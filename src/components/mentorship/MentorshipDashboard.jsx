@@ -793,7 +793,7 @@ const MentorshipDashboard = ({
     const setActiveTabFunc = activeService === 'IMNCI' ? setActiveImnciTab : setActiveEencTab;
 
     return (
-        <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir={isAr ? 'rtl' : 'ltr'}>             
+        <div className="p-2 sm:p-6 bg-slate-50/50 min-h-screen" dir={isAr ? 'rtl' : 'ltr'}>             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h3 className={`text-2xl font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-left'} tracking-tight`}>
                     <div className="flex items-center gap-3">

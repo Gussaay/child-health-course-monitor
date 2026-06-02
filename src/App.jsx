@@ -383,6 +383,10 @@ function SplashScreen() {
 export default function App() {
     const { t, i18n } = useTranslation();
     
+    // --- ADDED REFS FOR FCM NOTIFICATION QUEUE ---
+    const notificationQueue = useRef([]);
+    const notificationTimer = useRef(null);
+
     const { 
         appVersion, 
         isDownloadingAppUpdate, 
@@ -583,7 +587,7 @@ export default function App() {
       return () => { window.removeEventListener('firestoreOperation', handleOperation); };
     }, []);
 
-    // --- FOREGROUND FCM LISTENER ---
+    // --- UPDATED FOREGROUND FCM LISTENER ---
     useEffect(() => {
         let unsubscribe = null;
         
@@ -598,11 +602,38 @@ export default function App() {
                     const title = payload.notification?.title || "New Notification";
                     const body = payload.notification?.body || "";
                     
-                    setToast({
-                        show: true,
-                        message: `${title}: ${body}`,
-                        type: 'info'
-                    });
+                    // Add to queue instead of showing immediately
+                    notificationQueue.current.push({ title, body });
+
+                    // Clear existing timer
+                    if (notificationTimer.current) {
+                        clearTimeout(notificationTimer.current);
+                    }
+
+                    // Set a debounce timer to combine messages received within 1 second
+                    notificationTimer.current = setTimeout(() => {
+                        const queueLength = notificationQueue.current.length;
+                        
+                        if (queueLength === 1) {
+                            // Show single notification
+                            const singleNotif = notificationQueue.current[0];
+                            setToast({
+                                show: true,
+                                message: `${singleNotif.title}: ${singleNotif.body}`,
+                                type: 'info'
+                            });
+                        } else if (queueLength > 1) {
+                            // Combine multiple notifications
+                            setToast({
+                                show: true,
+                                message: `You have ${queueLength} new notifications (e.g., ${notificationQueue.current[0].title})`,
+                                type: 'info'
+                            });
+                        }
+                        
+                        // Clear the queue
+                        notificationQueue.current = [];
+                    }, 1000); 
                 });
              } catch (error) {
                  console.warn("Could not set up foreground FCM listener:", error);
@@ -613,6 +644,7 @@ export default function App() {
 
         return () => {
              if (unsubscribe) unsubscribe();
+             if (notificationTimer.current) clearTimeout(notificationTimer.current);
         };
     }, []);
 
@@ -2116,4 +2148,4 @@ export default function App() {
 
         </div>
     );
-}
+}	

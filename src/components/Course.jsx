@@ -7,7 +7,8 @@ import {
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, getDocs, getDoc } from 'firebase/firestore'; // <-- ADDED collection, getDocs, getDoc
+import { getFunctions, httpsCallable } from 'firebase/functions'; // <-- ADDED for FCM
 
 import { 
     getCourseById, 
@@ -1328,6 +1329,41 @@ export function CourseManagementView({
 
             await upsertCourse(payload, currentUserIdentifier);
             await fetchCourses(true); // <--- CACHE BYPASS FIX
+            
+            // --- TRIGGER FCM NOTIFICATION FOR MANAGERS ---
+            if (navigator.onLine) {
+                try {
+                    const isUpdate = !!courseToEdit;
+                    const submitterRole = currentUserRole ? currentUserRole.replace(/_/g, ' ') : 'User';
+                    const submitterName = user?.displayName || user?.email || 'A user';
+                    const actionText = isUpdate ? 'updated the' : 'added a new';
+                    const notifTitle = isUpdate ? 'Course Updated' : 'New Course Added';
+                    const notifBody = `${submitterName} (${submitterRole}) has ${actionText} ${payload.course_type} course in ${payload.state} - ${payload.locality}.`;
+
+                    const functions = getFunctions(db.app);
+                    const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                    const usersSnap = await getDocs(collection(db, 'users'));
+                    const targetPromises = [];
+                    
+                    usersSnap.forEach(userDoc => {
+                        const data = userDoc.data();
+                        const roles = data.roles || [data.role || 'user'];
+                        if (roles.includes('federal_manager') || roles.includes('super_user')) {
+                            targetPromises.push(
+                                sendFCMNotification({
+                                    targetUserId: userDoc.id,
+                                    title: notifTitle,
+                                    body: notifBody
+                                }).catch(e => console.warn(e))
+                            );
+                        }
+                    });
+                    await Promise.all(targetPromises);
+                } catch (fcmError) {
+                    console.warn("FCM Error", fcmError);
+                }
+            }
+
             setActiveCoursesTab('courses'); 
             setCourseToEdit(null);
             setToast({ show: true, message: 'Course saved successfully!', type: 'success' });

@@ -1,108 +1,124 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
+const { getAuth } = require("firebase-admin/auth");
 
-// Initialize Firebase Admin only once to avoid errors
-if (admin.apps.length === 0) {
-  admin.initializeApp();
-}
+// Initialize Firebase Admin
+initializeApp();
 
-exports.sendFCMNotification = functions.https.onCall(async (data, context) => {
-    // 1. Verify Authentication (Security Rule)
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'User must be logged in to send notifications.');
-    }
+// ============================================================================
+// 1. UPDATED: PUSH NOTIFICATION FUNCTION
+// ============================================================================
+exports.sendFCMNotification = onCall(async (request) => {
+  const { auth, data } = request;
 
-    const { targetUserId, targetVersion, title, body } = data;
-    const db = admin.firestore();
+  // 1. Any authenticated user can trigger system notifications (e.g., submitting reports)
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be logged in.");
+  }
 
-    try {
-        // =======================================================
-        // SCENARIO 1: Smart update for outdated users only
-        // =======================================================
-        if (targetUserId === 'outdated_users' && targetVersion) {
-            const usersSnap = await db.collection('users').get();
-            const tokens = [];
+  const { targetUserId, title, body } = data;
+  const db = getFirestore();
 
-            for (const doc of usersSnap.docs) {
-                const userData = doc.data();
-                
-                // Skip if they don't have push notifications enabled
-                if (!userData.fcmToken) continue;
+  try {
+    const tokens = [];
 
-                // Check their active version in usage stats
-                const statsSnap = await db.collection('userUsageStats').doc(doc.id).get();
-                const statsData = statsSnap.exists ? statsSnap.data() : {};
-                
-                const userAppVersion = userData.appVersion || statsData.appVersion || "0.0.0";
-                
-                // ONLY add their token if their version does not match the new target
-                if (userAppVersion !== targetVersion) {
-                    tokens.push(userData.fcmToken);
-                }
-            }
-
-            // Send multicast message to the filtered list
-            if (tokens.length > 0) {
-                // Note: Firebase sendEachForMulticast accepts max 500 tokens per batch.
-                // If you have > 500 users, you can safely chunk this array into groups of 500.
-                await admin.messaging().sendEachForMulticast({
-                    tokens: tokens,
-                    notification: { title, body }
-                });
-            }
-            
-            return { success: true, notifiedCount: tokens.length, target: 'outdated_users' };
-        }
+    // Scenario A: Notify all Federal Managers and Super Users
+    if (targetUserId === "managers_and_super_users") {
+      const usersSnapshot = await db.collection("users").get();
+      usersSnapshot.forEach((doc) => {
+        const userData = doc.data();
+        const roles = userData.roles || [userData.role || 'user'];
         
-        // =======================================================
-        // SCENARIO 2: Send to everyone (e.g., standard announcements)
-        // =======================================================
-        else if (targetUserId === 'all') {
-            const usersSnap = await db.collection('users').get();
-            const tokens = [];
-
-            usersSnap.forEach(doc => {
-                const userData = doc.data();
-                if (userData.fcmToken) {
-                    tokens.push(userData.fcmToken);
-                }
-            });
-
-            if (tokens.length > 0) {
-                await admin.messaging().sendEachForMulticast({
-                    tokens: tokens,
-                    notification: { title, body }
-                });
-            }
-            
-            return { success: true, notifiedCount: tokens.length, target: 'all' };
+        // Match against existing roles setup
+        if (roles.includes("federal_manager") || roles.includes("super_user") || roles.includes("manager")) {
+          const userToken = userData.fcmToken;
+          if (userToken) tokens.push(userToken);
         }
-
-        // =======================================================
-        // SCENARIO 3: Send to a specific single user
-        // =======================================================
-        else {
-            const userSnap = await db.collection('users').doc(targetUserId).get();
-            
-            if (!userSnap.exists) {
-                throw new functions.https.HttpsError('not-found', 'Target user does not exist.');
-            }
-
-            const userData = userSnap.data();
-            if (!userData.fcmToken) {
-                throw new functions.https.HttpsError('failed-precondition', 'Target user does not have a registered FCM token.');
-            }
-
-            await admin.messaging().send({
-                token: userData.fcmToken,
-                notification: { title, body }
-            });
-
-            return { success: true, notifiedCount: 1, target: targetUserId };
-        }
-
-    } catch (error) {
-        console.error("Error sending FCM:", error);
-        throw new functions.https.HttpsError('internal', error.message);
+      });
+    } 
+    // Scenario B: Broadcast to every single system user
+    else if (targetUserId === "all") {
+      const usersSnapshot = await db.collection("users").get();
+      usersSnapshot.forEach((doc) => {
+        const userToken = doc.data().fcmToken;
+        if (userToken) tokens.push(userToken);
+      });
+    } 
+    // Scenario C: Target a single specific user ID
+    else {
+      const userDoc = await db.collection("users").doc(targetUserId).get();
+      if (userDoc.exists && userDoc.data().fcmToken) {
+        tokens.push(userDoc.data().fcmToken);
+      }
     }
+
+    // Clean array duplicates
+    const uniqueTokens = [...new Set(tokens)];
+
+    if (uniqueTokens.length === 0) {
+      return { success: false, message: "No FCM tokens found for targets." };
+    }
+
+    // Multicast message packet
+    const message = {
+      notification: { title, body },
+      tokens: uniqueTokens,
+    };
+
+    const messaging = getMessaging();
+    const response = await messaging.sendEachForMulticast(message);
+
+    return {
+      success: true,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+    };
+  } catch (error) {
+    console.error("Error sending FCM notification:", error);
+    throw new HttpsError("internal", "Failed to send FCM message.");
+  }
+});
+
+// ============================================================================
+// 2. RESTORED: LIST USERS FUNCTION
+// ============================================================================
+exports.listUsers = onCall(async (request) => {
+  const { auth, data } = request;
+
+  if (!auth) {
+    throw new HttpsError(
+      "unauthenticated",
+      "You must be logged in to fetch users."
+    );
+  }
+
+  const db = getFirestore();
+
+  // Role validation (Only Admins/Managers can query all users)
+  const senderDoc = await db.collection("users").doc(auth.uid).get();
+  const senderRoles = senderDoc.data()?.roles || [];
+  if (!senderRoles.includes("super_user") && !senderRoles.includes("manager") && !senderRoles.includes("federal_manager")) {
+    throw new HttpsError(
+      "permission-denied",
+      "You do not have permission to list authentication users."
+    );
+  }
+
+  try {
+    const authService = getAuth();
+    const maxResults = data?.maxResults || 1000; 
+    
+    const listUsersResult = await authService.listUsers(maxResults, data?.pageToken);
+
+    return {
+      success: true,
+      users: listUsersResult.users.map(userRecord => userRecord.toJSON()),
+      pageToken: listUsersResult.pageToken 
+    };
+  } catch (error) {
+    console.error("Error listing auth users:", error);
+    throw new HttpsError("internal", "Failed to list users.");
+  }
 });

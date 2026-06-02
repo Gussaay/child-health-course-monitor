@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { getAuth } from "firebase/auth";
-import { writeBatch } from "firebase/firestore";
+import { writeBatch, collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from "../firebase";
 import { useDataCache } from '../DataContext';
 import { amiriFontBase64 } from './AmiriFont.js';
@@ -1388,8 +1389,11 @@ const ChildHealthServicesView = ({
     const handleSaveFacility = async (payload) => {
         const user = auth.currentUser;
         if (!user) { setToast({ show: true, message: 'You must be logged in.', type: 'error' }); return; }
+        
+        const isUpdate = !!editingFacility?.id; 
         const finalPayload = { ...payload };
-        if (editingFacility?.id) { finalPayload.id = editingFacility.id; }
+        if (isUpdate) { finalPayload.id = editingFacility.id; }
+        
         try {
             if (permissions.canApproveSubmissions) { 
                 await saveFacilitySnapshot(finalPayload); 
@@ -1398,6 +1402,47 @@ const ChildHealthServicesView = ({
             } else { 
                 await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); 
                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
+
+                // --- TRIGGER FCM NOTIFICATION FOR MANAGERS ---
+                if (navigator.onLine) {
+                    try {
+                        let submitterRole = permissions?.role ? permissions.role.replace(/_/g, ' ') : 'User';
+                        
+                        if (!permissions?.role) {
+                            const userDoc = await getDoc(doc(db, 'users', user.uid));
+                            if (userDoc.exists()) {
+                                submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
+                            }
+                        }
+
+                        const submitterName = user.displayName || user.email;
+                        const actionText = isUpdate ? 'updated the' : 'submitted a new';
+                        const notifTitle = isUpdate ? 'Facility Update Requires Approval' : 'New Facility Requires Approval';
+                        const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${finalPayload['اسم_المؤسسة']}.`;
+
+                        const functions = getFunctions(db.app);
+                        const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                        const usersSnap = await getDocs(collection(db, 'users'));
+                        const targetPromises = [];
+                        
+                        usersSnap.forEach(userDoc => {
+                            const data = userDoc.data();
+                            const roles = data.roles || [data.role || 'user'];
+                            if (roles.includes('federal_manager') || roles.includes('super_user')) {
+                                targetPromises.push(
+                                    sendFCMNotification({
+                                        targetUserId: userDoc.id,
+                                        title: notifTitle,
+                                        body: notifBody
+                                    }).catch(e => console.warn(e))
+                                );
+                            }
+                        });
+                        await Promise.all(targetPromises);
+                    } catch (fcmError) {
+                        console.warn("FCM Error", fcmError);
+                    }
+                }
             }
         } catch (error) {
              setStatusData({ status: 'error', message: error.message });
@@ -1410,7 +1455,7 @@ const ChildHealthServicesView = ({
         if (wasSuccessOrQueued) {
             setEditingFacility(null);
             setUpdateSelectionService(null);
-            setView('list'); // Return to list view
+            setView('list'); 
         }
     };
 
@@ -1425,7 +1470,7 @@ const ChildHealthServicesView = ({
         }
         if (facility) { 
             setEditingFacility(facility); 
-            setView('form'); // Open form page instead of modal
+            setView('form'); 
         } else { 
             setToast({ show: true, message: 'Facility not found or you do not have permission to edit it.', type: 'error' }); 
         }

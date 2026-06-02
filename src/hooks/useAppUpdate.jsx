@@ -4,7 +4,6 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import { LocalNotifications } from '@capacitor/local-notifications';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
@@ -23,6 +22,9 @@ export function useAppUpdate() {
     // Refs to control silent OTA flow and prevent duplicate operations
     const downloadedOtaBundleId = useRef(null);
     const isDownloadingOta = useRef(false);
+    
+    // Temporary memory for the current app session (resets on full app restart)
+    const sessionSkippedBuild = useRef(0);
 
     useEffect(() => {
         let appStateListenerHandle;
@@ -31,27 +33,11 @@ export function useAppUpdate() {
         if (Capacitor.isNativePlatform()) {
             
             // 1. CRITICAL: Prevent Rollbacks and Multiple Restarts!
-            // Instantly tell the native layer the app booted successfully.
             CapacitorUpdater.notifyAppReady()
                 .catch(e => console.warn("[Capgo] notifyAppReady failed:", e));
 
-            const showUpdateNotification = async (title, body, notifId) => {
-                try {
-                    let permStatus = await LocalNotifications.checkPermissions();
-                    if (permStatus.display !== 'granted') permStatus = await LocalNotifications.requestPermissions();
-                    
-                    if (permStatus.display === 'granted') {
-                        if (Capacitor.getPlatform() === 'android') {
-                            await LocalNotifications.createChannel({ id: 'updates', name: 'App Updates', description: 'Notifications for app updates', importance: 5, visibility: 1 });
-                        }
-                        await LocalNotifications.schedule({ notifications: [{ title, body, id: notifId, channelId: 'updates' }] });
-                    }
-                } catch (err) { console.warn("Failed to show update notification:", err); }
-            };
-
             // --- THE SILENT BACKGROUND WORKER FOR OTA ---
             const checkOtaUpdate = async () => {
-                // Prevent concurrent downloads or downloading if a native update is pending
                 if (isDownloadingOta.current || downloadedOtaBundleId.current || nativeUpdatePrompt) return;
 
                 try {
@@ -59,7 +45,6 @@ export function useAppUpdate() {
                     const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
                     setAppVersion(currentVersion);
 
-                    // Fetch the latest version manifest silently
                     const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), { cache: "no-store" });
                     if (response.ok) {
                         const latestUpdate = await response.json();
@@ -67,13 +52,11 @@ export function useAppUpdate() {
                         if (currentVersion !== latestUpdate.version) {
                             isDownloadingOta.current = true;
                             
-                            // Download completely silently in the background
                             const downloadedBundle = await CapacitorUpdater.download({ 
                                 url: latestUpdate.url, 
                                 version: latestUpdate.version 
                             });
                             
-                            // Store the ID. We will NOT apply it until the user leaves the app.
                             downloadedOtaBundleId.current = downloadedBundle.id;
                             isDownloadingOta.current = false;
                         }
@@ -90,7 +73,6 @@ export function useAppUpdate() {
 
                 const updateDocRef = doc(db, "meta", "update_config");
                 
-                // This triggers the EXACT moment the admin pushes an update in the dashboard
                 unsubscribeConfig = onSnapshot(updateDocRef, async (updateSnap) => {
                     if (updateSnap.exists()) {
                         const serverConfig = updateSnap.data();
@@ -99,12 +81,15 @@ export function useAppUpdate() {
                         const currentBuild = parseInt(appInfo.build, 10) || 1;
                         const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
 
-                        // 1. Check Native (Hard APK update requirement overrides OTA)
-                        // ONLY force the prompt if it's strictly mandatory
-                        if (serverBuild > currentBuild && serverConfig.mandatory) {
-                            setNativeUpdatePrompt(serverConfig);
-                            showUpdateNotification("تحديث جديد للتطبيق", "يتوفر إصدار جديد. يرجى التحميل الآن.", 101);
-                            return; 
+                        // 1. Check Native (Hard APK update requirement)
+                        if (serverBuild > currentBuild) {
+                            // Show prompt IF it is mandatory, OR if they haven't skipped it THIS SESSION
+                            if (serverConfig.mandatory || serverBuild !== sessionSkippedBuild.current) {
+                                setNativeUpdatePrompt(serverConfig);
+                                return; 
+                            } else {
+                                setNativeUpdatePrompt(null); 
+                            }
                         } else {
                             setNativeUpdatePrompt(null);
                         }
@@ -118,13 +103,9 @@ export function useAppUpdate() {
             setupRealtimeConfigListener();
 
             // --- APPLY UPDATE SILENTLY ON BACKGROUND ---
-            // This guarantees the user's active session is NEVER interrupted.
             CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
-                // If the app goes to the background AND an update is ready AND no hard APK is required
                 if (!isActive && downloadedOtaBundleId.current && !nativeUpdatePrompt) {
                     try {
-                        // Swap the bundle while the app is hidden.
-                        // The next time the user clicks the app icon, it will be instantly ready on the new version.
                         await CapacitorUpdater.set({ id: downloadedOtaBundleId.current });
                         downloadedOtaBundleId.current = null; 
                     } catch (e) { 
@@ -186,10 +167,8 @@ export function useAppUpdate() {
                 const currentVersion = currentState.bundle?.version || "builtin";
 
                 if (currentVersion !== latestUpdate.version) {
-                    // Inform the user gracefully and handle the OTA download implicitly
                     setManualUpdateModal({ isOpen: true, status: 'success', message: 'Update found. It will be downloaded and applied silently in the background.', bundleId: null });
                     
-                    // Trigger non-blocking silent download if not already doing so
                     if (!isDownloadingOta.current && !downloadedOtaBundleId.current) {
                         isDownloadingOta.current = true;
                         CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version })
@@ -203,7 +182,6 @@ export function useAppUpdate() {
                             });
                     }
                         
-                    // Auto-dismiss the modal to maintain workflow
                     setTimeout(() => setManualUpdateModal({ isOpen: false, status: 'idle', message: '', bundleId: null }), 4000);
                 } else if (!nativeUpdateFound) {
                     setManualUpdateModal({ isOpen: true, status: 'success', message: `App is already up to date! (Version: ${currentVersion})`, bundleId: null });
@@ -219,7 +197,7 @@ export function useAppUpdate() {
 
     const AppUpdateModals = () => (
         <>
-            {/* Native APK UI is kept intact as hard-updates require explicit user downloads */}
+            {/* Native APK UI */}
             {nativeUpdatePrompt && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-90 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm" dir="rtl">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
@@ -239,7 +217,6 @@ export function useAppUpdate() {
                         <div className="w-full pt-2">
                             <button 
                                 onClick={() => {
-                                    // FALLBACK FIX: Check multiple possible property names from Firebase
                                     const downloadUrl = nativeUpdatePrompt.downloadUrl || nativeUpdatePrompt.url || nativeUpdatePrompt.apkUrl;
                                     
                                     if (!downloadUrl) {
@@ -248,7 +225,7 @@ export function useAppUpdate() {
                                     }
 
                                     downloadAndOpenFile(downloadUrl, `Update_v${nativeUpdatePrompt.versionString}.apk`, {
-                                        isSystemFile: false, // Goes to NCHP_Downloads
+                                        isSystemFile: false,
                                         onStart: () => {
                                             setIsDownloadingAppUpdate(true);
                                             setAppUpdateProgress(0);
@@ -267,7 +244,6 @@ export function useAppUpdate() {
                                 {isDownloadingAppUpdate ? 'جاري التحميل...' : 'تحميل التحديث الآن'}
                             </button>
 
-                            {/* UPDATED PROGRESS UI WITH DISMISS/CANCEL CONTROLS */}
                             {isDownloadingAppUpdate && (
                                 <div className="mt-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
                                     <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
@@ -283,7 +259,6 @@ export function useAppUpdate() {
                                         </span>
                                         
                                         <div className="flex gap-3 text-xs font-medium">
-                                            {/* Dismisses the visual state while it downloads in the background */}
                                             <button 
                                                 onClick={() => setIsDownloadingAppUpdate(false)}
                                                 className="text-slate-500 hover:text-slate-700"
@@ -291,7 +266,6 @@ export function useAppUpdate() {
                                                 إخفاء للخلفية
                                             </button>
                                             
-                                            {/* Visual cancel (Note: CapacitorHttp doesn't natively abort network requests, but this resets the UI) */}
                                             <button 
                                                 onClick={() => {
                                                     setIsDownloadingAppUpdate(false);
@@ -307,8 +281,15 @@ export function useAppUpdate() {
                             )}
                         </div>
 
+                        {/* Skip Button: Saves to session memory so it hides for now but returns on restart */}
                         {!nativeUpdatePrompt.mandatory && !isDownloadingAppUpdate && (
-                            <button onClick={() => setNativeUpdatePrompt(null)} className="text-sm text-gray-500 hover:text-gray-700 mt-2">
+                            <button 
+                                onClick={() => {
+                                    sessionSkippedBuild.current = nativeUpdatePrompt.latestNativeBuild;
+                                    setNativeUpdatePrompt(null);
+                                }} 
+                                className="text-sm text-gray-500 hover:text-gray-700 mt-2"
+                            >
                                 تخطي في الوقت الحالي
                             </button>
                         )}
@@ -316,7 +297,7 @@ export function useAppUpdate() {
                 </div>
             )}
 
-            {/* Manual check modal (Auto-dismisses for OTA, stays open for info/errors) */}
+            {/* Manual check modal */}
             {manualUpdateModal.isOpen && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">

@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle, ArrowRightLeft } from 'lucide-react';
+import { db } from '../firebase'; 
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore'; 
+import { getFunctions, httpsCallable } from 'firebase/functions'; 
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select,
@@ -99,8 +102,54 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
 
     const handleSave = async (formData) => {
         try {
+            const isUpdate = !!initialData?.id; 
             const resultId = await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
+
+            // --- TRIGGER FCM NOTIFICATION ---
+            if (navigator.onLine) {
+                try {
+                    const currentUser = getAuth().currentUser;
+                    let submitterName = formData.submitterName || formData.submitterEmail || 'A public user';
+                    let submitterRole = 'Public User';
+
+                    if (currentUser) {
+                        submitterName = currentUser.displayName || currentUser.email || submitterName;
+                        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                        if (userDoc.exists()) {
+                            submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
+                        } else {
+                            submitterRole = 'Registered User';
+                        }
+                    }
+
+                    const actionText = isUpdate ? 'updated the' : 'submitted a new';
+                    const notifTitle = isUpdate ? 'Facility Updated' : 'New Facility Added';
+                    const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${formData['اسم_المؤسسة']}.`;
+
+                    const functions = getFunctions(db.app);
+                    const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                    const usersSnap = await getDocs(collection(db, 'users'));
+                    const targetPromises = [];
+                    
+                    usersSnap.forEach(userDoc => {
+                        const data = userDoc.data();
+                        const roles = data.roles || [data.role || 'user'];
+                        if (roles.includes('federal_manager') || roles.includes('super_user')) {
+                            targetPromises.push(
+                                sendFCMNotification({
+                                    targetUserId: userDoc.id,
+                                    title: notifTitle,
+                                    body: notifBody
+                                }).catch(e => console.warn(e))
+                            );
+                        }
+                    });
+                    await Promise.all(targetPromises);
+                } catch (fcmError) {
+                    console.warn("FCM Error", fcmError);
+                }
+            }
         } catch (error) {
             setStatusData({ status: 'error', message: error.message });
         }
@@ -355,8 +404,55 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
     const handleSave = async (formData) => {
         try {
+            const isUpdate = !!formInitialData?.id; 
             await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
+
+            // --- TRIGGER FCM NOTIFICATION ---
+            if (navigator.onLine) {
+                try {
+                    const currentUser = getAuth().currentUser;
+                    let submitterName = formData.submitterName || formData.submitterEmail || 'A public user';
+                    let submitterRole = 'Public User';
+
+                    if (currentUser) {
+                        submitterName = currentUser.displayName || currentUser.email || submitterName;
+                        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                        if (userDoc.exists()) {
+                            submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
+                        } else {
+                            submitterRole = 'Registered User';
+                        }
+                    }
+
+                    const actionText = isUpdate ? 'updated the' : 'submitted a new';
+                    const notifTitle = isUpdate ? 'Facility Updated' : 'New Facility Added';
+                    const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${formData['اسم_المؤسسة']}.`;
+
+                    const functions = getFunctions(db.app);
+                    const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                    const usersSnap = await getDocs(collection(db, 'users'));
+                    const targetPromises = [];
+                    
+                    usersSnap.forEach(userDoc => {
+                        const data = userDoc.data();
+                        const roles = data.roles || [data.role || 'user'];
+                        if (roles.includes('federal_manager') || roles.includes('super_user')) {
+                            targetPromises.push(
+                                sendFCMNotification({
+                                    targetUserId: userDoc.id,
+                                    title: notifTitle,
+                                    body: notifBody
+                                }).catch(e => console.warn(e))
+                            );
+                        }
+                    });
+                    await Promise.all(targetPromises);
+                } catch (fcmError) {
+                    console.warn("FCM Error", fcmError);
+                }
+            }
+
         } catch (error) {
             setStatusData({ status: 'error', message: error.message });
         }

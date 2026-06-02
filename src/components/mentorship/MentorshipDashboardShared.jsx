@@ -501,17 +501,17 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
     }
 
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+        <div ref={cardRef} className="bg-white p-2 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
+            <h4 className="text-base font-extrabold text-slate-800 mb-2 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
             
             {chartData.length > 0 && (
-                <div className="flex justify-between items-center mb-6 px-2 sm:px-6">
+                <div className="flex justify-between items-center gap-1 sm:gap-4 mb-6 px-1 sm:px-6">
                     <div className="flex flex-col items-center">
                         <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 1')}</span>
-                        <div className="border border-slate-300 bg-white rounded-lg px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
+                        <div className="border border-slate-300 bg-white rounded-lg px-2 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
                             {visit1Value !== null ? `${Math.round(visit1Value)}%` : '-'}
-                            <span className="text-[10px] font-bold text-slate-400 mt-0.5">
+                            <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
                                 {v1Numerator !== undefined && v1Denominator !== undefined ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
                             </span>
                         </div>
@@ -519,12 +519,12 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                     
                     <div className="flex flex-col items-center">
                         <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Average')}</span>
-                        <div className="border border-slate-800 bg-white rounded-xl px-10 py-3 shadow-sm flex flex-col items-center justify-center">
-                            <span className={`font-extrabold text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
+                        <div className="border border-slate-800 bg-white rounded-xl px-3 sm:px-10 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center">
+                            <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
                                 {avgValue !== null ? `${Math.round(avgValue)}%` : '-'}
                             </span>
                             {totalNumerator !== undefined && totalDenominator !== undefined && totalDenominator > 0 && (
-                                <span className="text-xs font-bold text-slate-500 mt-0.5">
+                                <span className="text-xs font-bold text-slate-500 mt-0.5 whitespace-nowrap">
                                     {totalNumerator} / {totalDenominator}
                                 </span>
                             )}
@@ -533,9 +533,9 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
 
                     <div className="flex flex-col items-center">
                         <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 4')}</span>
-                        <div className="border border-slate-300 bg-white rounded-lg px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
+                        <div className="border border-slate-300 bg-white rounded-lg px-2 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
                             {visit4Value !== null ? `${Math.round(visit4Value)}%` : '-'}
-                            <span className="text-[10px] font-bold text-slate-400 mt-0.5">
+                            <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
                                 {v4Numerator !== undefined && v4Denominator !== undefined ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
                             </span>
                         </div>

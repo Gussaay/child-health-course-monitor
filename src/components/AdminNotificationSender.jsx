@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions'; // <-- NEW IMPORTS FOR FCM
-import { Card, CardHeader, CardBody, Button, Input, FormGroup, Select, Toast, Table } from './CommonComponents';
-import { Trash2, CheckCircle, Clock } from 'lucide-react';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { Card, CardBody, Button, Input, FormGroup, Select, Toast, Table, Modal } from './CommonComponents';
+import { Trash2, CheckCircle, Clock, Eye } from 'lucide-react';
 
 export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
     const [users, setUsers] = useState([]);
@@ -20,6 +20,12 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
     // Manager state
     const [notifications, setNotifications] = useState([]);
     const [managerLoading, setManagerLoading] = useState(true);
+    
+    // Stats Modal state - store ONLY the ID to prevent unnecessary re-renders of the listener
+    const [statsNotifId, setStatsNotifId] = useState(null);
+
+    // Derive the active notification directly from the existing list
+    const statsNotif = notifications.find(n => n.id === statsNotifId) || null;
 
     // Sync the dropdown state if the parent passes a new pre-selected ID
     useEffect(() => {
@@ -27,7 +33,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
     }, [preselectedUserId]);
 
     useEffect(() => {
-        // Fetch users for the dropdown and for mapping read receipts
+        // Fetch users for the dropdown and for mapping read/delivered receipts
         const fetchUsers = async () => {
             try {
                 const usersSnap = await getDocs(collection(db, 'users'));
@@ -36,7 +42,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                 
                 const map = {};
                 usersList.forEach(u => {
-                    map[u.id] = u.email || u.displayName || u.id;
+                    map[u.id] = u.displayName || u.email || u.id;
                 });
                 setUsersMap(map);
             } catch (error) {
@@ -75,19 +81,19 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
 
         setLoading(true);
         try {
-            // 1. Save to Firestore (Preserves your in-app History & Read Receipts UI)
+            // 1. Save to Firestore (Preserves History & Read/Delivered Receipts UI)
             await addDoc(collection(db, 'notifications'), {
                 title,
                 message,
-                targetUser, // 'all' or specific user ID
+                targetUser, 
                 createdAt: serverTimestamp(),
-                readBy: [], 
+                deliveredTo: [], 
+                readBy: [],      
                 status: 'active'
             });
 
             // 2. Trigger FCM Push Notification via Cloud Function
             try {
-                // Initialize functions using your existing db app instance
                 const functions = getFunctions(db.app); 
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 
@@ -102,8 +108,6 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                 }
             } catch (fcmError) {
                 console.error("FCM Send Error:", fcmError);
-                // Note: We don't fail the whole function here so the in-app notification still works
-                // even if the user hasn't set up their FCM token yet.
             }
 
             setToast({ message: 'Notification sent and pushed successfully!', type: 'success' });
@@ -123,6 +127,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
         try {
             await deleteDoc(doc(db, 'notifications', id));
             setToast({ message: 'Notification deleted.', type: 'success' });
+            if (statsNotifId === id) setStatsNotifId(null);
         } catch (error) {
             console.error("Error deleting notification:", error);
             setToast({ message: 'Error deleting notification.', type: 'error' });
@@ -144,7 +149,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                 <option value="all">Broadcast to All Users</option>
                                 {users.map(u => (
                                     <option key={u.id} value={u.id}>
-                                        {u.email || u.displayName || u.id}
+                                        {u.displayName || u.email || u.id}
                                     </option>
                                 ))}
                             </Select>
@@ -182,7 +187,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                     <div>
                         <h3 className="text-lg font-bold text-gray-800">Notification History & Manager</h3>
-                        <p className="text-sm text-gray-500">Track sent messages and view read receipts.</p>
+                        <p className="text-sm text-gray-500">Track sent messages and view detailed delivery & read receipts.</p>
                     </div>
                 </div>
                 
@@ -192,8 +197,9 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                     <div className="p-8 text-center text-gray-500">No notifications sent yet.</div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <Table headers={['Date', 'Target', 'Message Details', 'Read Receipts', 'Actions']}>
+                        <Table headers={['Date', 'Target', 'Message Details', 'Engagement Stats', 'Actions']}>
                             {notifications.map(notif => {
+                                const deliveredCount = (notif.deliveredTo || []).length;
                                 const readCount = (notif.readBy || []).length;
                                 const dateStr = notif.createdAt 
                                     ? new Date(notif.createdAt.seconds * 1000).toLocaleString() 
@@ -204,7 +210,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                     : <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-[10px] font-bold uppercase tracking-wider">{usersMap[notif.targetUser] || 'Unknown User'}</span>;
 
                                 return (
-                                    <tr key={notif.id} className="hover:bg-gray-50">
+                                    <tr key={notif.id} className="hover:bg-gray-50 group">
                                         <td className="whitespace-nowrap text-xs text-gray-500">
                                             <div className="flex items-center"><Clock className="w-3 h-3 mr-1"/> {dateStr}</div>
                                         </td>
@@ -215,16 +221,18 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                                 <div className="text-xs text-gray-500 truncate" title={notif.message}>{notif.message}</div>
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className="flex items-center text-xs">
-                                                <CheckCircle className={`w-4 h-4 mr-1.5 ${readCount > 0 ? 'text-green-500' : 'text-gray-300'}`} />
-                                                {notif.targetUser === 'all' ? (
-                                                    <span className="font-medium text-gray-600">{readCount} user(s) read</span>
-                                                ) : (
-                                                    <span className={`font-medium ${readCount > 0 ? 'text-green-600' : 'text-amber-600'}`}>
-                                                        {readCount > 0 ? 'Read' : 'Unread'}
-                                                    </span>
-                                                )}
+                                        <td 
+                                            className="cursor-pointer bg-gray-50/50 hover:bg-sky-50 transition-colors rounded-lg m-1 p-2 border border-transparent hover:border-sky-200"
+                                            onClick={() => setStatsNotifId(notif.id)}
+                                            title="Click to view detailed engagement lists"
+                                        >
+                                            <div className="flex flex-col gap-1.5 text-xs">
+                                                <div className={`flex items-center font-bold ${deliveredCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                                                    <CheckCircle className="w-3.5 h-3.5 mr-1" /> {deliveredCount} Delivered
+                                                </div>
+                                                <div className={`flex items-center font-bold ${readCount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                                    <Eye className="w-3.5 h-3.5 mr-1" /> {readCount} Read
+                                                </div>
                                             </div>
                                         </td>
                                         <td>
@@ -244,6 +252,89 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                     </div>
                 )}
             </Card>
+
+            {/* 3. ENGAGEMENT STATS MODAL */}
+            {statsNotif && (
+                <Modal isOpen={!!statsNotif} onClose={() => setStatsNotifId(null)} title="Notification Engagement Details">
+                    {/* Removed max-h and overflow configurations to rely completely on default Modal container scrolling behavior */}
+                    <div className="p-5 bg-gray-50 space-y-5">
+                        
+                        {/* Notification Preview */}
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                            <h4 className="font-bold text-gray-900 text-lg mb-1">{statsNotif.title}</h4>
+                            <p className="text-sm text-gray-600 mb-3">{statsNotif.message}</p>
+                            <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                <Clock className="w-3 h-3 mr-1" />
+                                {statsNotif.createdAt ? new Date(statsNotif.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
+                                <span className="mx-2">•</span>
+                                Target: {statsNotif.targetUser === 'all' ? 'All Users' : usersMap[statsNotif.targetUser] || 'Unknown'}
+                            </div>
+                        </div>
+                        
+                        {/* Two Columns Grid elements flow cleanly with no internal layout boundaries */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                            {/* Column 1: DELIVERED */}
+                            <div className="bg-white rounded-xl border border-blue-100 shadow-sm flex flex-col">
+                                <div className="bg-blue-50 px-4 py-3 border-b border-blue-100 font-bold text-blue-900 flex items-center justify-between rounded-t-xl">
+                                    <span className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-blue-600"/> Delivered To Device</span>
+                                    <span className="bg-blue-200 text-blue-900 px-2.5 py-0.5 rounded-full text-xs shadow-sm">
+                                        {(statsNotif.deliveredTo || []).length}
+                                    </span>
+                                </div>
+                                <div>
+                                    <ul className="divide-y divide-gray-50">
+                                        {(!statsNotif.deliveredTo || statsNotif.deliveredTo.length === 0) ? (
+                                            <li className="p-6 text-center text-sm text-gray-400 italic">No delivery receipts yet.</li>
+                                        ) : (
+                                            statsNotif.deliveredTo.map(uid => (
+                                                <li key={uid} className="px-4 py-2.5 text-sm text-gray-700 flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                                        {(usersMap[uid] || '?')[0].toUpperCase()}
+                                                    </div>
+                                                    <span className="truncate">{usersMap[uid] || uid}</span>
+                                                </li>
+                                            ))
+                                        )}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {/* Column 2: READ */}
+                            <div className="bg-white rounded-xl border border-green-100 shadow-sm flex flex-col">
+                                <div className="bg-green-50 px-4 py-3 border-b border-green-100 font-bold text-green-900 flex items-center justify-between rounded-t-xl">
+                                    <span className="flex items-center"><Eye className="w-4 h-4 mr-2 text-green-600"/> Clicked & Read</span>
+                                    <span className="bg-green-200 text-green-900 px-2.5 py-0.5 rounded-full text-xs shadow-sm">
+                                        {(statsNotif.readBy || []).length}
+                                    </span>
+                                </div>
+                                <div>
+                                    <ul className="divide-y divide-gray-50">
+                                        {(!statsNotif.readBy || statsNotif.readBy.length === 0) ? (
+                                            <li className="p-6 text-center text-sm text-gray-400 italic">Nobody has read this yet.</li>
+                                        ) : (
+                                            statsNotif.readBy.map(uid => (
+                                                <li key={uid} className="px-4 py-2.5 text-sm text-gray-700 flex items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-2 truncate">
+                                                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                                            {(usersMap[uid] || '?')[0].toUpperCase()}
+                                                        </div>
+                                                        <span className="truncate">{usersMap[uid] || uid}</span>
+                                                    </div>
+                                                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                                                </li>
+                                            ))
+                                        )}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div className="p-4 border-t border-gray-200 bg-white flex justify-end rounded-b-xl">
+                        <Button onClick={() => setStatsNotifId(null)} variant="secondary" className="px-6">Close Details</Button>
+                    </div>
+                </Modal>
+            )}
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>

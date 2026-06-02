@@ -1,7 +1,9 @@
 // VisitReports.jsx
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { getAuth } from "firebase/auth";
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { db } from '../../firebase'; 
 import { 
     uploadFile, 
     deleteFile, 
@@ -139,7 +141,7 @@ const IMNCI_MALNUTRITION_SKILLS = {
 
 const ALL_IMNCI_MATRIX_SKILLS = { ...IMNCI_GENERAL_SKILLS, ...IMNCI_ASSESSMENT_SKILLS, ...IMNCI_MALNUTRITION_SKILLS };
 
-// --- EENC Mentoring Matrix Skill Categories (From Uploaded Checklist + 1 General) ---
+// --- EENC Mentoring Matrix Skill Categories ---
 const EENC_GENERAL_SKILLS = {
     'skill_record_form': "استخدام سجلات غرفة الولادة وملء معلومات الرعاية الضرورية المبكرة"
 };
@@ -501,6 +503,47 @@ export const IMNCIVisitReport = ({
             }
 
             await saveIMNCIVisitReport(payload, existingReportData?.id || null);
+
+            // --- TRIGGER POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
+            try {
+                const isUpdate = !!existingReportData?.id;
+                let submitterRole = 'User';
+                
+                // Fetch user's role
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
+                }
+
+                const submitterName = user.displayName || user.email;
+                const actionText = isUpdate ? 'updated an existing' : 'submitted a new';
+                const notifTitle = isUpdate ? `Visit Report Updated` : `New Visit Report Submitted`;
+                const notifBody = `${submitterName} (${submitterRole}) has ${actionText} IMNCI visit report for ${facility['اسم_المؤسسة']}.`;
+
+                const functions = getFunctions(db.app);
+                const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                
+                const usersSnap = await getDocs(collection(db, 'users'));
+                const targetPromises = [];
+                
+                usersSnap.forEach(uDoc => {
+                    const data = uDoc.data();
+                    const roles = data.roles || [data.role || 'user'];
+                    if (roles.includes('federal_manager') || roles.includes('super_user')) {
+                        targetPromises.push(
+                            sendFCMNotification({
+                                targetUserId: uDoc.id,
+                                title: notifTitle,
+                                body: notifBody
+                            }).catch(e => console.warn(`FCM error for user ${uDoc.id}:`, e))
+                        );
+                    }
+                });
+                
+                await Promise.all(targetPromises);
+            } catch (fcmError) {
+                console.warn("FCM Send Error: Notification popup skipped.", fcmError);
+            }
 
             const updatePromises = Object.values(previousUpdates).map(async (update) => {
                 const reportToUpdate = allVisitReports.find(r => r.id === update.reportId);
@@ -1026,8 +1069,6 @@ export const EENCVisitReport = ({
         return allSubmissions.filter(sub => sub.facilityId === facility.id && sub.sessionDate === formData.visit_date && sub.service === 'EENC' && sub.status === 'complete');
     }, [allSubmissions, facility, formData.visit_date]);
 
-    // Calculate EENC weaknesses based on scores < 75% 
-    // Max score for an item is 2 (yes), partial is 1. Average < 1.5 => Weakness
     const detectedWeaknesses = useMemo(() => {
         if (!sessionsForThisVisit || sessionsForThisVisit.length === 0) return [];
 
@@ -1181,6 +1222,47 @@ export const EENCVisitReport = ({
             if (existingReportData) { payload.mentorEmail = existingReportData.mentorEmail; payload.mentorName = existingReportData.mentorName; payload.edited_by_email = user.email; payload.edited_by_name = user.displayName || user.email; payload.lastUpdatedAt = Timestamp.now(); } else { payload.mentorEmail = user.email; payload.mentorName = user.displayName || user.email; payload.createdAt = Timestamp.now(); }
 
             await saveEENCVisitReport(payload, existingReportData?.id || null);
+
+            // --- TRIGGER POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
+            try {
+                const isUpdate = !!existingReportData?.id;
+                let submitterRole = 'User';
+                
+                // Fetch user's role
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
+                }
+
+                const submitterName = user.displayName || user.email;
+                const actionText = isUpdate ? 'updated an existing' : 'submitted a new';
+                const notifTitle = isUpdate ? `Visit Report Updated` : `New Visit Report Submitted`;
+                const notifBody = `${submitterName} (${submitterRole}) has ${actionText} EENC visit report for ${facility['اسم_المؤسسة']}.`;
+
+                const functions = getFunctions(db.app);
+                const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                
+                const usersSnap = await getDocs(collection(db, 'users'));
+                const targetPromises = [];
+                
+                usersSnap.forEach(uDoc => {
+                    const data = uDoc.data();
+                    const roles = data.roles || [data.role || 'user'];
+                    if (roles.includes('federal_manager') || roles.includes('super_user')) {
+                        targetPromises.push(
+                            sendFCMNotification({
+                                targetUserId: uDoc.id,
+                                title: notifTitle,
+                                body: notifBody
+                            }).catch(e => console.warn(`FCM error for user ${uDoc.id}:`, e))
+                        );
+                    }
+                });
+                
+                await Promise.all(targetPromises);
+            } catch (fcmError) {
+                console.warn("FCM Send Error: Notification popup skipped.", fcmError);
+            }
 
             const updatePromises = Object.values(previousUpdates).map(async (update) => {
                 const reportToUpdate = allVisitReports.find(r => r.id === update.reportId);
