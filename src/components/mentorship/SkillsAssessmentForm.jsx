@@ -9,7 +9,7 @@ import {
 } from '../CommonComponents';
 import { getAuth } from "firebase/auth";
 
-import { GenericFacilityForm, IMNCIFormFields, SaveStatusModal } from '../FacilityForms.jsx'; // <-- IMPORT SaveStatusModal
+import { GenericFacilityForm, IMNCIFormFields, SaveStatusModal } from '../FacilityForms.jsx'; 
 import { submitFacilityDataForApproval } from '../../data';
 
 // --- Import all IMNCI-specific logic and the renderer ---
@@ -112,21 +112,72 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     );
 
     useEffect(() => {
+        // Do not override if we are editing an existing draft/session
         if (existingSessionData) return;
+        
         const currentSessionDate = formData.session_date;
-        if (!currentSessionDate) return;
+        if (!currentSessionDate || !healthWorkerName) return;
 
-        const uniqueDates = [...new Set(
-            workerHistory.map(s => s.sessionDate || (s.effectiveDate ? new Date(s.effectiveDate.seconds * 1000).toISOString().split('T')[0] : ''))
-        )].filter(d => d).sort();
+        try {
+            let maxVisitNum = 0;
+            let matchingDateVisitNum = null;
 
-        if (uniqueDates.includes(currentSessionDate)) {
-            const index = uniqueDates.indexOf(currentSessionDate);
-            setCurrentVisitNumber(index + 1); 
-        } else {
-            setCurrentVisitNumber(uniqueDates.length + 1);
+            // 1. Ensure we are only looking at records for THIS specific worker
+            const validHistory = (workerHistory || []).filter(
+                s => s.healthWorkerName === healthWorkerName || s.healthWorkerName === undefined
+            );
+
+            // 2. Iterate through history to find the highest known visit and check for matching dates
+            validHistory.forEach(session => {
+                const vNum = parseInt(session.visitNumber, 10) || 0;
+                
+                // Track the absolute highest visit number
+                if (vNum > maxVisitNum) {
+                    maxVisitNum = vNum;
+                }
+
+                // Check if a session already occurred on the selected date
+                const sDate = session.sessionDate || 
+                    (session.effectiveDate && session.effectiveDate.seconds 
+                        ? new Date(session.effectiveDate.seconds * 1000).toISOString().split('T')[0] 
+                        : null);
+                
+                if (sDate === currentSessionDate && vNum > 0) {
+                    matchingDateVisitNum = vNum;
+                }
+            });
+
+            let newVisitNumber = 1;
+            const offlineKey = `offline_visit_max_${facility?.id}_${healthWorkerName.trim()}`;
+
+            // 3. Determine the correct visit number
+            if (matchingDateVisitNum !== null) {
+                // Same date as an existing session = same visit number
+                newVisitNumber = matchingDateVisitNum;
+            } else if (validHistory.length > 0) {
+                // New date with existing history = increment max visit
+                newVisitNumber = maxVisitNum + 1;
+            } else {
+                // 4. OFFLINE FALLBACK: If history is empty (due to network delay or offline app restart),
+                // rely on the local storage cache to prevent resetting to 1.
+                const savedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+                newVisitNumber = savedMax > 0 ? savedMax + 1 : 1;
+            }
+
+            setCurrentVisitNumber(newVisitNumber);
+
+            // 5. Always securely update the offline cache with the highest known visit number
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            const actualMaxToStore = Math.max(maxVisitNum, newVisitNumber, currentStoredMax);
+            
+            if (actualMaxToStore > currentStoredMax) {
+                localStorage.setItem(offlineKey, actualMaxToStore.toString());
+            }
+
+        } catch (error) {
+            console.error("Error calculating visit number:", error);
         }
-    }, [formData.session_date, workerHistory, existingSessionData]);
+    }, [formData.session_date, workerHistory, existingSessionData, healthWorkerName, facility?.id]);
     
     const [isFormFullyComplete, setIsFormFullyComplete] = useState(false);
 

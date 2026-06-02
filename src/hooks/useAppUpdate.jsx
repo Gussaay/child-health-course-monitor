@@ -100,7 +100,8 @@ export function useAppUpdate() {
                         const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
 
                         // 1. Check Native (Hard APK update requirement overrides OTA)
-                        if (serverBuild > currentBuild) {
+                        // ONLY force the prompt if it's strictly mandatory
+                        if (serverBuild > currentBuild && serverConfig.mandatory) {
                             setNativeUpdatePrompt(serverConfig);
                             showUpdateNotification("تحديث جديد للتطبيق", "يتوفر إصدار جديد. يرجى التحميل الآن.", 101);
                             return; 

@@ -34,7 +34,6 @@ const IMNCI_SKILL_GROUPS = {
     group3: { title: "Number of training sessions on Malnutrition signs Assessment", keys: ['skill_weight', 'skill_height', 'skill_muac', 'skill_wfh', 'skill_edema'], labels: ['Weight measurement training sessions', 'Height measurement training sessions', 'MUAC measurement training sessions', 'Z-Score measurement training sessions', 'Lower Limb Edema check training sessions'], color: '#f59e0b' }
 };
 
-// NEW: Added specific group definitions for EENC Visit Reports matrix
 const EENC_SKILL_GROUPS = {
     group1: { title: "Number of training sessions on Preparation & General Skills", keys: ['skill_record_form', 'skill_pre_handwash', 'skill_pre_equip'], labels: ['Recording form use', 'Hand washing', 'Equipment preparation'], color: '#3b82f6' },
     group2: { title: "Number of training sessions on Early Care & Cord Management", keys: ['skill_drying', 'skill_skin_to_skin', 'skill_cord_pulse_check', 'skill_clamp_placement'], labels: ['Drying', 'Skin-to-skin contact', 'Cord pulse check', 'Clamp placement'], color: '#10b981' },
@@ -45,7 +44,6 @@ const EENC_SKILLS_LABELS = {
     skill_pre_handwash: "Hand Washing", skill_pre_equip: "Equipment Preparation", skill_drying: "Drying", skill_skin_to_skin: "Skin-to-Skin Contact", skill_suction: "Suctioning", skill_cord_pulse_check: "Cord Pulse Check", skill_clamp_placement: "Clamp Placement", skill_transfer: "Baby Transfer", skill_airway: "Opening Airway", skill_ambubag_placement: "Ambu Bag Placement", skill_ambubag_use: "Ambu Bag Use", skill_ventilation_rate: "Ventilation Rate", skill_correction_steps: "Corrective Steps", skill_record_form: "Recording Form Use"
 };
 
-// --- Helpers ---
 const calculateAverage = (scores) => {
     if (!scores || !Array.isArray(scores)) return null;
     const validScores = scores.filter(s => isFinite(s) && !isNaN(s) && s !== null);
@@ -66,7 +64,6 @@ const MentorshipDashboard = ({
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
     const [activeImnciTab, setActiveImnciTab] = useState('skills'); 
     
-    // --- State for Admin custom date range ---
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
 
@@ -157,12 +154,10 @@ const MentorshipDashboard = ({
     const dynamicLocationLabel = dynamicLocationLevel === 'State' ? 'State' : (dynamicLocationLevel === 'Locality' ? 'Locality' : 'Facility & Date');
     const geographicLevelName = activeState ? 'Locality' : 'State';
 
-    // --- 1. DATA PROCESSING PIPELINE ---
     const visitReportStats = useMemo(() => {
         if (!visitReports) return null;
         let filtered = visitReports.filter(r => r.service === activeService);
         
-        // Flexible matching for states and localities to prevent 0 data drops
         if (activeState) {
             const arState = STATE_LOCALITIES?.[activeState]?.ar;
             filtered = filtered.filter(r => r.state === activeState || r.state === arState);
@@ -178,7 +173,6 @@ const MentorshipDashboard = ({
         if (activeFacilityId) filtered = filtered.filter(r => r.facilityId === activeFacilityId);
         if (activeProject) filtered = filtered.filter(r => r.project === activeProject);
         
-        // Apply admin dates
         filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, dateFilter, customStartDate, customEndDate));
 
         const totalVisits = filtered.length;
@@ -207,7 +201,6 @@ const MentorshipDashboard = ({
         
         filtered.forEach(r => {
             const data = r.fullData || r; 
-            // Count trained skills globally for both IMNCI and EENC
             if (data.trained_skills) {
                 Object.values(data.trained_skills).forEach(val => { if (val === true || val === 'yes') totalSkillsTrained++; });
             }
@@ -884,6 +877,7 @@ const MentorshipDashboard = ({
                     <ProviderSkillsTab 
                         activeService={activeService} overallKpis={overallKpis} chartData={activeService === 'IMNCI' ? imnciChartData : eencChartData}
                         geographicKpis={geographicKpis} kpisByWorkerType={kpisByWorkerType} imnciSummaryDefs={imnciSummaryDefs} eencSummaryDefs={eencSummaryDefs} scopeTitle={scopeTitle} geographicLevelName={geographicLevelName}
+                        filteredSubmissions={filteredSubmissions}
                     />
                 )}
 

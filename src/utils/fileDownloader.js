@@ -1,4 +1,5 @@
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
+// src/utils/fileDownloader.js
+import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
@@ -36,10 +37,10 @@ export const downloadAndOpenFile = async (url, customFileName = null, options = 
 
         const filePath = isSystemFile ? fileName : `NCHP_Downloads/${fileName}`;
 
-        // SAFETY FIX: Wrap listener in try/catch so it doesn't crash the whole download
+        // SAFETY FIX: Attach progress listener to the Filesystem plugin
         if (onProgress) {
             try {
-                progressListener = await CapacitorHttp.addListener('progress', (progressData) => {
+                progressListener = await Filesystem.addListener('progress', (progressData) => {
                     if (progressData && progressData.contentLength > 0) {
                         const percent = (progressData.bytes / progressData.contentLength) * 100;
                         onProgress(percent);
@@ -50,10 +51,11 @@ export const downloadAndOpenFile = async (url, customFileName = null, options = 
             }
         }
 
-        await CapacitorHttp.downloadFile({
+        // Execute download using Filesystem instead of CapacitorHttp
+        await Filesystem.downloadFile({
             url: url,
-            filePath: filePath,
-            fileDirectory: targetDirectory,
+            path: filePath,
+            directory: targetDirectory,
             progress: !!onProgress 
         });
 

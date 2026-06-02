@@ -33,7 +33,6 @@ ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler 
 );
 
-// --- Dictionaries for English Translations ---
 export const IMNCI_ENGLISH_LABELS = {
     'تقييم مهارات التقييم والتصنيف': 'Assessment & Classification Skills',
     'القرار النهائي': 'Final Decision',
@@ -185,7 +184,6 @@ export const EENC_MOTHER_SURVEY_ITEMS_EN = [
     ]}
 ];
 
-// Helper functions locally scoped
 const calculateAverage = (scores) => {
     if (!scores || !Array.isArray(scores)) return null;
     const validScores = scores.filter(s => isFinite(s) && !isNaN(s) && s !== null);
@@ -194,7 +192,6 @@ const calculateAverage = (scores) => {
     return sum / validScores.length;
 };
 
-// --- Shared UI Components ---
 export const CopyImageButton = ({ targetRef, title }) => {
     const { t } = useTranslation();
     const [isCopying, setIsCopying] = useState(false);
@@ -255,13 +252,18 @@ export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => {
     );
 };
 
-export const KpiGridItem = ({ title, scoreValue }) => {
+export const KpiGridItem = ({ title, scoreValue, numerator, denominator }) => {
     const { t } = useTranslation();
     const itemRef = useRef(null);
     return (
         <div ref={itemRef} className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-black text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group relative">
             <h5 className="text-xs font-bold text-slate-700 mb-2 leading-snug group-hover:text-sky-800 break-words" title={t(title)}>{t(title)}</h5>
-            <div className="mt-auto bg-white inline-block mx-auto px-3 py-1 rounded-lg border border-black shadow-sm"><ScoreText value={scoreValue} /></div>
+            <div className="mt-auto bg-white inline-flex justify-center items-center gap-2 mx-auto px-3 py-1 rounded-lg border border-black shadow-sm">
+                {numerator !== undefined && denominator !== undefined && (
+                    <span className="text-xs font-bold text-slate-500">{numerator}/{denominator}</span>
+                )}
+                <ScoreText value={scoreValue} />
+            </div>
         </div>
     );
 };
@@ -278,7 +280,7 @@ export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
                 <div className="absolute top-4 right-4"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             </div>
             <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 flex-grow`}>
-                {kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}
+                {kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} numerator={kpi.numerator} denominator={kpi.denominator} />))}
             </div>
         </div>
     );
@@ -298,7 +300,12 @@ export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
                 {kpis.map(kpi => (
                     <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-black shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
                         <h5 className={`text-xs font-bold text-slate-700 ${language === 'ar' ? 'text-right pl-2' : 'text-left pr-2'} group-hover:text-sky-800`}>{t(kpi.title)}</h5>
-                        <div className="bg-white px-2 sm:px-3 py-1 rounded-lg shadow-sm border border-black whitespace-nowrap"><ScoreText value={kpi.scoreValue} /></div>
+                        <div className="bg-white px-2 sm:px-3 py-1 rounded-lg shadow-sm border border-black whitespace-nowrap flex items-center gap-2">
+                            {kpi.numerator !== undefined && kpi.denominator !== undefined && (
+                                <span className="text-xs font-bold text-slate-500">{kpi.numerator}/{kpi.denominator}</span>
+                            )}
+                            <ScoreText value={kpi.scoreValue} />
+                        </div>
                     </div>
                 ))}
             </div>
@@ -347,10 +354,10 @@ export const getSharedChartOptions = (language) => {
                 beginAtZero: true, 
                 max: 100, 
                 grid: { color: '#e2e8f0', drawBorder: false }, 
-                ticks: { callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
+                ticks: { stepSize: 10, autoSkip: false, callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
             }, 
             x: { 
-                reverse: isAr, // RTL Magic: Reverses the X-axis direction for Arabic
+                reverse: isAr, 
                 grid: { display: false, drawBorder: false }, 
                 ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
             } 
@@ -370,8 +377,8 @@ export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
     
     const options = {
         responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' }, interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, bodyFont: { size: 12, family: "'Inter', sans-serif" }, padding: 12, cornerRadius: 8, boxPadding: 6, callbacks: { label: (context) => ` ${context.dataset.label}: ${context.parsed.y}` } } },
-        scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } }, x: { reverse: isAr, grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } } }
+        plugins: { legend: { display: kpiKeys.length > 1, position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, bodyFont: { size: 12, family: "'Inter', sans-serif" }, padding: 12, cornerRadius: 8, boxPadding: 6, callbacks: { label: (context) => ` ${context.dataset.label}: ${context.parsed.y}` } } },
+        scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, autoSkip: false, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } }, x: { reverse: isAr, grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } } }
     };
 
     const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
@@ -384,16 +391,161 @@ export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
     );
 };
 
-export const KpiLineChart = ({ title, chartData, kpiKeys }) => {
+export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNumerator, totalDenominator, v1Numerator, v1Denominator, v4Numerator, v4Denominator, filteredSubmissions }) => {
     const { t, language } = useTranslation();
     const cardRef = useRef(null);
+    
     const colors = { 'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 'Weight': '#06b6d4', 'Temp': '#3b82f6', 'Height': '#8b5cf6', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316', 'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626', 'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c', 'DangerSigns': '#f97316', 'Malnutrition Assessment': '#0284c7', 'Measurement Skills': '#8b5cf6', 'Immunization': '#10b981', 'Vitamin Assessment': '#f59e0b', 'Malaria Coartem': '#d946ef', 'Return Immediately': '#ef4444', 'Return Followup': '#3b82f6', 'Record Signs': '#06b6d4', 'Record Classifications': '#3b82f6', 'Record Treatments': '#8b5cf6', 'Preparation': '#10b981', 'Drying': '#3b82f6', 'Breathing Mgmt': '#f59e0b', 'Resuscitation': '#ef4444', 'Hand Washing (1st)': '#0d9488', 'Hand Washing (2nd)': '#14b8a6', 'Sterile Gloves': '#2dd4bf', 'Towels Ready': '#7c3aed', 'Resus Equip Ready': '#8b5cf6', 'Ambu Check': '#a78bfa', 'Drying < 5s': '#ea580c', 'Skin-to-Skin': '#f97316', 'Dry Towel/Hat': '#fb923c', 'Hygienic Check': '#be123c', 'Delayed Clamp': '#e11d48', 'Correct Clamp': '#f43f5e', 'Early BF Advice': '#d946ef', 'Head Pos': '#b91c1c', 'Mask Seal': '#dc2626', 'Chest Rise': '#ef4444', 'Rate 30-50': '#f87171', 'Imm. Skin-to-Skin': '#f97316', '90min Skin-to-Skin': '#fdba74', 'BF 1st Hour': '#ec4899', 'Other Fluids': '#f43f5e', 'Bottle Feeding': '#be123c', 'Vitamin K': '#8b5cf6', 'Eye Ointment': '#a78bfa', 'Cord Substance': '#d946ef', 'Skin Oiling': '#eab308', 'Bathing < 6hrs': '#f59e0b', 'Polio Vaccine': '#10b981', 'BCG Vaccine': '#34d399', 'Weight Measured': '#06b6d4', 'Temp Measured': '#22d3ee', 'Civil Reg': '#3b82f6', 'Discharge Card': '#6366f1', 'M: Knows Meds': '#4f46e5', 'M: Knows ORS': '#3b82f6', 'M: Knows Tx': '#0ea5e9', 'M: Knows 4 Rules': '#06b6d4', 'M: Knows Return': '#14b8a6', 'M: Knows Fluids': '#10b981', 'M: Time Spent': '#f59e0b', 'M: Assess Method': '#f97316', 'M: Tx Given': '#ef4444', 'M: Comm Style': '#ec4899', 'M: What Learned': '#d946ef', 'M: Drug Avail': '#8b5cf6' };
     const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
+
+    const customOptions = {
+        ...getSharedChartOptions(language),
+        plugins: {
+            ...getSharedChartOptions(language).plugins,
+            legend: {
+                ...getSharedChartOptions(language).plugins.legend,
+                display: kpiKeys.length > 1, 
+            },
+            tooltip: {
+                ...getSharedChartOptions(language).plugins.tooltip,
+                callbacks: {
+                    label: (context) => {
+                        const visitName = context.label;
+                        const visitNumMatch = visitName.match(/\d+/);
+                        const visitNum = visitNumMatch ? parseInt(visitNumMatch[0]) : null;
+                        const datasetIndex = context.datasetIndex;
+                        const kpiDef = kpiKeys[datasetIndex];
+                        
+                        let lines = [` ${context.dataset.label}: ${context.parsed.y}%`];
+                        
+                        if (filteredSubmissions && visitNum !== null) {
+                            const targetSubs = filteredSubmissions.filter(s => parseInt(s.visitNumber) === visitNum);
+                            let yes = 0, total = 0;
+                            const failingStates = new Set();
+                            
+                            targetSubs.forEach(sub => {
+                                if (kpiDef.compositeKey) {
+                                    const s = sub.scores || {};
+                                    if (s[kpiDef.compositeKey.max] > 0) {
+                                        yes += s[kpiDef.compositeKey.score];
+                                        total += s[kpiDef.compositeKey.max];
+                                        if (s[kpiDef.compositeKey.score] < s[kpiDef.compositeKey.max]) {
+                                            failingStates.add(sub.state || 'Unknown');
+                                        }
+                                    }
+                                } else if (kpiDef.rawKeys) {
+                                    const as = sub.fullData?.assessmentSkills || {};
+                                    const ts = sub.fullData?.treatmentSkills || {};
+                                    const rs = sub.fullData?.recording_skills || sub.fullData?.recordingSkills || {};
+                                    const eenc = sub.fullData?.skills || {};
+                                    const allSkills = { ...as, ...ts, ...rs, ...eenc };
+                                    
+                                    kpiDef.rawKeys.forEach(k => {
+                                         const val = allSkills[k];
+                                         if (val === 'yes' || val === 'correct' || val === true) {
+                                             yes++; total++;
+                                         } else if (val === 'no' || val === 'incorrect' || val === false || val === 'partial') {
+                                             total++;
+                                             failingStates.add(sub.state || 'Unknown');
+                                         }
+                                    });
+                                }
+                            });
+                            
+                            if (total > 0) {
+                                lines[0] += ` (${Math.round(yes)}/${Math.round(total)})`;
+                                if (failingStates.size > 0) {
+                                    lines.push(` Needs Improvement: ${Array.from(failingStates).join(', ')}`);
+                                }
+                            }
+                        }
+                        return lines;
+                    }
+                }
+            }
+        }
+    };
+
+    let visit1Value = null;
+    let visit4Value = null;
+    let avgValue = null;
+    
+    if (chartData && chartData.length > 0 && kpiKeys && kpiKeys.length > 0) {
+        const getAvgForVisit = (vNum) => {
+            const vData = chartData.find(d => d.name === `Visit ${vNum}` || d.name === t(`Visit ${vNum}`) || d.visitNumber === vNum);
+            if (!vData) return null;
+            const vals = kpiKeys.map(k => vData[k.key]).filter(val => val !== undefined && val !== null);
+            return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+        };
+
+        visit1Value = getAvgForVisit(1);
+        visit4Value = getAvgForVisit(4);
+        
+        if (overallScore !== undefined && overallScore !== null) {
+            avgValue = overallScore <= 1.0 ? overallScore * 100 : overallScore;
+        } else {
+            let totalSum = 0;
+            let totalCount = 0;
+            chartData.forEach(d => {
+                kpiKeys.forEach(k => {
+                    if (d[k.key] !== undefined && d[k.key] !== null) {
+                        totalSum += d[k.key];
+                        totalCount++;
+                    }
+                });
+            });
+            if (totalCount > 0) {
+                avgValue = totalSum / totalCount;
+            }
+        }
+    }
+
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
-            <div className="relative flex-grow min-h-[250px]" dir="ltr">{chartData.length > 0 ? <Line options={getSharedChartOptions(language)} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
+            
+            {chartData.length > 0 && (
+                <div className="flex justify-between items-center mb-6 px-2 sm:px-6">
+                    <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 1')}</span>
+                        <div className="border border-slate-300 bg-white rounded-lg px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
+                            {visit1Value !== null ? `${Math.round(visit1Value)}%` : '-'}
+                            <span className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                {v1Numerator !== undefined && v1Denominator !== undefined ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Average')}</span>
+                        <div className="border border-slate-800 bg-white rounded-xl px-10 py-3 shadow-sm flex flex-col items-center justify-center">
+                            <span className={`font-extrabold text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
+                                {avgValue !== null ? `${Math.round(avgValue)}%` : '-'}
+                            </span>
+                            {totalNumerator !== undefined && totalDenominator !== undefined && totalDenominator > 0 && (
+                                <span className="text-xs font-bold text-slate-500 mt-0.5">
+                                    {totalNumerator} / {totalDenominator}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 4')}</span>
+                        <div className="border border-slate-300 bg-white rounded-lg px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
+                            {visit4Value !== null ? `${Math.round(visit4Value)}%` : '-'}
+                            <span className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                {v4Numerator !== undefined && v4Denominator !== undefined ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="relative flex-grow min-h-[250px]" dir="ltr">
+                {chartData.length > 0 ? <Line options={customOptions} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}
+            </div>
         </div>
     );
 };
@@ -406,12 +558,29 @@ export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) 
     const colors = { 'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 'Pallor': '#78716c', 'Anemia Mgmt': '#dc2626', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316', 'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626', 'Immunization': '#10b981', 'Vitamin Assessment': '#f59e0b', 'Malaria Coartem': '#d946ef', 'Return Immediately': '#ef4444', 'Return Followup': '#3b82f6', 'Record Signs': '#06b6d4', 'Record Classifications': '#3b82f6', 'Record Treatments': '#8b5cf6' };
     const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
 
+    const customOptions = {
+        ...getSharedChartOptions(language),
+        plugins: {
+            ...getSharedChartOptions(language).plugins,
+            legend: {
+                ...getSharedChartOptions(language).plugins.legend,
+                display: kpiKeys.length > 1, 
+            }
+        }
+    };
+
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 flex flex-col h-full relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words" title={t(title)}>{t(title)}</h4>
-            <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 mb-4 sm:mb-6`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
-            <div className="relative flex-grow min-h-[200px]" dir="ltr">{chartData.length > 0 ? <Line options={getSharedChartOptions(language)} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
+            
+            <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 mb-4 sm:mb-6`}>
+                {kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} numerator={kpi.numerator} denominator={kpi.denominator} />))}
+            </div>
+            
+            <div className="relative flex-grow min-h-[200px]" dir="ltr">
+                {chartData.length > 0 ? <Line options={customOptions} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}
+            </div>
         </div>
     );
 };
@@ -434,7 +603,7 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     const options = { 
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' },
         plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif" }, bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' }, padding: 10, cornerRadius: 8, callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}${dataKey === 'count' ? '' : '%'}` } } }, 
-        scales: { x: { reverse: isAr, beginAtZero: true, max: dataKey === 'count' ? undefined : 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } }, y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { autoSkip: false, color: '#334155', font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' } } } } 
+        scales: { x: { reverse: isAr, beginAtZero: true, max: dataKey === 'count' ? undefined : 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { stepSize: dataKey === 'count' ? undefined : 10, autoSkip: false, callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } }, y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { autoSkip: false, color: '#334155', font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' } } } } 
     };
     const chartHeight = Math.max(300, chartData.length * 40); 
     
@@ -447,7 +616,6 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     );
 };
 
-// --- Tables ---
 export const CompactSkillRow = ({ label, stats }) => {
     const { language } = useTranslation();
     const yes = stats?.yes || 0; const no = stats?.no || 0; const total = yes + no; const percentage = total > 0 ? (yes / total) : null;
@@ -493,7 +661,6 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                         else if (group.group.includes('الخطورة')) groupAggregateScore = overallKpis.avgDangerSigns;
                         else if (group.sectionKey === 'recording_skills') groupAggregateScore = calculateAverage([overallKpis.avgRecordSigns, overallKpis.avgRecordClass, overallKpis.avgRecordTreat]);
 
-                        // Fetching correctly through the dictionary and fallback.
                         const groupName = t(IMNCI_ENGLISH_LABELS[group.group] || group.group);
 
                         return (
@@ -742,7 +909,6 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
     const handleCellClick = (mentorName, type, data, colTitle) => {
         if (!data || data.length === 0) return;
 
-        // Sort data by date from latest to earliest
         const sortedData = [...data].sort((a, b) => {
             const dateA = new Date(a.date || a.sessionDate || a.visitDate || 0).getTime();
             const dateB = new Date(b.date || b.sessionDate || b.visitDate || 0).getTime();
@@ -773,7 +939,6 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                 if (sub.staff) {
                     m.healthWorkersMap.set(sub.staff, { staff: sub.staff, facility: sub.facility || 'Unknown' });
                 }
-                // Combine visits to the same facility on the same date into ONE visit record
                 if (sub.facilityId && sub.date) {
                     const visitKey = `${sub.facilityId}_${sub.date}`;
                     if (!m.visitsMap.has(visitKey)) {
