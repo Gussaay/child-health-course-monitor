@@ -14,10 +14,17 @@ const getLocalityName = (locKey) => {
     return locKey;
 };
 
-// Robust Date Extractors
+// Robust Date Extractors (UPGRADED)
 const getValidDate = (val) => {
     if (!val) return null;
+    // 1. If it's a native Firebase Timestamp with the prototype still attached
     if (val.toDate && typeof val.toDate === 'function') return val.toDate();
+    // 2. CRITICAL FIX: If it's a raw/serialized Firebase Timestamp object
+    if (typeof val === 'object' && val !== null) {
+        if ('seconds' in val) return new Date(val.seconds * 1000);
+        if ('_seconds' in val) return new Date(val._seconds * 1000);
+    }
+    // 3. Fallback for ISO strings or epoch numbers
     const d = new Date(val);
     return isNaN(d.getTime()) ? null : d;
 };
@@ -112,20 +119,26 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
 
         // Helper: Verify if facility was updated AFTER initial creation safely
         const isUpdatedAfterCreation = (f) => {
+            // 1. Unambiguous structural markers of an update
+            if (f.revision && f.revision > 1) return true;
+            if (Array.isArray(f.history) && f.history.length > 0) return true;
+            if (typeof f.updated_by === 'string' && f.updated_by.toLowerCase().includes('cleaned by')) return true;
+
             const uDate = getUpdateDate(f);
             const cDate = getCreationDate(f);
             
             const updatedMs = uDate ? uDate.getTime() : 0;
             const createdMs = cDate ? cDate.getTime() : 0;
 
+            // 2. Timestamp comparisons
             if (createdMs > 0 && updatedMs > 0) {
-                if ((updatedMs - createdMs) > 60000) return true;
-                if (f.revision > 1 || (Array.isArray(f.history) && f.history.length > 0)) return true;
-                return false;
+                // If updated at least 10 seconds after creation, it's a confirmed update
+                if ((updatedMs - createdMs) > 10000) return true;
+                return false; 
             }
 
+            // 3. Fallback: If we somehow have an update date but missing creation date
             if (createdMs === 0 && updatedMs > 0) return true;
-            if (f.updated_by && f.updated_by !== 'System' && f.updated_by !== 'Unknown Uploader') return true;
 
             return false;
         };

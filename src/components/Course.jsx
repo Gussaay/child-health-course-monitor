@@ -7,8 +7,8 @@ import {
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
-import { doc, updateDoc, collection, getDocs, getDoc } from 'firebase/firestore'; // <-- ADDED collection, getDocs, getDoc
-import { getFunctions, httpsCallable } from 'firebase/functions'; // <-- ADDED for FCM
+import { doc, updateDoc, collection, getDocs } from 'firebase/firestore'; 
+import { getFunctions, httpsCallable } from 'firebase/functions'; 
 
 import { 
     getCourseById, 
@@ -40,11 +40,9 @@ import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
 import { Capacitor } from '@capacitor/core';
 
-// NEW IMPORTS FOR MIGRATED DASHBOARDS
 import SudanMap from '../SudanMap';
 import CompiledReportView from './CompiledReportView.jsx';
 
-// Certificate generator imports (Moved from internal definitions)
 import { 
     CertificateVerificationView, 
     PublicCertificateDownloadView, 
@@ -52,9 +50,306 @@ import {
     CertificateApprovalsView 
 } from './CertificateGenerator';
 
-// Lazy load components that are not always visible to speed up initial load
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
 const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
+
+
+// --- BULLETPROOF FACILITATOR ID & SYNC MIGRATION MODAL ---
+export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
+    const [loading, setLoading] = useState(false);
+    const [progressText, setProgressText] = useState('');
+
+    const [allFacilitators, setAllFacilitators] = useState([]);
+    const [rawCourses, setRawCourses] = useState([]);
+
+    const [autoMappings, setAutoMappings] = useState({});
+    const [manualMappings, setManualMappings] = useState({});
+    const [unmatchedList, setUnmatchedList] = useState([]);
+    const [outdatedCoursesCount, setOutdatedCoursesCount] = useState(0);
+
+    useEffect(() => {
+        if (isOpen) {
+            analyzeData();
+        } else {
+            setAutoMappings({});
+            setManualMappings({});
+            setUnmatchedList([]);
+            setAllFacilitators([]);
+            setRawCourses([]);
+            setOutdatedCoursesCount(0);
+        }
+    }, [isOpen]);
+
+    const analyzeData = async () => {
+        setLoading(true);
+        setProgressText("Fetching database records...");
+        try {
+            const facSnap = await getDocs(collection(db, "facilitators"));
+            const facs = [];
+            facSnap.forEach(d => facs.push({ id: d.id, ...d.data() }));
+            
+            const crsSnap = await getDocs(collection(db, "courses"));
+            const crs = [];
+            crsSnap.forEach(d => crs.push({ id: d.id, ...d.data() }));
+            
+            setAllFacilitators(facs.sort((a,b) => (a.name || '').localeCompare(b.name || '')));
+            setRawCourses(crs);
+
+            setProgressText("Analyzing names and checking for outdated records...");
+
+            const uniqueNamesInCourses = new Set();
+            let outdatedSyncNeeded = 0;
+
+            crs.forEach(course => {
+                let hasOutdated = false;
+                const checkOutdated = (id, str) => {
+                    if (id && str) {
+                        const f = facs.find(x => x.id === id);
+                        if (f && f.name !== str) return true;
+                    }
+                    return false;
+                };
+
+                if (course.director && !course.directorId) uniqueNamesInCourses.add(course.director);
+                if (course.clinical_instructor && !course.clinical_instructorId) uniqueNamesInCourses.add(course.clinical_instructor);
+                
+                if (Array.isArray(course.facilitators) && (!course.facilitatorIds || course.facilitatorIds.length === 0)) {
+                    course.facilitators.forEach(f => uniqueNamesInCourses.add(f));
+                }
+
+                if (Array.isArray(course.facilitatorAssignments)) {
+                    course.facilitatorAssignments.forEach(a => {
+                        if (a.name && !a.facilitatorId) uniqueNamesInCourses.add(a.name);
+                        if (checkOutdated(a.facilitatorId, a.name)) hasOutdated = true;
+                    });
+                }
+                
+                if (checkOutdated(course.directorId, course.director)) hasOutdated = true;
+                if (checkOutdated(course.clinical_instructorId, course.clinical_instructor)) hasOutdated = true;
+                
+                if (hasOutdated) outdatedSyncNeeded++;
+            });
+
+            setOutdatedCoursesCount(outdatedSyncNeeded);
+
+            const autoMap = {};
+            const unmatched = [];
+
+            const normalize = str => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            uniqueNamesInCourses.forEach(rawName => {
+                if (!rawName) return;
+                const clean = rawName.toLowerCase().trim();
+                const norm = normalize(rawName);
+                
+                let match = facs.find(f => f.name?.toLowerCase().trim() === clean || f.arabicName?.trim() === clean);
+                
+                if (!match) {
+                    match = facs.find(f => {
+                        const fNameNorm = normalize(f.name || '');
+                        if (fNameNorm.length < 4 || norm.length < 4) return false;
+                        return fNameNorm === norm || fNameNorm.includes(norm) || norm.includes(fNameNorm);
+                    });
+                }
+
+                if (match) {
+                    autoMap[rawName] = { id: match.id, name: match.name };
+                } else {
+                    unmatched.push(rawName);
+                }
+            });
+
+            setAutoMappings(autoMap);
+            setUnmatchedList(unmatched);
+
+        } catch (error) {
+            alert("Error analyzing data: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleManualMapChange = (unmatchedName, facId) => {
+        const fac = allFacilitators.find(f => f.id === facId);
+        if (fac) {
+            setManualMappings(prev => ({ ...prev, [unmatchedName]: { id: fac.id, name: fac.name } }));
+        } else {
+            setManualMappings(prev => {
+                const next = {...prev};
+                delete next[unmatchedName];
+                return next;
+            });
+        }
+    };
+
+    const applyMigration = async () => {
+        setLoading(true);
+        const combinedMapping = { ...autoMappings, ...manualMappings };
+        
+        try {
+            let updatedCount = 0;
+            
+            for (let i = 0; i < rawCourses.length; i++) {
+                const course = rawCourses[i];
+                setProgressText(`Updating course ${i + 1} of ${rawCourses.length}...`);
+                
+                let needsUpdate = false;
+                let updates = {};
+
+                const getMatchedFac = (n) => n ? combinedMapping[n] : null;
+                const getFacById = (id) => allFacilitators.find(f => f.id === id);
+
+                // BULLETPROOF LOGIC: Manual maps override everything.
+                
+                // 1. Director
+                const mappedDir = getMatchedFac(course.director);
+                if (mappedDir) {
+                    if (course.directorId !== mappedDir.id || course.director !== mappedDir.name) {
+                        updates.directorId = mappedDir.id; updates.director = mappedDir.name; needsUpdate = true;
+                    }
+                } else if (course.directorId) {
+                    const f = getFacById(course.directorId);
+                    if (f && f.name !== course.director) { updates.director = f.name; needsUpdate = true; }
+                }
+
+                // 2. Clinical
+                const mappedClin = getMatchedFac(course.clinical_instructor);
+                if (mappedClin) {
+                    if (course.clinical_instructorId !== mappedClin.id || course.clinical_instructor !== mappedClin.name) {
+                        updates.clinical_instructorId = mappedClin.id; updates.clinical_instructor = mappedClin.name; needsUpdate = true;
+                    }
+                } else if (course.clinical_instructorId) {
+                    const f = getFacById(course.clinical_instructorId);
+                    if (f && f.name !== course.clinical_instructor) { updates.clinical_instructor = f.name; needsUpdate = true; }
+                }
+
+                // 3. Assignments
+                if (Array.isArray(course.facilitatorAssignments)) {
+                    let changed = false;
+                    const newAssignments = course.facilitatorAssignments.map(ass => {
+                        const m = getMatchedFac(ass.name);
+                        if (m) {
+                            if (ass.facilitatorId !== m.id || ass.name !== m.name) {
+                                changed = true; return { ...ass, facilitatorId: m.id, name: m.name };
+                            }
+                        } else if (ass.facilitatorId) {
+                            const f = getFacById(ass.facilitatorId);
+                            if (f && f.name !== ass.name) { changed = true; return { ...ass, name: f.name }; }
+                        }
+                        return ass;
+                    });
+                    
+                    if (changed) { 
+                        updates.facilitatorAssignments = newAssignments; 
+                        updates.facilitatorIds = newAssignments.map(a => a.facilitatorId).filter(Boolean);
+                        updates.facilitators = newAssignments.map(a => a.name).filter(Boolean);
+                        needsUpdate = true;
+                    }
+                } else if (Array.isArray(course.facilitators)) {
+                    let newNames = [];
+                    let newIds = [];
+                    let changed = false;
+                    course.facilitators.forEach(fName => {
+                        const m = getMatchedFac(fName);
+                        if (m) { newIds.push(m.id); newNames.push(m.name); changed = true; }
+                        else { newNames.push(fName); } 
+                    });
+                    if (changed) {
+                        updates.facilitators = newNames;
+                        updates.facilitatorIds = newIds;
+                        needsUpdate = true;
+                    }
+                }
+
+                if (needsUpdate) {
+                    await updateDoc(doc(db, "courses", course.id), updates);
+                    updatedCount++;
+                }
+            }
+
+            alert(`Success! Updated ${updatedCount} courses. Both IDs and Names have been permanently synchronized.`);
+            if (onComplete) onComplete();
+            onClose();
+
+        } catch (err) {
+            alert("Error applying migration: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={loading ? null : onClose} title="Total Synchronization Tool" size="2xl">
+            <CardBody className="p-6">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center p-10">
+                        <Spinner size="lg" />
+                        <p className="mt-4 text-gray-600 font-medium">{progressText}</p>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                            <h4 className="font-bold text-blue-800 text-lg">Analysis Complete</h4>
+                            <ul className="list-disc pl-5 mt-2 text-blue-700">
+                                <li>Found <strong>{outdatedCoursesCount} courses</strong> where the stored name is outdated and needs syncing with the current ID.</li>
+                                <li>Found <strong>{Object.keys(autoMappings).length}</strong> historical names missing an ID that can be auto-linked.</li>
+                            </ul>
+                        </div>
+
+                        {unmatchedList.length > 0 ? (
+                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mt-4 max-h-96 overflow-y-auto">
+                                <h4 className="font-bold text-yellow-800 mb-2">Unmatched Names (Manual Mapping Required)</h4>
+                                <p className="text-sm text-yellow-700 mb-4">Because spelling or spacing differs (e.g., "Alaeldein" vs "Alaeldin"), the system skipped these names to be safe. <strong>You must select the correct facilitator below for their dashboard scores to update.</strong></p>
+                                
+                                <div className="border border-yellow-300 rounded overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-yellow-100 text-yellow-800 border-b border-yellow-300">
+                                            <tr>
+                                                <th className="p-2 w-1/2">Historical Name (Old Course)</th>
+                                                <th className="p-2 w-1/2">Map to Current Facilitator</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-yellow-200 bg-white">
+                                            {unmatchedList.map(uName => (
+                                                <tr key={uName} className="hover:bg-yellow-50">
+                                                    <td className="p-2 font-medium text-gray-800">{uName}</td>
+                                                    <td className="p-2">
+                                                        <Select 
+                                                            value={manualMappings[uName]?.id || ''} 
+                                                            onChange={(e) => handleManualMapChange(uName, e.target.value)}
+                                                            className="w-full py-1 text-sm border-yellow-300"
+                                                        >
+                                                            <option value="">-- Leave Unmapped --</option>
+                                                            {allFacilitators.map(f => (
+                                                                <option key={f.id} value={f.id}>{f.name} {f.arabicName ? `(${f.arabicName})` : ''}</option>
+                                                            ))}
+                                                        </Select>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-green-50 border border-green-200 p-4 rounded-lg text-green-800 font-medium">
+                                <CheckCircle className="inline mr-2" />
+                                All names found perfectly matched current facilitators!
+                            </div>
+                        )}
+                    </div>
+                )}
+            </CardBody>
+            <CardFooter className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+                <Button variant="success" onClick={applyMigration} disabled={loading}>
+                    Confirm & Sync All Records
+                </Button>
+            </CardFooter>
+        </Modal>
+    );
+}
+// --- END ADVANCED FACILITATOR ID MIGRATION MODAL ---
 
 
 // Helper functions 
@@ -72,30 +367,26 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     const [facilityName, setFacilityName] = useState(''); 
     
     const [facilities, setFacilities] = useState([]);
-    const [selectedFacility, setSelectedFacility] = useState(null); // <-- Added to track full facility object
+    const [selectedFacility, setSelectedFacility] = useState(null);
     const [loadingFacilities, setLoadingFacilities] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [isFacilitySelectorOpen, setIsFacilitySelectorOpen] = useState(false);
 
-    // --- Dynamic Job Titles based on course type ---
     const jobOptions = useMemo(() => {
         if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
         if (course.course_type === 'EENC') return JOB_TITLES_EENC;
         if (course.course_type === 'Small & Sick Newborn' || course.course_type === 'SSNC') return JOB_TITLES_SSNC;
         if (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') 
             return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
-        return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون", "أخرى"]; // Default
+        return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون", "أخرى"]; 
     }, [course.course_type]);
 
     useEffect(() => {
         if (course.state && course.locality && isOpen) {
             setLoadingFacilities(true);
             listHealthFacilities({ state: course.state, locality: course.locality }, 'server')
-                .then(data => {
-                    // Keep the full facility objects so we can update them later
-                    setFacilities(data);
-                })
+                .then(data => setFacilities(data))
                 .catch(err => console.error("Failed to load facilities", err))
                 .finally(() => setLoadingFacilities(false));
         }
@@ -122,7 +413,6 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                 facilityId: facilityId 
             };
 
-            // --- NEW: Dynamic Facility Update Payload for Public Registration ---
             const isImnci = course.course_type === 'IMNCI';
             const isEenc = course.course_type === 'EENC';
             const isEtat = course.course_type === 'ETAT';
@@ -132,7 +422,6 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
             let facilityUpdatePayload = null;
 
             if ((isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
-                // Determine the correct staff array
                 const staffField = isEtat ? 'critical_staff' 
                                  : (isSsnc || isIpc) ? 'neonatal_staff' 
                                  : isEenc ? 'eenc_staff' 
@@ -158,7 +447,6 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                 if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; 
                 else updatedStaffList.push(staffMemberData);
 
-                // IMNCI specific base payload
                 const baseFacilityPayload = isImnci ? {
                     'هل_المؤسسة_تعمل': 'Yes', 
                     'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes'
@@ -173,7 +461,6 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                 };
             }
 
-            // Submit both participant and the dynamic facility payload
             await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdatePayload, 'Public Form');
             
             if (onSuccess) onSuccess(participantData);
@@ -188,7 +475,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     const handleFacilitySelect = (fac) => {
         setFacilityId(fac.id);
         setFacilityName(fac['اسم_المؤسسة'] || '');
-        setSelectedFacility(fac); // Save full object for the payload
+        setSelectedFacility(fac); 
         setIsFacilitySelectorOpen(false);
     };
 
@@ -388,11 +675,7 @@ export function CoursesTable({
     const [reportModalCourse, setReportModalCourse] = useState(null);
      
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
-
-    // Accordion State for Mobile View
     const [expandedId, setExpandedId] = useState(null);
-
-    // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
@@ -490,7 +773,6 @@ export function CoursesTable({
 
                             return (
                                 <tr key={c.id} className={`hover:bg-blue-50/50 transition-colors group ${isPendingDeletion ? 'bg-red-50' : ''}`}>
-                                    {/* Location & Details */}
                                     <td className="p-3 align-middle border-b border-slate-200">
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
@@ -505,7 +787,6 @@ export function CoursesTable({
                                         </div>
                                     </td>
 
-                                    {/* Status */}
                                     <td className="p-3 align-middle border-b border-slate-200">
                                         {c.approvalStatus === 'pending' ? (
                                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 border border-yellow-200">Pending</span>
@@ -518,7 +799,6 @@ export function CoursesTable({
                                         )}
                                     </td>
                                     
-                                    {/* Activity (Compact) */}
                                     <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
                                         <div>{createdDate}</div>
                                         <div className="truncate max-w-[120px]" title={c.createdBy || 'Legacy Data'}>
@@ -526,7 +806,6 @@ export function CoursesTable({
                                         </div>
                                     </td>
 
-                                    {/* Actions */}
                                     <td className="p-3 align-middle border-b border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
                                             <Button variant="primary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => onOpen(c.id)} disabled={isProcessing}>
@@ -567,7 +846,6 @@ export function CoursesTable({
 
                     return (
                         <div key={c.id} className={`border rounded-lg bg-white shadow-sm overflow-hidden ${isPendingDeletion ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
-                            {/* Card Header (Clickable for Accordion) */}
                             <div 
                                 className="p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
                                 onClick={() => toggleExpand(c.id)}
@@ -595,7 +873,6 @@ export function CoursesTable({
                                 </div>
                             </div>
 
-                            {/* Collapsible Actions Menu */}
                             {isExpanded && (
                                 <div className="p-4 border-t border-gray-100 bg-gray-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                     <Button variant="primary" className="w-full flex justify-center items-center gap-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
@@ -620,7 +897,6 @@ export function CoursesTable({
                 })}
             </div>
 
-            {/* --- Pagination Controls --- */}
             {totalItems > 0 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between mt-4 p-4 bg-white border rounded-lg text-sm text-gray-700 shadow-sm">
                     <div className="flex items-center gap-4 mb-4 sm:mb-0">
@@ -661,7 +937,6 @@ export function CoursesTable({
                 </div>
             )}
 
-            {/* --- SHARE & MANAGE MODAL --- */}
             {shareModalCourse && (
                 <Modal isOpen={!!shareModalCourse} onClose={() => setShareModalCourse(null)} title="Share Public Links">
                      <CardBody className="flex flex-col gap-6 p-4">
@@ -751,7 +1026,6 @@ export function CoursesTable({
                 </Modal>
             )}
 
-            {/* --- REPORTS MODAL --- */}
             {reportModalCourse && (
                 <Modal isOpen={!!reportModalCourse} onClose={() => setReportModalCourse(null)} title="Course Reports">
                     <CardBody className="p-6 flex flex-col gap-3">
@@ -817,7 +1091,6 @@ export function CoursesTable({
 
 export { PublicAttendanceView, AttendanceManagerView } from './CourseAttendanceView';
 
-// --- Deleted Courses View ---
 function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessing }) {
     const sortedDeletedCourses = useMemo(() => {
         return [...courses].sort((a, b) => {
@@ -899,7 +1172,6 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
     );
 }
 
-// --- Federal Approvals View ---
 function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProcessing }) {
     const pendingApprovalCourses = useMemo(() => {
         return courses.filter(c => c.approvalStatus === 'pending' && !c.deletionRequested && !c.inRecycleBin)
@@ -1012,15 +1284,17 @@ export function CourseManagementView({
     const [isProcessing, setIsProcessing] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
+    // State for the new Migration Modal
+    const [showMigrationModal, setShowMigrationModal] = useState(false);
+
     useEffect(() => {
         fetchFederalCoordinators();
         fetchStateCoordinators();
         fetchLocalityCoordinators();
         fetchFunders();
-        fetchParticipants(true); // <-- UPDATED: Force incremental sync on load
+        fetchParticipants(true); 
     }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders, fetchParticipants]); 
 
-    // --- NEW EFFECT: Trigger incremental syncs when switching views ---
     useEffect(() => {
         if (['courses', 'dashboard', 'participants'].includes(activeCoursesTab)) {
             fetchCourses(true);
@@ -1188,23 +1462,6 @@ export function CourseManagementView({
         return { headers: ["State", ...allCourseTypesInFilter, "Total"], body: tableBody, totals: columnTotals };
     }, [dashboardCourses]);
 
-    const mapCoordinates = {
-        "Khartoum": { lat: 15.6000, lng: 32.5000 }, "Gezira": { lat: 14.4000, lng: 33.5167 }, "White Nile": { lat: 13.1667, lng: 32.6667 }, "Blue Nile": { lat: 11.7667, lng: 34.3500 },
-        "Sennar": { lat: 13.1500, lng: 33.9333 }, "Gedarif": { lat: 14.0333, lng: 35.3833 }, "Kassala": { lat: 15.4500, lng: 36.4000 }, "Red Sea": { lat: 19.6167, lng: 37.2167 },
-        "Northern": { lat: 19.1698, lng: 30.4749 }, "River Nile": { lat: 17.5900, lng: 33.9600 }, "North Kordofan": { lat: 13.1833, lng: 30.2167 }, "South Kordofan": { lat: 11.0167, lng: 29.7167 },
-        "West Kordofan": { lat: 11.7175, lng: 28.3400 }, "North Darfur": { lat: 13.6306, lng: 25.3500 }, "South Darfur": { lat: 12.0500, lng: 24.8833 }, "West Darfur": { lat: 13.4500, lng: 22.4500 },
-        "Central Darfur": { lat: 12.9000, lng: 23.4833 }, "East Darfur": { lat: 11.4608, lng: 26.1283 }
-    };
-
-    const localMapData = useMemo(() => {
-        const courseCounts = {};
-        dashboardCourses.forEach(course => courseCounts[course.state] = (courseCounts[course.state] || 0) + 1);
-        return Object.entries(courseCounts).map(([state, count]) => {
-            const coords = mapCoordinates[state];
-            return coords ? { state, percentage: count, coordinates: [coords.lng, coords.lat] } : null;
-        }).filter(Boolean);
-    }, [dashboardCourses]);
-
     const isCourseActive = useMemo(() => {
         if (selectedCourse?.approvalStatus === 'pending') return false; 
         if (selectedCourse?.approvalStatus === 'rejected') return false;
@@ -1252,20 +1509,16 @@ export function CourseManagementView({
         try {
             const payload = { ...courseData };
             
-            // Inject the precise creator role when generating a new course
             if (!payload.id) {
                 if (currentUserRole) {
                     payload.creatorRole = currentUserRole;
                 }
-
-                // Auto-approve courses added by super users, federal managers, and federal coordinators
                 const roleToCheck = currentUserRole || '';
                 if (['super_user', 'federal_manager', 'federal_coordinator'].includes(roleToCheck)) {
                     payload.approvalStatus = 'approved';
                 }
             }
 
-            // If a course is being saved (added OR edited) and we have states/localities, check if we need to calc/recalc baseline
             const editingExisting = !!payload.id;
             let needsBaselineCalculation = false;
 
@@ -1273,7 +1526,6 @@ export function CourseManagementView({
                 if (!editingExisting && !payload.coverageSnapshot) {
                     needsBaselineCalculation = true;
                 } else if (editingExisting && courseToEdit) {
-                    // Check if locations changed to drop the old baseline
                     const oldStatesStr = JSON.stringify([...(courseToEdit.states || [])].sort());
                     const newStatesStr = JSON.stringify([...(payload.states || [])].sort());
                     const oldLocsStr = JSON.stringify([...(courseToEdit.localities || [])].sort());
@@ -1328,9 +1580,8 @@ export function CourseManagementView({
             }
 
             await upsertCourse(payload, currentUserIdentifier);
-            await fetchCourses(true); // <--- CACHE BYPASS FIX
+            await fetchCourses(true); 
             
-            // --- TRIGGER FCM NOTIFICATION FOR MANAGERS ---
             if (navigator.onLine) {
                 try {
                     const isUpdate = !!courseToEdit;
@@ -1342,23 +1593,13 @@ export function CourseManagementView({
 
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
-                    const usersSnap = await getDocs(collection(db, 'users'));
-                    const targetPromises = [];
                     
-                    usersSnap.forEach(userDoc => {
-                        const data = userDoc.data();
-                        const roles = data.roles || [data.role || 'user'];
-                        if (roles.includes('federal_manager') || roles.includes('super_user')) {
-                            targetPromises.push(
-                                sendFCMNotification({
-                                    targetUserId: userDoc.id,
-                                    title: notifTitle,
-                                    body: notifBody
-                                }).catch(e => console.warn(e))
-                            );
-                        }
-                    });
-                    await Promise.all(targetPromises);
+                    await sendFCMNotification({
+                        targetUserId: 'managers_and_super_users',
+                        title: notifTitle,
+                        body: notifBody
+                    }).catch(e => console.warn("FCM Send Error:", e));
+                    
                 } catch (fcmError) {
                     console.warn("FCM Error", fcmError);
                 }
@@ -1382,7 +1623,7 @@ export function CourseManagementView({
         try {
             await upsertCourse({ ...courseToUpdate, deletionRequested: false, inRecycleBin: true }, currentUserIdentifier);
             setToast({ show: true, message: 'Course moved to Deleted Courses.', type: 'success' });
-            await fetchCourses(true); // <--- CACHE BYPASS FIX
+            await fetchCourses(true); 
         } catch (error) {
             setToast({ show: true, message: `Failed to process deletion: ${error.message}`, type: 'error' });
         } finally {
@@ -1395,7 +1636,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await deleteCourse(courseId, currentUserIdentifier);
-                await fetchCourses(true); // <--- CACHE BYPASS FIX
+                await fetchCourses(true); 
                 setToast({ show: true, message: 'Course permanently deleted.', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Deletion failed: ${error.message}`, type: 'error' });
@@ -1411,7 +1652,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await upsertCourse({ ...courseToUpdate, approvalStatus: 'approved' }, currentUserIdentifier);
-                await fetchCourses(true); // <--- CACHE BYPASS FIX
+                await fetchCourses(true); 
                 setToast({ show: true, message: 'Course approved successfully!', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
@@ -1427,9 +1668,8 @@ export function CourseManagementView({
             if (courseToUpdate) {
                 setIsProcessing(true);
                 try {
-                    // Update status to rejected AND move directly to recycle bin
                     await upsertCourse({ ...courseToUpdate, approvalStatus: 'rejected', inRecycleBin: true }, currentUserIdentifier);
-                    await fetchCourses(true); // <--- CACHE BYPASS FIX
+                    await fetchCourses(true); 
                     setToast({ show: true, message: 'Course rejected and moved to Deleted Courses.', type: 'info' });
                 } catch (error) {
                     setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' });
@@ -1444,7 +1684,7 @@ export function CourseManagementView({
         setIsProcessing(true);
         try {
             await upsertCourse({ ...course, deletionRequested: false }, currentUserIdentifier);
-            await fetchCourses(true); // <--- CACHE BYPASS FIX
+            await fetchCourses(true); 
             setToast({ show: true, message: 'Deletion request rejected.', type: 'success' });
         } catch (error) {
             setToast({ show: true, message: `Failed to reject deletion: ${error.message}`, type: 'error' });
@@ -1458,7 +1698,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await upsertCourse({ ...course, inRecycleBin: false }, currentUserIdentifier); 
-                await fetchCourses(true); // <--- CACHE BYPASS FIX
+                await fetchCourses(true); 
                 setToast({ show: true, message: 'Course restored successfully!', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Failed to restore course: ${error.message}`, type: 'error' });
@@ -1556,6 +1796,13 @@ export function CourseManagementView({
                                     <div className="flex gap-2">
                                         {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>}
                                         <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> Refresh Data</>}</Button>
+                                        
+                                        {/* TRIGGER BUTTON FOR MIGRATION MODAL */}
+                                        {canUseSuperUserAdvancedFeatures && (
+                                            <Button variant="danger" onClick={() => setShowMigrationModal(true)}>
+                                                Total Sync Tool
+                                            </Button>
+                                        )}
                                     </div>
                                     <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>Change Course Package</Button>
                                 </div>
@@ -1666,6 +1913,13 @@ export function CourseManagementView({
                     </>
                 )}
             </div>
+
+            {/* RENDER THE MODAL COMPONENT */}
+            <FacilitatorIdMigrationModal 
+                isOpen={showMigrationModal} 
+                onClose={() => setShowMigrationModal(false)} 
+                onComplete={handleRefresh} 
+            />
         </Card>
     );
 }
@@ -1811,6 +2065,15 @@ export function CourseForm({
     federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = [],
     userStates, userLocalities 
 }) {
+    // --- BINDING LATEST NAMES ---
+    const getFacName = (id, oldName) => {
+        if (id && facilitatorsList) {
+            const f = facilitatorsList.find(fac => fac.id === id);
+            if (f) return f.name;
+        }
+        return oldName || '';
+    };
+
     const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar));
         if (!userStates || userStates.length === 0) {
@@ -1848,13 +2111,14 @@ export function CourseForm({
     const [coordinator, setCoordinator] = useState(initialData?.coordinator || '');
     const [participantsCount, setParticipantsCount] = useState(initialData?.participants_count || 0);
     const [courseBudget, setCourseBudget] = useState(initialData?.course_budget || '');
-    const [director, setDirector] = useState(initialData?.director || '');
-    const [clinical, setClinical] = useState(initialData?.clinical_instructor || '');
     const [supporter, setSupporter] = useState(initialData?.funded_by || '');
     const [stateCoordinator, setStateCoordinator] = useState(initialData?.state_coordinator || '');
     const [localityCoordinator, setLocalityCoordinator] = useState(initialData?.locality_coordinator || '');
     const [courseProject, setCourseProject] = useState(initialData?.course_project || '');
     const [implementedBy, setImplementedBy] = useState(initialData?.implemented_by || '');
+
+    const [director, setDirector] = useState(() => getFacName(initialData?.directorId, initialData?.director));
+    const [clinical, setClinical] = useState(() => getFacName(initialData?.clinical_instructorId, initialData?.clinical_instructor));
 
     const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
     const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
@@ -1904,23 +2168,24 @@ export function CourseForm({
     const [facilitatorGroups, setFacilitatorGroups] = useState(() => {
         const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : '';
         if (initialData?.facilitatorAssignments?.length > 0) {
-            const groups = {};
+            const groupsMap = {};
             initialData.facilitatorAssignments.forEach(assignment => {
-                if (!groups[assignment.group]) {
-                    groups[assignment.group] = [];
+                if (!groupsMap[assignment.group]) {
+                    groupsMap[assignment.group] = [];
                 }
-                groups[assignment.group].push({
-                    name: assignment.name,
+                groupsMap[assignment.group].push({
+                    name: getFacName(assignment.facilitatorId, assignment.name), 
                     imci_sub_type: assignment.imci_sub_type,
+                    facilitatorId: assignment.facilitatorId 
                 });
             });
             const initialGroups = [...new Set(initialData.facilitatorAssignments.map(a => a.group))];
             initialGroups.forEach(group => {
-                if (!groups[group]) {
-                    groups[group] = [];
+                if (!groupsMap[group]) {
+                    groupsMap[group] = [];
                 }
             });
-            return groups;
+            return groupsMap;
         }
         return {
             'Group A': [{ imci_sub_type: defaultSubcourse, name: '' }, { imci_sub_type: defaultSubcourse, name: '' }],
@@ -2089,6 +2354,20 @@ export function CourseForm({
              return;
         }
 
+        const selectedDirectorObj = directorOptions.find(d => d.name === director);
+        const directorId = selectedDirectorObj ? selectedDirectorObj.id : null;
+
+        const selectedClinicalObj = clinicalInstructorOptions.find(c => c.name === clinical);
+        const clinicalId = selectedClinicalObj ? selectedClinicalObj.id : null;
+
+        const enrichedFacilitatorAssignments = allFacilitatorAssignments.map(assignment => {
+            const facObj = facilitatorOptions.find(f => f.name === assignment.name);
+            return {
+                ...assignment,
+                facilitatorId: facObj ? facObj.id : null
+            };
+        });
+
         const statesChanged = JSON.stringify(states.slice().sort()) !== JSON.stringify(initialData?.states?.slice().sort() || []);
         const localitiesChanged = JSON.stringify(localities.slice().sort()) !== JSON.stringify(initialData?.localities?.slice().sort() || []);
 
@@ -2101,15 +2380,22 @@ export function CourseForm({
             localities: localities,
             hall, hall_english: hallEnglish, coordinator, start_date: startDate,
             course_duration: courseDuration,
-            participants_count: participantsCount, director,
+            participants_count: participantsCount, 
+            
+            director: director,
+            directorId: directorId, 
+            
             funded_by: supporter,
             implemented_by: implementedBy,
             course_budget: courseBudget,
             state_coordinator: stateCoordinator,
             locality_coordinator: localityCoordinator,
             course_project: courseProject,
-            facilitators: allFacilitatorAssignments.map(f => f.name),
-            facilitatorAssignments: allFacilitatorAssignments,
+            
+            facilitators: enrichedFacilitatorAssignments.map(f => f.name),
+            facilitatorIds: enrichedFacilitatorAssignments.map(f => f.facilitatorId).filter(Boolean),
+            facilitatorAssignments: enrichedFacilitatorAssignments,
+            
             course_type: courseType, 
             approvalStatus: initialData?.approvalStatus || 'pending', 
         };
@@ -2124,6 +2410,7 @@ export function CourseForm({
 
         if (isImnci || isIccm || isCpcm) {
             payload.clinical_instructor = clinical;
+            payload.clinical_instructorId = clinicalId;
             payload.director_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : directorImciSubType;
             payload.clinical_instructor_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : clinicalImciSubType;
         }

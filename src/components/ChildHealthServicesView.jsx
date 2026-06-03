@@ -1422,23 +1422,12 @@ const ChildHealthServicesView = ({
 
                         const functions = getFunctions(db.app);
                         const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
-                        const usersSnap = await getDocs(collection(db, 'users'));
-                        const targetPromises = [];
                         
-                        usersSnap.forEach(userDoc => {
-                            const data = userDoc.data();
-                            const roles = data.roles || [data.role || 'user'];
-                            if (roles.includes('federal_manager') || roles.includes('super_user')) {
-                                targetPromises.push(
-                                    sendFCMNotification({
-                                        targetUserId: userDoc.id,
-                                        title: notifTitle,
-                                        body: notifBody
-                                    }).catch(e => console.warn(e))
-                                );
-                            }
-                        });
-                        await Promise.all(targetPromises);
+                        await sendFCMNotification({
+                            targetUserId: 'managers_and_super_users',
+                            title: notifTitle,
+                            body: notifBody
+                        }).catch(e => console.warn("FCM Send Error:", e));
                     } catch (fcmError) {
                         console.warn("FCM Error", fcmError);
                     }
@@ -2009,7 +1998,7 @@ const ChildHealthServicesView = ({
                                                  value={updateSelectionSearch} 
                                                  onChange={(e) => setUpdateSelectionSearch(e.target.value)}
                                                  className="pr-10 bg-white"
-                                             />
+                                            />
                                          </div>
                                      </FormGroup>
 

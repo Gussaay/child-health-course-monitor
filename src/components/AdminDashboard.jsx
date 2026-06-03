@@ -230,15 +230,21 @@ export function AdminDashboard() {
     const [otaVersion, setOtaVersion] = useState("Checking Server...");
     const [serverNativeConfig, setServerNativeConfig] = useState(null); 
     const [isUpdateActive, setIsUpdateActive] = useState(false); 
-    const [isEditingUpdate, setIsEditingUpdate] = useState(false); 
-    const [notifyOutdatedUsers, setNotifyOutdatedUsers] = useState(true);
+
+    const [historyPushModal, setHistoryPushModal] = useState({
+        isOpen: false,
+        versionData: null,
+        mandatory: true,
+        notify: false
+    });
 
     const [updateConfig, setUpdateConfig] = useState({
         latestNativeBuild: 1,
         versionString: "1.0.0",
         downloadUrl: "https://imnci-courses-monitor.web.app/app-release.apk",
         mandatory: true,
-        releaseNotes: ""
+        releaseNotes: "",
+        mandatoryStack: []
     });
 
     useEffect(() => {
@@ -332,7 +338,8 @@ export function AdminDashboard() {
                 if (updateSnap.exists()) {
                     const data = updateSnap.data();
                     setUpdateConfig(data);
-                    if (data.mandatory) setIsUpdateActive(true);
+                    // Treat any deployment build ID > 1 as an active live configuration state
+                    if (data.latestNativeBuild > 1) setIsUpdateActive(true);
                 }
 
                 // Load Update History Log
@@ -376,37 +383,56 @@ export function AdminDashboard() {
         setLoading(false);
     };
 
-    const handleSaveUpdateConfig = async () => {
-        if (!window.confirm("Are you sure you want to push these live update settings to all users?")) return;
+    const handlePushHistoryVersion = async () => {
+        const { versionData, mandatory, notify } = historyPushModal;
+        if (!versionData) return;
+    
+        if (!window.confirm(`Are you sure you want to deploy v${versionData.versionString} to users?`)) return;
+        
         setLoading(true);
         try {
-            await setDoc(doc(db, "meta", "update_config"), updateConfig);
-            setIsUpdateActive(updateConfig.mandatory);
-            setIsEditingUpdate(false); 
-
-            // --- TRIGGER SMART NOTIFICATIONS ---
-            if (notifyOutdatedUsers) {
+            const newBuildId = parseInt(versionData.latestNativeBuild, 10);
+            let updatedStack = updateConfig.mandatoryStack || [];
+            
+            if (!updatedStack.includes(newBuildId)) {
+                updatedStack.push(newBuildId);
+            }
+    
+            const newConfig = {
+                latestNativeBuild: newBuildId,
+                versionString: versionData.versionString,
+                downloadUrl: versionData.downloadUrl,
+                mandatory: mandatory,
+                releaseNotes: versionData.releaseNotes || `Update to version ${versionData.versionString}.`,
+                mandatoryStack: updatedStack
+            };
+    
+            await setDoc(doc(db, "meta", "update_config"), newConfig);
+            setUpdateConfig(newConfig);
+            setIsUpdateActive(true); 
+    
+            if (notify) {
                 try {
                     const notifTitle = "App Update Available";
-                    const notifMessage = updateConfig.mandatory 
-                        ? `A mandatory update to version ${updateConfig.versionString} is required. ${updateConfig.releaseNotes}`
-                        : `Version ${updateConfig.versionString} is now available. ${updateConfig.releaseNotes}`;
-
+                    const notifMessage = mandatory 
+                        ? `A mandatory update to version ${newConfig.versionString} is required. ${newConfig.releaseNotes}`
+                        : `Version ${newConfig.versionString} is now available. ${newConfig.releaseNotes}`;
+    
                     await addDoc(collection(db, 'notifications'), {
                         title: notifTitle,
                         message: notifMessage,
                         targetUser: 'outdated_users', 
-                        targetVersion: updateConfig.versionString,
+                        targetVersion: newConfig.versionString,
                         createdAt: serverTimestamp(),
                         readBy: [],
                         status: 'active'
                     });
-
+    
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     await sendFCMNotification({
                         targetUserId: 'outdated_users',
-                        targetVersion: updateConfig.versionString,
+                        targetVersion: newConfig.versionString,
                         title: notifTitle,
                         body: notifMessage
                     });
@@ -414,11 +440,70 @@ export function AdminDashboard() {
                     console.error("Failed to send automatic update notification:", notifErr);
                 }
             }
-
-            setToast({show: true, message: 'Update configuration saved!', type: 'success'});
+    
+            setToast({show: true, message: `Version ${versionData.versionString} successfully pushed!`, type: 'success'});
+            setHistoryPushModal({ isOpen: false, versionData: null, mandatory: true, notify: false });
         } catch(e) {
-            console.error("Update config error", e);
-            setToast({show: true, message: 'Failed to save update configuration.', type: 'error'});
+            console.error("Failed to push history version", e);
+            setToast({show: true, message: 'Failed to deploy historical version.', type: 'error'});
+        }
+        setLoading(false);
+    };
+
+    const handleStopUpdate = async () => {
+        const currentBuildId = parseInt(updateConfig.latestNativeBuild, 10) || 0;
+        let currentStack = updateConfig.mandatoryStack || [];
+        
+        currentStack = currentStack.filter(id => id !== currentBuildId);
+    
+        let fallbackVersion = null;
+        let validStack = [...currentStack];
+        
+        while (validStack.length > 0 && !fallbackVersion) {
+            const fallbackId = Math.max(...validStack);
+            fallbackVersion = updateHistory.find(stat => parseInt(stat.latestNativeBuild, 10) === fallbackId);
+            
+            if (!fallbackVersion) {
+                validStack = validStack.filter(id => id !== fallbackId);
+            }
+        }
+    
+        let confirmMessage = "Are you sure you want to cancel the current update?";
+        if (fallbackVersion) {
+            confirmMessage += `\n\nUsers will fall back to the previously configured update version: v${fallbackVersion.versionString} (Build ${fallbackVersion.latestNativeBuild}).`;
+        } else {
+            confirmMessage += `\n\nNo alternative configured updates found. The update block will be completely deactivated for everyone.`;
+        }
+    
+        if (!window.confirm(confirmMessage)) return;
+        
+        setLoading(true);
+        try {
+            let newConfig;
+            
+            if (fallbackVersion) {
+                newConfig = {
+                    latestNativeBuild: fallbackVersion.latestNativeBuild,
+                    versionString: fallbackVersion.versionString,
+                    downloadUrl: fallbackVersion.downloadUrl,
+                    mandatory: fallbackVersion.mandatory !== undefined ? fallbackVersion.mandatory : true, 
+                    releaseNotes: fallbackVersion.releaseNotes || `Fallback to version ${fallbackVersion.versionString}.`,
+                    mandatoryStack: validStack 
+                };
+                setToast({show: true, message: `Update cancelled. Reverted to alternative active version v${fallbackVersion.versionString}.`, type: 'success'});
+                setIsUpdateActive(true);
+            } else {
+                newConfig = { ...updateConfig, latestNativeBuild: 1, mandatory: false, mandatoryStack: [] };
+                setToast({show: true, message: 'Update completely stopped. Users will no longer be prompted.', type: 'success'});
+                setIsUpdateActive(false);
+            }
+    
+            await setDoc(doc(db, "meta", "update_config"), newConfig);
+            setUpdateConfig(newConfig);
+            
+        } catch(e) {
+            console.error("Stop config error", e);
+            setToast({show: true, message: 'Failed to stop/revert update configuration.', type: 'error'});
         }
         setLoading(false);
     };
@@ -431,7 +516,6 @@ export function AdminDashboard() {
         
         setLoading(true);
         try {
-            // 1. Check if the URL belongs to Firebase Storage and delete the physical file
             if (stat.downloadUrl && stat.downloadUrl.includes("firebasestorage.googleapis.com")) {
                 const storage = getStorage(db.app);
                 const fileRef = ref(storage, stat.downloadUrl); 
@@ -439,10 +523,8 @@ export function AdminDashboard() {
                 console.log("Physical APK file deleted from Storage.");
             }
     
-            // 2. Delete the record from the Firestore database
             await deleteDoc(doc(db, "update_history", stat.id));
     
-            // 3. Update the UI
             setUpdateHistory(updateHistory.filter(item => item.id !== stat.id));
             setToast({show: true, message: 'File and history record permanently deleted.', type: 'success'});
             
@@ -458,22 +540,6 @@ export function AdminDashboard() {
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleReverseUpdate = async () => {
-        if (!window.confirm("Are you sure you want to turn off the mandatory block? Users will no longer be forced to download the APK.")) return;
-        setLoading(true);
-        try {
-            const newConfig = { ...updateConfig, mandatory: false };
-            await setDoc(doc(db, "meta", "update_config"), newConfig);
-            setUpdateConfig(newConfig);
-            setIsUpdateActive(false);
-            setToast({show: true, message: 'Mandatory update requirement cancelled.', type: 'success'});
-        } catch(e) {
-            console.error("Revert config error", e);
-            setToast({show: true, message: 'Failed to reverse update configuration.', type: 'error'});
-        }
-        setLoading(false);
     };
 
     const handleUserRolesChange = async (userId, selectedRoles, assignedState, assignedLocality) => {
@@ -781,13 +847,17 @@ export function AdminDashboard() {
                         </div>
                         <Button 
                             onClick={() => {
-                                setUpdateConfig({
-                                    ...serverNativeConfig,
+                                setHistoryPushModal({
+                                    isOpen: true,
+                                    versionData: {
+                                        latestNativeBuild: serverNativeConfig.latestNativeBuild,
+                                        versionString: serverNativeConfig.versionString,
+                                        downloadUrl: serverNativeConfig.downloadUrl || "https://imnci-courses-monitor.web.app/app-release.apk",
+                                        releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`,
+                                    },
                                     mandatory: true,
-                                    releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`
+                                    notify: true
                                 });
-                                setIsEditingUpdate(true);
-                                setNotifyOutdatedUsers(true);
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
                         >
@@ -796,131 +866,15 @@ export function AdminDashboard() {
                     </div>
                 )}
 
-                {/* Native APK Trigger Control Block */}
-                <Card className="shadow-sm border border-gray-100 overflow-hidden mb-6">
-                    <div className="p-5 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center">
-                            <Smartphone className="w-5 h-5 text-sky-600 mr-3 shrink-0" />
-                            <div>
-                                <h3 className="text-md font-bold text-gray-800">Native APK Trigger Control</h3>
-                                <p className="text-xs text-gray-500">You control when users are forced to download a completely new Native APK installation.</p>
-                            </div>
+                {/* --- LIVE INDICATOR HEADER ALERTS --- */}
+                {isUpdateActive && updateConfig?.versionString && (
+                    <div className="bg-green-50 border border-green-200 p-4 rounded-xl shadow-inner flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                        <div className="text-sm text-green-800 font-medium">
+                            <strong>System Status:</strong> Version <span className="font-mono font-bold bg-green-100 text-green-900 px-1.5 py-0.5 rounded">v{updateConfig.versionString}</span> (Build ID: {updateConfig.latestNativeBuild}) is currently running as the **Active Update** ({updateConfig.mandatory ? "Mandatory Lock" : "Optional Prompt"}).
                         </div>
-                        {isUpdateActive && (
-                            <div className="flex items-center gap-3 shrink-0">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-bold border border-red-200 shadow-sm animate-pulse">
-                                    <Shield className="w-3.5 h-3.5 mr-1" /> Active Mandatory Update
-                                </span>
-                                {!isEditingUpdate && (
-                                    <Button onClick={handleReverseUpdate} variant="secondary" size="sm" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm bg-white">
-                                        Cancel Block
-                                    </Button>
-                                )}
-                            </div>
-                        )}
                     </div>
-                    
-                    {isEditingUpdate ? (
-                        /* EDIT MODE: Form Fields */
-                        <div className={`p-6 grid grid-cols-1 md:grid-cols-2 gap-6 ${isUpdateActive ? 'bg-red-50/10' : ''}`}>
-                            <FormGroup label="Target Native Build ID">
-                                <Input 
-                                    type="number" 
-                                    value={updateConfig.latestNativeBuild} 
-                                    onChange={e => setUpdateConfig({...updateConfig, latestNativeBuild: parseInt(e.target.value)})} 
-                                    placeholder="e.g. 19" 
-                                />
-                                <p className="text-[10px] text-gray-500 mt-1">Matches the exact Native ID built by GitHub Actions.</p>
-                            </FormGroup>
-                            <FormGroup label="Display Version String">
-                                <Input 
-                                    value={updateConfig.versionString} 
-                                    onChange={e => setUpdateConfig({...updateConfig, versionString: e.target.value})} 
-                                    placeholder="e.g. 1.19.0" 
-                                />
-                            </FormGroup>
-                            <div className="md:col-span-2">
-                                <FormGroup label="Release Notes / Message">
-                                    <textarea 
-                                        rows="3" 
-                                        className="w-full bg-white border border-gray-300 rounded-lg p-3 text-sm shadow-sm focus:ring-sky-500 focus:border-sky-500" 
-                                        value={updateConfig.releaseNotes} 
-                                        onChange={e => setUpdateConfig({...updateConfig, releaseNotes: e.target.value})} 
-                                        placeholder="Describe what's new in this Native APK..."
-                                    ></textarea>
-                                </FormGroup>
-                            </div>
-                            <div className={`md:col-span-2 flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl border gap-4 ${isUpdateActive ? 'bg-red-50 border-red-200' : 'bg-sky-50 border-sky-100'}`}>
-                                <div>
-                                    <label className="flex items-center cursor-pointer">
-                                        <Checkbox checked={updateConfig.mandatory} onChange={e => setUpdateConfig({...updateConfig, mandatory: e.target.checked})} />
-                                        <span className={`ml-3 font-bold text-sm ${isUpdateActive ? 'text-red-900' : 'text-sky-900'}`}>Force Mandatory Update</span>
-                                    </label>
-                                    <p className={`text-xs mt-1 ml-8 ${isUpdateActive ? 'text-red-700' : 'text-sky-700'}`}>If checked, users cannot dismiss the popup and must download the APK.</p>
-                                </div>
-                                
-                                <div className="flex-1 flex justify-center w-full md:w-auto my-2 md:my-0 border-t md:border-t-0 md:border-l border-gray-200/60 pt-3 md:pt-0 md:pl-4">
-                                    <label className="flex items-center cursor-pointer">
-                                        <Checkbox checked={notifyOutdatedUsers} onChange={e => setNotifyOutdatedUsers(e.target.checked)} />
-                                        <span className="ml-2 font-bold text-sm text-gray-800">Send Push Notification to outdated users</span>
-                                    </label>
-                                </div>
-
-                                <div className="flex gap-2 w-full md:w-auto">
-                                    <Button onClick={() => setIsEditingUpdate(false)} variant="secondary" className="shadow-sm w-full md:w-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700">
-                                        Cancel
-                                    </Button>
-                                    <Button onClick={handleSaveUpdateConfig} variant="primary" className="shadow-md w-full md:w-auto">
-                                        <CheckCircle className="w-4 h-4 mr-2"/> Save & Push Changes
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        /* VIEW MODE: Read-only summary */
-                        <div className={`p-8 flex flex-col items-center justify-center ${isUpdateActive ? 'bg-red-50/20' : 'bg-white'}`}>
-                            {isUpdateActive ? (
-                                <>
-                                    <div className="inline-flex items-center px-4 py-2 rounded-full bg-red-100 text-red-800 font-bold mb-4 shadow-sm border border-red-200">
-                                        <Smartphone className="w-5 h-5 mr-2" /> Native Update is Currently Mandatory
-                                    </div>
-                                    <h4 className="text-lg font-bold text-gray-800 mb-2">Target Build: v{updateConfig.versionString} (ID: {updateConfig.latestNativeBuild})</h4>
-                                    <p className="text-sm text-gray-600 max-w-2xl mb-6 text-center">
-                                        <strong>Release Notes:</strong> {updateConfig.releaseNotes || "No release notes provided."}
-                                    </p>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="inline-flex items-center px-4 py-2 rounded-full bg-gray-100 text-gray-600 font-bold mb-4 shadow-sm border border-gray-200">
-                                        <Smartphone className="w-5 h-5 mr-2" /> No Mandatory Update Active
-                                    </div>
-                                    <h4 className="text-md font-medium text-gray-600 mb-2">Last Configured Build: v{updateConfig.versionString} (ID: {updateConfig.latestNativeBuild})</h4>
-                                    <p className="text-sm text-gray-500 max-w-2xl mb-6 text-center italic">
-                                        Users are currently not being forced to download an APK update.
-                                    </p>
-                                </>
-                            )}
-                            
-                            <div className="flex gap-3">
-                                <Button 
-                                    onClick={() => {
-                                        setIsEditingUpdate(true);
-                                        setNotifyOutdatedUsers(false);
-                                    }} 
-                                    variant="primary" 
-                                    className="shadow-sm border border-sky-600"
-                                >
-                                    <Edit3 className="w-4 h-4 mr-2" /> Edit Update Configuration
-                                </Button>
-                                {isUpdateActive && (
-                                    <Button onClick={handleReverseUpdate} variant="secondary" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm bg-white">
-                                        <XCircle className="w-4 h-4 mr-2" /> Cancel Block
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </Card>
+                )}
 
                 {/* --- DEPLOYMENT HISTORY TABLE --- */}
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
@@ -934,44 +888,79 @@ export function AdminDashboard() {
                     {updateHistory.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table headers={["Version", "Build ID", "Deployment Date", "Release Notes", "Actions"]}>
-                                {updateHistory.map((stat) => (
-                                    <tr key={stat.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="py-3">
-                                            <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
-                                                v{stat.versionString}
-                                            </div>
-                                        </td>
-                                        <td className="py-3 text-gray-600 font-mono font-medium">{stat.latestNativeBuild}</td>
-                                        <td className="py-3 text-sm text-gray-500 font-medium">
-                                            {stat.timestamp?.seconds 
-                                                ? new Date(stat.timestamp.seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-                                                : 'Unknown'}
-                                        </td>
-                                        <td className="py-3 text-xs text-gray-500 max-w-xs truncate">
-                                            {stat.releaseNotes || '-'}
-                                        </td>
-                                        <td className="py-3">
-                                            <div className="flex gap-2">
-                                                <a 
-                                                    href={stat.downloadUrl} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center justify-center p-1.5 text-sky-600 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
-                                                    title="Download APK"
-                                                >
-                                                    <Download className="w-4 h-4" />
-                                                </a>
-                                                <button 
-                                                    onClick={() => handleDeleteHistoryRecord(stat)}
-                                                    className="inline-flex items-center justify-center p-1.5 text-red-500 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
-                                                    title="Permanently remove file and history"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {updateHistory.map((stat) => {
+                                    // Row matches live version config
+                                    const isActiveUpdate = isUpdateActive && (parseInt(updateConfig?.latestNativeBuild, 10) === parseInt(stat.latestNativeBuild, 10));
+
+                                    return (
+                                        <tr key={stat.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="py-3">
+                                                <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
+                                                    v{stat.versionString}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 text-gray-600 font-mono font-medium">{stat.latestNativeBuild}</td>
+                                            <td className="py-3 text-sm text-gray-500 font-medium">
+                                                {stat.timestamp?.seconds 
+                                                    ? new Date(stat.timestamp.seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                                                    : 'Unknown'}
+                                            </td>
+                                            <td className="py-3 text-xs text-gray-500 max-w-xs truncate">
+                                                {stat.releaseNotes || '-'}
+                                            </td>
+                                            <td className="py-3">
+                                                <div className="flex flex-wrap gap-2">
+                                                    
+                                                    {isActiveUpdate ? (
+                                                        <span className="inline-flex items-center bg-green-600 border border-green-700 text-white font-bold text-xs px-2.5 py-1.5 rounded shadow-sm select-none">
+                                                            <CheckCircle className="w-3.5 h-3.5 mr-1" /> Active Update
+                                                        </span>
+                                                    ) : (
+                                                        <Button 
+                                                            size="sm"
+                                                            onClick={() => setHistoryPushModal({ isOpen: true, versionData: stat, mandatory: true, notify: false })}
+                                                            className="bg-sky-600 border-sky-700 hover:bg-sky-700 text-xs px-2 py-1 shadow-sm text-white border"
+                                                        >
+                                                            Push APK Update
+                                                        </Button>
+                                                    )}
+
+                                                    <Button 
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        onClick={isActiveUpdate ? handleStopUpdate : undefined}
+                                                        disabled={!isActiveUpdate}
+                                                        className={`border-red-200 text-red-700 text-xs px-2 py-1 shadow-sm bg-white ${
+                                                            isActiveUpdate 
+                                                            ? 'hover:bg-red-50 hover:text-red-800 cursor-pointer' 
+                                                            : 'opacity-50 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        Cancel APK Update
+                                                    </Button>
+
+                                                    <a 
+                                                        href={stat.downloadUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
+                                                        title="Download APK"
+                                                    >
+                                                        Download
+                                                    </a>
+                                                    
+                                                    <button 
+                                                        onClick={() => handleDeleteHistoryRecord(stat)}
+                                                        className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-red-500 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
+                                                        title="Permanently remove file and history"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </Table>
                         </div>
                     ) : (
@@ -1295,6 +1284,61 @@ export function AdminDashboard() {
                 {activeTab === 'updates' && currentUserRoles.includes('super_user') && renderUpdatesTab()}
                 {activeTab === 'notifications' && <AdminNotificationSender preselectedUserId={notificationTargetId} />}
             </div>
+
+            {/* PUSH HISTORICAL VERSION MODAL */}
+            <Modal isOpen={historyPushModal.isOpen} onClose={() => setHistoryPushModal({ ...historyPushModal, isOpen: false })} title="Deploy Historical Version">
+                <div className="p-6 space-y-5 bg-gray-50/50">
+                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-start gap-4">
+                        <div className="p-3 bg-emerald-100 text-emerald-600 rounded-full shrink-0">
+                            <Smartphone className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-gray-900 text-lg">Target: v{historyPushModal.versionData?.versionString}</h4>
+                            <p className="text-sm text-gray-500 font-medium">Build ID: {historyPushModal.versionData?.latestNativeBuild}</p>
+                            {historyPushModal.versionData?.releaseNotes && (
+                                <p className="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded border border-gray-100 italic">
+                                    "{historyPushModal.versionData.releaseNotes}"
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="flex items-start cursor-pointer p-4 bg-white rounded-xl border border-gray-200 shadow-sm transition-colors hover:border-emerald-300">
+                            <div className="pt-0.5">
+                                <Checkbox
+                                    checked={historyPushModal.mandatory}
+                                    onChange={(e) => setHistoryPushModal({...historyPushModal, mandatory: e.target.checked})}
+                                />
+                            </div>
+                            <div className="ml-3">
+                                <span className="block font-bold text-gray-800 text-sm">Enforce Mandatory Update</span>
+                                <span className="block text-xs text-gray-500 mt-0.5">If checked, users cannot dismiss the prompt and must download the APK.</span>
+                            </div>
+                        </label>
+
+                        <label className="flex items-start cursor-pointer p-4 bg-white rounded-xl border border-gray-200 shadow-sm transition-colors hover:border-emerald-300">
+                            <div className="pt-0.5">
+                                <Checkbox
+                                    checked={historyPushModal.notify}
+                                    onChange={(e) => setHistoryPushModal({...historyPushModal, notify: e.target.checked})}
+                                />
+                            </div>
+                            <div className="ml-3">
+                                <span className="block font-bold text-gray-800 text-sm">Send Push Notification</span>
+                                <span className="block text-xs text-gray-500 mt-0.5">Alert all outdated users via FCM that this specific version is available.</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <Button variant="secondary" onClick={() => setHistoryPushModal({ ...historyPushModal, isOpen: false })}>Cancel</Button>
+                        <Button variant="primary" onClick={handlePushHistoryVersion} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 shadow-md border-emerald-700">
+                            <CloudDownload className="w-4 h-4 mr-2" /> Push Version Now
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             {/* EDIT ROLES MODAL */}
             <Modal isOpen={!!editingRolesUser} onClose={() => setEditingRolesUser(null)} title="Modify User Access Roles">

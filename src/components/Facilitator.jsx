@@ -543,6 +543,9 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
     const [processingId, setProcessingId] = useState(null);
     const [processedSubmissionIds, setProcessedSubmissionIds] = useState(new Set()); // Local optimistic state
 
+    // NEW: State for sorting
+    const [sortBy, setSortBy] = useState('score');
+
     useEffect(() => {
         fetchFacilitators(false); 
         if (fetchCourses) fetchCourses(false);
@@ -552,6 +555,18 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
             fetchFacilitatorApplicationSettings(false);
         }
     }, [permissions.canApproveSubmissions, fetchFacilitators, fetchCourses, fetchPendingFacilitatorSubmissions, fetchFacilitatorApplicationSettings]);
+
+    // NEW: Wrap delete to trigger immediate incremental sync
+    const handleDelete = async (id) => {
+        await onDelete(id);
+        await fetchFacilitators(true); 
+    };
+
+    // NEW: Wrap import to trigger immediate incremental sync
+    const handleImportWrapper = async (data) => {
+        await onImport(data);
+        await fetchFacilitators(true);
+    };
 
     const handleToggleLinkStatus = async () => {
         const newStatus = !facilitatorApplicationSettings.isActive;
@@ -659,9 +674,15 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
             result = result.filter(f => (f.name && f.name.toLowerCase().includes(lowerQuery)) || (f.email && f.email.toLowerCase().includes(lowerQuery)) || (f.phone && f.phone.includes(lowerQuery)));
         }
         
-        result.sort((a, b) => b.score - a.score);
+        // NEW: Sort by Alphabet or Score
+        if (sortBy === 'name') {
+            result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        } else {
+            result.sort((a, b) => b.score - a.score);
+        }
+        
         return result;
-    }, [facilitators, userStates, permissions.manageScope, searchQuery, courses]);
+    }, [facilitators, userStates, permissions.manageScope, searchQuery, courses, sortBy]);
 
     const dashboardKpis = useMemo(() => {
         return {
@@ -738,17 +759,28 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
             <CardBody>
                 <PageHeader title="Manage Facilitators" />
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap items-center">
                         {permissions.canManageHumanResource && <Button onClick={onAdd}>Add New Facilitator</Button>}
                         {permissions.canManageHumanResource && <Button variant="secondary" onClick={() => setImportModalOpen(true)}>Import from Excel</Button>}
                         {permissions.canApproveSubmissions && <Button variant="secondary" onClick={() => setIsLinkModalOpen(true)}>Manage Submission Link</Button>}
+                        {/* NEW: Refresh Button */}
+                        <Button variant="secondary" onClick={() => fetchFacilitators(true)} disabled={isLoading.facilitators}>
+                            {isLoading.facilitators ? 'Refreshing...' : 'Refresh Data'}
+                        </Button>
                     </div>
-                    <div className="w-full md:w-64">
-                        <Input type="text" placeholder="Search by name, email, phone..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
+                        {/* NEW: Sort Dropdown */}
+                        <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-48">
+                            <option value="score">Sort by Score (Highest)</option>
+                            <option value="name">Sort by Name (A-Z)</option>
+                        </Select>
+                        <div className="w-full md:w-64">
+                            <Input type="text" placeholder="Search by name, email, phone..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                        </div>
                     </div>
                 </div>
                 
-                <ExcelImportModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} onImport={onImport} facilitators={facilitators} />
+                <ExcelImportModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} onImport={handleImportWrapper} facilitators={facilitators} />
                 <LinkManagementModal isOpen={isLinkModalOpen} onClose={() => setIsLinkModalOpen(false)} settings={facilitatorApplicationSettings} isLoading={isLoadingSettings} onToggleStatus={handleToggleLinkStatus} />
                 <ViewCertificatesModal isOpen={!!viewingCertsFor} onClose={() => setViewingCertsFor(null)} facilitator={viewingCertsFor} />
                 <ShareLinkModal isOpen={shareModalInfo.isOpen} onClose={() => setShareModalInfo({ isOpen: false, link: '' })} title="Share Facilitator Report" link={shareModalInfo.link} />
@@ -814,7 +846,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                                                         <Button size="sm" variant="secondary" onClick={() => handleShare(f)}>Share</Button>
                                                         <Button size="sm" variant="secondary" onClick={() => setViewingCertsFor(f)} disabled={!hasCerts} title={hasCerts ? "View Certificates" : "No certificates available"}>Certs</Button>
                                                         {permissions.canManageHumanResource && <Button size="sm" variant="secondary" onClick={() => onEdit(f)}>Edit</Button>}
-                                                        {permissions.canManageHumanResource && <Button size="sm" variant="danger" onClick={() => onDelete(f.id)}>Delete</Button>}
+                                                        {permissions.canManageHumanResource && <Button size="sm" variant="danger" onClick={() => handleDelete(f.id)}>Delete</Button>}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -865,7 +897,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
 }
 
 export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLoading }) {
-    const { facilitators } = useDataCache();
+    const { facilitators, fetchFacilitators } = useDataCache();
     const [formData, setFormData] = useState({
         name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
@@ -953,6 +985,9 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
             } else {
                 console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
             }
+            
+            // NEW: Immediately trigger incremental update to ensure UI reflects the new state
+            await fetchFacilitators(true);
             
             onSave(); 
 

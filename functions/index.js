@@ -8,7 +8,7 @@ const { getAuth } = require("firebase-admin/auth");
 initializeApp();
 
 // ============================================================================
-// 1. UPDATED: PUSH NOTIFICATION FUNCTION
+// 1. UPDATED: PUSH NOTIFICATION FUNCTION (EXCLUDES SENDER)
 // ============================================================================
 exports.sendFCMNotification = onCall(async (request) => {
   const { auth, data } = request;
@@ -20,6 +20,7 @@ exports.sendFCMNotification = onCall(async (request) => {
 
   const { targetUserId, title, body } = data;
   const db = getFirestore();
+  const senderUid = auth.uid; // <-- Capture the ID of the person triggering the function
 
   try {
     const tokens = [];
@@ -28,6 +29,9 @@ exports.sendFCMNotification = onCall(async (request) => {
     if (targetUserId === "managers_and_super_users") {
       const usersSnapshot = await db.collection("users").get();
       usersSnapshot.forEach((doc) => {
+        // EXCLUDE THE SENDER FROM THE NOTIFICATION LIST
+        if (doc.id === senderUid) return; 
+
         const userData = doc.data();
         const roles = userData.roles || [userData.role || 'user'];
         
@@ -42,12 +46,20 @@ exports.sendFCMNotification = onCall(async (request) => {
     else if (targetUserId === "all") {
       const usersSnapshot = await db.collection("users").get();
       usersSnapshot.forEach((doc) => {
+        // EXCLUDE THE SENDER
+        if (doc.id === senderUid) return;
+
         const userToken = doc.data().fcmToken;
         if (userToken) tokens.push(userToken);
       });
     } 
     // Scenario C: Target a single specific user ID
     else {
+      // EXCLUDE THE SENDER IF THEY ACCIDENTALLY TARGET THEMSELVES
+      if (targetUserId === senderUid) {
+          return { success: true, message: "Sender excluded from targeted notification." };
+      }
+      
       const userDoc = await db.collection("users").doc(targetUserId).get();
       if (userDoc.exists && userDoc.data().fcmToken) {
         tokens.push(userDoc.data().fcmToken);
@@ -58,7 +70,7 @@ exports.sendFCMNotification = onCall(async (request) => {
     const uniqueTokens = [...new Set(tokens)];
 
     if (uniqueTokens.length === 0) {
-      return { success: false, message: "No FCM tokens found for targets." };
+      return { success: false, message: "No FCM tokens found for targets (or sender was the only target)." };
     }
 
     // Multicast message packet

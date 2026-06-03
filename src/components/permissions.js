@@ -58,7 +58,13 @@ export const mergeRolePermissions = (rolesArray, globalPermissionsMap) => {
         manageLocation: { 'user_locality': 1, 'user_state': 2, 'federal_level': 3, '': 4 }
     };
 
-    rolesArray.forEach(role => {
+    // Ensure the 'user' role is only applied if it is the ONLY role the user has.
+    // If combined with other roles, the other roles dictate permissions entirely.
+    const effectiveRoles = rolesArray.length > 1 
+        ? rolesArray.filter(role => role !== 'user') 
+        : rolesArray;
+
+    effectiveRoles.forEach(role => {
         const perms = globalPermissionsMap[role] || DEFAULT_ROLE_PERMISSIONS[role] || {};
         
         Object.keys(perms).forEach(key => {
@@ -69,7 +75,7 @@ export const mergeRolePermissions = (rolesArray, globalPermissionsMap) => {
                 const newVal = perms[key] || Object.keys(hierarchies[key])[0];
                 
                 if (hierarchies[key][newVal] > hierarchies[key][currentVal]) {
-                    mergedPerms[key] = mergedPerms[key] = newVal;
+                    mergedPerms[key] = newVal; // Fixed double assignment typo
                 }
             }
         });

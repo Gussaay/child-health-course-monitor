@@ -523,24 +523,11 @@ export const IMNCIVisitReport = ({
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 
-                const usersSnap = await getDocs(collection(db, 'users'));
-                const targetPromises = [];
-                
-                usersSnap.forEach(uDoc => {
-                    const data = uDoc.data();
-                    const roles = data.roles || [data.role || 'user'];
-                    if (roles.includes('federal_manager') || roles.includes('super_user')) {
-                        targetPromises.push(
-                            sendFCMNotification({
-                                targetUserId: uDoc.id,
-                                title: notifTitle,
-                                body: notifBody
-                            }).catch(e => console.warn(`FCM error for user ${uDoc.id}:`, e))
-                        );
-                    }
-                });
-                
-                await Promise.all(targetPromises);
+                await sendFCMNotification({
+                    targetUserId: 'managers_and_super_users',
+                    title: notifTitle,
+                    body: notifBody
+                }).catch(e => console.warn("FCM Send Error: Notification popup skipped.", e));
             } catch (fcmError) {
                 console.warn("FCM Send Error: Notification popup skipped.", fcmError);
             }
@@ -1242,24 +1229,11 @@ export const EENCVisitReport = ({
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 
-                const usersSnap = await getDocs(collection(db, 'users'));
-                const targetPromises = [];
-                
-                usersSnap.forEach(uDoc => {
-                    const data = uDoc.data();
-                    const roles = data.roles || [data.role || 'user'];
-                    if (roles.includes('federal_manager') || roles.includes('super_user')) {
-                        targetPromises.push(
-                            sendFCMNotification({
-                                targetUserId: uDoc.id,
-                                title: notifTitle,
-                                body: notifBody
-                            }).catch(e => console.warn(`FCM error for user ${uDoc.id}:`, e))
-                        );
-                    }
-                });
-                
-                await Promise.all(targetPromises);
+                await sendFCMNotification({
+                    targetUserId: 'managers_and_super_users',
+                    title: notifTitle,
+                    body: notifBody
+                }).catch(e => console.warn("FCM Send Error: Notification popup skipped.", e));
             } catch (fcmError) {
                 console.warn("FCM Send Error: Notification popup skipped.", fcmError);
             }
