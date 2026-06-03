@@ -74,15 +74,14 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
     );
 };
 
+// UPDATED: Removed questions 2 and 3, reordered question 5 to the end, updated numbering
 const MOTHER_KNOWLEDGE_QUESTIONS = [
     { key: 'knows_med_details', label: '1. الأم التي طفلها أعطى مضاد حيوي أو دواء ملاريا تعرف كل الأسئلة . إجاباتها صحيحة على : الجرعة، كم مرة في اليوم، عدد الأيام )' },
-    { key: 'knows_ors_prep', label: '2. الأم التي طفلها يعانى من الإسهال و أعطى ملح الإرواء بالفم تعرف كيف تعطى ملح الإرواء في المنزل ( كيف تحضره، الكمية التي يجب أن تعطيها )' },
-    { key: 'knows_treatment_details', label: '3. الأم التي طفلها أعطى مضاد حيوي مع / أو دواء ملاريا مع / أو ملح الإرواء بالفم تعرف كيف تعطى العلاج :( الجرعة ، كم مرة في اليوم ، عدد الأيام )' },
-    { key: 'knows_diarrhea_4rules', label: '4. الأم تعرف القواعد الاربعة للعلاج الاسهال بالمنزل ( السوائل ، التغذية ، الزنك ومتى تعود فوراً )' },
-    { key: 'knows_return_date', label: '5. الأم تعرف متى تعود للمتابعة.' },
-    { key: 'knows_home_fluids', label: '6. لأم تعرف ما هي السوائل التي تعطيها لطفلها بالمنزل' },
-    { key: 'knows_ors_water_qty', label: '7. الأم تعرف ما هي كمية الماء التي تحضر بها ملح الإرواء' },
-    { key: 'knows_ors_after_stool', label: '8. الأم تعرف ما هي كمية المحلول التي تعطيها بعد كل جلسة تبرز' },
+    { key: 'knows_diarrhea_4rules', label: '2. الأم تعرف القواعد الاربعة للعلاج الاسهال بالمنزل ( السوائل ، التغذية ، الزنك ومتى تعود فوراً )' },
+    { key: 'knows_home_fluids', label: '3. الأم تعرف ما هي السوائل التي تعطيها لطفلها بالمنزل' },
+    { key: 'knows_ors_water_qty', label: '4. الأم تعرف ما هي كمية الماء التي تحضر بها ملح الإرواء' },
+    { key: 'knows_ors_after_stool', label: '5. الأم تعرف ما هي كمية المحلول التي تعطيها بعد كل جلسة تبرز' },
+    { key: 'knows_return_date', label: '6. الأم تعرف متى تعود للمتابعة.' },
 ];
 
 const MOTHER_SATISFACTION_QUESTIONS = [
@@ -169,9 +168,8 @@ const MothersForm = ({
     visitNumber = 1, 
     existingSessionData = null,
     canEditVisitNumber = false,
-    allSubmissions = [] // Dynamic recalculation history
+    allSubmissions = []
 }) => {
-    // Initialize State
     const [formData, setFormData] = useState(() => {
         if (existingSessionData) {
             return {
@@ -193,26 +191,49 @@ const MothersForm = ({
     const user = auth.currentUser;
     const formRef = useRef(null); 
     
-    // --- DYNAMIC VISIT NUMBER CALCULATION ---
     useEffect(() => {
         if (existingSessionData) return;
         const currentSessionDate = formData.session_date;
         if (!currentSessionDate || !facility?.id) return;
 
-        const facilityMotherSessions = allSubmissions.filter(sub => 
-            sub.facilityId === facility.id && 
-            sub.service === 'IMNCI_MOTHERS'
-        );
+        try {
+            let maxVisitNum = 0;
+            let matchingDateVisitNum = null;
 
-        const uniqueDates = [...new Set(
-            facilityMotherSessions.map(s => s.sessionDate || (s.effectiveDate ? new Date(s.effectiveDate.seconds * 1000).toISOString().split('T')[0] : ''))
-        )].filter(d => d).sort();
+            const facilityMotherSessions = allSubmissions.filter(sub => 
+                sub.facilityId === facility.id && 
+                sub.service === 'IMNCI_MOTHERS'
+            );
 
-        if (uniqueDates.includes(currentSessionDate)) {
-            const index = uniqueDates.indexOf(currentSessionDate);
-            setFormData(prev => ({ ...prev, visitNumber: index + 1 }));
-        } else {
-            setFormData(prev => ({ ...prev, visitNumber: uniqueDates.length + 1 }));
+            facilityMotherSessions.forEach(session => {
+                const vNum = parseInt(session.visitNumber, 10) || parseInt(session.fullData?.visitNumber, 10) || 0;
+                if (vNum > maxVisitNum) maxVisitNum = vNum;
+
+                const sDate = session.sessionDate || (session.effectiveDate && session.effectiveDate.seconds ? new Date(session.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null);
+                if (sDate === currentSessionDate && vNum > 0) matchingDateVisitNum = vNum;
+            });
+
+            let newVisitNumber = 1;
+            const offlineKey = `offline_visit_max_${facility.id}_IMNCI_MOTHERS`;
+
+            if (matchingDateVisitNum !== null) {
+                newVisitNumber = matchingDateVisitNum;
+            } else if (facilityMotherSessions.length > 0) {
+                newVisitNumber = maxVisitNum + 1;
+            } else {
+                const savedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+                newVisitNumber = savedMax > 0 ? savedMax + 1 : 1;
+            }
+
+            setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            const actualMaxToStore = Math.max(maxVisitNum, newVisitNumber, currentStoredMax);
+            if (actualMaxToStore > currentStoredMax) {
+                localStorage.setItem(offlineKey, actualMaxToStore.toString());
+            }
+        } catch (error) {
+            console.error("Error calculating visit number:", error);
         }
     }, [formData.session_date, allSubmissions, facility?.id, existingSessionData]);
     

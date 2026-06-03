@@ -596,9 +596,19 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                     const usersRef = collection(db, "users");
                     const q = query(usersRef, where("email", "==", submission.email));
                     const querySnapshot = await getDocs(q);
+                    
                     if (!querySnapshot.empty) {
                         const userDoc = querySnapshot.docs[0];
-                        await updateDoc(doc(db, "users", userDoc.id), { role: facilitatorRole, permissions: { ...ALL_PERMISSIONS, ...newPermissions } });
+                        const userData = userDoc.data();
+                        
+                        // CRITICAL FIX: Only assign facilitator role if they have no role or are a basic 'user'
+                        // This prevents downgrading Admins or Federal Managers when they get approved
+                        if (!userData.role || userData.role === 'user') {
+                            await updateDoc(doc(db, "users", userDoc.id), { 
+                                role: facilitatorRole, 
+                                permissions: { ...ALL_PERMISSIONS, ...newPermissions } 
+                            });
+                        }
                     }
                 }
             }
@@ -653,7 +663,8 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                 courses.forEach(course => {
                     const duration = Number(course.course_duration) || 0;
                     
-                    // --- ID-BASED MATCHING ---
+                    // --- STRICT ID-BASED SCORING MATCHING ---
+                    // Note: Falls back to name only if the ID field on the course is completely empty.
                     const isDirector = course.directorId === f.id || (!course.directorId && course.director === f.name);
                     const isFacilitator = (Array.isArray(course.facilitatorIds) && course.facilitatorIds.includes(f.id)) || 
                                           (!course.facilitatorIds && Array.isArray(course.facilitators) && course.facilitators.includes(f.name));
@@ -973,11 +984,19 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
 
                     if (!querySnapshot.empty) {
                         const userDoc = querySnapshot.docs[0];
-                        await updateDoc(userDoc.ref, {
-                            role: facilitatorRole,
-                            permissions: { ...ALL_PERMISSIONS, ...newPermissions }
-                        });
-                        console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${email}`);
+                        const userData = userDoc.data();
+                        
+                        // CRITICAL FIX: Only update role if user has no role or is a basic 'user'.
+                        // Do NOT overwrite roles like 'admin', 'federal_manager', 'states_manager' during an edit.
+                        if (!userData.role || userData.role === 'user') {
+                            await updateDoc(userDoc.ref, {
+                                role: facilitatorRole,
+                                permissions: { ...ALL_PERMISSIONS, ...newPermissions }
+                            });
+                            console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${email}`);
+                        } else {
+                            console.log(`[RoleSync] User ${email} already has role '${userData.role}'. Skipping role overwrite to preserve permissions.`);
+                        }
                     } else {
                         console.warn(`[RoleSync] Could not find user with email ${email} to assign role.`);
                     }
@@ -986,7 +1005,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
                 console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
             }
             
-            // NEW: Immediately trigger incremental update to ensure UI reflects the new state
+            // Immediately trigger incremental update to ensure UI reflects the new state
             await fetchFacilitators(true);
             
             onSave(); 

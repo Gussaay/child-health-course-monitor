@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle, ArrowRightLeft } from 'lucide-react';
 import { db } from '../firebase'; 
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore'; 
+import { collection, getDocs, doc } from 'firebase/firestore'; // Removed getDoc
 import { getFunctions, httpsCallable } from 'firebase/functions'; 
 
 import {
@@ -103,10 +103,10 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     const handleSave = async (formData) => {
         try {
             const isUpdate = !!initialData?.id; 
-            const resultId = await submitFacilityDataForApproval(formData);
+            await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
-            // --- TRIGGER FCM NOTIFICATION ---
+            // --- TRIGGER FIRE-AND-FORGET FCM NOTIFICATION ---
             if (navigator.onLine) {
                 try {
                     const currentUser = getAuth().currentUser;
@@ -115,12 +115,8 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
 
                     if (currentUser) {
                         submitterName = currentUser.displayName || currentUser.email || submitterName;
-                        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                        if (userDoc.exists()) {
-                            submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
-                        } else {
-                            submitterRole = 'Registered User';
-                        }
+                        // Skip DB fetch to speed up UI response
+                        submitterRole = 'Registered User';
                     }
 
                     const actionText = isUpdate ? 'updated the' : 'submitted a new';
@@ -130,10 +126,14 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
-                    await sendFCMNotification({
+                    // No await here
+                    sendFCMNotification({
                         targetUserId: 'managers_and_super_users',
                         title: notifTitle,
-                        body: notifBody
+                        body: notifBody,
+                        data: {
+                            actionView: 'childHealthServices'
+                        }
                     }).catch(e => console.warn("FCM Send Error:", e));
                     
                 } catch (fcmError) {
@@ -398,7 +398,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
-            // --- TRIGGER FCM NOTIFICATION ---
+            // --- TRIGGER FIRE-AND-FORGET FCM NOTIFICATION ---
             if (navigator.onLine) {
                 try {
                     const currentUser = getAuth().currentUser;
@@ -407,12 +407,8 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
                     if (currentUser) {
                         submitterName = currentUser.displayName || currentUser.email || submitterName;
-                        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                        if (userDoc.exists()) {
-                            submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
-                        } else {
-                            submitterRole = 'Registered User';
-                        }
+                        // Skip DB fetch to speed up UI response
+                        submitterRole = 'Registered User';
                     }
 
                     const actionText = isUpdate ? 'updated the' : 'submitted a new';
@@ -422,10 +418,14 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
-                    await sendFCMNotification({
+                    // No await here
+                    sendFCMNotification({
                         targetUserId: 'managers_and_super_users',
                         title: notifTitle,
-                        body: notifBody
+                        body: notifBody,
+                        data: {
+                            actionView: 'childHealthServices'
+                        }
                     }).catch(e => console.warn("FCM Send Error:", e));
 
                 } catch (fcmError) {

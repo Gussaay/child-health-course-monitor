@@ -1,14 +1,14 @@
 // VisitReportDashboardTab.jsx
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { useTranslation } from './LanguageContext'; 
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
-    LineElement, BarElement, Title, Tooltip, Legend,
+    LineElement, BarElement, Title, Tooltip, Legend, Filler
 } from 'chart.js';
 
 ChartJS.register(
-    CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend
+    CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler
 );
 
 const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) => {
@@ -75,6 +75,112 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
     );
 };
 
+const InfoKpiTrendCard = ({ 
+    title, 
+    avgValue, totalNumerator, totalDenominator,
+    v1Value, v1Numerator, v1Denominator,
+    v4Value, v4Numerator, v4Denominator,
+    lineLabels, lineData, color, isAr, t, CopyImageButton 
+}) => {
+    const cardRef = useRef(null);
+    
+    const chartData = {
+        labels: lineLabels,
+        datasets: [{
+            label: title,
+            data: lineData,
+            borderColor: color,
+            backgroundColor: color + '26',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: color,
+            pointBorderWidth: 2,
+            borderWidth: 2.5
+        }]
+    };
+
+    const options = {
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 1000, easing: 'easeOutQuart' },
+        interaction: { mode: 'index', intersect: false },
+        plugins: { 
+            legend: { display: false }, 
+            tooltip: { 
+                backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+                titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, 
+                bodyFont: { size: 12, family: "'Inter', sans-serif" }, 
+                padding: 12, cornerRadius: 8, boxPadding: 6,
+                callbacks: { label: (context) => ` ${context.dataset.label}: ${context.raw}%` } 
+            } 
+        },
+        scales: { 
+            y: { 
+                beginAtZero: true, max: 100, 
+                grid: { color: '#e2e8f0', drawBorder: false },
+                ticks: { stepSize: 20, callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' } }
+            }, 
+            x: { 
+                reverse: isAr, grid: { display: false },
+                ticks: { color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' } }
+            } 
+        }
+    };
+
+    return (
+        <div ref={cardRef} className="bg-white p-2 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-2 sm:mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
+            
+            <div className="flex justify-between items-center gap-1 sm:gap-4 mb-6 px-1 sm:px-6">
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 1')}</span>
+                    <div className="border border-slate-300 bg-white rounded-lg px-2 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
+                        {v1Value !== null && v1Value !== undefined ? `${Math.round(v1Value)}%` : '-'}
+                        <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
+                            {v1Numerator !== undefined && v1Denominator !== undefined ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
+                        </span>
+                    </div>
+                </div>
+                
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Average')}</span>
+                    <div className="border border-slate-800 bg-white rounded-xl px-3 sm:px-10 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center">
+                        <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
+                            {avgValue !== null && avgValue !== undefined && !isNaN(avgValue) ? `${Math.round(avgValue)}%` : '-'}
+                        </span>
+                        {totalNumerator !== undefined && totalDenominator !== undefined && totalDenominator > 0 && (
+                            <span className="text-xs font-bold text-slate-500 mt-0.5 whitespace-nowrap">
+                                {totalNumerator} / {totalDenominator}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 4')}</span>
+                    <div className="border border-slate-300 bg-white rounded-lg px-2 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
+                        {v4Value !== null && v4Value !== undefined ? `${Math.round(v4Value)}%` : '-'}
+                        <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
+                            {v4Numerator !== undefined && v4Denominator !== undefined ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="relative flex-grow min-h-[250px]" dir="ltr">
+                {lineLabels.length > 0 ? (
+                    <Line options={options} data={chartData} />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs">{t('No data available.')}</div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const VisitReportDashboardTab = ({
     activeService,
     visitReportStats,
@@ -92,6 +198,9 @@ const VisitReportDashboardTab = ({
 }) => {
     const { t, language } = useTranslation();
     const isAr = language === 'ar';
+    
+    // State for filtering problems by their status
+    const [statusFilter, setStatusFilter] = useState('All');
 
     if (!visitReportStats) return null;
 
@@ -210,62 +319,47 @@ const VisitReportDashboardTab = ({
         }
     });
 
-    const infoSystemLineData = {
-        labels: infoLineLabels,
-        datasets: isIMNCI ? [
-            { label: t('Seen by Trained Cadre (%)'), data: infoLineDataSets.seenByTrained, borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointRadius: 5 },
-            { label: t('With Recording Form (%)'), data: infoLineDataSets.recordingForm, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
-            { label: t('Return for Follow-up (%)'), data: infoLineDataSets.followup, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
-        ] : [
-            { label: t('Deliveries by Trained Cadre (%)'), data: infoLineDataSets.seenByTrained, borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointRadius: 5 },
-            { label: t('90min Skin-to-Skin (%)'), data: infoLineDataSets.s2s, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
-            { label: t('Resuscitated with Ambu (%)'), data: infoLineDataSets.ambu, borderColor: '#ec4899', backgroundColor: '#ec4899', tension: 0.3, pointRadius: 5 },
-            { label: t('Registered/Followed-up (%)'), data: infoLineDataSets.followup, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
-        ]
-    };
-
     const getAvailabilityPct = (vNum, drugKey) => {
         const d = drugAvailabilityByVisit[vNum];
         return d && d.total > 0 ? ((d[drugKey] / d.total) * 100).toFixed(1) : null;
     };
 
     const drugLineLabels = [];
-    const drugLineDataSets = { d1: [], d2: [], d3: [], d4: [], d5: [], d6: [] };
+    const drugLineDataSets = {};
+    drugList.forEach(d => { drugLineDataSets[d.key] = []; });
 
     [1, 2, 3, 4].forEach(vNum => {
         if (drugAvailabilityByVisit[vNum].total > 0) {
             drugLineLabels.push(`${t('Visit')} ${vNum}`);
-            drugLineDataSets.d1.push(getAvailabilityPct(vNum, drugList[0].key));
-            drugLineDataSets.d2.push(getAvailabilityPct(vNum, drugList[1].key));
-            drugLineDataSets.d3.push(getAvailabilityPct(vNum, drugList[2].key));
-            drugLineDataSets.d4.push(getAvailabilityPct(vNum, drugList[3].key));
-            if (!isIMNCI) {
-                drugLineDataSets.d5.push(getAvailabilityPct(vNum, drugList[4].key));
-                drugLineDataSets.d6.push(getAvailabilityPct(vNum, drugList[5].key));
-            }
+            drugList.forEach(drug => {
+                drugLineDataSets[drug.key].push(getAvailabilityPct(vNum, drug.key));
+            });
         }
     });
 
-    const datasetsDrug = [
-        { label: t(`${drugList[0].label} Availability`), data: drugLineDataSets.d1, borderColor: drugList[0].color, backgroundColor: drugList[0].color, tension: 0.3, pointRadius: 5 },
-        { label: t(`${drugList[1].label} Availability`), data: drugLineDataSets.d2, borderColor: drugList[1].color, backgroundColor: drugList[1].color, tension: 0.3, pointRadius: 5 },
-        { label: t(`${drugList[2].label} Availability`), data: drugLineDataSets.d3, borderColor: drugList[2].color, backgroundColor: drugList[2].color, tension: 0.3, pointRadius: 5 },
-        { label: t(`${drugList[3].label} Availability`), data: drugLineDataSets.d4, borderColor: drugList[3].color, backgroundColor: drugList[3].color, tension: 0.3, pointRadius: 5 }
-    ];
-    if (!isIMNCI) {
-        datasetsDrug.push({ label: t(`${drugList[4].label} Availability`), data: drugLineDataSets.d5, borderColor: drugList[4].color, backgroundColor: drugList[4].color, tension: 0.3, pointRadius: 5 });
-        datasetsDrug.push({ label: t(`${drugList[5].label} Availability`), data: drugLineDataSets.d6, borderColor: drugList[5].color, backgroundColor: drugList[5].color, tension: 0.3, pointRadius: 5 });
-    }
-
-    const drugLineData = { labels: drugLineLabels, datasets: datasetsDrug };
-
-    const getLineOptions = (yAxisTitle) => ({
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'top', labels: { font: { family: "'Inter', sans-serif", weight: 'bold' } } }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw}%` } } },
-        scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: yAxisTitle, font: { weight: 'bold' } } }, x: { reverse: isAr, grid: { display: false } } }
-    });
-
     const SKILL_GROUPS = isIMNCI ? IMNCI_SKILL_GROUPS : EENC_SKILL_GROUPS;
+
+    // Filter problems by status
+    const filteredGroupedProblems = {};
+    let filteredTotalProblems = 0;
+    
+    if (visitReportStats?.groupedProblems) {
+        Object.keys(visitReportStats.groupedProblems).forEach(locName => {
+            const problems = visitReportStats.groupedProblems[locName];
+            const filtered = problems.filter(item => {
+                if (statusFilter === 'All') return true;
+                // Combine Done and Resolved check
+                if (statusFilter === 'Resolved/Done') {
+                    return item.status === 'Resolved' || item.status === 'Done' || item.status === 'Resolved/Done';
+                }
+                return item.status === statusFilter;
+            });
+            if (filtered.length > 0) {
+                filteredGroupedProblems[locName] = filtered;
+                filteredTotalProblems += filtered.length;
+            }
+        });
+    }
 
     return (
         <div className="animate-fade-in">
@@ -285,79 +379,122 @@ const VisitReportDashboardTab = ({
             {rawReports && (
                 <>
                     {/* Information System KPIs */}
-                    <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
-                        <h4 className={`text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2 ${isAr ? 'text-right' : 'text-left'}`}>{t('Information System KPIs (Overall)')}</h4>
-                        <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 mb-8`}>
-                            <KpiCard 
-                                title={t(infoTrainedLabel)} 
-                                value={`${pctExaminedByTrained}%`} 
-                                unit={`(${infoSystemAgg.trained} / ${infoSystemAgg.total} ${t(infoTotalLabel)})`}
-                            />
-                            {isIMNCI ? (
-                                <KpiCard 
-                                    title={t("Children with IMNCI recording form")} 
-                                    value={`${pctCompletedForms}%`} 
-                                    unit={`(${infoSystemAgg.completed_forms} / ${infoSystemAgg.trained} ${t('trained')})`}
-                                />
-                            ) : (
-                                <KpiCard 
-                                    title={t("Babies skin-to-skin for 90min")} 
-                                    value={`${pctS2s}%`} 
-                                    unit={`(${infoSystemAgg.skin_to_skin_90min_count} / ${infoSystemAgg.total} ${t('total')})`}
-                                />
-                            )}
-                            {isIMNCI ? (
-                                <KpiCard 
-                                    title={t("Children returning for follow up")} 
-                                    value={`${pctFollowupForms}%`} 
-                                    unit={`(${infoSystemAgg.completed_followup_forms} / ${infoSystemAgg.trained} ${t('trained')})`}
-                                />
-                            ) : (
-                                <KpiCard 
-                                    title={t("Babies resuscitated with Ambu bag")} 
-                                    value={`${pctAmbu}%`} 
-                                    unit={`(${infoSystemAgg.resuscitated_with_ambu_count} / ${infoSystemAgg.total} ${t('total')})`}
-                                />
-                            )}
-                        </div>
+                    <h3 className={`text-xl font-extrabold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+                        {t('Information System KPIs (Overall)')}
+                    </h3>
 
-                        {infoLineLabels.length > 0 && (
-                            <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
-                                <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Information System Performance Over Time')}</h5>
-                                <div dir="ltr" className="h-full w-full">
-                                    <Line options={getLineOptions(t('KPI Performance (%)'))} data={infoSystemLineData} />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    {isIMNCI ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <InfoKpiTrendCard 
+                                title={t(infoTrainedLabel)} 
+                                avgValue={pctExaminedByTrained} totalNumerator={infoSystemAgg.trained} totalDenominator={infoSystemAgg.total}
+                                v1Value={getInfoPct(1, 'trained', 'total')} v1Numerator={infoSystemByVisit[1]?.trained || 0} v1Denominator={infoSystemByVisit[1]?.total || 0}
+                                v4Value={getInfoPct(4, 'trained', 'total')} v4Numerator={infoSystemByVisit[4]?.trained || 0} v4Denominator={infoSystemByVisit[4]?.total || 0}
+                                lineLabels={infoLineLabels}
+                                lineData={infoLineDataSets.seenByTrained}
+                                color="#0ea5e9"
+                                isAr={isAr} t={t} CopyImageButton={CopyImageButton}
+                            />
+                            <InfoKpiTrendCard 
+                                title={t("Children with IMNCI recording form")} 
+                                avgValue={pctCompletedForms} totalNumerator={infoSystemAgg.completed_forms} totalDenominator={infoSystemAgg.trained}
+                                v1Value={getInfoPct(1, 'completed_forms', 'trained')} v1Numerator={infoSystemByVisit[1]?.completed_forms || 0} v1Denominator={infoSystemByVisit[1]?.trained || 0}
+                                v4Value={getInfoPct(4, 'completed_forms', 'trained')} v4Numerator={infoSystemByVisit[4]?.completed_forms || 0} v4Denominator={infoSystemByVisit[4]?.trained || 0}
+                                lineLabels={infoLineLabels}
+                                lineData={infoLineDataSets.recordingForm}
+                                color="#8b5cf6"
+                                isAr={isAr} t={t} CopyImageButton={CopyImageButton}
+                            />
+                            <InfoKpiTrendCard 
+                                title={t("Children returning for follow up")} 
+                                avgValue={pctFollowupForms} totalNumerator={infoSystemAgg.completed_followup_forms} totalDenominator={infoSystemAgg.trained}
+                                v1Value={getInfoPct(1, 'completed_followup_forms', 'trained')} v1Numerator={infoSystemByVisit[1]?.completed_followup_forms || 0} v1Denominator={infoSystemByVisit[1]?.trained || 0}
+                                v4Value={getInfoPct(4, 'completed_followup_forms', 'trained')} v4Numerator={infoSystemByVisit[4]?.completed_followup_forms || 0} v4Denominator={infoSystemByVisit[4]?.trained || 0}
+                                lineLabels={infoLineLabels}
+                                lineData={infoLineDataSets.followup}
+                                color="#f59e0b"
+                                isAr={isAr} t={t} CopyImageButton={CopyImageButton}
+                            />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <InfoKpiTrendCard 
+                                title={t(infoTrainedLabel)} 
+                                avgValue={pctExaminedByTrained} totalNumerator={infoSystemAgg.trained} totalDenominator={infoSystemAgg.total}
+                                v1Value={getInfoPct(1, 'trained', 'total')} v1Numerator={infoSystemByVisit[1]?.trained || 0} v1Denominator={infoSystemByVisit[1]?.total || 0}
+                                v4Value={getInfoPct(4, 'trained', 'total')} v4Numerator={infoSystemByVisit[4]?.trained || 0} v4Denominator={infoSystemByVisit[4]?.total || 0}
+                                lineLabels={infoLineLabels}
+                                lineData={infoLineDataSets.seenByTrained}
+                                color="#0ea5e9"
+                                isAr={isAr} t={t} CopyImageButton={CopyImageButton}
+                            />
+                            <InfoKpiTrendCard 
+                                title={t("Babies skin-to-skin for 90min")} 
+                                avgValue={pctS2s} totalNumerator={infoSystemAgg.skin_to_skin_90min_count} totalDenominator={infoSystemAgg.total}
+                                v1Value={getInfoPct(1, 'skin_to_skin_90min_count', 'total')} v1Numerator={infoSystemByVisit[1]?.skin_to_skin_90min_count || 0} v1Denominator={infoSystemByVisit[1]?.total || 0}
+                                v4Value={getInfoPct(4, 'skin_to_skin_90min_count', 'total')} v4Numerator={infoSystemByVisit[4]?.skin_to_skin_90min_count || 0} v4Denominator={infoSystemByVisit[4]?.total || 0}
+                                lineLabels={infoLineLabels}
+                                lineData={infoLineDataSets.s2s}
+                                color="#8b5cf6"
+                                isAr={isAr} t={t} CopyImageButton={CopyImageButton}
+                            />
+                            <InfoKpiTrendCard 
+                                title={t("Babies resuscitated with Ambu bag")} 
+                                avgValue={pctAmbu} totalNumerator={infoSystemAgg.resuscitated_with_ambu_count} totalDenominator={infoSystemAgg.total}
+                                v1Value={getInfoPct(1, 'resuscitated_with_ambu_count', 'total')} v1Numerator={infoSystemByVisit[1]?.resuscitated_with_ambu_count || 0} v1Denominator={infoSystemByVisit[1]?.total || 0}
+                                v4Value={getInfoPct(4, 'resuscitated_with_ambu_count', 'total')} v4Numerator={infoSystemByVisit[4]?.resuscitated_with_ambu_count || 0} v4Denominator={infoSystemByVisit[4]?.total || 0}
+                                lineLabels={infoLineLabels}
+                                lineData={infoLineDataSets.ambu}
+                                color="#ec4899"
+                                isAr={isAr} t={t} CopyImageButton={CopyImageButton}
+                            />
+                            <InfoKpiTrendCard 
+                                title={t("Registered/Followed-up")} 
+                                avgValue={pctFollowupForms} totalNumerator={infoSystemAgg.completed_followup_forms} totalDenominator={infoSystemAgg.trained}
+                                v1Value={getInfoPct(1, 'completed_followup_forms', 'trained')} v1Numerator={infoSystemByVisit[1]?.completed_followup_forms || 0} v1Denominator={infoSystemByVisit[1]?.trained || 0}
+                                v4Value={getInfoPct(4, 'completed_followup_forms', 'trained')} v4Numerator={infoSystemByVisit[4]?.completed_followup_forms || 0} v4Denominator={infoSystemByVisit[4]?.trained || 0}
+                                lineLabels={infoLineLabels}
+                                lineData={infoLineDataSets.followup}
+                                color="#f59e0b"
+                                isAr={isAr} t={t} CopyImageButton={CopyImageButton}
+                            />
+                        </div>
+                    )}
 
                     {/* Drug/Supplies Availability KPIs */}
-                    <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
-                        <h4 className={`text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility Drug & Supplies Availability (Percentage of facilities reporting always available)')}</h4>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
-                            {drugList.map(drug => {
-                                const count = drugAvailabilityOverall[drug.key] || 0;
-                                const total = drugAvailabilityOverall.total || 1;
-                                const pct = ((count / total) * 100).toFixed(1);
-                                return (
-                                    <div key={drug.key} className="bg-emerald-50 p-4 rounded-xl border border-emerald-300 shadow-sm text-center">
-                                        <h5 className="text-xs font-extrabold text-emerald-800 mb-2 h-8 flex items-center justify-center leading-tight">{t(drug.label)}</h5>
-                                        <div className="text-xl font-extrabold text-emerald-600 mb-1" dir="ltr">{pct}%</div>
-                                        <div className="text-[10px] text-emerald-600 font-bold" dir="ltr">{count} {t('of')} {total} {t('facilities')}</div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                    <h3 className={`text-xl font-extrabold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+                        {t('Facility Drug & Supplies Availability (Percentage of facilities reporting always available)')}
+                    </h3>
 
-                        {drugLineLabels.length > 0 && (
-                            <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
-                                <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Availability Over Time')}</h5>
-                                <div dir="ltr" className="h-full w-full">
-                                    <Line options={getLineOptions(t('Facilities with item available (%)'))} data={drugLineData} />
-                                </div>
-                            </div>
-                        )}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        {drugList.map(drug => {
+                            const count = drugAvailabilityOverall[drug.key] || 0;
+                            const total = drugAvailabilityOverall.total || 0;
+                            const safeTotal = total > 0 ? total : 1;
+                            const pct = ((count / safeTotal) * 100).toFixed(1);
+                            
+                            return (
+                                <InfoKpiTrendCard 
+                                    key={drug.key}
+                                    title={t(`${drug.label} Availability`)} 
+                                    avgValue={total > 0 ? pct : null} 
+                                    totalNumerator={count} 
+                                    totalDenominator={total}
+                                    v1Value={getAvailabilityPct(1, drug.key)} 
+                                    v1Numerator={drugAvailabilityByVisit[1]?.[drug.key] || 0} 
+                                    v1Denominator={drugAvailabilityByVisit[1]?.total || 0}
+                                    v4Value={getAvailabilityPct(4, drug.key)} 
+                                    v4Numerator={drugAvailabilityByVisit[4]?.[drug.key] || 0} 
+                                    v4Denominator={drugAvailabilityByVisit[4]?.total || 0}
+                                    lineLabels={drugLineLabels}
+                                    lineData={drugLineDataSets[drug.key]}
+                                    color={drug.color}
+                                    isAr={isAr} 
+                                    t={t} 
+                                    CopyImageButton={CopyImageButton}
+                                />
+                            );
+                        })}
                     </div>
                 </>
             )}
@@ -373,7 +510,22 @@ const VisitReportDashboardTab = ({
             </div>
 
             <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                <h4 className={`text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility Problems & Solutions (Combined)')}</h4>
+                <div className={`p-5 border-b border-black bg-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isAr ? 'text-right' : 'text-left'}`}>
+                    <h4 className="text-lg font-extrabold text-slate-800">{t('Facility Problems & Solutions (Combined)')}</h4>
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-bold text-slate-600">{t('Filter by Status')}:</label>
+                        <select 
+                            value={statusFilter} 
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-sky-500 focus:border-sky-500 shadow-sm"
+                        >
+                            <option value="All">{t('All')}</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved/Done">Resolved / Done</option>
+                        </select>
+                    </div>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                         <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
@@ -386,11 +538,11 @@ const VisitReportDashboardTab = ({
                             </tr>
                         </thead>
                         <tbody>
-                            {visitReportStats.totalProblems === 0 && (
-                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">{t('No problems recorded.')}</td></tr>
+                            {filteredTotalProblems === 0 && (
+                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">{t('No problems match the selected filter.')}</td></tr>
                             )}
-                            {Object.keys(visitReportStats.groupedProblems).sort().map(locName => {
-                                const problems = visitReportStats.groupedProblems[locName];
+                            {Object.keys(filteredGroupedProblems).sort().map(locName => {
+                                const problems = filteredGroupedProblems[locName];
                                 return problems.map((item, idx) => (
                                     <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-black">
                                         {idx === 0 && (

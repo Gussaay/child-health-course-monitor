@@ -1594,10 +1594,15 @@ export function CourseManagementView({
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
-                    await sendFCMNotification({
+                    // Fire and forget (no await statement)
+                    sendFCMNotification({
                         targetUserId: 'managers_and_super_users',
                         title: notifTitle,
-                        body: notifBody
+                        body: notifBody,
+                        data: {
+                            actionView: 'courses',
+                            actionParams: JSON.stringify({ courseId: payload.id })
+                        }
                     }).catch(e => console.warn("FCM Send Error:", e));
                     
                 } catch (fcmError) {

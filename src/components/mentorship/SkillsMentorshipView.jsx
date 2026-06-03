@@ -155,17 +155,25 @@ const normalizeJobTitle = (title) => {
     return t;
 };
 
+// UPDATED: Keys mapped to match what is actually saved in VisitReports.jsx
 const IMNCI_SKILLS_LABELS = {
     skill_weight: "قياس الوزن",
     skill_height: "قياس الطول",
     skill_temp: "قياس الحرارة",
-    skill_rr: "قياس معدل التنفس",
-    skill_muac: "قياس محيط منتصف الذراع",
-    skill_wfh: "قياس الانحراف المعياري للطول بالنسبة للوزن",
+    skill_check_rr: "قياس معدل التنفس",
+    skill_mal_muac: "قياس محيط منتصف الذراع",
+    skill_mal_wfh: "قياس الانحراف المعياري للطول بالنسبة للوزن",
+    skill_check_dehydration: "تقييم فقدان السوائل",
     skill_edema: "تقييم الورم",
-    skill_danger_signs: "التعرف على علامات الخطورة",
+    skill_danger_signs: "التعرف على علامات الخطورة العامة",
+    skill_ds_drink: "علامة خطورة: لا يستطيع ان يرضع أو يشرب",
+    skill_ds_vomit: "علامة خطورة: يتقيأ كل شئ",
+    skill_ds_convulsion: "علامة خطورة: تشنجات أثناء المرض الحالي",
+    skill_ds_conscious: "علامة خطورة: خامل أو فاقد للوعي",
     skill_chartbook: "استخدام كتيب اللوحات للتقييم والتصنيف والعلاج",
     skill_counseling_card: "استخدام كرت نصح وارشاد الأم",
+    skill_record_form: "استخدام استمارة تسجيل الحالة",
+    skill_stat_reports: "ملء سجل العمل اليومي والتقرير الشهري",
     skill_immunization_referral: "اكتشاف وتحويل سواقط التطعيم",
 };
 

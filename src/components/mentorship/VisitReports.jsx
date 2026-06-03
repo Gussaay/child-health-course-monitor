@@ -1,7 +1,7 @@
 // VisitReports.jsx
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { getAuth } from "firebase/auth";
-import { Timestamp, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, doc } from 'firebase/firestore'; // Removed getDoc to eliminate lookup latency
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../../firebase'; 
 import { 
@@ -165,7 +165,7 @@ const EENC_BREATHING_BABY_SKILLS = {
 
 const EENC_RESUSCITATION_SKILLS = {
     'skill_airway': "فتح مجرى الهواء",
-    'skill_ambubag_placement': "وضع الامبوباق بصورة صحيحة على القم والانف",
+    'skill_ambubag_placement': "وضع امبوباق بصورة صحيحة على القم والانف",
     'skill_ambubag_use': "استخدام الامبوباق بصورة صحيحة",
     'skill_ventilation_rate': "معدل التهوية 40-60 في الدقيقة"
 };
@@ -273,19 +273,45 @@ export const IMNCIVisitReport = ({
     useEffect(() => {
         if (existingReportData) return;
         const currentVisitDate = formData.visit_date;
-        if (!currentVisitDate) return;
+        if (!currentVisitDate || !facility?.id) return;
 
-        const uniqueDates = [...new Set(
-            allVisitReports
-                .filter(r => r.facilityId === facility?.id)
-                .map(r => r.visitDate)
-        )].filter(d => d && d !== 'N/A').sort();
+        try {
+            let maxVisitNum = 0;
+            let matchingDateVisitNum = null;
 
-        if (uniqueDates.includes(currentVisitDate)) {
-            const index = uniqueDates.indexOf(currentVisitDate);
-            setFormData(prev => ({ ...prev, visitNumber: index + 1 }));
-        } else {
-            setFormData(prev => ({ ...prev, visitNumber: uniqueDates.length + 1 }));
+            const facilityReports = allVisitReports.filter(r => 
+                r.facilityId === facility.id && r.service === 'IMNCI'
+            );
+
+            facilityReports.forEach(report => {
+                const vNum = parseInt(report.visitNumber, 10) || parseInt(report.fullData?.visitNumber, 10) || 0;
+                if (vNum > maxVisitNum) maxVisitNum = vNum;
+
+                const rDate = report.visitDate || report.fullData?.visitDate || null;
+                if (rDate === currentVisitDate && vNum > 0) matchingDateVisitNum = vNum;
+            });
+
+            let newVisitNumber = 1;
+            const offlineKey = `offline_visit_max_${facility.id}_IMNCI_REPORT`;
+
+            if (matchingDateVisitNum !== null) {
+                newVisitNumber = matchingDateVisitNum;
+            } else if (facilityReports.length > 0) {
+                newVisitNumber = maxVisitNum + 1;
+            } else {
+                const savedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+                newVisitNumber = savedMax > 0 ? savedMax + 1 : 1;
+            }
+
+            setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            const actualMaxToStore = Math.max(maxVisitNum, newVisitNumber, currentStoredMax);
+            if (actualMaxToStore > currentStoredMax) {
+                localStorage.setItem(offlineKey, actualMaxToStore.toString());
+            }
+        } catch (error) {
+            console.error("Error calculating visit number:", error);
         }
     }, [formData.visit_date, allVisitReports, facility?.id, existingReportData]);
 
@@ -504,29 +530,23 @@ export const IMNCIVisitReport = ({
 
             await saveIMNCIVisitReport(payload, existingReportData?.id || null);
 
-            // --- TRIGGER POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
+            // --- TRIGGER FIRE-AND-FORGET REAL-TIME POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
             try {
                 const isUpdate = !!existingReportData?.id;
-                let submitterRole = 'User';
-                
-                // Fetch user's role
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists()) {
-                    submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
-                }
-
-                const submitterName = user.displayName || user.email;
+                const submitterName = user.displayName || user.email || 'A monitor';
                 const actionText = isUpdate ? 'updated an existing' : 'submitted a new';
                 const notifTitle = isUpdate ? `Visit Report Updated` : `New Visit Report Submitted`;
-                const notifBody = `${submitterName} (${submitterRole}) has ${actionText} IMNCI visit report for ${facility['اسم_المؤسسة']}.`;
+                const notifBody = `${submitterName} has ${actionText} IMNCI visit report for ${facility['اسم_المؤسسة']}.`;
 
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 
-                await sendFCMNotification({
+                // Fire and Forget (no await statement)[cite: 9]
+                sendFCMNotification({
                     targetUserId: 'managers_and_super_users',
                     title: notifTitle,
-                    body: notifBody
+                    body: notifBody,
+                    data: { actionView: 'skillsMentorship' } // Injected tracking layout destination[cite: 9]
                 }).catch(e => console.warn("FCM Send Error: Notification popup skipped.", e));
             } catch (fcmError) {
                 console.warn("FCM Send Error: Notification popup skipped.", fcmError);
@@ -1035,19 +1055,45 @@ export const EENCVisitReport = ({
     useEffect(() => {
         if (existingReportData) return;
         const currentVisitDate = formData.visit_date;
-        if (!currentVisitDate) return;
+        if (!currentVisitDate || !facility?.id) return;
 
-        const uniqueDates = [...new Set(
-            allVisitReports
-                .filter(r => r.facilityId === facility?.id)
-                .map(r => r.visitDate)
-        )].filter(d => d && d !== 'N/A').sort();
+        try {
+            let maxVisitNum = 0;
+            let matchingDateVisitNum = null;
 
-        if (uniqueDates.includes(currentVisitDate)) {
-            const index = uniqueDates.indexOf(currentVisitDate);
-            setFormData(prev => ({ ...prev, visitNumber: index + 1 }));
-        } else {
-            setFormData(prev => ({ ...prev, visitNumber: uniqueDates.length + 1 }));
+            const facilityReports = allVisitReports.filter(r => 
+                r.facilityId === facility.id && r.service === 'EENC'
+            );
+
+            facilityReports.forEach(report => {
+                const vNum = parseInt(report.visitNumber, 10) || parseInt(report.fullData?.visitNumber, 10) || 0;
+                if (vNum > maxVisitNum) maxVisitNum = vNum;
+
+                const rDate = report.visitDate || report.fullData?.visitDate || null;
+                if (rDate === currentVisitDate && vNum > 0) matchingDateVisitNum = vNum;
+            });
+
+            let newVisitNumber = 1;
+            const offlineKey = `offline_visit_max_${facility.id}_EENC_REPORT`;
+
+            if (matchingDateVisitNum !== null) {
+                newVisitNumber = matchingDateVisitNum;
+            } else if (facilityReports.length > 0) {
+                newVisitNumber = maxVisitNum + 1;
+            } else {
+                const savedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+                newVisitNumber = savedMax > 0 ? savedMax + 1 : 1;
+            }
+
+            setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            const actualMaxToStore = Math.max(maxVisitNum, newVisitNumber, currentStoredMax);
+            if (actualMaxToStore > currentStoredMax) {
+                localStorage.setItem(offlineKey, actualMaxToStore.toString());
+            }
+        } catch (error) {
+            console.error("Error calculating visit number:", error);
         }
     }, [formData.visit_date, allVisitReports, facility?.id, existingReportData]);
 
@@ -1139,7 +1185,7 @@ export const EENCVisitReport = ({
         setFormData(prev => ({ ...prev, medication_shortage: { ...prev.medication_shortage, [key]: value } }));
     };
 
-    const handleInfoSystemChange = (key, value) => {
+    const handlePaperworkChange = (key, value) => {
         setFormData(prev => ({ ...prev, info_system: { ...prev.info_system, [key]: value } }));
     };
 
@@ -1210,29 +1256,23 @@ export const EENCVisitReport = ({
 
             await saveEENCVisitReport(payload, existingReportData?.id || null);
 
-            // --- TRIGGER POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
+            // --- TRIGGER FIRE-AND-FORGET REAL-TIME POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
             try {
                 const isUpdate = !!existingReportData?.id;
-                let submitterRole = 'User';
-                
-                // Fetch user's role
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists()) {
-                    submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
-                }
-
-                const submitterName = user.displayName || user.email;
+                const submitterName = user.displayName || user.email || 'A monitor';
                 const actionText = isUpdate ? 'updated an existing' : 'submitted a new';
                 const notifTitle = isUpdate ? `Visit Report Updated` : `New Visit Report Submitted`;
-                const notifBody = `${submitterName} (${submitterRole}) has ${actionText} EENC visit report for ${facility['اسم_المؤسسة']}.`;
+                const notifBody = `${submitterName} has ${actionText} EENC visit report for ${facility['اسم_المؤسسة']}.`;
 
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 
-                await sendFCMNotification({
+                // Fire and Forget (no await statement)[cite: 9]
+                sendFCMNotification({
                     targetUserId: 'managers_and_super_users',
                     title: notifTitle,
-                    body: notifBody
+                    body: notifBody,
+                    data: { actionView: 'skillsMentorship' } // Injected tracking layout destination[cite: 9]
                 }).catch(e => console.warn("FCM Send Error: Notification popup skipped.", e));
             } catch (fcmError) {
                 console.warn("FCM Send Error: Notification popup skipped.", fcmError);
@@ -1530,7 +1570,7 @@ export const EENCVisitReport = ({
                                                         type="number" 
                                                         min="0"
                                                         value={formData.info_system[item.key]} 
-                                                        onChange={(e) => handleInfoSystemChange(item.key, e.target.value)}
+                                                        onChange={(e) => handlePaperworkChange(item.key, e.target.value)}
                                                         className="w-full text-center font-bold"
                                                         placeholder="0"
                                                     />

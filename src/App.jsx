@@ -386,6 +386,7 @@ export default function App() {
     // --- ADDED REFS FOR FCM NOTIFICATION QUEUE ---
     const notificationQueue = useRef([]);
     const notificationTimer = useRef(null);
+    const [actionAlert, setActionAlert] = useState(null);
 
     const { 
         appVersion, 
@@ -599,8 +600,15 @@ export default function App() {
                 const messaging = getMessaging();
                 unsubscribe = onMessage(messaging, (payload) => {
                     console.log("Foreground FCM received:", payload);
-                    const title = payload.notification?.title || "New Notification";
-                    const body = payload.notification?.body || "";
+                    const title = payload.notification?.title || payload.data?.title || "New Notification";
+                    const body = payload.notification?.body || payload.data?.body || "";
+                    const data = payload.data || {};
+
+                    // Intercept actionable notifications for Pop-up
+                    if (data.actionView) {
+                        setActionAlert({ title, body, data });
+                        return; 
+                    }
                     
                     // Add to queue instead of showing immediately
                     notificationQueue.current.push({ title, body });
@@ -1871,7 +1879,7 @@ export default function App() {
                     </div>
 
                     <div className="flex items-center justify-end gap-1.5 shrink-0">
-                        <NotificationBell user={user} />
+                        <NotificationBell user={user} navigate={navigate} />
                         
                         <button
                             onClick={() => setIsSyncModalOpen(true)}
@@ -2140,6 +2148,33 @@ export default function App() {
                 )}
             </Suspense>
 
+            {/* ACTION ALERT MODAL FOR FOREGROUND FCM */}
+            <Suspense fallback={null}>
+                {actionAlert && (
+                    <Modal isOpen={!!actionAlert} onClose={() => setActionAlert(null)} title="Action Required">
+                        <div className="p-6 text-center space-y-4">
+                            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-sky-100 mb-4 shadow-sm">
+                                <Bell className="h-8 w-8 text-sky-600 animate-pulse" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">{actionAlert.title}</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed">{actionAlert.body}</p>
+                            <div className="flex justify-center gap-3 mt-8 border-t pt-6">
+                                <Button variant="secondary" onClick={() => setActionAlert(null)}>
+                                    Dismiss
+                                </Button>
+                                <Button onClick={() => {
+                                    setActionAlert(null);
+                                    const params = actionAlert.data.actionParams ? JSON.parse(actionAlert.data.actionParams) : {};
+                                    navigate(actionAlert.data.actionView, params);
+                                }}>
+                                    View Details Now
+                                </Button>
+                            </div>
+                        </div>
+                    </Modal>
+                )}
+            </Suspense>
+
             {permissions.canUseSuperUserAdvancedFeatures && isMonitorVisible && (
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
@@ -2148,4 +2183,4 @@ export default function App() {
 
         </div>
     );
-}	
+}

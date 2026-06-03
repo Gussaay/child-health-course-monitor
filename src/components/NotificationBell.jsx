@@ -5,11 +5,12 @@ import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion } from
 import { Bell, Trash2, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Modal, Button, Toast } from './CommonComponents';
 
-export default function NotificationBell({ user }) {
+export default function NotificationBell({ user, navigate }) {
     const [notifications, setNotifications] = useState([]);
     const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
     const [selectedNotif, setSelectedNotif] = useState(null); 
     const [toast, setToast] = useState(null);
+    const [actionAlert, setActionAlert] = useState(null); 
     
     // Track initial load to prevent toast flooding
     const initialLoadRef = useRef(true);
@@ -17,35 +18,41 @@ export default function NotificationBell({ user }) {
     useEffect(() => {
         if (!user) return;
 
+        // UPDATED: Added 'managers_and_super_users' to the query so group notifications are caught
         const q = query(
             collection(db, 'notifications'),
-            where('targetUser', 'in', ['all', user.uid]),
+            where('targetUser', 'in', ['all', 'managers_and_super_users', user.uid]),
             where('status', '==', 'active')
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const notifs = [];
             snapshot.forEach(docSnap => {
-                notifs.push({ id: docSnap.id, ...docSnap.data() });
+                const data = docSnap.data();
+                // ONLY show notifications this specific user hasn't cleared/deleted
+                if (!(data.deletedBy || []).includes(user.uid)) {
+                    notifs.push({ id: docSnap.id, ...data });
+                }
             });
             
             // Sort newest first
             notifs.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
             setNotifications(notifs);
 
-            // Update selected notification if it gets modified while open
             if (selectedNotif) {
                 const updatedSelected = notifs.find(n => n.id === selectedNotif.id);
                 if (updatedSelected) setSelectedNotif(updatedSelected);
             }
 
-            // Process document changes for Delivery Tracking and Toasts
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added") {
                     const data = change.doc.data();
                     const notifId = change.doc.id;
 
-                    // 1. Mark as DELIVERED as soon as it reaches the device
+                    // Prevent processing if the user already cleared it
+                    if ((data.deletedBy || []).includes(user.uid)) return;
+
+                    // 1. Mark as DELIVERED
                     if (!(data.deliveredTo || []).includes(user.uid)) {
                         const notifRef = doc(db, 'notifications', notifId);
                         updateDoc(notifRef, {
@@ -53,18 +60,21 @@ export default function NotificationBell({ user }) {
                         }).catch(err => console.error("Error marking delivered:", err));
                     }
 
-                    // 2. Show toast ONLY if it's a completely new notification (not initial app load)
+                    // 2. Handle actionable (Pop-up) vs standard (Toast)
                     if (!initialLoadRef.current && !(data.readBy || []).includes(user.uid)) {
-                        setToast({ 
-                            show: true, 
-                            message: `🔔 ${data.title}`, 
-                            type: 'info' 
-                        });
+                        if (data.actionView) {
+                            setActionAlert({ id: notifId, ...data });
+                        } else {
+                            setToast({ 
+                                show: true, 
+                                message: `🔔 ${data.title}`, 
+                                type: 'info' 
+                            });
+                        }
                     }
                 }
             });
 
-            // Mark initial load as complete after processing the first snapshot
             if (initialLoadRef.current) {
                 initialLoadRef.current = false;
             }
@@ -73,11 +83,9 @@ export default function NotificationBell({ user }) {
         return () => unsubscribe();
     }, [user, selectedNotif]);
 
-    // Handle clicking a notification in the list
+    // Standard click just marks as Read (Used for regular notifications in the list)
     const handleNotificationClick = async (notif) => {
-        setSelectedNotif(notif); // Switch to detail view
-
-        // 3. Mark as READ explicitly when the user clicks the notification
+        setSelectedNotif(notif); 
         if (user && !(notif.readBy || []).includes(user.uid)) {
             try {
                 const notifRef = doc(db, 'notifications', notif.id);
@@ -90,16 +98,17 @@ export default function NotificationBell({ user }) {
         }
     };
 
-    const handleClearNotification = async (notificationId, currentTargetUser) => {
+    // Immediate personal deletion (Used for Action Pop-ups and the Trash icon)
+    const handleClearNotification = async (notificationId) => {
         if (!user) return;
         try {
             const notifRef = doc(db, 'notifications', notificationId);
-            if (currentTargetUser === 'all') {
-                await updateDoc(notifRef, { readBy: arrayUnion(user.uid) });
-            } else {
-                await updateDoc(notifRef, { status: 'cleared' });
-            }
-            setSelectedNotif(null); // Go back to list if cleared while viewing
+            // Append the user to 'deletedBy' so it hides for them, but stays in DB for others
+            await updateDoc(notifRef, { 
+                readBy: arrayUnion(user.uid),
+                deletedBy: arrayUnion(user.uid) 
+            });
+            setSelectedNotif(null); 
         } catch (error) {
             console.error("Error clearing notification:", error);
         }
@@ -127,6 +136,37 @@ export default function NotificationBell({ user }) {
 
             {toast?.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
+            {/* ACTION ALERT POP-UP MODAL (For Federal Managers / Updates) */}
+            {actionAlert && (
+                <Modal isOpen={!!actionAlert} onClose={() => setActionAlert(null)} title="Action Required">
+                    <div className="p-6 text-center space-y-4">
+                        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-sky-100 mb-4 shadow-sm">
+                            <Bell className="h-8 w-8 text-sky-600 animate-pulse" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900">{actionAlert.title}</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">{actionAlert.message || actionAlert.body}</p>
+                        <div className="flex justify-center gap-3 mt-8 border-t pt-6">
+                            <Button variant="secondary" onClick={() => {
+                                handleClearNotification(actionAlert.id); // Hides it permanently for this user
+                                setActionAlert(null);
+                            }}>
+                                Dismiss
+                            </Button>
+                            <Button onClick={() => {
+                                handleClearNotification(actionAlert.id); // Hides it permanently for this user
+                                setActionAlert(null);
+                                if(navigate) {
+                                    const params = actionAlert.actionParams ? JSON.parse(actionAlert.actionParams) : {};
+                                    navigate(actionAlert.actionView, params);
+                                }
+                            }}>
+                                View Details Now
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
             {isNotificationsModalOpen && (
                 <Modal 
                     isOpen={isNotificationsModalOpen} 
@@ -135,7 +175,7 @@ export default function NotificationBell({ user }) {
                 >
                     <div className="p-4 max-h-[60vh] min-h-[300px] overflow-y-auto bg-gray-50">
                         
-                        {/* LIST VIEW */}
+                        {/* LIST VIEW (Standard Notifications) */}
                         {!selectedNotif && notifications.length === 0 && (
                             <div className="text-center py-12 text-gray-500">
                                 <Bell className="w-10 h-10 mx-auto text-gray-300 mb-3" />
@@ -159,7 +199,7 @@ export default function NotificationBell({ user }) {
                                                         {notif.title}
                                                         {!isRead && <span className="ml-2 inline-block w-2 h-2 bg-red-500 rounded-full"></span>}
                                                     </h4>
-                                                    <p className="text-xs text-gray-500 truncate mt-0.5">{notif.message}</p>
+                                                    <p className="text-xs text-gray-500 truncate mt-0.5">{notif.message || notif.body}</p>
                                                 </div>
                                                 <div className="text-[10px] text-gray-400 shrink-0 flex items-center">
                                                     {notif.createdAt ? new Date(notif.createdAt.seconds * 1000).toLocaleDateString() : 'New'}
@@ -182,34 +222,30 @@ export default function NotificationBell({ user }) {
                                             {selectedNotif.createdAt ? new Date(selectedNotif.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
                                         </div>
                                     </div>
-                                    {selectedNotif.targetUser !== 'all' && (
-                                        <button 
-                                            onClick={() => handleClearNotification(selectedNotif.id, selectedNotif.targetUser)} 
-                                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0 bg-gray-50" 
-                                            title="Delete Notification"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    )}
+                                    <button 
+                                        onClick={() => handleClearNotification(selectedNotif.id)} 
+                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0 bg-gray-50" 
+                                        title="Delete Notification"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
                                 </div>
                                 <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                                    {selectedNotif.message}
+                                    {selectedNotif.message || selectedNotif.body}
                                 </div>
                             </div>
                         )}
 
                     </div>
                     
-                    {/* MODAL FOOTER */}
                     <div className="p-4 border-t border-gray-200 bg-white flex justify-between items-center rounded-b-xl">
                         {selectedNotif ? (
                             <Button onClick={() => setSelectedNotif(null)} variant="secondary" className="px-4">
                                 <ArrowLeft size={16} className="mr-2" /> Back to List
                             </Button>
                         ) : (
-                            <div></div> // Spacer
+                            <div></div>
                         )}
-                        
                         <Button onClick={() => { setIsNotificationsModalOpen(false); setSelectedNotif(null); }} variant="secondary">
                             Close
                         </Button>

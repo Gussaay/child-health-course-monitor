@@ -29,9 +29,26 @@ const SERVICE_TITLES = {
 };
 
 const IMNCI_SKILL_GROUPS = {
-    group1: { title: "Number of training sessions on use of IMNCI tools", keys: ['skill_chartbook', 'skill_counseling_card', 'skill_record_form', 'skill_stat_reports'], labels: ['Chartbooklet use training sessions', 'Mother Counseling Card use training sessions', 'Recording Form filling training sessions', 'Daily and Monthly Statistic Reports filling training sessions'], color: '#3b82f6' },
-    group2: { title: "Number of training sessions on Main IMNCI Signs Assessment", keys: ['skill_danger_signs', 'skill_rr', 'skill_dehydration', 'skill_immunization_referral'], labels: ['Danger Signs assessment training sessions', 'Respiratory Rate measurement training sessions', 'Dehydration assessment training sessions', 'Immunization check training sessions'], color: '#10b981' },
-    group3: { title: "Number of training sessions on Malnutrition signs Assessment", keys: ['skill_weight', 'skill_height', 'skill_muac', 'skill_wfh', 'skill_edema'], labels: ['Weight measurement training sessions', 'Height measurement training sessions', 'MUAC measurement training sessions', 'Z-Score measurement training sessions', 'Lower Limb Edema check training sessions'], color: '#f59e0b' }
+    group1: { 
+        title: "Number of training sessions on use of IMNCI tools", 
+        keys: ['skill_chartbook', 'skill_counseling_card', 'skill_record_form', 'skill_stat_reports'], 
+        labels: ['Chartbooklet use training sessions', 'Mother Counseling Card use training sessions', 'Recording Form filling training sessions', 'Daily and Monthly Statistic Reports filling training sessions'], 
+        color: '#3b82f6' 
+    },
+    group2: { 
+        title: "Number of training sessions on Main IMNCI Signs Assessment", 
+        // FIXED: 'skill_rr' -> 'skill_check_rr' and 'skill_dehydration' -> 'skill_check_dehydration'
+        keys: ['skill_danger_signs', 'skill_check_rr', 'skill_check_dehydration', 'skill_immunization_referral'], 
+        labels: ['Danger Signs assessment training sessions', 'Respiratory Rate measurement training sessions', 'Dehydration assessment training sessions', 'Immunization check training sessions'], 
+        color: '#10b981' 
+    },
+    group3: { 
+        title: "Number of training sessions on Malnutrition signs Assessment", 
+        // FIXED: 'skill_muac' -> 'skill_mal_muac' and 'skill_wfh' -> 'skill_mal_wfh'
+        keys: ['skill_weight', 'skill_height', 'skill_mal_muac', 'skill_mal_wfh', 'skill_edema'], 
+        labels: ['Weight measurement training sessions', 'Height measurement training sessions', 'MUAC measurement training sessions', 'Z-Score measurement training sessions', 'Lower Limb Edema check training sessions'], 
+        color: '#f59e0b' 
+    }
 };
 
 const EENC_SKILL_GROUPS = {
@@ -132,19 +149,23 @@ const MentorshipDashboard = ({
 
     const renderStatusCell = (currentStatus, reportId, challengeId, fieldName) => {
         const key = `${reportId}_${challengeId}_${fieldName}`;
-        const displayStatus = localStatusUpdates[key] !== undefined ? localStatusUpdates[key] : currentStatus;
+        const rawDisplayStatus = localStatusUpdates[key] !== undefined ? localStatusUpdates[key] : currentStatus;
+        
+        const isResolvedOrDone = rawDisplayStatus === 'Done' || rawDisplayStatus === 'Resolved' || rawDisplayStatus === 'Resolved/Done';
+        const displayStatus = isResolvedOrDone ? 'Resolved/Done' : rawDisplayStatus;
 
         if (canEditStatus) {
             return (
-                <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-[11px] font-bold border border-black rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${displayStatus === 'Done' || displayStatus === 'Resolved' ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
-                    <option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
-                    <option value="Resolved">Resolved</option>
+                <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-[11px] font-bold border border-black rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${isResolvedOrDone ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved/Done">Resolved / Done</option>
                 </select>
             );
         } else {
             return (
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide shadow-sm border border-black ${displayStatus === 'Done' || displayStatus === 'Resolved' ? 'bg-emerald-50 text-emerald-700' : displayStatus === 'In Progress' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
-                    {displayStatus}
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide shadow-sm border border-black ${isResolvedOrDone ? 'bg-emerald-50 text-emerald-700' : displayStatus === 'In Progress' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
+                    {displayStatus === 'Resolved/Done' ? 'Resolved / Done' : displayStatus}
                 </span>
             );
         }
@@ -417,12 +438,16 @@ const MentorshipDashboard = ({
 
     const eencMotherKpiHelper = useCallback((submissions) => {
         const motherSubmissions = submissions.filter(sub => sub.service === 'EENC_MOTHERS');
-        const scores = { skin_imm: [], skin_90min: [], bf_1hr: [], bf_substitute: [], bf_bottle: [], vit_k: [], eye_oint: [], cord_subs: [], skin_oil: [], bath_6hr: [], polio: [], bcg: [], weight: [], temp: [], civ_reg: [], dis_card: [] };
+        const scores = { overall_score: [], skin_imm: [], skin_90min: [], bf_1hr: [], bf_substitute: [], bf_bottle: [], vit_k: [], eye_oint: [], cord_subs: [], skin_oil: [], bath_6hr: [], polio: [], bcg: [], weight: [], temp: [], civ_reg: [], dis_card: [] };
         const skillStats = {};
         EENC_MOTHER_SURVEY_ITEMS_EN.forEach(g => g.items.forEach(i => skillStats[i.key] = { yes: 0, no: 0 }));
 
         motherSubmissions.forEach(sub => {
             const d = sub.eencMothersData || sub.fullData?.eencMothersData;
+            const sc = sub.scores || {};
+            
+            if (sc.overall_maxScore > 0) scores.overall_score.push(sc.overall_score / sc.overall_maxScore);
+
             if (d) {
                 const push = (val, arr, key) => { const isYes = val === 'yes'; arr.push(isYes ? 1 : 0); if(skillStats[key]) { if(isYes) skillStats[key].yes++; else if(val === 'no') skillStats[key].no++; } };
                 push(d.skin_to_skin_immediate, scores.skin_imm, 'skin_to_skin_immediate'); push(d.skin_to_skin_90min, scores.skin_90min, 'skin_to_skin_90min');
@@ -438,6 +463,7 @@ const MentorshipDashboard = ({
         const avg = (arr) => calculateAverage(arr);
         return {
             totalMothers: motherSubmissions.length, skillStats, avgOverall: calculateAverage(Object.values(scores).flat()),
+            avgOverallScore: avg(scores.overall_score),
             avgSkinImm: avg(scores.skin_imm), avgSkin90min: avg(scores.skin_90min), avgBf1hr: avg(scores.bf_1hr), avgBfSub: avg(scores.bf_substitute), avgBfBottle: avg(scores.bf_bottle),
             avgVitK: avg(scores.vit_k), avgEyeOint: avg(scores.eye_oint), avgCordSubs: avg(scores.cord_subs), avgSkinOil: avg(scores.skin_oil), avgBath6hr: avg(scores.bath_6hr),
             avgPolio: avg(scores.polio), avgBcg: avg(scores.bcg), avgWeight: avg(scores.weight), avgTemp: avg(scores.temp), avgCivReg: avg(scores.civ_reg), avgDisCard: avg(scores.dis_card),
@@ -448,7 +474,8 @@ const MentorshipDashboard = ({
         const motherSubmissions = submissions.filter(sub => sub.service === 'IMNCI_MOTHERS');
         const scores = {
             know_med: [], know_ors_prep: [], know_tx: [], know_4rules: [], know_return: [], know_fluids: [], know_ors_qty: [], know_ors_stool: [],
-            sat_time: [], sat_assess: [], sat_tx: [], sat_comm: [], sat_learn: [], sat_avail: []
+            sat_time: [], sat_assess: [], sat_tx: [], sat_comm: [], sat_learn: [], sat_avail: [],
+            overall_knowledge: [], overall_satisfaction: []
         };
         const skillStats = {};
         IMNCI_MOTHER_SURVEY_ITEMS_EN.forEach(g => g.items.forEach(i => skillStats[i.key] = { yes: 0, no: 0 }));
@@ -456,16 +483,38 @@ const MentorshipDashboard = ({
         motherSubmissions.forEach(sub => {
             const k = sub.mothersKnowledge || sub.fullData?.mothersKnowledge || {};
             const s = sub.mothersSatisfaction || sub.fullData?.mothersSatisfaction || {};
-            const push = (val, arr, key) => { const isYes = val === 'نعم'; arr.push(isYes ? 1 : 0); if(skillStats[key]) { if(isYes) skillStats[key].yes++; else if(val === 'لا') skillStats[key].no++; } };
+            const sc = sub.scores || {};
+            
+            if (sc.knowledge_maxScore > 0) scores.overall_knowledge.push(sc.knowledge_score / sc.knowledge_maxScore);
+            if (sc.satisfaction_maxScore > 0) scores.overall_satisfaction.push(sc.satisfaction_score / sc.satisfaction_maxScore);
 
-            push(k.knows_med_details, scores.know_med, 'knows_med_details'); push(k.knows_ors_prep, scores.know_ors_prep, 'knows_tx', 'knows_treatment_details'); push(k.knows_diarrhea_4rules, scores.know_4rules, 'knows_diarrhea_4rules');
-            push(k.knows_return_date, scores.know_return, 'knows_return_date'); push(k.knows_home_fluids, scores.know_fluids, 'knows_home_fluids'); push(k.knows_ors_water_qty, scores.know_ors_qty, 'knows_ors_water_qty'); push(k.knows_ors_after_stool, scores.know_ors_stool, 'knows_ors_after_stool');
+            const push = (val, arr, key) => { 
+                if (typeof val === 'string' && (val.includes('نعم') || (val.includes('لا') && !val.includes('ينطبق')))) {
+                    const isYes = val.includes('نعم'); 
+                    arr.push(isYes ? 1 : 0); 
+                    if(skillStats[key]) { 
+                        if(isYes) skillStats[key].yes++; 
+                        else skillStats[key].no++; 
+                    }
+                }
+            };
+
+            push(k.knows_med_details, scores.know_med, 'knows_med_details'); 
+            push(k.knows_ors_prep, scores.know_ors_prep, 'knows_ors_prep'); 
+            push(k.knows_treatment_details, scores.know_tx, 'knows_treatment_details'); 
+            push(k.knows_diarrhea_4rules, scores.know_4rules, 'knows_diarrhea_4rules');
+            push(k.knows_return_date, scores.know_return, 'knows_return_date'); 
+            push(k.knows_home_fluids, scores.know_fluids, 'knows_home_fluids'); 
+            push(k.knows_ors_water_qty, scores.know_ors_qty, 'knows_ors_water_qty'); 
+            push(k.knows_ors_after_stool, scores.know_ors_stool, 'knows_ors_after_stool');
+            
             push(s.time_spent, scores.sat_time, 'time_spent'); push(s.assessment_method, scores.sat_assess, 'assessment_method'); push(s.treatment_given, scores.sat_tx, 'treatment_given'); push(s.communication_style, scores.sat_comm, 'communication_style'); push(s.what_learned, scores.sat_learn, 'what_learned'); push(s.drug_availability, scores.sat_avail, 'drug_availability');
         });
 
         const avg = (arr) => calculateAverage(arr);
         return {
             totalMothers: motherSubmissions.length, skillStats, avgOverall: calculateAverage(Object.values(scores).flat()),
+            avgKnowledge: avg(scores.overall_knowledge), avgSatisfaction: avg(scores.overall_satisfaction),
             avgKnowMed: avg(scores.know_med), avgKnowOrsPrep: avg(scores.know_ors_prep), avgKnowTx: avg(scores.know_tx), avgKnow4Rules: avg(scores.know_4rules),
             avgKnowReturn: avg(scores.know_return), avgKnowFluids: avg(scores.know_fluids), avgKnowOrsQty: avg(scores.know_ors_qty), avgKnowOrsStool: avg(scores.know_ors_stool),
             avgSatTime: avg(scores.sat_time), avgSatAssess: avg(scores.sat_assess), avgSatTx: avg(scores.sat_tx), avgSatComm: avg(scores.sat_comm), avgSatLearn: avg(scores.sat_learn), avgSatAvail: avg(scores.sat_avail)
@@ -626,16 +675,37 @@ const MentorshipDashboard = ({
 
     const imnciMotherChartData = useMemo(() => {
         if (activeService !== 'IMNCI') return [];
-        const visitGroups = [...filteredSubmissions].sort((a, b) => (a.visitNumber || 1) - (b.visitNumber || 1)).reduce((acc, sub) => {
+        const visitGroups = [...filteredSubmissions].sort((a, b) => {
+            const vA = parseInt(a.visitNumber || a.fullData?.visitNumber); 
+            const vB = parseInt(b.visitNumber || b.fullData?.visitNumber);
+            return (isNaN(vA) ? 1 : vA) - (isNaN(vB) ? 1 : vB);
+        }).reduce((acc, sub) => {
             if (sub.service !== 'IMNCI_MOTHERS') return acc;
-            const visitNum = sub.visitNumber || 1; 
-            if (!acc[visitNum]) acc[visitNum] = { 'M: Knows Meds': [], 'M: Knows ORS': [], 'M: Knows Tx': [], 'M: Knows 4 Rules': [], 'M: Knows Return': [], 'M: Knows Fluids': [], 'M: Time Spent': [], 'M: Assess Method': [], 'M: Tx Given': [], 'M: Comm Style': [], 'M: What Learned': [], 'M: Drug Avail': [] };
-            const g = acc[visitNum]; const k = sub.mothersKnowledge || sub.fullData?.mothersKnowledge || {}; const s = sub.mothersSatisfaction || sub.fullData?.mothersSatisfaction || {};
-            const push = (val, label) => g[label].push(val === 'نعم' ? 100 : 0);
+            const parsedV = parseInt(sub.visitNumber || sub.fullData?.visitNumber);
+            const visitNum = isNaN(parsedV) ? 1 : parsedV; 
+            
+            if (!acc[visitNum]) acc[visitNum] = { 'M: Knows Meds': [], 'M: Knows ORS': [], 'M: Knows Tx': [], 'M: Knows 4 Rules': [], 'M: Knows Return': [], 'M: Knows Fluids': [], 'M: ORS Water': [], 'M: ORS Stool': [], 'M: Time Spent': [], 'M: Assess Method': [], 'M: Tx Given': [], 'M: Comm Style': [], 'M: What Learned': [], 'M: Drug Avail': [], 'M: Overall Knowledge': [], 'M: Overall Satisfaction': [] };
+            const g = acc[visitNum]; 
+            const k = sub.mothersKnowledge || sub.fullData?.mothersKnowledge || sub.fullData?.knowledge || {}; 
+            const s = sub.mothersSatisfaction || sub.fullData?.mothersSatisfaction || sub.fullData?.satisfaction || {};
+            const sc = sub.scores || {};
+            
+            const push = (val, label) => {
+                if (typeof val === 'string' && val.includes('نعم')) g[label].push(100);
+                else if (typeof val === 'string' && val.includes('لا') && !val.includes('ينطبق')) g[label].push(0);
+            };
+            
             push(k.knows_med_details, 'M: Knows Meds'); push(k.knows_ors_prep, 'M: Knows ORS'); push(k.knows_treatment_details, 'M: Knows Tx'); push(k.knows_diarrhea_4rules, 'M: Knows 4 Rules'); push(k.knows_return_date, 'M: Knows Return'); push(k.knows_home_fluids, 'M: Knows Fluids');
+            push(k.knows_ors_water_qty, 'M: ORS Water'); push(k.knows_ors_after_stool, 'M: ORS Stool');
+            
             push(s.time_spent, 'M: Time Spent'); push(s.assessment_method, 'M: Assess Method'); push(s.treatment_given, 'M: Tx Given'); push(s.communication_style, 'M: Comm Style'); push(s.what_learned, 'M: What Learned'); push(s.drug_availability, 'M: Drug Avail');
+
+            if (sc.knowledge_maxScore > 0) g['M: Overall Knowledge'].push((sc.knowledge_score / sc.knowledge_maxScore) * 100);
+            if (sc.satisfaction_maxScore > 0) g['M: Overall Satisfaction'].push((sc.satisfaction_score / sc.satisfaction_maxScore) * 100);
+
             return acc;
         }, {});
+        
         return Object.keys(visitGroups).map(v => ({ visitNumber: parseInt(v), data: visitGroups[v] })).sort((a,b) => a.visitNumber - b.visitNumber).map(({visitNumber, data}) => {
             const avg = (scoreArray) => { const v = scoreArray.filter(s => s !== null && !isNaN(s)); return v.length===0 ? null : Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
             const res = { name: `Visit ${visitNumber}` }; Object.keys(data).forEach(k => res[k] = avg(data[k])); return res;
@@ -644,17 +714,27 @@ const MentorshipDashboard = ({
 
     const eencMotherChartData = useMemo(() => {
         if (activeService !== 'EENC') return [];
-        const visitGroups = [...filteredSubmissions].sort((a, b) => (a.visitNumber || 1) - (b.visitNumber || 1)).reduce((acc, sub) => {
+        const visitGroups = [...filteredSubmissions].sort((a, b) => {
+            const vA = parseInt(a.visitNumber || a.fullData?.visitNumber); 
+            const vB = parseInt(b.visitNumber || b.fullData?.visitNumber);
+            return (isNaN(vA) ? 1 : vA) - (isNaN(vB) ? 1 : vB);
+        }).reduce((acc, sub) => {
             if (sub.service !== 'EENC_MOTHERS') return acc;
-            const visitNum = sub.visitNumber || 1; 
-            if (!acc[visitNum]) acc[visitNum] = { 'Imm. Skin-to-Skin': [], '90min Skin-to-Skin': [], 'BF 1st Hour': [], 'Other Fluids': [], 'Bottle Feeding': [], 'Vitamin K': [], 'Eye Ointment': [], 'Cord Substance': [], 'Skin Oiling': [], 'Bathing < 6hrs': [], 'Polio Vaccine': [], 'BCG Vaccine': [], 'Weight Measured': [], 'Temp Measured': [], 'Civil Reg': [], 'Discharge Card': [] };
-            const g = acc[visitNum]; const d = sub.eencMothersData || sub.fullData?.eencMothersData || {};
+            const parsedV = parseInt(sub.visitNumber || sub.fullData?.visitNumber);
+            const visitNum = isNaN(parsedV) ? 1 : parsedV; 
+            if (!acc[visitNum]) acc[visitNum] = { 'Imm. Skin-to-Skin': [], '90min Skin-to-Skin': [], 'BF 1st Hour': [], 'Other Fluids': [], 'Bottle Feeding': [], 'Vitamin K': [], 'Eye Ointment': [], 'Cord Substance': [], 'Skin Oiling': [], 'Bathing < 6hrs': [], 'Polio Vaccine': [], 'BCG Vaccine': [], 'Weight Measured': [], 'Temp Measured': [], 'Civil Reg': [], 'Discharge Card': [], 'M: Overall Score': [] };
+            const g = acc[visitNum]; const d = sub.eencMothersData || sub.fullData?.eencMothersData || sub.fullData?.skills || {};
+            const sc = sub.scores || {};
             if(d) {
-                const push = (val, label) => g[label].push(val === 'yes' ? 100 : 0);
+                const push = (val, label) => {
+                    if (val === 'yes' || val === 'نعم' || val === true) g[label].push(100);
+                    else if (val === 'no' || val === 'لا' || val === false) g[label].push(0);
+                }
                 push(d.skin_to_skin_immediate, 'Imm. Skin-to-Skin'); push(d.skin_to_skin_90min, '90min Skin-to-Skin'); push(d.breastfed_first_hour, 'BF 1st Hour'); push(d.given_other_fluids, 'Other Fluids'); push(d.given_other_fluids_bottle, 'Bottle Feeding');
                 push(d.given_vitamin_k, 'Vitamin K'); push(d.given_tetracycline, 'Eye Ointment'); push(d.anything_on_cord, 'Cord Substance'); push(d.rubbed_with_oil, 'Skin Oiling'); push(d.baby_bathed, 'Bathing < 6hrs');
                 push(d.polio_zero_dose, 'Polio Vaccine'); push(d.bcg_dose, 'BCG Vaccine'); push(d.baby_weighed, 'Weight Measured'); push(d.baby_temp_measured, 'Temp Measured'); push(d.baby_registered, 'Civil Reg'); push(d.given_discharge_card, 'Discharge Card');
             }
+            if (sc.overall_maxScore > 0) g['M: Overall Score'].push((sc.overall_score / sc.overall_maxScore) * 100);
             return acc;
         }, {});
         return Object.keys(visitGroups).map(v => ({ visitNumber: parseInt(v), data: visitGroups[v] })).sort((a,b) => a.visitNumber - b.visitNumber).map(({visitNumber, data}) => {
@@ -883,8 +963,13 @@ const MentorshipDashboard = ({
 
                 {activeTab === 'mothers' && (
                     <MotherInterviewsTab 
-                        activeService={activeService} motherKpis={motherKpis} chartData={activeService === 'IMNCI' ? imnciMotherChartData : eencMotherChartData}
-                        motherGeographicKpis={motherGeographicKpis} scopeTitle={scopeTitle} geographicLevelName={geographicLevelName}
+                        activeService={activeService} 
+                        motherKpis={motherKpis} 
+                        chartData={activeService === 'IMNCI' ? imnciMotherChartData : eencMotherChartData}
+                        motherGeographicKpis={motherGeographicKpis} 
+                        scopeTitle={scopeTitle} 
+                        geographicLevelName={geographicLevelName}
+                        filteredSubmissions={filteredSubmissions}
                     />
                 )}
 

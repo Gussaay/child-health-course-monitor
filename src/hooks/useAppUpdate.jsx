@@ -50,6 +50,7 @@ export function useAppUpdate() {
                         const latestUpdate = await response.json();
                         
                         if (currentVersion !== latestUpdate.version) {
+                            console.log(`[OTA] New version ${latestUpdate.version} found. Downloading in background...`);
                             isDownloadingOta.current = true;
                             
                             const downloadedBundle = await CapacitorUpdater.download({ 
@@ -57,11 +58,13 @@ export function useAppUpdate() {
                                 version: latestUpdate.version 
                             });
                             
+                            console.log(`[OTA] Version ${latestUpdate.version} downloaded successfully. Waiting for app close to apply.`);
                             downloadedOtaBundleId.current = downloadedBundle.id;
                             isDownloadingOta.current = false;
                         }
                     }
                 } catch (error) { 
+                    console.error("[OTA] Background Check/Download Failed:", error);
                     isDownloadingOta.current = false;
                 }
             };
@@ -83,7 +86,6 @@ export function useAppUpdate() {
 
                         // 1. Check Native (Hard APK update requirement)
                         if (serverBuild > currentBuild) {
-                            // Show prompt IF it is mandatory, OR if they haven't skipped it THIS SESSION
                             if (serverConfig.mandatory || serverBuild !== sessionSkippedBuild.current) {
                                 setNativeUpdatePrompt(serverConfig);
                                 return; 
@@ -106,6 +108,7 @@ export function useAppUpdate() {
             CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
                 if (!isActive && downloadedOtaBundleId.current && !nativeUpdatePrompt) {
                     try {
+                        console.log("[OTA] App closed/minimized. Applying the downloaded update now...");
                         await CapacitorUpdater.set({ id: downloadedOtaBundleId.current });
                         downloadedOtaBundleId.current = null; 
                     } catch (e) { 

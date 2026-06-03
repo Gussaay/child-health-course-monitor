@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { getAuth } from "firebase/auth";
-import { writeBatch, collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { writeBatch, collection, getDocs, doc } from "firebase/firestore"; // Removed getDoc
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from "../firebase";
 import { useDataCache } from '../DataContext';
@@ -100,8 +100,6 @@ const STAFF_ARRAY_KEYS = ['imnci_staff', 'eenc_staff', 'neonatal_staff', 'critic
 
 const compareFacilities = (oldData, newData) => {
     const changes = [];
-    
-    // 1. Add requested fields to the ignore list
     const ignoreFields = [
         'id', 'submissionId', 'submittedAt', 'updated_by', 'اخر تحديث', 'date_of_visit',
         'createdAt', 'lastSnapshotAt', 'originalFacilityId', 'status'
@@ -115,7 +113,6 @@ const compareFacilities = (oldData, newData) => {
         const oldValue = oldData?.[key];
         const newValue = newData?.[key];
 
-        // 2. Special deep-diff logic for ALL Staff Lists
         if (STAFF_ARRAY_KEYS.includes(key)) {
             const oldStaff = Array.isArray(oldValue) ? oldValue : [];
             const newStaff = Array.isArray(newValue) ? newValue : [];
@@ -143,7 +140,6 @@ const compareFacilities = (oldData, newData) => {
             return; 
         }
 
-        // 3. Default comparison for all other fields
         if (!deepEqual(oldValue, newValue)) { 
             changes.push({ 
                 key: key, 
@@ -177,7 +173,7 @@ const getServiceConfig = (serviceType) => {
         case TABS.NEONATAL: case 'Neonatal': 
         case 'Neonatal (Any Level)': case 'Neonatal (Primary)': case 'Neonatal (Secondary)': case 'Neonatal (Tertiary)':
             finalHeaders.push(...eencConfig.headers, ...neonatalConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...neonatalConfig.dataKeys); fileName = 'Neonatal_Care_Template.xlsx'; break;
-        case TABS.CRITICAL: case 'Critical Care': finalHeaders.push(...eencConfig.headers, ...criticalCareConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...criticalCareConfig.dataKeys); fileName = 'Critical_Care_Template.xlsx'; break;
+        case TABS.CRITICAL: case 'Critical Care': finalHeaders.push(...eencConfig.headers, ...criticalCareConfig.headers); finalDataKeys.push(...criticalCareConfig.dataKeys); fileName = 'Critical_Care_Template.xlsx'; break;
         default: finalHeaders.push(...imnciConfig.headers, ...eencConfig.headers, ...neonatalConfig.headers, ...criticalCareConfig.headers); finalDataKeys.push(...imnciConfig.dataKeys, ...imnciConfig.dataKeys, ...eencConfig.dataKeys, ...neonatalConfig.dataKeys, ...criticalCareConfig.dataKeys); fileName = 'All_Services_Template.xlsx';
     }
     return { headers: [...new Set(finalHeaders)], dataKeys: [...new Set(finalDataKeys)], fileName };
@@ -190,7 +186,6 @@ const LOCALITY_EN_TO_AR_MAP = Object.values(STATE_LOCALITIES).flatMap(s => s.loc
 
 const getStateName = (stateKey) => STATE_LOCALITIES[stateKey]?.ar || stateKey || 'N/A';
 const getLocalityName = (stateKey, localityKey) => { if (!stateKey || !localityKey) return 'N/A'; const state = STATE_LOCALITIES[stateKey]; if (!state) return localityKey; const locality = state.localities.find(l => l.en === localityKey); return locality?.ar || localityKey; };
-
 
 // --- SUB-COMPONENTS ---
 
@@ -962,7 +957,6 @@ const ChildHealthServicesView = ({
 
     const isSuperUserOrFed = permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || permissions?.manageScope === 'federal' || permissions?.isAdmin;
 
-    // --- Helper Functions ---
     const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
 
     const shareViaWhatsApp = (textToShare, successMessage) => {
@@ -1051,14 +1045,11 @@ const ChildHealthServicesView = ({
 
     const isFacilitiesLoading = isLoading?.healthFacilities || healthFacilities === null;
 
-    // --- APPLY SOFT DELETE FILTER TO ALL CACHED DATA ---
     const activeHealthFacilities = useMemo(() => {
         if (!healthFacilities) return null;
         return healthFacilities.filter(f => f.isDeleted !== true && f.isDeleted !== "true");
     }, [healthFacilities]);
 
-    // --- STRICT ROLE-BASED SCOPING ---
-    // Extract scoped facilities based on permissions so the dashboard gets strict, precise data
     const scopedFacilities = useMemo(() => {
         if (!activeHealthFacilities) return [];
         const userScope = permissions?.manageScope;
@@ -1068,16 +1059,15 @@ const ChildHealthServicesView = ({
                 const allowedLocalities = new Set(userLocalities);
                 return activeHealthFacilities.filter(f => allowedLocalities.has(f['المحلية']));
             }
-            return []; // Locality manager without a locality sees nothing
+            return []; 
         } else if (userScope === 'state') {
             if (userStates && userStates.length > 0) {
                 const allowedStates = new Set(userStates);
                 return activeHealthFacilities.filter(f => allowedStates.has(f['الولاية']));
             }
-            return []; // State manager without a state sees nothing
+            return []; 
         }
         
-        // Federal / Super User sees all
         return activeHealthFacilities;
     }, [activeHealthFacilities, permissions?.manageScope, userLocalities, userStates]);
 
@@ -1106,8 +1096,6 @@ const ChildHealthServicesView = ({
     const [facilityForMap, setFacilityForMap] = useState(null);
     const [isMismatchModalOpen, setIsMismatchModalOpen] = useState(false);
     const [mismatchedFacilities, setMismatchedFacilities] = useState([]);
-    
-    // HISTORY STATES
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [facilityForHistory, setFacilityForHistory] = useState(null);
 
@@ -1231,7 +1219,6 @@ const ChildHealthServicesView = ({
 
     const refreshSubmissions = useCallback(async (force = false) => {
         if (!permissions.canManageFacilities) return;
-        
         if (!force && hasFetchedPendingRef.current) return;
 
         setIsSubmissionsLoading(true);
@@ -1403,19 +1390,11 @@ const ChildHealthServicesView = ({
                 await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); 
                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
-                // --- TRIGGER FCM NOTIFICATION FOR MANAGERS ---
+                // --- UPDATED: FIRE AND FORGET NOTIFICATION ---
                 if (navigator.onLine) {
                     try {
                         let submitterRole = permissions?.role ? permissions.role.replace(/_/g, ' ') : 'User';
-                        
-                        if (!permissions?.role) {
-                            const userDoc = await getDoc(doc(db, 'users', user.uid));
-                            if (userDoc.exists()) {
-                                submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
-                            }
-                        }
-
-                        const submitterName = user.displayName || user.email;
+                        const submitterName = user.displayName || user.email || 'A user';
                         const actionText = isUpdate ? 'updated the' : 'submitted a new';
                         const notifTitle = isUpdate ? 'Facility Update Requires Approval' : 'New Facility Requires Approval';
                         const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${finalPayload['اسم_المؤسسة']}.`;
@@ -1423,10 +1402,13 @@ const ChildHealthServicesView = ({
                         const functions = getFunctions(db.app);
                         const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                         
-                        await sendFCMNotification({
+                        sendFCMNotification({
                             targetUserId: 'managers_and_super_users',
                             title: notifTitle,
-                            body: notifBody
+                            body: notifBody,
+                            data: {
+                                actionView: 'childHealthServices'
+                            }
                         }).catch(e => console.warn("FCM Send Error:", e));
                     } catch (fcmError) {
                         console.warn("FCM Error", fcmError);
@@ -1651,7 +1633,6 @@ const ChildHealthServicesView = ({
         return prefilledData;
     }, [editingFacility, userStates, userLocalities]);
 
-
     const renderListView = () => {
         const FACILITY_TYPES = ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"];
         const SERVICE_TYPES = [
@@ -1689,7 +1670,6 @@ const ChildHealthServicesView = ({
         
         const totalFacilities = filteredFacilities ? filteredFacilities.length : 0;
         const totalPages = Math.ceil(totalFacilities / itemsPerPage);
-
 
         return (<Card>
             <div className="p-6">
@@ -1897,7 +1877,6 @@ const ChildHealthServicesView = ({
         );
     };
 
-    // Derived states for Update Selection Modal
     const facilitiesInLocality = useMemo(() => {
          if (!scopedFacilities || !updateSelectionData.state || !updateSelectionData.locality) return [];
          return scopedFacilities.filter(f => f['الولاية'] === updateSelectionData.state && f['المحلية'] === updateSelectionData.locality)
@@ -1921,7 +1900,6 @@ const ChildHealthServicesView = ({
 
     const facilitiesToDisplay = facilitiesWithService.length > 0 ? facilitiesWithService : facilitiesInLocality;
     
-    // Filter facilities based on the live search input
     const searchedFacilitiesToDisplay = useMemo(() => {
         if (!updateSelectionSearch) return facilitiesToDisplay;
         const lowerQuery = updateSelectionSearch.toLowerCase();
@@ -1944,7 +1922,6 @@ const ChildHealthServicesView = ({
                 <UpdateDashboard facilities={scopedFacilities || []} onBack={() => setView('action_menu')} />
             ) : null}
 
-            {/* Modal for selecting the facility to update */}
             <Modal isOpen={!!updateSelectionService && view === 'action_menu'} onClose={() => setUpdateSelectionService(null)} title={`تحديث بيانات - ${updateSelectionService}`} size="lg">
                 <div className="p-6 space-y-4" dir="rtl">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1953,7 +1930,7 @@ const ChildHealthServicesView = ({
                                 value={updateSelectionData.state} 
                                 onChange={(e) => {
                                     setUpdateSelectionData({ state: e.target.value, locality: '', facilityId: '' });
-                                    setUpdateSelectionSearch(''); // Reset Search
+                                    setUpdateSelectionSearch(''); 
                                 }}
                                 disabled={userStates && userStates.length === 1}
                              >
@@ -1968,7 +1945,7 @@ const ChildHealthServicesView = ({
                                 value={updateSelectionData.locality} 
                                 onChange={(e) => {
                                     setUpdateSelectionData({ ...updateSelectionData, locality: e.target.value, facilityId: '' });
-                                    setUpdateSelectionSearch(''); // Reset Search
+                                    setUpdateSelectionSearch(''); 
                                 }} 
                                 disabled={!updateSelectionData.state || (userLocalities && userLocalities.length === 1)}
                              >
@@ -2060,7 +2037,6 @@ const ChildHealthServicesView = ({
                 </div>
             </Modal>
 
-            {/* --- INJECTED STATUS MODAL --- */}
             <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
 
             <ApprovalComparisonModal

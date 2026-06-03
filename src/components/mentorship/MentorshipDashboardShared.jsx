@@ -132,16 +132,14 @@ export const EENC_SKILL_KEYS_TO_ENGLISH = {
 
 export const IMNCI_MOTHER_SURVEY_ITEMS_EN = [
     { title: 'Mother Knowledge (Treatment & Medications)', items: [
-        { key: 'knows_med_details', label: 'Mother knows medication details (dose, frequency, days)' },
-        { key: 'knows_treatment_details', label: 'Mother knows combination treatment details' },
-        { key: 'knows_diarrhea_4rules', label: 'Mother knows the 4 rules for home diarrhea management' },
-        { key: 'knows_return_date', label: 'Mother knows follow-up return date' }
+        { key: 'knows_med_details', label: 'The Mother Know About the dose , the frequency and duration of oral drugs prescribed' },
+        { key: 'knows_diarrhea_4rules', label: 'Mother knows the 4 rules for home diarrhea management' }
     ]},
     { title: 'Mother Knowledge (Fluids & ORS)', items: [
-        { key: 'knows_ors_prep', label: 'Mother knows how to prepare ORS' },
         { key: 'knows_home_fluids', label: 'Mother knows allowed home fluids' },
-        { key: 'knows_ors_water_qty', label: 'Mother knows correct water quantity for ORS' },
-        { key: 'knows_ors_after_stool', label: 'Mother knows ORS amount to give after each stool' }
+        { key: 'knows_ors_water_qty', label: 'The Mother Know how to prepare ORS and amout of ORS' },
+        { key: 'knows_ors_after_stool', label: 'Mother knows ORS amount to give after each stool' },
+        { key: 'knows_return_date', label: 'Mother knows follow-up return date' }
     ]},
     { title: 'Mother Satisfaction', items: [
         { key: 'time_spent', label: 'Satisfaction with time spent by health worker' },
@@ -391,11 +389,11 @@ export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
     );
 };
 
-export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNumerator, totalDenominator, v1Numerator, v1Denominator, v4Numerator, v4Denominator, filteredSubmissions }) => {
+export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNumerator, totalDenominator, v1Value, v1Numerator, v1Denominator, v4Value, v4Numerator, v4Denominator, filteredSubmissions }) => {
     const { t, language } = useTranslation();
     const cardRef = useRef(null);
     
-    const colors = { 'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 'Weight': '#06b6d4', 'Temp': '#3b82f6', 'Height': '#8b5cf6', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316', 'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626', 'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c', 'DangerSigns': '#f97316', 'Malnutrition Assessment': '#0284c7', 'Measurement Skills': '#8b5cf6', 'Immunization': '#10b981', 'Vitamin Assessment': '#f59e0b', 'Malaria Coartem': '#d946ef', 'Return Immediately': '#ef4444', 'Return Followup': '#3b82f6', 'Record Signs': '#06b6d4', 'Record Classifications': '#3b82f6', 'Record Treatments': '#8b5cf6', 'Preparation': '#10b981', 'Drying': '#3b82f6', 'Breathing Mgmt': '#f59e0b', 'Resuscitation': '#ef4444', 'Hand Washing (1st)': '#0d9488', 'Hand Washing (2nd)': '#14b8a6', 'Sterile Gloves': '#2dd4bf', 'Towels Ready': '#7c3aed', 'Resus Equip Ready': '#8b5cf6', 'Ambu Check': '#a78bfa', 'Drying < 5s': '#ea580c', 'Skin-to-Skin': '#f97316', 'Dry Towel/Hat': '#fb923c', 'Hygienic Check': '#be123c', 'Delayed Clamp': '#e11d48', 'Correct Clamp': '#f43f5e', 'Early BF Advice': '#d946ef', 'Head Pos': '#b91c1c', 'Mask Seal': '#dc2626', 'Chest Rise': '#ef4444', 'Rate 30-50': '#f87171', 'Imm. Skin-to-Skin': '#f97316', '90min Skin-to-Skin': '#fdba74', 'BF 1st Hour': '#ec4899', 'Other Fluids': '#f43f5e', 'Bottle Feeding': '#be123c', 'Vitamin K': '#8b5cf6', 'Eye Ointment': '#a78bfa', 'Cord Substance': '#d946ef', 'Skin Oiling': '#eab308', 'Bathing < 6hrs': '#f59e0b', 'Polio Vaccine': '#10b981', 'BCG Vaccine': '#34d399', 'Weight Measured': '#06b6d4', 'Temp Measured': '#22d3ee', 'Civil Reg': '#3b82f6', 'Discharge Card': '#6366f1', 'M: Knows Meds': '#4f46e5', 'M: Knows ORS': '#3b82f6', 'M: Knows Tx': '#0ea5e9', 'M: Knows 4 Rules': '#06b6d4', 'M: Knows Return': '#14b8a6', 'M: Knows Fluids': '#10b981', 'M: Time Spent': '#f59e0b', 'M: Assess Method': '#f97316', 'M: Tx Given': '#ef4444', 'M: Comm Style': '#ec4899', 'M: What Learned': '#d946ef', 'M: Drug Avail': '#8b5cf6' };
+    const colors = { 'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 'Weight': '#06b6d4', 'Temp': '#3b82f6', 'Height': '#8b5cf6', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316', 'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626', 'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c', 'DangerSigns': '#f97316', 'Malnutrition Assessment': '#0284c7', 'Measurement Skills': '#8b5cf6', 'Immunization': '#10b981', 'Vitamin Assessment': '#f59e0b', 'Malaria Coartem': '#d946ef', 'Return Immediately': '#ef4444', 'Return Followup': '#3b82f6', 'Record Signs': '#06b6d4', 'Record Classifications': '#3b82f6', 'Record Treatments': '#8b5cf6', 'Preparation': '#10b981', 'Drying': '#3b82f6', 'Breathing Mgmt': '#f59e0b', 'Resuscitation': '#ef4444', 'Hand Washing (1st)': '#0d9488', 'Hand Washing (2nd)': '#14b8a6', 'Sterile Gloves': '#2dd4bf', 'Towels Ready': '#7c3aed', 'Resus Equip Ready': '#8b5cf6', 'Ambu Check': '#a78bfa', 'Drying < 5s': '#ea580c', 'Skin-to-Skin': '#f97316', 'Dry Towel/Hat': '#fb923c', 'Hygienic Check': '#be123c', 'Delayed Clamp': '#e11d48', 'Correct Clamp': '#f43f5e', 'Early BF Advice': '#d946ef', 'Head Pos': '#b91c1c', 'Mask Seal': '#dc2626', 'Chest Rise': '#ef4444', 'Rate 30-50': '#f87171', 'Imm. Skin-to-Skin': '#f97316', '90min Skin-to-Skin': '#fdba74', 'BF 1st Hour': '#ec4899', 'Other Fluids': '#f43f5e', 'Bottle Feeding': '#be123c', 'Vitamin K': '#8b5cf6', 'Eye Ointment': '#a78bfa', 'Cord Substance': '#d946ef', 'Skin Oiling': '#eab308', 'Bathing < 6hrs': '#f59e0b', 'Polio Vaccine': '#10b981', 'BCG Vaccine': '#34d399', 'Weight Measured': '#06b6d4', 'Temp Measured': '#22d3ee', 'Civil Reg': '#3b82f6', 'Discharge Card': '#6366f1', 'M: Knows Meds': '#4f46e5', 'M: Knows ORS': '#3b82f6', 'M: Knows Tx': '#0ea5e9', 'M: Knows 4 Rules': '#06b6d4', 'M: Knows Return': '#14b8a6', 'M: Knows Fluids': '#10b981', 'M: Time Spent': '#f59e0b', 'M: Assess Method': '#f97316', 'M: Tx Given': '#ef4444', 'M: Comm Style': '#ec4899', 'M: What Learned': '#d946ef', 'M: Drug Avail': '#8b5cf6', 'M: ORS Water': '#3b82f6', 'M: ORS Stool': '#f59e0b', 'M: Overall Knowledge': '#10b981', 'M: Overall Satisfaction': '#0ea5e9', 'M: Overall Score': '#8b5cf6' };
     const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
 
     const customOptions = {
@@ -419,7 +417,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                         let lines = [` ${context.dataset.label}: ${context.parsed.y}%`];
                         
                         if (filteredSubmissions && visitNum !== null) {
-                            const targetSubs = filteredSubmissions.filter(s => parseInt(s.visitNumber) === visitNum);
+                            const targetSubs = filteredSubmissions.filter(s => parseInt(s.visitNumber || s.fullData?.visitNumber) === visitNum);
                             let yes = 0, total = 0;
                             const failingStates = new Set();
                             
@@ -437,14 +435,16 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                                     const as = sub.fullData?.assessmentSkills || {};
                                     const ts = sub.fullData?.treatmentSkills || {};
                                     const rs = sub.fullData?.recording_skills || sub.fullData?.recordingSkills || {};
-                                    const eenc = sub.fullData?.skills || {};
-                                    const allSkills = { ...as, ...ts, ...rs, ...eenc };
+                                    const eenc = sub.fullData?.skills || sub.fullData?.eencMothersData || sub.eencMothersData || {};
+                                    const mk = sub.fullData?.mothersKnowledge || sub.fullData?.knowledge || sub.mothersKnowledge || {};
+                                    const ms = sub.fullData?.mothersSatisfaction || sub.fullData?.satisfaction || sub.mothersSatisfaction || {};
+                                    const allSkills = { ...as, ...ts, ...rs, ...eenc, ...mk, ...ms };
                                     
                                     kpiDef.rawKeys.forEach(k => {
                                          const val = allSkills[k];
-                                         if (val === 'yes' || val === 'correct' || val === true) {
+                                         if (val === 'yes' || val === 'correct' || val === true || val === 'نعم' || val === 'نعم ') {
                                              yes++; total++;
-                                         } else if (val === 'no' || val === 'incorrect' || val === false || val === 'partial') {
+                                         } else if (val === 'no' || val === 'incorrect' || val === false || val === 'partial' || val === 'لا' || val === 'لا ') {
                                              total++;
                                              failingStates.add(sub.state || 'Unknown');
                                          }
@@ -466,8 +466,8 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
         }
     };
 
-    let visit1Value = null;
-    let visit4Value = null;
+    let calcV1Value = v1Value;
+    let calcV4Value = v4Value;
     let avgValue = null;
     
     if (chartData && chartData.length > 0 && kpiKeys && kpiKeys.length > 0) {
@@ -478,8 +478,8 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
             return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
         };
 
-        visit1Value = getAvgForVisit(1);
-        visit4Value = getAvgForVisit(4);
+        if (calcV1Value === undefined) calcV1Value = getAvgForVisit(1);
+        if (calcV4Value === undefined) calcV4Value = getAvgForVisit(4);
         
         if (overallScore !== undefined && overallScore !== null) {
             avgValue = overallScore <= 1.0 ? overallScore * 100 : overallScore;
@@ -510,7 +510,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                     <div className="flex flex-col items-center">
                         <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 1')}</span>
                         <div className="border border-slate-300 bg-white rounded-lg px-2 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
-                            {visit1Value !== null ? `${Math.round(visit1Value)}%` : '-'}
+                            {calcV1Value !== null && calcV1Value !== undefined ? `${Math.round(calcV1Value)}%` : '-'}
                             <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
                                 {v1Numerator !== undefined && v1Denominator !== undefined ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
                             </span>
@@ -521,7 +521,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                         <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Average')}</span>
                         <div className="border border-slate-800 bg-white rounded-xl px-3 sm:px-10 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center">
                             <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
-                                {avgValue !== null ? `${Math.round(avgValue)}%` : '-'}
+                                {avgValue !== null && avgValue !== undefined ? `${Math.round(avgValue)}%` : '-'}
                             </span>
                             {totalNumerator !== undefined && totalDenominator !== undefined && totalDenominator > 0 && (
                                 <span className="text-xs font-bold text-slate-500 mt-0.5 whitespace-nowrap">
@@ -534,7 +534,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                     <div className="flex flex-col items-center">
                         <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 4')}</span>
                         <div className="border border-slate-300 bg-white rounded-lg px-2 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
-                            {visit4Value !== null ? `${Math.round(visit4Value)}%` : '-'}
+                            {calcV4Value !== null && calcV4Value !== undefined ? `${Math.round(calcV4Value)}%` : '-'}
                             <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
                                 {v4Numerator !== undefined && v4Denominator !== undefined ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
                             </span>
@@ -595,23 +595,80 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     const data = { 
         labels: chartData.map(d => d.stateName), 
         datasets: [{ 
-            label: t('Value'), data: chartData.map(d => d[dataKey] ? Math.round(d[dataKey] * (dataKey === 'count' ? 1 : 100)) : null), 
-            backgroundColor: chartData.map(d => dataKey === 'count' ? '#3b82f6' : getBarColor(d[dataKey] ? d[dataKey] * 100 : 0)), hoverBackgroundColor: chartData.map(d => dataKey === 'count' ? '#2563eb' : getHoverColor(d[dataKey] ? d[dataKey] * 100 : 0)), borderRadius: 6, borderSkipped: false, barPercentage: 0.6,
+            label: t('Value'), 
+            data: chartData.map(d => d[dataKey] ? Math.round(d[dataKey] * (dataKey === 'count' ? 1 : 100)) : null), 
+            backgroundColor: chartData.map(d => dataKey === 'count' ? '#3b82f6' : getBarColor(d[dataKey] ? d[dataKey] * 100 : 0)), 
+            hoverBackgroundColor: chartData.map(d => dataKey === 'count' ? '#2563eb' : getHoverColor(d[dataKey] ? d[dataKey] * 100 : 0)), 
+            borderRadius: 6, 
+            borderSkipped: false, 
+            barPercentage: 0.6,
         }] 
     };
     
-    const options = { 
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' },
-        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif" }, bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' }, padding: 10, cornerRadius: 8, callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}${dataKey === 'count' ? '' : '%'}` } } }, 
-        scales: { x: { reverse: isAr, beginAtZero: true, max: dataKey === 'count' ? undefined : 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { stepSize: dataKey === 'count' ? undefined : 10, autoSkip: false, callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } }, y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { autoSkip: false, color: '#334155', font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' } } } } 
+    // Inline plugin to draw data label at the end of each bar
+    const barLabelPlugin = {
+        id: 'barLabelPlugin',
+        afterDatasetsDraw(chart) {
+            const { ctx, data } = chart;
+            const datasetMeta = chart.getDatasetMeta(0);
+            if (!datasetMeta || !datasetMeta.data) return;
+
+            ctx.save();
+            datasetMeta.data.forEach((datapoint, index) => {
+                const value = data.datasets[0].data[index];
+                if (value === null || value === undefined) return;
+                
+                const text = `${value}${dataKey === 'count' ? '' : '%'}`;
+                ctx.font = 'bold 12px "Inter", sans-serif';
+                ctx.fillStyle = '#334155'; 
+                ctx.textBaseline = 'middle';
+                
+                if (isAr) {
+                    ctx.textAlign = 'right';
+                    ctx.fillText(text, datapoint.x - 6, datapoint.y);
+                } else {
+                    ctx.textAlign = 'left';
+                    ctx.fillText(text, datapoint.x + 6, datapoint.y);
+                }
+            });
+            ctx.restore();
+        }
     };
+
+    const options = { 
+        indexAxis: 'y', 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        animation: { duration: 1000, easing: 'easeOutQuart' },
+        layout: {
+            padding: {
+                left: isAr ? 45 : 0,
+                right: isAr ? 0 : 45
+            }
+        },
+        plugins: { 
+            legend: { display: false }, 
+            tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif" }, bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' }, padding: 10, cornerRadius: 8, callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}${dataKey === 'count' ? '' : '%'}` } } 
+        }, 
+        scales: { 
+            x: { reverse: isAr, beginAtZero: true, max: dataKey === 'count' ? undefined : 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { stepSize: dataKey === 'count' ? undefined : 10, autoSkip: false, callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } }, 
+            y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { autoSkip: false, color: '#334155', font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' } } } 
+        } 
+    };
+    
     const chartHeight = Math.max(300, chartData.length * 40); 
     
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
-            <div className="relative" style={{ height: `${chartHeight}px` }} dir="ltr">{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
+            <div className="relative" style={{ height: `${chartHeight}px` }} dir="ltr">
+                {chartData.length > 0 ? (
+                    <Bar options={options} data={data} plugins={[barLabelPlugin]} />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>
+                )}
+            </div>
         </div>
     );
 };
