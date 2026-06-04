@@ -14,7 +14,7 @@ import AdminDashboardTab from './AdminDashboardTab';
 import ProviderSkillsTab from './ProviderSkillsTab';
 import MotherInterviewsTab from './MotherInterviewsTab';
 import VisitReportDashboardTab from './VisitReportDashboardTab';
-import FacilityInformationDashboardTab from './FacilityInformationDashboardTab'; // Added Import
+import FacilityInformationDashboardTab from './FacilityInformationDashboardTab';
 
 import { IMNCI_FORM_STRUCTURE, calculateScores, rehydrateDraftData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS } from './IMNCSkillsAssessmentForm.jsx';
 import { PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS, NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS } from './EENCSkillsAssessmentForm.jsx';
@@ -38,14 +38,12 @@ const IMNCI_SKILL_GROUPS = {
     },
     group2: { 
         title: "Number of training sessions on Main IMNCI Signs Assessment", 
-        // FIXED: 'skill_rr' -> 'skill_check_rr' and 'skill_dehydration' -> 'skill_check_dehydration'
         keys: ['skill_danger_signs', 'skill_check_rr', 'skill_check_dehydration', 'skill_immunization_referral'], 
         labels: ['Danger Signs assessment training sessions', 'Respiratory Rate measurement training sessions', 'Dehydration assessment training sessions', 'Immunization check training sessions'], 
         color: '#10b981' 
     },
     group3: { 
         title: "Number of training sessions on Malnutrition signs Assessment", 
-        // FIXED: 'skill_muac' -> 'skill_mal_muac' and 'skill_wfh' -> 'skill_mal_wfh'
         keys: ['skill_weight', 'skill_height', 'skill_mal_muac', 'skill_mal_wfh', 'skill_edema'], 
         labels: ['Weight measurement training sessions', 'Height measurement training sessions', 'MUAC measurement training sessions', 'Z-Score measurement training sessions', 'Lower Limb Edema check training sessions'], 
         color: '#f59e0b' 
@@ -876,40 +874,46 @@ const MentorshipDashboard = ({
     const setActiveTabFunc = activeService === 'IMNCI' ? setActiveImnciTab : setActiveEencTab;
 
     return (
-        <div className="p-2 sm:p-6 bg-slate-50/50 min-h-screen" dir={isAr ? 'rtl' : 'ltr'}>             
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <h3 className={`text-2xl font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-left'} tracking-tight`}>
+        // ADDED pb-24 to prevent the Session Ops floating widget from covering bottom content
+        <div className="p-2 sm:p-6 bg-slate-50/50 min-h-screen pb-24" dir={isAr ? 'rtl' : 'ltr'}>             
+            
+            {/* 1. OPTIMIZED HEADER: Tighter spacing and hierarchy */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-6">
+                <h3 className={`text-2xl font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-left'} tracking-tight flex flex-col`}>
                     <div className="flex items-center gap-3">
                         {t('app.title')}: {serviceTitle}
                         {(isLoading || isRefreshing) && <Spinner size="sm" className="text-sky-600" />}
                     </div>
-                    <span className="text-sky-600 text-lg font-semibold block mt-1 break-words leading-snug">{scopeTitle}</span>
+                    <span className="text-sky-600 text-[1rem] font-semibold mt-1 break-words leading-snug">
+                        {scopeTitle}
+                    </span>
                 </h3>
             </div>
             
-            <div className="flex flex-row flex-nowrap overflow-x-auto gap-3 mb-8 p-4 bg-white rounded-2xl shadow-md border border-black scrollbar-thin scrollbar-thumb-sky-200 scrollbar-track-transparent">
-                <div className="min-w-[140px] flex-1 flex-shrink-0">
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{t('Start Date') || 'Start Date'}</label>
+            {/* 2. OPTIMIZED FILTERS: flex-wrap replaces overflow-x-auto to prevent annoying scrolling */}
+            <div className="flex flex-row flex-wrap gap-4 mb-8 p-5 bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('Start Date') || 'Start Date'}</label>
                     <input 
                         type="date" 
                         value={formatDateForInput(customStartDate)} 
                         onChange={(e) => setCustomStartDate(e.target.value)} 
-                        className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customStartDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}
+                        className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customStartDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}
                     />
                 </div>
-                <div className="min-w-[140px] flex-1 flex-shrink-0">
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{t('End Date') || 'End Date'}</label>
+                <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('End Date') || 'End Date'}</label>
                     <input 
                         type="date" 
                         value={formatDateForInput(customEndDate)} 
                         onChange={(e) => setCustomEndDate(e.target.value)} 
-                        className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customEndDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}
+                        className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customEndDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}
                     />
                 </div>
 
-                <div className="min-w-[140px] flex-1 flex-shrink-0">
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{t('filter.date')}</label>
-                    <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}>
+                <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('filter.date')}</label>
+                    <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}>
                         <option value="">{t('filter.all.time')}</option>
                         <option value="today">{t('date.today')}</option>
                         <option value="yesterday">{t('date.yesterday')}</option>
@@ -930,13 +934,39 @@ const MentorshipDashboard = ({
                 <FilterSelect label={t('filter.worker_name')} value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption={t('filter.all.workers')} />
             </div>
             
-            <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-black w-fit">
-                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('skills')}>{t('tab.skills')}</button>
-                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'mothers' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('mothers')}>{t('tab.mothers')}</button>
-                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'visit_reports' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('visit_reports')}>{t('tab.visit_reports')}</button>
-                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'facility_info' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('facility_info')}>{t('Facility Information') || 'Facility Information'}</button>
+            {/* 3. OPTIMIZED TABS: Stronger visual contrast for the active state */}
+            <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-slate-300 w-fit">
+                <button 
+                    className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                    onClick={() => setActiveTabFunc('skills')}
+                >
+                    {t('tab.skills')}
+                </button>
+                <button 
+                    className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'mothers' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                    onClick={() => setActiveTabFunc('mothers')}
+                >
+                    {t('tab.mothers')}
+                </button>
+                <button 
+                    className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'visit_reports' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                    onClick={() => setActiveTabFunc('visit_reports')}
+                >
+                    {t('tab.visit_reports')}
+                </button>
+                <button 
+                    className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'facility_info' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                    onClick={() => setActiveTabFunc('facility_info')}
+                >
+                    {t('Facility Information') || 'Facility Information'}
+                </button>
                 {canEditStatus && (
-                    <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('admin')}>{t('tab.admin')}</button>
+                    <button 
+                        className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'admin' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                        onClick={() => setActiveTabFunc('admin')}
+                    >
+                        {t('tab.admin')}
+                    </button>
                 )}
             </div>
 

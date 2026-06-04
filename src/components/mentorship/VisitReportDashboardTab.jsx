@@ -511,7 +511,12 @@ const VisitReportDashboardTab = ({
 
             <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
                 <div className={`p-5 border-b border-black bg-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isAr ? 'text-right' : 'text-left'}`}>
-                    <h4 className="text-lg font-extrabold text-slate-800">{t('Facility Problems & Solutions (Combined)')}</h4>
+                    <h4 className="text-lg font-extrabold text-slate-800 flex items-center gap-3">
+                        {t('Facility Problems & Solutions (Combined)')}
+                        <span className="bg-white text-sky-700 text-sm font-bold px-2.5 py-0.5 rounded-full border border-slate-300 shadow-sm">
+                            {filteredTotalProblems}
+                        </span>
+                    </h4>
                     <div className="flex items-center gap-2">
                         <label className="text-sm font-bold text-slate-600">{t('Filter by Status')}:</label>
                         <select 

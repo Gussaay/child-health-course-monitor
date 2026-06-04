@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { getAuth } from "firebase/auth";
-import { writeBatch, collection, getDocs, doc } from "firebase/firestore"; // Removed getDoc
+import { writeBatch, collection, getDocs, doc } from "firebase/firestore"; 
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from "../firebase";
 import { useDataCache } from '../DataContext';
@@ -756,12 +756,12 @@ const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted
 const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setToast, cleanupConfig }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
-    const [selectedFieldKey, setSelectedFieldKey] = useState('');
+    const [selectedFieldKey, useStateFieldKey] = useState('');
     const [nonStandardValues, setNonStandardValues] = useState([]);
     const [mappings, setMappings] = useState({});
     const auth = getAuth();
     
-    useEffect(() => { if (!isOpen) { setSelectedFieldKey(''); } setNonStandardValues([]); setMappings({}); }, [isOpen]);
+    useEffect(() => { if (!isOpen) { useStateFieldKey(''); } setNonStandardValues([]); setMappings({}); }, [isOpen]);
     
     useEffect(() => {
         if (selectedFieldKey) {
@@ -837,7 +837,7 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
         }
     };
     
-    const renderSelectionScreen = () => ( <div><FormGroup label="Select a data field to clean"><Select value={selectedFieldKey} onChange={(e) => setSelectedFieldKey(e.target.value)}><option value="">-- Choose field --</option>{Object.entries(cleanupConfig).map(([key, config]) => ( <option key={key} value={key}>{config.label}</option> ))}</Select></FormGroup></div> );
+    const renderSelectionScreen = () => ( <div><FormGroup label="Select a data field to clean"><Select value={selectedFieldKey} onChange={(e) => useStateFieldKey(e.target.value)}><option value="">-- Choose field --</option>{Object.entries(cleanupConfig).map(([key, config]) => ( <option key={key} value={key}>{config.label}</option> ))}</Select></FormGroup></div> );
     
     const renderMappingScreen = () => {
         const config = cleanupConfig[selectedFieldKey];
@@ -886,7 +886,7 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
                     </div> 
                 )}
                 <div className="flex justify-between items-center mt-6">
-                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')}>Back to Selection</Button>
+                    <Button variant="secondary" onClick={() => useStateFieldKey('')}>Back to Selection</Button>
                     <Button onClick={handleApplyFixes} disabled={isUpdating || Object.keys(mappings).length === 0 || nonStandardValues.length === 0}>
                         {isUpdating ? 'Applying Fixes...' : `Apply Fixes for ${Object.keys(mappings).length} Value(s)`}
                     </Button>
@@ -1092,10 +1092,11 @@ const ChildHealthServicesView = ({
     const [pendingStartDate, setPendingStartDate] = useState('');
     const [pendingEndDate, setPendingEndDate] = useState('');
     const hasFetchedPendingRef = useRef(false); 
+    
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
     const [facilityForMap, setFacilityForMap] = useState(null);
     const [isMismatchModalOpen, setIsMismatchModalOpen] = useState(false);
-    const [mismatchedFacilities, setMismatchedFacilities] = useState([]);
+    const [mismatchedFacilities, setMismatchedFacilities] = useState([]); // <-- RESTORED FIX
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [facilityForHistory, setFacilityForHistory] = useState(null);
 
@@ -1218,7 +1219,7 @@ const ChildHealthServicesView = ({
     }), [projectNames]);
 
     const refreshSubmissions = useCallback(async (force = false) => {
-        if (!permissions.canManageFacilities) return;
+        if (!permissions?.canManageFacilities) return;
         if (!force && hasFetchedPendingRef.current) return;
 
         setIsSubmissionsLoading(true);
@@ -1242,14 +1243,20 @@ const ChildHealthServicesView = ({
     }, [ permissions, setToast, fetchPendingFacilitatorSubmissions, fetchPendingFederalSubmissions, fetchPendingStateSubmissions, fetchPendingLocalitySubmissions ]);
 
     useEffect(() => {
+        if (permissions?.canManageFacilities) {
+            refreshSubmissions(false);
+        }
+    }, [permissions, refreshSubmissions]);
+
+    useEffect(() => {
         if (view === 'list') {
             if (activeTab === TABS.PENDING) {
-                refreshSubmissions(false);
+                // Already fetched
             } else {
                 fetchHealthFacilities({}, false);
             }
         }
-    }, [view, activeTab, fetchHealthFacilities, refreshSubmissions]);
+    }, [view, activeTab, fetchHealthFacilities]);
 
     const uniquePendingSubmissions = useMemo(() => {
         if (!pendingSubmissions || pendingSubmissions.length === 0) return [];
@@ -1269,8 +1276,10 @@ const ChildHealthServicesView = ({
         const sortedSubmissions = [...relevantSubmissions].sort((a, b) => {
             const timeA = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : 0;
             const timeB = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
-            return timeA - timeB;
+            return timeA - timeB; 
         });
+
+        const norm = (v) => (v === undefined || v === null) ? '' : String(v).trim();
 
         const unique = new Map();
         for (const s of sortedSubmissions) {
@@ -1286,13 +1295,84 @@ const ChildHealthServicesView = ({
                         _mergedSubmissionIds: [...existing._mergedSubmissionIds, s.submissionId] 
                     });
                 } else {
-                    const merged = { ...existing, ...s };
-                    if (existing.neonatal_level_of_care || s.neonatal_level_of_care) {
-                        merged.neonatal_level_of_care = {
-                            ...(existing.neonatal_level_of_care || {}),
-                            ...(s.neonatal_level_of_care || {})
-                        };
+                    const baseFacility = (activeHealthFacilities || []).find(f => 
+                        f['اسم_المؤسسة'] === s['اسم_المؤسسة'] && 
+                        f['الولاية'] === s['الولاية'] && 
+                        f['المحلية'] === s['المحلية']
+                    ) || {};
+
+                    const merged = { ...existing }; 
+
+                    const allKeys = new Set([...Object.keys(existing), ...Object.keys(s)]);
+                    const ignoreKeys = [
+                        '_mergedSubmissionIds', 'submissionId', 'submittedAt', 'createdAt', 
+                        'lastSnapshotAt', 'updated_by', 'اخر تحديث', 'imnci_staff', 'eenc_staff', 
+                        'neonatal_staff', 'critical_staff', 'neonatal_level_of_care'
+                    ];
+                    
+                    allKeys.forEach(field => {
+                        if (ignoreKeys.includes(field)) return;
+                        
+                        const sVal = s[field];
+                        const baseVal = baseFacility[field];
+                        const existVal = existing[field];
+
+                        if (norm(sVal) !== norm(baseVal)) {
+                            merged[field] = s[field];
+                        } else {
+                            merged[field] = existVal;
+                        }
+                    });
+
+                    const baseNeonatal = baseFacility.neonatal_level_of_care || {};
+                    const existNeonatal = existing.neonatal_level_of_care || {};
+                    const sNeonatal = s.neonatal_level_of_care || {};
+                    
+                    if (Object.keys(existNeonatal).length > 0 || Object.keys(sNeonatal).length > 0) {
+                        merged.neonatal_level_of_care = { ...existNeonatal };
+                        ['primary', 'secondary', 'tertiary'].forEach(level => {
+                            const sVal = sNeonatal[level];
+                            const bVal = baseNeonatal[level];
+                            if (norm(sVal) !== norm(bVal)) {
+                                merged.neonatal_level_of_care[level] = sNeonatal[level];
+                            }
+                        });
                     }
+
+                    const STAFF_ARRAY_KEYS = ['imnci_staff', 'eenc_staff', 'neonatal_staff', 'critical_staff'];
+                    
+                    STAFF_ARRAY_KEYS.forEach(staffKey => {
+                        const baseStaffArr = Array.isArray(baseFacility[staffKey]) ? baseFacility[staffKey] : [];
+                        const existStaffArr = Array.isArray(existing[staffKey]) ? existing[staffKey] : [];
+                        const sStaffArr = Array.isArray(s[staffKey]) ? s[staffKey] : [];
+                        
+                        const maxLen = Math.max(existStaffArr.length, sStaffArr.length);
+                        const mergedStaffArr = [];
+                        
+                        for (let i = 0; i < maxLen; i++) {
+                            const bStaff = baseStaffArr[i] || {};
+                            const eStaff = existStaffArr[i] || {};
+                            const sStaff = sStaffArr[i] || {};
+                            
+                            const mergedStaffMember = { ...eStaff };
+                            const staffFields = new Set([...Object.keys(eStaff), ...Object.keys(sStaff)]);
+                            
+                            staffFields.forEach(f => {
+                                const sVal = sStaff[f];
+                                const bVal = bStaff[f];
+                                
+                                if (norm(sVal) !== norm(bVal)) {
+                                    mergedStaffMember[f] = sStaff[f];
+                                }
+                            });
+                            
+                            if (Object.keys(mergedStaffMember).length > 0) {
+                                mergedStaffArr.push(mergedStaffMember);
+                            }
+                        }
+                        merged[staffKey] = mergedStaffArr;
+                    });
+
                     merged._mergedSubmissionIds = [...existing._mergedSubmissionIds, s.submissionId];
                     merged.submissionId = s.submissionId; 
                     unique.set(key, merged);
@@ -1305,7 +1385,7 @@ const ChildHealthServicesView = ({
             const timeB = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
             return timeB - timeA;
         });
-    }, [pendingSubmissions, pendingStartDate, pendingEndDate]);
+    }, [pendingSubmissions, pendingStartDate, pendingEndDate, activeHealthFacilities]);
 
     const filteredFacilities = useMemo(() => {
         if (!scopedFacilities || !hasManuallySelected) return [];
@@ -1390,7 +1470,6 @@ const ChildHealthServicesView = ({
                 await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); 
                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
-                // --- UPDATED: FIRE AND FORGET NOTIFICATION ---
                 if (navigator.onLine) {
                     try {
                         let submitterRole = permissions?.role ? permissions.role.replace(/_/g, ' ') : 'User';
@@ -1633,6 +1712,78 @@ const ChildHealthServicesView = ({
         return prefilledData;
     }, [editingFacility, userStates, userLocalities]);
 
+    const renderFormPage = () => {
+        const saveButtonText = permissions.canApproveSubmissions ? "Save Directly" : "Submit for Approval";
+        
+        let formTypeKey = 'imnci';
+        if (updateSelectionService === 'IMNCI') formTypeKey = 'imnci';
+        if (updateSelectionService === 'EENC') formTypeKey = 'eenc';
+        if (updateSelectionService === 'Neonatal') formTypeKey = 'neonatal';
+        if (updateSelectionService === 'Critical Care') formTypeKey = 'critical';
+
+        const FORM_KEY_TO_COMPONENT = {
+            'imnci': IMNCIFormFields,
+            'eenc': EENCFormFields,
+            'neonatal': NeonatalFormFields,
+            'critical': CriticalCareFormFields,
+        };
+
+        const FormComponent = FORM_KEY_TO_COMPONENT[formTypeKey] || IMNCIFormFields;
+
+        const handleBackClick = () => {
+            setEditingFacility(null);
+            if (updateSelectionService) {
+                setUpdateSelectionService(null);
+                setView('action_menu');
+            } else {
+                setView('list');
+            }
+        };
+
+        const pendingFacilityData = editingFacility 
+            ? (uniquePendingSubmissions || []).find(s => 
+                s['اسم_المؤسسة'] === editingFacility['اسم_المؤسسة'] && 
+                s['الولاية'] === editingFacility['الولاية'] && 
+                s['المحلية'] === editingFacility['المحلية']
+              ) 
+            : null;
+
+        return (
+            <div className="w-full max-w-7xl mx-auto animate-fade-in">
+                <div className="mb-4 flex justify-end" dir="rtl">
+                    <Button variant="secondary" onClick={handleBackClick} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
+                        <ArrowLeft className="w-5 h-5 ml-2" /> الرجوع للخلف
+                    </Button>
+                </div>
+                <GenericFacilityForm
+                    initialData={formInitialData}
+                    pendingData={pendingFacilityData}
+                    onSave={handleSaveFacility}
+                    onCancel={handleBackClick}
+                    setToast={setToast}
+                    title={editingFacility ? `تحديث بيانات: ${updateSelectionService || 'المنشأة'}` : `إضافة منشأة جديدة`}
+                    subtitle={editingFacility ? `المنشأة: ${editingFacility['اسم_المؤسسة']}` : `أدخل تفاصيل المنشأة`}
+                    saveButtonText={saveButtonText}
+                    userAssignedState={userStates && userStates.length === 1 ? userStates[0] : null}
+                    userAssignedLocality={userLocalities && userLocalities.length === 1 ? userLocalities[0] : null}
+                >
+                    {(props) => (
+                        <div className="space-y-8">
+                            {updateSelectionService ? <FormComponent {...props} /> : (
+                                <>
+                                    <IMNCIFormFields {...props} />
+                                    <EENCFormFields {...props} />
+                                    <NeonatalFormFields {...props} />
+                                    <CriticalCareFormFields {...props} />
+                                </>
+                            )}
+                        </div>
+                    )}
+                </GenericFacilityForm>
+            </div>
+        );
+    };
+
     const renderListView = () => {
         const FACILITY_TYPES = ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"];
         const SERVICE_TYPES = [
@@ -1812,69 +1963,6 @@ const ChildHealthServicesView = ({
                 )}
             </div>
         </Card>);
-    };
-
-    const renderFormPage = () => {
-        const saveButtonText = permissions.canApproveSubmissions ? "Save Directly" : "Submit for Approval";
-        
-        let formTypeKey = 'imnci';
-        if (updateSelectionService === 'IMNCI') formTypeKey = 'imnci';
-        if (updateSelectionService === 'EENC') formTypeKey = 'eenc';
-        if (updateSelectionService === 'Neonatal') formTypeKey = 'neonatal';
-        if (updateSelectionService === 'Critical Care') formTypeKey = 'critical';
-
-        const FORM_KEY_TO_COMPONENT = {
-            'imnci': IMNCIFormFields,
-            'eenc': EENCFormFields,
-            'neonatal': NeonatalFormFields,
-            'critical': CriticalCareFormFields,
-        };
-
-        const FormComponent = FORM_KEY_TO_COMPONENT[formTypeKey] || IMNCIFormFields;
-
-        const handleBackClick = () => {
-            setEditingFacility(null);
-            if (updateSelectionService) {
-                setUpdateSelectionService(null);
-                setView('action_menu');
-            } else {
-                setView('list');
-            }
-        };
-
-        return (
-            <div className="w-full max-w-7xl mx-auto animate-fade-in">
-                <div className="mb-4 flex justify-end" dir="rtl">
-                    <Button variant="secondary" onClick={handleBackClick} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
-                        <ArrowLeft className="w-5 h-5 ml-2" /> الرجوع للخلف
-                    </Button>
-                </div>
-                <GenericFacilityForm
-                    initialData={formInitialData}
-                    onSave={handleSaveFacility}
-                    onCancel={handleBackClick}
-                    setToast={setToast}
-                    title={editingFacility ? `تحديث بيانات: ${updateSelectionService || 'المنشأة'}` : `إضافة منشأة جديدة`}
-                    subtitle={editingFacility ? `المنشأة: ${editingFacility['اسم_المؤسسة']}` : `أدخل تفاصيل المنشأة`}
-                    saveButtonText={saveButtonText}
-                    userAssignedState={userStates && userStates.length === 1 ? userStates[0] : null}
-                    userAssignedLocality={userLocalities && userLocalities.length === 1 ? userLocalities[0] : null}
-                >
-                    {(props) => (
-                        <div className="space-y-8">
-                            {updateSelectionService ? <FormComponent {...props} /> : (
-                                <>
-                                    <IMNCIFormFields {...props} />
-                                    <EENCFormFields {...props} />
-                                    <NeonatalFormFields {...props} />
-                                    <CriticalCareFormFields {...props} />
-                                </>
-                            )}
-                        </div>
-                    )}
-                </GenericFacilityForm>
-            </div>
-        );
     };
 
     const facilitiesInLocality = useMemo(() => {

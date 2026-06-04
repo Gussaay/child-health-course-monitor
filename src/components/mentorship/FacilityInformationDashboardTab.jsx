@@ -244,13 +244,13 @@ const FacilityInformationDashboardTab = ({
     }, [scopedReports]);
 
     const toolsList = useMemo(() => [
-        { key: 'chartbook', label: 'Clinical Chartbooklet (كتيب اللوحات)', color: '#0ea5e9' },
-        { key: 'recordForm', label: 'Recording Form (سجل العلاج المتكامل)', color: '#8b5cf6' },
-        { key: 'weightScale', label: 'Infant Weight Scale (ميزان الوزن)', color: '#10b981' },
-        { key: 'heightScale', label: 'Length/Height Board (ميزان الطول)', color: '#f59e0b' },
-        { key: 'thermometer', label: 'Clinical Thermometer (ميزان الحرارة)', color: '#ec4899' },
-        { key: 'timer', label: 'Respiratory Rate Timer (ساعة مؤقت)', color: '#3b82f6' },
-        { key: 'orsCorner', label: 'ORS Hydration Corner (غرفة إرواء)', color: '#14b8a6' }
+        { key: 'chartbook', label: 'Clinical Chartbooklet', color: '#0ea5e9' },
+        { key: 'recordForm', label: 'Recording Form registers', color: '#8b5cf6' },
+        { key: 'weightScale', label: 'Infant Weight Scale', color: '#10b981' },
+        { key: 'heightScale', label: 'Length/Height Board', color: '#f59e0b' },
+        { key: 'thermometer', label: 'Clinical Thermometer', color: '#ec4899' },
+        { key: 'timer', label: 'Respiratory Rate Timer', color: '#3b82f6' },
+        { key: 'orsCorner', label: 'ORS Hydration Corner', color: '#14b8a6' }
     ], []);
 
     const checkToolAvailability = (toolsObj, key) => {

@@ -104,9 +104,9 @@ import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
 
-import { doc, getDoc, setDoc, waitForPendingWrites } from 'firebase/firestore';
+import { doc, getDoc, setDoc, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
 
-import { signOut, updateProfile } from 'firebase/auth'; 
+import { signOut, updateProfile, onAuthStateChanged } from 'firebase/auth'; 
 import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; 
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
@@ -437,6 +437,47 @@ export default function App() {
         const handleQueueUpdate = () => setPendingSyncItems(getPendingSyncQueue());
         window.addEventListener('syncQueueUpdated', handleQueueUpdate);
         return () => window.removeEventListener('syncQueueUpdated', handleQueueUpdate);
+    }, []);
+
+    // =========================================================================
+    // --- REMOTE CACHE WIPE LISTENER (Triggered by Admin Dashboard) ---
+    // =========================================================================
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (!user) return;
+
+            // Listen to the user's specific document in real-time[cite: 27]
+            const userRef = doc(db, 'users', user.uid);
+            const unsubscribeDoc = onSnapshot(userRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // If the admin triggered a cache reset[cite: 27]
+                    if (data.forceCacheReset) {
+                        const remoteResetTime = data.forceCacheReset.toMillis();
+                        const localResetTime = parseInt(localStorage.getItem('last_forced_reset') || '0', 10);
+                        
+                        // If the remote command is newer than the last time we reset locally[cite: 27]
+                        if (remoteResetTime > localResetTime) {
+                            console.warn("⚠️ Admin ordered a local storage wipe. Wiping now...");
+                            
+                            // Clear all local storage EXCEPT the last reset timestamp[cite: 27]
+                            localStorage.clear();
+                            localStorage.setItem('last_forced_reset', remoteResetTime.toString());
+                            
+                            alert("قام مدير النظام بتحديث بيانات التطبيق وإصلاح الأخطاء. سيتم إعادة تحميل التطبيق الآن.\n\n(The administrator has refreshed your app data to fix errors. The app will now reload.)");
+                            
+                            // Reload the app completely to fetch fresh data from the database[cite: 27]
+                            window.location.reload(true);
+                        }
+                    }
+                }
+            });
+
+            return () => unsubscribeDoc();
+        });
+
+        return () => unsubscribeAuth();
     }, []);
 
     const {

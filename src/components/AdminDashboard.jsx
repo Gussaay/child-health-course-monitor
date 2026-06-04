@@ -24,7 +24,6 @@ import {
     ROLES,
     PERMISSION_DESCRIPTIONS
 } from './permissions';
-// ----------------------------
 
 // -----------------------------------------------------------------------------
 // LOCAL CONSTANTS
@@ -41,7 +40,6 @@ const getRoleBadgeStyle = (role) => {
 };
 
 // --- Helper Components ---
-
 const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
     const tabs = [
         { key: 'roles', label: 'Manage User Roles', icon: Users },
@@ -332,17 +330,14 @@ export function AdminDashboard() {
             }
 
             if (role === 'super_user') {
-                // Load Active Config
                 const updateRef = doc(db, "meta", "update_config");
                 const updateSnap = await getDoc(updateRef);
                 if (updateSnap.exists()) {
                     const data = updateSnap.data();
                     setUpdateConfig(data);
-                    // Treat any deployment build ID > 1 as an active live configuration state
                     if (data.latestNativeBuild > 1) setIsUpdateActive(true);
                 }
 
-                // Load Update History Log
                 try {
                     const historyQuery = query(collection(db, "update_history"));
                     const historySnap = await getDocs(historyQuery);
@@ -353,7 +348,6 @@ export function AdminDashboard() {
                     console.warn("Could not load update history:", e);
                 }
 
-                // Fetch current Live OTA Version from Firebase Hosting
                 try {
                     const res = await fetch("https://imnci-courses-monitor.web.app/latest/update.json?t=" + Date.now());
                     if (res.ok) {
@@ -366,7 +360,6 @@ export function AdminDashboard() {
                     setOtaVersion("Offline");
                 }
 
-                // Fetch the absolute latest compiled APK config from Firebase Hosting
                 try {
                     const nativeRes = await fetch("https://imnci-courses-monitor.web.app/native-version.json?t=" + Date.now());
                     if (nativeRes.ok) {
@@ -381,6 +374,43 @@ export function AdminDashboard() {
             setToast({ show: true, message: "Error loading data. Please try again.", type: "error" });
         }
         setLoading(false);
+    };
+
+    // =========================================================================
+    // REMOTE CACHE WIPE HANDLERS
+    // =========================================================================
+    const handleForceCacheReset = async (userId, userEmail) => {
+        if (!window.confirm(`Are you sure you want to wipe the local storage on ${userEmail}'s device? This will happen the next time they open the app while online.`)) {
+            return;
+        }
+        
+        try {
+            const userRef = doc(db, 'users', userId);
+            await updateDoc(userRef, {
+                forceCacheReset: serverTimestamp() 
+            });
+            setToast({ show: true, message: `Cache reset command sent to ${userEmail}.`, type: 'success' });
+        } catch (error) {
+            console.error("Error sending cache reset command:", error);
+            setToast({ show: true, message: `Failed to send command: ${error.message}`, type: 'error' });
+        }
+    };
+
+    const handleForceCacheResetAll = async () => {
+        if (!window.confirm(`WARNING: Are you sure you want to wipe the local storage for ALL users?`)) return;
+        
+        try {
+            const usersSnap = await getDocs(collection(db, 'users'));
+            const batch = writeBatch(db);
+            usersSnap.forEach((userDoc) => {
+                batch.update(userDoc.ref, { forceCacheReset: serverTimestamp() });
+            });
+            await batch.commit();
+            setToast({ show: true, message: `Cache reset command sent to all users.`, type: 'success' });
+        } catch (error) {
+            console.error("Error sending bulk cache reset:", error);
+            setToast({ show: true, message: `Failed to send command: ${error.message}`, type: 'error' });
+        }
     };
 
     const handlePushHistoryVersion = async () => {
@@ -508,7 +538,6 @@ export function AdminDashboard() {
         setLoading(false);
     };
 
-    // --- STORAGE DELETION LOGIC ---
     const handleDeleteHistoryRecord = async (stat) => {
         const confirmMessage = `WARNING:\n\nAre you sure you want to delete version v${stat.versionString}?\n\nThis will permanently delete the visual record from this table AND permanently delete the physical .apk file from Firebase Storage.`;
         
@@ -682,11 +711,10 @@ export function AdminDashboard() {
             console.error("Error updating individual permissions:", error);
             setToast({ show: true, message: "Failed to update custom permissions.", type: "error" });
         } finally {
-            setLoading(false);
+            sm:setLoading(false);
         }
     };
 
-    // --- INCREMENTAL PERMISSION SYNC ---
     const handleCloseAndSyncBlueprint = async () => {
         if (!editingPermissionRole) return;
         const roleToSync = editingPermissionRole;
@@ -808,17 +836,11 @@ export function AdminDashboard() {
         };
     }, [usageStats]);
 
-    if (loading) return <Spinner />;
-
-    // =========================================================================
-    // NEW APP UPDATES TAB
-    // =========================================================================
     const renderUpdatesTab = () => {
         const isNewApkAvailable = serverNativeConfig && serverNativeConfig.latestNativeBuild > (updateConfig?.latestNativeBuild || 0);
 
         return (
             <div className="space-y-6 animate-in fade-in duration-500">
-                {/* OTA Web Status Block */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
                     <div className="p-3 bg-emerald-50 rounded-full shrink-0"><CloudDownload className="w-6 h-6 text-emerald-500" /></div>
                     <div>
@@ -833,7 +855,6 @@ export function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* --- 1-CLICK NEW APK NOTIFICATION BANNER --- */}
                 {isNewApkAvailable && (
                     <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
@@ -866,7 +887,6 @@ export function AdminDashboard() {
                     </div>
                 )}
 
-                {/* --- LIVE INDICATOR HEADER ALERTS --- */}
                 {isUpdateActive && updateConfig?.versionString && (
                     <div className="bg-green-50 border border-green-200 p-4 rounded-xl shadow-inner flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
@@ -876,7 +896,6 @@ export function AdminDashboard() {
                     </div>
                 )}
 
-                {/* --- DEPLOYMENT HISTORY TABLE --- */}
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center">
                         <History className="w-5 h-5 text-gray-500 mr-3 shrink-0" />
@@ -889,7 +908,6 @@ export function AdminDashboard() {
                         <div className="overflow-x-auto">
                             <Table headers={["Version", "Build ID", "Deployment Date", "Release Notes", "Actions"]}>
                                 {updateHistory.map((stat) => {
-                                    // Row matches live version config
                                     const isActiveUpdate = isUpdateActive && (parseInt(updateConfig?.latestNativeBuild, 10) === parseInt(stat.latestNativeBuild, 10));
 
                                     return (
@@ -928,7 +946,7 @@ export function AdminDashboard() {
                                                     <Button 
                                                         size="sm"
                                                         variant="secondary"
-                                                        onClick={isActiveUpdate ? handleStopUpdate : undefined}
+                                                        onClick={isActiveUpdate ? handleForceCacheReset : undefined}
                                                         disabled={!isActiveUpdate}
                                                         className={`border-red-200 text-red-700 text-xs px-2 py-1 shadow-sm bg-white ${
                                                             isActiveUpdate 
@@ -976,6 +994,25 @@ export function AdminDashboard() {
 
     const renderUserRolesTab = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
+            {/* BULK ACTIONS FOR SUPER USER PROFILE */}
+            {currentUserRoles.includes('super_user') && (
+                <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <Smartphone className="w-6 h-6 text-orange-600 shrink-0" />
+                        <div>
+                            <h4 className="font-bold text-orange-900 text-base">Bulk Operational Maintenance Controls</h4>
+                            <p className="text-xs text-orange-700 mt-0.5 font-medium">Perform immediate diagnostic overrides across all systems.</p>
+                        </div>
+                    </div>
+                    <Button
+                        onClick={handleForceCacheResetAll}
+                        className="bg-orange-600 hover:bg-orange-700 border-orange-700 text-white shadow-md text-xs sm:text-sm whitespace-nowrap"
+                    >
+                        Wipe Storage Cache for ALL Users
+                    </Button>
+                </div>
+            )}
+
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex items-center text-gray-800 font-bold mb-4">
                     <Filter className="w-5 h-5 mr-2 text-sky-500" /> Filter & Search Directory
@@ -1553,7 +1590,7 @@ export function AdminDashboard() {
                                 <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">Geographic State</span>
                                 <span className="text-gray-900 font-bold">
                                     {viewingUser.assignedState || 'Global (No Restrictions)'}
-                                </span>
+                                  </span>
                             </div>
                             
                             <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
@@ -1564,8 +1601,18 @@ export function AdminDashboard() {
                             </div>
                         </div>
 
+                        {/* ACTION BUTTONS INSIDE USER PROFILE MODAL */}
                         <div className="mt-8 flex flex-col sm:flex-row justify-between items-center pt-4 border-t border-gray-100 gap-4">
                             <div className="flex gap-2 w-full sm:w-auto">
+                                {/* NEW WIPE CACHE BUTTON */}
+                                <Button 
+                                    onClick={() => handleForceCacheReset(viewingUser.id, viewingUser.email)} 
+                                    variant="outline" 
+                                    className="text-xs sm:text-sm px-3 border-orange-200 text-orange-700 hover:bg-orange-50"
+                                >
+                                    Wipe Device Cache
+                                </Button>
+
                                 <Button 
                                     onClick={() => handleSendPasswordReset(viewingUser.email)} 
                                     variant="secondary" 

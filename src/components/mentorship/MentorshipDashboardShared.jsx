@@ -235,17 +235,30 @@ export const ScoreText = ({ value, showPercentage = true }) => {
     return (<span className={`font-extrabold text-sm ${colorClass}`} dir="ltr">{text}</span>);
 };
 
-export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => {
+export const KpiCard = ({ title, value, unit = '', scoreValue = null, trend = null, trendText = '' }) => {
     const { t } = useTranslation();
     const cardRef = useRef(null);
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black border-t-4 border-t-sky-600 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full relative group">
-            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
-            <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-2 sm:mb-3 text-center uppercase tracking-wider break-words w-full px-2 sm:px-4" title={t(title)}>{t(title)}</h4>
-            <div className="flex items-baseline justify-center gap-1.5 mt-auto">
-                {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight" dir="ltr">{value}</span>}
-                {unit && <span className="text-xs sm:text-sm font-bold text-slate-500">{unit}</span>}
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 border-t-4 border-t-sky-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full relative group">
+            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <CopyImageButton targetRef={cardRef} title={t(title)} />
             </div>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-500 mb-2 sm:mb-3 text-center uppercase tracking-wider break-words w-full px-2 sm:px-4" title={t(title)}>
+                {t(title)}
+            </h4>
+            <div className="flex items-baseline justify-center gap-1.5 mt-auto">
+                {scoreValue !== null ? (
+                    <ScoreText value={scoreValue} />
+                ) : (
+                    <span className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight" dir="ltr">{value}</span>
+                )}
+                {unit && <span className="text-xs sm:text-sm font-bold text-slate-400">{unit}</span>}
+            </div>
+            {trend && (
+                <div className={`mt-2 flex items-center justify-center text-xs font-bold ${trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-rose-600' : 'text-slate-400'}`}>
+                    {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '−'} <span className="ml-1">{trendText}</span>
+                </div>
+            )}
         </div>
     );
 };
@@ -314,9 +327,9 @@ export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
 export const FilterSelect = ({ label, value, onChange, options, disabled = false, defaultOption }) => {
     const isSelected = value !== "" && value !== null && value !== undefined;
     return (
-        <div className="w-full sm:flex-1 sm:min-w-[140px]">
-            <label htmlFor={label} className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{label}</label>
-            <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isSelected ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}>
+        <div className="w-full sm:flex-1 sm:min-w-[150px]">
+            <label htmlFor={label} className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{label}</label>
+            <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isSelected ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}>
                 <option value="">{defaultOption}</option>
                 {options.map(option => (<option key={option.key || option} value={option.key || option}>{option.name || option}</option>))}
             </select>

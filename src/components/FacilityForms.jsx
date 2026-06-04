@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle, ArrowRightLeft } from 'lucide-react';
 import { db } from '../firebase'; 
-import { collection, getDocs, doc } from 'firebase/firestore'; // Removed getDoc
+import { collection, getDocs, doc } from 'firebase/firestore'; 
 import { getFunctions, httpsCallable } from 'firebase/functions'; 
 
 import {
@@ -14,6 +14,7 @@ import {
     getHealthFacilityById,
     listHealthFacilities,
     submitFacilityDataForApproval,
+    listPendingFacilitySubmissions 
 } from "../data.js";
 import {
     STATE_LOCALITIES
@@ -57,9 +58,32 @@ export const SaveStatusModal = ({ statusData, onClose }) => {
     );
 };
 
+// --- PENDING BADGE COMPONENT ---
+export const PendingBadge = ({ fieldKey, pendingData, currentData, valueMap }) => {
+    if (!pendingData || pendingData[fieldKey] === undefined) return null;
+    
+    // Normalize values to prevent false positives (treats undefined, null, and "" as identical)
+    const norm = (v) => (v === undefined || v === null) ? '' : String(v).trim();
+    if (norm(pendingData[fieldKey]) === norm(currentData[fieldKey])) return null;
+
+    let displayVal = pendingData[fieldKey];
+    
+    if (valueMap && valueMap[displayVal]) displayVal = valueMap[displayVal];
+    else if (displayVal === 'Yes') displayVal = 'نعم';
+    else if (displayVal === 'No') displayVal = 'لا';
+    else if (displayVal === 'Planned') displayVal = 'مخططة';
+
+    return (
+        <span className="mr-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300" title="تحديث معلق في انتظار الموافقة">
+            ⏳ تحديث معلق: {displayVal}
+        </span>
+    );
+};
+
 // --- PUBLIC-FACING FORMS ---
 export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     const [initialData, setInitialData] = useState(null);
+    const [pendingData, setPendingData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [statusData, setStatusData] = useState(null); 
@@ -74,6 +98,16 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     const facility = await getHealthFacilityById(id);
                     if (facility) {
                         setInitialData(facility);
+                        
+                        // Fetch pending submissions to show the badge
+                        const pendingSubs = await listPendingFacilitySubmissions();
+                        const facilityPending = pendingSubs.filter(s => 
+                            s['اسم_المؤسسة'] === facility['اسم_المؤسسة'] && 
+                            s['الولاية'] === facility['الولاية'] && 
+                            s['المحلية'] === facility['المحلية']
+                        ).sort((a,b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0))[0];
+                        
+                        setPendingData(facilityPending || null);
                     } else {
                         setError('Facility not found. The link may be invalid or the facility has been deleted.');
                     }
@@ -106,7 +140,6 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
             await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
-            // --- TRIGGER FIRE-AND-FORGET FCM NOTIFICATION ---
             if (navigator.onLine) {
                 try {
                     const currentUser = getAuth().currentUser;
@@ -115,7 +148,6 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
 
                     if (currentUser) {
                         submitterName = currentUser.displayName || currentUser.email || submitterName;
-                        // Skip DB fetch to speed up UI response
                         submitterRole = 'Registered User';
                     }
 
@@ -126,7 +158,6 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
-                    // No await here
                     sendFCMNotification({
                         targetUserId: 'managers_and_super_users',
                         title: notifTitle,
@@ -158,10 +189,10 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
 
     return (
         <div className="min-h-screen bg-sky-50 p-4 sm:p-6 lg:p-8 flex justify-center">
-            {/* INCREASED WIDTH TO max-w-7xl */}
             <div className="w-full max-w-7xl">
                 <GenericFacilityForm
                     initialData={initialData}
+                    pendingData={pendingData}
                     onSave={handleSave}
                     onCancel={() => window.history.back()}
                     setToast={setToast}
@@ -305,6 +336,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
     const [step, setStep] = useState('selection');
     const [formInitialData, setFormInitialData] = useState(null);
+    const [pendingData, setPendingData] = useState(null);
     const [selectionData, setSelectionData] = useState({ state: searchParams.get('state') || '', locality: searchParams.get('locality') || '', facilityId: '' });
     const [facilitiesWithService, setFacilitiesWithService] = useState([]);
     const [facilitiesWithoutService, setFacilitiesWithoutService] = useState([]);
@@ -379,12 +411,24 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
         if (!selectionData.facilityId) return;
         if (selectionData.facilityId === 'addNew') {
             setFormInitialData({ 'الولاية': selectionData.state, 'المحلية': selectionData.locality });
+            setPendingData(null);
             setStep('form');
         } else {
             setIsLoading(true);
             try {
                 const data = await getHealthFacilityById(selectionData.facilityId);
                 setFormInitialData(data);
+                
+                // Fetch pending submissions to show the badge
+                const pendingSubs = await listPendingFacilitySubmissions();
+                const facilityPending = pendingSubs.filter(s => 
+                    s['اسم_المؤسسة'] === data['اسم_المؤسسة'] && 
+                    s['الولاية'] === data['الولاية'] && 
+                    s['المحلية'] === data['المحلية']
+                ).sort((a,b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0))[0];
+                
+                setPendingData(facilityPending || null);
+
                 setStep('form');
             } finally {
                 setIsLoading(false);
@@ -398,7 +442,6 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
-            // --- TRIGGER FIRE-AND-FORGET FCM NOTIFICATION ---
             if (navigator.onLine) {
                 try {
                     const currentUser = getAuth().currentUser;
@@ -407,7 +450,6 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
                     if (currentUser) {
                         submitterName = currentUser.displayName || currentUser.email || submitterName;
-                        // Skip DB fetch to speed up UI response
                         submitterRole = 'Registered User';
                     }
 
@@ -418,7 +460,6 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
-                    // No await here
                     sendFCMNotification({
                         targetUserId: 'managers_and_super_users',
                         title: notifTitle,
@@ -534,7 +575,6 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
     return (
         <div className="min-h-screen bg-gray-50/50 p-4 sm:p-8 flex flex-col items-center">
-            {/* INCREASED WIDTH TO max-w-7xl */}
             <div className="w-full max-w-7xl space-y-4">
                 <div className="flex justify-start" dir="rtl">
                     <Button variant="secondary" onClick={() => setStep('selection')} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
@@ -543,6 +583,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                 </div>
                 <GenericFacilityForm
                     initialData={formInitialData}
+                    pendingData={pendingData}
                     onSave={handleSave}
                     onCancel={() => setStep('selection')}
                     setToast={setToast}
@@ -558,7 +599,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 }
 
 // --- SharedFacilityFields ---
-export const SharedFacilityFields = ({ formData, handleChange, handleStateChange, isPublicForm = false, isReadOnly = false }) => {
+export const SharedFacilityFields = ({ formData, pendingData, handleChange, handleStateChange, isPublicForm = false, isReadOnly = false }) => {
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [locationError, setLocationError] = useState('');
 
@@ -586,6 +627,9 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
         );
     };
 
+    const stateMap = Object.keys(STATE_LOCALITIES).reduce((acc, key) => ({...acc, [key]: STATE_LOCALITIES[key].ar}), {});
+    const localityMap = formData['الولاية'] ? STATE_LOCALITIES[formData['الولاية']]?.localities.reduce((acc, l) => ({...acc, [l.en]: l.ar}), {}) : {};
+
     return (
         <div className="space-y-8">
             <div className="border-2 border-sky-100 rounded-2xl overflow-hidden bg-white shadow-sm">
@@ -595,13 +639,13 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                 </div>
                 <div className="p-6 space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormGroup label="الولاية">
+                        <FormGroup label={<>الولاية <PendingBadge fieldKey="الولاية" pendingData={pendingData} currentData={formData} valueMap={stateMap} /></>}>
                             <Select name="الولاية" value={formData['الولاية'] || ''} onChange={handleStateChange} required disabled={isReadOnly}>
                                 <option value="">اختر الولاية</option>
                                 {Object.keys(STATE_LOCALITIES).map(sKey => <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey].ar}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="المحلية">
+                        <FormGroup label={<>المحلية <PendingBadge fieldKey="المحلية" pendingData={pendingData} currentData={formData} valueMap={localityMap} /></>}>
                             <Select name="المحلية" value={formData['المحلية'] || ''} onChange={handleChange} required disabled={!formData['الولاية'] || isReadOnly}>
                                 <option value="">اختر المحلية</option>
                                 {formData['الولاية'] && STATE_LOCALITIES[formData['الولاية']]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
@@ -609,8 +653,10 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                         </FormGroup>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormGroup label="اسم المؤسسة"><Input name="اسم_المؤسسة" value={formData['اسم_المؤسسة'] || ''} onChange={handleChange} required disabled={isReadOnly} className="border-2 border-gray-100" /></FormGroup>
-                        <FormGroup label="ملكية المؤسسة">
+                        <FormGroup label={<>اسم المؤسسة <PendingBadge fieldKey="اسم_المؤسسة" pendingData={pendingData} currentData={formData} /></>}>
+                            <Input name="اسم_المؤسسة" value={formData['اسم_المؤسسة'] || ''} onChange={handleChange} required disabled={isReadOnly} className="border-2 border-gray-100" />
+                        </FormGroup>
+                        <FormGroup label={<>ملكية المؤسسة <PendingBadge fieldKey="facility_ownership" pendingData={pendingData} currentData={formData} /></>}>
                             <Select name="facility_ownership" value={formData.facility_ownership || ''} onChange={handleChange} disabled={isReadOnly}>
                                 <option value="">اختر الملكية</option>
                                 <option value="حكومي">حكومي</option>
@@ -621,7 +667,7 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                         </FormGroup>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormGroup label="نوع المؤسسة الصحية">
+                        <FormGroup label={<>نوع المؤسسة الصحية <PendingBadge fieldKey="نوع_المؤسسةالصحية" pendingData={pendingData} currentData={formData} /></>}>
                             <Select name="نوع_المؤسسةالصحية" value={formData['نوع_المؤسسةالصحية'] || ''} onChange={handleChange} disabled={isReadOnly}>
                                 <option value="">اختر النوع</option>
                                 <option value="مركز صحة الاسرة">مركز صحة الاسرة</option>
@@ -630,7 +676,7 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                                 <option value="مستشفى">مستشفى</option>
                             </Select>
                         </FormGroup>
-                        <FormGroup label="نوع الخدمات المقدمة">
+                        <FormGroup label={<>نوع الخدمات المقدمة <PendingBadge fieldKey="eenc_service_type" pendingData={pendingData} currentData={formData} valueMap={{'CEmONC':'مؤسسة طواري حمل وولادة شاملة','BEmONC':'مؤسسة طواري حمل وولادة أساسية','general':'خدمات عامة غير متخصصة','pediatric':'مستشفى اطفال متخصص'}}/></>}>
                             <Select name="eenc_service_type" value={formData.eenc_service_type || ''} onChange={handleChange} disabled={isReadOnly}>
                                 <option value="">اختر النوع</option>
                                 <option value="CEmONC">مؤسسة طواري حمل وولادة شاملة</option>
@@ -648,7 +694,7 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                     <h3 className="text-lg font-bold text-sky-800">حالة عمل المؤسسة</h3>
                 </div>
                 <div className="p-6 space-y-6">
-                    <FormGroup label="هل المؤسسة تعمل؟">
+                    <FormGroup label={<>هل المؤسسة تعمل؟ <PendingBadge fieldKey="هل_المؤسسة_تعمل" pendingData={pendingData} currentData={formData} /></>}>
                         <Select name="هل_المؤسسة_تعمل" value={formData['هل_المؤسسة_تعمل'] || ''} onChange={handleChange} disabled={isReadOnly} required>
                             <option value="">اختر...</option>
                             <option value="Yes">نعم</option>
@@ -657,7 +703,7 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                     </FormGroup>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="p-5 bg-gray-50/50 border border-gray-100 rounded-xl space-y-4">
-                            <FormGroup label="هل توجد حوافز للاستاف؟">
+                            <FormGroup label={<>هل توجد حوافز للاستاف؟ <PendingBadge fieldKey="staff_incentives" pendingData={pendingData} currentData={formData} /></>}>
                                 <Select name="staff_incentives" value={formData.staff_incentives || ''} onChange={handleChange} disabled={isReadOnly}>
                                     <option value="">اختر...</option>
                                     <option value="Yes">نعم</option>
@@ -665,11 +711,11 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                                 </Select>
                             </FormGroup>
                             {formData.staff_incentives === 'Yes' && (
-                                <div className="animate-fade-in"><FormGroup label="ما هي المنظمة المقدم للحوافز؟"><Input type="text" name="staff_incentives_organization" value={formData.staff_incentives_organization || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup></div>
+                                <div className="animate-fade-in"><FormGroup label={<>ما هي المنظمة المقدم للحوافز؟ <PendingBadge fieldKey="staff_incentives_organization" pendingData={pendingData} currentData={formData} /></>}><Input type="text" name="staff_incentives_organization" value={formData.staff_incentives_organization || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup></div>
                             )}
                         </div>
                         <div className="p-5 bg-gray-50/50 border border-gray-100 rounded-xl space-y-4">
-                            <FormGroup label="هل تشارك المؤسسة في أي مشروع؟">
+                            <FormGroup label={<>هل تشارك المؤسسة في أي مشروع؟ <PendingBadge fieldKey="project_participation" pendingData={pendingData} currentData={formData} /></>}>
                                 <Select name="project_participation" value={formData.project_participation || ''} onChange={handleChange} disabled={isReadOnly}>
                                     <option value="">اختر...</option>
                                     <option value="Yes">نعم</option>
@@ -677,12 +723,12 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                                 </Select>
                             </FormGroup>
                             {formData.project_participation === 'Yes' && (
-                                <div className="animate-fade-in"><FormGroup label="ما هو اسم المشروع؟"><Input type="text" name="project_name" value={formData.project_name || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup></div>
+                                <div className="animate-fade-in"><FormGroup label={<>ما هو اسم المشروع؟ <PendingBadge fieldKey="project_name" pendingData={pendingData} currentData={formData} /></>}><Input type="text" name="project_name" value={formData.project_name || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup></div>
                             )}
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2">
-                        <FormGroup label="رقم هاتف المسئول من المؤسسة">
+                        <FormGroup label={<>رقم هاتف المسئول من المؤسسة <PendingBadge fieldKey="person_in_charge_phone" pendingData={pendingData} currentData={formData} /></>}>
                             <Input type="tel" name="person_in_charge_phone" value={formData.person_in_charge_phone || ''} onChange={handleChange} disabled={isReadOnly} />
                         </FormGroup>
                     </div>
@@ -723,10 +769,10 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                         )}
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <FormGroup label="خط العرض (Latitude)">
+                            <FormGroup label={<>خط العرض (Latitude) <PendingBadge fieldKey="_الإحداثيات_latitude" pendingData={pendingData} currentData={formData} /></>}>
                                 <Input type="number" step="any" name="_الإحداثيات_latitude" value={formData['_الإحداثيات_latitude'] || ''} onChange={handleChange} disabled={isReadOnly} />
                             </FormGroup>
-                            <FormGroup label="خط الطول (Longitude)">
+                            <FormGroup label={<>خط الطول (Longitude) <PendingBadge fieldKey="_الإحداثيات_longitude" pendingData={pendingData} currentData={formData} /></>}>
                                 <Input type="number" step="any" name="_الإحداثيات_longitude" value={formData['_الإحداثيات_longitude'] || ''} onChange={handleChange} disabled={isReadOnly} />
                             </FormGroup>
                         </div>
@@ -948,6 +994,7 @@ const TransferFacilityModal = ({ isOpen, onClose, currentServiceKey, currentStaf
 // --- GENERIC FACILITY FORM WRAPPER ---
 export const GenericFacilityForm = React.forwardRef(({
     initialData,
+    pendingData, 
     onSave,
     onCancel,
     setToast,
@@ -1074,7 +1121,6 @@ export const GenericFacilityForm = React.forwardRef(({
         setFormData(prev => ({ ...prev, [serviceKey]: formData[serviceKey].filter((_, i) => i !== index) }));
     };
 
-    // "Move to another department" (Same Facility)
     const handleMoveDepartment = (staffIndices, targetKey) => {
         const currentKey = moveModalInfo.currentServiceKey;
         setFormData(prev => {
@@ -1101,15 +1147,12 @@ export const GenericFacilityForm = React.forwardRef(({
         setMoveModalInfo({ isOpen: false, currentServiceKey: '' });
     };
 
-    // "Transfer to another facility" (Same Department)
     const handleTransferFacility = async (staffIndices, targetFacility) => {
         const currentKey = transferModalInfo.currentServiceKey;
         try {
-            // 1. Extract staff
             const currentStaff = formData[currentKey] || [];
             const staffToTransfer = staffIndices.map(idx => currentStaff[idx]);
             
-            // 2. Add to target facility's same department array
             let targetStaffList = [];
             try {
                 targetStaffList = targetFacility[currentKey] ? (typeof targetFacility[currentKey] === 'string' ? JSON.parse(targetFacility[currentKey]) : JSON.parse(JSON.stringify(targetFacility[currentKey]))) : [];
@@ -1124,11 +1167,8 @@ export const GenericFacilityForm = React.forwardRef(({
             });
 
             const updatedTargetFacility = { ...targetFacility, [currentKey]: targetStaffList };
-            
-            // 3. Save target facility to DB
             await submitFacilityDataForApproval(updatedTargetFacility);
 
-            // 4. Remove from current local form data
             setFormData(prev => ({
                 ...prev,
                 [currentKey]: prev[currentKey].filter((_, i) => !staffIndices.includes(i))
@@ -1172,6 +1212,7 @@ export const GenericFacilityForm = React.forwardRef(({
                     <form onSubmit={handleSubmit} ref={ref}>
                         <SharedFacilityFields 
                             formData={formData} 
+                            pendingData={pendingData}
                             handleChange={handleChange} 
                             handleStateChange={handleStateChange} 
                             isPublicForm={isPublicForm} 
@@ -1181,6 +1222,7 @@ export const GenericFacilityForm = React.forwardRef(({
                         <div className="mt-8">
                             {children({ 
                                 formData, 
+                                pendingData,
                                 handleChange, 
                                 handleStateChange, 
                                 handleStaffChange, 
@@ -1230,18 +1272,44 @@ export const GenericFacilityForm = React.forwardRef(({
     );
 });
 
-// MODIFIED StaffTable WITH FIXES FOR SCROLLING AND VISIBILITY
-export const StaffTable = ({ serviceKey, formData, isReadOnly, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, jobTitles, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
+export const StaffTable = ({ serviceKey, formData, pendingData, isReadOnly, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, jobTitles, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const staffList = formData[serviceKey] || [];
+    
+    const hasPendingStaff = useMemo(() => {
+        if (!pendingData || !pendingData[serviceKey]) return false;
+        const pList = pendingData[serviceKey];
+        if (!Array.isArray(pList)) return false;
+        
+        if (pList.length !== staffList.length) return true;
+        
+        const norm = (v) => (v === undefined || v === null) ? '' : String(v).trim();
+        
+        for (let i = 0; i < pList.length; i++) {
+            const pStaff = pList[i] || {};
+            const cStaff = staffList[i] || {};
+            const keys = new Set([...Object.keys(pStaff), ...Object.keys(cStaff)]);
+            
+            for (let k of keys) {
+                if (norm(pStaff[k]) !== norm(cStaff[k])) return true;
+            }
+        }
+        return false;
+    }, [pendingData, serviceKey, staffList]);
+
     return (
         <div>
             <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md flex items-center justify-between">
-                <span>معلومات الكادر بالاسم ({staffList.length})</span>
+                <div>
+                    <span>معلومات الكادر بالاسم ({staffList.length})</span>
+                    {hasPendingStaff && (
+                        <span className="mr-3 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                            ⏳ يوجد تعديل معلق على الكوادر
+                        </span>
+                    )}
+                </div>
             </h4>
             
-            {/* Removed overflow-x-auto to prevent scrollbars. The table will now fluidly fit the container. */}
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                {/* Removed table-fixed and min-w to allow natural fluid squeezing */}
                 <table className="w-full border-collapse text-sm">
                     <thead className="bg-sky-100/50">
                         <tr>
@@ -1257,72 +1325,30 @@ export const StaffTable = ({ serviceKey, formData, isReadOnly, handleStaffChange
                         {staffList.map((staff, index) => (
                             <tr key={index} className="hover:bg-gray-50">
                                 <td className="border p-1">
-                                    <Input 
-                                        className="w-full text-sm" 
-                                        name="name" 
-                                        value={staff.name} 
-                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
-                                        disabled={isReadOnly} 
-                                    />
+                                    <Input className="w-full text-sm" name="name" value={staff.name} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={isReadOnly} />
                                 </td>
                                 <td className="border p-1">
-                                    <Select 
-                                        className="w-full text-sm px-1" 
-                                        name="job_title" 
-                                        value={staff.job_title || ''} 
-                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
-                                        disabled={isReadOnly}
-                                    >
+                                    <Select className="w-full text-sm px-1" name="job_title" value={staff.job_title || ''} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={isReadOnly}>
                                         <option value="">اختر الوصف</option>
                                         {jobTitles.map(t => <option key={t} value={t}>{t}</option>)}
-                                        {/* Fallback to display custom/legacy job titles if not in standard list */}
-                                        {staff.job_title && !jobTitles.includes(staff.job_title) && (
-                                            <option value={staff.job_title}>{staff.job_title}</option>
-                                        )}
+                                        {staff.job_title && !jobTitles.includes(staff.job_title) && (<option value={staff.job_title}>{staff.job_title}</option>)}
                                     </Select>
                                 </td>
                                 <td className="border p-1">
-                                    <Select 
-                                        className="w-full text-sm px-1" 
-                                        name="is_trained" 
-                                        value={staff.is_trained} 
-                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
-                                        disabled={isReadOnly}
-                                    >
+                                    <Select className="w-full text-sm px-1" name="is_trained" value={staff.is_trained} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={isReadOnly}>
                                         <option value="Yes">نعم</option>
                                         <option value="No">لا</option>
                                         <option value="Planned">مخططة</option>
                                     </Select>
                                 </td>
                                 <td className="border p-1">
-                                    <Input 
-                                        className="w-full text-sm px-1" 
-                                        type="date" 
-                                        name="training_date" 
-                                        value={staff.training_date} 
-                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
-                                        disabled={staff.is_trained !== 'Yes' || isReadOnly} 
-                                    />
+                                    <Input className="w-full text-sm px-1" type="date" name="training_date" value={staff.training_date} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={staff.is_trained !== 'Yes' || isReadOnly} />
                                 </td>
                                 <td className="border p-1">
-                                    <Input 
-                                        className="w-full text-sm px-1" 
-                                        type="tel" 
-                                        name="phone" 
-                                        value={staff.phone} 
-                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
-                                        disabled={isReadOnly} 
-                                    />
+                                    <Input className="w-full text-sm px-1" type="tel" name="phone" value={staff.phone} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={isReadOnly} />
                                 </td>
                                 <td className="border p-1 text-center">
-                                    <Button 
-                                        size="sm" 
-                                        variant="danger" 
-                                        type="button" 
-                                        onClick={(e) => { e.preventDefault(); handleRemoveStaffRow(serviceKey, e, index); }} 
-                                        disabled={isReadOnly} 
-                                        className="w-full px-1 py-1.5 text-xs"
-                                    >
+                                    <Button size="sm" variant="danger" type="button" onClick={(e) => { e.preventDefault(); handleRemoveStaffRow(serviceKey, e, index); }} disabled={isReadOnly} className="w-full px-1 py-1.5 text-xs">
                                         حذف
                                     </Button>
                                 </td>
@@ -1340,24 +1366,12 @@ export const StaffTable = ({ serviceKey, formData, isReadOnly, handleStaffChange
                     + إضافة كادر يدوياً
                 </Button>
                 {onOpenMoveDeptModal && (
-                    <Button 
-                        type="button" 
-                        onClick={(e) => { e.preventDefault(); onOpenMoveDeptModal(serviceKey); }} 
-                        variant="secondary" 
-                        className="font-bold shadow-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200" 
-                        disabled={isReadOnly}
-                    >
+                    <Button type="button" onClick={(e) => { e.preventDefault(); onOpenMoveDeptModal(serviceKey); }} variant="secondary" className="font-bold shadow-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200" disabled={isReadOnly}>
                         <ArrowRightLeft className="w-4 h-4 mr-2 inline" /> نقل لقسم آخر
                     </Button>
                 )}
                 {onOpenTransferFacModal && (
-                    <Button 
-                        type="button" 
-                        onClick={(e) => { e.preventDefault(); onOpenTransferFacModal(serviceKey); }} 
-                        variant="secondary" 
-                        className="font-bold shadow-sm bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200" 
-                        disabled={isReadOnly}
-                    >
+                    <Button type="button" onClick={(e) => { e.preventDefault(); onOpenTransferFacModal(serviceKey); }} variant="secondary" className="font-bold shadow-sm bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200" disabled={isReadOnly}>
                         <Building2 className="w-4 h-4 mr-2 inline" /> نقل لمنشأة أخرى
                     </Button>
                 )}
@@ -1365,7 +1379,8 @@ export const StaffTable = ({ serviceKey, formData, isReadOnly, handleStaffChange
         </div>
     );
 };
-export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
+
+export const IMNCIFormFields = ({ formData, pendingData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['طبيب', 'مساعد طبي', 'ممرض معالج', 'مسؤول تغذية', 'زائرة صحية'];
 
     return (
@@ -1374,7 +1389,7 @@ export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, han
                 <h3 className="text-lg font-semibold text-sky-800">IMNCI Services (خدمات العلاج المتكامل لأمراض الطفولة)</h3>
             </div>
             <div className="p-5 space-y-6">
-                <FormGroup label="هل تتوفر خدمة العلاج المتكامل لأمراض الطفولة؟">
+                <FormGroup label={<>هل تتوفر خدمة العلاج المتكامل لأمراض الطفولة؟ <PendingBadge fieldKey="وجود_العلاج_المتكامل_لامراض_الطفولة" pendingData={pendingData} currentData={formData} /></>}>
                     <p className="text-sm font-medium text-sky-700 mb-2">الكوادر العاملة في المؤسسة مدربة بنسبة 50% أو لأكثر</p>
                     <Select name="وجود_العلاج_المتكامل_لامراض_الطفولة" value={formData['وجود_العلاج_المتكامل_لامراض_الطفولة'] || ''} onChange={handleChange} disabled={isReadOnly} required>
                         <option value="">اختر...</option>
@@ -1415,6 +1430,7 @@ export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, han
                     <StaffTable 
                         serviceKey="imnci_staff" 
                         formData={formData} 
+                        pendingData={pendingData}
                         isReadOnly={isReadOnly} 
                         handleStaffChange={handleStaffChange} 
                         handleAddStaffRow={handleAddStaffRow} 
@@ -1429,13 +1445,13 @@ export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, han
                     <div>
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">الموارد والمعدات المتاحة</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormGroup label="وجود سجل علاج متكامل"><Select name="وجود_سجل_علاج_متكامل" value={formData['وجود_سجل_علاج_متكامل'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                            <FormGroup label="وجود كتيب لوحات"><Select name="وجود_كتيب_لوحات" value={formData['وجود_كتيب_لوحات'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                            <FormGroup label="ميزان وزن"><Select name="ميزان_وزن" value={formData['ميزان_وزن'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                            <FormGroup label="ميزان طول"><Select name="ميزان_طول" value={formData['ميزان_طول'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                            <FormGroup label="ميزان حرارة"><Select name="ميزان_حرارة" value={formData['ميزان_حرارة'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                            <FormGroup label="ساعة مؤقت"><Select name="ساعة_مؤقت" value={formData['ساعة_مؤقت'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                            <FormGroup label="غرفة إرواء"><Select name="غرفة_إرواء" value={formData['غرفة_إرواء'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>وجود سجل علاج متكامل <PendingBadge fieldKey="وجود_سجل_علاج_متكامل" pendingData={pendingData} currentData={formData} /></>}><Select name="وجود_سجل_علاج_متكامل" value={formData['وجود_سجل_علاج_متكامل'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>وجود كتيب لوحات <PendingBadge fieldKey="وجود_كتيب_لوحات" pendingData={pendingData} currentData={formData} /></>}><Select name="وجود_كتيب_لوحات" value={formData['وجود_كتيب_لوحات'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>ميزان وزن <PendingBadge fieldKey="ميزان_وزن" pendingData={pendingData} currentData={formData} /></>}><Select name="ميزان_وزن" value={formData['ميزان_وزن'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>ميزان طول <PendingBadge fieldKey="ميزان_طول" pendingData={pendingData} currentData={formData} /></>}><Select name="ميزان_طول" value={formData['ميزان_طول'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>ميزان حرارة <PendingBadge fieldKey="ميزان_حرارة" pendingData={pendingData} currentData={formData} /></>}><Select name="ميزان_حرارة" value={formData['ميزان_حرارة'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>ساعة مؤقت <PendingBadge fieldKey="ساعة_مؤقت" pendingData={pendingData} currentData={formData} /></>}><Select name="ساعة_مؤقت" value={formData['ساعة_مؤقت'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>غرفة إرواء <PendingBadge fieldKey="غرفة_إرواء" pendingData={pendingData} currentData={formData} /></>}><Select name="غرفة_إرواء" value={formData['غرفة_إرواء'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
                         </div>
                     </div>
 
@@ -1445,15 +1461,15 @@ export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, han
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">الخدمات الاخرى</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
                             <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                                <FormGroup label="هل يوجد مكتب تحصين؟"><Select name="immunization_office_exists" value={formData.immunization_office_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                                {formData.immunization_office_exists === 'No' && <FormGroup label="اين يقع اقرب مركز تحصين؟" className="mt-3"><Input type="text" name="nearest_immunization_center" value={formData.nearest_immunization_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
+                                <FormGroup label={<>هل يوجد مكتب تحصين؟ <PendingBadge fieldKey="immunization_office_exists" pendingData={pendingData} currentData={formData} /></>}><Select name="immunization_office_exists" value={formData.immunization_office_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                {formData.immunization_office_exists === 'No' && <FormGroup label={<>اين يقع اقرب مركز تحصين؟ <PendingBadge fieldKey="nearest_immunization_center" pendingData={pendingData} currentData={formData} /></>} className="mt-3"><Input type="text" name="nearest_immunization_center" value={formData.nearest_immunization_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
                             </div>
                             <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                                <FormGroup label="هل يوجد مركز تغذية خارجي؟"><Select name="nutrition_center_exists" value={formData.nutrition_center_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                                {formData.nutrition_center_exists === 'No' && <FormGroup label="اين يقع اقرب مركز تغذية خارجي؟" className="mt-3"><Input type="text" name="nearest_nutrition_center" value={formData.nearest_nutrition_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
+                                <FormGroup label={<>هل يوجد مركز تغذية خارجي؟ <PendingBadge fieldKey="nutrition_center_exists" pendingData={pendingData} currentData={formData} /></>}><Select name="nutrition_center_exists" value={formData.nutrition_center_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                {formData.nutrition_center_exists === 'No' && <FormGroup label={<>اين يقع اقرب مركز تغذية خارجي؟ <PendingBadge fieldKey="nearest_nutrition_center" pendingData={pendingData} currentData={formData} /></>} className="mt-3"><Input type="text" name="nearest_nutrition_center" value={formData.nearest_nutrition_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
                             </div>
                             <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                                <FormGroup label="هل يوجد خدمة متابعة النمو ؟"><Select name="growth_monitoring_service_exists" value={formData.growth_monitoring_service_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                <FormGroup label={<>هل يوجد خدمة متابعة النمو ؟ <PendingBadge fieldKey="growth_monitoring_service_exists" pendingData={pendingData} currentData={formData} /></>}><Select name="growth_monitoring_service_exists" value={formData.growth_monitoring_service_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
                             </div>
                         </div>
                     </div>
@@ -1463,7 +1479,7 @@ export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, han
     );
 };
 
-export const EENCFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
+export const EENCFormFields = ({ formData, pendingData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['طبيب أطفال', 'طبيب نساء وتوليد', 'طبيب عمومي', 'قابلة', 'ممرض', 'مساعد طبي'];
 
     return (
@@ -1472,7 +1488,7 @@ export const EENCFormFields = ({ formData, handleChange, handleStaffChange, hand
                 <h3 className="text-lg font-semibold text-sky-800">EENC Services (خدمات الرعاية الطارئة لحديثي الولادة)</h3>
             </div>
             <div className="p-5 space-y-6">
-                <FormGroup label="هل تقدم الرعاية الضرورية المبكرة لحديثي الولادة والأطفال؟">
+                <FormGroup label={<>هل تقدم الرعاية الضرورية المبكرة لحديثي الولادة والأطفال؟ <PendingBadge fieldKey="eenc_provides_essential_care" pendingData={pendingData} currentData={formData} /></>}>
                     <p className="text-sm font-medium text-sky-700 mb-2">تم تدريب الكوادر العاملة في غرفة الولادة على الرعاية الضرورية المبكرة للاطفال حديثي الولادة</p>
                     <Select name="eenc_provides_essential_care" value={formData.eenc_provides_essential_care || ''} onChange={handleChange} disabled={isReadOnly} required>
                         <option value="">اختر...</option>
@@ -1483,11 +1499,12 @@ export const EENCFormFields = ({ formData, handleChange, handleStaffChange, hand
                 </FormGroup>
 
                 <div className="space-y-6 animate-fade-in pt-4 border-t border-gray-200">
-                    <FormGroup label="عدد الكوادر الصحية المدربة (إجمالي)"><Input type="number" name="eenc_trained_workers" value={formData.eenc_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                    <FormGroup label={<>عدد الكوادر الصحية المدربة (إجمالي) <PendingBadge fieldKey="eenc_trained_workers" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_trained_workers" value={formData.eenc_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                     
                     <StaffTable 
                         serviceKey="eenc_staff" 
                         formData={formData} 
+                        pendingData={pendingData}
                         isReadOnly={isReadOnly} 
                         handleStaffChange={handleStaffChange} 
                         handleAddStaffRow={handleAddStaffRow} 
@@ -1501,13 +1518,13 @@ export const EENCFormFields = ({ formData, handleChange, handleStaffChange, hand
                     <div>
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">الموارد والمعدات المتاحة</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormGroup label="العدد الكلي لسرير الولادة"><Input type="number" name="eenc_delivery_beds" value={formData.eenc_delivery_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="العدد الكلي لمحطات الانعاش"><Input type="number" name="eenc_resuscitation_stations" value={formData.eenc_resuscitation_stations ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="العدد الكلي لاجهزة التدفئة"><Input type="number" name="eenc_warmers" value={formData.eenc_warmers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="العدد الكلي لجهاز الامبوباق"><Input type="number" name="eenc_ambu_bags" value={formData.eenc_ambu_bags ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="العدد الكلي لجهاز الشفط اليدوي"><Input type="number" name="eenc_manual_suction" value={formData.eenc_manual_suction ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="ساعة حائط"><Select name="eenc_wall_clock" value={formData.eenc_wall_clock || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                            <FormGroup label="جهاز التعقيم بالبخار"><Select name="eenc_steam_sterilizer" value={formData.eenc_steam_sterilizer || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>العدد الكلي لسرير الولادة <PendingBadge fieldKey="eenc_delivery_beds" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_delivery_beds" value={formData.eenc_delivery_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لمحطات الانعاش <PendingBadge fieldKey="eenc_resuscitation_stations" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_resuscitation_stations" value={formData.eenc_resuscitation_stations ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لاجهزة التدفئة <PendingBadge fieldKey="eenc_warmers" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_warmers" value={formData.eenc_warmers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لجهاز الامبوباق <PendingBadge fieldKey="eenc_ambu_bags" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_ambu_bags" value={formData.eenc_ambu_bags ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لجهاز الشفط اليدوي <PendingBadge fieldKey="eenc_manual_suction" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_manual_suction" value={formData.eenc_manual_suction ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>ساعة حائط <PendingBadge fieldKey="eenc_wall_clock" pendingData={pendingData} currentData={formData} /></>}><Select name="eenc_wall_clock" value={formData.eenc_wall_clock || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <FormGroup label={<>جهاز التعقيم بالبخار <PendingBadge fieldKey="eenc_steam_sterilizer" pendingData={pendingData} currentData={formData} /></>}><Select name="eenc_steam_sterilizer" value={formData.eenc_steam_sterilizer || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
                         </div>
                     </div>
                 </div>
@@ -1516,7 +1533,7 @@ export const EENCFormFields = ({ formData, handleChange, handleStaffChange, hand
     );
 };
 
-export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
+export const NeonatalFormFields = ({ formData, pendingData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['اختصاصي أطفال', 'طبيب أطفال', 'طبيب عمومي', 'ممرض عناية مكثفة', 'ممرض', 'قابلة'];
 
     return (
@@ -1531,7 +1548,7 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
                     <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-6">
                         <h4 className="text-md font-extrabold text-sky-800 mb-2 border-b border-gray-200 pb-3">مستويات الرعاية لحديثي الولادة</h4>
                         
-                        <FormGroup label="هل تتوفر رعاية أساسية لحديثي الولادة (المستوى الأولي)؟">
+                        <FormGroup label={<>هل تتوفر رعاية أساسية لحديثي الولادة (المستوى الأولي)؟ <PendingBadge fieldKey="neonatal_level_primary" pendingData={pendingData} currentData={formData} /></>}>
                             <p className="text-sm font-medium text-sky-700 mb-2">يتم تنويم الاطفال حديثي الولادة ومعالجة الامراض البسيطة التسمم الدموي - اليرقان....</p>
                             <Select name="neonatal_level_primary" value={formData.neonatal_level_primary || ''} onChange={handleChange} disabled={isReadOnly}>
                                 <option value="">اختر...</option>
@@ -1541,7 +1558,7 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
                             </Select>
                         </FormGroup>
 
-                        <FormGroup label="هل تتوفر وحدة رعاية خاصة لحديثي الولادة (المستوى الثانوي)؟">
+                        <FormGroup label={<>هل تتوفر وحدة رعاية خاصة لحديثي الولادة (المستوى الثانوي)؟ <PendingBadge fieldKey="neonatal_level_secondary" pendingData={pendingData} currentData={formData} /></>}>
                             <p className="text-sm font-medium text-sky-700 mb-2">تقديم خدمة تنويم الاطفال حديثي الولادة بما يشمل الاطفال الخدج ، الاكسجين ، ...،</p>
                             <Select name="neonatal_level_secondary" value={formData.neonatal_level_secondary || ''} onChange={handleChange} disabled={isReadOnly}>
                                 <option value="">اختر...</option>
@@ -1551,7 +1568,7 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
                             </Select>
                         </FormGroup>
 
-                        <FormGroup label="هل تتوفر وحدة العناية المركزة لحديثي الولادة (المستوى الثالثوي)؟">
+                        <FormGroup label={<>هل تتوفر وحدة العناية المركزة لحديثي الولادة (المستوى الثالثوي)؟ <PendingBadge fieldKey="neonatal_level_tertiary" pendingData={pendingData} currentData={formData} /></>}>
                             <p className="text-sm font-medium text-sky-700 mb-2">تقدم خدمات حديثي اولادة المتقدمة بما يشمل التنفس الصناعي</p>
                             <Select name="neonatal_level_tertiary" value={formData.neonatal_level_tertiary || ''} onChange={handleChange} disabled={isReadOnly}>
                                 <option value="">اختر...</option>
@@ -1565,6 +1582,7 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
                     <StaffTable 
                         serviceKey="neonatal_staff" 
                         formData={formData} 
+                        pendingData={pendingData}
                         isReadOnly={isReadOnly} 
                         handleStaffChange={handleStaffChange} 
                         handleAddStaffRow={handleAddStaffRow} 
@@ -1579,19 +1597,19 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">خدمات ملحقة</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <label className="p-3 border border-gray-200 rounded-md hover:bg-sky-50 transition-colors flex items-center justify-between cursor-pointer">
-                                <span className="font-medium text-gray-700">وحدة رعاية الكنغر (KMC unit)</span>
+                                <span className="font-medium text-gray-700">وحدة رعاية الكنغر (KMC unit) <PendingBadge fieldKey="neonatal_kmc_unit" pendingData={pendingData} currentData={formData} /></span>
                                 <Checkbox name="neonatal_kmc_unit" label="" checked={formData.neonatal_kmc_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
                             </label>
                             <label className="p-3 border border-gray-200 rounded-md hover:bg-sky-50 transition-colors flex items-center justify-between cursor-pointer">
-                                <span className="font-medium text-gray-700">وحدة الرضاعة الطبيعية (breastfeeding unit)</span>
+                                <span className="font-medium text-gray-700">وحدة الرضاعة الطبيعية (breastfeeding unit) <PendingBadge fieldKey="neonatal_breastfeeding_unit" pendingData={pendingData} currentData={formData} /></span>
                                 <Checkbox name="neonatal_breastfeeding_unit" label="" checked={formData.neonatal_breastfeeding_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
                             </label>
                             <label className="p-3 border border-gray-200 rounded-md hover:bg-sky-50 transition-colors flex items-center justify-between cursor-pointer">
-                                <span className="font-medium text-gray-700">وحدة تعقيم (sterilization unit)</span>
+                                <span className="font-medium text-gray-700">وحدة تعقيم (sterilization unit) <PendingBadge fieldKey="neonatal_sterilization_unit" pendingData={pendingData} currentData={formData} /></span>
                                 <Checkbox name="neonatal_sterilization_unit" label="" checked={formData.neonatal_sterilization_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
                             </label>
                             <label className="p-3 border border-gray-200 rounded-md hover:bg-sky-50 transition-colors flex items-center justify-between cursor-pointer">
-                                <span className="font-medium text-gray-700">الترصد والحماية من عدوى التسمم الدموي</span>
+                                <span className="font-medium text-gray-700">الترصد والحماية من عدوى التسمم الدموي <PendingBadge fieldKey="neonatal_sepsis_surveillance" pendingData={pendingData} currentData={formData} /></span>
                                 <Checkbox name="neonatal_sepsis_surveillance" label="" checked={formData.neonatal_sepsis_surveillance === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
                             </label>
                         </div>
@@ -1602,21 +1620,21 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
                     <div>
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">المعدات المتاحة</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormGroup label="إجمالي سعة الأسرة"><Input type="number" name="neonatal_total_beds" value={formData.neonatal_total_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="العدد الكلي للحضانات (incubators)"><Input type="number" name="neonatal_total_incubators" value={formData.neonatal_total_incubators ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="العدد الكلي للاسرة للاطفال مكتملي النمو (cots)"><Input type="number" name="neonatal_total_cots" value={formData.neonatal_total_cots ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="أجهزة CPAP"><Input type="number" name="neonatal_cpap" value={formData.neonatal_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="جهاز تدفئة حرارية (warmer)"><Input type="number" name="neonatal_warmer" value={formData.neonatal_warmer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="مضخة تسريب (infusion pump)"><Input type="number" name="neonatal_infusion_pump" value={formData.neonatal_infusion_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="مضخات الحقن (Syringe pump)"><Input type="number" name="neonatal_syringe_pump" value={formData.neonatal_syringe_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="جهاز شفط (suction machine)"><Input type="number" name="neonatal_sucker" value={formData.neonatal_sucker ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="وحدات العلاج الضوئي (Phototherapy)"><Input type="number" name="neonatal_phototherapy" value={formData.neonatal_phototherapy ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="أكياس الإنعاش (Ambu Bag)"><Input type="number" name="neonatal_ambu_bag" value={formData.neonatal_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor)"><Input type="number" name="neonatal_respiration_monitor" value={formData.neonatal_respiration_monitor ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="جهاز أكسجين (Oxygen concentrator)"><Input type="number" name="neonatal_oxygen_machine" value={formData.neonatal_oxygen_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="أسطوانة الاكسجين (oxygen cylinder)"><Input type="number" name="neonatal_oxygen_cylinder" value={formData.neonatal_oxygen_cylinder ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="جهاز تنفس صناعي (Mechanical ventilator)"><Input type="number" name="neonatal_mechanical_ventilator" value={formData.neonatal_mechanical_ventilator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label="حاضنة محمولة (Portable Incubator)"><Input type="number" name="neonatal_portable_incubator" value={formData.neonatal_portable_incubator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>إجمالي سعة الأسرة <PendingBadge fieldKey="neonatal_total_beds" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_total_beds" value={formData.neonatal_total_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي للحضانات (incubators) <PendingBadge fieldKey="neonatal_total_incubators" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_total_incubators" value={formData.neonatal_total_incubators ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي للاسرة للاطفال مكتملي النمو (cots) <PendingBadge fieldKey="neonatal_total_cots" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_total_cots" value={formData.neonatal_total_cots ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>أجهزة CPAP <PendingBadge fieldKey="neonatal_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_cpap" value={formData.neonatal_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز تدفئة حرارية (warmer) <PendingBadge fieldKey="neonatal_warmer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_warmer" value={formData.neonatal_warmer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>مضخة تسريب (infusion pump) <PendingBadge fieldKey="neonatal_infusion_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_infusion_pump" value={formData.neonatal_infusion_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>مضخات الحقن (Syringe pump) <PendingBadge fieldKey="neonatal_syringe_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_syringe_pump" value={formData.neonatal_syringe_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز شفط (suction machine) <PendingBadge fieldKey="neonatal_sucker" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_sucker" value={formData.neonatal_sucker ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>وحدات العلاج الضوئي (Phototherapy) <PendingBadge fieldKey="neonatal_phototherapy" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_phototherapy" value={formData.neonatal_phototherapy ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>أكياس الإنعاش (Ambu Bag) <PendingBadge fieldKey="neonatal_ambu_bag" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_ambu_bag" value={formData.neonatal_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor) <PendingBadge fieldKey="neonatal_respiration_monitor" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_respiration_monitor" value={formData.neonatal_respiration_monitor ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز أكسجين (Oxygen concentrator) <PendingBadge fieldKey="neonatal_oxygen_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_oxygen_machine" value={formData.neonatal_oxygen_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>أسطوانة الاكسجين (oxygen cylinder) <PendingBadge fieldKey="neonatal_oxygen_cylinder" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_oxygen_cylinder" value={formData.neonatal_oxygen_cylinder ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز تنفس صناعي (Mechanical ventilator) <PendingBadge fieldKey="neonatal_mechanical_ventilator" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_mechanical_ventilator" value={formData.neonatal_mechanical_ventilator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>حاضنة محمولة (Portable Incubator) <PendingBadge fieldKey="neonatal_portable_incubator" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_portable_incubator" value={formData.neonatal_portable_incubator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                         </div>
                     </div>
                 </div>
@@ -1647,7 +1665,7 @@ const CRITICAL_CARE_STAFF_CATEGORIES = [
     { key: 'nurse_diploma', label: 'ممرض (دبلوم)' },
 ];
 
-export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
+export const CriticalCareFormFields = ({ formData, pendingData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['اختصاصي أطفال', 'نائب اختصاصي أطفال', 'طبيب عمومي', 'طبيب إمتياز', 'ممرض (بكلاريوس)', 'ممرض (دبلوم)'];
     
     return (
@@ -1659,7 +1677,7 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
                 
                 {/* ETAT Section */}
                 <div className="p-4 border rounded-md transition-colors bg-gray-50 border-gray-200 hover:bg-white">
-                    <FormGroup label="هل المؤسسة تقدم خدمة الفرز والتقييم والعلاج لطوارئ الأطفال (ETAT) ؟">
+                    <FormGroup label={<>هل المؤسسة تقدم خدمة الفرز والتقييم والعلاج لطوارئ الأطفال (ETAT) ؟ <PendingBadge fieldKey="etat_has_service" pendingData={pendingData} currentData={formData} /></>}>
                         <Select name="etat_has_service" value={formData.etat_has_service || ''} onChange={handleChange} disabled={isReadOnly}>
                             <option value="">اختر...</option>
                             <option value="Yes">نعم</option>
@@ -1701,6 +1719,7 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
                         <StaffTable 
                             serviceKey="critical_staff" 
                             formData={formData} 
+                            pendingData={pendingData}
                             isReadOnly={isReadOnly} 
                             handleStaffChange={handleStaffChange} 
                             handleAddStaffRow={handleAddStaffRow} 
@@ -1726,7 +1745,7 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
                                     <tbody>
                                         {ETAT_ASSESSMENT_QUESTIONS.map((q, index) => (
                                             <tr key={index} className="hover:bg-gray-50">
-                                                <td className="border p-2 font-medium text-gray-700">{q.label}</td>
+                                                <td className="border p-2 font-medium text-gray-700">{q.label} <PendingBadge fieldKey={`etat_${q.key}`} pendingData={pendingData} currentData={formData} /></td>
                                                 <td className="border p-2 text-center">
                                                     <Select name={`etat_${q.key}`} value={formData[`etat_${q.key}`] || ''} onChange={handleChange} disabled={isReadOnly}>
                                                         <option value="">اختر...</option>
@@ -1747,12 +1766,12 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
                         <div>
                             <h4 className="text-md font-semibold mb-4 text-sky-800">الأجهزة والمعدات المتاحة (العدد)</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                <FormGroup label="أمبوباق"><Input type="number" name="etat_ambu_bag" value={formData.etat_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label="قناع أكسجين"><Input type="number" name="etat_oxygen_mask" value={formData.etat_oxygen_mask ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label="جهاز قياس السكر"><Input type="number" name="etat_glucometer" value={formData.etat_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label="جهاز مضخة السوائل"><Input type="number" name="etat_fluid_pump" value={formData.etat_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label="جهاز شفط"><Input type="number" name="etat_suction_machine" value={formData.etat_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label="جهاز تنفس صناعي CPAP"><Input type="number" name="etat_cpap" value={formData.etat_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>أمبوباق <PendingBadge fieldKey="etat_ambu_bag" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_ambu_bag" value={formData.etat_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>قناع أكسجين <PendingBadge fieldKey="etat_oxygen_mask" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_oxygen_mask" value={formData.etat_oxygen_mask ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز قياس السكر <PendingBadge fieldKey="etat_glucometer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_glucometer" value={formData.etat_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز مضخة السوائل <PendingBadge fieldKey="etat_fluid_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_fluid_pump" value={formData.etat_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز شفط <PendingBadge fieldKey="etat_suction_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_suction_machine" value={formData.etat_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز تنفس صناعي CPAP <PendingBadge fieldKey="etat_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_cpap" value={formData.etat_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                             </div>
                         </div>
 
@@ -1761,7 +1780,7 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
 
                 {/* HDU Section */}
                 <div className="p-4 border rounded-md transition-colors bg-gray-50 border-gray-200 hover:bg-white">
-                    <FormGroup label="هل المؤسسة تقدم خدمة العناية الوسيطة HDU ؟">
+                    <FormGroup label={<>هل المؤسسة تقدم خدمة العناية الوسيطة HDU ؟ <PendingBadge fieldKey="hdu_has_service" pendingData={pendingData} currentData={formData} /></>}>
                         <Select name="hdu_has_service" value={formData.hdu_has_service || ''} onChange={handleChange} disabled={isReadOnly}>
                             <option value="">اختر...</option>
                             <option value="Yes">نعم</option>
@@ -1772,7 +1791,7 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
 
                     <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormGroup label="عدد الاسرة في العناية الوسيطة"><Input type="number" name="hdu_bed_capacity" value={formData.hdu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} placeholder="أدخل العدد" min="0" /></FormGroup>
+                            <FormGroup label={<>عدد الاسرة في العناية الوسيطة <PendingBadge fieldKey="hdu_bed_capacity" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_bed_capacity" value={formData.hdu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} placeholder="أدخل العدد" min="0" /></FormGroup>
                             <FormGroup label="تعليقات (عدد الأسرة)"><Input type="text" name="hdu_bed_capacity_notes" value={formData.hdu_bed_capacity_notes || ''} onChange={handleChange} disabled={isReadOnly} placeholder="إضافة تعليق..." /></FormGroup>
                         </div>
 
@@ -1807,10 +1826,10 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
                         <div>
                             <h4 className="text-md font-semibold mb-4 text-sky-800">الأجهزة والمعدات المتاحة (العدد)</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                <FormGroup label="جهاز قياس السكر"><Input type="number" name="hdu_glucometer" value={formData.hdu_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label="جهاز مضخة السوائل"><Input type="number" name="hdu_fluid_pump" value={formData.hdu_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label="جهاز شفط"><Input type="number" name="hdu_suction_machine" value={formData.hdu_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label="جهاز تنفس صناعي CPAP"><Input type="number" name="hdu_cpap" value={formData.hdu_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز قياس السكر <PendingBadge fieldKey="hdu_glucometer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_glucometer" value={formData.hdu_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز مضخة السوائل <PendingBadge fieldKey="hdu_fluid_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_fluid_pump" value={formData.hdu_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز شفط <PendingBadge fieldKey="hdu_suction_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_suction_machine" value={formData.hdu_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز تنفس صناعي CPAP <PendingBadge fieldKey="hdu_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_cpap" value={formData.hdu_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                             </div>
                         </div>
 
@@ -1819,7 +1838,7 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
 
                 {/* PICU Section */}
                 <div className="p-4 border rounded-md transition-colors bg-gray-50 border-gray-200 hover:bg-white">
-                    <FormGroup label="هل المؤسسة تقدم خدمة وحدة العناية المركزة للأطفال (PICU) ؟">
+                    <FormGroup label={<>هل المؤسسة تقدم خدمة وحدة العناية المركزة للأطفال (PICU) ؟ <PendingBadge fieldKey="picu_has_service" pendingData={pendingData} currentData={formData} /></>}>
                         <Select name="picu_has_service" value={formData.picu_has_service || ''} onChange={handleChange} disabled={isReadOnly}>
                             <option value="">اختر...</option>
                             <option value="Yes">نعم</option>
@@ -1829,7 +1848,7 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
                     </FormGroup>
 
                     <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in">
-                        <FormGroup label="سعة أسرة PICU">
+                        <FormGroup label={<>سعة أسرة PICU <PendingBadge fieldKey="picu_bed_capacity" pendingData={pendingData} currentData={formData} /></>}>
                             <Input type="number" name="picu_bed_capacity" value={formData.picu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} />
                         </FormGroup>
                     </div>
