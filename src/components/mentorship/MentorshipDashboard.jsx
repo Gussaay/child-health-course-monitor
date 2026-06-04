@@ -14,6 +14,7 @@ import AdminDashboardTab from './AdminDashboardTab';
 import ProviderSkillsTab from './ProviderSkillsTab';
 import MotherInterviewsTab from './MotherInterviewsTab';
 import VisitReportDashboardTab from './VisitReportDashboardTab';
+import FacilityInformationDashboardTab from './FacilityInformationDashboardTab'; // Added Import
 
 import { IMNCI_FORM_STRUCTURE, calculateScores, rehydrateDraftData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS } from './IMNCSkillsAssessmentForm.jsx';
 import { PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS, NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS } from './EENCSkillsAssessmentForm.jsx';
@@ -69,7 +70,7 @@ const calculateAverage = (scores) => {
 };
 
 const MentorshipDashboard = ({ 
-    allSubmissions, STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, activeProject, onProjectChange, visitReports, canEditStatus, onUpdateStatus, activeWorkerType, onWorkerTypeChange = () => {},
+    allSubmissions, visitReports, localHealthFacilities = [], STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, activeProject, onProjectChange, canEditStatus, onUpdateStatus, activeWorkerType, onWorkerTypeChange = () => {},
     publicDashboardMode = false, handleRefresh = () => {}, isRefreshing = false, isLoading = false,
     lastUpdated = null, currentUserRole = '',
     dateFilter = '', onDateFilterChange = () => {}
@@ -560,25 +561,27 @@ const MentorshipDashboard = ({
         return Array.from(types).map(t => ({ key: t, name: t })).sort((a, b) => a.name.localeCompare(b.name));
     }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeProject]);
 
-    const filteredSubmissions = useMemo(() => serviceCompletedSubmissions.filter(sub => {
-        const stateMatch = !activeState || sub.state === activeState || sub.state === STATE_LOCALITIES[activeState]?.ar;
-        
-        let localityMatch = !activeLocality;
-        if (activeLocality) {
-            const stateObj = STATE_LOCALITIES[activeState] || STATE_LOCALITIES[sub.state] || Object.values(STATE_LOCALITIES || {}).find(s => s.ar === sub.state);
-            const arLocality = stateObj?.localities?.find(l => l.en === activeLocality)?.ar;
-            localityMatch = sub.locality === activeLocality || sub.locality === arLocality;
-        }
+    const filteredSubmissions = useMemo(() => {
+        return serviceCompletedSubmissions.filter(sub => {
+            const stateMatch = !activeState || sub.state === activeState || sub.state === STATE_LOCALITIES[activeState]?.ar;
+            
+            let localityMatch = !activeLocality;
+            if (activeLocality) {
+                const stateObj = STATE_LOCALITIES[activeState] || STATE_LOCALITIES[sub.state] || Object.values(STATE_LOCALITIES || {}).find(s => s.ar === sub.state);
+                const arLocality = stateObj?.localities?.find(l => l.en === activeLocality)?.ar;
+                localityMatch = sub.locality === activeLocality || sub.locality === arLocality;
+            }
 
-        const facilityMatch = !activeFacilityId || sub.facilityId === activeFacilityId;
-        const workerMatch = !activeWorkerName || sub.staff === activeWorkerName;
-        const projectMatch = !activeProject || sub.project === activeProject;
-        const typeMatch = !activeWorkerType || sub.workerType === activeWorkerType;
-        
-        const dateMatch = checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter, customStartDate, customEndDate);
-        
-        return stateMatch && localityMatch && facilityMatch && workerMatch && projectMatch && typeMatch && dateMatch;
-    }), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter, customStartDate, customEndDate]);
+            const facilityMatch = !activeFacilityId || sub.facilityId === activeFacilityId;
+            const workerMatch = !activeWorkerName || sub.staff === activeWorkerName;
+            const projectMatch = !activeProject || sub.project === activeProject;
+            const typeMatch = !activeWorkerType || sub.workerType === activeWorkerType;
+            
+            const dateMatch = checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter, customStartDate, customEndDate);
+            
+            return stateMatch && localityMatch && facilityMatch && workerMatch && projectMatch && typeMatch && dateMatch;
+        });
+    }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter, customStartDate, customEndDate, STATE_LOCALITIES]);
 
     const overallKpis = useMemo(() => {
         if (activeService === 'IMNCI') return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
@@ -931,6 +934,7 @@ const MentorshipDashboard = ({
                 <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('skills')}>{t('tab.skills')}</button>
                 <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'mothers' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('mothers')}>{t('tab.mothers')}</button>
                 <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'visit_reports' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('visit_reports')}>{t('tab.visit_reports')}</button>
+                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'facility_info' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('facility_info')}>{t('Facility Information') || 'Facility Information'}</button>
                 {canEditStatus && (
                     <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('admin')}>{t('tab.admin')}</button>
                 )}
@@ -976,6 +980,18 @@ const MentorshipDashboard = ({
                 {activeTab === 'visit_reports' && (
                     <VisitReportDashboardTab 
                         activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILL_GROUPS={EENC_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
+                    />
+                )}
+
+                {activeTab === 'facility_info' && (
+                    <FacilityInformationDashboardTab
+                        facilities={localHealthFacilities}
+                        visitReports={visitReports}
+                        allSubmissions={allSubmissions}
+                        activeService={activeService}
+                        activeState={activeState}
+                        activeLocality={activeLocality}
+                        STATE_LOCALITIES={STATE_LOCALITIES}
                     />
                 )}
             </div>

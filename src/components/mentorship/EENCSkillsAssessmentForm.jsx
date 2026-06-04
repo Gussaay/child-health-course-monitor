@@ -460,23 +460,60 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         existingSessionData?.visitNumber ? existingSessionData.visitNumber : visitNumber
     );
 
-    // --- DYNAMIC VISIT NUMBER CALCULATION ---
+    // Memory-only analysis of background caching context array (0 reads)
+    const eencHistoryStats = useMemo(() => {
+        if (existingSessionData || !healthWorkerName || !facility?.id) return { maxVisitNum: 0, dateMap: {} };
+
+        let maxVisitNum = 0;
+        const dateMap = {};
+
+        const validHistory = (workerHistory || []).filter(
+            s => s.healthWorkerName === healthWorkerName || s.healthWorkerName === undefined
+        );
+
+        validHistory.forEach(session => {
+            const vNum = parseInt(session.visitNumber, 10) || parseInt(session.fullData?.visitNumber, 10) || 0;
+            if (vNum > maxVisitNum) maxVisitNum = vNum;
+
+            const sDate = session.sessionDate || (session.effectiveDate && session.effectiveDate.seconds ? new Date(session.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null);
+            if (sDate && vNum > 0) dateMap[sDate] = vNum;
+        });
+
+        return { maxVisitNum, dateMap };
+    }, [workerHistory, healthWorkerName, facility?.id, existingSessionData]);
+
+    // DYNAMIC VISIT NUMBER CALCULATION
     useEffect(() => {
-        if (existingSessionData) return;
+        if (existingSessionData || !facility?.id || !healthWorkerName) return;
         const currentSessionDate = formData.session_date;
         if (!currentSessionDate) return;
 
-        const uniqueDates = [...new Set(
-            (workerHistory || []).map(s => s.sessionDate || (s.effectiveDate ? new Date(s.effectiveDate.seconds * 1000).toISOString().split('T')[0] : ''))
-        )].filter(d => d).sort();
+        try {
+            const { maxVisitNum, dateMap } = eencHistoryStats;
+            const matchingDateVisitNum = dateMap[currentSessionDate] || null;
 
-        if (uniqueDates.includes(currentSessionDate)) {
-            const index = uniqueDates.indexOf(currentSessionDate);
-            setCurrentVisitNumber(index + 1);
-        } else {
-            setCurrentVisitNumber(uniqueDates.length + 1);
+            let newVisitNumber = 1;
+            const offlineKey = `offline_visit_max_${facility.id}_${healthWorkerName.trim()}`;
+            const localMaxVisitNum = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+
+            if (matchingDateVisitNum !== null) {
+                newVisitNumber = matchingDateVisitNum;
+            } else {
+                const absoluteMax = Math.max(maxVisitNum, localMaxVisitNum);
+                newVisitNumber = absoluteMax + 1;
+            }
+
+            if (currentVisitNumber !== newVisitNumber) {
+                setCurrentVisitNumber(newVisitNumber);
+            }
+
+            if (maxVisitNum > localMaxVisitNum) {
+                localStorage.setItem(offlineKey, maxVisitNum.toString());
+            }
+        } catch (error) {
+            console.error("Error calculating visit number:", error);
         }
-    }, [formData.session_date, workerHistory, existingSessionData]);
+    }, [formData.session_date, eencHistoryStats, facility?.id, existingSessionData, healthWorkerName, currentVisitNumber]);
 
     const formDataRef = useRef(formData);
     useEffect(() => {
@@ -648,6 +685,13 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
+            // --- SAVE MAX VISIT NUMBER TO OFFLINE CACHE ONLY ON SUCCESSFUL SUBMIT ---
+            const offlineKey = `offline_visit_max_${facility.id}_${healthWorkerName.trim()}`;
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            if (payload.visitNumber > currentStoredMax) {
+                localStorage.setItem(offlineKey, payload.visitNumber.toString());
+            }
+
             const savedDraft = await saveMentorshipSession(payload, sessionId);
             
             if (!sessionId && savedDraft && onDraftCreated) {
@@ -753,6 +797,13 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             } else {
                 payload.mentorEmail = user?.email || 'unknown';
                 payload.mentorName = user?.displayName || 'Unknown Mentor';
+            }
+
+            // --- SAVE MAX VISIT NUMBER TO OFFLINE CACHE ONLY ON SUCCESSFUL SUBMIT ---
+            const offlineKey = `offline_visit_max_${facility.id}_${healthWorkerName.trim()}`;
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            if (payload.visitNumber > currentStoredMax) {
+                localStorage.setItem(offlineKey, payload.visitNumber.toString());
             }
 
             const savedSession = await saveMentorshipSession(payload, sessionId);

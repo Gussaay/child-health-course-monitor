@@ -987,9 +987,13 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
         const mentorMap = {}; 
         submissions.forEach(sub => {
             const mentor = sub.supervisorDisplay || sub.supervisorEmail || 'Unknown';
-            if (!mentorMap[mentor]) mentorMap[mentor] = { mentorName: mentor, healthWorkersMap: new Map(), visitsMap: new Map(), casesList: [], mothersList: [], reportsList: [] };
+            if (!mentorMap[mentor]) mentorMap[mentor] = { mentorName: mentor, healthWorkersMap: new Map(), visitsMap: new Map(), casesList: [], mothersList: [], reportsList: [], uniqueFacilities: new Set() };
             
             const m = mentorMap[mentor];
+
+            if (sub.facilityId) {
+                m.uniqueFacilities.add(sub.facilityId);
+            }
 
             if (sub.service === activeService) {
                 m.casesList.push(sub);
@@ -1023,8 +1027,11 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
             visitReports.forEach(rep => {
                 if (rep.service === activeService) {
                     const mentor = rep.mentorDisplay || rep.mentorEmail || 'Unknown';
-                    if (!mentorMap[mentor]) mentorMap[mentor] = { mentorName: mentor, healthWorkersMap: new Map(), visitsMap: new Map(), casesList: [], mothersList: [], reportsList: [] };
+                    if (!mentorMap[mentor]) mentorMap[mentor] = { mentorName: mentor, healthWorkersMap: new Map(), visitsMap: new Map(), casesList: [], mothersList: [], reportsList: [], uniqueFacilities: new Set() };
                     mentorMap[mentor].reportsList.push(rep);
+                    if (rep.facilityId || rep.fullData?.facilityId) {
+                        mentorMap[mentor].uniqueFacilities.add(rep.facilityId || rep.fullData?.facilityId);
+                    }
                 }
             });
         }
@@ -1039,6 +1046,8 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
             const reportsCount = m.reportsList.length;
             return {
                 mentorName: m.mentorName, 
+                uniqueFacilitiesCount: m.uniqueFacilities.size,
+                facilityUpdatesCount: reportsCount,
                 hwCount, hwList,
                 visitCount, visitsList, visitsPerHw: hwCount > 0 ? (visitCount / hwCount).toFixed(1) : '0',
                 casesCount, casesList: m.casesList, casesPerVisit: visitCount > 0 ? (casesCount / visitCount).toFixed(1) : '0',
@@ -1173,6 +1182,7 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                         <tr>
                             <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-left'}`}>{t('Mentor Name')}</th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-teal-50">{t('Facility Updates')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Forms Saved')}</div></th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Health Workers')}</th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-50">{t('Total Visits')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Visits per HW')}</div></th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Total Cases')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Cases per Visit')}</div></th>
@@ -1185,6 +1195,13 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                             <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
                                 <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{row.mentorName}</td>
                                 
+                                <td className="px-5 py-3 border-l border-black text-center bg-teal-50/50" dir="ltr">
+                                    <div className="font-bold text-teal-800 text-base">
+                                        {row.facilityUpdatesCount}
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-semibold">{row.uniqueFacilitiesCount} {t('facilities')}</div>
+                                </td>
+
                                 <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">
                                     {row.hwCount > 0 ? (
                                         <button onClick={() => handleCellClick(row.mentorName, 'healthWorkers', row.hwList, 'Health Workers')} className="hover:underline text-sky-700 hover:text-sky-900 transition-colors">{row.hwCount}</button>

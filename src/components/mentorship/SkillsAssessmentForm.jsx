@@ -111,73 +111,61 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         existingSessionData?.visitNumber ? existingSessionData.visitNumber : visitNumber
     );
 
+    // Memory-only analysis of background caching context array (0 reads)
+    const imnciHistoryStats = useMemo(() => {
+        if (existingSessionData || !healthWorkerName || !facility?.id) return { maxVisitNum: 0, dateMap: {} };
+
+        let maxVisitNum = 0;
+        const dateMap = {};
+
+        const validHistory = (workerHistory || []).filter(
+            s => s.healthWorkerName === healthWorkerName || s.healthWorkerName === undefined
+        );
+
+        validHistory.forEach(session => {
+            const vNum = parseInt(session.visitNumber, 10) || parseInt(session.fullData?.visitNumber, 10) || 0;
+            if (vNum > maxVisitNum) maxVisitNum = vNum;
+
+            const sDate = session.sessionDate || (session.effectiveDate && session.effectiveDate.seconds ? new Date(session.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null);
+            if (sDate && vNum > 0) dateMap[sDate] = vNum;
+        });
+
+        return { maxVisitNum, dateMap };
+    }, [workerHistory, healthWorkerName, facility?.id, existingSessionData]);
+
+    // DYNAMIC VISIT NUMBER CALCULATION 
     useEffect(() => {
-        // Do not override if we are editing an existing draft/session
-        if (existingSessionData) return;
-        
+        if (existingSessionData || !facility?.id || !healthWorkerName) return;
         const currentSessionDate = formData.session_date;
-        if (!currentSessionDate || !healthWorkerName) return;
+        if (!currentSessionDate) return;
 
         try {
-            let maxVisitNum = 0;
-            let matchingDateVisitNum = null;
-
-            // 1. Ensure we are only looking at records for THIS specific worker
-            const validHistory = (workerHistory || []).filter(
-                s => s.healthWorkerName === healthWorkerName || s.healthWorkerName === undefined
-            );
-
-            // 2. Iterate through history to find the highest known visit and check for matching dates
-            validHistory.forEach(session => {
-                const vNum = parseInt(session.visitNumber, 10) || 0;
-                
-                // Track the absolute highest visit number
-                if (vNum > maxVisitNum) {
-                    maxVisitNum = vNum;
-                }
-
-                // Check if a session already occurred on the selected date
-                const sDate = session.sessionDate || 
-                    (session.effectiveDate && session.effectiveDate.seconds 
-                        ? new Date(session.effectiveDate.seconds * 1000).toISOString().split('T')[0] 
-                        : null);
-                
-                if (sDate === currentSessionDate && vNum > 0) {
-                    matchingDateVisitNum = vNum;
-                }
-            });
+            const { maxVisitNum, dateMap } = imnciHistoryStats;
+            const matchingDateVisitNum = dateMap[currentSessionDate] || null;
 
             let newVisitNumber = 1;
-            const offlineKey = `offline_visit_max_${facility?.id}_${healthWorkerName.trim()}`;
+            const offlineKey = `offline_visit_max_${facility.id}_${healthWorkerName.trim()}`;
+            const localMaxVisitNum = parseInt(localStorage.getItem(offlineKey), 10) || 0;
 
-            // 3. Determine the correct visit number
             if (matchingDateVisitNum !== null) {
-                // Same date as an existing session = same visit number
                 newVisitNumber = matchingDateVisitNum;
-            } else if (validHistory.length > 0) {
-                // New date with existing history = increment max visit
-                newVisitNumber = maxVisitNum + 1;
             } else {
-                // 4. OFFLINE FALLBACK: If history is empty (due to network delay or offline app restart),
-                // rely on the local storage cache to prevent resetting to 1.
-                const savedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
-                newVisitNumber = savedMax > 0 ? savedMax + 1 : 1;
+                const absoluteMax = Math.max(maxVisitNum, localMaxVisitNum);
+                newVisitNumber = absoluteMax + 1;
             }
 
-            setCurrentVisitNumber(newVisitNumber);
+            if (currentVisitNumber !== newVisitNumber) {
+                setCurrentVisitNumber(newVisitNumber);
+            }
 
-            // 5. Always securely update the offline cache with the highest known visit number
-            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
-            const actualMaxToStore = Math.max(maxVisitNum, newVisitNumber, currentStoredMax);
-            
-            if (actualMaxToStore > currentStoredMax) {
-                localStorage.setItem(offlineKey, actualMaxToStore.toString());
+            if (maxVisitNum > localMaxVisitNum) {
+                localStorage.setItem(offlineKey, maxVisitNum.toString());
             }
 
         } catch (error) {
             console.error("Error calculating visit number:", error);
         }
-    }, [formData.session_date, workerHistory, existingSessionData, healthWorkerName, facility?.id]);
+    }, [formData.session_date, imnciHistoryStats, facility?.id, existingSessionData, healthWorkerName, currentVisitNumber]);
     
     const [isFormFullyComplete, setIsFormFullyComplete] = useState(false);
 
@@ -479,7 +467,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             }
         } catch (error) {
             console.error("Autosave failed:", error);
-            setToast({ show: true, message: `فشل الحفظ التلقائي: ${error.message}`, type: 'error' });
         }
     }, [currentVisitNumber]);
 
@@ -630,6 +617,13 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
+            // --- SAVE MAX VISIT NUMBER TO OFFLINE CACHE ONLY ON SUCCESSFUL SUBMIT ---
+            const offlineKey = `offline_visit_max_${facility.id}_${healthWorkerName.trim()}`;
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            if (payload.visitNumber > currentStoredMax) {
+                localStorage.setItem(offlineKey, payload.visitNumber.toString());
+            }
+
             const savedSessionId = await saveMentorshipSession(payload, sessionId);
             payload.id = savedSessionId;
             
@@ -702,6 +696,13 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             } else {
                 payload.mentorEmail = user?.email || 'unknown';
                 payload.mentorName = user?.displayName || 'Unknown Mentor';
+            }
+
+            // --- SAVE MAX VISIT NUMBER TO OFFLINE CACHE ONLY ON SUCCESSFUL SUBMIT ---
+            const offlineKey = `offline_visit_max_${facility.id}_${healthWorkerName.trim()}`;
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            if (payload.visitNumber > currentStoredMax) {
+                localStorage.setItem(offlineKey, payload.visitNumber.toString());
             }
 
              const savedDraftId = await saveMentorshipSession(payload, sessionId);

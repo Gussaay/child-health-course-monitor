@@ -1,7 +1,7 @@
 // SkillsMentorshipView.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, doc, query, where, orderBy, limit } from 'firebase/firestore';
 import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle } from 'lucide-react';
 import {
     saveMentorshipSession,
@@ -31,6 +31,7 @@ import MentorshipDashboard from './MentorshipDashboard';
 import { LanguageProvider, useTranslation } from './LanguageContext';
 import LanguageSwitcher from './LanguageSwitcher';
 import { getAuth } from "firebase/auth";
+import { db } from '../../firebase'; 
 
 // --- Bulk Upload Modal ---
 import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
@@ -205,6 +206,32 @@ const EENC_ORIENTATIONS_LABELS = {
     orient_nicu: "قسم الحضانة",
     orient_stats: "قسم الاحصاء والمعلومات",
     orient_nutrition: "قسم التغذية عن الرعاية الضرورية المبكرة للاطفال حديث الولادة",
+};
+
+// --- Helper: Fetch Historical Facility Snapshot ---
+const fetchFacilitySnapshot = async (facilityId, visitDate, currentFacilities) => {
+    try {
+        // Attempts to fetch a historical record of the facility on or before the visit date
+        // Note: This assumes you have a 'facility_snapshots' tracking collection.
+        const snapshotRef = collection(db, 'facility_snapshots');
+        const q = query(
+            snapshotRef,
+            where('facilityId', '==', facilityId),
+            where('snapshotDate', '<=', visitDate),
+            orderBy('snapshotDate', 'desc'),
+            limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            return querySnapshot.docs[0].data();
+        }
+    } catch (error) {
+        console.warn("No historical snapshot found or query failed. Falling back to current facility data.", error);
+    }
+
+    // Fallback to current facility data if no snapshot collection exists or no snapshot is found
+    return currentFacilities.find(f => f.id === facilityId);
 };
 
 // --- Helper: Calculate Proposed Visit Number Updates for Visit Reports ---
@@ -1804,6 +1831,11 @@ const SkillsMentorshipView = ({
     const [isPreviewSyncModalOpen, setIsPreviewSyncModalOpen] = useState(false);
     const [isExecutingSync, setIsExecutingSync] = useState(false);
 
+    // --- Backfill Migration State ---
+    const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
+    const [migrationCandidates, setMigrationCandidates] = useState([]);
+    const [isMigrating, setIsMigrating] = useState(false);
+
     const updateLastSyncTime = useCallback(() => {
         let lastTimeMs = 0;
         
@@ -2521,6 +2553,65 @@ const SkillsMentorshipView = ({
         } finally {
             setIsExecutingSync(false);
         }
+    };
+
+    // --- Handle Previewing Facility Data Migration (Super User Only) ---
+    const handlePrepareMigration = () => {
+        // Use filteredVisitReports to reduce load and apply user's current filters
+        const candidates = filteredVisitReports.filter(r => !r.fullData?.essential_tools);
+        setMigrationCandidates(candidates);
+        setIsMigrationModalOpen(true);
+    };
+
+    // --- Handle Confirming Facility Data Migration ---
+    const handleExecuteMigration = async () => {
+        setIsMigrating(true);
+        let success = 0;
+        let failed = 0;
+        
+        for (const report of migrationCandidates) {
+            // Fetch historical snapshot based on visitDate, fallback to localHealthFacilities
+            const facility = await fetchFacilitySnapshot(report.facilityId, report.visitDate, localHealthFacilities);
+            
+            if (facility) {
+                const essential_tools = {
+                    chartbook: facility['وجود_كتيب_لوحات'] === 'Yes' ? 'yes' : 'no',
+                    recordForm: facility['وجود_سجل_علاج_متكامل'] === 'Yes' ? 'yes' : 'no',
+                    weightScale: facility['ميزان_وزن'] === 'Yes' ? 'yes' : 'no',
+                    heightScale: facility['ميزان_طول'] === 'Yes' ? 'yes' : 'no',
+                    thermometer: facility['ميزان_حرارة'] === 'Yes' ? 'yes' : 'no',
+                    timer: facility['ساعة_مؤقت'] === 'Yes' ? 'yes' : 'no',
+                    orsCorner: facility['غرفة_إرواء'] === 'Yes' ? 'yes' : 'no',
+                    immunization: facility.immunization_office_exists === 'Yes' ? 'yes' : 'no',
+                    nutrition: facility.nutrition_center_exists === 'Yes' ? 'yes' : 'no',
+                    growthMonitoring: facility.growth_monitoring_service_exists === 'Yes' ? 'yes' : 'no'
+                };
+
+                const payload = {
+                    ...report.fullData,
+                    essential_tools
+                };
+
+                try {
+                    if (report.service === 'IMNCI') {
+                        await saveIMNCIVisitReport(payload, report.id);
+                    } else {
+                        await saveEENCVisitReport(payload, report.id);
+                    }
+                    success++;
+                } catch (e) {
+                    console.error("Migration failed for report", report.id, e);
+                    failed++;
+                }
+            } else {
+                failed++; // Facility not found
+            }
+        }
+
+        setToast({ show: true, message: `Migration complete. Success: ${success}, Failed: ${failed}`, type: 'success' });
+        setIsMigrating(false);
+        setIsMigrationModalOpen(false);
+        handleRefresh();
     };
 
     const handleRefresh = async () => {
@@ -3752,6 +3843,13 @@ const SkillsMentorshipView = ({
                                             </Button>
                                         )}
 
+                                        {/* NEW: Backfill Migration Button for Super Users */}
+                                        {activeTab === 'visit_reports' && permissions?.role === 'super_user' && (
+                                            <Button variant="info" onClick={handlePrepareMigration} className="bg-teal-600 hover:bg-teal-700 text-white">
+                                                Migrate Facility Data
+                                            </Button>
+                                        )}
+
                                         {activeTab === 'skills_list' && canBulkUploadMentorships && selectedSubmissionIds.length === 0 && canManageMentorship && (
                                             <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button>
                                         )}
@@ -3843,6 +3941,7 @@ const SkillsMentorshipView = ({
                                     <MentorshipDashboard
                                         allSubmissions={processedSubmissions}
                                         visitReports={processedVisitReports}
+                                        localHealthFacilities={localHealthFacilities}
                                         STATE_LOCALITIES={dashboardStateLocalities}
                                         activeService={activeService}
                                         isLoading={!publicDashboardMode && (isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null)}
@@ -3951,6 +4050,37 @@ const SkillsMentorshipView = ({
                     isSyncing={isExecutingSync}
                     activeTab={activeTab}
                 />
+
+                {/* NEW: Backfill Migration Modal */}
+                {isMigrationModalOpen && (
+                    <Modal isOpen={isMigrationModalOpen} onClose={() => !isMigrating && setIsMigrationModalOpen(false)} title="Backfill Facility Data (Super User)" size="md">
+                        <div className="p-6 text-right" dir="rtl">
+                            <div className="mb-4 bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-start gap-3">
+                                <AlertTriangle className="text-blue-600 mt-1 flex-shrink-0" />
+                                <div>
+                                    <h4 className="font-bold text-blue-800">تحديث البيانات التاريخية</h4>
+                                    <p className="text-sm text-blue-700 mt-2">
+                                        تم العثور على <strong>{migrationCandidates.length}</strong> تقرير زيارة قديم لا يحتوي على بيانات البنية التحتية للمنشأة (Essential Tools).
+                                    </p>
+                                    <p className="text-sm text-blue-700 mt-2">
+                                        سيقوم النظام بنسخ البيانات الحالية للمنشأة وإرفاقها بهذه التقارير. <strong>لن يتم تعديل أو حذف أي بيانات أخرى موجودة في التقرير.</strong>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                                <Button variant="secondary" onClick={() => setIsMigrationModalOpen(false)} disabled={isMigrating}>إلغاء</Button>
+                                <Button variant="primary" onClick={handleExecuteMigration} disabled={isMigrating || migrationCandidates.length === 0} className="px-6 bg-teal-600 hover:bg-teal-700">
+                                    {isMigrating ? (
+                                        <><Spinner size="sm" className="ml-2"/> جاري التحديث...</>
+                                    ) : (
+                                        'تأكيد وتحديث'
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </Modal>
+                )}
             </>
         );
     }
@@ -4101,6 +4231,7 @@ const SkillsMentorshipView = ({
                                 <MentorshipDashboard
                                     allSubmissions={processedSubmissions}
                                     visitReports={processedVisitReports}
+                                    localHealthFacilities={localHealthFacilities}
                                     STATE_LOCALITIES={dashboardStateLocalities}
                                     activeService={activeService}
                                     isLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
@@ -4365,7 +4496,7 @@ const SkillsMentorshipView = ({
                                             </span>
                                             <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                         </div>
-                                        {selectedState && selectedLocality && filteredFacilities.length === 0 && !isFacilitiesLoading && ( <p className="text-xs text-red-600 mt-1">لا توجد مؤسسات مسجلة.</p> )}
+                                        {selectedState && selectedLocality && filteredFacilities.length === 0 && !isFacilitiesLoading && ( <p className="text-xs text-red-600 mt-1">لا توجد مؤسسات مسجلين.</p> )}
                                     </FormGroup>
                                 )}
                             </div>
@@ -4615,6 +4746,7 @@ const SkillsMentorshipView = ({
                             <MentorshipDashboard
                                 allSubmissions={processedSubmissions}
                                 visitReports={processedVisitReports}
+                                localHealthFacilities={localHealthFacilities}
                                 STATE_LOCALITIES={dashboardStateLocalities}
                                 activeService={activeService}
                                 isLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}

@@ -198,52 +198,59 @@ const EENCMothersForm = ({
 
     const scores = useMemo(() => calculateScores(formData), [formData]);
 
-    // --- DYNAMIC VISIT NUMBER CALCULATION ---
+    const eencMothersHistoryStats = useMemo(() => {
+        if (existingSessionData || !facility?.id) return { maxVisitNum: 0, dateMap: {} };
+
+        let maxVisitNum = 0;
+        const dateMap = {};
+
+        const facilityMotherSessions = allSubmissions.filter(sub => 
+            sub.facilityId === facility.id && 
+            sub.service === 'EENC_MOTHERS'
+        );
+
+        facilityMotherSessions.forEach(session => {
+            const vNum = parseInt(session.visitNumber, 10) || parseInt(session.fullData?.visitNumber, 10) || 0;
+            if (vNum > maxVisitNum) maxVisitNum = vNum;
+
+            const sDate = session.sessionDate || (session.effectiveDate && session.effectiveDate.seconds ? new Date(session.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null);
+            if (sDate && vNum > 0) dateMap[sDate] = vNum;
+        });
+
+        return { maxVisitNum, dateMap };
+    }, [allSubmissions, facility?.id, existingSessionData]);
+
     useEffect(() => {
-        if (existingSessionData) return;
+        if (existingSessionData || !facility?.id) return;
         const currentSessionDate = formData.session_date;
-        if (!currentSessionDate || !facility?.id) return;
+        if (!currentSessionDate) return;
 
         try {
-            let maxVisitNum = 0;
-            let matchingDateVisitNum = null;
-
-            const facilityMotherSessions = allSubmissions.filter(sub => 
-                sub.facilityId === facility.id && 
-                sub.service === 'EENC_MOTHERS'
-            );
-
-            facilityMotherSessions.forEach(session => {
-                const vNum = parseInt(session.visitNumber, 10) || parseInt(session.fullData?.visitNumber, 10) || 0;
-                if (vNum > maxVisitNum) maxVisitNum = vNum;
-
-                const sDate = session.sessionDate || (session.effectiveDate && session.effectiveDate.seconds ? new Date(session.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null);
-                if (sDate === currentSessionDate && vNum > 0) matchingDateVisitNum = vNum;
-            });
+            const { maxVisitNum, dateMap } = eencMothersHistoryStats;
+            const matchingDateVisitNum = dateMap[currentSessionDate] || null;
 
             let newVisitNumber = 1;
             const offlineKey = `offline_visit_max_${facility.id}_EENC_MOTHERS`;
+            const localMaxVisitNum = parseInt(localStorage.getItem(offlineKey), 10) || 0;
 
             if (matchingDateVisitNum !== null) {
                 newVisitNumber = matchingDateVisitNum;
-            } else if (facilityMotherSessions.length > 0) {
-                newVisitNumber = maxVisitNum + 1;
             } else {
-                const savedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
-                newVisitNumber = savedMax > 0 ? savedMax + 1 : 1;
+                const absoluteMax = Math.max(maxVisitNum, localMaxVisitNum);
+                newVisitNumber = absoluteMax + 1;
             }
 
-            setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+            if (formData.visitNumber !== newVisitNumber) {
+                setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+            }
 
-            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
-            const actualMaxToStore = Math.max(maxVisitNum, newVisitNumber, currentStoredMax);
-            if (actualMaxToStore > currentStoredMax) {
-                localStorage.setItem(offlineKey, actualMaxToStore.toString());
+            if (maxVisitNum > localMaxVisitNum) {
+                localStorage.setItem(offlineKey, maxVisitNum.toString());
             }
         } catch (error) {
-            console.error("Error calculating visit number:", error);
+            console.error("Error managing visit number assignment:", error);
         }
-    }, [formData.session_date, allSubmissions, facility?.id, existingSessionData]);
+    }, [formData.session_date, eencMothersHistoryStats, facility?.id, existingSessionData, formData.visitNumber]);
 
     const handleChange = (key, value) => {
         setFormData(prev => ({ ...prev, [key]: value }));
@@ -325,6 +332,12 @@ const EENCMothersForm = ({
         } else {
             payload.mentorEmail = user?.email || 'unknown';
             payload.mentorName = user?.displayName || 'Unknown Mentor';
+        }
+
+        const offlineKey = `offline_visit_max_${facility.id}_EENC_MOTHERS`;
+        const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+        if (payload.visitNumber > currentStoredMax) {
+            localStorage.setItem(offlineKey, payload.visitNumber.toString());
         }
 
         try {

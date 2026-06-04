@@ -228,16 +228,16 @@ const MotherInterviewsTab = ({
                 title: "Mother Knowledge: Treatment",
                 items: [
                     { title: "The Mother Know About the dose , the frequency and duration of oral drugs prescribed", key: 'knows_med_details', chartKey: 'M: Knows Meds', avg: motherKpis?.avgKnowMed },
-                    { title: "Knows 4 Rules", key: 'knows_diarrhea_4rules', chartKey: 'M: Knows 4 Rules', avg: motherKpis?.avgKnow4Rules }
+                    { title: "Knows 4 Rules of Home Tratment of Diarrhea", key: 'knows_diarrhea_4rules', chartKey: 'M: Knows 4 Rules', avg: motherKpis?.avgKnow4Rules }
                 ]
             },
             {
                 title: "Mother Knowledge: ORS & Fluids",
                 items: [
-                    { title: "Knows Home Fluids", key: 'knows_home_fluids', chartKey: 'M: Knows Fluids', avg: motherKpis?.avgKnowFluids },
-                    { title: "The Mother Know how to prepare ORS and amout of ORS", key: 'knows_ors_water_qty', chartKey: 'M: ORS Water', avg: motherKpis?.avgKnowOrsQty },
-                    { title: "Knows ORS Amount after Stool", key: 'knows_ors_after_stool', chartKey: 'M: ORS Stool', avg: motherKpis?.avgKnowOrsStool },
-                    { title: "Knows Return Date", key: 'knows_return_date', chartKey: 'M: Knows Return', avg: motherKpis?.avgKnowReturn }
+                    { title: "Knows Home Fluids fluides for Diarheal managment", key: 'knows_home_fluids', chartKey: 'M: Knows Fluids', avg: motherKpis?.avgKnowFluids },
+                    { title: "The Mother Know how to prepare ORS", key: 'knows_ors_water_qty', chartKey: 'M: ORS Water', avg: motherKpis?.avgKnowOrsQty },
+                    { title: "Knows ORS Amount to be given after each Stool", key: 'knows_ors_after_stool', chartKey: 'M: ORS Stool', avg: motherKpis?.avgKnowOrsStool },
+                    { title: "Knows Return for follow up", key: 'knows_return_date', chartKey: 'M: Knows Return', avg: motherKpis?.avgKnowReturn }
                 ]
             },
             {

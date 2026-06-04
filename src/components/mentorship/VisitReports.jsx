@@ -1,7 +1,7 @@
 // VisitReports.jsx
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { getAuth } from "firebase/auth";
-import { Timestamp, collection, getDocs, doc } from 'firebase/firestore'; // Removed getDoc to eliminate lookup latency
+import { Timestamp, collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../../firebase'; 
 import { 
@@ -28,6 +28,48 @@ const SuccessModal = ({ isOpen, onClose, message }) => {
                 </Button>
             </div>
         </Modal>
+    );
+};
+
+// --- Helper Component: View-Only Facility Snapshot Summary ---
+const FacilitySnapshotSummary = ({ facility, serviceType }) => {
+    if (!facility) return null;
+
+    return (
+        <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-inner">
+            <h3 className="text-sm font-extrabold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
+                <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                البيانات المرفقة تلقائياً (Automated Facility Snapshot)
+            </h3>
+            <p className="text-xs text-slate-500 mb-4 font-semibold">
+                هذه البيانات تم جلبها تلقائياً من ملف المنشأة وللقراءة فقط. سيتم إرفاقها مع هذا التقرير لضمان دقة التحليل الزمني.
+            </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                    { key: 'وجود_كتيب_لوحات', label: 'كتيب اللوحات (Chartbook)' },
+                    { key: 'وجود_سجل_علاج_متكامل', label: 'سجل علاج متكامل (Record Form)' },
+                    { key: 'ميزان_وزن', label: 'ميزان وزن (Weight Scale)' },
+                    { key: 'ميزان_طول', label: 'ميزان طول (Height Board)' },
+                    { key: 'ميزان_حرارة', label: 'ميزان حرارة (Thermometer)' },
+                    { key: 'ساعة_مؤقت', label: 'ساعة مؤقت (Timer)' },
+                    { key: 'غرفة_إرواء', label: 'غرفة إرواء (ORS Corner)' },
+                    { key: 'immunization_office_exists', label: 'مكتب تحصين (Immunization)' },
+                    { key: 'nutrition_center_exists', label: 'مركز تغذية (Nutrition)' },
+                    { key: 'growth_monitoring_service_exists', label: 'متابعة النمو (Growth Monitoring)' }
+                ].map(item => {
+                    const isAvailable = facility[item.key] === 'Yes' || facility[item.key] === 'yes';
+                    return (
+                        <div key={item.key} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-slate-200">
+                            <span className="text-xs font-bold text-slate-700">{item.label}</span>
+                            <span className={`text-[10px] font-extrabold px-2 py-1 rounded ${isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                {isAvailable ? 'متوفر' : 'غير متوفر'}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
     );
 };
 
@@ -165,7 +207,7 @@ const EENC_BREATHING_BABY_SKILLS = {
 
 const EENC_RESUSCITATION_SKILLS = {
     'skill_airway': "فتح مجرى الهواء",
-    'skill_ambubag_placement': "وضع امبوباق بصورة صحيحة على القم والانف",
+    'skill_ambubag_placement': "وضع الامبوباق بصورة صحيحة على القم والانف",
     'skill_ambubag_use': "استخدام الامبوباق بصورة صحيحة",
     'skill_ventilation_rate': "معدل التهوية 40-60 في الدقيقة"
 };
@@ -270,50 +312,58 @@ export const IMNCIVisitReport = ({
     const [previousUpdates, setPreviousUpdates] = useState({}); 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+    const imnciHistoryStats = useMemo(() => {
+        if (existingReportData || !facility?.id) return { maxVisitNum: 0, dateMap: {} };
+        
+        let maxVisitNum = 0;
+        const dateMap = {};
+
+        const facilityReports = allVisitReports.filter(r => 
+            r.facilityId === facility.id && r.service === 'IMNCI'
+        );
+
+        facilityReports.forEach(report => {
+            const vNum = parseInt(report.visitNumber, 10) || parseInt(report.fullData?.visitNumber, 10) || 0;
+            if (vNum > maxVisitNum) maxVisitNum = vNum;
+
+            const rDate = report.visitDate || report.fullData?.visitDate || null;
+            if (rDate && vNum > 0) dateMap[rDate] = vNum;
+        });
+
+        return { maxVisitNum, dateMap };
+    }, [allVisitReports, facility?.id, existingReportData]);
+
     useEffect(() => {
-        if (existingReportData) return;
+        if (existingReportData || !facility?.id) return;
         const currentVisitDate = formData.visit_date;
-        if (!currentVisitDate || !facility?.id) return;
+        if (!currentVisitDate) return;
 
         try {
-            let maxVisitNum = 0;
-            let matchingDateVisitNum = null;
-
-            const facilityReports = allVisitReports.filter(r => 
-                r.facilityId === facility.id && r.service === 'IMNCI'
-            );
-
-            facilityReports.forEach(report => {
-                const vNum = parseInt(report.visitNumber, 10) || parseInt(report.fullData?.visitNumber, 10) || 0;
-                if (vNum > maxVisitNum) maxVisitNum = vNum;
-
-                const rDate = report.visitDate || report.fullData?.visitDate || null;
-                if (rDate === currentVisitDate && vNum > 0) matchingDateVisitNum = vNum;
-            });
+            const { maxVisitNum, dateMap } = imnciHistoryStats;
+            const matchingDateVisitNum = dateMap[currentVisitDate] || null;
 
             let newVisitNumber = 1;
             const offlineKey = `offline_visit_max_${facility.id}_IMNCI_REPORT`;
+            const localMaxVisitNum = parseInt(localStorage.getItem(offlineKey), 10) || 0;
 
             if (matchingDateVisitNum !== null) {
                 newVisitNumber = matchingDateVisitNum;
-            } else if (facilityReports.length > 0) {
-                newVisitNumber = maxVisitNum + 1;
             } else {
-                const savedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
-                newVisitNumber = savedMax > 0 ? savedMax + 1 : 1;
+                const absoluteMax = Math.max(maxVisitNum, localMaxVisitNum);
+                newVisitNumber = absoluteMax + 1;
             }
 
-            setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+            if (formData.visitNumber !== newVisitNumber) {
+                setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+            }
 
-            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
-            const actualMaxToStore = Math.max(maxVisitNum, newVisitNumber, currentStoredMax);
-            if (actualMaxToStore > currentStoredMax) {
-                localStorage.setItem(offlineKey, actualMaxToStore.toString());
+            if (maxVisitNum > localMaxVisitNum) {
+                localStorage.setItem(offlineKey, maxVisitNum.toString());
             }
         } catch (error) {
-            console.error("Error calculating visit number:", error);
+            console.error("Error managing visit number assignment:", error);
         }
-    }, [formData.visit_date, allVisitReports, facility?.id, existingReportData]);
+    }, [formData.visit_date, imnciHistoryStats, facility?.id, existingReportData, formData.visitNumber]);
 
     const sessionsForThisVisit = useMemo(() => {
         if (!allSubmissions || !facility || !formData.visit_date) return [];
@@ -504,9 +554,24 @@ export const IMNCIVisitReport = ({
                 }
             });
 
+            // Ensure we capture the exact snapshot of facility readiness during the report entry
+            const capturedEssentialTools = existingReportData?.essential_tools || {
+                chartbook: facility['وجود_كتيب_لوحات'] === 'Yes' ? 'yes' : 'no',
+                recordForm: facility['وجود_سجل_علاج_متكامل'] === 'Yes' ? 'yes' : 'no',
+                weightScale: facility['ميزان_وزن'] === 'Yes' ? 'yes' : 'no',
+                heightScale: facility['ميزان_طول'] === 'Yes' ? 'yes' : 'no',
+                thermometer: facility['ميزان_حرارة'] === 'Yes' ? 'yes' : 'no',
+                timer: facility['ساعة_مؤقت'] === 'Yes' ? 'yes' : 'no',
+                orsCorner: facility['غرفة_إرواء'] === 'Yes' ? 'yes' : 'no',
+                immunization: facility.immunization_office_exists === 'Yes' ? 'yes' : 'no',
+                nutrition: facility.nutrition_center_exists === 'Yes' ? 'yes' : 'no',
+                growthMonitoring: facility.growth_monitoring_service_exists === 'Yes' ? 'yes' : 'no'
+            };
+
             const payload = {
                 ...formData,
                 trained_skills: updatedTrainedSkills, 
+                essential_tools: capturedEssentialTools, // Automated snapshot mapping 
                 visitNumber: parseInt(formData.visitNumber) || 1,
                 imageUrls: finalImageUrls,
                 facilityId: facility.id,
@@ -530,23 +595,37 @@ export const IMNCIVisitReport = ({
 
             await saveIMNCIVisitReport(payload, existingReportData?.id || null);
 
-            // --- TRIGGER FIRE-AND-FORGET REAL-TIME POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
+            // --- SAVE MAX VISIT NUMBER TO OFFLINE CACHE ONLY ON SUCCESSFUL SUBMIT ---
+            const offlineKey = `offline_visit_max_${facility.id}_IMNCI_REPORT`;
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            const savedVisitNumber = payload.visitNumber;
+            if (savedVisitNumber > currentStoredMax) {
+                localStorage.setItem(offlineKey, savedVisitNumber.toString());
+            }
+
+            // --- TRIGGER POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
             try {
                 const isUpdate = !!existingReportData?.id;
-                const submitterName = user.displayName || user.email || 'A monitor';
+                let submitterRole = 'User';
+                
+                // Fetch user's role
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
+                }
+
+                const submitterName = user.displayName || user.email;
                 const actionText = isUpdate ? 'updated an existing' : 'submitted a new';
                 const notifTitle = isUpdate ? `Visit Report Updated` : `New Visit Report Submitted`;
-                const notifBody = `${submitterName} has ${actionText} IMNCI visit report for ${facility['اسم_المؤسسة']}.`;
+                const notifBody = `${submitterName} (${submitterRole}) has ${actionText} IMNCI visit report for ${facility['اسم_المؤسسة']}.`;
 
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 
-                // Fire and Forget (no await statement)[cite: 9]
-                sendFCMNotification({
+                await sendFCMNotification({
                     targetUserId: 'managers_and_super_users',
                     title: notifTitle,
-                    body: notifBody,
-                    data: { actionView: 'skillsMentorship' } // Injected tracking layout destination[cite: 9]
+                    body: notifBody
                 }).catch(e => console.warn("FCM Send Error: Notification popup skipped.", e));
             } catch (fcmError) {
                 console.warn("FCM Send Error: Notification popup skipped.", fcmError);
@@ -943,6 +1022,9 @@ export const IMNCIVisitReport = ({
                         <div className="mb-6"><FormGroup label="ملاحظات" className="text-right"><Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={3} /></FormGroup></div>
                     </div>
                     
+                    {/* --- INJECT VIEW-ONLY SNAPSHOT SUMMARY --- */}
+                    <FacilitySnapshotSummary facility={facility} serviceType="IMNCI" />
+
                     <div className="flex flex-col gap-2 items-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                         <div className="flex gap-2 flex-wrap justify-start">
                             <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}> إلغاء </Button>
@@ -1052,50 +1134,58 @@ export const EENCVisitReport = ({
     const [previousUpdates, setPreviousUpdates] = useState({}); 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+    const eencHistoryStats = useMemo(() => {
+        if (existingReportData || !facility?.id) return { maxVisitNum: 0, dateMap: {} };
+        
+        let maxVisitNum = 0;
+        const dateMap = {};
+
+        const facilityReports = allVisitReports.filter(r => 
+            r.facilityId === facility.id && r.service === 'EENC'
+        );
+
+        facilityReports.forEach(report => {
+            const vNum = parseInt(report.visitNumber, 10) || parseInt(report.fullData?.visitNumber, 10) || 0;
+            if (vNum > maxVisitNum) maxVisitNum = vNum;
+
+            const rDate = report.visitDate || report.fullData?.visitDate || null;
+            if (rDate && vNum > 0) dateMap[rDate] = vNum;
+        });
+
+        return { maxVisitNum, dateMap };
+    }, [allVisitReports, facility?.id, existingReportData]);
+
     useEffect(() => {
-        if (existingReportData) return;
+        if (existingReportData || !facility?.id) return;
         const currentVisitDate = formData.visit_date;
-        if (!currentVisitDate || !facility?.id) return;
+        if (!currentVisitDate) return;
 
         try {
-            let maxVisitNum = 0;
-            let matchingDateVisitNum = null;
-
-            const facilityReports = allVisitReports.filter(r => 
-                r.facilityId === facility.id && r.service === 'EENC'
-            );
-
-            facilityReports.forEach(report => {
-                const vNum = parseInt(report.visitNumber, 10) || parseInt(report.fullData?.visitNumber, 10) || 0;
-                if (vNum > maxVisitNum) maxVisitNum = vNum;
-
-                const rDate = report.visitDate || report.fullData?.visitDate || null;
-                if (rDate === currentVisitDate && vNum > 0) matchingDateVisitNum = vNum;
-            });
+            const { maxVisitNum, dateMap } = eencHistoryStats;
+            const matchingDateVisitNum = dateMap[currentVisitDate] || null;
 
             let newVisitNumber = 1;
             const offlineKey = `offline_visit_max_${facility.id}_EENC_REPORT`;
+            const localMaxVisitNum = parseInt(localStorage.getItem(offlineKey), 10) || 0;
 
             if (matchingDateVisitNum !== null) {
                 newVisitNumber = matchingDateVisitNum;
-            } else if (facilityReports.length > 0) {
-                newVisitNumber = maxVisitNum + 1;
             } else {
-                const savedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
-                newVisitNumber = savedMax > 0 ? savedMax + 1 : 1;
+                const absoluteMax = Math.max(maxVisitNum, localMaxVisitNum);
+                newVisitNumber = absoluteMax + 1;
             }
 
-            setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+            if (formData.visitNumber !== newVisitNumber) {
+                setFormData(prev => ({ ...prev, visitNumber: newVisitNumber }));
+            }
 
-            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
-            const actualMaxToStore = Math.max(maxVisitNum, newVisitNumber, currentStoredMax);
-            if (actualMaxToStore > currentStoredMax) {
-                localStorage.setItem(offlineKey, actualMaxToStore.toString());
+            if (maxVisitNum > localMaxVisitNum) {
+                localStorage.setItem(offlineKey, maxVisitNum.toString());
             }
         } catch (error) {
-            console.error("Error calculating visit number:", error);
+            console.error("Error managing visit number assignment:", error);
         }
-    }, [formData.visit_date, allVisitReports, facility?.id, existingReportData]);
+    }, [formData.visit_date, eencHistoryStats, facility?.id, existingReportData, formData.visitNumber]);
 
     const sessionsForThisVisit = useMemo(() => {
         if (!allSubmissions || !facility || !formData.visit_date) return [];
@@ -1177,7 +1267,7 @@ export const EENCVisitReport = ({
                         timesTrained: newTimesTrained
                     }
                 }
-            };
+            }
         });
     };
 
@@ -1241,9 +1331,24 @@ export const EENCVisitReport = ({
                 }
             });
 
+            // Ensure we capture the exact snapshot of facility readiness during the report entry
+            const capturedEssentialTools = existingReportData?.essential_tools || {
+                chartbook: facility['وجود_كتيب_لوحات'] === 'Yes' ? 'yes' : 'no',
+                recordForm: facility['وجود_سجل_علاج_متكامل'] === 'Yes' ? 'yes' : 'no',
+                weightScale: facility['ميزان_وزن'] === 'Yes' ? 'yes' : 'no',
+                heightScale: facility['ميزان_طول'] === 'Yes' ? 'yes' : 'no',
+                thermometer: facility['ميزان_حرارة'] === 'Yes' ? 'yes' : 'no',
+                timer: facility['ساعة_مؤقت'] === 'Yes' ? 'yes' : 'no',
+                orsCorner: facility['غرفة_إرواء'] === 'Yes' ? 'yes' : 'no',
+                immunization: facility.immunization_office_exists === 'Yes' ? 'yes' : 'no',
+                nutrition: facility.nutrition_center_exists === 'Yes' ? 'yes' : 'no',
+                growthMonitoring: facility.growth_monitoring_service_exists === 'Yes' ? 'yes' : 'no'
+            };
+
             const payload = {
                 ...formData, 
                 trained_skills: updatedTrainedSkills,
+                essential_tools: capturedEssentialTools, // Automated snapshot mapping
                 visitNumber: parseInt(formData.visitNumber) || 1, 
                 imageUrls: [...currentUrls, ...newUploadedUrls], 
                 facilityId: facility.id, 
@@ -1256,6 +1361,13 @@ export const EENCVisitReport = ({
 
             await saveEENCVisitReport(payload, existingReportData?.id || null);
 
+            // --- SAVE MAX VISIT NUMBER TO OFFLINE CACHE ONLY ON SUCCESSFUL SUBMIT ---
+            const offlineKey = `offline_visit_max_${facility.id}_EENC_REPORT`;
+            const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            if (payload.visitNumber > currentStoredMax) {
+                localStorage.setItem(offlineKey, payload.visitNumber.toString());
+            }
+
             // --- TRIGGER FIRE-AND-FORGET REAL-TIME POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
             try {
                 const isUpdate = !!existingReportData?.id;
@@ -1267,12 +1379,11 @@ export const EENCVisitReport = ({
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 
-                // Fire and Forget (no await statement)[cite: 9]
                 sendFCMNotification({
                     targetUserId: 'managers_and_super_users',
                     title: notifTitle,
                     body: notifBody,
-                    data: { actionView: 'skillsMentorship' } // Injected tracking layout destination[cite: 9]
+                    data: { actionView: 'skillsMentorship' } 
                 }).catch(e => console.warn("FCM Send Error: Notification popup skipped.", e));
             } catch (fcmError) {
                 console.warn("FCM Send Error: Notification popup skipped.", fcmError);
@@ -1657,6 +1768,9 @@ export const EENCVisitReport = ({
                         <div className="mb-6"><FormGroup label="ملاحظات" className="text-right"><Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={3} /></FormGroup></div>
                     </div>
                     
+                    {/* --- INJECT VIEW-ONLY SNAPSHOT SUMMARY --- */}
+                    <FacilitySnapshotSummary facility={facility} serviceType="EENC" />
+
                     <div className="flex flex-col gap-2 items-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                         <div className="flex gap-2 flex-wrap justify-start">
                             <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}> إلغاء </Button>
