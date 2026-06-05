@@ -305,11 +305,9 @@ export const STATE_LOCALITIES = {
   }
 };
 
-// --- MODIFICATION: Added ICCM & SSNC ---
 export const COURSE_TYPES_FACILITATOR = ["IMNCI", "ETAT", "EENC", "IPC", "ICCM", "SSNC"];
 export const IMNCI_SUBCOURSE_TYPES = ["Standard 7 days course for medical assistants", "Standard 7 days course for medical doctor", "Refreshment course", "IMNCI in humanitarian setting", "online IMCI course", "preservice Course", "IMNCI Mentorship"];
 
-// EENC SKILLS UPDATED WITH SCORING TYPE
 export const SKILLS_EENC_BREATHING = { pre_birth: [{ text: "Checked room temperature and turned off fans" }, { text: "Told the mother (and her support person) what is going to be done" }, { text: "Washed hands (first of two hand washings)" }, { text: "Placed dry cloth on mother's abdomen" }, { text: "Prepared the newborn resuscitation area" }, { text: "Checked that bag and mask are functional" }, { text: "Washed hands (second of two hand washings)" }, { text: "Put on two pairs of clean gloves" }, { text: "Put forceps, cord clamp in easy-to-use order" }], eenc: [{ text: "Call out time of birth" }, { text: "Start Drying within 5 seconds of birth" }, { text: "Dry the baby thoroughly" }, { text: "Stimulate baby by gently rubbing" }, { text: "Suction only if airway blocked" }, { text: "Remove the wet cloth" }, { text: "Put baby in direct skin-to-skin contact" }, { text: "Cover baby’s body with dry cloth and the head with a hat" }], oxytocin: [{ text: "Check for a second baby" }, { text: "Give oxytocin to mother within 1 minute of delivery" }], cord_clamp: [{ text: "Removed outer pair of gloves" }, { text: "Check cord pulsations, clamp after cord pulsations stopped" }, { text: "Place clamp at 2 cm, forceps at 5 cm" }], placenta: [{ text: "Delivered placenta" }, { text: "Counsel mother on feeding cues" }] };
 export const SKILLS_EENC_NOT_BREATHING = { pre_birth: [{ text: "Checked room temperature and turned off fans" }, { text: "Told the mother what is going to be done" }, { text: "Washed hands (first of two hand washings)" }, { text: "Placed dry cloth on mother's abdomen" }, { text: "Prepared the newborn resuscitation area" }, { text: "Checked that bag and mask are functional" }, { text: "Washed hands (second of two hand washings)" }, { text: "Put on two pairs of clean gloves" }, { text: "Put forceps, cord clamp in easy-to-use order" }], eenc_initial: [{ text: "Called out time of birth" }, { text: "Started Drying within 5 seconds of birth" }, { text: "Dried the baby thoroughly" }, { text: "Stimulated baby by gently rubbing" }, { text: "Suction only if airway blocked" }, { text: "Removed the wet cloth" }, { text: "Put baby in direct skin-to-skin contact" }, { text: "Covered baby’s body with cloth and the head with a hat" }], if_not_breathing: [{ text: "Called for help" }, { text: "Removed outer pair of gloves" }, { text: "Quickly clamped and cut cord" }, { text: "Moved baby to resuscitation area" }, { text: "Covered baby quickly during and after transfer" }], resuscitation: [{ text: "Positioned the head correctly to open airways" }, { text: "Applied face mask firmly" }, { text: "Gain chest rise within < 1 min of birth" }, { text: "Squeezed bag to give 30–50 breaths per minute" }, { text: "If chest not rising: Reposition head, reposition mask, check airway, squeeze harder" }], if_breathing_starts: [{ text: "Stop ventilation and monitor every 15 minutes" }, { text: "Return baby to skin-to-skin contact and cover baby" }, { text: "Counsel mother that baby is OK" }], post_resuscitation: [{ text: "Check for a second baby" }, { text: "Give oxytocin to mother within 1 minute of delivery" }, { text: "Delivered placenta" }, { text: "Counsel mother on feeding cues" }], if_not_breathing_after_10_min: [{ text: "If heart rate, continue ventilation, Refer and transport" }, { text: "If no heart rate, stop ventilation, provide emotional support" }] };
 export const EENC_DOMAIN_LABEL_BREATHING = { pre_birth: "Pre-birth preparations", eenc: "Early Essential Newborn Care", oxytocin: "Give Oxytocin to mother", cord_clamp: "Clamp the cord", placenta: "Deliver the placenta and counsel the mother" };
@@ -319,19 +317,31 @@ export const EENC_DOMAINS_NOT_BREATHING = Object.keys(SKILLS_EENC_NOT_BREATHING)
 export const SKILLS_ETAT = { triage: ["Triage Assessment", "Assigns Triage Category"], airway_breathing: ["Positions Airway", "Suctions", "Gives Oxygen", "Bag-Mask Ventilation"], circulation: ["Inserts IV/IO", "Gives IV fluids", "Checks blood sugar"], coma: ["Positions unresponsive child", "Gives IV fluids"], convulsion: ["Positions convulsing child", "Gives Diazepam"], dehydration: ["Assesses dehydration", "Gives IV fluids", "Reassesses"] };
 export const ETAT_DOMAIN_LABEL = { triage: "Triage", airway_breathing: "Airway and Breathing", circulation: "Circulation", coma: "Coma", convulsion: "Convulsion", dehydration: "Dehydration (Severe)" };
 export const ETAT_DOMAINS = Object.keys(SKILLS_ETAT);
-export const CLASS_2_59M = { danger: ["Any Danger Sign"], respiratory: ["Severe pneumonia/disease", "Pneumonia", "Cough/cold", "Severe pneumonia/disease (Wheeze)", "Pneumonia (Wheeze)", "Cough/cold (Wheeze)"], diarrhoea: ["Severe dehydration", "Some dehydration", "No dehydration", "Severe persistent", "Persistent", "Dysentery"], fever_malaria: ["Very severe febrile disease", "Malaria", "Fever - malaria unlikely", "Severe complicated measles", "Measles - Eye/mouth complications", "Measles"], ear: ["Mastoiditis", "Acute ear infection", "Chronic ear infection", "No ear infection"], malnutrition: ["Complicated Severe Acute malnutrition (SAM)", "Un-complicated Severe Acute malnutrition (SAM)", "Moderate Acute malnutrition (MAM)", "No Acute Malnutrition"], anaemia: ["Severe Anaemia", "Anaemia", "No anaemia"], identify_treatment: ["IDENTIFY TREATMENTS NEEDED"], treatment_2_59m: ["ORAL DRUGS", "PLAN A", "PLAN B", "LOCAL INFECTION"], counsel: ["Assess and counsel for vaccination", "Asks feeding questions", "Feeding problems identified", "Gives advice on feeding problems", "COUNSEL WHEN TO RETURN"], };
+
+// --- MODIFICATION: Added "PLAN C" into treatment_2_59m ---
+export const CLASS_2_59M = { 
+    danger: ["Any Danger Sign"], 
+    respiratory: ["Severe pneumonia/disease", "Pneumonia", "Cough/cold", "Severe pneumonia/disease (Wheeze)", "Pneumonia (Wheeze)", "Cough/cold (Wheeze)"], 
+    diarrhoea: ["Severe dehydration", "Some dehydration", "No dehydration", "Severe persistent", "Persistent", "Dysentery"], 
+    fever_malaria: ["Very severe febrile disease", "Malaria", "Fever - malaria unlikely", "Severe complicated measles", "Measles - Eye/mouth complications", "Measles"], 
+    ear: ["Mastoiditis", "Acute ear infection", "Chronic ear infection", "No ear infection"], 
+    malnutrition: ["Complicated Severe Acute malnutrition (SAM)", "Un-complicated Severe Acute malnutrition (SAM)", "Moderate Acute malnutrition (MAM)", "No Acute Malnutrition"], 
+    anaemia: ["Severe Anaemia", "Anaemia", "No anaemia"], 
+    identify_treatment: ["IDENTIFY TREATMENTS NEEDED"], 
+    treatment_2_59m: ["ORAL DRUGS", "PLAN A", "PLAN B", "PLAN C", "LOCAL INFECTION"], 
+    counsel: ["Assess and counsel for vaccination", "Asks feeding questions", "Feeding problems identified", "Gives advice on feeding problems", "COUNSEL WHEN TO RETURN"], 
+};
+
 export const CLASS_0_59D = { bacterial: ["Possible serious bacterial infection", "Local bacterial infection", "Bacterial infection unlikely"], jaundice: ["Severe Jaundice", "Jaundice", "No Jaundice"], vyi_diarrhoea: ["Severe dehydration", "Some dehydration", "No dehydration", "Persistent diarrhea", "Blood in Stool"], feeding: ["Breastfeeding attachment and suckling assessed", "Feeding problem or low weight", "No feeding problem"], identify_treatment: ["IDENTIFY TREATMENTS NEEDED"], treatment_0_59d: ["Teach correct positioning and attachment", "Advise on home care"], };
 export const DOMAINS_BY_AGE_IMNCI = { GE2M_LE5Y: ["danger", "respiratory", "diarrhoea", "fever_malaria", "ear", "malnutrition", "anaemia", "identify_treatment", "treatment_2_59m", "counsel"], LT2M: ["bacterial", "jaundice", "vyi_diarrhoea", "feeding", "identify_treatment", "treatment_0_59d"], };
 export const DOMAIN_LABEL_IMNCI = { danger: "Danger signs", respiratory: "COUGH:", diarrhoea: "DIARRHOEA:", fever_malaria: "FEVER:", ear: "EAR:", malnutrition: "MALNUTRITION:", anaemia: "ANAEMIA:", identify_treatment: "IDENTIFY TREATMENT:", treatment_2_59m: "TREAT:", counsel: "COUNSEL:", bacterial: "BACTERIAL:", jaundice: "JAUNDICE:", vyi_diarrhoea: "DIARRHOEA:", feeding: "FEEDING:", treatment_0_59d: "TREATMENT/COUNSEL:" };
 export const getClassListImnci = (age, d) => (age === "GE2M_LE5Y" ? CLASS_2_59M[d] : CLASS_0_59D[d]) || [];
 
-// --- UPDATED JOB TITLES TO MATCH REQUEST ---
 export const JOB_TITLES_IMNCI = ["Pediatric Doctor", "Family Medicine Doctor", "General Practioner", "Medical Assistance", "Treating Nurse", "Other"];
 export const JOB_TITLES_ETAT = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
 export const JOB_TITLES_EENC = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
 export const JOB_TITLES_SSNC = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
 
-// --- NEW: ICCM Constants based on CSV ---
 export const SKILLS_ICCM = {
     danger: [
         "Not able to drink or breastfeed",
@@ -376,7 +386,6 @@ export const ICCM_DOMAIN_LABEL = {
     treatment: "TREATMENTS Given"
 };
 export const ICCM_DOMAINS = Object.keys(SKILLS_ICCM);
-// --- END ICCM Constants ---
 
 // ----------------------------- HELPER FUNCTIONS --------------------------------
 export const calcPct = (c, s) => (!s ? NaN : (c * 100) / s);

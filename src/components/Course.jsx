@@ -7,7 +7,7 @@ import {
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
-import { doc, updateDoc, collection, getDocs } from 'firebase/firestore'; 
+import { doc, updateDoc, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { getFunctions, httpsCallable } from 'firebase/functions'; 
 
 import { 
@@ -1591,10 +1591,24 @@ export function CourseManagementView({
                     const notifTitle = isUpdate ? 'Course Updated' : 'New Course Added';
                     const notifBody = `${submitterName} (${submitterRole}) has ${actionText} ${payload.course_type} course in ${payload.state} - ${payload.locality}.`;
 
+                    // 1. DISTINCT DB SAVE
+                    await addDoc(collection(db, 'notifications'), {
+                        title: notifTitle,
+                        message: notifBody,
+                        targetUser: 'managers_and_super_users',
+                        createdAt: serverTimestamp(),
+                        deliveredTo: [],
+                        readBy: [],
+                        deletedBy: [], 
+                        status: 'active',
+                        actionView: 'courses',
+                        actionParams: JSON.stringify({ courseId: payload.id })
+                    });
+
+                    // 2. FIRE AND FORGET PUSH
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
-                    // Fire and forget (no await statement)
                     sendFCMNotification({
                         targetUserId: 'managers_and_super_users',
                         title: notifTitle,

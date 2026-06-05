@@ -15,6 +15,15 @@ export function usePushNotifications() {
         if (!user || !user.uid) return;
 
         const saveTokenToFirestore = async (token) => {
+            // OPTIMIZATION: Check if we already saved this exact token locally
+            const savedToken = localStorage.getItem('fcm_token');
+            
+            if (savedToken === token) {
+                // Token hasn't changed, skip the expensive database write!
+                console.log('[FCM] Token unchanged, skipping Firestore write.');
+                return; 
+            }
+
             console.log('[FCM] Attempting to save token to Firestore...', token);
             try {
                 const userRef = doc(db, 'users', user.uid);
@@ -22,6 +31,9 @@ export function usePushNotifications() {
                     fcmToken: token,
                     fcmTokenUpdatedAt: new Date()
                 });
+                
+                // Save the new token locally so we don't write it again next time
+                localStorage.setItem('fcm_token', token);
                 console.log('[FCM] ✅ Token successfully saved to profile!');
             } catch (error) {
                 console.error('[FCM] ❌ Failed to save FCM token to Firestore. Check your security rules!', error);

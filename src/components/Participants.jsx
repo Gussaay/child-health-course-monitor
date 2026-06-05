@@ -23,7 +23,8 @@ import {
     queueCertificateEmail,
     saveParticipantAndSubmitFacilityUpdate,
     deleteParticipant,
-    saveFacilitySnapshot
+    saveFacilitySnapshot,
+    listPendingFacilitySubmissions
 } from '../data.js';
 import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
@@ -518,7 +519,7 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave, is
     );
 };
 
-const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, courseType, setToast }) => {
+const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilitiesList, onSave, courseType, setToast }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [selectedFieldKey, setSelectedFieldKey] = useState('');
@@ -649,11 +650,9 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
 
         const facilitiesToUpsert = [];
         
-        // --- DYNAMIC ROUTING FOR FACILITY STAFF ARRAYS ---
         if (['IMNCI', 'EENC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(courseType)) {
             const facilityUpdatesMap = new Map();
             
-            // Determine the correct staff array field based on course type
             const staffField = courseType === 'ETAT' ? 'critical_staff' : 
                                (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') ? 'neonatal_staff' : 
                                courseType === 'EENC' ? 'eenc_staff' : 
@@ -661,20 +660,31 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
 
             participantsToUpdate.forEach(p => {
                 const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
-                const existingPayload = facilityUpdatesMap.get(facilityKey) || {
+                
+                const existingFacility = facilitiesList?.find(f => 
+                    (p.facilityId && f.id === p.facilityId) || 
+                    (!p.facilityId && f['اسم_المؤسسة'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state)
+                );
+
+                const existingPayload = facilityUpdatesMap.get(facilityKey) || (existingFacility ? { ...existingFacility } : {
                     id: p.facilityId || undefined,
                     'اسم_المؤسسة': p.center_name,
                     'الولاية': p.state,
-                    'المحلية': p.locality,
-                    [staffField]: []
-                };
+                    'المحلية': p.locality
+                });
 
                 if (selectedFieldKey === 'facility_type') {
                     existingPayload['نوع_المؤسسةالصحية'] = p.facility_type;
                 }
 
-                if (!existingPayload[staffField].some(s => s.name === p.name)) {
-                    existingPayload[staffField].push({
+                let staffList = [];
+                try {
+                    staffList = existingPayload[staffField] ? (typeof existingPayload[staffField] === 'string' ? JSON.parse(existingPayload[staffField]) : JSON.parse(JSON.stringify(existingPayload[staffField]))) : [];
+                    if (!Array.isArray(staffList)) staffList = [];
+                } catch (e) { staffList = []; }
+
+                if (!staffList.some(s => s.name === p.name)) {
+                    staffList.push({
                         name: p.name,
                         job_title: p.job_title,
                         is_trained: p.trained_before ? 'Yes' : 'No',
@@ -682,6 +692,8 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
                         phone: p.phone || ''
                     });
                 }
+                
+                existingPayload[staffField] = staffList;
                 facilityUpdatesMap.set(facilityKey, existingPayload);
             });
             facilitiesToUpsert.push(...Array.from(facilityUpdatesMap.values()));
@@ -764,7 +776,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
     );
 };
 
-const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, setToast }) => {
+const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave, courseType, setToast }) => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [selectedFieldKey, setSelectedFieldKey] = useState('');
     const [fromValue, setFromValue] = useState('');
@@ -813,7 +825,6 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, se
 
         const facilitiesToUpsert = [];
         
-        // --- DYNAMIC ROUTING FOR FACILITY STAFF ARRAYS ---
         if (['IMNCI', 'EENC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(courseType)) {
             const facilityUpdatesMap = new Map();
             
@@ -824,16 +835,27 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, se
 
             participantsToUpdate.forEach(p => {
                 const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
-                const existingPayload = facilityUpdatesMap.get(facilityKey) || {
+                
+                const existingFacility = facilitiesList?.find(f => 
+                    (p.facilityId && f.id === p.facilityId) || 
+                    (!p.facilityId && f['اسم_المؤسسة'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state)
+                );
+
+                const existingPayload = facilityUpdatesMap.get(facilityKey) || (existingFacility ? { ...existingFacility } : {
                     id: p.facilityId || undefined,
                     'اسم_المؤسسة': p.center_name,
                     'الولاية': p.state,
-                    'المحلية': p.locality,
-                    [staffField]: []
-                };
+                    'المحلية': p.locality
+                });
 
-                if (!existingPayload[staffField].some(s => s.name === p.name)) {
-                    existingPayload[staffField].push({
+                let staffList = [];
+                try {
+                    staffList = existingPayload[staffField] ? (typeof existingPayload[staffField] === 'string' ? JSON.parse(existingPayload[staffField]) : JSON.parse(JSON.stringify(existingPayload[staffField]))) : [];
+                    if (!Array.isArray(staffList)) staffList = [];
+                } catch (e) { staffList = []; }
+
+                if (!staffList.some(s => s.name === p.name)) {
+                    staffList.push({
                         name: p.name,
                         job_title: p.job_title, 
                         is_trained: p.trained_before ? 'Yes' : 'No',
@@ -841,6 +863,8 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, se
                         phone: p.phone || ''
                     });
                 }
+
+                existingPayload[staffField] = staffList;
                 facilityUpdatesMap.set(facilityKey, existingPayload);
             });
             facilitiesToUpsert.push(...Array.from(facilityUpdatesMap.values()));
@@ -922,7 +946,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, se
     );
 };
 
-const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, setToast }) => {
+const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, facilitiesList, setToast }) => {
     const [excelData, setExcelData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [fieldMappings, setFieldMappings] = useState({});
@@ -1151,7 +1175,9 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
             }
 
             const facilityKey = `${participant.state}-${participant.locality}-${participant.center_name}`;
-            const existingPayload = facilityUpdatesMap.get(facilityKey) || {};
+            
+            const existingFacility = facilitiesList?.find(f => f['اسم_المؤسسة'] === participant.center_name && f['الولاية'] === participant.state && f['المحلية'] === participant.locality);
+            const existingPayload = facilityUpdatesMap.get(facilityKey) || (existingFacility ? { ...existingFacility } : {});
 
             const newStaffMember = {
                 name: participant.name,
@@ -1161,13 +1187,17 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
                 phone: participant.phone || '',
             };
 
-            // --- DYNAMIC ROUTING FOR FACILITY STAFF ARRAYS ---
             const staffField = course.course_type === 'ETAT' ? 'critical_staff' : 
                                (course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn' || course.course_type === 'IPC') ? 'neonatal_staff' : 
                                course.course_type === 'EENC' ? 'eenc_staff' : 
                                'imnci_staff';
 
-            const staffList = existingPayload[staffField] || [];
+            let staffList = [];
+            try {
+                staffList = existingPayload[staffField] ? (typeof existingPayload[staffField] === 'string' ? JSON.parse(existingPayload[staffField]) : JSON.parse(JSON.stringify(existingPayload[staffField]))) : [];
+                if (!Array.isArray(staffList)) staffList = [];
+            } catch (e) { staffList = []; }
+
             if (!staffList.some(s => s.name === newStaffMember.name)) {
                 staffList.push(newStaffMember);
             }
@@ -1182,7 +1212,6 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
                 [staffField]: staffList,
             };
 
-            // Keep the corresponding course metrics and dynamically toggle active facility indicators to Yes
             if (course.course_type === 'IMNCI') {
                 payload['وجود_العلاج_المتكامل_لامراض_الطفولة'] = 'Yes';
                 payload['وجود_كتيب_لوحات'] = 'Yes';
@@ -1759,6 +1788,67 @@ export function ParticipantsView({
         }
     }, [course?.course_type, healthFacilities, fetchHealthFacilities]);
 
+    // --- NEW: 3-WAY MERGE FOR PENDING SUBMISSIONS IN BACKGROUND ---
+    const [pendingFacSubs, setPendingFacSubs] = useState([]);
+
+    useEffect(() => {
+        listPendingFacilitySubmissions().then(setPendingFacSubs).catch(console.error);
+    }, []);
+
+    const mergedHealthFacilities = useMemo(() => {
+        if (!healthFacilities) return [];
+        const norm = (v) => (v === undefined || v === null) ? '' : String(v).trim();
+        const facilityMap = new Map();
+        
+        healthFacilities.forEach(f => facilityMap.set(f.id, { ...f }));
+
+        const sortedSubs = [...(pendingFacSubs || [])].sort((a,b) => (a.submittedAt?.toMillis?.() || 0) - (b.submittedAt?.toMillis?.() || 0));
+
+        sortedSubs.forEach(s => {
+            const matchEntry = Array.from(facilityMap.entries()).find(([id, f]) => f['اسم_المؤسسة'] === s['اسم_المؤسسة'] && f['الولاية'] === s['الولاية'] && f['المحلية'] === s['المحلية']);
+            
+            if (matchEntry) {
+                const [id, match] = matchEntry;
+                const merged = { ...match };
+                
+                Object.keys(s).forEach(k => {
+                    if (!['_mergedSubmissionIds', 'submissionId', 'submittedAt', 'createdAt', 'lastSnapshotAt', 'updated_by', 'اخر تحديث', 'imnci_staff', 'eenc_staff', 'neonatal_staff', 'critical_staff', 'neonatal_level_of_care'].includes(k)) {
+                        if (norm(s[k]) !== norm(match[k]) && s[k] !== undefined) merged[k] = s[k];
+                    }
+                });
+
+                const STAFF_ARRAY_KEYS = ['imnci_staff', 'eenc_staff', 'neonatal_staff', 'critical_staff'];
+                STAFF_ARRAY_KEYS.forEach(staffKey => {
+                    let matchStaff = [];
+                    try { matchStaff = Array.isArray(match[staffKey]) ? match[staffKey] : JSON.parse(match[staffKey] || '[]'); } catch(e){}
+                    if(!Array.isArray(matchStaff)) matchStaff = [];
+                    
+                    const sStaff = Array.isArray(s[staffKey]) ? s[staffKey] : [];
+                    const maxLen = Math.max(matchStaff.length, sStaff.length);
+                    const mergedStaff = [];
+                    
+                    for(let i=0; i<maxLen; i++) {
+                        const b = matchStaff[i] || {};
+                        const cur = sStaff[i] || {};
+                        const mergedMem = { ...b };
+                        new Set([...Object.keys(b), ...Object.keys(cur)]).forEach(f => {
+                            if(norm(cur[f]) !== norm(b[f]) && cur[f] !== undefined) mergedMem[f] = cur[f];
+                        });
+                        if(Object.keys(mergedMem).length > 0) mergedStaff.push(mergedMem);
+                    }
+                    merged[staffKey] = mergedStaff;
+                });
+
+                facilityMap.set(id, merged);
+            } else {
+                facilityMap.set(`pending_${s.submissionId || s.id}`, { ...s, id: `pending_${s.submissionId || s.id}` });
+            }
+        });
+
+        return Array.from(facilityMap.values());
+    }, [healthFacilities, pendingFacSubs]);
+
+
     const [activeScreen, setActiveScreen] = useState('list'); 
     const [editingParticipant, setEditingParticipant] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -1777,12 +1867,10 @@ export function ParticipantsView({
     const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
     const [certActionModal, setCertActionModal] = useState({ isOpen: false, data: null });
 
-    // State setup for manual action validation popup modal
     const [syncPreviewModal, setSyncPreviewModal] = useState({ isOpen: false, facilitiesToUpsert: [], serviceType: '', staffField: '' });
     
-    // --- UPDATED: LOCAL COURSE STATE FIX ---
     const [localApprovalStatus, setLocalApprovalStatus] = useState(course?.isCertificateApproved);
-    const [localCourseData, setLocalCourseData] = useState(course); // Tracks the full updated course object
+    const [localCourseData, setLocalCourseData] = useState(course);
 
     useEffect(() => {
         setLocalCourseData(course);
@@ -1815,42 +1903,33 @@ export function ParticipantsView({
         fetchFacilitators(); 
     }, [fetchFederalCoordinators, fetchFacilitators]);
 
-    // 1. Incremental Sync: Ensure we fetch any new participants incrementally when the view opens
     useEffect(() => {
         if (course?.id && fetchParticipants) {
-            // The 'true' flag tells your DataCache to perform an incremental sync
             fetchParticipants(true);
         }
     }, [course?.id, fetchParticipants]);
 
-    // 2. Real-time Certificate Approval Sync: Auto-unlock certificates when approved on the server
     useEffect(() => {
         if (!course?.id) return;
-
-        // Attach a real-time listener to the specific course document
         const courseRef = doc(db, 'courses', course.id);
         const unsubscribe = onSnapshot(courseRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setLocalApprovalStatus(data.isCertificateApproved === true);
-                setLocalCourseData({ id: docSnap.id, ...data }); // THIS FIXES THE SIGNATURE BUG
+                setLocalCourseData({ id: docSnap.id, ...data }); 
             }
         });
-
-        // Cleanup the listener when the component unmounts or course changes
         return () => unsubscribe();
     }, [course?.id]);
 
-    // Added Logic to Sync Coverage Snapshot with Database Dynamically
     const syncCourseCoverageSnapshot = async (updatedParticipantsList) => {
         if (!course?.coverageSnapshot || course.course_type !== 'IMNCI') return;
 
-        // 1. Identify unique new PHC facilities from the participant list
         const newPhcMap = new Map();
         updatedParticipantsList.forEach(p => {
             if (p.introduced_imci_to_facility) {
                 let isHospital = false;
-                const matchedFacility = healthFacilities?.find(f => f['مستشفى'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state);
+                const matchedFacility = mergedHealthFacilities?.find(f => f['مستشفى'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state);
                 
                 if (matchedFacility && matchedFacility['نوع_المؤسسةالصحية']) {
                     isHospital = ['مستشفى', 'مستشفى ريفي'].includes(matchedFacility['نوع_المؤسسةالصحية']);
@@ -1868,7 +1947,6 @@ export function ParticipantsView({
         const updatedSnapshot = JSON.parse(JSON.stringify(course.coverageSnapshot));
         let hasChanges = false;
 
-        // 2. Recalculate Locality Coverage
         updatedSnapshot.localityCoverage?.forEach(l => {
             const count = uniqueNewPhcKeys.filter(key => key.includes(`-${l.name}-`)).length;
             if (l.newPhc !== count) {
@@ -1879,7 +1957,6 @@ export function ParticipantsView({
             }
         });
 
-        // 3. Recalculate State Coverage
         updatedSnapshot.stateCoverage?.forEach(s => {
             const count = uniqueNewPhcKeys.filter(key => key.startsWith(`${s.name}-`)).length;
             if (s.newPhc !== count) {
@@ -1890,7 +1967,6 @@ export function ParticipantsView({
             }
         });
 
-        // 4. Save to Firestore if numbers changed
         if (hasChanges) {
             try {
                 await updateDoc(doc(db, 'courses', course.id), { coverageSnapshot: updatedSnapshot });
@@ -1900,7 +1976,6 @@ export function ParticipantsView({
         }
     };
 
-    // Action validation preparation stage
     const handlePrepareSyncPreview = () => {
         if (!participants || participants.length === 0) {
             setToast({ show: true, message: 'No participants to sync.', type: 'info' });
@@ -1922,7 +1997,7 @@ export function ParticipantsView({
             let existingPayload = facilityUpdatesMap.get(facilityKey);
             
             if (!existingPayload) {
-                const existingFacility = healthFacilities?.find(f => 
+                const existingFacility = mergedHealthFacilities?.find(f => 
                     (p.facilityId && f.id === p.facilityId) || 
                     (!p.facilityId && f['اسم_المؤسسة'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state)
                 );
@@ -1985,7 +2060,6 @@ export function ParticipantsView({
     const handleConfirmSyncToFirebase = async () => {
         setIsProcessing(true);
         try {
-            // Write each mapped facility directly to Firebase registry
             const promises = syncPreviewModal.facilitiesToUpsert.map(fac => saveFacilitySnapshot(fac));
             await Promise.all(promises);
 
@@ -2027,7 +2101,6 @@ export function ParticipantsView({
         });
     }, [participants, groupFilter, jobTitleFilter, facilityFilter, localityFilter, subTypeFilter, course.facilitatorAssignments]);
 
-    // Handlers
     const toggleExpandParticipant = (id) => {
         setExpandedParticipantId(prev => (prev === id ? null : id));
     };
@@ -2040,7 +2113,6 @@ export function ParticipantsView({
             try {
                 await deleteParticipant(participantId, currentUserIdentifier);
                 
-                // Calculate the new array and update DB to keep Coverage in sync
                 const updatedParticipantsList = participants.filter(p => p.id !== participantId);
                 await syncCourseCoverageSnapshot(updatedParticipantsList);
 
@@ -2068,7 +2140,6 @@ export function ParticipantsView({
             };
             const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData, currentUserIdentifier);
             
-            // Calculate the new array and update DB to keep Coverage in sync
             const updatedParticipantsList = [...(participants || []).filter(p => p.id !== (editingParticipant?.id || savedParticipant.id)), fullPayload];
             await syncCourseCoverageSnapshot(updatedParticipantsList);
 
@@ -2083,7 +2154,6 @@ export function ParticipantsView({
         }
     };
 
-    // Corrected handleAdvancedSave execution logic to allow discrete updates
     const handleAdvancedSave = async (participantsData, facilitiesData) => {
         if ((!participantsData || participantsData.length === 0) && (!facilitiesData || facilitiesData.length === 0)) return;
         setIsProcessing(true);
@@ -2131,7 +2201,6 @@ export function ParticipantsView({
                 await Promise.all(facilitiesToUpsert.map(f => saveFacilitySnapshot(f)));
             }
 
-            // Re-sync coverage snapshot after an import
             const newParticipantsList = [...(participants || []), ...participantsWithCourseId];
             await syncCourseCoverageSnapshot(newParticipantsList);
 
@@ -2178,7 +2247,7 @@ export function ParticipantsView({
             if (snapshot.exists()) {
                 const data = snapshot.data();
                 setLocalApprovalStatus(data.isCertificateApproved === true);
-                setLocalCourseData({ id: snapshot.id, ...data }); // Ensure we sync full updated data
+                setLocalCourseData({ id: snapshot.id, ...data }); 
                 setToast({ show: true, message: data.isCertificateApproved ? 'Status updated! Certificates are approved.' : 'Status refreshed. Still pending.', type: data.isCertificateApproved ? 'success' : 'info' });
             }
         } catch (error) {
@@ -2196,7 +2265,6 @@ export function ParticipantsView({
         setDownloadProgress({ current: 0, total: 1 });
         
         try {
-            // UPDATED: Use localCourseData which contains the signature URLs from the onSnapshot
             const canvas = await generateCertificatePdf(localCourseData, p, federalProgramManagerName, participantSubCourse, language, facilitators, federalCoordinators);
             
             if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
@@ -2235,7 +2303,6 @@ export function ParticipantsView({
         setDownloadProgress({ current: 0, total: filtered.length }); 
 
         try {
-             // UPDATED: Use localCourseData
              await generateAllCertificatesPdf(localCourseData, filtered, federalProgramManagerName, language, (current, total) => {
                  if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
                  setDownloadProgress({ current, total });
@@ -2258,7 +2325,6 @@ export function ParticipantsView({
         setIsGeneratingTemplate(true);
         setIsProcessing(true);
         try {
-            // UPDATED: Use localCourseData
             const canvas = await generateBlankCertificatePdf(localCourseData, federalProgramManagerName, language, facilitators, federalCoordinators);
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
@@ -2295,7 +2361,6 @@ export function ParticipantsView({
         setEmailModalOpen(true);
     };
 
-    // Render logic
     if (activeScreen === 'form') {
         return (
             <ParticipantForm 
@@ -2327,7 +2392,6 @@ export function ParticipantsView({
                 onCancel={() => setIsBulkEditing(false)}
                 onSave={async (pData, fData) => {
                     await handleAdvancedSave(pData, fData);
-                    // Also trigger the coverage snapshot update upon mass edit
                     const updatedParticipantsList = participants.map(orig => pData.find(u => u.id === orig.id) || orig);
                     await syncCourseCoverageSnapshot(updatedParticipantsList);
 
@@ -2389,6 +2453,7 @@ export function ParticipantsView({
                 onImport={handleImportParticipants}
                 course={course}
                 participants={participants} 
+                facilitiesList={mergedHealthFacilities}
                 setToast={setToast}
             />
 
@@ -2396,6 +2461,7 @@ export function ParticipantsView({
                 isOpen={isCleanupModalOpen}
                 onClose={() => setIsCleanupModalOpen(false)}
                 participants={participants} 
+                facilitiesList={mergedHealthFacilities}
                 onSave={handleAdvancedSave}
                 courseType={course.course_type}
                 setToast={setToast}
@@ -2405,6 +2471,7 @@ export function ParticipantsView({
                 isOpen={isBulkChangeModalOpen}
                 onClose={() => setIsBulkChangeModalOpen(false)}
                 participants={participants} 
+                facilitiesList={mergedHealthFacilities}
                 onSave={handleAdvancedSave}
                 courseType={course.course_type}
                 setToast={setToast}
@@ -2414,7 +2481,6 @@ export function ParticipantsView({
             <ShareCoursePageModal isOpen={sharePageModalOpen} onClose={() => setSharePageModalOpen(false)} courseId={course.id} courseName={course.course_type} />
             <EmailCertificateModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} participants={emailTargets} isBulk={isBulkEmail} setToast={setToast} />
 
-            {/* Action Validation Confirmation Popup Modal */}
             <Modal 
                 isOpen={syncPreviewModal.isOpen} 
                 onClose={() => !isProcessing && setSyncPreviewModal(prev => ({ ...prev, isOpen: false }))} 
@@ -2543,25 +2609,21 @@ export function ParticipantsView({
                 </div>
             </Modal>
 
-            {/* Top Functions & Filters (Always Visible) */}
             <div className="flex flex-col gap-4 mb-4">
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <div className="flex flex-wrap gap-2 items-center">
-                        {/* Standard Add Button remains visible for quick access */}
                         {canAddParticipant && (
                             <Button onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>
                                 Add Participant
                             </Button>
                         )}
 
-                        {/* Advanced Actions Popup Button */}
                         {finalAdvancedPerm && (
                             <Button variant="secondary" onClick={() => setIsAdvancedActionsModalOpen(true)} disabled={isProcessing}>
                                 Advanced User Actions
                             </Button>
                         )}
 
-                        {/* Certificate Management Popup Button */}
                         {finalCertPerm && (
                             <Button variant="secondary" onClick={() => setIsCertManagementModalOpen(true)} disabled={isProcessing} className="bg-slate-800 text-white hover:bg-slate-700 border-transparent">
                                 Certificate Management
@@ -2588,7 +2650,6 @@ export function ParticipantsView({
                 </div>
             </div>
 
-            {/* Desktop View (Compact, Single-Row Layout with Borders) */}
             <div className="hidden md:block overflow-hidden bg-white rounded-xl shadow-sm">
                 <table className="w-full text-left border-collapse border border-slate-300 text-sm">
                     <thead>
@@ -2610,7 +2671,6 @@ export function ParticipantsView({
 
                             return (
                                 <tr key={p.id} className="hover:bg-blue-50/50 transition-colors group">
-                                    {/* Participant Info & Role */}
                                     <td className="p-3 align-middle border border-slate-200">
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
@@ -2620,7 +2680,6 @@ export function ParticipantsView({
                                         </div>
                                     </td>
 
-                                    {/* Facility & Location */}
                                     <td className="p-3 align-middle border border-slate-200">
                                         <div className="text-[12px] font-semibold text-gray-700 whitespace-nowrap truncate max-w-[220px]">
                                             {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}
@@ -2628,13 +2687,11 @@ export function ParticipantsView({
                                         {p.locality && <div className="text-[11px] text-gray-500 whitespace-nowrap">Locality: {p.locality}</div>}
                                     </td>
                                     
-                                    {/* Activity (Compact) */}
                                     <td className="p-3 align-middle border border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
                                         <div>{createdDate}</div>
                                         <div className="truncate max-w-[90px]" title={p.createdBy || 'Legacy'}>By: {p.createdBy || 'Legacy'}</div>
                                     </td>
 
-                                    {/* Actions */}
                                     <td className="p-3 align-middle border border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
                                             
@@ -2652,7 +2709,6 @@ export function ParticipantsView({
                                                 </Button>
                                             )}
 
-                                            {/* Consolidated Certificate Button */}
                                             {isCertApproved && finalCertPerm && (
                                                 <Button 
                                                     variant="secondary" 
@@ -2688,7 +2744,6 @@ export function ParticipantsView({
                 </table>
             </div>
 
-            {/* Mobile View */}
             <div className="grid gap-4 md:hidden">
                 {filtered.length > 0 ? filtered.map(p => {
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
@@ -2764,7 +2819,7 @@ const parseBool = (val) => val === 'yes' ? true : (val === 'no' ? false : null);
 const parseStr = (val) => val === 'yes' ? 'Yes' : (val === 'no' ? 'No' : '');
 
 export function ParticipantForm({ course, initialData, onCancel, onSave }) {
-    const { fetchHealthFacilities } = useDataCache();
+    const { healthFacilities } = useDataCache();
     const isImnci = course.course_type === 'IMNCI';
     const isIccm = course.course_type === 'ICCM';
     const isCpcm = course.course_type === 'Comprehensive Package For Community Midwives';
@@ -2814,7 +2869,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [trainedIMNCI, setTrainedIMNCI] = useState(getBoolState(initialData?.trained_before));
     const [lastTrainIMNCI, setLastTrainIMNCI] = useState(initialData?.last_imci_training || '');
     
-    // Updated IMNCI Staff Stats Table States
     const [imnciDoctorsTotal, setImnciDoctorsTotal] = useState(initialData?.imnci_doctors_total ?? '');
     const [imnciDoctorsTrained, setImnciDoctorsTrained] = useState(initialData?.imnci_doctors_trained ?? '');
     const [imnciMedicalAssistantsTotal, setImnciMedicalAssistantsTotal] = useState(initialData?.imnci_medical_assistants_total ?? '');
@@ -2862,10 +2916,58 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             if (state && locality && !isIccm && !isCpcm && !isProgramManagement) {
                 setIsLoadingFacilities(true);
                 try {
-                    const facilities = await fetchHealthFacilities({ state, locality }, false);
-                    setFacilitiesInLocality(facilities);
+                    const approvedFacilities = healthFacilities ? healthFacilities.filter(f => f['الولاية'] === state && f['المحلية'] === locality) : [];
+                    const pendingSubs = await listPendingFacilitySubmissions();
+                    const relevantPending = pendingSubs.filter(s => s['الولاية'] === state && s['المحلية'] === locality);
+                    relevantPending.sort((a,b) => (a.submittedAt?.toMillis?.() || 0) - (b.submittedAt?.toMillis?.() || 0));
+
+                    const norm = (v) => (v === undefined || v === null) ? '' : String(v).trim();
+                    const facilityMap = new Map();
+                    approvedFacilities.forEach(f => facilityMap.set(f.id, { ...f }));
+
+                    relevantPending.forEach(s => {
+                        const matchEntry = Array.from(facilityMap.entries()).find(([_, f]) => f['اسم_المؤسسة'] === s['اسم_المؤسسة']);
+                        if (matchEntry) {
+                            const [id, match] = matchEntry;
+                            const merged = { ...match };
+                            
+                            Object.keys(s).forEach(k => {
+                                if (!['_mergedSubmissionIds', 'submissionId', 'submittedAt', 'createdAt', 'lastSnapshotAt', 'updated_by', 'اخر تحديث', 'imnci_staff', 'eenc_staff', 'neonatal_staff', 'critical_staff', 'neonatal_level_of_care'].includes(k)) {
+                                    if (norm(s[k]) !== norm(match[k]) && s[k] !== undefined) merged[k] = s[k];
+                                }
+                            });
+
+                            const STAFF_ARRAY_KEYS = ['imnci_staff', 'eenc_staff', 'neonatal_staff', 'critical_staff'];
+                            STAFF_ARRAY_KEYS.forEach(staffKey => {
+                                let matchStaff = [];
+                                try { matchStaff = Array.isArray(match[staffKey]) ? match[staffKey] : JSON.parse(match[staffKey] || '[]'); } catch(e){}
+                                if (!Array.isArray(matchStaff)) matchStaff = [];
+                                const sStaff = Array.isArray(s[staffKey]) ? s[staffKey] : [];
+                                
+                                const maxLen = Math.max(matchStaff.length, sStaff.length);
+                                const mergedStaff = [];
+                                for(let i=0; i<maxLen; i++) {
+                                    const b = matchStaff[i] || {};
+                                    const cur = sStaff[i] || {};
+                                    const mergedMem = { ...b };
+                                    new Set([...Object.keys(b), ...Object.keys(cur)]).forEach(f => {
+                                        if(norm(cur[f]) !== norm(b[f]) && cur[f] !== undefined) mergedMem[f] = cur[f];
+                                    });
+                                    if(Object.keys(mergedMem).length > 0) mergedStaff.push(mergedMem);
+                                }
+                                merged[staffKey] = mergedStaff;
+                            });
+                            facilityMap.set(id, merged);
+                        } else {
+                            facilityMap.set(`pending_${s.submissionId || s.id}`, { ...s, id: `pending_${s.submissionId || s.id}` });
+                        }
+                    });
+
+                    const mergedFacilities = Array.from(facilityMap.values());
+                    setFacilitiesInLocality(mergedFacilities);
+                    
                     if (initialData?.facilityId) {
-                         const matchedFacility = facilities.find(f => f.id === initialData.facilityId);
+                         const matchedFacility = mergedFacilities.find(f => f.id === initialData.facilityId);
                          if(matchedFacility){
                              setSelectedFacility(matchedFacility);
                              setCenter(matchedFacility['اسم_المؤسسة']);
@@ -2874,7 +2976,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                              setSelectedFacility(null);
                          }
                     } else if (initialData?.center_name) {
-                         const matchedFacility = facilities.find(f => f['اسم_المؤسسة'] === initialData.center_name);
+                         const matchedFacility = mergedFacilities.find(f => f['اسم_المؤسسة'] === initialData.center_name);
                           if(matchedFacility){
                              setSelectedFacility(matchedFacility);
                              setCenter(matchedFacility['اسم_المؤسسة']);
@@ -2883,7 +2985,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                              setSelectedFacility(null);
                          }
                     }
-
                 } catch (err) {
                     console.error("Facility fetch error:", err);
                     setError("فشل في تحميل المؤسسات الصحية لهذا الموقع.");
@@ -2904,8 +3005,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
              setIsLoadingFacilities(false);
              isInitialLoad.current = false;
         }
-
-    }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm, isCpcm, isProgramManagement, fetchHealthFacilities]); 
+    }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm, isCpcm, isProgramManagement, healthFacilities]); 
 
     const handleFacilitySelect = (facilityId) => {
         setError('');
@@ -2921,40 +3021,37 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             setPhone('');
             setEmail('');
         }
-
-        if (isImnci) {
-            if (facility) {
-                 setHasNutri(getStrState(facility.nutrition_center_exists));
-                 setNearestNutri(facility.nearest_nutrition_center || '');
-                 setHasImm(getStrState(facility.immunization_office_exists));
-                 setNearestImm(facility.nearest_immunization_center || '');
-                 setHasORS(getStrState(facility['غرفة_إرواء']));
-                 
-                 setImnciDoctorsTotal(facility.imnci_doctors_total ?? '');
-                 setImnciDoctorsTrained(facility.imnci_doctors_trained ?? '');
-                 setImnciMedicalAssistantsTotal(facility.imnci_medical_assistants_total ?? '');
-                 setImnciMedicalAssistantsTrained(facility.imnci_medical_assistants_trained ?? '');
-                 
-                 setHasWeightScale(getStrState(facility['ميزان_وزن']));
-                 setHasHeightScale(getStrState(facility['ميزان_طول']));
-                 setHasThermometer(getStrState(facility['ميزان_حرارة']));
-                 setHasTimer(getStrState(facility['ساعة_ مؤقت'])); 
-                 setHasImnciRegister(getStrState(facility['وجود_سجل_علاج_متكامل']));
-                 setHasChartBooklet(getStrState(facility['وجود_كتيب_لوحات']));
-                 setHasGrowthMonitoring(getStrState(facility.growth_monitoring_service_exists));
-                 setTrainedIMNCI('');
-                 setLastTrainIMNCI('');
-            } else {
-                 setHasNutri(''); setNearestNutri('');
-                 setHasImm(''); setNearestImm('');
-                 setHasORS('');
-                 setImnciDoctorsTotal(''); setImnciDoctorsTrained(''); setImnciMedicalAssistantsTotal(''); setImnciMedicalAssistantsTrained('');
-                 setHasWeightScale(''); setHasHeightScale(''); setHasThermometer(''); setHasTimer(''); setHasGrowthMonitoring('');
-                 setHasImnciRegister(''); setHasChartBooklet('');
-                 setTrainedIMNCI(''); setLastTrainIMNCI('');
-            }
-        }
     };
+
+    useEffect(() => {
+        if (isImnci && selectedFacility) {
+            setHasNutri(getStrState(selectedFacility.nutrition_center_exists));
+            setNearestNutri(selectedFacility.nearest_nutrition_center || '');
+            setHasImm(getStrState(selectedFacility.immunization_office_exists));
+            setNearestImm(selectedFacility.nearest_immunization_center || '');
+            setHasORS(getStrState(selectedFacility['غرفة_إرواء']));
+            
+            setImnciDoctorsTotal(selectedFacility.imnci_doctors_total ?? '');
+            setImnciDoctorsTrained(selectedFacility.imnci_doctors_trained ?? '');
+            setImnciMedicalAssistantsTotal(selectedFacility.imnci_medical_assistants_total ?? '');
+            setImnciMedicalAssistantsTrained(selectedFacility.imnci_medical_assistants_trained ?? '');
+            
+            setHasWeightScale(getStrState(selectedFacility['ميزان_وزن']));
+            setHasHeightScale(getStrState(selectedFacility['ميزان_طول']));
+            setHasThermometer(getStrState(selectedFacility['ميزان_حرارة']));
+            setHasTimer(getStrState(selectedFacility['ساعة_ مؤقت'])); 
+            setHasImnciRegister(getStrState(selectedFacility['وجود_سجل_علاج_متكامل']));
+            setHasChartBooklet(getStrState(selectedFacility['وجود_كتيب_لوحات']));
+            setHasGrowthMonitoring(getStrState(selectedFacility.growth_monitoring_service_exists));
+        } else if (isImnci && !selectedFacility && !isInitialLoad.current) {
+             setHasNutri(''); setNearestNutri('');
+             setHasImm(''); setNearestImm('');
+             setHasORS('');
+             setImnciDoctorsTotal(''); setImnciDoctorsTrained(''); setImnciMedicalAssistantsTotal(''); setImnciMedicalAssistantsTrained('');
+             setHasWeightScale(''); setHasHeightScale(''); setHasThermometer(''); setHasTimer(''); setHasGrowthMonitoring('');
+             setHasImnciRegister(''); setHasChartBooklet('');
+        }
+    }, [selectedFacility, isImnci]);
 
     const handleFacilitySelectFromModal = (facility) => {
         handleFacilitySelect(facility.id);

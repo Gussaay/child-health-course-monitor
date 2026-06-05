@@ -1,7 +1,7 @@
 // VisitReports.jsx
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { getAuth } from "firebase/auth";
-import { Timestamp, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../../firebase'; 
 import { 
@@ -571,7 +571,7 @@ export const IMNCIVisitReport = ({
             const payload = {
                 ...formData,
                 trained_skills: updatedTrainedSkills, 
-                essential_tools: capturedEssentialTools, // Automated snapshot mapping 
+                essential_tools: capturedEssentialTools, 
                 visitNumber: parseInt(formData.visitNumber) || 1,
                 imageUrls: finalImageUrls,
                 facilityId: facility.id,
@@ -603,29 +603,36 @@ export const IMNCIVisitReport = ({
                 localStorage.setItem(offlineKey, savedVisitNumber.toString());
             }
 
-            // --- TRIGGER POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
+            // --- TRIGGER DB SAVE AND POPUP NOTIFICATION FOR FEDERAL MANAGERS ---
             try {
                 const isUpdate = !!existingReportData?.id;
-                let submitterRole = 'User';
-                
-                // Fetch user's role
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists()) {
-                    submitterRole = (userDoc.data().role || 'user').replace(/_/g, ' ');
-                }
-
-                const submitterName = user.displayName || user.email;
+                const submitterName = user.displayName || user.email || 'A monitor';
                 const actionText = isUpdate ? 'updated an existing' : 'submitted a new';
                 const notifTitle = isUpdate ? `Visit Report Updated` : `New Visit Report Submitted`;
-                const notifBody = `${submitterName} (${submitterRole}) has ${actionText} IMNCI visit report for ${facility['اسم_المؤسسة']}.`;
+                const notifBody = `${submitterName} has ${actionText} visit report for ${facility['اسم_المؤسسة']}.`;
 
+                // 1. DISTINCT DB SAVE
+                await addDoc(collection(db, 'notifications'), {
+                    title: notifTitle,
+                    message: notifBody,
+                    targetUser: 'managers_and_super_users',
+                    createdAt: serverTimestamp(),
+                    deliveredTo: [],
+                    readBy: [],
+                    deletedBy: [],
+                    status: 'active',
+                    actionView: 'skillsMentorship'
+                });
+
+                // 2. FIRE AND FORGET PUSH NOTIFICATION
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 
-                await sendFCMNotification({
+                sendFCMNotification({
                     targetUserId: 'managers_and_super_users',
                     title: notifTitle,
-                    body: notifBody
+                    body: notifBody,
+                    data: { actionView: 'skillsMentorship' } 
                 }).catch(e => console.warn("FCM Send Error: Notification popup skipped.", e));
             } catch (fcmError) {
                 console.warn("FCM Send Error: Notification popup skipped.", fcmError);
@@ -1368,14 +1375,28 @@ export const EENCVisitReport = ({
                 localStorage.setItem(offlineKey, payload.visitNumber.toString());
             }
 
-            // --- TRIGGER FIRE-AND-FORGET REAL-TIME POPUP NOTIFICATION FOR FEDERAL MANAGERS & SUPER USERS ---
+            // --- TRIGGER DB SAVE AND POPUP NOTIFICATION FOR FEDERAL MANAGERS ---
             try {
                 const isUpdate = !!existingReportData?.id;
                 const submitterName = user.displayName || user.email || 'A monitor';
                 const actionText = isUpdate ? 'updated an existing' : 'submitted a new';
                 const notifTitle = isUpdate ? `Visit Report Updated` : `New Visit Report Submitted`;
-                const notifBody = `${submitterName} has ${actionText} EENC visit report for ${facility['اسم_المؤسسة']}.`;
+                const notifBody = `${submitterName} has ${actionText} visit report for ${facility['اسم_المؤسسة']}.`;
 
+                // 1. DISTINCT DB SAVE
+                await addDoc(collection(db, 'notifications'), {
+                    title: notifTitle,
+                    message: notifBody,
+                    targetUser: 'managers_and_super_users',
+                    createdAt: serverTimestamp(),
+                    deliveredTo: [],
+                    readBy: [],
+                    deletedBy: [],
+                    status: 'active',
+                    actionView: 'skillsMentorship'
+                });
+
+                // 2. FIRE AND FORGET PUSH NOTIFICATION
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 

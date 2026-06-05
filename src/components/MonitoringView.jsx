@@ -9,7 +9,6 @@ import {
     EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING,
     SKILLS_ETAT, ETAT_DOMAINS, ETAT_DOMAIN_LABEL,
     DOMAINS_BY_AGE_IMNCI, DOMAIN_LABEL_IMNCI, getClassListImnci,
-    // --- MODIFICATION: Import new ICCM constants ---
     SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL,
 } from './constants.js';
 import {
@@ -19,7 +18,7 @@ import {
     deleteCaseAndObservations,
 } from "../data.js";
 
-// --- NEW HELPER FUNCTION for Performance Optimization ---
+// --- HELPERS for Performance Optimization ---
 const generateHash = (buffer) => {
     return Object.keys(buffer)
         .sort()
@@ -27,16 +26,9 @@ const generateHash = (buffer) => {
         .join('|');
 };
 
-// --- NEW REUSABLE COMPONENT for the Segmented Control UI ---
-/**
- * A reusable segmented control for actions.
- * @param {Array} options - Array of [label, value, activeClassName]
- * @param {*} currentValue - The current selected value (mark)
- * @param {Function} onClick - The toggle function (d, cls, v)
- */
+// --- REUSABLE COMPONENT for the Segmented Control UI ---
 function ActionToggle({ options, currentValue, onClick }) {
     return (
-        // --- MODIFICATION: Added flex-shrink-0 to prevent shrinking in flex layouts ---
         <div className="relative z-0 inline-flex shadow-sm rounded-md flex-shrink-0">
             {options.map(([label, value, activeClass], idx) => {
                 const isSelected = currentValue === value;
@@ -64,10 +56,7 @@ function ActionToggle({ options, currentValue, onClick }) {
         </div>
     );
 }
-// --- END NEW COMPONENT ---
 
-
-// --- MODIFICATION: Added isPublicView prop ---
 export function ObservationView({ course, participant, participants, onChangeParticipant, initialCaseToEdit, isPublicView = false }) {
     const [observations, setObservations] = useState([]);
     const [cases, setCases] = useState([]);
@@ -84,17 +73,13 @@ export function ObservationView({ course, participant, participants, onChangePar
     const [eencScenario, setEencScenario] = useState('breathing');
     const [isSaving, setIsSaving] = useState(false);
     
-    // --- MODIFICATION: Added states for gating flow ---
     const [showSetupModal, setShowSetupModal] = useState(true);
     const [showGrid, setShowGrid] = useState(false);
-    
-    // --- MODIFICATION: Changed to modal state ---
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     
     const isImnci = course.course_type === 'IMNCI';
     const isEenc = course.course_type === 'EENC';
-    const isEtat = course.course_type === 'ETAT';
-    // --- MODIFICATION: Add isIccm flag ---
+    const isLegalEtat = course.course_type === 'ETAT';
     const isIccm = course.course_type === 'ICCM';
 
     const handleEditCase = (caseToEdit, allObservations) => {
@@ -150,7 +135,6 @@ export function ObservationView({ course, participant, participants, onChangePar
 
     useEffect(() => {
         if (editingCase) return;
-        // --- MODIFICATION: Calculate serial based on Day of Course, not Encounter Date ---
         const sameDayCases = cases.filter(c => c.day_of_course === dayOfCourse);
         const maxS = sameDayCases.reduce((m, x) => Math.max(m, x.case_serial || 0), 0);
         setCaseSerial(Math.max(1, maxS + 1));
@@ -166,24 +150,18 @@ export function ObservationView({ course, participant, participants, onChangePar
 
         if (!editingCase) { 
             const newHash = generateHash(buffer);
-            
             if (newHash.length > 0) {
                 const duplicateCase = cases.find(c => c.contentHash === newHash);
-
                 if (duplicateCase) {
                     const confirmSubmit = window.confirm(
                         `WARNING: This case appears to be an exact duplicate of a case previously submitted on ${duplicateCase.encounter_date} (Serial #${duplicateCase.case_serial}).\n\nAre you sure you want to submit this duplicate case?`
                     );
-                    
-                    if (!confirmSubmit) {
-                        return; 
-                    }
+                    if (!confirmSubmit) return; 
                 }
             }
         }
 
         setIsSaving(true);
-
         const entries = Object.entries(buffer);
 
         if (isEenc) {
@@ -205,19 +183,17 @@ export function ObservationView({ course, participant, participants, onChangePar
         const currentCaseSerial = editingCase ? editingCase.case_serial : caseSerial;
         const allCorrect = entries.every(([, v]) => v > 0);
 
-        // --- MODIFICATION: Determine age_group based on all course types ---
         let ageGroup;
         if (isImnci) ageGroup = age;
         else if (isEenc) ageGroup = `EENC_${eencScenario}`;
-        else if (isEtat) ageGroup = 'ETAT';
+        else if (isLegalEtat) ageGroup = 'ETAT';
         else if (isIccm) ageGroup = 'ICCM';
         else ageGroup = 'N/A';
-        // --- END MODIFICATION ---
 
         const caseData = {
             courseId: course.id, participant_id: participant.id, encounter_date: encounterDate,
             setting: isImnci ? setting : 'N/A', 
-            age_group: ageGroup, // <-- Use new ageGroup variable
+            age_group: ageGroup, 
             case_serial: currentCaseSerial, day_of_course: dayOfCourse, allCorrect: allCorrect,
             contentHash: generateHash(buffer)
         };
@@ -233,9 +209,8 @@ export function ObservationView({ course, participant, participants, onChangePar
             let ageGroupForObs;
             if (isImnci) ageGroupForObs = age;
             else if (isEenc) ageGroupForObs = eencScenario;
-            if (ageGroupForObs) {
-                observationData.age_group = ageGroupForObs;
-            }
+            if (ageGroupForObs) observationData.age_group = ageGroupForObs;
+            
             if (caseAgeMonths !== '' && caseAgeMonths !== null) {
                 observationData.case_age_months = Number(caseAgeMonths);
             }
@@ -243,13 +218,10 @@ export function ObservationView({ course, participant, participants, onChangePar
         });
 
         try {
-            // This line was causing the error, but the fix is in data.js
             const { savedCase, savedObservations } = await upsertCaseAndObservations(caseData, newObservations, editingCase?.id);
 
             if (editingCase) {
-                setCases(prevCases => prevCases.map(c => 
-                    c.id === editingCase.id ? savedCase : c
-                ));
+                setCases(prevCases => prevCases.map(c => c.id === editingCase.id ? savedCase : c));
                 setObservations(prevObs => [
                     ...prevObs.filter(o => o.caseId !== editingCase.id),
                     ...savedObservations
@@ -259,9 +231,7 @@ export function ObservationView({ course, participant, participants, onChangePar
                 setObservations(prevObs => [...prevObs, ...savedObservations]);
             }
 
-            // --- MODIFICATION: Show Success Modal ---
             setShowSuccessModal(true);
-            
             setBuffer({});
             setCaseAgeMonths('');
             setEditingCase(null);
@@ -275,7 +245,6 @@ export function ObservationView({ course, participant, participants, onChangePar
 
     const handleDeleteCase = async (caseToDelete) => {
         if (!window.confirm('Delete this case and all its observations? This cannot be undone.')) return;
-        
         try {
             await deleteCaseAndObservations(caseToDelete.id);
             setCases(prev => prev.filter(c => c.id !== caseToDelete.id));
@@ -292,7 +261,7 @@ export function ObservationView({ course, participant, participants, onChangePar
             
             {error && <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div></Card>}
             
-            {/* --- MODIFICATION: Success Modal Pop-up --- */}
+            {/* Success Modal Pop-up */}
             <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} title="Submission Successful">
                 <div className="p-6 text-center">
                     <div className="flex justify-center mb-4">
@@ -309,30 +278,11 @@ export function ObservationView({ course, participant, participants, onChangePar
                     </Button>
                 </div>
             </Modal>
-            {/* --- END MODIFICATION --- */}
 
-            {/* --- NEW SETUP MODAL --- */}
+            {/* Case Setup Modal */}
             <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Case Setup Configuration" size="lg">
                 <div className="p-4">
-                    <div className="bg-sky-50 p-4 rounded border border-sky-100 mb-5">
-                        <h4 className="font-semibold text-sky-800 mb-2">Previous Cases for {participant?.name}</h4>
-                        {cases.length === 0 ? (
-                            <p className="text-sm text-sky-700">No cases submitted yet.</p>
-                        ) : (
-                            <div className="text-sm text-sky-700 max-h-32 overflow-y-auto">
-                                <ul className="list-disc pl-5">
-                                    {cases.slice().sort((a,b) => (b.day_of_course - a.day_of_course) || (b.case_serial - a.case_serial)).map(c => (
-                                        <li key={c.id}>
-                                            <span className="font-semibold">Day {c.day_of_course}</span> (Serial: {c.case_serial}) - {c.encounter_date}
-                                            {isImnci && ` - ${c.setting} (${c.age_group === 'LT2M' ? '0-59d' : '2-59m'})`}
-                                            {isEenc && ` - ${c.age_group.replace('EENC_', '')}`}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-
+                    {/* Mentoring visits list container has been removed from here */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {!isPublicView && (
                             <FormGroup label="Select participant" className="sm:col-span-2">
@@ -362,7 +312,7 @@ export function ObservationView({ course, participant, participants, onChangePar
                 </div>
             </Modal>
 
-            {/* Main Action Bar (when grid is not shown) */}
+            {/* Main Action Bar */}
             {!showGrid && !loading && (
                 <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
                     <div>
@@ -376,47 +326,44 @@ export function ObservationView({ course, participant, participants, onChangePar
             )}
 
             {showGrid && (
-            <Card className="p-4 mb-4">
-                <div className="flex justify-between items-start mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
-                    <div>
-                        <h3 className="text-lg font-semibold">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
-                        <p className="text-sm text-slate-600 mt-1">
-                            <span className="font-semibold">Day:</span> {dayOfCourse} &bull; 
-                            <span className="font-semibold ml-2">Date:</span> {encounterDate}
-                            {isImnci && <>&bull; <span className="font-semibold ml-2">Setting:</span> {setting} &bull; <span className="font-semibold ml-2">Age:</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</>}
-                            {isEenc && <>&bull; <span className="font-semibold ml-2">Scenario:</span> {eencScenario === 'breathing' ? 'Breathing' : 'Not Breathing'}</>}
-                        </p>
+                <Card className="p-4 mb-4">
+                    <div className="flex justify-between items-start mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
+                        <div>
+                            <h3 className="text-lg font-semibold">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
+                            <p className="text-sm text-slate-600 mt-1">
+                                <span className="font-semibold">Day:</span> {dayOfCourse} &bull; 
+                                <span className="font-semibold ml-2">Date:</span> {encounterDate}
+                                {isImnci && <>&bull; <span className="font-semibold ml-2">Setting:</span> {setting} &bull; <span className="font-semibold ml-2">Age:</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</>}
+                                {isEenc && <>&bull; <span className="font-semibold ml-2">Scenario:</span> {eencScenario === 'breathing' ? 'Breathing' : 'Not Breathing'}</>}
+                            </p>
+                        </div>
+                        <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>
+                            Edit Setup
+                        </Button>
                     </div>
-                    <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>
-                        Edit Setup
-                    </Button>
-                </div>
 
-                <p className="text-sm text-gray-600 mb-3">Click a domain title to expand/collapse. Select an action for each item.</p>
-                <div className="rounded-lg border border-slate-300">
-                    {isImnci && <ImnciMonitoringGrid age={age} buffer={buffer} toggle={toggle} />}
-                    {isEenc && <EencMonitoringGrid scenario={eencScenario} buffer={buffer} toggle={toggle} />}
-                    {isEtat && <EtatMonitoringGrid buffer={buffer} toggle={toggle} />}
-                    {isIccm && <IccmMonitoringGrid buffer={buffer} toggle={toggle} />}
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 border-t pt-4">
-                    <Button onClick={submitCase} className="w-full sm:w-auto" disabled={isSaving}>
-                        {isSaving ? 'Saving...' : (editingCase ? 'Update Case' : 'Submit Case')}
-                    </Button>
-                    <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setCaseAgeMonths(''); setShowGrid(false); }} className="w-full sm:w-auto" disabled={isSaving}>
-                        {editingCase ? 'Cancel Edit' : 'Discard Case'}
-                    </Button>
-                </div>
-            </Card>
+                    <p className="text-sm text-gray-600 mb-3">Click a domain title to expand/collapse. Select an action for each item.</p>
+                    <div className="rounded-lg border border-slate-300">
+                        {isImnci && <ImnciMonitoringGrid age={age} buffer={buffer} toggle={toggle} />}
+                        {isEenc && <EencMonitoringGrid scenario={eencScenario} buffer={buffer} toggle={toggle} />}
+                        {isLegalEtat && <EtatMonitoringGrid buffer={buffer} toggle={toggle} />}
+                        {isIccm && <IccmMonitoringGrid buffer={buffer} toggle={toggle} />}
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 border-t pt-4">
+                        <Button onClick={submitCase} className="w-full sm:w-auto" disabled={isSaving}>
+                            {isSaving ? 'Saving...' : (editingCase ? 'Update Case' : 'Submit Case')}
+                        </Button>
+                        <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setCaseAgeMonths(''); setShowGrid(false); }} className="w-full sm:w-auto" disabled={isSaving}>
+                            {editingCase ? 'Cancel Edit' : 'Discard Case'}
+                        </Button>
+                    </div>
+                </Card>
             )}
             
-            {/* --- MODIFICATION: Show submitted cases list (unconditionally) --- */}
             {loading ? <Card><Spinner /></Card> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />}
-            {/* --- END MODIFICATION --- */}
         </div>
     );
 }
-
 
 function ImnciMonitoringGrid({ age, buffer, toggle }) {
     const [expandedDomains, setExpandedDomains] = useState(new Set());
@@ -494,7 +441,6 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
     );
 }
 
-
 function EtatMonitoringGrid({ buffer, toggle }) {
     const allDomains = ETAT_DOMAINS; 
     const [expandedDomains, setExpandedDomains] = useState(new Set(allDomains.slice(0, 2)));
@@ -565,7 +511,6 @@ function EtatMonitoringGrid({ buffer, toggle }) {
         </div>
     );
 }
-
 
 function EencMonitoringGrid({ scenario, buffer, toggle }) {
     const isBreathing = scenario === 'breathing';
@@ -648,7 +593,6 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     );
 }
 
-
 function IccmMonitoringGrid({ buffer, toggle }) {
     const allDomains = ICCM_DOMAINS; 
     const [expandedDomains, setExpandedDomains] = useState(new Set(allDomains.slice(0, 2)));
@@ -720,11 +664,9 @@ function IccmMonitoringGrid({ buffer, toggle }) {
     );
 }
 
-
 function SubmittedCases({ course, participant, observations, cases, onEditCase, onDeleteCase }) {
     const isImnci = course.course_type === 'IMNCI';
     const isEenc = course.course_type === 'EENC';
-    // NOTE: No isIccm needed here; logic defaults correctly
 
     const [dayFilter, setDayFilter] = useState('all');
     const [settingFilter, setSettingFilter] = useState('all');
@@ -741,7 +683,6 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                 const percentage = calcPct(score, maxScore);
                 rowData = { ...rowData, score, percentage };
             } else {
-                // This block works for IMNCI, ETAT, and ICCM
                 const total = relatedObs.length;
                 const correct = relatedObs.filter(o => o.item_correct > 0).length;
                 const pct = calcPct(correct, total);
@@ -757,16 +698,13 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
             return dayMatch && settingMatch && correctnessMatch;
         });
 
-        // --- MODIFICATION: Sort by Course Day (Descending) first, then by Serial ---
         return mappedAndFiltered.sort((a, b) => (b.day - a.day) || (b.serial - a.serial));
     }, [cases, observations, isEenc, dayFilter, settingFilter, correctnessFilter]);
 
-
-
     const getAgeLabel = (age) => {
-        if (isImnci) { return age === 'LT2M' ? '0-59 d' : '2-59 m'; }
-        if (isEenc) { return age?.includes('breathing') ? (age.includes('not_breathing') ? 'Not Breathing' : 'Breathing') : age; }
-        return age; // This will return 'ETAT' or 'ICCM'
+        if (isImnci) return age === 'LT2M' ? '0-59 d' : '2-59 m';
+        if (isEenc) return age?.includes('breathing') ? (age.includes('not_breathing') ? 'Not Breathing' : 'Breathing') : age;
+        return age;
     };
 
     const headers = isEenc
@@ -776,7 +714,6 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
     return (
         <Card>
             <PageHeader title={`Submitted Cases for ${participant.name}`} />
-            {/* This filter bar is already mobile-friendly with flex-wrap */}
             <div className="flex flex-wrap gap-4 p-4 border-b border-slate-300 bg-slate-50 items-center">
                 <FormGroup label="Filter by Day" className="!mb-0">
                     <Select value={dayFilter} onChange={e => setDayFilter(e.target.value)}>
@@ -802,7 +739,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                 </FormGroup>
             </div>
             
-            {/* This is the mobile-specific card view, which is great. */}
+            {/* Mobile View */}
             <div className="md:hidden">
                 {caseRows.length === 0 ? <div className="p-4 text-center text-gray-500">No cases match the current filters.</div> : 
                     <div className="space-y-3 p-3">
@@ -833,7 +770,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                 }
             </div>
 
-            {/* This is the desktop table view, which is correctly hidden on mobile. */}
+            {/* Desktop View */}
             <div className="hidden md:block overflow-x-auto p-4">
                 <Table headers={headers}>
                     {caseRows.length === 0 ? <EmptyState message="No cases match the current filters." colSpan={headers.length} /> : caseRows.map((c, idx) => (
@@ -854,7 +791,6 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                             )}
                             <td className="p-2 border-b border-slate-300">
                                 <div className="flex gap-2 justify-end">
-                                    {/* --- FIX: Corrected LButton typo --- */}
                                     <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>Edit</Button>
                                     <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>Delete</Button>
                                 </div>

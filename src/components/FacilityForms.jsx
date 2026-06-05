@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle, ArrowRightLeft } from 'lucide-react';
 import { db } from '../firebase'; 
-import { collection, getDocs, doc } from 'firebase/firestore'; 
+import { collection, getDocs, doc, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { getFunctions, httpsCallable } from 'firebase/functions'; 
 
 import {
@@ -140,6 +140,7 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
             await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
+            // --- TRIGGER FIRE-AND-FORGET FCM NOTIFICATION & DB STORE ---
             if (navigator.onLine) {
                 try {
                     const currentUser = getAuth().currentUser;
@@ -155,6 +156,20 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     const notifTitle = isUpdate ? 'Facility Updated' : 'New Facility Added';
                     const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${formData['اسم_المؤسسة']}.`;
 
+                    // 1. DISTINCT DB SAVE
+                    await addDoc(collection(db, 'notifications'), {
+                        title: notifTitle,
+                        message: notifBody,
+                        targetUser: 'managers_and_super_users',
+                        createdAt: serverTimestamp(),
+                        deliveredTo: [],
+                        readBy: [],
+                        deletedBy: [],
+                        status: 'active',
+                        actionView: 'childHealthServices'
+                    });
+
+                    // 2. FIRE AND FORGET PUSH
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
@@ -162,9 +177,7 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                         targetUserId: 'managers_and_super_users',
                         title: notifTitle,
                         body: notifBody,
-                        data: {
-                            actionView: 'childHealthServices'
-                        }
+                        data: { actionView: 'childHealthServices' }
                     }).catch(e => console.warn("FCM Send Error:", e));
                     
                 } catch (fcmError) {
@@ -442,6 +455,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
+            // --- TRIGGER FIRE-AND-FORGET FCM NOTIFICATION & DB STORE ---
             if (navigator.onLine) {
                 try {
                     const currentUser = getAuth().currentUser;
@@ -457,6 +471,20 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     const notifTitle = isUpdate ? 'Facility Updated' : 'New Facility Added';
                     const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${formData['اسم_المؤسسة']}.`;
 
+                    // 1. DISTINCT DB SAVE
+                    await addDoc(collection(db, 'notifications'), {
+                        title: notifTitle,
+                        message: notifBody,
+                        targetUser: 'managers_and_super_users',
+                        createdAt: serverTimestamp(),
+                        deliveredTo: [],
+                        readBy: [],
+                        deletedBy: [],
+                        status: 'active',
+                        actionView: 'childHealthServices'
+                    });
+
+                    // 2. FIRE AND FORGET PUSH
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
@@ -464,11 +492,9 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                         targetUserId: 'managers_and_super_users',
                         title: notifTitle,
                         body: notifBody,
-                        data: {
-                            actionView: 'childHealthServices'
-                        }
+                        data: { actionView: 'childHealthServices' }
                     }).catch(e => console.warn("FCM Send Error:", e));
-
+                    
                 } catch (fcmError) {
                     console.warn("FCM Error", fcmError);
                 }
