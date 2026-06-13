@@ -1,44 +1,100 @@
 // IMNCSkillsAssessmentForm.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
     FormGroup, Select, Checkbox
 } from '../CommonComponents';
 
-// --- Single Skill Checklist Item ---
-export const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true, naLabel = "لا ينطبق", isMainSymptom = false, scoreCircle = null }) => {
-    const handleChange = (e) => { onChange(name, e.target.value); };
-
-    const containerClasses = isMainSymptom
-        ? "flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-sky-700 text-white rounded-t-md"
-        : "flex flex-col sm:flex-row justify-between sm:items-center p-3 border rounded-md bg-white shadow-sm transition-all hover:shadow-md sm:mr-4";
-
-    const labelClasses = isMainSymptom
-        ? "text-sm font-bold mb-2 sm:mb-0 text-right flex items-start sm:items-center flex-grow mr-4"
-        : "text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex items-start sm:items-center flex-grow mr-4";
-
+// --- Reusable Segmented Control (Adapted for RTL) ---
+export function ActionToggle({ options, currentValue, onClick, name }) {
     return (
-        <div dir="rtl" className={containerClasses}>
-            <span className={labelClasses}>
-                {scoreCircle && <span className="ml-2 flex-shrink-0 self-start sm:self-auto">{scoreCircle}</span>} 
-                <span className="w-full sm:w-auto break-words sm:whitespace-nowrap">{label}</span> 
-            </span>
-            <div className="flex gap-4 flex-shrink-0 mt-2 sm:mt-0"> 
-                <label className="flex items-center gap-1 cursor-pointer text-sm">
-                    <input type="radio" name={name} value="yes" checked={value === 'yes'} onChange={handleChange} className="form-radio text-green-600" /> نعم
-                </label>
-                <label className="flex items-center gap-1 cursor-pointer text-sm">
-                    <input type="radio" name={name} value="no" checked={value === 'no'} onChange={handleChange} className="form-radio text-red-600" /> لا
-                </label>
-                {showNaOption && (
-                    <label className="flex items-center gap-1 cursor-pointer text-sm">
-                        <input type="radio" name={name} value="na" checked={value === 'na'} onChange={handleChange} className="form-radio text-gray-500" /> {naLabel}
-                    </label>
-                )}
-            </div>
+        <div className="relative z-0 inline-flex shadow-sm rounded-md flex-shrink-0" dir="rtl">
+            {options.map(([label, value, activeClass], idx) => {
+                const isSelected = currentValue === value;
+                const baseClass = "relative inline-flex items-center justify-center px-3 py-1 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
+                const activeState = isSelected ? `${activeClass} text-white` : "bg-white text-gray-700 hover:bg-gray-50";
+                
+                let roundedClass = "";
+                if (idx === 0) roundedClass = "rounded-r-md";
+                if (idx === options.length - 1) roundedClass = "rounded-l-md";
+                if (options.length === 1) roundedClass = "rounded-md";
+                if (idx > 0) roundedClass += " -mr-px border border-gray-300"; 
+                else roundedClass += " border border-gray-300";
+
+                return (
+                    <button
+                        key={value}
+                        type="button"
+                        className={`${baseClass} ${activeState} ${roundedClass}`}
+                        onClick={() => onClick(name, value)}
+                    >
+                        {label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+// --- Accordion Wrapper Component ---
+const SubgroupAccordion = ({ title, scoreData, children, isMainSymptom = false }) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+    return (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 mb-4" dir="rtl">
+            <button 
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)} 
+                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+            >
+                <div className="flex items-center text-right text-base font-bold text-slate-800">
+                    {scoreData && <ScoreCircle score={scoreData.score} maxScore={scoreData.maxScore} />}
+                    <span className="mr-2">{title}</span>
+                </div>
+                <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            {isExpanded && (
+                <div className={`divide-y divide-slate-100 bg-white ${isMainSymptom ? 'p-0' : ''}`}>
+                    {children}
+                </div>
+            )}
         </div>
     );
 };
 
+// --- Single Skill Checklist Item ---
+export const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true, naLabel = "لا ينطبق", isMainSymptom = false, scoreCircle = null }) => {
+    const handleChange = (key, val) => { 
+        onChange(key, val); 
+    };
+
+    const options = [
+        ['نعم', 'yes', 'bg-green-600 border-green-600'],
+        ['لا', 'no', 'bg-red-600 border-red-600']
+    ];
+    if (showNaOption) {
+        options.push([naLabel, 'na', 'bg-gray-500 border-gray-500']);
+    }
+
+    const containerClasses = isMainSymptom
+        ? "flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group bg-sky-50 border-b border-sky-100"
+        : "flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group";
+
+    return (
+        <div dir="rtl" className={containerClasses}>
+            <span className="font-medium text-slate-700 break-words group-hover:text-slate-900 text-right flex items-start sm:items-center flex-grow mr-4">
+                {scoreCircle && <span className="ml-2 flex-shrink-0 self-start sm:self-auto">{scoreCircle}</span>} 
+                <span className="w-full sm:w-auto">{label}</span> 
+            </span>
+            <div className="flex gap-4 flex-shrink-0 mt-2 sm:mt-0"> 
+                <ActionToggle
+                    options={options}
+                    currentValue={value}
+                    name={name}
+                    onClick={handleChange}
+                />
+            </div>
+        </div>
+    );
+};
 
 // --- Score Circle Component ---
 export const ScoreCircle = ({ score, maxScore }) => {
@@ -76,7 +132,6 @@ export const ScoreCircle = ({ score, maxScore }) => {
     );
 };
 
-
 // --- Helper function to evaluate the relevance logic ---
 export const evaluateRelevance = (relevanceString, formData) => {
     if (!relevanceString) return true;
@@ -109,17 +164,34 @@ export const IMNCI_FORM_STRUCTURE = [
         sectionKey: 'assessment_skills',
         subgroups: [
             { subgroupTitle: 'القياسات الجسمانية والحيوية', step: 1, scoreKey: 'vitalSigns', maxScore: 3, skills: [ { key: 'skill_weight', label: 'وزن الطفل بصورة صحيحة' }, { key: 'skill_temp', label: 'قياس درجة الطفل بصورة صحيحة' }, { key: 'skill_height', label: 'قياس طول / ارتفاع الطفل بصورة صحيحة' }, ] },
-            { subgroupTitle: 'قيم علامات الخطورة العامة بصورة صحيحة', step: 2, scoreKey: 'dangerSigns', maxScore: 4, skills: [ { key: 'skill_ds_drink', label: 'هل سأل وتأكد من علامة الخطورة : لا يستطيع ان يرضع أو يشرب' }, { key: 'skill_ds_vomit', label: 'هل سأل وتأكد من علامة الخطورة : يتقيأ كل شئ' }, { key: 'skill_ds_convulsion', label: 'هل سأل وتأكد من علامة الخطورة : تشنجات أثناء المرض الحالي' }, { key: 'skill_ds_conscious', label: 'هل تأكد من علامة الخطورة : حامل أو فاقد للوعي' }, ] },
+            { subgroupTitle: 'قيم علامات الخطورة العامة بصورة صحيحة', step: 2, scoreKey: 'dangerSigns', maxScore: 4, skills: [ 
+                { key: 'skill_ds_drink', label: 'هل سأل وتأكد من علامة الخطورة : لا يستطيع ان يرضع أو يشرب', showNaOption: false }, 
+                { key: 'skill_ds_vomit', label: 'هل سأل وتأكد من علامة الخطورة : يتقيأ كل شئ', showNaOption: false }, 
+                { key: 'skill_ds_convulsion', label: 'هل سأل وتأكد من علامة الخطورة : تشنجات أثناء المرض الحالي', showNaOption: false }, 
+                { key: 'skill_ds_conscious', label: 'هل تأكد من علامة الخطورة : حامل أو فاقد للوعي', showNaOption: false }, 
+            ] },
             { subgroupTitle: 'قيم الطفل بصورة صحيحة لوجود كل الأعراض الأساسية', step: 3, scoreKey: 'mainSymptoms', maxScore: 12, isSymptomGroupContainer: true, symptomGroups: [
                 { mainSkill: { key: 'skill_ask_cough', label: 'هل سأل عن وجود الكحة أو ضيق التنفس', scoreKey: 'symptom_cough' } },
                 { mainSkill: { key: 'skill_ask_diarrhea', label: 'هل سأل عن وجود الاسهال', scoreKey: 'symptom_diarrhea' } },
                 { mainSkill: { key: 'skill_ask_fever', label: 'هل سأل عن وجود الحمى', scoreKey: 'symptom_fever' } },
                 { mainSkill: { key: 'skill_ask_ear', label: 'هل سأل عن وجود مشكلة في الأذن', scoreKey: 'symptom_ear' } },
             ] },
-            { subgroupTitle: 'تحرى عن سوء التغذية الحاد', step: 4, scoreKey: 'malnutrition', maxScore: 3, skills: [ { key: 'skill_mal_muac', label: 'هل قاس المواك بصورة صحيحة' }, { key: 'skill_mal_wfh', label: 'هل قاس نسبة الوزن للطول أو الارتفاع بصورة صحيحة' }, { key: 'skill_mal_classify', label: 'هل صنف الحالة التغذوية بصورة صحيحة' }, ] },
-            { subgroupTitle: 'تحرى عن الانيميا', step: 5, scoreKey: 'anemia', maxScore: 2, skills: [ { key: 'skill_anemia_pallor', label: 'هل فحص شحوب الكف بصورة صحيحة' }, { key: 'skill_anemia_classify', label: 'هل صنف الانيميا بصورة صحيحة' }, ] },
-            { subgroupTitle: 'تحرى عن التطعيم وفيتامين أ بصورة صحيحة', step: 6, scoreKey: 'immunization', maxScore: 2, skills: [ { key: 'skill_imm_vacc', label: 'هل تحرى عن التطعيمات بصورة صحيحة' }, { key: 'skill_imm_vita', label: 'هل تحرى عن فيتامين أ بصورة صحيحة' }, ] },
-            { subgroupTitle: 'تحرى عن الأمراض الأخرى', step: 7, scoreKey: 'otherProblems', maxScore: 1, skills: [ { key: 'skill_other', label: 'هل تحرى عن الأمراض الأخرى' }, ] }
+            { subgroupTitle: 'تحرى عن سوء التغذية الحاد', step: 4, scoreKey: 'malnutrition', maxScore: 3, skills: [ 
+                { key: 'skill_mal_muac', label: 'هل قاس المواك بصورة صحيحة' }, // Keeps NA
+                { key: 'skill_mal_wfh', label: 'هل قاس نسبة الوزن للطول أو الارتفاع بصورة صحيحة', showNaOption: false }, 
+                { key: 'skill_mal_classify', label: 'هل صنف الحالة التغذوية بصورة صحيحة', showNaOption: false }, 
+            ] },
+            { subgroupTitle: 'تحرى عن الانيميا', step: 5, scoreKey: 'anemia', maxScore: 2, skills: [ 
+                { key: 'skill_anemia_pallor', label: 'هل فحص شحوب الكف بصورة صحيحة', showNaOption: false }, 
+                { key: 'skill_anemia_classify', label: 'هل صنف الانيميا بصورة صحيحة', showNaOption: false }, 
+            ] },
+            { subgroupTitle: 'تحرى عن التطعيم وفيتامين أ بصورة صحيحة', step: 6, scoreKey: 'immunization', maxScore: 2, skills: [ 
+                { key: 'skill_imm_vacc', label: 'هل تحرى عن التطعيمات بصورة صحيحة', showNaOption: false }, 
+                { key: 'skill_imm_vita', label: 'هل تحرى عن فيتامين أ بصورة صحيحة', showNaOption: false }, 
+            ] },
+            { subgroupTitle: 'تحرى عن الأمراض الأخرى', step: 7, scoreKey: 'otherProblems', maxScore: 1, skills: [ 
+                { key: 'skill_other', label: 'هل تحرى عن الأمراض الأخرى', showNaOption: false }, 
+            ] }
         ]
     },
     { group: 'القرار النهائي', step: 8, scoreKey: 'finalDecision', maxScore: 1, isDecisionSection: true, sectionKey: null, subgroups: [] },
@@ -131,10 +203,11 @@ export const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'الحالات التي تحتاج لتحويل ، تم تحويلها',
                 scoreKey: 'ref_treatment',
                 skills: [
-                    { key: 'skill_ref_abx', label: 'هل أعطى الجرعة الاولى من المضاد الحيوي المناسب قبل تحويل الطفل' },
+                    { key: 'skill_ref_abx', label: 'هل أعطى الجرعة الاولى من المضاد الحيوي المناسب قبل تحويل الطفل', showNaOption: false },
                     {
                         key: 'skill_ref_quinine',
                         label: 'في حالة التحويل : أعطى الكينيين بالعضل قبل التحويل',
+                        showNaOption: false,
                         relevant: (formData) => {
                             const didClassifyCorrectly = formData.assessment_skills.skill_classify_fever === 'yes';
                             const workerCls = formData.assessment_skills.worker_fever_classification || {};
@@ -151,7 +224,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الإلتهاب الرئوي',
                 scoreKey: 'pneu_treatment',
-                skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي (أموكسيلين) لعلاج الالتهاب الرئوي بصورة صحيحة' }, { key: 'skill_pneu_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', relevant: "${skill_pneu_abx}='yes'" }, ],
+                skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي (أموكسيلين) لعلاج الالتهاب الرئوي بصورة صحيحة', showNaOption: false }, { key: 'skill_pneu_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', showNaOption: false, relevant: "${skill_pneu_abx}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_cough === 'yes';
@@ -164,7 +237,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الإسهال',
                 scoreKey: 'diar_treatment',
-                skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${skill_diar_zinc}='yes'" }, ],
+                skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة', showNaOption: false }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)', showNaOption: false }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة', showNaOption: false }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', showNaOption: false, relevant: "${skill_diar_zinc}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
@@ -178,7 +251,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الدسنتاريا',
                 scoreKey: 'dyst_treatment',
-                skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي (سبروفلوكساسين) لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الدسنتاريا في العيادة بصورة صحيحة', relevant: "${skill_dyst_abx}='yes'" }, ],
+                skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي (سبروفلوكساسين) لعلاج الدسنتاريا بصورة صحيحة', showNaOption: false }, { key: 'skill_dyst_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الدسنتاريا في العيادة بصورة صحيحة', showNaOption: false, relevant: "${skill_dyst_abx}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
@@ -191,7 +264,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الملاريا',
                 scoreKey: 'mal_treatment',
-                skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا (كوارتم) بصورة صحيحة' }, { key: 'skill_mal_dose', label: 'هل أعطى الجرعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', relevant: "${skill_mal_meds}='yes'" }, ],
+                skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا (كوارتم) بصورة صحيحة', showNaOption: false }, { key: 'skill_mal_dose', label: 'هل أعطى الجرعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', showNaOption: false, relevant: "${skill_mal_meds}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_fever === 'yes';
@@ -204,7 +277,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة التهاب الأذن',
                 scoreKey: 'ear_treatment',
-                skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي (أموكسيلين) لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجرعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
+                skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي (أموكسيلين) لعلاج التهاب الأذن الحاد بصورة صحيحة', showNaOption: false }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', showNaOption: false, relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة', showNaOption: false }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجرعة الأولى من الباراسيتامول بصورة صحيحة', showNaOption: false, relevant: "${skill_ear_para}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_ear === 'yes';
@@ -221,6 +294,7 @@ export const IMNCI_FORM_STRUCTURE = [
                     {
                         key: 'skill_nut_refer_otp',
                         label: 'هل حول الطفل الى مركز المعالجة الخارجي OTP',
+                        showNaOption: false,
                         relevant: (formData) => {
                             const didClassifyCorrectly = formData.assessment_skills.skill_mal_classify === 'yes';
                             const workerCls = formData.assessment_skills.worker_malnutrition_classification;
@@ -229,7 +303,7 @@ export const IMNCI_FORM_STRUCTURE = [
                             return ['سوء تغذية شديد غير مصحوب بمضاعفات', 'سوء تغذية حاد متوسط'].includes(effectiveCls);
                         }
                     },
-                    { key: 'skill_nut_assess', label: 'قيم تغذية الطفل بما في ذلك مشاكل الرضاعة (لأقل من عمر سنتين)' }, { key: 'skill_nut_counsel', label: 'أرشد الأم عن تغذية الطفل بما في ذلك مشاكل الرضاعة الأقل من عمر سنتين)' },
+                    { key: 'skill_nut_assess', label: 'قيم تغذية الطفل بما في ذلك مشاكل الرضاعة (لأقل من عمر سنتين)', showNaOption: false }, { key: 'skill_nut_counsel', label: 'أرشد الأم عن تغذية الطفل بما في ذلك مشاكل الرضاعة الأقل من عمر سنتين)', showNaOption: false },
                 ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
@@ -243,7 +317,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة فقر الدم',
                 scoreKey: 'anemia_treatment',
-                skills: [ { key: 'skill_anemia_iron', label: 'هل وصف (شراب حديد) بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجرعة الأولى من شراب حديد بصورة صحيحة', relevant: "${skill_anemia_iron}='yes'" }, ],
+                skills: [ { key: 'skill_anemia_iron', label: 'هل وصف (شراب حديد) بصورة صحيحة', showNaOption: false }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجرعة الأولى من شراب حديد بصورة صحيحة', showNaOption: false, relevant: "${skill_anemia_iron}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_anemia_classify === 'yes';
@@ -255,7 +329,7 @@ export const IMNCI_FORM_STRUCTURE = [
             },
             { subgroupTitle: 'نصح الأم متى تعود للمتابعة',
                 scoreKey: 'fu_treatment',
-                skills: [ { key: 'skill_fu_when', label: 'هل ذكر لها علامتين علي الأقل إذا ظهرت على الطفل يجب أن تعود به فورا للوحدة الصحية' }, { key: 'skill_fu_return', label: 'هل حدد للام متى تعود بالطفل' }, ]
+                skills: [ { key: 'skill_fu_when', label: 'هل ذكر لها علامتين علي الأقل إذا ظهرت على الطفل يجب أن تعود به فورا للوحدة الصحية', showNaOption: false }, { key: 'skill_fu_return', label: 'هل حدد للام متى تعود بالطفل', showNaOption: false }, ]
                 ,
                 relevant: (formData) => {
                     return formData.finalDecision === 'treatment';
@@ -317,20 +391,16 @@ export const getInitialFormData = () => {
     return initialState;
 };
 
-// --- Helper function to find incomplete treatment skills ---
 export const ensureArrayOfKeys = (data, classifications) => {
     if (Array.isArray(data)) {
         return data;
     }
     if (typeof data === 'object' && data !== null) {
-        // MODIFICATION: Filter out 'did_not_classify' if it exists as a key
         return classifications.filter(c => data[c]);
     }
     return [];
 };
 
-// --- Helper to rehydrate draft data into form state ---
-// --- MODIFIED: Pass in constants to avoid circular dependencies ---
 export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS) => {
     const rehydrated = getInitialFormData();
 
@@ -366,7 +436,6 @@ export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSI
             acc[c] = workerDiarrheaKeys.includes(c);
             return acc;
         }, createInitialClassificationState(DIARRHEA_CLASSIFICATIONS));
-    // Handle 'did_not_classify' separately
     if (assessmentDraft.worker_diarrhea_classification && assessmentDraft.worker_diarrhea_classification.did_not_classify) {
         rehydrated.assessment_skills.worker_diarrhea_classification.did_not_classify = true;
     }
@@ -385,7 +454,6 @@ export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSI
             acc[c] = workerFeverKeys.includes(c);
             return acc;
         }, createInitialClassificationState(FEVER_CLASSIFICATIONS));
-    // Handle 'did_not_classify' separately
      if (assessmentDraft.worker_fever_classification && assessmentDraft.worker_fever_classification.did_not_classify) {
         rehydrated.assessment_skills.worker_fever_classification.did_not_classify = true;
     }
@@ -401,7 +469,6 @@ export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSI
 };
 
 
-// --- calculateScores function (MODIFIED: NaN Bug Fix Applied) ---
 export const calculateScores = (formData) => {
     const scores = {};
     let totalTreatmentMaxScore = 0;
@@ -411,9 +478,8 @@ export const calculateScores = (formData) => {
     let mainSymptomsMaxScore = 0;
     let totalMaxScore = 0;
     let totalCurrentScore = 0;
-    let totalRecordingMaxScore = 0; // FIX 1: Add recording max score tracker
+    let totalRecordingMaxScore = 0; 
 
-    // --- NEW HANDS-ON SKILLS VARS ---
     let handsOnWeight_score = 0, handsOnWeight_max = 0;
     let handsOnTemp_score = 0, handsOnTemp_max = 0;
     let handsOnHeight_score = 0, handsOnHeight_max = 0;
@@ -421,17 +487,14 @@ export const calculateScores = (formData) => {
     let handsOnRDT_score = 0, handsOnRDT_max = 0;
     let handsOnMUAC_score = 0, handsOnMUAC_max = 0;
     let handsOnWFH_score = 0, handsOnWFH_max = 0;
-    // --- END NEW HANDS-ON SKILLS VARS ---
 
-    // --- NEW KPI VARS (Malaria, Malnutrition) ---
     let totalFeverCases_Malaria = 0;
     let totalCorrectFeverClassifications_Malaria = 0;
     let totalMalnutritionCases_max = 0;
-    // --- END NEW KPI VARS ---
 
     IMNCI_FORM_STRUCTURE.forEach(group => {
         let groupCurrentScore = 0;
-        let groupMaxScore = group.maxScore || 0; // FIX 2: Default to 0 to prevent NaN
+        let groupMaxScore = group.maxScore || 0; 
 
         if (group.isDecisionSection) {
             groupCurrentScore = formData.decisionMatches === 'yes' ? 1 : 0;
@@ -453,7 +516,6 @@ export const calculateScores = (formData) => {
                 let dynamicSubgroupMaxScore = 0;
                 let isSubgroupRelevantForScoring = true;
 
-                // --- NEW KPI: Check Malnutrition Cases ---
                 if (group.sectionKey === 'assessment_skills' && subgroup.scoreKey === 'malnutrition') {
                     const didClassifyMal = sectionData['skill_mal_classify'] === 'yes';
                     const workerClsMal = sectionData['worker_malnutrition_classification'];
@@ -463,7 +525,6 @@ export const calculateScores = (formData) => {
                         totalMalnutritionCases_max = 1; 
                     }
                 }
-                // --- END NEW KPI ---
 
                 if (isTreatmentSubgroup && subgroup.relevant) {
                     if (typeof subgroup.relevant === 'function') isSubgroupRelevantForScoring = subgroup.relevant(formData);
@@ -505,7 +566,6 @@ export const calculateScores = (formData) => {
                              }
                          }
 
-                        // --- NEW HANDS-ON SKILL LOGIC (Symptoms) ---
                         if (askValue === 'yes' && formData.assessment_skills[confirmsKey] === 'yes') {
                             const checkValue = sectionData[checkSkillKey];
                             if (symptomPrefix === 'cough') {
@@ -516,9 +576,7 @@ export const calculateScores = (formData) => {
                                 if (checkValue === 'yes') handsOnRDT_score++;
                             }
                         }
-                        // --- END NEW HANDS-ON SKILL LOGIC ---
                         
-                        // --- NEW KPI: Malaria Classification ---
                         if (symptomPrefix === 'fever') {
                             const confirmsValue = formData.assessment_skills[confirmsKey];
                             const classifyValue = sectionData[classifySkillKey];
@@ -536,10 +594,9 @@ export const calculateScores = (formData) => {
                                 }
                             }
                         }
-                        // --- END NEW KPI ---
 
                          mainSymptomsCurrentScore += currentSymptomScore;
-                         mainSymptomsMaxScore += maxSymptomScore; // <-- MODIFIED: was subgroupRelevantMaxScore
+                         mainSymptomsMaxScore += maxSymptomScore; 
                          if (sg.mainSkill.scoreKey) {
                              scores[sg.mainSkill.scoreKey] = { score: currentSymptomScore, maxScore: maxSymptomScore };
                          }
@@ -563,7 +620,7 @@ export const calculateScores = (formData) => {
                                       return `'${val || ''}'`;
                                  });
                                  try {
-                                      isSkillRelevantForScoring = evaluateRelevance(skill.relevant, formData); // Use the dedicated helper for consistency
+                                      isSkillRelevantForScoring = evaluateRelevance(skill.relevant, formData); 
                                  } catch (e) {
                                       console.warn("Error evaluating skill relevance:", simplifiedRelevanceString, e);
                                       isSkillRelevantForScoring = false;
@@ -576,7 +633,6 @@ export const calculateScores = (formData) => {
                         if (isSkillRelevantForScoring) {
                             const value = sectionData[skill.key];
 
-                            // --- NEW HANDS-ON SKILL LOGIC (Vitals & Malnutrition) ---
                             if (subgroup.scoreKey === 'vitalSigns') {
                                 if (skill.key === 'skill_weight') {
                                     if (value === 'yes' || value === 'no') handsOnWeight_max++;
@@ -597,22 +653,19 @@ export const calculateScores = (formData) => {
                                     if (value === 'yes') handsOnWFH_score++;
                                 }
                             }
-                            // --- END NEW HANDS-ON SKILL LOGIC ---
 
                             if (value === 'yes' || value === 'no') {
-                                // subgroupRelevantMaxScore is for the max score of *this* subgroup
                                 subgroupRelevantMaxScore += 1;
                                 
-                                // This is for the *group* total max score (assessment vs treatment)
                                 if (isTreatmentSubgroup) {
                                     totalTreatmentMaxScore += 1;
                                 } else if (group.sectionKey === 'assessment_skills') {
                                     const isVitalSignsNa = (subgroup.scoreKey === 'vitalSigns' && value === 'na');
-                                    if (!isVitalSignsNa) { // Don't count N/A vitals
+                                    if (!isVitalSignsNa) { 
                                         totalAssessmentMaxScore += 1;
                                     }
                                 } else if (group.sectionKey === 'recording_skills') {
-                                    totalRecordingMaxScore += 1; // FIX 3: Accumulate the recording score specifically
+                                    totalRecordingMaxScore += 1; 
                                 }
                             }
 
@@ -630,26 +683,23 @@ export const calculateScores = (formData) => {
                 groupCurrentScore += subgroupCurrentScore;
             });
 
-            // This block is for the total Assessment score
             if (group.sectionKey === 'assessment_skills') {
                 scores['assessment_total_score'] = { 
-                    score: groupCurrentScore, // contains sum of vital, danger, mal, anemia, imm, other
-                    maxScore: totalAssessmentMaxScore // contains sum of their relevant maxes
+                    score: groupCurrentScore, 
+                    maxScore: totalAssessmentMaxScore 
                 };
                  totalCurrentScore += groupCurrentScore;
                  totalMaxScore += totalAssessmentMaxScore;
             } 
-            // This block is for the total Treatment score
             else if (group.scoreKey === 'treatment') {
-                groupMaxScore = totalTreatmentMaxScore; // Max score is the sum of all relevant skills
+                groupMaxScore = totalTreatmentMaxScore; 
                 scores['treatment_total_score'] = { score: groupCurrentScore, maxScore: groupMaxScore };
                 totalMaxScore += groupMaxScore;
                 totalCurrentScore += groupCurrentScore;
                 currentTreatmentScore = groupCurrentScore;
             }
-            // This block handles the Recording Skills Score 
             else if (group.sectionKey === 'recording_skills') {
-                 groupMaxScore = totalRecordingMaxScore; // FIX 4: Apply the properly accumulated tracking variable
+                 groupMaxScore = totalRecordingMaxScore; 
                  scores['recording_score'] = { score: groupCurrentScore, maxScore: groupMaxScore };
                  totalMaxScore += groupMaxScore;
                  totalCurrentScore += groupCurrentScore;
@@ -657,21 +707,14 @@ export const calculateScores = (formData) => {
         }
     });
 
-    // Add back the mainSymptom scores to the total (they were separate)
     totalCurrentScore += mainSymptomsCurrentScore;
     totalMaxScore += mainSymptomsMaxScore;
     
-    // Recalculate assessment_total_score to include symptoms
     scores['assessment_total_score'].score += mainSymptomsCurrentScore;
     scores['assessment_total_score'].maxScore += mainSymptomsMaxScore;
     
-    // Final Overall Score
     scores.overallScore = { score: totalCurrentScore, maxScore: totalMaxScore };
     
-    // --- THIS IS THE CRITICAL ADDITION ---
-    // --- Add all the KPI and Hands-On scores that were missing ---
-
-    // --- NEW HANDS-ON SKILL SCORES ---
     scores.handsOnWeight = { score: handsOnWeight_score, maxScore: handsOnWeight_max };
     scores.handsOnTemp = { score: handsOnTemp_score, maxScore: handsOnTemp_max };
     scores.handsOnHeight = { score: handsOnHeight_score, maxScore: handsOnHeight_max };
@@ -679,33 +722,26 @@ export const calculateScores = (formData) => {
     scores.handsOnRDT = { score: handsOnRDT_score, maxScore: handsOnRDT_max };
     scores.handsOnMUAC = { score: handsOnMUAC_score, maxScore: handsOnMUAC_max };
     scores.handsOnWFH = { score: handsOnWFH_score, maxScore: handsOnWFH_max };
-    // --- END NEW HANDS-ON SKILL SCORES ---
 
-    // --- REVISED KPI SCORES (Malaria, Malnutrition, Anemia, Cough & Diarrhea) ---
     scores.malariaClassification = { score: totalCorrectFeverClassifications_Malaria, maxScore: totalFeverCases_Malaria };
     scores.malariaManagement = { score: scores['mal_treatment']?.score || 0, maxScore: scores['mal_treatment']?.maxScore || 0 };
     scores.malnutritionCaseCount = { score: totalMalnutritionCases_max, maxScore: 1 };
     scores.malnutritionManagement = { score: scores['nut_treatment']?.score || 0, maxScore: scores['nut_treatment']?.maxScore || 0 };
     scores.anemiaManagement = { score: scores['anemia_treatment']?.score || 0, maxScore: scores['anemia_treatment']?.maxScore || 0 };
     
-    // Cough & Pneumonia replaced with Respiratory Rate Calculation
     const rrDenominator = formData.assessment_skills?.supervisor_confirms_cough === 'yes' ? 1 : 0;
     const rrNumerator = (rrDenominator && formData.assessment_skills?.skill_check_rr === 'yes') ? 1 : 0;
     scores.respiratoryRateCalculation = { score: rrNumerator, maxScore: rrDenominator };
     scores.pneumoniaManagement = { score: scores['pneu_treatment']?.score || 0, maxScore: scores['pneu_treatment']?.maxScore || 0 };
     
-    // Diarrhea KPI replaced with Dehydration Assessment
     const dehydDenominator = formData.assessment_skills?.supervisor_confirms_diarrhea === 'yes' ? 1 : 0;
     const dehydNumerator = (dehydDenominator && formData.assessment_skills?.skill_check_dehydration === 'yes') ? 1 : 0;
     scores.dehydrationAssessment = { score: dehydNumerator, maxScore: dehydDenominator };
     scores.diarrheaManagement = { score: scores['diar_treatment']?.score || 0, maxScore: scores['diar_treatment']?.maxScore || 0 };
-    // --- END REVISED KPI SCORES ---
 
     return scores;
 };
-// --- END calculateScores ---
 
-// --- Helper function to find incomplete treatment skills ---
 export const findIncompleteTreatmentSkills = (formData) => {
     const treatmentGroup = IMNCI_FORM_STRUCTURE.find(g => g.sectionKey === 'treatment_skills');
     if (!treatmentGroup) return [];
@@ -739,8 +775,6 @@ export const findIncompleteTreatmentSkills = (formData) => {
     return incomplete;
 };
 
-
-// --- Step completion helpers ---
 const isMultiSelectGroupEmpty = (obj) => !obj || !Object.values(obj).some(v => v === true);
 
 export const isVitalSignsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_weight !== '' && skills.skill_temp !== '' && skills.skill_height !== ''; };
@@ -799,7 +833,7 @@ export const isEarBlockComplete = (skills) => {
 };
 
 export const isMainSymptomsComplete = (data_assessment_skills) => {
-    const skills = data_assessment_skills; // Passed in directly
+    const skills = data_assessment_skills; 
     return isCoughBlockComplete(skills) && 
            isDiarrheaBlockComplete(skills) && 
            isFeverBlockComplete(skills) && 
@@ -838,7 +872,6 @@ export const isImmunizationComplete = (data) => { const skills = data.assessment
 export const isOtherProblemsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_other !== ''; };
 export const isDecisionComplete = (data) => { return data.finalDecision !== '' && data.decisionMatches !== ''; };
 
-// --- NEW HELPER: Is Recording Skills Complete? ---
 export const isRecordingComplete = (data) => {
     const skills = data.recording_skills;
     if (!skills) return false;
@@ -847,22 +880,18 @@ export const isRecordingComplete = (data) => {
            skills.skill_record_treatments !== '';
 };
 
-// --- NEW: The IMNCI-specific rendering component ---
+// --- Form Renderer ---
 export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormChange, handleSkillChange, handleMultiClassificationChange, isEditing }) => {
     return (
         <>
-            {/* Form Structure Mapping */}
             {IMNCI_FORM_STRUCTURE.map(group => {
                 const isGroupVisible = !group.step || visibleStep >= group.step;
                 if (!isGroupVisible) return null;
                 
-                // --- MODIFIED: Use 'treatment_total_score' for the treatment group score ---
                 const groupScoreData = group.scoreKey 
                     ? (group.scoreKey === 'treatment' ? scores['treatment_total_score'] : scores[group.scoreKey])
                     : (group.sectionKey === 'assessment_skills' ? scores['assessment_total_score'] : null);
-                // --- END MODIFICATION ---
 
-                // Decision Section Rendering
                 if (group.isDecisionSection) {
                     return (
                         <div key={group.group} className="mb-8">
@@ -896,7 +925,6 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                     );
                 }
 
-                // Other Group Rendering
                 return (
                     <div key={group.group} className="mb-8">
                         <h3 dir="rtl" className={`flex justify-between items-center text-xl font-bold mb-4 border-b pb-2 text-right ${ group.group.includes('الأعراض الأساسية') ? 'text-white bg-sky-900 p-2 rounded-md border-b-0' : 'text-gray-800 border-gray-300' }`}>
@@ -918,7 +946,6 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                             }
                             if (!isSubgroupRelevant) return null;
 
-                            // Symptom Group Container Rendering
                             if (subgroup.isSymptomGroupContainer && Array.isArray(subgroup.symptomGroups)) {
                                 return (
                                     <div key={subgroup.subgroupTitle} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
@@ -954,23 +981,29 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                             switch (mainSkill.key) { case 'skill_ask_cough': symptomPrefix = 'cough'; symptomClassifications = COUGH_CLASSIFICATIONS; originalCheckSkill = { key: 'skill_check_rr', label: 'هل قاس معدل التنفس بصورة صحيحة'}; originalClassifySkill = { key: 'skill_classify_cough', label: 'هل صنف الكحة بصورة صحيحة'}; supervisorConfirmLabel = 'هل يوجد كحة او ضيق تنفس (سؤال للمشرف)'; break; case 'skill_ask_diarrhea': symptomPrefix = 'diarrhea'; symptomClassifications = DIARRHEA_CLASSIFICATIONS; originalCheckSkill = { key: 'skill_check_dehydration', label: 'هل قيم فقدان السوائل بصورة صحيحة'}; originalClassifySkill = { key: 'skill_classify_diarrhea', label: 'هل صنف الاسهال بصورة صحيحة'}; supervisorConfirmLabel = 'هل يوجد إسهال (سؤال للمشرف)'; multiSelectCols = { col1: DIARRHEA_COLS_1, col2: DIARRHEA_COLS_2 }; break; case 'skill_ask_fever': symptomPrefix = 'fever'; symptomClassifications = FEVER_CLASSIFICATIONS; originalCheckSkill = { key: 'skill_check_rdt', label: 'هل أجرى فحص الملاريا السريع بصورة صحيحة'}; originalClassifySkill = { key: 'skill_classify_fever', label: 'هل صنف الحمى بصورة صحيحة'}; supervisorConfirmLabel = 'هل يوجد حمى (سؤال للمشرف)'; multiSelectCols = { col1: FEVER_COLS_1, col2: FEVER_COLS_2 }; break; case 'skill_ask_ear': symptomPrefix = 'ear'; symptomClassifications = EAR_CLASSIFICATIONS; originalCheckSkill = { key: 'skill_check_ear', label: 'هل فحص الفحص ورم مؤلم خلف الأذن'}; originalClassifySkill = { key: 'skill_classify_ear', label: 'هل صنف مشكلة الأذن بصورة صحيحة'}; supervisorConfirmLabel = 'هل يوجد مشكلة اذن (سؤال للمشرف)'; break; default: return null; }
                                             const supervisorConfirmsKey = `supervisor_confirms_${symptomPrefix}`; const workerClassKey = `worker_${symptomPrefix}_classification`; const correctClassKey = `supervisor_correct_${symptomPrefix}_classification`; const classifySkillKey = `skill_classify_${symptomPrefix}`;
                                             const mainSkillValue = formData[group.sectionKey]?.[mainSkill.key];
-                                            const isMainRelevant = true;
-                                            if (!isMainRelevant) return null;
+                                            
                                             const isMultiSelectClassification = ['diarrhea', 'fever'].includes(symptomPrefix);
                                             const showSubQuestions = mainSkillValue === 'yes';
                                             const showClassifications = showSubQuestions && formData.assessment_skills[supervisorConfirmsKey] === 'yes';
                                             const showSupervisorCorrection = showClassifications && formData.assessment_skills[classifySkillKey] === 'no';
 
                                             return (
-                                                <div key={mainSkill.key} className="mb-4 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
+                                                <div key={mainSkill.key} className="mb-4 border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
                                                     <SkillChecklistItem name={mainSkill.key} label={mainSkill.label} value={mainSkillValue} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} isMainSymptom={true} scoreCircle={symptomScoreCircle} />
                                                     {showSubQuestions && (
-                                                        <div dir="rtl" className="p-4 pt-2 bg-gray-50 space-y-4 text-right rounded-b-md">
-                                                            <div className="flex flex-col sm:flex-row justify-between sm:items-center py-2">
-                                                                <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 sm:ml-4 text-right">{supervisorConfirmLabel}</span>
+                                                        <div dir="rtl" className="p-4 pt-2 bg-white space-y-4 text-right rounded-b-xl border-t border-slate-100 divide-y divide-slate-100">
+                                                            <div className="flex flex-col sm:flex-row justify-between sm:items-center py-2 px-1">
+                                                                <span className="text-sm font-medium text-slate-800 mb-2 sm:mb-0 sm:ml-4 text-right">{supervisorConfirmLabel}</span>
                                                                 <div className="flex gap-4 mt-1 sm:mt-0 flex-shrink-0">
-                                                                    <label className="flex items-center gap-1 cursor-pointer text-sm"> <input type="radio" name={supervisorConfirmsKey} value="yes" checked={formData.assessment_skills[supervisorConfirmsKey] === 'yes'} onChange={handleFormChange} className="form-radio text-green-600"/> نعم </label>
-                                                                    <label className="flex items-center gap-1 cursor-pointer text-sm"> <input type="radio" name={supervisorConfirmsKey} value="no" checked={formData.assessment_skills[supervisorConfirmsKey] === 'no'} onChange={handleFormChange} className="form-radio text-red-600"/> لا </label>
+                                                                    <ActionToggle
+                                                                        options={[
+                                                                            ['نعم', 'yes', 'bg-green-600 border-green-600'],
+                                                                            ['لا', 'no', 'bg-red-600 border-red-600']
+                                                                        ]}
+                                                                        currentValue={formData.assessment_skills[supervisorConfirmsKey]}
+                                                                        name={supervisorConfirmsKey}
+                                                                        onClick={(name, value) => handleFormChange({ target: { name, value }})}
+                                                                    />
                                                                 </div>
                                                             </div>
                                                             {showClassifications && ( <>
@@ -981,54 +1014,58 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                 )}
 
                                                                 {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
-                                                                    <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
-                                                                        {isMultiSelectClassification && multiSelectCols ? (
-                                                                            <>
-                                                                                {formData.assessment_skills[classifySkillKey] === 'no' && (
-                                                                                    <div className="flex items-center gap-2 mb-2 p-2 border border-red-200 rounded bg-red-50">
-                                                                                        <Checkbox 
-                                                                                            label="" 
-                                                                                            id={`${workerClassKey}-did_not_classify`} 
-                                                                                            name="did_not_classify" 
-                                                                                            checked={!!formData.assessment_skills[workerClassKey]?.['did_not_classify']} 
-                                                                                            onChange={(e) => handleMultiClassificationChange(workerClassKey, 'did_not_classify', e.target.checked)} 
-                                                                                        />
-                                                                                        <label htmlFor={`${workerClassKey}-did_not_classify`} className="cursor-pointer text-sm font-medium" style={{ color: 'red' }}>
-                                                                                            لم يتم التصنيف
-                                                                                        </label>
+                                                                    <div className="pt-4 mt-2">
+                                                                        <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
+                                                                            {isMultiSelectClassification && multiSelectCols ? (
+                                                                                <>
+                                                                                    {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                                                        <div className="flex items-center gap-2 mb-2 p-2 border border-red-200 rounded bg-red-50">
+                                                                                            <Checkbox 
+                                                                                                label="" 
+                                                                                                id={`${workerClassKey}-did_not_classify`} 
+                                                                                                name="did_not_classify" 
+                                                                                                checked={!!formData.assessment_skills[workerClassKey]?.['did_not_classify']} 
+                                                                                                onChange={(e) => handleMultiClassificationChange(workerClassKey, 'did_not_classify', e.target.checked)} 
+                                                                                            />
+                                                                                            <label htmlFor={`${workerClassKey}-did_not_classify`} className="cursor-pointer text-sm font-medium" style={{ color: 'red' }}>
+                                                                                                لم يتم التصنيف
+                                                                                            </label>
+                                                                                        </div>
+                                                                                    )}
+                                                                                    <div className="max-h-40 overflow-y-auto border rounded p-3 bg-slate-50 grid grid-cols-2 gap-x-4">
+                                                                                        <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(workerClassKey, c, e.target.checked)} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                        <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(workerClassKey, c, e.target.checked)} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
                                                                                     </div>
-                                                                                )}
-                                                                                <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white grid grid-cols-2 gap-x-4">
-                                                                                    <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(workerClassKey, c, e.target.checked)} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                    <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(workerClassKey, c, e.target.checked)} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                </div>
-                                                                            </>
-                                                                        ) : (
-                                                                            <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}>
-                                                                                <option value="">-- اختر التصنيف --</option>
-                                                                                {formData.assessment_skills[classifySkillKey] === 'no' && (
-                                                                                    <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
-                                                                                )}
-                                                                                {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)}
-                                                                            </Select>
-                                                                        )}
-                                                                    </FormGroup>
+                                                                                </>
+                                                                            ) : (
+                                                                                <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}>
+                                                                                    <option value="">-- اختر التصنيف --</option>
+                                                                                    {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                                                        <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
+                                                                                    )}
+                                                                                    {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)}
+                                                                                </Select>
+                                                                            )}
+                                                                        </FormGroup>
+                                                                    </div>
                                                                 )}
 
                                                                 {showSupervisorCorrection && (
                                                                     (isMultiSelectClassification && !isMultiSelectGroupEmpty(formData.assessment_skills[workerClassKey])) ||
                                                                     (!isMultiSelectClassification && formData.assessment_skills[workerClassKey] !== '')
                                                                 ) && (
-                                                                    <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
-                                                                        {isMultiSelectClassification && multiSelectCols ? (
-                                                                            <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white grid grid-cols-2 gap-x-4">
-                                                                                <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(correctClassKey, c, e.target.checked)} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(correctClassKey, c, e.target.checked)} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف الصحيح --</option> {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
-                                                                        )}
-                                                                    </FormGroup>
+                                                                    <div className="pt-4 mt-2 border-t border-slate-100">
+                                                                        <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
+                                                                            {isMultiSelectClassification && multiSelectCols ? (
+                                                                                <div className="max-h-40 overflow-y-auto border rounded p-3 bg-slate-50 grid grid-cols-2 gap-x-4">
+                                                                                    <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(correctClassKey, c, e.target.checked)} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                    <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(correctClassKey, c, e.target.checked)} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف الصحيح --</option> {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
+                                                                            )}
+                                                                        </FormGroup>
+                                                                    </div>
                                                                 )}
                                                             </> )}
                                                         </div>
@@ -1039,7 +1076,6 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                     </div>
                                 );
                             }
-                            // Regular Subgroup Rendering
                             else if (Array.isArray(subgroup.skills)) {
                                 const isVitalSignsGroup = subgroup.subgroupTitle === 'القياسات الجسمانية والحيوية';
                                 const isMalnutrition = subgroup.subgroupTitle === 'تحرى عن سوء التغذية الحاد'; const isAnemia = subgroup.subgroupTitle === 'تحرى عن الانيميا'; let classPrefix = ''; let classifications = []; if (isMalnutrition) { classPrefix = 'malnutrition'; classifications = MALNUTRITION_CLASSIFICATIONS; } if (isAnemia) { classPrefix = 'anemia'; classifications = ANEMIA_CLASSIFICATIONS; } const workerClassKey = `worker_${classPrefix}_classification`; const correctClassKey = `supervisor_correct_${classPrefix}_classification`; const classifySkillKey = isMalnutrition ? 'skill_mal_classify' : isAnemia ? 'skill_anemia_classify' : null;
@@ -1047,83 +1083,77 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                 const showSupervisorCorrection = showClassifications && formData.assessment_skills[classifySkillKey] === 'no';
 
                                 return (
-                                    <div key={subgroup.subgroupTitle} className="mb-4 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                                        <h5 dir="rtl" className="flex items-center text-sm font-bold text-white bg-sky-700 p-3 text-right">
-                                            {subgroupScoreData && <ScoreCircle score={subgroupScoreData.score} maxScore={subgroupScoreData.maxScore} />}
-                                            <span className="mr-2">{subgroup.subgroupTitle}</span>
-                                        </h5>
-                                        <div className="space-y-3 p-4 text-right" dir="rtl">
-                                            {subgroup.skills.map((skill, index) => {
-                                                let isConditionallyRelevant = true;
-                                                if (skill.relevant) {
-                                                    isConditionallyRelevant = typeof skill.relevant === 'function'
-                                                        ? skill.relevant(formData)
-                                                        : evaluateRelevance(skill.relevant, formData);
-                                                }
-                                                if (!isConditionallyRelevant) return null;
+                                    <SubgroupAccordion key={subgroup.subgroupTitle} title={subgroup.subgroupTitle} scoreData={subgroupScoreData}>
+                                        {subgroup.skills.map((skill, index) => {
+                                            let isConditionallyRelevant = true;
+                                            if (skill.relevant) {
+                                                isConditionallyRelevant = typeof skill.relevant === 'function'
+                                                    ? skill.relevant(formData)
+                                                    : evaluateRelevance(skill.relevant, formData);
+                                            }
+                                            if (!isConditionallyRelevant) return null;
 
-                                                let isSequentiallyVisible = true;
-                                                if (!isEditing && index > 0) {
-                                                    let previousRelevantSkill = null;
-                                                    for (let i = index - 1; i >= 0; i--) {
-                                                        const prevSkill = subgroup.skills[i];
-                                                        let prevSkillIsRelevant = true;
-                                                        if (prevSkill.relevant) {
-                                                            prevSkillIsRelevant = typeof prevSkill.relevant === 'function'
-                                                                ? prevSkill.relevant(formData)
-                                                                : evaluateRelevance(prevSkill.relevant, formData);
-                                                        }
-                                                        if (prevSkillIsRelevant) {
-                                                            previousRelevantSkill = prevSkill;
-                                                            break;
-                                                        }
+                                            let isSequentiallyVisible = true;
+                                            if (!isEditing && index > 0) {
+                                                let previousRelevantSkill = null;
+                                                for (let i = index - 1; i >= 0; i--) {
+                                                    const prevSkill = subgroup.skills[i];
+                                                    let prevSkillIsRelevant = true;
+                                                    if (prevSkill.relevant) {
+                                                        prevSkillIsRelevant = typeof prevSkill.relevant === 'function'
+                                                            ? prevSkill.relevant(formData)
+                                                            : evaluateRelevance(prevSkill.relevant, formData);
                                                     }
-                                                    if (previousRelevantSkill) {
-                                                        const previousValue = formData[group.sectionKey]?.[previousRelevantSkill.key];
-                                                        if (previousValue === '' || previousValue === undefined) {
-                                                            isSequentiallyVisible = false;
-                                                        }
+                                                    if (prevSkillIsRelevant) {
+                                                        previousRelevantSkill = prevSkill;
+                                                        break;
                                                     }
                                                 }
+                                                if (previousRelevantSkill) {
+                                                    const previousValue = formData[group.sectionKey]?.[previousRelevantSkill.key];
+                                                    if (previousValue === '' || previousValue === undefined) {
+                                                        isSequentiallyVisible = false;
+                                                    }
+                                                }
+                                            }
 
-                                                if (!isSequentiallyVisible) return null;
+                                            if (!isSequentiallyVisible) return null;
 
-                                                return (
-                                                    <SkillChecklistItem
-                                                        key={skill.key}
-                                                        name={skill.key}
-                                                        label={skill.label}
-                                                        value={formData[group.sectionKey]?.[skill.key]}
-                                                        onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)}
-                                                        showNaOption={isVitalSignsGroup || skill.showNaOption}
-                                                        naLabel={skill.naLabel || (isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق")}
-                                                    />
-                                                );
-                                            })}
-                                            
-                                            {showClassifications && (
-                                                <div className="pt-4 mt-4 border-t border-gray-200 space-y-4">
-                                                    {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
-                                                        <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
-                                                            <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}>
-                                                                <option value="">-- اختر التصنيف --</option>
-                                                                {formData.assessment_skills[classifySkillKey] === 'no' && (
-                                                                    <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
-                                                                )}
-                                                                {classifications.map(c => <option key={c} value={c}>{c}</option>)}
-                                                            </Select>
-                                                        </FormGroup>
-                                                    )}
-                                                    
-                                                    {showSupervisorCorrection && formData.assessment_skills[workerClassKey] !== '' && (
-                                                        <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
-                                                            <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف الصحيح --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
-                                                        </FormGroup>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                            return (
+                                                <SkillChecklistItem
+                                                    key={skill.key}
+                                                    name={skill.key}
+                                                    label={skill.label}
+                                                    value={formData[group.sectionKey]?.[skill.key]}
+                                                    onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)}
+                                                    showNaOption={isVitalSignsGroup ? true : (skill.showNaOption !== undefined ? skill.showNaOption : true)}
+                                                    naLabel={skill.naLabel || (isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق")}
+                                                />
+                                            );
+                                        })}
+                                        
+                                        {showClassifications && (
+                                            <div className="p-4 bg-white space-y-4">
+                                                {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
+                                                    <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
+                                                        <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}>
+                                                            <option value="">-- اختر التصنيف --</option>
+                                                            {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                                <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
+                                                            )}
+                                                            {classifications.map(c => <option key={c} value={c}>{c}</option>)}
+                                                        </Select>
+                                                    </FormGroup>
+                                                )}
+                                                
+                                                {showSupervisorCorrection && formData.assessment_skills[workerClassKey] !== '' && (
+                                                    <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
+                                                        <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف الصحيح --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
+                                                    </FormGroup>
+                                                )}
+                                            </div>
+                                        )}
+                                    </SubgroupAccordion>
                                 );
                             }
                             return null;

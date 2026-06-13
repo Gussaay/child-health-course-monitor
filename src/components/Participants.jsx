@@ -1781,9 +1781,10 @@ export function ParticipantsView({
     const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, facilitators, fetchFacilitators, isLoading, healthFacilities, fetchHealthFacilities } = useDataCache();
     const isCacheLoading = isLoading?.federalCoordinators === true || isLoading?.courses === true || isLoading?.facilitators === true;
 
-    // Load HealthFacilities immediately if we are viewing an IMNCI course, to ensure baseline generation works.
+    // Load HealthFacilities immediately if we are viewing courses that require facility mapping.
     useEffect(() => {
-        if (course?.course_type === 'IMNCI' && (!healthFacilities || healthFacilities.length === 0)) {
+        const requiresFacilities = ['IMNCI', 'EENC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(course?.course_type);
+        if (requiresFacilities && (!healthFacilities || healthFacilities.length === 0)) {
             fetchHealthFacilities();
         }
     }, [course?.course_type, healthFacilities, fetchHealthFacilities]);
