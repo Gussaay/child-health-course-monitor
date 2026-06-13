@@ -1446,7 +1446,7 @@ export const EENCVisitReport = ({
 
             setShowSuccessModal(true);
 
-        } catch (error) { setToast({ show: true, message: `فشل: ${error.message}`, type: 'error' }); } fillaly { setIsSaving(false); }
+        } catch (error) { setToast({ show: true, message: `فشل: ${error.message}`, type: 'error' }); } fillally { setIsSaving(false); }
     };
 
     const handleCloseSuccessModal = () => {
