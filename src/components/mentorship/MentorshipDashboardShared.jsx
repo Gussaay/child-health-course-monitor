@@ -16,7 +16,7 @@ import {
 } from 'chart.js';
 
 import { Spinner, Modal } from '../CommonComponents'; 
-import { useTranslation } from './LanguageContext'; 
+import { useTranslation } from 'react-i18next'; 
 
 import { 
     IMNCI_FORM_STRUCTURE 
@@ -280,7 +280,8 @@ export const KpiGridItem = ({ title, scoreValue, numerator, denominator }) => {
 };
 
 export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
     const gridColsClass = cols === 3 ? 'sm:grid-cols-3' : (cols === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2');
     
@@ -298,7 +299,8 @@ export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
 };
 
 export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
@@ -381,7 +383,8 @@ export const getLineDatasetStyle = (title, key, colors, data) => ({
 });
 
 export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
     const colors = { 'Cases Observed': '#3b82f6', 'Completed Visits': '#10b981' };
     const isAr = language === 'ar';
@@ -403,7 +406,8 @@ export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
 };
 
 export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNumerator, totalDenominator, v1Value, v1Numerator, v1Denominator, v4Value, v4Numerator, v4Denominator, filteredSubmissions }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
     
     const colors = { 'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 'Weight': '#06b6d4', 'Temp': '#3b82f6', 'Height': '#8b5cf6', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316', 'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626', 'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c', 'DangerSigns': '#f97316', 'Malnutrition Assessment': '#0284c7', 'Measurement Skills': '#8b5cf6', 'Immunization': '#10b981', 'Vitamin Assessment': '#f59e0b', 'Malaria Coartem': '#d946ef', 'Return Immediately': '#ef4444', 'Return Followup': '#3b82f6', 'Record Signs': '#06b6d4', 'Record Classifications': '#3b82f6', 'Record Treatments': '#8b5cf6', 'Preparation': '#10b981', 'Drying': '#3b82f6', 'Breathing Mgmt': '#f59e0b', 'Resuscitation': '#ef4444', 'Hand Washing (1st)': '#0d9488', 'Hand Washing (2nd)': '#14b8a6', 'Sterile Gloves': '#2dd4bf', 'Towels Ready': '#7c3aed', 'Resus Equip Ready': '#8b5cf6', 'Ambu Check': '#a78bfa', 'Drying < 5s': '#ea580c', 'Skin-to-Skin': '#f97316', 'Dry Towel/Hat': '#fb923c', 'Hygienic Check': '#be123c', 'Delayed Clamp': '#e11d48', 'Correct Clamp': '#f43f5e', 'Early BF Advice': '#d946ef', 'Head Pos': '#b91c1c', 'Mask Seal': '#dc2626', 'Chest Rise': '#ef4444', 'Rate 30-50': '#f87171', 'Imm. Skin-to-Skin': '#f97316', '90min Skin-to-Skin': '#fdba74', 'BF 1st Hour': '#ec4899', 'Other Fluids': '#f43f5e', 'Bottle Feeding': '#be123c', 'Vitamin K': '#8b5cf6', 'Eye Ointment': '#a78bfa', 'Cord Substance': '#d946ef', 'Skin Oiling': '#eab308', 'Bathing < 6hrs': '#f59e0b', 'Polio Vaccine': '#10b981', 'BCG Vaccine': '#34d399', 'Weight Measured': '#06b6d4', 'Temp Measured': '#22d3ee', 'Civil Reg': '#3b82f6', 'Discharge Card': '#6366f1', 'M: Knows Meds': '#4f46e5', 'M: Knows ORS': '#3b82f6', 'M: Knows Tx': '#0ea5e9', 'M: Knows 4 Rules': '#06b6d4', 'M: Knows Return': '#14b8a6', 'M: Knows Fluids': '#10b981', 'M: Time Spent': '#f59e0b', 'M: Assess Method': '#f97316', 'M: Tx Given': '#ef4444', 'M: Comm Style': '#ec4899', 'M: What Learned': '#d946ef', 'M: Drug Avail': '#8b5cf6', 'M: ORS Water': '#3b82f6', 'M: ORS Stool': '#f59e0b', 'M: Overall Knowledge': '#10b981', 'M: Overall Satisfaction': '#0ea5e9', 'M: Overall Score': '#8b5cf6' };
@@ -564,7 +568,8 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
 };
 
 export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
     const gridColsClass = cols === 3 ? 'sm:grid-cols-3' : (cols === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2');
 
@@ -599,7 +604,8 @@ export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) 
 };
 
 export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
     const isAr = language === 'ar';
     const getBarColor = (value) => { if (value >= 80) return '#10b981'; if (value >= 50) return '#f59e0b'; return '#ef4444'; };
@@ -687,7 +693,8 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
 };
 
 export const CompactSkillRow = ({ label, stats }) => {
-    const { language } = useTranslation();
+    const { i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const yes = stats?.yes || 0; const no = stats?.no || 0; const total = yes + no; const percentage = total > 0 ? (yes / total) : null;
     return (
         <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
@@ -699,7 +706,8 @@ export const CompactSkillRow = ({ label, stats }) => {
 };
 
 export const CompactSkillsTable = ({ overallKpis }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const skillStats = overallKpis?.skillStats;
     if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No detailed skill data available.')}</div>);
@@ -788,7 +796,8 @@ export const CompactSkillsTable = ({ overallKpis }) => {
 };
 
 export const EENCCompactSkillRow = ({ label, stats }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const yes = stats?.yes || 0; const partial = stats?.partial || 0; const no = stats?.no || 0; const totalResponses = yes + partial + no; const score = (yes * 2) + (partial * 1); const maxScore = totalResponses * 2; const percentage = maxScore > 0 ? (score / maxScore) : null;
     return (
@@ -803,7 +812,8 @@ export const EENCCompactSkillRow = ({ label, stats }) => {
 };
 
 export const EENCCompactSkillsTable = ({ overallKpis }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const skillStats = overallKpis?.skillStats;
     if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No detailed EENC skill data available.')}</div>);
@@ -845,7 +855,8 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
 };
 
 export const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const skillStats = motherKpis?.skillStats;
     if (!motherKpis || !skillStats) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No mother survey data available.')}</div>);
@@ -894,7 +905,8 @@ export const renderTrendArrows = (val, type) => {
 };
 
 export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const tableRef = useRef(null);
     if (!data || data.length === 0) return null;
@@ -937,7 +949,8 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
 };
 
 export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWorkerType }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const tableRef = useRef(null);
     if (!overallKpis || !kpisByWorkerType || kpisByWorkerType.length === 0) return null;
@@ -970,7 +983,8 @@ export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWork
 };
 
 export const MentorPerformanceTable = ({ title, submissions, visitReports, activeService }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const tableRef = useRef(null);
 

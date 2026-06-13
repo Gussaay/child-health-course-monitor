@@ -14,7 +14,9 @@ import {
   fetchSignInMethodsForEmail,
   linkWithCredential,
   EmailAuthProvider,
-  updateProfile 
+  updateProfile,
+  signInWithRedirect,
+  getRedirectResult 
 } from 'firebase/auth';
 
 import { auth } from './firebase.js';
@@ -53,6 +55,24 @@ export function SignInBox() {
     }, 100); 
     
     return () => clearTimeout(timer);
+  }, []);
+
+  // --- Handle Mobile Redirect Return ---
+  useEffect(() => {
+    const handleRedirectReturn = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          setIsLoading(true);
+          checkAndPromptForName(result.user);
+        }
+      } catch (err) {
+        setError(err.message);
+        setIsLoading(false);
+      }
+    };
+    
+    handleRedirectReturn();
   }, []);
 
   const checkAndPromptForName = (user, skipSuccessMessage = false) => {
@@ -273,7 +293,14 @@ export function SignInBox() {
             const result = await signInWithPopup(auth, provider); 
             user = result.user;
         } catch (popupError) {
-            throw popupError; 
+            // Fallback to redirect if browser blocks the popup[cite: 2]
+            if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/operation-not-supported-in-this-environment') {
+                setMessage("Redirecting to secure Google sign-in...");
+                await signInWithRedirect(auth, provider);
+                return; // Stop execution, the page will redirect
+            } else {
+                throw popupError; 
+            }
         }
       }
 
@@ -453,7 +480,11 @@ export function SignInBox() {
         </div> 
         
         <button 
-          onClick={() => signInWithGoogle()} 
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            signInWithGoogle();
+          }} 
           className="flex items-center justify-center w-full gap-3 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:bg-gray-400"
           disabled={isLoading} 
         >

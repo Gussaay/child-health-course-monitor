@@ -1,6 +1,6 @@
 // MentorshipDashboard.jsx
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { Spinner } from '../CommonComponents'; 
+import { Spinner, Modal } from '../CommonComponents'; 
 import { 
     FilterSelect, 
     CopyImageButton, 
@@ -19,7 +19,7 @@ import FacilityInformationDashboardTab from './FacilityInformationDashboardTab';
 import { IMNCI_FORM_STRUCTURE, calculateScores, rehydrateDraftData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS } from './IMNCSkillsAssessmentForm.jsx';
 import { PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS, NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS } from './EENCSkillsAssessmentForm.jsx';
 
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from 'react-i18next';
 
 // --- Constants & Dictionaries ---
 const SERVICE_TITLES = {
@@ -74,7 +74,8 @@ const MentorshipDashboard = ({
     dateFilter = '', onDateFilterChange = () => {}
 }) => {
 
-    const { t, language } = useTranslation(); 
+    const { t, i18n } = useTranslation(); 
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
 
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
@@ -82,6 +83,9 @@ const MentorshipDashboard = ({
     
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
+    
+    // Controls the Mobile Filter Modal
+    const [isMobileFilterModalOpen, setIsMobileFilterModalOpen] = useState(false);
 
     const formatDateForInput = (dateValue) => {
         if (!dateValue) return '';
@@ -873,6 +877,63 @@ const MentorshipDashboard = ({
     const activeTab = activeService === 'IMNCI' ? activeImnciTab : activeEencTab;
     const setActiveTabFunc = activeService === 'IMNCI' ? setActiveImnciTab : setActiveEencTab;
 
+    const FilterControls = (
+        <div className="flex flex-row flex-wrap gap-4 w-full">
+            <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('Start Date') || 'Start Date'}</label>
+                <input 
+                    type="date" 
+                    value={formatDateForInput(customStartDate)} 
+                    onChange={(e) => setCustomStartDate(e.target.value)} 
+                    className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customStartDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}
+                />
+            </div>
+            <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('End Date') || 'End Date'}</label>
+                <input 
+                    type="date" 
+                    value={formatDateForInput(customEndDate)} 
+                    onChange={(e) => setCustomEndDate(e.target.value)} 
+                    className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customEndDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}
+                />
+            </div>
+
+            <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('filter.date')}</label>
+                <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}>
+                    <option value="">{t('filter.all.time')}</option>
+                    <option value="today">{t('date.today')}</option>
+                    <option value="yesterday">{t('date.yesterday')}</option>
+                    <option value="this_week">{t('date.this_week')}</option>
+                    <option value="last_week">{t('date.last_week')}</option>
+                    <option value="this_month">{t('date.this_month')}</option>
+                    <option value="last_month">{t('date.last_month')}</option>
+                    <option value="this_year">{t('date.this_year')}</option>
+                    <option value="last_year">{t('date.last_year')}</option>
+                </select>
+            </div>
+            
+            <FilterSelect label={t('filter.state')} value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={stateOptions} defaultOption={t('filter.all.states')} />
+            <FilterSelect label={t('filter.locality')} value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={localityOptions} disabled={!activeState} defaultOption={t('filter.all.localities')} />
+            <FilterSelect label={t('filter.facility')} value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption={t('filter.all.facilities')} />
+            <FilterSelect label={t('filter.project')} value={activeProject} onChange={(v) => { onProjectChange(v); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={projectOptions} defaultOption={t('filter.all.projects')} />
+            <FilterSelect label={t('filter.job_title')} value={activeWorkerType || ""} onChange={(v) => { if(onWorkerTypeChange) onWorkerTypeChange(v); onWorkerNameChange(""); }} options={workerTypeOptions || []} defaultOption={t('filter.all.titles')} />
+            <FilterSelect label={t('filter.worker_name')} value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption={t('filter.all.workers')} />
+        </div>
+    );
+
+    const activeFilterCount = [
+        activeState, 
+        activeLocality, 
+        activeFacilityId, 
+        activeProject, 
+        activeWorkerType, 
+        activeWorkerName, 
+        dateFilter, 
+        customStartDate, 
+        customEndDate
+    ].filter(Boolean).length;
+
     return (
         // ADDED pb-24 to prevent the Session Ops floating widget from covering bottom content
         <div className="p-2 sm:p-6 bg-slate-50/50 min-h-screen pb-24" dir={isAr ? 'rtl' : 'ltr'}>             
@@ -890,48 +951,28 @@ const MentorshipDashboard = ({
                 </h3>
             </div>
             
-            {/* 2. OPTIMIZED FILTERS: flex-wrap replaces overflow-x-auto to prevent annoying scrolling */}
-            <div className="flex flex-row flex-wrap gap-4 mb-8 p-5 bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('Start Date') || 'Start Date'}</label>
-                    <input 
-                        type="date" 
-                        value={formatDateForInput(customStartDate)} 
-                        onChange={(e) => setCustomStartDate(e.target.value)} 
-                        className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customStartDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}
-                    />
-                </div>
-                <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('End Date') || 'End Date'}</label>
-                    <input 
-                        type="date" 
-                        value={formatDateForInput(customEndDate)} 
-                        onChange={(e) => setCustomEndDate(e.target.value)} 
-                        className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customEndDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}
-                    />
-                </div>
+            {/* 2. RESPONSIVE FILTERS */}
+            {/* Mobile Filter Button */}
+            <div className="flex md:hidden mb-6">
+                <button 
+                    onClick={() => setIsMobileFilterModalOpen(true)}
+                    className="w-full bg-white border border-slate-300 hover:border-sky-500 text-slate-700 py-3 px-4 rounded-xl shadow-sm flex items-center justify-between font-bold transition-all"
+                >
+                    <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+                        {t('Filters')}
+                    </div>
+                    {activeFilterCount > 0 && (
+                        <span className="bg-sky-600 text-white text-xs px-2.5 py-0.5 rounded-full">
+                            {activeFilterCount} Active
+                        </span>
+                    )}
+                </button>
+            </div>
 
-                <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('filter.date')}</label>
-                    <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}>
-                        <option value="">{t('filter.all.time')}</option>
-                        <option value="today">{t('date.today')}</option>
-                        <option value="yesterday">{t('date.yesterday')}</option>
-                        <option value="this_week">{t('date.this_week')}</option>
-                        <option value="last_week">{t('date.last_week')}</option>
-                        <option value="this_month">{t('date.this_month')}</option>
-                        <option value="last_month">{t('date.last_month')}</option>
-                        <option value="this_year">{t('date.this_year')}</option>
-                        <option value="last_year">{t('date.last_year')}</option>
-                    </select>
-                </div>
-                
-                <FilterSelect label={t('filter.state')} value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={stateOptions} defaultOption={t('filter.all.states')} />
-                <FilterSelect label={t('filter.locality')} value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={localityOptions} disabled={!activeState} defaultOption={t('filter.all.localities')} />
-                <FilterSelect label={t('filter.facility')} value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption={t('filter.all.facilities')} />
-                <FilterSelect label={t('filter.project')} value={activeProject} onChange={(v) => { onProjectChange(v); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={projectOptions} defaultOption={t('filter.all.projects')} />
-                <FilterSelect label={t('filter.job_title')} value={activeWorkerType || ""} onChange={(v) => { if(onWorkerTypeChange) onWorkerTypeChange(v); onWorkerNameChange(""); }} options={workerTypeOptions || []} defaultOption={t('filter.all.titles')} />
-                <FilterSelect label={t('filter.worker_name')} value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption={t('filter.all.workers')} />
+            {/* Desktop Inline Filters */}
+            <div className="hidden md:flex flex-row flex-wrap gap-4 mb-8 p-5 bg-white rounded-2xl shadow-sm border border-slate-200">
+                {FilterControls}
             </div>
             
             {/* 3. OPTIMIZED TABS: Stronger visual contrast for the active state */}
@@ -1025,6 +1066,36 @@ const MentorshipDashboard = ({
                     />
                 )}
             </div>
+
+            {/* Mobile Filter Modal */}
+            {isMobileFilterModalOpen && (
+                <Modal 
+                    isOpen={isMobileFilterModalOpen} 
+                    onClose={() => setIsMobileFilterModalOpen(false)} 
+                    title={t('Dashboard Filters')}
+                    size="md"
+                >
+                    <div className="p-4 bg-slate-50 min-h-[50vh] max-h-[75vh] overflow-y-auto">
+                        {FilterControls}
+                    </div>
+                    <div className="p-4 bg-white border-t border-slate-200 flex justify-end gap-3 sticky bottom-0">
+                         <button 
+                            onClick={() => {
+                                onStateChange(""); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); if(onWorkerTypeChange) onWorkerTypeChange(""); setCustomStartDate(""); setCustomEndDate(""); onDateFilterChange("");
+                            }}
+                            className="px-4 py-2 text-slate-600 font-bold text-sm"
+                        >
+                            {t('Clear All')}
+                        </button>
+                        <button 
+                            onClick={() => setIsMobileFilterModalOpen(false)}
+                            className="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-bold text-sm shadow-sm"
+                        >
+                            {t('Apply Filters')}
+                        </button>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 };

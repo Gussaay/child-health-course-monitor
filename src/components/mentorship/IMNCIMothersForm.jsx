@@ -11,6 +11,7 @@ import {
     Input 
 } from '../CommonComponents';
 import { getAuth } from "firebase/auth";
+import { handleAutoScroll, ActionToggle } from './IMNCSkillsAssessmentForm';
 
 // --- Score Circle Component ---
 const ScoreCircle = ({ score, maxScore }) => {
@@ -70,6 +71,42 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
             <div className="font-bold text-sm sm:text-lg leading-none">{totalMaxScore === 0 ? 'N/A' : `${percentage}%`}</div>
             <div className="text-[10px] sm:text-xs mt-1 text-center leading-tight">Overall Score</div>
             <div className="text-[10px] sm:text-xs mt-0 leading-tight">({totalScore}/{totalMaxScore})</div>
+        </div>
+    );
+};
+
+// --- Accordion Wrapper for Mothers Form Sections ---
+const MothersSectionAccordion = ({ title, scoreData, children, isCompleted = false }) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+
+    useEffect(() => {
+        if (isCompleted) {
+            const timer = setTimeout(() => setIsExpanded(false), 800);
+            return () => clearTimeout(timer);
+        } else {
+            setIsExpanded(true);
+        }
+    }, [isCompleted]);
+
+    return (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 mb-6" dir="rtl">
+            <button 
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)} 
+                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+            >
+                <div className="flex items-center text-right text-base font-bold text-slate-800">
+                    {scoreData && <ScoreCircle score={scoreData.score} maxScore={scoreData.maxScore} />}
+                    <span className="mr-2">{title}</span>
+                    {isCompleted && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
+                </div>
+                <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            {isExpanded && (
+                <div className="divide-y divide-slate-100 bg-white">
+                    {children}
+                </div>
+            )}
         </div>
     );
 };
@@ -136,25 +173,35 @@ const calculateScores = (formData) => {
 };
 
 const MotherFormRow = ({ name, label, value, onChange, options = ['نعم', 'لا', 'لا ينطبق'] }) => {
+    const isAnswered = value !== '';
+    const containerClasses = `flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:px-5 hover:bg-gray-50 transition-colors ${isAnswered ? 'row-answered' : 'row-unanswered'}`;
+
+    const handleToggleClick = (name, val) => {
+        const wasAnswered = value !== '';
+        onChange(name, val);
+        if (!wasAnswered) {
+            handleAutoScroll();
+        }
+    };
+
+    const toggleOptions = options.map(opt => {
+        if (opt === 'نعم') return ['نعم', 'نعم', 'bg-green-600 border-green-600'];
+        if (opt === 'لا') return ['لا', 'لا', 'bg-red-600 border-red-600'];
+        return [opt, opt, 'bg-gray-500 border-gray-500']; 
+    });
+
     return (
-        <div dir="rtl" className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b last:border-b-0 bg-white hover:bg-gray-50 transition-colors">
+        <div dir="rtl" className={containerClasses}>
             <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex-grow mr-4 w-full sm:w-auto">
                 {label}
             </span>
             <div className="flex gap-4 flex-shrink-0 mt-1 sm:mt-0">
-                {options.map(option => (
-                    <label key={option} className="flex items-center gap-1 cursor-pointer text-sm">
-                        <input
-                            type="radio"
-                            name={name}
-                            value={option}
-                            checked={value === option}
-                            onChange={(e) => onChange(name, e.target.value)}
-                            className={`form-radio ${option === 'نعم' ? 'text-green-600' : option === 'لا' ? 'text-red-600' : 'text-gray-500'}`}
-                            required
-                        /> {option}
-                    </label>
-                ))}
+                <ActionToggle
+                    options={toggleOptions}
+                    currentValue={value}
+                    name={name}
+                    onClick={handleToggleClick}
+                />
             </div>
         </div>
     );
@@ -349,6 +396,9 @@ const MothersForm = ({
             setIsSaving(false);
         }
     };
+    
+    const isKnowledgeComplete = MOTHER_KNOWLEDGE_QUESTIONS.every(q => formData.knowledge[q.key] !== '');
+    const isSatisfactionComplete = MOTHER_SATISFACTION_QUESTIONS.every(q => formData.satisfaction[q.key] !== '');
 
     return (
         <Card dir="rtl">
@@ -407,11 +457,7 @@ const MothersForm = ({
                         </div>
                     </div>
 
-                    <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                        <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
-                            <span className="mr-2">معرفة الأمهات: هل الأم تعرف؟</span> 
-                            <ScoreCircle score={scores.knowledge.score} maxScore={scores.knowledge.maxScore} />
-                        </h3>
+                    <MothersSectionAccordion title="معرفة الأمهات: هل الأم تعرف؟" scoreData={scores.knowledge} isCompleted={isKnowledgeComplete}>
                         {MOTHER_KNOWLEDGE_QUESTIONS.map((q) => (
                             <MotherFormRow
                                 key={q.key}
@@ -421,13 +467,9 @@ const MothersForm = ({
                                 onChange={(key, value) => handleFormChange('knowledge', key, value)}
                             />
                         ))}
-                    </div>
+                    </MothersSectionAccordion>
 
-                    <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                         <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
-                            <span className="mr-2">رضاء الأمهات: هل الأم راضية عن؟</span>
-                            <ScoreCircle score={scores.satisfaction.score} maxScore={scores.satisfaction.maxScore} />
-                        </h3>
+                    <MothersSectionAccordion title="رضاء الأمهات: هل الأم راضية عن؟" scoreData={scores.satisfaction} isCompleted={isSatisfactionComplete}>
                         {MOTHER_SATISFACTION_QUESTIONS.map((q) => {
                             return (
                                 <div key={q.key} className="space-y-2">
@@ -441,9 +483,9 @@ const MothersForm = ({
                                 </div>
                             );
                         })}
-                    </div>
+                    </MothersSectionAccordion>
                     
-                    <FormGroup label="ملاحظات عامة حول الاستبيان" className="text-right">
+                    <FormGroup label="ملاحظات عامة حول الاستبيان" className="text-right mt-6">
                         <Textarea name="notes" value={formData.notes} onChange={handleSimpleChange} rows={3} placeholder="أضف أي ملاحظات إضافية حول الاستبيان..." className="text-right placeholder:text-right"/>
                     </FormGroup>
                 </div>

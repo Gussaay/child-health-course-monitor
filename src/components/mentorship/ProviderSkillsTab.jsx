@@ -1,6 +1,6 @@
 // ProviderSkillsTab.jsx
 import React from 'react';
-import { useTranslation } from './LanguageContext'; 
+import { useTranslation } from 'react-i18next'; 
 import { 
     KpiCard, 
     DetailedKpiCard, 
@@ -22,7 +22,8 @@ const ProviderSkillsTab = ({
     imnciSummaryDefs, eencSummaryDefs, scopeTitle, geographicLevelName,
     filteredSubmissions
 }) => {
-    const { t } = useTranslation(); 
+    const { t, i18n } = useTranslation(); 
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
 
     // Helper functions to get absolute counts out of simple YES/NO skillStats
     const getStats = (keys) => {
@@ -284,6 +285,37 @@ const ProviderSkillsTab = ({
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <KpiLineChart title={t("Drying within 5 sec")} chartData={chartData} kpiKeys={[{ key: 'Drying < 5s', title: 'Drying < 5s', rawKeys: ['dry_start_5sec'] }]} overallScore={overallKpis.avgCareDry} totalNumerator={getStats(['dry_start_5sec']).yes} totalDenominator={getStats(['dry_start_5sec']).total} v1Numerator={getVisitStats(['dry_start_5sec'], 1).yes} v1Denominator={getVisitStats(['dry_start_5sec'], 1).total} v4Numerator={getVisitStats(['dry_start_5sec'], 4).yes} v4Denominator={getVisitStats(['dry_start_5sec'], 4).total} filteredSubmissions={filteredSubmissions} />
+                <KpiLineChart title={t("Immediate Skin-to-Skin")} chartData={chartData} kpiKeys={[{ key: 'Skin-to-Skin', title: 'Skin-to-Skin', rawKeys: ['dry_skin_to_skin'] }]} overallScore={overallKpis.avgCareSkin} totalNumerator={getStats(['dry_skin_to_skin']).yes} totalDenominator={getStats(['dry_skin_to_skin']).total} v1Numerator={getVisitStats(['dry_skin_to_skin'], 1).yes} v1Denominator={getVisitStats(['dry_skin_to_skin'], 1).total} v4Numerator={getVisitStats(['dry_skin_to_skin'], 4).yes} v4Denominator={getVisitStats(['dry_skin_to_skin'], 4).total} filteredSubmissions={filteredSubmissions} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <KpiLineChart title={t("Dry Towel & Hat Used")} chartData={chartData} kpiKeys={[{ key: 'Dry Towel/Hat', title: 'Towel/Hat', rawKeys: ['dry_cover_baby'] }]} overallScore={overallKpis.avgCareCover} totalNumerator={getStats(['dry_cover_baby']).yes} totalDenominator={getStats(['dry_cover_baby']).total} v1Numerator={getVisitStats(['dry_cover_baby'], 1).yes} v1Denominator={getVisitStats(['dry_cover_baby'], 1).total} v4Numerator={getVisitStats(['dry_cover_baby'], 4).yes} v4Denominator={getVisitStats(['dry_cover_baby'], 4).total} filteredSubmissions={filteredSubmissions} />
+                <DetailedKpiCard title={t("Cord Management (Details)")} overallScore={calculateAverage([overallKpis.avgCordHygiene, overallKpis.avgCordDelay, overallKpis.avgCordClamp])} kpis={eencCordKpis} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <KpiLineChart title={t("Hygienic Cord Check")} chartData={chartData} kpiKeys={[{ key: 'Hygienic Check', title: 'Hygienic Check', rawKeys: ['normal_remove_outer_glove'] }]} overallScore={overallKpis.avgCordHygiene} totalNumerator={getStats(['normal_remove_outer_glove']).yes} totalDenominator={getStats(['normal_remove_outer_glove']).total} v1Numerator={getVisitStats(['normal_remove_outer_glove'], 1).yes} v1Denominator={getVisitStats(['normal_remove_outer_glove'], 1).total} v4Numerator={getVisitStats(['normal_remove_outer_glove'], 4).yes} v4Denominator={getVisitStats(['normal_remove_outer_glove'], 4).total} filteredSubmissions={filteredSubmissions} />
+                <KpiLineChart title={t("Delayed Clamping")} chartData={chartData} kpiKeys={[{ key: 'Delayed Clamp', title: 'Delayed Clamp', rawKeys: ['normal_cord_pulse_check'] }]} overallScore={overallKpis.avgCordDelay} totalNumerator={getStats(['normal_cord_pulse_check']).yes} totalDenominator={getStats(['normal_cord_pulse_check']).total} v1Numerator={getVisitStats(['normal_cord_pulse_check'], 1).yes} v1Denominator={getVisitStats(['normal_cord_pulse_check'], 1).total} v4Numerator={getVisitStats(['normal_cord_pulse_check'], 4).yes} v4Denominator={getVisitStats(['normal_cord_pulse_check'], 4).total} filteredSubmissions={filteredSubmissions} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <KpiLineChart title={t("Correct Clamping")} chartData={chartData} kpiKeys={[{ key: 'Correct Clamp', title: 'Correct Clamp', rawKeys: ['normal_cord_clamping'] }]} overallScore={overallKpis.avgCordClamp} totalNumerator={getStats(['normal_cord_clamping']).yes} totalDenominator={getStats(['normal_cord_clamping']).total} v1Numerator={getVisitStats(['normal_cord_clamping'], 1).yes} v1Denominator={getVisitStats(['normal_cord_clamping'], 1).total} v4Numerator={getVisitStats(['normal_cord_clamping'], 4).yes} v4Denominator={getVisitStats(['normal_cord_clamping'], 4).total} filteredSubmissions={filteredSubmissions} />
+                <DetailedKpiCard title={t("Breastfeeding (Details)")} overallScore={overallKpis.avgBfAdvice} kpis={eencBreastfeedingKpis} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <KpiLineChart title={t("Early Breastfeeding Advice")} chartData={chartData} kpiKeys={[{ key: 'Early BF Advice', title: 'BF Advice', rawKeys: ['normal_breastfeeding_guidance'] }]} overallScore={overallKpis.avgBfAdvice} totalNumerator={getStats(['normal_breastfeeding_guidance']).yes} totalDenominator={getStats(['normal_breastfeeding_guidance']).total} v1Numerator={getVisitStats(['normal_breastfeeding_guidance'], 1).yes} v1Denominator={getVisitStats(['normal_breastfeeding_guidance'], 1).total} v4Numerator={getVisitStats(['normal_breastfeeding_guidance'], 4).yes} v4Denominator={getVisitStats(['normal_breastfeeding_guidance'], 4).total} filteredSubmissions={filteredSubmissions} />
+                <DetailedKpiCard title={t("Resuscitation Execution (Details)")} overallScore={overallKpis.avgResuscitation} kpis={eencResusExecKpis} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <KpiLineChart title={t("Head Positioning")} chartData={chartData} kpiKeys={[{ key: 'Head Pos', title: 'Head Pos', rawKeys: ['resus_position_head'] }]} overallScore={overallKpis.avgResusHead} totalNumerator={getStats(['resus_position_head']).yes} totalDenominator={getStats(['resus_position_head']).total} v1Numerator={getVisitStats(['resus_position_head'], 1).yes} v1Denominator={getVisitStats(['resus_position_head'], 1).total} v4Numerator={getVisitStats(['resus_position_head'], 4).yes} v4Denominator={getVisitStats(['resus_position_head'], 4).total} filteredSubmissions={filteredSubmissions} />
+                <KpiLineChart title={t("Good Mask Seal")} chartData={chartData} kpiKeys={[{ key: 'Mask Seal', title: 'Mask Seal', rawKeys: ['resus_mask_position'] }]} overallScore={overallKpis.avgResusMask} totalNumerator={getStats(['resus_mask_position']).yes} totalDenominator={getStats(['resus_mask_position']).total} v1Numerator={getVisitStats(['resus_mask_position'], 1).yes} v1Denominator={getVisitStats(['resus_mask_position'], 1).total} v4Numerator={getVisitStats(['resus_mask_position'], 4).yes} v4Denominator={getVisitStats(['resus_mask_position'], 4).total} filteredSubmissions={filteredSubmissions} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <KpiLineChart title={t("Chest Rise (1st min)")} chartData={chartData} kpiKeys={[{ key: 'Chest Rise', title: 'Chest Rise', rawKeys: ['resus_check_chest_rise'] }]} overallScore={overallKpis.avgResusChest} totalNumerator={getStats(['resus_check_chest_rise']).yes} totalDenominator={getStats(['resus_check_chest_rise']).total} v1Numerator={getVisitStats(['resus_check_chest_rise'], 1).yes} v1Denominator={getVisitStats(['resus_check_chest_rise'], 1).total} v4Numerator={getVisitStats(['resus_check_chest_rise'], 4).yes} v4Denominator={getVisitStats(['resus_check_chest_rise'], 4).total} filteredSubmissions={filteredSubmissions} />
+                <KpiLineChart title={t("Adequate Rate (30-50)")} chartData={chartData} kpiKeys={[{ key: 'Rate 30-50', title: 'Rate', rawKeys: ['resus_ventilation_rate'] }]} overallScore={overallKpis.avgResusRate} totalNumerator={getStats(['resus_ventilation_rate']).yes} totalDenominator={getStats(['resus_ventilation_rate']).total} v1Numerator={getVisitStats(['resus_ventilation_rate'], 1).yes} v1Denominator={getVisitStats(['resus_ventilation_rate'], 1).total} v4Numerator={getVisitStats(['resus_ventilation_rate'], 4).yes} v4Denominator={getVisitStats(['resus_ventilation_rate'], 4).total} filteredSubmissions={filteredSubmissions} />
             </div>
             
             <SummaryKpiTable title={`${t('KPI Summary by Job Description')} ${scopeTitle}`} kpiDefinitions={eencSummaryDefs} overallKpis={overallKpis} kpisByWorkerType={kpisByWorkerType} />

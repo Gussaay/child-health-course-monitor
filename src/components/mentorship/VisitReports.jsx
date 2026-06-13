@@ -35,30 +35,51 @@ const SuccessModal = ({ isOpen, onClose, message }) => {
 const FacilitySnapshotSummary = ({ facility, serviceType }) => {
     if (!facility) return null;
 
+    let itemsToDisplay = [];
+    if (serviceType === 'IMNCI') {
+        itemsToDisplay = [
+            { key: 'وجود_كتيب_لوحات', label: 'كتيب اللوحات (Chartbook)' },
+            { key: 'وجود_سجل_علاج_متكامل', label: 'سجل علاج متكامل (Record Form)' },
+            { key: 'ميزان_وزن', label: 'ميزان وزن (Weight Scale)' },
+            { key: 'ميزان_طول', label: 'ميزان طول (Height Board)' },
+            { key: 'ميزان_حرارة', label: 'ميزان حرارة (Thermometer)' },
+            { key: 'ساعة_مؤقت', label: 'ساعة مؤقت (Timer)' },
+            { key: 'غرفة_إرواء', label: 'غرفة إرواء (ORS Corner)' },
+            { key: 'immunization_office_exists', label: 'مكتب تحصين (Immunization)' },
+            { key: 'nutrition_center_exists', label: 'مركز تغذية (Nutrition)' },
+            { key: 'growth_monitoring_service_exists', label: 'متابعة النمو (Growth Monitoring)' }
+        ];
+    } else if (serviceType === 'EENC') {
+        itemsToDisplay = [
+            { key: 'delivery_register', fallbackKey: 'سجل_ولادات', label: 'سجل ولادات (Delivery Register)' },
+            { key: 'resuscitation_area', fallbackKey: 'طاولة_إنعاش', fallbackKey2: 'resuscitation_table', label: 'طاولة إنعاش (Resuscitation Area)' },
+            { key: 'infant_warmer', label: 'مدفأة (Infant Warmer)' },
+            { key: 'suction_machine', label: 'جهاز شفط (Suction Machine)' },
+            { key: 'oxygen_supply', label: 'إمداد أوكسجين (Oxygen Supply)' },
+            { key: 'handwashing_sink', label: 'حوض غسيل أيدي (Handwashing Sink)' },
+            { key: 'kmc_space', fallbackKey: 'رعاية_الكنغر', label: 'رعاية الكنغر (KMC Space)' },
+            { key: 'anc_services', label: 'رعاية حوامل (ANC)' },
+            { key: 'pnc_services', label: 'رعاية نفاس (PNC)' },
+            { key: 'infection_control', label: 'مكافحة العدوى (Infection Control)' }
+        ];
+    }
+
     return (
         <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-inner">
             <h3 className="text-sm font-extrabold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
                 <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                البيانات المرفقة تلقائياً (Automated Facility Snapshot)
+                البيانات المرفقة تلقائياً ({serviceType} Facility Snapshot)
             </h3>
             <p className="text-xs text-slate-500 mb-4 font-semibold">
-                هذه البيانات تم جلبها تلقائياً من ملف المنشأة وللقراءة فقط. سيتم إرفاقها مع هذا التقرير لضمان دقة التحليل الزمني.
+                هذه البيانات تم جلبها تلقائياً من ملف المنشأة وللقراءة فقط. سيتم إرفاقها مع هذا التقرير لضمان دقة التحليل الزمني لـ {serviceType}.
             </p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {[
-                    { key: 'وجود_كتيب_لوحات', label: 'كتيب اللوحات (Chartbook)' },
-                    { key: 'وجود_سجل_علاج_متكامل', label: 'سجل علاج متكامل (Record Form)' },
-                    { key: 'ميزان_وزن', label: 'ميزان وزن (Weight Scale)' },
-                    { key: 'ميزان_طول', label: 'ميزان طول (Height Board)' },
-                    { key: 'ميزان_حرارة', label: 'ميزان حرارة (Thermometer)' },
-                    { key: 'ساعة_مؤقت', label: 'ساعة مؤقت (Timer)' },
-                    { key: 'غرفة_إرواء', label: 'غرفة إرواء (ORS Corner)' },
-                    { key: 'immunization_office_exists', label: 'مكتب تحصين (Immunization)' },
-                    { key: 'nutrition_center_exists', label: 'مركز تغذية (Nutrition)' },
-                    { key: 'growth_monitoring_service_exists', label: 'متابعة النمو (Growth Monitoring)' }
-                ].map(item => {
-                    const isAvailable = facility[item.key] === 'Yes' || facility[item.key] === 'yes';
+                {itemsToDisplay.map(item => {
+                    const val = facility[item.key] !== undefined ? facility[item.key] : 
+                                (item.fallbackKey && facility[item.fallbackKey] !== undefined ? facility[item.fallbackKey] : 
+                                (item.fallbackKey2 && facility[item.fallbackKey2] !== undefined ? facility[item.fallbackKey2] : null));
+                    const isAvailable = val === 'Yes' || val === 'yes' || val === true || val === 'true';
                     return (
                         <div key={item.key} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-slate-200">
                             <span className="text-xs font-bold text-slate-700">{item.label}</span>
@@ -207,7 +228,7 @@ const EENC_BREATHING_BABY_SKILLS = {
 
 const EENC_RESUSCITATION_SKILLS = {
     'skill_airway': "فتح مجرى الهواء",
-    'skill_ambubag_placement': "وضع الامبوباق بصورة صحيحة على القم والانف",
+    'skill_ambubag_placement': "وضع الامبوباق بصورة صحيحة على الفم والانف",
     'skill_ambubag_use': "استخدام الامبوباق بصورة صحيحة",
     'skill_ventilation_rate': "معدل التهوية 40-60 في الدقيقة"
 };
@@ -1339,17 +1360,19 @@ export const EENCVisitReport = ({
             });
 
             // Ensure we capture the exact snapshot of facility readiness during the report entry
+            const checkYes = (val) => val === 'Yes' || val === 'yes' || val === true || val === 'true' ? 'yes' : 'no';
+            
             const capturedEssentialTools = existingReportData?.essential_tools || {
-                chartbook: facility['وجود_كتيب_لوحات'] === 'Yes' ? 'yes' : 'no',
-                recordForm: facility['وجود_سجل_علاج_متكامل'] === 'Yes' ? 'yes' : 'no',
-                weightScale: facility['ميزان_وزن'] === 'Yes' ? 'yes' : 'no',
-                heightScale: facility['ميزان_طول'] === 'Yes' ? 'yes' : 'no',
-                thermometer: facility['ميزان_حرارة'] === 'Yes' ? 'yes' : 'no',
-                timer: facility['ساعة_مؤقت'] === 'Yes' ? 'yes' : 'no',
-                orsCorner: facility['غرفة_إرواء'] === 'Yes' ? 'yes' : 'no',
-                immunization: facility.immunization_office_exists === 'Yes' ? 'yes' : 'no',
-                nutrition: facility.nutrition_center_exists === 'Yes' ? 'yes' : 'no',
-                growthMonitoring: facility.growth_monitoring_service_exists === 'Yes' ? 'yes' : 'no'
+                delivery_register: checkYes(facility['delivery_register']) === 'yes' ? 'yes' : checkYes(facility['سجل_ولادات']),
+                resuscitation_area: checkYes(facility['resuscitation_area']) === 'yes' ? 'yes' : (checkYes(facility['طاولة_إنعاش']) === 'yes' ? 'yes' : checkYes(facility['resuscitation_table'])),
+                infant_warmer: checkYes(facility['infant_warmer']),
+                suction_machine: checkYes(facility['suction_machine']),
+                oxygen_supply: checkYes(facility['oxygen_supply']),
+                handwashing_sink: checkYes(facility['handwashing_sink']),
+                kmc_space: checkYes(facility['kmc_space']) === 'yes' ? 'yes' : checkYes(facility['رعاية_الكنغر']),
+                anc_services: checkYes(facility['anc_services']),
+                pnc_services: checkYes(facility['pnc_services']),
+                infection_control: checkYes(facility['infection_control'])
             };
 
             const payload = {
@@ -1423,7 +1446,7 @@ export const EENCVisitReport = ({
 
             setShowSuccessModal(true);
 
-        } catch (error) { setToast({ show: true, message: `فشل: ${error.message}`, type: 'error' }); } finally { setIsSaving(false); }
+        } catch (error) { setToast({ show: true, message: `فشل: ${error.message}`, type: 'error' }); } fillaly { setIsSaving(false); }
     };
 
     const handleCloseSuccessModal = () => {

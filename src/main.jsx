@@ -15,9 +15,73 @@ import { registerSW } from 'virtual:pwa-register';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { Capacitor } from '@capacitor/core';
 
-// Automatically updates the service worker when new content is available
-registerSW({ immediate: true });
-// ------------------------------------
+// =========================================================================
+// --- INTELLIGENT INSTANT UPDATE MANAGER (WEB & NATIVE) ---
+// =========================================================================
+window.pendingPwaUpdate = null;
+window.pendingOtaBundleId = null;
+
+// Helper to instantly trigger Native OTA restart
+window.applyCapgoUpdate = async (id) => {
+    try {
+        if (Capacitor.isNativePlatform()) {
+            await CapacitorUpdater.set({ id });
+        }
+    } catch (e) {
+        console.error("❌ Capacitor Updater: Failed to apply OTA bundle:", e);
+    }
+};
+
+// Evaluates safety and applies pending updates instantly
+window.checkAndApplyPendingUpdates = async () => {
+    // Regex identifies active data-entry routes where a sudden reload would lose data. Added root path `/` for Auth.[cite: 3]
+    const isCriticalPath = /(form|submit|observe|test|record|edit|new|update|manager|finalreport|attendance)/i.test(window.location.pathname) || window.location.pathname === '/';
+    
+    if (!isCriticalPath) {
+        // 1. Instantly apply PWA Update (Web)
+        if (window.pendingPwaUpdate) {
+            console.log("🔄 Safe state detected: Reloading Web PWA instantly.");
+            const updateFn = window.pendingPwaUpdate;
+            window.pendingPwaUpdate = null;
+            updateFn(true); // Triggers skipWaiting and reloads
+        }
+        // 2. Instantly apply Capgo OTA (Native)
+        if (window.pendingOtaBundleId) {
+            console.log("🔄 Safe state detected: Waking native app and reloading OTA instantly.");
+            const bundleId = window.pendingOtaBundleId;
+            window.pendingOtaBundleId = null;
+            window.applyCapgoUpdate(bundleId);
+        }
+    } else {
+        console.log("⚠️ Update downloaded and pending, but user is entering data. Waiting for safe navigation or app close to avoid data loss.");
+    }
+};
+
+// Intercept SPA routing to catch the exact moment a user leaves a critical form
+const originalPushState = window.history.pushState;
+window.history.pushState = function() {
+    originalPushState.apply(this, arguments);
+    setTimeout(() => window.checkAndApplyPendingUpdates(), 500); 
+};
+const originalReplaceState = window.history.replaceState;
+window.history.replaceState = function() {
+    originalReplaceState.apply(this, arguments);
+    setTimeout(() => window.checkAndApplyPendingUpdates(), 500);
+};
+window.addEventListener('popstate', () => {
+    setTimeout(() => window.checkAndApplyPendingUpdates(), 500);
+});
+
+// Register SW to capture PWA updates immediately and pass them to our manager
+const updateSW = registerSW({ 
+    onNeedRefresh() {
+        console.log("⬇️ PWA Service Worker downloaded new update.");
+        window.pendingPwaUpdate = updateSW;
+        window.checkAndApplyPendingUpdates();
+    },
+    immediate: true 
+});
+// =========================================================================
 
 // =========================================================================
 // --- AGGRESSIVE VERSION-CONTROLLED CACHE BUSTER ---
@@ -29,9 +93,6 @@ const localVersion = localStorage.getItem('app_version');
 
 if (localVersion !== APP_VERSION) {
   console.log(`🔄 New version detected! Upgrading from ${localVersion || 'unknown'} to ${APP_VERSION}.`);
-  
-  // CRITICAL: Only wipe caches and force reload if the device is actually online.
-  // Doing this while offline will crash the PWA/Native Webview entirely.
   if (navigator.onLine) {
       console.log("Clearing cache to fetch fresh files...");
       if ('caches' in window) {
@@ -41,9 +102,7 @@ if (localVersion !== APP_VERSION) {
               console.log("✅ All caches successfully deleted.");
               if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                  for(let registration of registrations) {
-                    registration.unregister();
-                  }
+                  for(let registration of registrations) { registration.unregister(); }
                 });
               }
               localStorage.setItem('app_version', APP_VERSION);
@@ -68,18 +127,8 @@ root.render(
   </DataProvider>
 );
 
-// =========================================================================
-// --- CAPGO OTA SAFETY NET ---
-// =========================================================================
-// This MUST stay outside of the React render cycle. By executing here, we 
-// guarantee Capgo receives the "App is Ready" signal the exact moment the 
-// JS bundle finishes executing, regardless of network or authentication delays.
 if (Capacitor.isNativePlatform()) {
   CapacitorUpdater.notifyAppReady()
-    .then(() => {
-      console.log("✅ Capacitor Updater: App booted successfully. Rollback prevented.");
-    })
-    .catch((err) => {
-      console.error("❌ Capacitor Updater: Failed to notify app ready.", err);
-    });
+    .then(() => console.log("✅ Capacitor Updater: App booted successfully."))
+    .catch((err) => console.error("❌ Capacitor Updater: Failed to notify app ready.", err));
 }

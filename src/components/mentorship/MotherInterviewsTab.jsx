@@ -1,6 +1,6 @@
 // MotherInterviewsTab.jsx
 import React, { useMemo } from 'react';
-import { useTranslation } from './LanguageContext'; 
+import { useTranslation } from 'react-i18next'; 
 import { 
     KpiCard, 
     KpiLineChart, 
@@ -12,7 +12,8 @@ const MotherInterviewsTab = ({
     activeService, motherKpis, chartData, motherGeographicKpis, scopeTitle, geographicLevelName,
     filteredSubmissions 
 }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
 
     // Calculate Total Facilities specific to Mother Interviews

@@ -30,8 +30,8 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         
-        // 🛑 THE FIX: Tell the Service Worker NOT to intercept APK or JSON files
-        navigateFallbackDenylist: [/\.apk$/, /\.json$/], 
+        // 🛑 THE FIX: Tell the Service Worker NOT to intercept APK, JSON, or Firebase Auth routes[cite: 7]
+        navigateFallbackDenylist: [/\.apk$/, /\.json$/, /^\/__\//], 
         
         runtimeCaching: [
           {

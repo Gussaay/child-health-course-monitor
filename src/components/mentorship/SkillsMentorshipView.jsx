@@ -28,8 +28,7 @@ import {
 import { STATE_LOCALITIES } from "../constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard';
-import { LanguageProvider, useTranslation } from './LanguageContext';
-import LanguageSwitcher from './LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 import { getAuth } from "firebase/auth";
 import { db } from '../../firebase'; 
 
@@ -156,7 +155,7 @@ const normalizeJobTitle = (title) => {
     return t;
 };
 
-// UPDATED: Keys mapped to match what is actually saved in VisitReports.jsx
+// Keys mapped to match what is actually saved in VisitReports.jsx
 const IMNCI_SKILLS_LABELS = {
     skill_weight: "قياس الوزن",
     skill_height: "قياس الطول",
@@ -211,8 +210,6 @@ const EENC_ORIENTATIONS_LABELS = {
 // --- Helper: Fetch Historical Facility Snapshot ---
 const fetchFacilitySnapshot = async (facilityId, visitDate, currentFacilities) => {
     try {
-        // Attempts to fetch a historical record of the facility on or before the visit date
-        // Note: This assumes you have a 'facility_snapshots' tracking collection.
         const snapshotRef = collection(db, 'facility_snapshots');
         const q = query(
             snapshotRef,
@@ -229,8 +226,6 @@ const fetchFacilitySnapshot = async (facilityId, visitDate, currentFacilities) =
     } catch (error) {
         console.warn("No historical snapshot found or query failed. Falling back to current facility data.", error);
     }
-
-    // Fallback to current facility data if no snapshot collection exists or no snapshot is found
     return currentFacilities.find(f => f.id === facilityId);
 };
 
@@ -276,7 +271,6 @@ const calculateVisitNumberUpdates = (allVisitReports, serviceType) => {
             }
         }
     }
-    
     return updatesToMake.sort((a, b) => new Date(a.visitDate) - new Date(b.visitDate));
 };
 
@@ -394,7 +388,6 @@ const PreviewSyncModal = ({ isOpen, onClose, onConfirm, proposedUpdates, isSynci
 
 // --- Action Menu Component ---
 const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage }) => {
-    
     const canViewSubmissions = 
         permissions?.canViewSkillsMentorship ||
         permissions?.canUseFederalManagerAdvancedFeatures ||
@@ -455,7 +448,6 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
 
     return (
         <div className="max-w-4xl mx-auto mt-4 p-4 space-y-5" dir="ltr">
-            {/* Top Bar with Back Button */}
             <div className="flex items-center justify-between pb-3 border-b border-gray-200">
                 <Button variant="secondary" onClick={onBack} size="sm" className="py-1.5 px-3 text-sm">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Back
@@ -483,7 +475,6 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
 
 // --- Training Priorities View Component ---
 const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, onBack }) => {
-    
     const [facilityFilter, setFacilityFilter] = useState('');
     const [workerFilter, setWorkerFilter] = useState('');
     const [visitCountFilter, setVisitCountFilter] = useState('');
@@ -678,7 +669,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
                     </div>
                 </div>
 
-                {/* Filters */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                     <FormGroup label="المؤسسة الصحية" className="text-right">
                         <Select value={facilityFilter} onChange={e => setFacilityFilter(e.target.value)}>
@@ -700,7 +690,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
                     </FormGroup>
                 </div>
 
-                {/* Table */}
                 <div className="overflow-x-auto border rounded-xl shadow-sm">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-sky-50">
@@ -769,14 +758,12 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
     );
 };
 
-
 // --- AddHealthWorkerModal Component ---
 const IMNCI_JOB_TITLES = ["مساعد طبي", "طبيب عمومي", "ممرض", "قابلة", "مسؤول تغذية", "فني مختبر", "صيدلي", "أخرى"];
 const EENC_JOB_TITLES = ["طبيب أطفال", "طبيب نساء وتوليد", "طبيب عمومي", "قابلة", "ممرض", "مساعد طبي", "أخرى"];
 const ETAT_JOB_TITLES = ["اختصاصي أطفال", "نائب اختصاصي أطفال", "طبيب عمومي", "طبيب إمتياز", "ممرض (بكلاريوس)", "ممرض (دبلوم)", "أخرى"];
 const NEONATAL_JOB_TITLES = ["اختصاصي أطفال", "طبيب أطفال", "طبيب عمومي", "ممرض عناية مكثفة", "ممرض", "قابلة", "أخرى"];
 
-// Helper to route data dynamically based on active service
 const getServiceConfig = (service) => {
     switch(service) {
         case 'EENC': return { titles: EENC_JOB_TITLES, label: "اخر تاريخ تدريب (EENC)", field: 'eenc_staff' };
@@ -896,7 +883,6 @@ const FacilitySelectionModal = ({ isOpen, onClose, facilities, onSelect }) => {
 
 // --- Training Priorities Modal (Post Save) ---
 const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData, historicalSessions, healthWorkerName }) => {
-    
     const computeWeaknesses = (sessions) => {
         if (!sessions || sessions.length === 0) return [];
         const stats = {
@@ -985,7 +971,7 @@ const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-green-700 font-bold text-sm">أداء ممتاز! لم تُسجل نقاط ضعف (أقل من 75%) في هذه الجلسة.</p>
+                            <p className="text-green-700 font-bold text-sm">أداء ممتاز! لم تُسجل نقاط ضعف (أقل من 75%) in هذه الجلسة.</p>
                         )}
                     </div>
                 )}
@@ -1061,7 +1047,6 @@ const MentorInfoModal = ({ mentor, onClose }) => {
 const VisitReportsTable = ({ 
     reports, onEdit, onDelete, onView, onMentorClick, selectedIds, onSelectionChange, isReportsLoading, canManage, currentUserEmail
 }) => {
-
     const isAllSelected = reports.length > 0 && reports.every(r => selectedIds.includes(r.id));
     const isSomeSelected = reports.length > 0 && reports.some(r => selectedIds.includes(r.id));
 
@@ -1187,7 +1172,7 @@ const ViewVisitReportModal = ({ report, onClose }) => {
                         <p><span className="font-medium text-gray-500">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{report.visitNumber || 1}</span></p>
                         <p><span className="font-medium text-gray-500">المشرف:</span> <span className="font-semibold text-gray-900">{report.mentorDisplay}</span></p>
                         <p><span className="font-medium text-gray-500">الولاية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[report.state]?.ar || report.state}</span></p>
-                        <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[report.state]?.localities.find(l => l.en === report.locality)?.ar || report.locality}</span></p>
+                        <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[report.state]?.localities.find(l=>l.en === report.locality)?.ar || report.locality}</span></p>
                     </div>
                 </div>
 
@@ -1634,7 +1619,6 @@ const MentorshipSubmissionsTable = ({
 
                                         const isAuthor = sub.supervisorEmail === currentUserEmail || sub.mentorEmail === currentUserEmail;
                                         
-                                        // UPDATED: Facilitator cannot edit/delete completed skills/mothers forms. Only drafts.
                                         const canEditRow = canManage || (isAuthor && sub.status === 'draft');
                                         const canDeleteRow = canManage || (isAuthor && sub.status === 'draft');
 
@@ -2574,18 +2558,37 @@ const SkillsMentorshipView = ({
             const facility = await fetchFacilitySnapshot(report.facilityId, report.visitDate, localHealthFacilities);
             
             if (facility) {
-                const essential_tools = {
-                    chartbook: facility['وجود_كتيب_لوحات'] === 'Yes' ? 'yes' : 'no',
-                    recordForm: facility['وجود_سجل_علاج_متكامل'] === 'Yes' ? 'yes' : 'no',
-                    weightScale: facility['ميزان_وزن'] === 'Yes' ? 'yes' : 'no',
-                    heightScale: facility['ميزان_طول'] === 'Yes' ? 'yes' : 'no',
-                    thermometer: facility['ميزان_حرارة'] === 'Yes' ? 'yes' : 'no',
-                    timer: facility['ساعة_مؤقت'] === 'Yes' ? 'yes' : 'no',
-                    orsCorner: facility['غرفة_إرواء'] === 'Yes' ? 'yes' : 'no',
-                    immunization: facility.immunization_office_exists === 'Yes' ? 'yes' : 'no',
-                    nutrition: facility.nutrition_center_exists === 'Yes' ? 'yes' : 'no',
-                    growthMonitoring: facility.growth_monitoring_service_exists === 'Yes' ? 'yes' : 'no'
-                };
+                let essential_tools = {};
+                
+                // Route mapping based on the service type
+                if (report.service === 'IMNCI') {
+                    essential_tools = {
+                        chartbook: facility['وجود_كتيب_لوحات'] === 'Yes' ? 'yes' : 'no',
+                        recordForm: facility['وجود_سجل_علاج_متكامل'] === 'Yes' ? 'yes' : 'no',
+                        weightScale: facility['ميزان_وزن'] === 'Yes' ? 'yes' : 'no',
+                        heightScale: facility['ميزان_طول'] === 'Yes' ? 'yes' : 'no',
+                        thermometer: facility['ميزان_حرارة'] === 'Yes' ? 'yes' : 'no',
+                        timer: facility['ساعة_مؤقت'] === 'Yes' ? 'yes' : 'no',
+                        orsCorner: facility['غرفة_إرواء'] === 'Yes' ? 'yes' : 'no',
+                        immunization: facility.immunization_office_exists === 'Yes' ? 'yes' : 'no',
+                        nutrition: facility.nutrition_center_exists === 'Yes' ? 'yes' : 'no',
+                        growthMonitoring: facility.growth_monitoring_service_exists === 'Yes' ? 'yes' : 'no'
+                    };
+                } else if (report.service === 'EENC') {
+                    const checkYes = (val) => val === 'Yes' || val === 'yes' || val === true || val === 'true' ? 'yes' : 'no';
+                    essential_tools = {
+                        delivery_register: checkYes(facility['delivery_register']) === 'yes' ? 'yes' : checkYes(facility['سجل_ولادات']),
+                        resuscitation_area: checkYes(facility['resuscitation_area']) === 'yes' ? 'yes' : (checkYes(facility['طاولة_إنعاش']) === 'yes' ? 'yes' : checkYes(facility['resuscitation_table'])),
+                        infant_warmer: checkYes(facility['infant_warmer']),
+                        suction_machine: checkYes(facility['suction_machine']),
+                        oxygen_supply: checkYes(facility['oxygen_supply']),
+                        handwashing_sink: checkYes(facility['handwashing_sink']),
+                        kmc_space: checkYes(facility['kmc_space']) === 'yes' ? 'yes' : checkYes(facility['رعاية_الكنغر']),
+                        anc_services: checkYes(facility['anc_services']),
+                        pnc_services: checkYes(facility['pnc_services']),
+                        infection_control: checkYes(facility['infection_control'])
+                    };
+                }
 
                 const payload = {
                     ...report.fullData,
@@ -3634,8 +3637,6 @@ const SkillsMentorshipView = ({
                                         <ArrowLeft className="w-4 h-4 mr-2" /> Back to Main Menu
                                     </Button>
                                 )}
-                                
-                                <LanguageSwitcher />
 
                                 <Button 
                                     variant="secondary" 
@@ -3843,7 +3844,6 @@ const SkillsMentorshipView = ({
                                             </Button>
                                         )}
 
-                                        {/* NEW: Backfill Migration Button for Super Users */}
                                         {activeTab === 'visit_reports' && permissions?.role === 'super_user' && (
                                             <Button variant="info" onClick={handlePrepareMigration} className="bg-teal-600 hover:bg-teal-700 text-white">
                                                 Migrate Facility Data
@@ -3868,16 +3868,6 @@ const SkillsMentorshipView = ({
                                     onEdit={handleEditSubmission}
                                     onDelete={handleDeleteSubmission}
                                     isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
-                                    stateFilter={stateFilter}
-                                    localityFilter={localityFilter}
-                                    supervisorFilter={supervisorFilter}
-                                    statusFilter={statusFilter}
-                                    visitNumberFilter={visitNumberFilter}
-                                    facilityFilter={facilityFilter}
-                                    workerFilter={workerFilter}
-                                    projectFilter={projectFilter}
-                                    workerTypeFilter={workerTypeFilter}
-                                    dateFilter={dateFilter}
                                     selectedIds={selectedSubmissionIds}
                                     onSelectionChange={setSelectedSubmissionIds}
                                     canManage={canManageMentorship}
@@ -3894,16 +3884,6 @@ const SkillsMentorshipView = ({
                                     onEdit={handleEditSubmission}
                                     onDelete={handleDeleteSubmission}
                                     isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
-                                    stateFilter={stateFilter}
-                                    localityFilter={localityFilter}
-                                    supervisorFilter={supervisorFilter}
-                                    statusFilter={statusFilter}
-                                    visitNumberFilter={visitNumberFilter}
-                                    facilityFilter={facilityFilter}
-                                    workerFilter={workerFilter}
-                                    projectFilter={projectFilter}
-                                    workerTypeFilter={workerTypeFilter}
-                                    dateFilter={dateFilter}
                                     selectedIds={selectedSubmissionIds}
                                     onSelectionChange={setSelectedSubmissionIds}
                                     canManage={canManageMentorship}
@@ -4051,7 +4031,6 @@ const SkillsMentorshipView = ({
                     activeTab={activeTab}
                 />
 
-                {/* NEW: Backfill Migration Modal */}
                 {isMigrationModalOpen && (
                     <Modal isOpen={isMigrationModalOpen} onClose={() => !isMigrating && setIsMigrationModalOpen(false)} title="Backfill Facility Data (Super User)" size="md">
                         <div className="p-6 text-right" dir="rtl">
@@ -4536,6 +4515,42 @@ const SkillsMentorshipView = ({
                                             </p>
                                         )}
                                     </FormGroup>
+                                    
+                                    {/* Worker details update form snippet */}
+                                    {selectedHealthWorkerName && selectedWorkerOriginalData && (
+                                        <div className="bg-white p-4 rounded border border-gray-200 shadow-inner space-y-4">
+                                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wide border-b pb-1.5 mb-3">تحديث بيانات الكادر الفني التابع للمؤسسة</div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <FormGroup label="الوصف الوظيفي الحالي">
+                                                    <Select value={workerJobTitle} onChange={(e) => setWorkerJobTitle(e.target.value)}>
+                                                        <option value="">-- اختر الوصف --</option>
+                                                        {getServiceConfig(activeService).titles.map(t => (
+                                                            <option key={t} value={t}>{t}</option>
+                                                        ))}
+                                                    </Select>
+                                                </FormGroup>
+                                                <FormGroup label="تاريخ آخر تدريب">
+                                                    <Input type="date" value={workerTrainingDate} onChange={(e) => setWorkerTrainingDate(e.target.value)} />
+                                                </FormGroup>
+                                                <FormGroup label="رقم الهاتف">
+                                                    <Input type="tel" value={workerPhone} onChange={(e) => setWorkerPhone(e.target.value)} placeholder="ادخل رقم الهاتف" />
+                                                </FormGroup>
+                                            </div>
+                                            {isWorkerInfoChanged && (
+                                                <div className="flex justify-end pt-2">
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="warning" 
+                                                        size="sm" 
+                                                        onClick={handleUpdateHealthWorkerInfo} 
+                                                        disabled={isUpdatingWorker}
+                                                    >
+                                                        {isUpdatingWorker ? 'جاري التحديث...' : 'إرسال تعديل الكادر للموافقة'}
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -4652,7 +4667,6 @@ const SkillsMentorshipView = ({
                                 saveButtonText="إرسال التحديث للموافقة"
                                 cancelButtonText="إغلاق"
                             >
-                                {/* --- UPDATED: Render the correct form based on activeService --- */}
                                 {(props) => {
                                     if (activeService === 'EENC') return <EENCFormFields {...props} />;
                                     if (activeService === 'ETAT') return <CriticalCareFormFields {...props} />;
@@ -4809,10 +4823,4 @@ const SkillsMentorshipView = ({
     return null;
 };
 
-export default function SkillsMentorshipViewWrapper(props) {
-    return (
-        <LanguageProvider>
-            <SkillsMentorshipView {...props} />
-        </LanguageProvider>
-    );
-}
+export default SkillsMentorshipView;

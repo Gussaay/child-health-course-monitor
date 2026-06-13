@@ -6,6 +6,7 @@ import { getAuth } from "firebase/auth";
 import {
     Card, Button, FormGroup, Input, Spinner
 } from '../CommonComponents'; 
+import { handleAutoScroll, ActionToggle } from './IMNCSkillsAssessmentForm';
 
 // --- Score Circle Component ---
 const ScoreCircle = ({ score, maxScore }) => {
@@ -69,31 +70,68 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
     );
 };
 
-const EENCFormRow = ({ label, value, onChange }) => {
+// --- Accordion Wrapper for EENC Mothers Form Sections ---
+const MothersSectionAccordion = ({ title, scoreData, children, isCompleted = false }) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+
+    useEffect(() => {
+        if (isCompleted) {
+            const timer = setTimeout(() => setIsExpanded(false), 800);
+            return () => clearTimeout(timer);
+        } else {
+            setIsExpanded(true);
+        }
+    }, [isCompleted]);
+
     return (
-        <div dir="rtl" className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b last:border-b-0 bg-white hover:bg-gray-50 transition-colors">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 mb-6" dir="rtl">
+            <button 
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)} 
+                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+            >
+                <div className="flex items-center text-right text-base font-bold text-slate-800">
+                    {scoreData && <ScoreCircle score={scoreData.score} maxScore={scoreData.max} />}
+                    <span className="mr-2">{title}</span>
+                    {isCompleted && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
+                </div>
+                <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            {isExpanded && (
+                <div className="divide-y divide-slate-100 bg-white">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const EENCFormRow = ({ label, value, onChange }) => {
+    const isAnswered = value !== '';
+    const containerClasses = `flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:px-5 hover:bg-sky-50 transition-colors ${isAnswered ? 'row-answered' : 'row-unanswered'}`;
+
+    const handleToggleClick = (name, val) => {
+        const wasAnswered = value !== '';
+        onChange(val);
+        if (!wasAnswered) {
+            handleAutoScroll();
+        }
+    };
+
+    return (
+        <div dir="rtl" className={containerClasses}>
             <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex-grow mr-4 w-full sm:w-auto">
                 {label} <span className="text-red-500 text-lg align-middle">*</span>
             </span>
             <div className="flex gap-4 flex-shrink-0 mt-1 sm:mt-0">
-                <label className="flex items-center gap-1 cursor-pointer text-sm">
-                    <input
-                        type="radio"
-                        value="yes"
-                        checked={value === 'yes'}
-                        onChange={onChange}
-                        className="form-radio text-green-600"
-                    /> نعم
-                </label>
-                <label className="flex items-center gap-1 cursor-pointer text-sm">
-                    <input
-                        type="radio"
-                        value="no"
-                        checked={value === 'no'}
-                        onChange={onChange}
-                        className="form-radio text-red-600"
-                    /> لا
-                </label>
+                <ActionToggle
+                    options={[
+                        ['نعم', 'yes', 'bg-green-600 border-green-600'],
+                        ['لا', 'no', 'bg-red-600 border-red-600']
+                    ]}
+                    currentValue={value}
+                    onClick={handleToggleClick}
+                />
             </div>
         </div>
     );
@@ -355,6 +393,14 @@ const EENCMothersForm = ({
             setIsSaving(false);
         }
     };
+    
+    // Check completion state for each section to feed auto-collapse
+    const isSkinComplete = formData.skin_to_skin_immediate !== '' && formData.skin_to_skin_90min !== '';
+    const isBreastfeedingComplete = formData.breastfed_first_hour !== '' && formData.given_other_fluids !== '' && formData.given_other_fluids_bottle !== '';
+    const isCareComplete = formData.given_vitamin_k !== '' && formData.given_tetracycline !== '' && formData.anything_on_cord !== '' && formData.rubbed_with_oil !== '' && formData.baby_bathed !== '';
+    const isVaccinationComplete = formData.polio_zero_dose !== '' && formData.bcg_dose !== '';
+    const isMeasurementsComplete = formData.baby_weighed !== '' && formData.baby_temp_measured !== '';
+    const isRegistrationComplete = formData.baby_registered !== '' && formData.given_discharge_card !== '';
 
     return (
         <Card dir="rtl">
@@ -406,77 +452,47 @@ const EENCMothersForm = ({
                         </div>
                     </div>
 
-                    {/* Section 1 */}
-                    <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                        <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
-                            <span className="mr-2">1. وضع الطفل جلد بجلد</span>
-                            <ScoreCircle score={scores.skin.score} maxScore={scores.skin.max} />
-                        </h3>
+                    <MothersSectionAccordion title="1. وضع الطفل جلد بجلد" scoreData={scores.skin} isCompleted={isSkinComplete}>
                         <EENCFormRow 
                             label="هل تم وضع الطفل جلد بجلد مباشرة بعد الولادة؟" 
                             value={formData.skin_to_skin_immediate} 
-                            onChange={(e) => handleChange('skin_to_skin_immediate', e.target.value)} 
+                            onChange={(val) => handleChange('skin_to_skin_immediate', val)} 
                         />
                         <EENCFormRow 
                             label="هل الطفل الان موضوع جلد بجلد أو تم وضعه جلد بجلد بصورة غير منقطعة مدة 90 دقيقة؟" 
                             value={formData.skin_to_skin_90min} 
-                            onChange={(e) => handleChange('skin_to_skin_90min', e.target.value)} 
+                            onChange={(val) => handleChange('skin_to_skin_90min', val)} 
                         />
-                    </div>
+                    </MothersSectionAccordion>
 
-                    {/* Section 2 */}
-                    <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                        <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
-                            <span className="mr-2">2. بدء الرضاعة الطبيعية</span>
-                            <ScoreCircle score={scores.breastfeeding.score} maxScore={scores.breastfeeding.max} />
-                        </h3>
-                        <EENCFormRow label="هل أكمل الطفل رضعة كاملة خلال الساعة الأولى من الولادة؟" value={formData.breastfed_first_hour} onChange={(e) => handleChange('breastfed_first_hour', e.target.value)} />
-                        <EENCFormRow label="هل تم إعطاء أي سوائل اخرى غير حليب الأم؟ (الإجابة المثالية: لا)" value={formData.given_other_fluids} onChange={(e) => handleChange('given_other_fluids', e.target.value)} />
-                        <EENCFormRow label="هل تم إعطاء الطفل أي سائل اخر عن طريق البزة؟ (الإجابة المثالية: لا)" value={formData.given_other_fluids_bottle} onChange={(e) => handleChange('given_other_fluids_bottle', e.target.value)} />
-                    </div>
+                    <MothersSectionAccordion title="2. بدء الرضاعة الطبيعية" scoreData={scores.breastfeeding} isCompleted={isBreastfeedingComplete}>
+                        <EENCFormRow label="هل أكمل الطفل رضعة كاملة خلال الساعة الأولى من الولادة؟" value={formData.breastfed_first_hour} onChange={(val) => handleChange('breastfed_first_hour', val)} />
+                        <EENCFormRow label="هل تم إعطاء أي سوائل اخرى غير حليب الأم؟ (الإجابة المثالية: لا)" value={formData.given_other_fluids} onChange={(val) => handleChange('given_other_fluids', val)} />
+                        <EENCFormRow label="هل تم إعطاء الطفل أي سائل اخر عن طريق البزة؟ (الإجابة المثالية: لا)" value={formData.given_other_fluids_bottle} onChange={(val) => handleChange('given_other_fluids_bottle', val)} />
+                    </MothersSectionAccordion>
 
-                    {/* Section 3 */}
-                    <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                        <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
-                            <span className="mr-2">3. رعاية الجلد والعين والسرة</span>
-                            <ScoreCircle score={scores.care.score} maxScore={scores.care.max} />
-                        </h3>
-                        <EENCFormRow label="هل تم إعطاء الطفل فيتامين ك ؟" value={formData.given_vitamin_k} onChange={(e) => handleChange('given_vitamin_k', e.target.value)} />
-                        <EENCFormRow label="هل تم إعطاء الطفل جرعة تتراسيكلين للعين ؟" value={formData.given_tetracycline} onChange={(e) => handleChange('given_tetracycline', e.target.value)} />
-                        <EENCFormRow label="هل تم وضع أي مادة على السرة ؟" value={formData.anything_on_cord} onChange={(e) => handleChange('anything_on_cord', e.target.value)} />
-                        <EENCFormRow label="هل تم مسح الطفل باي نوع من الزيوت ؟" value={formData.rubbed_with_oil} onChange={(e) => handleChange('rubbed_with_oil', e.target.value)} />
-                        <EENCFormRow label="هل تم استحمام الطفل ؟" value={formData.baby_bathed} onChange={(e) => handleChange('baby_bathed', e.target.value)} />
-                    </div>
+                    <MothersSectionAccordion title="3. رعاية الجلد والعين والسرة" scoreData={scores.care} isCompleted={isCareComplete}>
+                        <EENCFormRow label="هل تم إعطاء الطفل فيتامين ك ؟" value={formData.given_vitamin_k} onChange={(val) => handleChange('given_vitamin_k', val)} />
+                        <EENCFormRow label="هل تم إعطاء الطفل جرعة تتراسيكلين للعين ؟" value={formData.given_tetracycline} onChange={(val) => handleChange('given_tetracycline', val)} />
+                        <EENCFormRow label="هل تم وضع أي مادة على السرة ؟" value={formData.anything_on_cord} onChange={(val) => handleChange('anything_on_cord', val)} />
+                        <EENCFormRow label="هل تم مسح الطفل باي نوع من الزيوت ؟" value={formData.rubbed_with_oil} onChange={(val) => handleChange('rubbed_with_oil', val)} />
+                        <EENCFormRow label="هل تم استحمام الطفل ؟" value={formData.baby_bathed} onChange={(val) => handleChange('baby_bathed', val)} />
+                    </MothersSectionAccordion>
 
-                    {/* Section 4 */}
-                    <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                        <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
-                            <span className="mr-2">4. تطعيمات الطفل</span>
-                            <ScoreCircle score={scores.vaccination.score} maxScore={scores.vaccination.max} />
-                        </h3>
-                        <EENCFormRow label="هل تم تطعيم الطفل الجرعة الصفرية للشلل الفموي ؟" value={formData.polio_zero_dose} onChange={(e) => handleChange('polio_zero_dose', e.target.value)} />
-                        <EENCFormRow label="هل تم تطعيم الطفل جرعة الدرن ؟" value={formData.bcg_dose} onChange={(e) => handleChange('bcg_dose', e.target.value)} />
-                    </div>
+                    <MothersSectionAccordion title="4. تطعيمات الطفل" scoreData={scores.vaccination} isCompleted={isVaccinationComplete}>
+                        <EENCFormRow label="هل تم تطعيم الطفل الجرعة الصفرية للشلل الفموي ؟" value={formData.polio_zero_dose} onChange={(val) => handleChange('polio_zero_dose', val)} />
+                        <EENCFormRow label="هل تم تطعيم الطفل جرعة الدرن ؟" value={formData.bcg_dose} onChange={(val) => handleChange('bcg_dose', val)} />
+                    </MothersSectionAccordion>
 
-                    {/* Section 5 */}
-                    <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                        <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
-                            <span className="mr-2">5. قياسات الطفل</span>
-                            <ScoreCircle score={scores.measurements.score} maxScore={scores.measurements.max} />
-                        </h3>
-                        <EENCFormRow label="هل تم وزن الطفل ؟" value={formData.baby_weighed} onChange={(e) => handleChange('baby_weighed', e.target.value)} />
-                        <EENCFormRow label="هل تم قياس درجة حرارة الطفل ؟" value={formData.baby_temp_measured} onChange={(e) => handleChange('baby_temp_measured', e.target.value)} />
-                    </div>
+                    <MothersSectionAccordion title="5. قياسات الطفل" scoreData={scores.measurements} isCompleted={isMeasurementsComplete}>
+                        <EENCFormRow label="هل تم وزن الطفل ؟" value={formData.baby_weighed} onChange={(val) => handleChange('baby_weighed', val)} />
+                        <EENCFormRow label="هل تم قياس درجة حرارة الطفل ؟" value={formData.baby_temp_measured} onChange={(val) => handleChange('baby_temp_measured', val)} />
+                    </MothersSectionAccordion>
 
-                    {/* Section 6 */}
-                    <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                        <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
-                            <span className="mr-2">6. تسجيلات الطفل</span>
-                            <ScoreCircle score={scores.registration.score} maxScore={scores.registration.max} />
-                        </h3>
-                        <EENCFormRow label="هل تم تسجيل الطفل في السجل المدني؟" value={formData.baby_registered} onChange={(e) => handleChange('baby_registered', e.target.value)} />
-                        <EENCFormRow label="هل تم إعطاء الطفل كرت الخروج؟" value={formData.given_discharge_card} onChange={(e) => handleChange('given_discharge_card', e.target.value)} />
-                    </div>
+                    <MothersSectionAccordion title="6. تسجيلات الطفل" scoreData={scores.registration} isCompleted={isRegistrationComplete}>
+                        <EENCFormRow label="هل تم تسجيل الطفل في السجل المدني؟" value={formData.baby_registered} onChange={(val) => handleChange('baby_registered', val)} />
+                        <EENCFormRow label="هل تم إعطاء الطفل كرت الخروج؟" value={formData.given_discharge_card} onChange={(val) => handleChange('given_discharge_card', val)} />
+                    </MothersSectionAccordion>
                 </div>
 
                 <div className="hidden sm:flex gap-2 justify-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">

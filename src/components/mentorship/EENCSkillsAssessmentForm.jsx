@@ -9,6 +9,17 @@ import { getAuth } from "firebase/auth";
 import { GenericFacilityForm, EENCFormFields } from '../FacilityForms.jsx'; 
 import { submitFacilityDataForApproval } from '../../data';
 
+// --- Smart Auto-Scroll Helper ---
+export const handleAutoScroll = () => {
+    setTimeout(() => {
+        const nextUnanswered = document.querySelector('.row-unanswered');
+        if (nextUnanswered) {
+            const y = nextUnanswered.getBoundingClientRect().top + window.scrollY - 180;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+    }, 400);
+};
+
 // --- Reusable Segmented Control (Adapted for RTL) ---
 export function ActionToggle({ options, currentValue, onClick, name }) {
     return (
@@ -96,7 +107,13 @@ const getInitialFormData = () => {
     const skills = {};
     allItems.forEach(item => { skills[item.key] = 'na'; });
     return {
-        session_date: new Date().toISOString().split('T')[0], eenc_breathing_status: 'na', eenc_resus_breathed_normally: 'na', eenc_resus_has_pulse: 'na', skills: skills, notes: '',
+        session_date: new Date().toISOString().split('T')[0], 
+        delivery_type: '', // NORMAL VAGINAL DELIVERY, Caesarean section, manikin simulation
+        eenc_breathing_status: 'na', 
+        eenc_resus_breathed_normally: 'na', 
+        eenc_resus_has_pulse: 'na', 
+        skills: skills, 
+        notes: '',
     };
 };
 
@@ -107,17 +124,26 @@ const rehydrateDraftData = (draftData) => {
     const skills = { ...initial.skills, ...dataToLoad.skills };
     return {
         session_date: dataToLoad.session_date || initial.session_date,
+        delivery_type: dataToLoad.delivery_type || '',
         eenc_breathing_status: dataToLoad.eenc_breathing_status || (dataToLoad.formType === 'breathing' ? 'yes' : (dataToLoad.formType === 'not_breathing' ? 'no' : 'na')),
         eenc_resus_breathed_normally: dataToLoad.eenc_resus_breathed_normally || 'na',
         eenc_resus_has_pulse: dataToLoad.eenc_resus_has_pulse || 'na',
-        skills: skills, notes: dataToLoad.notes || '',
+        skills: skills, 
+        notes: dataToLoad.notes || '',
     };
 };
 
 const calculateScores = (formData) => {
-    const { eenc_breathing_status, skills } = formData;
+    const { eenc_breathing_status, skills, delivery_type } = formData;
     let overallScore = 0; let overallMax = 0;
     const sectionScores = { preparation: { score: 0, maxScore: 0 }, drying: { score: 0, maxScore: 0 }, normal_breathing: { score: 0, maxScore: 0 }, resuscitation: { score: 0, maxScore: 0 } };
+    
+    const isCesarean = delivery_type === 'cesarean';
+    const activePrepItems = isCesarean ? [] : PREPARATION_ITEMS;
+    const activeNormalItems = isCesarean
+        ? NORMAL_BREATHING_ITEMS.filter(i => !['normal_check_second_baby', 'normal_oxytocin', 'normal_remove_outer_glove'].includes(i.key))
+        : NORMAL_BREATHING_ITEMS;
+
     const calculateSection = (items, sectionKey) => {
         items.forEach(item => {
             const value = skills[item.key];
@@ -128,22 +154,36 @@ const calculateScores = (formData) => {
             }
         });
     };
-    calculateSection(PREPARATION_ITEMS, 'preparation');
+    
+    calculateSection(activePrepItems, 'preparation');
     calculateSection(DRYING_STIMULATION_ITEMS, 'drying');
-    if (eenc_breathing_status === 'yes') calculateSection(NORMAL_BREATHING_ITEMS, 'normal_breathing');
+    if (eenc_breathing_status === 'yes') calculateSection(activeNormalItems, 'normal_breathing');
     else if (eenc_breathing_status === 'no') calculateSection(RESUSCITATION_ITEMS, 'resuscitation');
 
     return { overallScore: { score: overallScore, maxScore: overallMax }, ...sectionScores };
 };
 
 const checkFormCompletion = (formData) => {
-    const { eenc_breathing_status, eenc_resus_breathed_normally, eenc_resus_has_pulse, skills } = formData;
-    const initialItemsToCheck = [...PREPARATION_ITEMS, ...DRYING_STIMULATION_ITEMS];
-    for (const item of initialItemsToCheck) if (skills[item.key] === 'na' || skills[item.key] === '') return false;
+    const { eenc_breathing_status, eenc_resus_breathed_normally, eenc_resus_has_pulse, skills, delivery_type } = formData;
+    if (!delivery_type) return false;
+
+    const isCesarean = delivery_type === 'cesarean';
+    const activePrepItems = isCesarean ? [] : PREPARATION_ITEMS;
+    const activeNormalItems = isCesarean
+        ? NORMAL_BREATHING_ITEMS.filter(i => !['normal_check_second_baby', 'normal_oxytocin', 'normal_remove_outer_glove'].includes(i.key))
+        : NORMAL_BREATHING_ITEMS;
+
+    const initialItemsToCheck = [...activePrepItems, ...DRYING_STIMULATION_ITEMS];
+    for (const item of initialItemsToCheck) {
+        if (skills[item.key] === 'na' || skills[item.key] === '') return false;
+    }
+    
     if (eenc_breathing_status === 'na') return false; 
     
     if (eenc_breathing_status === 'yes') {
-        for (const item of NORMAL_BREATHING_ITEMS) if (skills[item.key] === 'na' || skills[item.key] === '') return false;
+        for (const item of activeNormalItems) {
+            if (skills[item.key] === 'na' || skills[item.key] === '') return false;
+        }
     } else if (eenc_breathing_status === 'no') {
         for (let i = 0; i < 10; i++) if (skills[RESUSCITATION_ITEMS[i].key] === 'na' || skills[RESUSCITATION_ITEMS[i].key] === '') return false;
         if (eenc_resus_breathed_normally === 'na') return false;
@@ -193,8 +233,16 @@ const StickyOverallScore = ({ score, maxScore }) => {
 };
 
 const SkillChecklistItem = ({ label, itemKey, value, onChange, showPartial = false, showNaOption = false }) => {
+    const isAnswered = value !== 'na' && value !== '' && value !== undefined;
+    const containerClass = `flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group ${isAnswered ? 'row-answered' : 'row-unanswered'}`;
+
     const handleChange = (key, val) => {
+        const wasAlreadyAnswered = value !== 'na' && value !== '' && value !== undefined;
         onChange('skills', key, val);
+        
+        if (!wasAlreadyAnswered && val !== 'na') {
+            handleAutoScroll();
+        }
     };
 
     const options = [
@@ -205,7 +253,7 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange, showPartial = fal
     if (showNaOption) options.push(['لا ينطبق', 'na', 'bg-gray-500 border-gray-500']);
 
     return (
-        <div dir="rtl" className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
+        <div dir="rtl" className={containerClass}>
             <span className="font-medium text-slate-700 break-words group-hover:text-slate-900 text-right flex items-start sm:items-center flex-grow mr-4">
                 <span className="w-full sm:w-auto">{label}</span> 
             </span>
@@ -223,8 +271,20 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange, showPartial = fal
 
 const SectionRenderer = ({ title, items, formData, handleSkillChange, score, maxScore, visibleItemIndex }) => {
     const [isExpanded, setIsExpanded] = useState(true);
+    
+    const isCompleted = visibleItemIndex === -1;
 
-    if (visibleItemIndex === -2) return null;
+    // React Hooks must be called unconditionally and before any early returns.
+    useEffect(() => {
+        if (isCompleted) {
+            const timer = setTimeout(() => setIsExpanded(false), 800);
+            return () => clearTimeout(timer);
+        } else {
+            setIsExpanded(true);
+        }
+    }, [isCompleted]);
+
+    if (visibleItemIndex === -2 || items.length === 0) return null;
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 mb-6 animate-fade-in" dir="rtl">
@@ -236,6 +296,7 @@ const SectionRenderer = ({ title, items, formData, handleSkillChange, score, max
                 <div className="flex items-center text-right">
                     <ScoreCircle score={score} maxScore={maxScore} />
                     <h4 className="text-base font-bold text-slate-800 mr-3">{title}</h4>
+                    {isCompleted && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
@@ -275,6 +336,29 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
     const isBaseComplete = firstUnanswered === -1;
     const showBreathedNormally = isBaseComplete;
     const showHasPulse = isBaseComplete && formData.eenc_resus_breathed_normally === 'no';
+    
+    // Determine overall resuscitation section completion
+    let isSectionComplete = false;
+    if (isBaseComplete) {
+        if (formData.eenc_resus_breathed_normally === 'yes') {
+            isSectionComplete = formData.skills[RESUSCITATION_ITEMS[10].key] !== 'na' && formData.skills[RESUSCITATION_ITEMS[10].key] !== '';
+        } else if (formData.eenc_resus_breathed_normally === 'no') {
+            if (formData.eenc_resus_has_pulse === 'yes') {
+                isSectionComplete = formData.skills[RESUSCITATION_ITEMS[11].key] !== 'na' && formData.skills[RESUSCITATION_ITEMS[11].key] !== '';
+            } else if (formData.eenc_resus_has_pulse === 'no') {
+                isSectionComplete = formData.skills[RESUSCITATION_ITEMS[12].key] !== 'na' && formData.skills[RESUSCITATION_ITEMS[12].key] !== '';
+            }
+        }
+    }
+
+    useEffect(() => {
+        if (isSectionComplete) {
+            const timer = setTimeout(() => setIsExpanded(false), 800);
+            return () => clearTimeout(timer);
+        } else {
+            setIsExpanded(true);
+        }
+    }, [isSectionComplete]);
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 mb-6 animate-fade-in" dir="rtl">
@@ -286,6 +370,7 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                 <div className="flex items-center text-right">
                     <ScoreCircle score={score} maxScore={maxScore} />
                     <h4 className="text-base font-bold text-slate-800 mr-3">4. إنعاش الوليد (الدقيقة الذهبية)</h4>
+                    {isSectionComplete && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
@@ -306,7 +391,7 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                     ))}
 
                     {showBreathedNormally && (
-                        <div className="p-4 bg-sky-50/30 border-y border-sky-100 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in" dir="rtl">
+                        <div className={`p-4 bg-sky-50/30 border-y border-sky-100 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in ${formData.eenc_resus_breathed_normally === 'na' ? 'row-unanswered' : 'row-answered'}`} dir="rtl">
                             <span className="font-bold text-sky-900 text-right w-full md:flex-1">
                                 هل تنفس الطفل طبيعيا؟
                             </span>
@@ -318,7 +403,11 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                                     ]}
                                     currentValue={formData.eenc_resus_breathed_normally}
                                     name="eenc_resus_breathed_normally"
-                                    onClick={(name, value) => handleFormChange({ target: { name, value }})}
+                                    onClick={(name, value) => {
+                                        const wasAnswered = formData.eenc_resus_breathed_normally !== 'na';
+                                        handleFormChange({ target: { name, value }});
+                                        if (!wasAnswered) handleAutoScroll();
+                                    }}
                                 />
                             </div>
                         </div>
@@ -334,7 +423,7 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                     )}
 
                     {showHasPulse && (
-                        <div className="p-4 bg-sky-50/30 border-y border-sky-100 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in" dir="rtl">
+                        <div className={`p-4 bg-sky-50/30 border-y border-sky-100 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in ${formData.eenc_resus_has_pulse === 'na' ? 'row-unanswered' : 'row-answered'}`} dir="rtl">
                             <span className="font-bold text-sky-900 text-right w-full md:flex-1">
                                 هل يوجد نبضات قلب؟
                             </span>
@@ -346,7 +435,11 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                                     ]}
                                     currentValue={formData.eenc_resus_has_pulse}
                                     name="eenc_resus_has_pulse"
-                                    onClick={(name, value) => handleFormChange({ target: { name, value }})}
+                                    onClick={(name, value) => {
+                                        const wasAnswered = formData.eenc_resus_has_pulse !== 'na';
+                                        handleFormChange({ target: { name, value }});
+                                        if (!wasAnswered) handleAutoScroll();
+                                    }}
                                 />
                             </div>
                         </div>
@@ -449,7 +542,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     useEffect(() => {
         let needsUpdate = false;
         const newFormData = JSON.parse(JSON.stringify(formData));
-        const { eenc_breathing_status, eenc_resus_breathed_normally, eenc_resus_has_pulse, skills } = newFormData;
+        const { eenc_breathing_status, eenc_resus_breathed_normally, eenc_resus_has_pulse, skills, delivery_type } = newFormData;
 
         const updateRelevance = (items, isRelevant) => {
             items.forEach(item => {
@@ -462,9 +555,21 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             });
         };
 
-        updateRelevance(PREPARATION_ITEMS, true);
-        updateRelevance(DRYING_STIMULATION_ITEMS, true);
-        updateRelevance(NORMAL_BREATHING_ITEMS, eenc_breathing_status === 'yes');
+        const isCesarean = delivery_type === 'cesarean';
+
+        updateRelevance(PREPARATION_ITEMS, !isCesarean && delivery_type !== '');
+        updateRelevance(DRYING_STIMULATION_ITEMS, delivery_type !== '');
+
+        const cesareanHiddenNormal = ['normal_check_second_baby', 'normal_oxytocin', 'normal_remove_outer_glove'];
+        if (eenc_breathing_status === 'yes') {
+            const normalRelevant = NORMAL_BREATHING_ITEMS.filter(item => !(isCesarean && cesareanHiddenNormal.includes(item.key)));
+            const normalIrrelevant = NORMAL_BREATHING_ITEMS.filter(item => isCesarean && cesareanHiddenNormal.includes(item.key));
+            
+            updateRelevance(normalRelevant, true);
+            updateRelevance(normalIrrelevant, false);
+        } else {
+            updateRelevance(NORMAL_BREATHING_ITEMS, false);
+        }
         
         const isResus = eenc_breathing_status === 'no';
         updateRelevance(RESUSCITATION_ITEMS.slice(0, 10), isResus);
@@ -516,7 +621,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(currentFormData.session_date));
             const sessionId = editingIdRef.current;
             const payload = {
-                serviceType: 'EENC', state: facility?.['الولاية'] || null, locality: facility?.['المحلية'] || null, facilityId: facility?.id || null, facilityName: facility?.['اسم_المؤسسة'] || null, healthWorkerName: healthWorkerName, facilityType: facility?.['نوع_المؤسسةالصحية'] || null, workerType: healthWorkerJobTitle || null, sessionDate: currentFormData.session_date, effectiveDate: effectiveDateTimestamp, scores: scoresPayload, notes: currentFormData.notes, status: 'draft', visitNumber: Number(currentVisitNumber), eenc_breathing_status: currentFormData.eenc_breathing_status, eenc_resus_breathed_normally: currentFormData.eenc_resus_breathed_normally, eenc_resus_has_pulse: currentFormData.eenc_resus_has_pulse, skills: currentFormData.skills,
+                serviceType: 'EENC', state: facility?.['الولاية'] || null, locality: facility?.['المحلية'] || null, facilityId: facility?.id || null, facilityName: facility?.['اسم_المؤسسة'] || null, healthWorkerName: healthWorkerName, facilityType: facility?.['نوع_المؤسسةالصحية'] || null, workerType: healthWorkerJobTitle || null, sessionDate: currentFormData.session_date, effectiveDate: effectiveDateTimestamp, scores: scoresPayload, notes: currentFormData.notes, status: 'draft', visitNumber: Number(currentVisitNumber), delivery_type: currentFormData.delivery_type, eenc_breathing_status: currentFormData.eenc_breathing_status, eenc_resus_breathed_normally: currentFormData.eenc_resus_breathed_normally, eenc_resus_has_pulse: currentFormData.eenc_resus_has_pulse, skills: currentFormData.skills,
             };
             if (sessionId) { payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown'; payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor'; payload.edited_by_email = user?.email || 'unknown'; payload.edited_by_name = user?.displayName || 'Unknown Mentor'; payload.edited_at = Timestamp.now(); } 
             else { payload.mentorEmail = user?.email || 'unknown'; payload.mentorName = user?.displayName || 'Unknown Mentor'; }
@@ -550,7 +655,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
             const sessionId = editingIdRef.current;
             const payload = {
-                serviceType: 'EENC', state: facility?.['الولاية'] || null, locality: facility?.['المحلية'] || null, facilityId: facility?.id || null, facilityName: facility?.['اسم_المؤسسة'] || null, healthWorkerName: healthWorkerName, facilityType: facility?.['نوع_المؤسسةالصحية'] || null, workerType: healthWorkerJobTitle || null, sessionDate: formData.session_date, effectiveDate: effectiveDateTimestamp, scores: scoresPayload, notes: formData.notes, status: status, visitNumber: Number(currentVisitNumber), eenc_breathing_status: formData.eenc_breathing_status, eenc_resus_breathed_normally: formData.eenc_resus_breathed_normally, eenc_resus_has_pulse: formData.eenc_resus_has_pulse, skills: formData.skills,
+                serviceType: 'EENC', state: facility?.['الولاية'] || null, locality: facility?.['المحلية'] || null, facilityId: facility?.id || null, facilityName: facility?.['اسم_المؤسسة'] || null, healthWorkerName: healthWorkerName, facilityType: facility?.['نوع_المؤسسةالصحية'] || null, workerType: healthWorkerJobTitle || null, sessionDate: formData.session_date, effectiveDate: effectiveDateTimestamp, scores: scoresPayload, notes: formData.notes, status: status, visitNumber: Number(currentVisitNumber), delivery_type: formData.delivery_type, eenc_breathing_status: formData.eenc_breathing_status, eenc_resus_breathed_normally: formData.eenc_resus_breathed_normally, eenc_resus_has_pulse: formData.eenc_resus_has_pulse, skills: formData.skills,
             };
             if (sessionId) { payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown'; payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor'; payload.edited_by_email = user?.email || 'unknown'; payload.edited_by_name = user?.displayName || 'Unknown Mentor'; payload.edited_at = Timestamp.now(); } 
             else { payload.mentorEmail = user?.email || 'unknown'; payload.mentorName = user?.displayName || 'Unknown Mentor'; }
@@ -565,19 +670,49 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         finally { setIsSaving(false); setIsSavingDraft(false); }
     };
 
+    const isCesarean = formData.delivery_type === 'cesarean';
+
+    const activePrepItems = isCesarean ? [] : PREPARATION_ITEMS;
+    
+    const activeDryingItems = DRYING_STIMULATION_ITEMS.map(item => {
+        if (isCesarean) {
+            if (item.key === 'dry_skin_to_skin') return { ...item, label: 'وضع الطفل ملتصقا جلدا بجلد أمه (منطقة الفخذ) ، قثىشةث تغطية الطفل بقطعة جافة' };
+            if (item.key === 'dry_cover_baby') return { ...item, label: 'تغطية الطفل بقطعة جافة' };
+        }
+        return item;
+    });
+
+    const activeNormalItems = isCesarean
+        ? NORMAL_BREATHING_ITEMS.filter(i => !['normal_check_second_baby', 'normal_oxytocin', 'normal_remove_outer_glove'].includes(i.key))
+        : NORMAL_BREATHING_ITEMS;
+
     const getFirstUnansweredIndex = (items) => { return items.findIndex(item => formData.skills[item.key] === 'na' || formData.skills[item.key] === ''); };
-    const prepUnanswered = getFirstUnansweredIndex(PREPARATION_ITEMS);
+    
+    const prepUnanswered = isCesarean ? -1 : getFirstUnansweredIndex(activePrepItems);
     const prepVisibleIndex = prepUnanswered !== -1 ? prepUnanswered : -1;
     const isPrepComplete = prepUnanswered === -1;
-    const dryingUnanswered = getFirstUnansweredIndex(DRYING_STIMULATION_ITEMS);
+    
+    const dryingUnanswered = getFirstUnansweredIndex(activeDryingItems);
     const dryingVisibleIndex = isPrepComplete ? (dryingUnanswered !== -1 ? dryingUnanswered : -1) : -2;
     const isDryingComplete = isPrepComplete && dryingUnanswered === -1;
+    
     const isBreathingStatusAnswered = formData.eenc_breathing_status !== 'na';
-    const normalUnanswered = getFirstUnansweredIndex(NORMAL_BREATHING_ITEMS);
+    const normalUnanswered = getFirstUnansweredIndex(activeNormalItems);
     const normalVisibleIndex = isBreathingStatusAnswered ? (normalUnanswered !== -1 ? normalUnanswered : -1) : -2;
 
     return (
         <Card dir="rtl">
+            <Modal isOpen={!formData.delivery_type} onClose={() => {}} title="اختيار نوع التقييم">
+                <div className="p-6 text-center space-y-6" dir="rtl">
+                    <h3 className="text-lg font-bold text-sky-800 mb-4">الرجاء تحديد نوع الولادة أو المحاكاة لبدء التقييم</h3>
+                    <div className="flex flex-col gap-4 max-w-sm mx-auto">
+                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'normal'}))} className="w-full justify-center text-lg py-3" variant="outline">NORMAL VAGINAL DELIVERY</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'cesarean'}))} className="w-full justify-center text-lg py-3" variant="outline">Caesarean section</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'manikin'}))} className="w-full justify-center text-lg py-3" variant="outline">manikin simulation</Button>
+                    </div>
+                </div>
+            </Modal>
+
             <StickyOverallScore score={scores?.overallScore?.score} maxScore={scores?.overallScore?.maxScore} />
             <form onSubmit={(e) => handleSubmit(e, 'complete')}>
                 <div className="p-6">
@@ -597,6 +732,19 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                                     <Input type="date" name="session_date" value={formData.session_date} onChange={handleFormChange} required className="p-1 text-sm mr-2 w-auto"/>
                                 </div>
                                 <div className="text-sm flex items-center">
+                                    <span className="font-medium text-gray-500 ml-2">نوع التقييم:</span>
+                                    <select 
+                                        className="p-1 border rounded bg-white text-sm font-bold text-sky-700 border-sky-300 focus:ring-sky-500 outline-none" 
+                                        value={formData.delivery_type} 
+                                        onChange={(e) => setFormData(prev => ({ ...prev, delivery_type: e.target.value }))}
+                                    >
+                                        <option value="" disabled>اختر النوع</option>
+                                        <option value="normal">NORMAL VAGINAL DELIVERY</option>
+                                        <option value="cesarean">Caesarean section</option>
+                                        <option value="manikin">manikin simulation</option>
+                                    </select>
+                                </div>
+                                <div className="text-sm flex items-center">
                                     <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
                                     {canEditVisitNumber ? (
                                         <Input type="number" min="1" value={currentVisitNumber} onChange={(e) => setCurrentVisitNumber(e.target.value)} className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"/>
@@ -608,11 +756,13 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                         </div>
                     </div>
 
-                    <SectionRenderer title="1. تحضيرات ما قبل الولادة" items={PREPARATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.preparation?.score} maxScore={scores.preparation?.maxScore} visibleItemIndex={prepVisibleIndex} />
-                    <SectionRenderer title="2. التجفيف، التحفيز، التدفئة والشفط" items={DRYING_STIMULATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.drying?.score} maxScore={scores.drying?.maxScore} visibleItemIndex={dryingVisibleIndex} />
+                    {!isCesarean && (
+                        <SectionRenderer title="1. تحضيرات ما قبل الولادة" items={activePrepItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.preparation?.score} maxScore={scores.preparation?.maxScore} visibleItemIndex={prepVisibleIndex} />
+                    )}
+                    <SectionRenderer title="2. التجفيف، التحفيز، التدفئة والشفط" items={activeDryingItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.drying?.score} maxScore={scores.drying?.maxScore} visibleItemIndex={dryingVisibleIndex} />
 
                     {isDryingComplete && (
-                        <div className="mt-6 p-4 border rounded-xl bg-sky-50 shadow-sm animate-fade-in transition-all duration-500 mb-6">
+                        <div className={`mt-6 p-4 border rounded-xl bg-sky-50 shadow-sm animate-fade-in transition-all duration-500 mb-6 ${formData.eenc_breathing_status === 'na' ? 'row-unanswered' : 'row-answered'}`}>
                             <h3 className="text-lg font-bold mb-3 text-right text-sky-900">3. تحديد حالة الوليد</h3>
                             <FormGroup label="الرجاء تحديد حالة الوليد لبدء التقييم التالي:" className="text-right">
                                 <div className="flex gap-4 justify-start mt-2" dir="rtl">
@@ -623,7 +773,11 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                                         ]}
                                         currentValue={formData.eenc_breathing_status}
                                         name="eenc_breathing_status"
-                                        onClick={(name, value) => handleFormChange({ target: { name, value }})}
+                                        onClick={(name, value) => {
+                                            const wasAnswered = formData.eenc_breathing_status !== 'na';
+                                            handleFormChange({ target: { name, value }});
+                                            if (!wasAnswered) handleAutoScroll();
+                                        }}
                                     />
                                 </div>
                             </FormGroup>
@@ -631,7 +785,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                     )}
 
                     {isDryingComplete && formData.eenc_breathing_status === 'yes' && (
-                        <SectionRenderer title="4. متابعة طفل يتنفس طبيعياً" items={NORMAL_BREATHING_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.normal_breathing?.score} maxScore={scores.normal_breathing?.maxScore} visibleItemIndex={normalVisibleIndex} />
+                        <SectionRenderer title="4. متابعة طفل يتنفس طبيعياً" items={activeNormalItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.normal_breathing?.score} maxScore={scores.normal_breathing?.maxScore} visibleItemIndex={normalVisibleIndex} />
                     )}
 
                     {isDryingComplete && formData.eenc_breathing_status === 'no' && (

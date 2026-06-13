@@ -1,7 +1,7 @@
 // VisitReportDashboardTab.jsx
 import React, { useRef, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
-import { useTranslation } from './LanguageContext'; 
+import { useTranslation } from 'react-i18next'; 
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
     LineElement, BarElement, Title, Tooltip, Legend, Filler
@@ -12,7 +12,8 @@ ChartJS.register(
 );
 
 const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const cardRef = useRef(null);
 
@@ -196,7 +197,8 @@ const VisitReportDashboardTab = ({
     ScoreText,
     CopyImageButton
 }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     
     // State for filtering problems by their status
@@ -362,7 +364,7 @@ const VisitReportDashboardTab = ({
     }
 
     return (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in" dir={isAr ? 'rtl' : 'ltr'}>
             {/* Common Top Level KPI row for both services */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <KpiCard title={t("Total Visit Reports")} value={visitReportStats.totalVisits} />
@@ -463,7 +465,7 @@ const VisitReportDashboardTab = ({
 
                     {/* Drug/Supplies Availability KPIs */}
                     <h3 className={`text-xl font-extrabold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
-                        {t('Facility Drug & Supplies Availability (Percentage of facilities reporting always available)')}
+                        {t('Facility Drug Availability (Percentage of facilities reporting drugs always available)')}
                     </h3>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -476,7 +478,7 @@ const VisitReportDashboardTab = ({
                             return (
                                 <InfoKpiTrendCard 
                                     key={drug.key}
-                                    title={t(`${drug.label} Availability`)} 
+                                    title={t(`${drug.label}`)} 
                                     avgValue={total > 0 ? pct : null} 
                                     totalNumerator={count} 
                                     totalDenominator={total}
@@ -525,9 +527,9 @@ const VisitReportDashboardTab = ({
                             className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-sky-500 focus:border-sky-500 shadow-sm"
                         >
                             <option value="All">{t('All')}</option>
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Resolved/Done">Resolved / Done</option>
+                            <option value="Pending">{t('Pending')}</option>
+                            <option value="In Progress">{t('In Progress')}</option>
+                            <option value="Resolved/Done">{t('Resolved / Done')}</option>
                         </select>
                     </div>
                 </div>

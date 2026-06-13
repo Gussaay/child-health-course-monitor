@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from 'react-i18next';
 import { KpiCard, CopyImageButton, ScoreText } from './MentorshipDashboardShared';
 import { Line, Bar } from 'react-chartjs-2';
 import { SlidersHorizontal, Activity } from 'lucide-react';
@@ -126,9 +126,9 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
     const cardRef = useRef(null);
 
     const data = {
-        labels: [t('Immunization'), t('Nutrition'), t('Growth Monitoring')],
+        labels: stats.labels,
         datasets: [{
-            data: [stats.immunization, stats.nutrition, stats.growthMonitoring],
+            data: [stats.stat1, stats.stat2, stats.stat3],
             backgroundColor: ['#f97316', '#6366f1', '#84cc16'],
             borderRadius: 6,
             barPercentage: 0.5
@@ -186,22 +186,22 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
         },
         layout: {
             padding: {
-                top: 15 // Ensure room for the top label
+                top: 15 
             }
         }
     };
 
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative justify-center">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t('Integrated Child Health Services')} /></div>
+            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t('Integrated Child/Maternal Health Services')} /></div>
             <div className="flex items-center justify-center gap-3 mb-6">
                 <Activity className="w-5 h-5 text-sky-600" />
                 <h4 className="text-sm sm:text-base font-extrabold text-slate-800 text-center tracking-wide pr-8 break-words">
-                    {t('Integrated Child Health Services')}
+                    {t('Integrated Core Health Services')}
                 </h4>
             </div>
             <p className="text-center text-xs text-slate-500 font-semibold mb-6 px-2">
-                {t('Percentage of supervised facilities integrating additional core child health services (Based on Baseline / First Visit).')}
+                {t('Percentage of supervised facilities integrating additional core services (Based on Baseline / First Visit).')}
             </p>
             <div className="relative flex-grow min-h-[220px]" dir="ltr">
                 <Bar data={data} options={options} plugins={[verticalBarLabelPlugin]} />
@@ -218,8 +218,51 @@ const FacilityInformationDashboardTab = ({
     activeLocality,
     STATE_LOCALITIES
 }) => {
-    const { t, language } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
+    const isIMNCI = activeService === 'IMNCI';
+
+    // Dynamic Lists based on Active Service
+    const toolsList = useMemo(() => {
+        if (isIMNCI) {
+            return [
+                { key: 'chartbook', label: 'Clinical Chartbooklet', color: '#0ea5e9' },
+                { key: 'recordForm', label: 'Recording Form registers', color: '#8b5cf6' },
+                { key: 'weightScale', label: 'Infant Weight Scale', color: '#10b981' },
+                { key: 'heightScale', label: 'Length/Height Board', color: '#f59e0b' },
+                { key: 'thermometer', label: 'Clinical Thermometer', color: '#ec4899' },
+                { key: 'timer', label: 'Respiratory Rate Timer', color: '#3b82f6' },
+                { key: 'orsCorner', label: 'ORS Hydration Corner', color: '#14b8a6' }
+            ];
+        } else {
+            return [
+                { key: 'delivery_register', label: 'Delivery/EENC Registers', color: '#8b5cf6' },
+                { key: 'resuscitation_area', label: 'Functional Resuscitation Area', color: '#0ea5e9' },
+                { key: 'infant_warmer', label: 'Infant Warmer / Heater', color: '#10b981' },
+                { key: 'suction_machine', label: 'Functional Suction Machine', color: '#f59e0b' },
+                { key: 'oxygen_supply', label: 'Oxygen Supply', color: '#ec4899' },
+                { key: 'handwashing_sink', label: 'Handwashing Sink (Water/Soap)', color: '#3b82f6' },
+                { key: 'kmc_space', label: 'KMC Space/Unit', color: '#14b8a6' }
+            ];
+        }
+    }, [isIMNCI]);
+
+    const integratedKeys = useMemo(() => {
+        if (isIMNCI) {
+            return [
+                { key: 'immunization', label: 'Immunization' },
+                { key: 'nutrition', label: 'Nutrition' },
+                { key: 'growthMonitoring', label: 'Growth Monitoring' }
+            ];
+        } else {
+            return [
+                { key: 'anc_services', label: 'Antenatal Care (ANC)' },
+                { key: 'pnc_services', label: 'Postnatal Care (PNC)' },
+                { key: 'infection_control', label: 'Infection Control' }
+            ];
+        }
+    }, [isIMNCI]);
 
     // Scoped reports strictly matched to active Service
     const scopedReports = useMemo(() => {
@@ -243,19 +286,15 @@ const FacilityInformationDashboardTab = ({
         return uniqueIds.size;
     }, [scopedReports]);
 
-    const toolsList = useMemo(() => [
-        { key: 'chartbook', label: 'Clinical Chartbooklet', color: '#0ea5e9' },
-        { key: 'recordForm', label: 'Recording Form registers', color: '#8b5cf6' },
-        { key: 'weightScale', label: 'Infant Weight Scale', color: '#10b981' },
-        { key: 'heightScale', label: 'Length/Height Board', color: '#f59e0b' },
-        { key: 'thermometer', label: 'Clinical Thermometer', color: '#ec4899' },
-        { key: 'timer', label: 'Respiratory Rate Timer', color: '#3b82f6' },
-        { key: 'orsCorner', label: 'ORS Hydration Corner', color: '#14b8a6' }
-    ], []);
-
     const checkToolAvailability = (toolsObj, key) => {
         if (!toolsObj) return false;
-        const status = toolsObj[key];
+        let status = toolsObj[key];
+
+        // EENC Arabic Fallbacks if falling back to raw facility fields
+        if (key === 'resuscitation_area' && status === undefined) status = toolsObj['طاولة_إنعاش'] || toolsObj['resuscitation_table'];
+        if (key === 'kmc_space' && status === undefined) status = toolsObj['رعاية_الكنغر'];
+        if (key === 'delivery_register' && status === undefined) status = toolsObj['سجل_ولادات'];
+
         return status === 'yes' || status === 'Yes' || status === true || status === 'true';
     };
 
@@ -273,7 +312,7 @@ const FacilityInformationDashboardTab = ({
 
         scopedReports.forEach(r => {
             const vNum = parseInt(r.visitNumber || r.fullData?.visitNumber) || 1;
-            const tools = r.fullData?.essential_tools || r.essential_tools;
+            const tools = r.fullData?.essential_tools || r.essential_tools || r.fullData || r;
 
             if (tools && aggByVisit[vNum]) {
                 toolsList.forEach(tool => {
@@ -294,9 +333,9 @@ const FacilityInformationDashboardTab = ({
     // IMPORTANT: Calculated ONLY based on Baseline / First Visit per facility
     const integratedStats = useMemo(() => {
         let total = 0;
-        let imm = 0;
-        let nut = 0;
-        let gm = 0;
+        let count1 = 0;
+        let count2 = 0;
+        let count3 = 0;
         let fullyIntegratedCount = 0;
 
         // Group by facility and extract ONLY the earliest visit
@@ -317,37 +356,39 @@ const FacilityInformationDashboardTab = ({
         const firstVisitReports = Array.from(firstVisitsMap.values());
 
         firstVisitReports.forEach(r => {
-            const tools = r.fullData?.essential_tools || r.essential_tools;
+            const tools = r.fullData?.essential_tools || r.essential_tools || r.fullData || r;
             if (tools) {
                 total++;
-                const hasImm = checkToolAvailability(tools, 'immunization');
-                const hasNut = checkToolAvailability(tools, 'nutrition');
-                const hasGm = checkToolAvailability(tools, 'growthMonitoring');
+                const has1 = checkToolAvailability(tools, integratedKeys[0].key);
+                const has2 = checkToolAvailability(tools, integratedKeys[1].key);
+                const has3 = checkToolAvailability(tools, integratedKeys[2].key);
                 
-                if (hasImm) imm++;
-                if (hasNut) nut++;
-                if (hasGm) gm++;
+                if (has1) count1++;
+                if (has2) count2++;
+                if (has3) count3++;
                 
-                if (hasImm && hasNut && hasGm) fullyIntegratedCount++;
+                if (has1 && has2 && has3) fullyIntegratedCount++;
             }
         });
 
         return {
             total,
             fullyIntegratedCount,
-            immunization: total > 0 ? (imm / total) * 100 : 0,
-            nutrition: total > 0 ? (nut / total) * 100 : 0,
-            growthMonitoring: total > 0 ? (gm / total) * 100 : 0
+            stat1: total > 0 ? (count1 / total) * 100 : 0,
+            stat2: total > 0 ? (count2 / total) * 100 : 0,
+            stat3: total > 0 ? (count3 / total) * 100 : 0,
+            labels: [t(integratedKeys[0].label), t(integratedKeys[1].label), t(integratedKeys[2].label)]
         };
-    }, [scopedReports]);
+    }, [scopedReports, integratedKeys, t]);
 
     const lineLabels = useMemo(() => {
         const labels = [];
+        const baseKey = isIMNCI ? 'chartbook' : 'delivery_register';
         [1, 2, 3, 4].forEach(v => {
-            if (toolAggByVisit[v]['chartbook']?.denominator > 0) labels.push(`${t('Visit')} ${v}`);
+            if (toolAggByVisit[v][baseKey]?.denominator > 0) labels.push(`${t('Visit')} ${v}`);
         });
         return labels;
-    }, [toolAggByVisit, t]);
+    }, [toolAggByVisit, t, isIMNCI]);
 
     const getToolPct = (vNum, toolKey) => {
         const d = toolAggByVisit[vNum]?.[toolKey];
@@ -365,10 +406,16 @@ const FacilityInformationDashboardTab = ({
             {/* Top Cards Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <KpiCard title={t("Monitored Facilities Under Supervision")} value={uniqueVisitedFacilitiesCount} />
-                <KpiCard title={t("IMNCI Case Recording Forms Register")} scoreValue={getOverallPct('recordForm')} />
-                <KpiCard title={t("Clinical Chartbooklet Availability")} scoreValue={getOverallPct('chartbook')} />
                 <KpiCard 
-                    title={t("Facilities with All 4 Services Integrated")} 
+                    title={isIMNCI ? t("IMNCI Case Recording Forms Register") : t("Delivery/EENC Registers Availability")} 
+                    scoreValue={getOverallPct(isIMNCI ? 'recordForm' : 'delivery_register')} 
+                />
+                <KpiCard 
+                    title={isIMNCI ? t("Clinical Chartbooklet Availability") : t("Functional Resuscitation Area Availability")} 
+                    scoreValue={getOverallPct(isIMNCI ? 'chartbook' : 'resuscitation_area')} 
+                />
+                <KpiCard 
+                    title={t("Facilities with Core Services Integrated")} 
                     value={integratedStats.fullyIntegratedCount} 
                     unit={`(${integratedStats.total > 0 ? Math.round((integratedStats.fullyIntegratedCount / integratedStats.total) * 100) : 0}%)`}
                 />

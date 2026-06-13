@@ -1,8 +1,19 @@
 // IMNCSkillsAssessmentForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     FormGroup, Select, Checkbox
 } from '../CommonComponents';
+
+// --- Smart Auto-Scroll Helper ---
+export const handleAutoScroll = () => {
+    setTimeout(() => {
+        const nextUnanswered = document.querySelector('.row-unanswered');
+        if (nextUnanswered) {
+            const y = nextUnanswered.getBoundingClientRect().top + window.scrollY - 180;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+    }, 400); 
+};
 
 // --- Reusable Segmented Control (Adapted for RTL) ---
 export function ActionToggle({ options, currentValue, onClick, name }) {
@@ -36,8 +47,18 @@ export function ActionToggle({ options, currentValue, onClick, name }) {
 }
 
 // --- Accordion Wrapper Component ---
-const SubgroupAccordion = ({ title, scoreData, children, isMainSymptom = false }) => {
+const SubgroupAccordion = ({ title, scoreData, children, isMainSymptom = false, isCompleted = false }) => {
     const [isExpanded, setIsExpanded] = useState(true);
+
+    useEffect(() => {
+        if (isCompleted) {
+            const timer = setTimeout(() => setIsExpanded(false), 800);
+            return () => clearTimeout(timer);
+        } else {
+            setIsExpanded(true);
+        }
+    }, [isCompleted]);
+
     return (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 mb-4" dir="rtl">
             <button 
@@ -48,6 +69,7 @@ const SubgroupAccordion = ({ title, scoreData, children, isMainSymptom = false }
                 <div className="flex items-center text-right text-base font-bold text-slate-800">
                     {scoreData && <ScoreCircle score={scoreData.score} maxScore={scoreData.maxScore} />}
                     <span className="mr-2">{title}</span>
+                    {isCompleted && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
@@ -62,8 +84,18 @@ const SubgroupAccordion = ({ title, scoreData, children, isMainSymptom = false }
 
 // --- Single Skill Checklist Item ---
 export const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true, naLabel = "لا ينطبق", isMainSymptom = false, scoreCircle = null }) => {
+    const isAnswered = value !== '' && value !== undefined && value !== 'na';
+    const containerClasses = isMainSymptom
+        ? `flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group bg-sky-50 border-b border-sky-100 ${isAnswered ? 'row-answered' : 'row-unanswered'}`
+        : `flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group ${isAnswered ? 'row-answered' : 'row-unanswered'}`;
+
     const handleChange = (key, val) => { 
+        const wasAlreadyAnswered = value !== '' && value !== undefined && value !== 'na';
         onChange(key, val); 
+        
+        if (!wasAlreadyAnswered && val !== 'na') {
+            handleAutoScroll();
+        }
     };
 
     const options = [
@@ -73,10 +105,6 @@ export const SkillChecklistItem = ({ label, value, onChange, name, showNaOption 
     if (showNaOption) {
         options.push([naLabel, 'na', 'bg-gray-500 border-gray-500']);
     }
-
-    const containerClasses = isMainSymptom
-        ? "flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group bg-sky-50 border-b border-sky-100"
-        : "flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group";
 
     return (
         <div dir="rtl" className={containerClasses}>
@@ -177,7 +205,7 @@ export const IMNCI_FORM_STRUCTURE = [
                 { mainSkill: { key: 'skill_ask_ear', label: 'هل سأل عن وجود مشكلة في الأذن', scoreKey: 'symptom_ear' } },
             ] },
             { subgroupTitle: 'تحرى عن سوء التغذية الحاد', step: 4, scoreKey: 'malnutrition', maxScore: 3, skills: [ 
-                { key: 'skill_mal_muac', label: 'هل قاس المواك بصورة صحيحة' }, // Keeps NA
+                { key: 'skill_mal_muac', label: 'هل قاس المواك بصورة صحيحة' },
                 { key: 'skill_mal_wfh', label: 'هل قاس نسبة الوزن للطول أو الارتفاع بصورة صحيحة', showNaOption: false }, 
                 { key: 'skill_mal_classify', label: 'هل صنف الحالة التغذوية بصورة صحيحة', showNaOption: false }, 
             ] },
@@ -903,16 +931,16 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                             </h3>
                             <div className="mb-4 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
                                 <div className="p-4 space-y-4 md:space-y-0 md:flex md:items-end md:gap-6 text-right" dir="rtl">
-                                    <FormGroup label="القرار النهائي حسب تقييم العامل الصحي" className="text-right flex-1 min-w-0">
-                                        <Select name="finalDecision" value={formData.finalDecision} onChange={handleFormChange}>
+                                    <FormGroup label="القرار النهائي حسب تقييم العامل الصحي" className="text-right flex-1 min-w-0 row-unanswered">
+                                        <Select name="finalDecision" value={formData.finalDecision} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }}>
                                             <option value="">-- اختر القرار --</option>
                                             <option value="referral">تحويل عاجل</option>
                                             <option value="treatment">علاج ونصائح منزلية</option>
                                         </Select>
                                     </FormGroup>
                                     {formData.finalDecision !== '' && (
-                                        <FormGroup label="هل يتطابق قرار العامل الصحي مع المشرف؟" className="text-right flex-shrink-0">
-                                            <Select name="decisionMatches" value={formData.decisionMatches} onChange={handleFormChange} className="min-w-[100px]">
+                                        <FormGroup label="هل يتطابق قرار العامل الصحي مع المشرف؟" className="text-right flex-shrink-0 row-unanswered">
+                                            <Select name="decisionMatches" value={formData.decisionMatches} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }} className="min-w-[100px]">
                                                 <option value="">-- اختر --</option>
                                                 <option value="yes">نعم</option>
                                                 <option value="no">لا</option>
@@ -992,7 +1020,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                     <SkillChecklistItem name={mainSkill.key} label={mainSkill.label} value={mainSkillValue} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} isMainSymptom={true} scoreCircle={symptomScoreCircle} />
                                                     {showSubQuestions && (
                                                         <div dir="rtl" className="p-4 pt-2 bg-white space-y-4 text-right rounded-b-xl border-t border-slate-100 divide-y divide-slate-100">
-                                                            <div className="flex flex-col sm:flex-row justify-between sm:items-center py-2 px-1">
+                                                            <div className={`flex flex-col sm:flex-row justify-between sm:items-center py-2 px-1 hover:bg-sky-50 transition-colors ${formData.assessment_skills[supervisorConfirmsKey] === '' ? 'row-unanswered' : 'row-answered'}`}>
                                                                 <span className="text-sm font-medium text-slate-800 mb-2 sm:mb-0 sm:ml-4 text-right">{supervisorConfirmLabel}</span>
                                                                 <div className="flex gap-4 mt-1 sm:mt-0 flex-shrink-0">
                                                                     <ActionToggle
@@ -1002,7 +1030,11 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                         ]}
                                                                         currentValue={formData.assessment_skills[supervisorConfirmsKey]}
                                                                         name={supervisorConfirmsKey}
-                                                                        onClick={(name, value) => handleFormChange({ target: { name, value }})}
+                                                                        onClick={(name, value) => { 
+                                                                            const wasAnswered = formData.assessment_skills[supervisorConfirmsKey] !== '';
+                                                                            handleFormChange({ target: { name, value }}); 
+                                                                            if (!wasAnswered) handleAutoScroll(); 
+                                                                        }}
                                                                     />
                                                                 </div>
                                                             </div>
@@ -1014,7 +1046,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                 )}
 
                                                                 {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
-                                                                    <div className="pt-4 mt-2">
+                                                                    <div className="pt-4 mt-2 row-unanswered">
                                                                         <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
                                                                             {isMultiSelectClassification && multiSelectCols ? (
                                                                                 <>
@@ -1025,7 +1057,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                                                 id={`${workerClassKey}-did_not_classify`} 
                                                                                                 name="did_not_classify" 
                                                                                                 checked={!!formData.assessment_skills[workerClassKey]?.['did_not_classify']} 
-                                                                                                onChange={(e) => handleMultiClassificationChange(workerClassKey, 'did_not_classify', e.target.checked)} 
+                                                                                                onChange={(e) => { handleMultiClassificationChange(workerClassKey, 'did_not_classify', e.target.checked); handleAutoScroll(); }} 
                                                                                             />
                                                                                             <label htmlFor={`${workerClassKey}-did_not_classify`} className="cursor-pointer text-sm font-medium" style={{ color: 'red' }}>
                                                                                                 لم يتم التصنيف
@@ -1033,12 +1065,12 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                                         </div>
                                                                                     )}
                                                                                     <div className="max-h-40 overflow-y-auto border rounded p-3 bg-slate-50 grid grid-cols-2 gap-x-4">
-                                                                                        <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(workerClassKey, c, e.target.checked)} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                        <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(workerClassKey, c, e.target.checked)} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                        <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => { handleMultiClassificationChange(workerClassKey, c, e.target.checked); handleAutoScroll(); }} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                        <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => { handleMultiClassificationChange(workerClassKey, c, e.target.checked); handleAutoScroll(); }} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
                                                                                     </div>
                                                                                 </>
                                                                             ) : (
-                                                                                <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}>
+                                                                                <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }}>
                                                                                     <option value="">-- اختر التصنيف --</option>
                                                                                     {formData.assessment_skills[classifySkillKey] === 'no' && (
                                                                                         <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
@@ -1054,15 +1086,15 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                     (isMultiSelectClassification && !isMultiSelectGroupEmpty(formData.assessment_skills[workerClassKey])) ||
                                                                     (!isMultiSelectClassification && formData.assessment_skills[workerClassKey] !== '')
                                                                 ) && (
-                                                                    <div className="pt-4 mt-2 border-t border-slate-100">
+                                                                    <div className="pt-4 mt-2 border-t border-slate-100 row-unanswered">
                                                                         <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
                                                                             {isMultiSelectClassification && multiSelectCols ? (
                                                                                 <div className="max-h-40 overflow-y-auto border rounded p-3 bg-slate-50 grid grid-cols-2 gap-x-4">
-                                                                                    <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(correctClassKey, c, e.target.checked)} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                    <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(correctClassKey, c, e.target.checked)} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                    <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => { handleMultiClassificationChange(correctClassKey, c, e.target.checked); handleAutoScroll(); }} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                    <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => { handleMultiClassificationChange(correctClassKey, c, e.target.checked); handleAutoScroll(); }} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
                                                                                 </div>
                                                                             ) : (
-                                                                                <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف الصحيح --</option> {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
+                                                                                <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }}> <option value="">-- اختر التصنيف الصحيح --</option> {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
                                                                             )}
                                                                         </FormGroup>
                                                                     </div>
@@ -1082,8 +1114,24 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                 const showClassifications = (isMalnutrition || isAnemia) && classifySkillKey;
                                 const showSupervisorCorrection = showClassifications && formData.assessment_skills[classifySkillKey] === 'no';
 
+                                // Determine if subgroup is fully completed to trigger auto-collapse
+                                const isSubgroupComplete = subgroup.skills.every(skill => {
+                                    let isSkillRelevant = true;
+                                    if (skill.relevant) {
+                                        isSkillRelevant = typeof skill.relevant === 'function' ? skill.relevant(formData) : evaluateRelevance(skill.relevant, formData);
+                                    }
+                                    const val = formData[group.sectionKey]?.[skill.key];
+                                    return !isSkillRelevant || (val !== undefined && val !== '' && val !== 'na');
+                                });
+                                // Additional check for classification dropdowns if they are visible
+                                let isFullyComplete = isSubgroupComplete;
+                                if (showClassifications && formData.assessment_skills[classifySkillKey] && formData.assessment_skills[classifySkillKey] !== 'na') {
+                                    if (formData.assessment_skills[workerClassKey] === '') isFullyComplete = false;
+                                    if (showSupervisorCorrection && formData.assessment_skills[workerClassKey] !== '' && formData.assessment_skills[correctClassKey] === '') isFullyComplete = false;
+                                }
+
                                 return (
-                                    <SubgroupAccordion key={subgroup.subgroupTitle} title={subgroup.subgroupTitle} scoreData={subgroupScoreData}>
+                                    <SubgroupAccordion key={subgroup.subgroupTitle} title={subgroup.subgroupTitle} scoreData={subgroupScoreData} isCompleted={isFullyComplete}>
                                         {subgroup.skills.map((skill, index) => {
                                             let isConditionallyRelevant = true;
                                             if (skill.relevant) {
@@ -1135,8 +1183,8 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                         {showClassifications && (
                                             <div className="p-4 bg-white space-y-4">
                                                 {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
-                                                    <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
-                                                        <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}>
+                                                    <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right row-unanswered">
+                                                        <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }}>
                                                             <option value="">-- اختر التصنيف --</option>
                                                             {formData.assessment_skills[classifySkillKey] === 'no' && (
                                                                 <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
@@ -1147,8 +1195,8 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                 )}
                                                 
                                                 {showSupervisorCorrection && formData.assessment_skills[workerClassKey] !== '' && (
-                                                    <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
-                                                        <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف الصحيح --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
+                                                    <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right row-unanswered">
+                                                        <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }}> <option value="">-- اختر التصنيف الصحيح --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
                                                     </FormGroup>
                                                 )}
                                             </div>
