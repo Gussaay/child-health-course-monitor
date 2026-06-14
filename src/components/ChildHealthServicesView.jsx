@@ -55,6 +55,25 @@ const TABS = {
 
 // --- HELPER FUNCTIONS ---
 
+const removeUndefinedProperties = (obj) => {
+    if (obj === undefined) return null;
+    if (obj === null || typeof obj !== 'object') return obj;
+    // Preserve Firebase Dates and Timestamps
+    if (obj instanceof Date || (typeof obj.toDate === 'function')) return obj;
+    
+    if (Array.isArray(obj)) {
+        return obj.map(removeUndefinedProperties);
+    }
+    
+    const result = {};
+    for (const key in obj) {
+        if (obj[key] !== undefined) {
+            result[key] = removeUndefinedProperties(obj[key]);
+        }
+    }
+    return result;
+};
+
 const deepEqual = (obj1, obj2) => JSON.stringify(obj1) === JSON.stringify(obj2);
 
 const getDisplayableValue = (value) => {
@@ -1095,7 +1114,7 @@ const ChildHealthServicesView = ({
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
     const [facilityForMap, setFacilityForMap] = useState(null);
     const [isMismatchModalOpen, setIsMismatchModalOpen] = useState(false);
-    const [mismatchedFacilities, setMismatchedFacilities] = useState([]); // <-- RESTORED FIX
+    const [mismatchedFacilities, setMismatchedFacilities] = useState([]); 
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [facilityForHistory, setFacilityForHistory] = useState(null);
 
@@ -1460,13 +1479,16 @@ const ChildHealthServicesView = ({
         const finalPayload = { ...payload };
         if (isUpdate) { finalPayload.id = editingFacility.id; }
         
+        // --- FIX 1: Clean data before sending to Firestore ---
+        const cleanedPayload = removeUndefinedProperties(finalPayload);
+        
         try {
             if (permissions.canApproveSubmissions) { 
-                await saveFacilitySnapshot(finalPayload); 
+                await saveFacilitySnapshot(cleanedPayload); 
                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
                 await fetchHealthFacilities({}, true);
             } else { 
-                await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); 
+                await submitFacilityDataForApproval(cleanedPayload, user.email || 'Unknown User'); 
                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
                 if (navigator.onLine) {
@@ -1475,7 +1497,7 @@ const ChildHealthServicesView = ({
                         const submitterName = user.displayName || user.email || 'A user';
                         const actionText = isUpdate ? 'updated the' : 'submitted a new';
                         const notifTitle = isUpdate ? 'Facility Update Requires Approval' : 'New Facility Requires Approval';
-                        const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${finalPayload['اسم_المؤسسة']}.`;
+                        const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${cleanedPayload['اسم_المؤسسة']}.`;
 
                         const functions = getFunctions(db.app);
                         const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
@@ -1575,15 +1597,25 @@ const ChildHealthServicesView = ({
     const handleConfirmApproval = async (submissionData) => {
         if (!permissions.canApproveSubmissions) return;
         try {
-            if (submissionData._action === 'DELETE') {
-                 await deleteHealthFacility(submissionData.id);
-                 const idsToClean = submissionData._mergedSubmissionIds || [submissionData.submissionId];
+            // --- FIX 2: Strip undefined fields before interacting with Firestore ---
+            const cleanSubmissionData = removeUndefinedProperties(submissionData);
+
+            if (cleanSubmissionData._action === 'DELETE') {
+                 // --- FIX 3: Target originalFacilityId explicitly for deletions, fallback to id ---
+                 const targetId = cleanSubmissionData.originalFacilityId || cleanSubmissionData.id;
+                 if (!targetId) throw new Error("Missing facility ID for deletion.");
+                 
+                 await deleteHealthFacility(targetId);
+                 
+                 // --- FIX 4: Prevent mapping undefined IDs into rejectFacilitySubmission ---
+                 const idsToClean = (cleanSubmissionData._mergedSubmissionIds || [cleanSubmissionData.submissionId]).filter(Boolean);
                  await Promise.all(idsToClean.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Approver')));
+                 
                  setToast({ show: true, message: "Facility deletion approved and completed.", type: "success" });
             } else {
-                await approveFacilitySubmission(submissionData, auth.currentUser?.email || 'Unknown Approver');
-                if (submissionData._mergedSubmissionIds && submissionData._mergedSubmissionIds.length > 1) {
-                    const redundantIds = submissionData._mergedSubmissionIds.filter(id => id !== submissionData.submissionId);
+                await approveFacilitySubmission(cleanSubmissionData, auth.currentUser?.email || 'Unknown Approver');
+                if (cleanSubmissionData._mergedSubmissionIds && cleanSubmissionData._mergedSubmissionIds.length > 1) {
+                    const redundantIds = cleanSubmissionData._mergedSubmissionIds.filter(id => id !== cleanSubmissionData.submissionId).filter(Boolean);
                     await Promise.all(redundantIds.map(id => rejectFacilitySubmission(id, 'Merged into a combined submission')));
                 }
                 setToast({ show: true, message: "Submission approved and facility data updated.", type: "success" });
@@ -1602,7 +1634,9 @@ const ChildHealthServicesView = ({
         const action = isDeletionRequest ? "deletion request" : "submission";
         if (window.confirm(`Are you sure you want to reject this ${action}?`)) {
             try {
-                const idsArray = Array.isArray(submissionIds) ? submissionIds : [submissionIds];
+                // --- FIX 5: Safely ensure we don't pass undefined values to rejectDoc ---
+                const idsArray = (Array.isArray(submissionIds) ? submissionIds : [submissionIds]).filter(Boolean);
+                
                 await Promise.all(idsArray.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Rejector')));
                 setToast({ show: true, message: "Submission rejected.", type: "success" });
                 refreshSubmissions(true);

@@ -38,7 +38,7 @@ export const SaveStatusModal = ({ statusData, onClose }) => {
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-fade-in" dir="rtl">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center transform scale-100 transition-transform">
-                {isSuccess && <div className="text-green-500 mb-4 flex justify-center"><CheckCircle className="w-16 h-16" /></div>}
+                {isSuccess && <div className="text-green-50 mb-4 flex justify-center"><CheckCircle className="w-16 h-16" /></div>}
                 {isQueued && <div className="text-amber-500 mb-4 flex justify-center"><WifiOff className="w-16 h-16" /></div>}
                 {isError && <div className="text-red-500 mb-4 flex justify-center"><XCircle className="w-16 h-16" /></div>}
                 
@@ -1102,6 +1102,7 @@ export const GenericFacilityForm = React.forwardRef(({
         setFormData(prev => ({ ...prev, 'الولاية': e.target.value, 'المحلية': '' }));
     };
 
+    // --- SYNCHRONOUS SUBMIT HANDLER TO PREVENT 'UNKNOWN' ---
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLocalSubmitting(true);
@@ -1112,14 +1113,27 @@ export const GenericFacilityForm = React.forwardRef(({
             if ([null, undefined, ''].includes(processedData[field])) processedData[field] = 'no data';
         });
         
-        let updaterIdentifier;
-        const name = submitterName.trim();
-        const email = submitterEmail.trim();
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+        
+        let finalName = submitterName.trim();
+        let finalEmail = submitterEmail.trim();
 
-        if (name && email) updaterIdentifier = `${name} (${email})`;
-        else if (name) updaterIdentifier = name;
-        else if (email) updaterIdentifier = email;
-        else updaterIdentifier = 'Anonymous Submission';
+        if (currentUser) {
+            finalName = currentUser.displayName || finalName;
+            finalEmail = currentUser.email || finalEmail;
+        }
+
+        let updaterIdentifier;
+        if (finalName && finalEmail) {
+            updaterIdentifier = `${finalName} (${finalEmail})`;
+        } else if (finalName) {
+            updaterIdentifier = finalName;
+        } else if (finalEmail) {
+            updaterIdentifier = finalEmail;
+        } else {
+            updaterIdentifier = 'Anonymous Submission';
+        }
 
         try {
             await onSave({ ...processedData, 'اخر تحديث': new Date().toISOString(), 'updated_by': updaterIdentifier });
