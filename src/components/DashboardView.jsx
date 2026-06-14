@@ -46,8 +46,8 @@ function DashboardView({ userStates, userLocalities }) {
 
     return (
         <div className="flex flex-col w-full bg-slate-50/20 min-h-screen">
-            {/* Unified Header & Tabs sitting flush at the top */}
-            <div className="bg-sky-50/60 border-b border-sky-100 px-4 md:px-8 pt-5 pb-0 flex flex-col gap-4">
+            {/* Unified Header & Tabs */}
+            <div className="bg-sky-50/60 border-b border-sky-100 px-4 md:px-8 pt-5 pb-4 flex flex-col gap-5">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
@@ -59,23 +59,32 @@ function DashboardView({ userStates, userLocalities }) {
                     </Button>
                 </div>
                 
-                <nav className="-mb-px flex flex-nowrap space-x-6 overflow-x-auto">
-                    {[
-                        { id: 'combinedCoverage', label: t('dashboard.tabs.combined', 'Combined Coverage') },
-                        { id: 'neonatalCoverage', label: t('dashboard.tabs.neonatal', 'Neonatal Care Coverage') },
-                        { id: 'eencCoverage', label: t('dashboard.tabs.eenc', 'EENC Coverage') },
-                        { id: 'imnciCoverage', label: t('dashboard.tabs.imnci', 'IMNCI Coverage') },
-                        { id: 'criticalCoverage', label: t('dashboard.tabs.critical', 'Emergency & Critical Care') } 
-                    ].map(tab => (
-                        <button 
-                            key={tab.id} 
-                            onClick={() => setViewType(tab.id)} 
-                            className={`${viewType === tab.id ? 'border-sky-600 text-sky-800 font-bold' : 'border-transparent text-gray-500 hover:text-sky-700 hover:border-sky-300 font-medium'} whitespace-nowrap py-3 border-b-2 text-[13px] tracking-wide uppercase transition-colors`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </nav>
+                {/* Modern Pill-Style Tab Navigation */}
+                <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                    <nav className="flex space-x-2 pb-1">
+                        {[
+                            { id: 'combinedCoverage', label: t('dashboard.tabs.combined', 'Combined Coverage') },
+                            { id: 'neonatalCoverage', label: t('dashboard.tabs.neonatal', 'Neonatal Care Coverage') },
+                            { id: 'eencCoverage', label: t('dashboard.tabs.eenc', 'EENC Coverage') },
+                            { id: 'imnciCoverage', label: t('dashboard.tabs.imnci', 'IMNCI Coverage') },
+                            { id: 'criticalCoverage', label: t('dashboard.tabs.critical', 'Emergency & Critical Care') } 
+                        ].map(tab => (
+                            <button 
+                                key={tab.id} 
+                                onClick={() => setViewType(tab.id)} 
+                                className={`
+                                    relative px-5 py-2.5 rounded-full text-[13px] font-bold tracking-wide transition-all duration-200 whitespace-nowrap border
+                                    ${viewType === tab.id 
+                                        ? 'bg-white text-sky-700 border-sky-200 shadow-sm ring-1 ring-sky-100' 
+                                        : 'bg-transparent text-slate-500 border-transparent hover:bg-sky-100/50 hover:text-sky-700'
+                                    }
+                                `}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
             </div>
 
             {isDashboardLoading ? (

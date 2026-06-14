@@ -38,18 +38,30 @@ const CopyIcon = () => (
 
 // --- KPI Card Components ---
 const KPIWrapper = ({ children, borderClass = 'border-s-slate-400', decorationColor = 'bg-slate-500', className = '', percentage, colorTheme = 'slate' }) => {
-    const bgLight = `bg-${colorTheme}-100`;
-    const textDark = `text-${colorTheme}-700`;
+    // Explicit map to ensure Tailwind compiles the classes properly
+    const colorMap = {
+        slate: { bg: 'bg-slate-50', text: 'text-slate-800', border: 'border-slate-200' },
+        sky: { bg: 'bg-sky-50', text: 'text-sky-800', border: 'border-sky-200' },
+        teal: { bg: 'bg-teal-50', text: 'text-teal-800', border: 'border-teal-200' },
+        indigo: { bg: 'bg-indigo-50', text: 'text-indigo-800', border: 'border-indigo-200' },
+        purple: { bg: 'bg-purple-50', text: 'text-purple-800', border: 'border-purple-200' },
+    };
+    const theme = colorMap[colorTheme] || colorMap.slate;
+
     return (
-        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-s-4 ${borderClass} hover:shadow-md transition-all duration-200 flex flex-col items-center justify-center relative overflow-hidden text-center min-h-[140px] ${className}`}>
-            <div className={`absolute -start-8 -bottom-8 w-28 h-28 rounded-full opacity-10 ${decorationColor} pointer-events-none`}></div>
-            {percentage !== undefined && (
-                <div className={`absolute top-2 end-2 w-14 h-14 rounded-full flex items-center justify-center font-black text-[15px] ${bgLight} ${textDark} ring-4 ring-white shadow-md z-20`}>
-                    {percentage}%
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 md:p-6 border-s-4 ${borderClass} hover:shadow-md transition-all duration-200 flex flex-col relative overflow-hidden min-h-[140px] ${className}`}>
+            {/* Background Decoration */}
+            <div className={`absolute -start-8 -bottom-8 w-32 h-32 rounded-full opacity-10 ${decorationColor} pointer-events-none`}></div>
+            
+            <div className="relative z-10 w-full flex justify-between items-center gap-4 h-full">
+                <div className="flex-1 flex flex-col justify-center text-start">
+                    {children}
                 </div>
-            )}
-            <div className="relative z-10 w-full flex flex-col items-center justify-center h-full mt-2">
-                {children}
+                {percentage !== undefined && (
+                    <div className={`shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center font-black text-lg md:text-2xl ${theme.bg} ${theme.text} border-[4px] ${theme.border} shadow-sm z-20`}>
+                        {percentage}%
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -59,19 +71,19 @@ const ValueTotalPercentageCard = ({ title, value, total, percentage, borderClass
     const { t } = useTranslation();
     return (
     <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} percentage={percentage} colorTheme={colorTheme} className={className}>
-        <h3 className="text-[12px] font-bold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
-        <div className="flex flex-col items-center justify-center">
-            <span className={`text-4xl font-black ${valueClass}`}>{value}</span>
-            {total > 0 && <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide mt-1">{t('dashboard.cards.out_of', 'out of')} {total}</span>}
+        <h3 className="text-xs md:text-sm font-extrabold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
+        <div className="flex flex-col items-start mt-1">
+            <span className={`text-4xl md:text-5xl font-black tracking-tight leading-none ${valueClass}`}>{value}</span>
+            {total > 0 && <span className="text-[11px] md:text-xs text-slate-400 font-bold uppercase tracking-wider mt-1.5">{t('dashboard.cards.out_of', 'out of')} {total}</span>}
         </div>
     </KPIWrapper>
 )};
 
 const TotalCountCard = ({ title, count, borderClass = 'border-s-slate-500', valueClass = 'text-slate-700', decorationColor = 'bg-slate-500', className = '' }) => (
     <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} className={className}>
-        <h3 className="text-[12px] font-bold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
-        <div className="flex items-center justify-center">
-            <span className={`text-4xl font-black ${valueClass}`}>{count}</span>
+        <h3 className="text-xs md:text-sm font-extrabold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
+        <div className="flex flex-col items-start mt-1">
+            <span className={`text-4xl md:text-5xl font-black tracking-tight leading-none ${valueClass}`}>{count}</span>
         </div>
     </KPIWrapper>
 );
@@ -102,7 +114,7 @@ const MapLegend = ({ isPlanningMap = false }) => {
     if (isPlanningMap) {
         return (
             <div className="flex justify-center items-center flex-wrap gap-4 text-sm text-gray-700">
-                <span className="font-bold">{t('dashboard.map.legend', 'Legend:')}</span>
+                <span className="font-bold">{t('dashboard.map.legend', 'Legend')}</span>
                 <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#22c55e]"></div><span className='text-xs font-medium'>{t('dashboard.map.has_unit', 'Has Unit (Green)')}</span></div>
                 <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#eab308]"></div><span className='text-xs font-medium'>{t('dashboard.map.planned_only', 'Planned Only (Yellow)')}</span></div>
                 <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#ef4444]"></div><span className='text-xs font-medium'>{t('dashboard.map.no_unit', 'No Unit (Red)')}</span></div>
@@ -112,7 +124,7 @@ const MapLegend = ({ isPlanningMap = false }) => {
     
     return (
     <div className="flex justify-center items-center flex-wrap gap-4 text-sm text-gray-700">
-        <span className="font-bold">{t('dashboard.map.legend', 'Legend:')}</span>
+        <span className="font-bold">{t('dashboard.map.legend', 'Legend')}</span>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>{t('dashboard.map.no_data', '0-39% (or No Data)')}</span></div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_mid', '40-74%')}</span></div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_high', '≥75%')}</span></div>
@@ -269,9 +281,9 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         return {
             totalSupposed,
             totalWithUnit,
-            unitCoveragePercentage: totalSupposed > 0 ? Math.round((totalWithUnit / totalSupposed) * 100) : 0,
+            unitCoveragePercentage: totalSupposed > 0 ? ((totalWithUnit / totalSupposed) * 100).toFixed(1) : 0,
             totalWithCPAP,
-            cpapPercentage: totalWithUnit > 0 ? Math.round((totalWithCPAP / totalWithUnit) * 100) : 0,
+            cpapPercentage: totalWithUnit > 0 ? ((totalWithCPAP / totalWithUnit) * 100).toFixed(1) : 0,
         };
     }, [targetFacilities, targetLevel]); 
 
@@ -772,7 +784,8 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
         const totalEENCProviders = locationFilteredFacilities.filter(isEmONCFunctional).filter(providesEENC).length;
         return {
             totalEmONC, totalFunctionalEmONC, totalEENCProviders, 
-            eencCoveragePercentage: totalFunctionalEmONC > 0 ? Math.round((totalEENCProviders / totalFunctionalEmONC) * 100) : 0
+            functionalEmoncPercentage: totalEmONC > 0 ? ((totalFunctionalEmONC / totalEmONC) * 100).toFixed(1) : 0,
+            eencCoveragePercentage: totalFunctionalEmONC > 0 ? ((totalEENCProviders / totalFunctionalEmONC) * 100).toFixed(1) : 0
         };
     }, [locationFilteredFacilities, isEmONCFacility, isEmONCFunctional, providesEENC]); 
 
@@ -784,8 +797,11 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
             if (!key || key === 'إتحادي') return;
             if (!s[key]) s[key] = { 
                 name: stateFilter ? getLocalizedLocalityName(stateFilter, key, i18n.language) : getLocalizedStateName(key, i18n.language), 
-                key, functionalEmONC: 0, eencProviders: 0 
+                key, totalEmONC: 0, functionalEmONC: 0, eencProviders: 0 
             };
+            if (isEmONCFacility(f)) {
+                s[key].totalEmONC++;
+            }
             if (isEmONCFunctional(f)) {
                 s[key].functionalEmONC++;
                 if (providesEENC(f)) s[key].eencProviders++;
@@ -794,7 +810,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
         const tD = Object.values(s).map(st => ({ ...st, eencCoverage: st.functionalEmONC > 0 ? Math.round((st.eencProviders / st.functionalEmONC) * 100) : 0 })).sort((a, b) => b.eencCoverage - a.eencCoverage);
         const mD = tD.map(st => ({ state: st.key, percentage: st.eencCoverage, coordinates: mapCoordinates[st.key] ? [mapCoordinates[st.key].lng, mapCoordinates[st.key].lat] : [0, 0] }));
         return { tableData: tD, mapData: mD };
-    }, [locationFilteredFacilities, stateFilter, isEmONCFunctional, providesEENC, i18n.language]); 
+    }, [locationFilteredFacilities, stateFilter, isEmONCFacility, isEmONCFunctional, providesEENC, i18n.language]); 
 
     const equipmentTableData = useMemo(() => {
         const aggK = stateFilter ? 'اسم_المؤسسة' : 'الولاية';
@@ -892,7 +908,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                     {loading ? <Spinner/> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.total_emonc', 'Total EmONC Facilities')} count={kpiData.totalEmONC} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
-                            <TotalCountCard title={t('dashboard.cards.functional_emonc', 'Functional EmONC Facilities')} count={kpiData.totalFunctionalEmONC} className="flex-1" borderClass="border-s-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.functional_emonc', 'Functional EmONC Facilities')} value={kpiData.totalFunctionalEmONC} total={kpiData.totalEmONC} percentage={kpiData.functionalEmoncPercentage} className="flex-1" borderClass="border-s-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" colorTheme="indigo" />
                             <ValueTotalPercentageCard title={t('dashboard.cards.eenc_coverage_functional', 'EENC Coverage in Functional EmONC')} value={kpiData.totalEENCProviders} total={kpiData.totalFunctionalEmONC} percentage={kpiData.eencCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
                         </>
                     )}
@@ -941,17 +957,19 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                             <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[25%]'>{aggregationLevelName}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[20%]'>{aggregationLevelName}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>{t('dashboard.table.total_emonc', 'Total EmONC')}</th>
                                         <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>{t('dashboard.table.functional_emonc', 'Functional EmONC')}</th>
                                         <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>{t('dashboard.table.with_eenc', 'With EENC')}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[45%]'>{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[35%]'>{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tableData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
+                                    {tableData.length === 0 ? <tr><td colSpan={5} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
                                      tableData.map(row => ( 
                                         <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
                                             <td className="p-3 font-medium text-gray-700 text-start">{row.name}</td>
+                                            <td className="p-3 text-center align-middle font-medium">{row.totalEmONC}</td>
                                             <td className="p-3 text-center align-middle font-medium">{row.functionalEmONC}</td>
                                             <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.eencProviders} <span className="text-gray-400 font-normal ms-1">({row.eencCoverage}%)</span></td>
                                             <td className="p-3 align-middle text-start">
@@ -1059,7 +1077,12 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
 
     const functioningPhcs = useMemo(() => locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية'])), [locationFilteredFacilities]);
     const imnciInPhcs = useMemo(() => functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'), [functioningPhcs]);
-    const imnciCoveragePercentage = useMemo(() => functioningPhcs.length > 0 ? Math.round((imnciInPhcs.length / functioningPhcs.length) * 100) : 0, [imnciInPhcs, functioningPhcs]);
+    
+    // ORT Corner calculation based on the facility form data
+    const ortCornerInPhcs = useMemo(() => functioningPhcs.filter(f => f['غرفة_إرواء'] === 'Yes'), [functioningPhcs]);
+    
+    const imnciCoveragePercentage = useMemo(() => functioningPhcs.length > 0 ? ((imnciInPhcs.length / functioningPhcs.length) * 100).toFixed(1) : 0, [imnciInPhcs, functioningPhcs]);
+    const ortCoveragePercentage = useMemo(() => functioningPhcs.length > 0 ? ((ortCornerInPhcs.length / functioningPhcs.length) * 100).toFixed(1) : 0, [ortCornerInPhcs, functioningPhcs]);
 
     const isLocalityView = !!stateFilter && !localityFilter;
     const isFacilityView = !!localityFilter;
@@ -1209,8 +1232,8 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                     {loading ? <Spinner/> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.total_functioning_phc', 'Total Functioning PHC Facilities')} count={functioningPhcs.length} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
-                            <TotalCountCard title={t('dashboard.cards.total_phc_imnci', 'Total PHC Facilities with IMNCI')} count={imnciInPhcs.length} className="flex-1" borderClass="border-s-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
-                            <ValueTotalPercentageCard title={t('dashboard.cards.imnci_coverage_phc', 'IMNCI Service Coverage in PHCs')} value={imnciInPhcs.length} total={functioningPhcs.length} percentage={imnciCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.total_phc_imnci', 'Total PHC Facilities with IMNCI')} value={imnciInPhcs.length} total={functioningPhcs.length} percentage={imnciCoveragePercentage} className="flex-1" borderClass="border-s-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" colorTheme="indigo" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.phc_ort_corner', 'Facilities with ORT Corner')} value={ortCornerInPhcs.length} total={functioningPhcs.length} percentage={ortCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
                         </>
                     )}
                 </div>
@@ -1300,7 +1323,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                                 <button onClick={() => copyTableAsImage(toolsTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                             </div>
                             <div className="flex items-center gap-3 text-xs mt-2">
-                                <span className="font-bold text-gray-600">{t('dashboard.map.legend', 'Legend:')}</span>
+                                <span className="font-bold text-gray-600">{t('dashboard.map.legend', 'Legend')}</span>
                                 <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-50 border border-green-300 rounded-sm"></div> <span className="text-gray-600 font-medium">≥ 75%</span></div>
                                 <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-yellow-50 border border-yellow-300 rounded-sm"></div> <span className="text-gray-600 font-medium">50% - 74%</span></div>
                                 <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-50 border border-red-300 rounded-sm"></div> <span className="text-gray-600 font-medium">&lt; 50%</span></div>
@@ -1422,7 +1445,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
         const totalPICU = locationFilteredFacilities.filter(hasPICU).length;
         return {
             totalTarget, totalETAT, totalHDU, totalPICU,
-            etatCoveragePercentage: totalTarget > 0 ? Math.round((totalETAT / totalTarget) * 100) : 0
+            etatCoveragePercentage: totalTarget > 0 ? ((totalETAT / totalTarget) * 100).toFixed(1) : 0
         };
     }, [locationFilteredFacilities, isTargetFacility, hasETAT, hasHDU, hasPICU]); 
 
@@ -1724,17 +1747,17 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
         // 1. IMNCI
         const functioningPhcs = locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
         const imnciInPhcs = functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes');
-        const imnciPerc = functioningPhcs.length > 0 ? Math.round((imnciInPhcs.length / functioningPhcs.length) * 100) : 0;
+        const imnciPerc = functioningPhcs.length > 0 ? ((imnciInPhcs.length / functioningPhcs.length) * 100).toFixed(1) : 0;
 
         // 2. ETAT (Pediatric + General Hospitals)
         const supposedEtatFacilities = locationFilteredFacilities.filter(f => ['مستشفى', 'مستشفى ريفي'].includes(f['نوع_المؤسسةالصحية']) || f.eenc_service_type === 'pediatric');
         const facilitiesWithEtat = supposedEtatFacilities.filter(f => f.etat_has_service === 'Yes');
-        const etatPerc = supposedEtatFacilities.length > 0 ? Math.round((facilitiesWithEtat.length / supposedEtatFacilities.length) * 100) : 0;
+        const etatPerc = supposedEtatFacilities.length > 0 ? ((facilitiesWithEtat.length / supposedEtatFacilities.length) * 100).toFixed(1) : 0;
 
         // 3. EENC
         const emoncFacilities = locationFilteredFacilities.filter(f => ['BEmONC', 'CEmONC'].includes(f.eenc_service_type) && f['هل_المؤسسة_تعمل'] === 'Yes');
         const eencProviders = emoncFacilities.filter(f => f.eenc_provides_essential_care === 'Yes');
-        const eencPerc = emoncFacilities.length > 0 ? Math.round((eencProviders.length / emoncFacilities.length) * 100) : 0;
+        const eencPerc = emoncFacilities.length > 0 ? ((eencProviders.length / emoncFacilities.length) * 100).toFixed(1) : 0;
 
         // 4. SCNU (Neonatal)
         const supposedScnuFacilities = locationFilteredFacilities.filter(f => 
@@ -1744,7 +1767,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
             f.neonatal_level_primary === 'Planned' || f.neonatal_level_secondary === 'Planned' || f.neonatal_level_tertiary === 'Planned'
         );
         const functioningScnus = supposedScnuFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && (f.neonatal_level_secondary === 'Yes' || f.neonatal_level_of_care?.secondary));
-        const scnuPerc = supposedScnuFacilities.length > 0 ? Math.round((functioningScnus.length / supposedScnuFacilities.length) * 100) : 0;
+        const scnuPerc = supposedScnuFacilities.length > 0 ? ((functioningScnus.length / supposedScnuFacilities.length) * 100).toFixed(1) : 0;
 
         return {
             imnci: { num: imnciInPhcs.length, den: functioningPhcs.length, perc: imnciPerc },
@@ -1785,11 +1808,11 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
         // Calculate percentages and overall average
         Object.keys(agg).forEach(key => {
             const counts = agg[key];
-            counts.imnci.perc = counts.imnci.d > 0 ? Math.round((counts.imnci.n / counts.imnci.d) * 100) : 0;
-            counts.etat.perc  = counts.etat.d > 0 ? Math.round((counts.etat.n / counts.etat.d) * 100) : 0;
-            counts.eenc.perc  = counts.eenc.d > 0 ? Math.round((counts.eenc.n / counts.eenc.d) * 100) : 0;
-            counts.scnu.perc  = counts.scnu.d > 0 ? Math.round((counts.scnu.n / counts.scnu.d) * 100) : 0;
-            counts.overallAvg = Math.round((counts.imnci.perc + counts.etat.perc + counts.eenc.perc + counts.scnu.perc) / 4);
+            counts.imnci.perc = counts.imnci.d > 0 ? Number(((counts.imnci.n / counts.imnci.d) * 100).toFixed(1)) : 0;
+            counts.etat.perc  = counts.etat.d > 0 ? Number(((counts.etat.n / counts.etat.d) * 100).toFixed(1)) : 0;
+            counts.eenc.perc  = counts.eenc.d > 0 ? Number(((counts.eenc.n / counts.eenc.d) * 100).toFixed(1)) : 0;
+            counts.scnu.perc  = counts.scnu.d > 0 ? Number(((counts.scnu.n / counts.scnu.d) * 100).toFixed(1)) : 0;
+            counts.overallAvg = Number(((counts.imnci.perc + counts.etat.perc + counts.eenc.perc + counts.scnu.perc) / 4).toFixed(1));
         });
 
         return agg;
