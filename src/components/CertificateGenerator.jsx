@@ -198,9 +198,17 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     
     let displaySubCourse = participantSubCourse;
     if (participantSubCourse) {
+        // Check if the sub-course is a refreshment course
+        const isRefreshment = participantSubCourse.toLowerCase().includes('refreshment');
+
         if (isArabic) {
             if (courseType === 'ICCM') displaySubCourse = "تدريب العامل الصحي المجتمعي";
-            else if (courseType === 'IMNCI') displaySubCourse = "المعالجة القياسية للاطفال اقل من 5 سنوات";
+            else if (courseType === 'IMNCI') {
+                // Apply specific Arabic translation based on sub-course type
+                displaySubCourse = isRefreshment 
+                    ? "ورشة تنشيطية" 
+                    : "المعالجة القياسية للاطفال اقل من 5 سنوات";
+            }
             else if (courseType === 'Small & Sick Newborn') displaySubCourse = getSmallAndSickSubCourseArabic(participantSubCourse);
             else if (courseType === 'Program Management') {
                 if (participantSubCourse.includes('IMNCI implementation operational Guide')) displaySubCourse = "دورة تدريب المدريبين على الدليل التشغيلي لتطبيق العلاج المتكامل في مؤسسات الرعاية الصحية الأساسية";
@@ -208,6 +216,11 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             }
             else if (courseType === 'Comprehensive Package For Community Midwives') {
                 displaySubCourse = "الرعاية الضرورية للاطفال حديثي الولادة + مساعدة الأطفال حديثي الولادة على التنفس";
+            }
+        } else {
+            // Handle English overrides
+            if (courseType === 'IMNCI' && isRefreshment) {
+                displaySubCourse = "IMNCI refreshment course";
             }
         }
     }
