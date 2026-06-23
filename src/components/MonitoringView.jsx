@@ -245,13 +245,26 @@ export function ObservationView({ course, participant, participants, onChangePar
 
     const handleDeleteCase = async (caseToDelete) => {
         if (!window.confirm('Delete this case and all its observations? This cannot be undone.')) return;
+
+        // 1. Capture the current state in case we need to revert
+        const previousCases = [...cases];
+        const previousObservations = [...observations];
+
+        // 2. Optimistically update the UI instantly
+        setCases(prev => prev.filter(c => c.id !== caseToDelete.id));
+        setObservations(prev => prev.filter(o => o.caseId !== caseToDelete.id));
+
+        // 3. Perform the backend deletion
         try {
             await deleteCaseAndObservations(caseToDelete.id);
-            setCases(prev => prev.filter(c => c.id !== caseToDelete.id));
-            setObservations(prev => prev.filter(o => o.caseId !== caseToDelete.id));
         } catch (error) {
             console.error("Failed to delete case:", error);
-            alert(`Failed to delete case: ${error.message}. Please refresh the page.`);
+            
+            // 4. Revert the UI back to original state if the backend fails
+            setCases(previousCases);
+            setObservations(previousObservations);
+            
+            alert(`Failed to delete case: ${error.message}. The case has been restored in your view.`);
         }
     };
 

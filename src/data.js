@@ -1486,12 +1486,12 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
 export async function listObservationsForParticipant(courseId, participantId, sourceOptions = {}) {
     const q = query(collection(db, "observations"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
     const snapshot = await getDocs(q, sourceOptions);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.isDeleted !== true);
 }
 export async function listCasesForParticipant(courseId, participantId, sourceOptions = {}) {
     const q = query(collection(db, "cases"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
     const snapshot = await getDocs(q, sourceOptions);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.isDeleted !== true);
 }
 
 export async function upsertCaseAndObservations(caseData, observations, editingCaseId = null) {

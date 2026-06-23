@@ -1693,7 +1693,7 @@ const ChildHealthServicesView = ({
             if (updateSelectionData.state) params.append('state', updateSelectionData.state);
             if (updateSelectionData.locality) params.append('locality', updateSelectionData.locality);
             
-            url = `${getBaseUrl()}/public/bulk-update?${params.toString()}`;
+            url = `${getBaseUrl()}/facilities/data-entry/new?${params.toString()}`;
             
             let locationDesc = '';
             if (updateSelectionData.locality) {
@@ -1702,7 +1702,7 @@ const ChildHealthServicesView = ({
                 locationDesc = ` في ولاية ${STATE_LOCALITIES[updateSelectionData.state]?.ar || updateSelectionData.state}`;
             }
 
-            textToCopy = `الرجاء تحديث بيانات المنشآت الصحية${locationDesc} لخدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
+            textToCopy = `الرجاء الدخول واختيار المنشأة${locationDesc} لتحديث بيانات خدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
         }
         
         shareViaWhatsApp(textToCopy, 'تم نسخ الرابط بنجاح!');
