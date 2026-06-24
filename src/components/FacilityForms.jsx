@@ -27,7 +27,7 @@ const SERVICE_LABELS = {
     'critical_staff': 'طوارئ الأطفال (ETAT)'
 };
 
-// --- NEW STATUS MODAL ---
+// --- SAVE STATUS MODAL ---
 export const SaveStatusModal = ({ statusData, onClose }) => {
     if (!statusData) return null;
     
@@ -62,7 +62,6 @@ export const SaveStatusModal = ({ statusData, onClose }) => {
 export const PendingBadge = ({ fieldKey, pendingData, currentData, valueMap }) => {
     if (!pendingData || pendingData[fieldKey] === undefined) return null;
     
-    // Normalize values to prevent false positives (treats undefined, null, and "" as identical)
     const norm = (v) => (v === undefined || v === null) ? '' : String(v).trim();
     if (norm(pendingData[fieldKey]) === norm(currentData[fieldKey])) return null;
 
@@ -77,6 +76,130 @@ export const PendingBadge = ({ fieldKey, pendingData, currentData, valueMap }) =
         <span className="mr-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300" title="تحديث معلق في انتظار الموافقة">
             ⏳ تحديث معلق: {displayVal}
         </span>
+    );
+};
+
+// --- SMOOTH INLINE COMBOBOX (SearchableSelect) ---
+const SearchableSelect = ({ options, value, onChange, placeholder = "اختر من القائمة...", disabled = false }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const wrapperRef = useRef(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+                setSearchTerm(''); // Reset search term if closed without selection
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedOption = options.find(option => option.value === value);
+    const isSelectionComplete = !!selectedOption && !isOpen;
+
+    const handleSelect = (optionValue) => {
+        onChange({ target: { name: 'facilityId', value: optionValue } });
+        setIsOpen(false);
+        setSearchTerm('');
+    };
+
+    const filteredOptions = useMemo(() => {
+        if (!searchTerm) return options;
+        return options.filter(option =>
+            (option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    }, [searchTerm, options]);
+
+    const groupedOptions = useMemo(() => {
+        const groups = { ungrouped: [] };
+        filteredOptions.forEach(option => {
+            const groupName = option.group || 'ungrouped';
+            if (!groups[groupName]) groups[groupName] = [];
+            groups[groupName].push(option);
+        });
+        return { ungrouped: groups.ungrouped, ...Object.fromEntries(Object.entries(groups).filter(([key]) => key !== 'ungrouped')) };
+    }, [filteredOptions]);
+
+    return (
+        <div className="relative w-full" ref={wrapperRef} dir="rtl">
+            <div 
+                className={`relative w-full rounded-xl flex items-center overflow-hidden transition-all duration-300 border-2
+                ${disabled ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-70' : 
+                  isSelectionComplete ? 'bg-sky-50 border-sky-500 shadow-md ring-4 ring-sky-500/20' : 'bg-white border-gray-300 shadow-sm focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-200 cursor-text'}`}
+            >
+                <span className={`pr-3 pl-2 pointer-events-none transition-colors duration-300 ${isSelectionComplete ? 'text-sky-600' : 'text-gray-400'}`}>
+                    {isSelectionComplete ? <CheckCircle className="w-6 h-6" /> : <Search className="w-5 h-5" />}
+                </span>
+                <input
+                    type="text"
+                    className={`w-full py-3.5 pl-12 pr-0 bg-transparent border-none outline-none focus:ring-0 transition-colors duration-300 placeholder-gray-400
+                        ${isSelectionComplete ? 'text-sky-900 font-extrabold text-base' : 'text-gray-700 font-medium'}`}
+                    placeholder={selectedOption ? selectedOption.label : placeholder}
+                    value={isOpen ? searchTerm : (selectedOption ? selectedOption.label : '')}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        if (!isOpen) setIsOpen(true);
+                        if (value) onChange({ target: { name: 'facilityId', value: '' } }); // Clear selection if typing
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    disabled={disabled}
+                    autoComplete="off"
+                />
+                
+                {value && !disabled && (
+                    <button
+                        type="button"
+                        className={`absolute left-2 p-1.5 rounded-full transition-colors ${isSelectionComplete ? 'text-sky-400 hover:text-red-500 hover:bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onChange({ target: { name: 'facilityId', value: '' } });
+                            setSearchTerm('');
+                            setIsOpen(true);
+                        }}
+                        title="مسح الاختيار"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                )}
+            </div>
+
+            {isOpen && !disabled && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-[100] bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto animate-fade-in origin-top">
+                    <ul className="py-2 px-2 space-y-1">
+                        {Object.entries(groupedOptions).map(([groupName, opts]) => (
+                            <React.Fragment key={groupName}>
+                                {groupName !== 'ungrouped' && opts.length > 0 && (
+                                    <li className="text-sky-700 bg-sky-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md mt-2 mb-1">
+                                        {groupName}
+                                    </li>
+                                )}
+                                {opts.map(option => (
+                                    <li
+                                        key={option.value}
+                                        className={`cursor-pointer px-4 py-2.5 rounded-lg text-sm transition-colors ${
+                                            value === option.value 
+                                            ? 'bg-sky-100 text-sky-800 font-bold' 
+                                            : 'text-gray-700 hover:bg-gray-50 font-medium'
+                                        }`}
+                                        onClick={() => handleSelect(option.value)}
+                                    >
+                                        {option.label}
+                                    </li>
+                                ))}
+                            </React.Fragment>
+                        ))}
+                        {filteredOptions.length === 0 && (
+                            <li className="px-4 py-3 text-sm text-gray-500 text-center bg-gray-50 rounded-lg">
+                                لا توجد منشأة مطابقة للبحث.
+                            </li>
+                        )}
+                    </ul>
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -99,7 +222,6 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     if (facility) {
                         setInitialData(facility);
                         
-                        // Fetch pending submissions to show the badge
                         const pendingSubs = await listPendingFacilitySubmissions();
                         const facilityPending = pendingSubs.filter(s => 
                             s['اسم_المؤسسة'] === facility['اسم_المؤسسة'] && 
@@ -140,7 +262,6 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
             await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
-            // --- TRIGGER FIRE-AND-FORGET FCM NOTIFICATION & DB STORE ---
             if (navigator.onLine) {
                 try {
                     const currentUser = getAuth().currentUser;
@@ -156,20 +277,21 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     const notifTitle = isUpdate ? 'Facility Updated' : 'New Facility Added';
                     const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${formData['اسم_المؤسسة']}.`;
 
-                    // 1. DISTINCT DB SAVE
-                    await addDoc(collection(db, 'notifications'), {
-                        title: notifTitle,
-                        message: notifBody,
-                        targetUser: 'managers_and_super_users',
-                        createdAt: serverTimestamp(),
-                        deliveredTo: [],
-                        readBy: [],
-                        deletedBy: [],
-                        status: 'active',
-                        actionView: 'childHealthServices'
-                    });
+                    // Only push directly to notifications if authenticated
+                    if (currentUser) {
+                        await addDoc(collection(db, 'notifications'), {
+                            title: notifTitle,
+                            message: notifBody,
+                            targetUser: 'managers_and_super_users',
+                            createdAt: serverTimestamp(),
+                            deliveredTo: [],
+                            readBy: [],
+                            deletedBy: [],
+                            status: 'active',
+                            actionView: 'childHealthServices'
+                        });
+                    }
 
-                    // 2. FIRE AND FORGET PUSH
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
@@ -221,120 +343,13 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     );
 }
 
-// ... SearchableSelect ...
-const SearchableSelect = ({ options, value, onChange, placeholder = "اختر من القائمة...", disabled = false }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-
-    const selectedOption = options.find(option => option.value === value);
-
-    const handleSelect = (optionValue) => {
-        onChange({ target: { name: 'facilityId', value: optionValue } });
-        setIsOpen(false);
-        setSearchTerm('');
-    };
-
-    const filteredOptions = useMemo(() => {
-        if (!searchTerm) return options;
-        return options.filter(option =>
-            option.value === 'addNew' || 
-            (option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-    }, [searchTerm, options]);
-
-    const groupedOptions = useMemo(() => {
-        const groups = { ungrouped: [] };
-        filteredOptions.forEach(option => {
-            const groupName = option.group || 'ungrouped';
-            if (!groups[groupName]) {
-                groups[groupName] = [];
-            }
-            groups[groupName].push(option);
-        });
-        return { ungrouped: groups.ungrouped, ...Object.fromEntries(Object.entries(groups).filter(([key]) => key !== 'ungrouped')) };
-    }, [filteredOptions]);
-
-    return (
-        <>
-            <button
-                type="button"
-                className="w-full text-right bg-white border-2 border-gray-200 rounded-xl shadow-sm pl-3 pr-10 py-3 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all disabled:bg-gray-100"
-                onClick={() => setIsOpen(true)}
-                disabled={disabled}
-            >
-                <span className="block truncate font-medium text-gray-700">
-                    {selectedOption ? selectedOption.label : <span className="text-gray-400">{placeholder}</span>}
-                </span>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
-                </span>
-            </button>
-
-            {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in" dir="rtl">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden transform transition-all">
-                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-sky-50">
-                            <h3 className="font-bold text-sky-900 text-lg">البحث عن منشأة</h3>
-                            <button type="button" onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1 bg-white rounded-full shadow-sm border border-gray-200">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        
-                        <div className="p-4 border-b border-gray-100 bg-white">
-                            <div className="relative">
-                                <Input
-                                    type="search"
-                                    placeholder="ابحث باسم المنشأة..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:ring-sky-500 focus:border-sky-500 shadow-inner"
-                                    autoFocus
-                                />
-                                <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-                            </div>
-                        </div>
-                        
-                        <ul role="listbox" className="overflow-y-auto flex-1 p-3 space-y-1 bg-gray-50/30">
-                            {Object.entries(groupedOptions).map(([groupName, opts]) => (
-                                <React.Fragment key={groupName}>
-                                    {groupName !== 'ungrouped' && opts.length > 0 && (
-                                        <li className="text-sky-800 bg-sky-100/70 cursor-default select-none relative py-2 px-4 font-bold border border-sky-100 text-xs uppercase tracking-wider mt-3 mb-1 rounded-lg shadow-sm">
-                                            {groupName}
-                                        </li>
-                                    )}
-                                    {opts.map(option => (
-                                        <li
-                                            key={option.value}
-                                            className={`cursor-pointer select-none relative py-3 px-4 rounded-xl hover:bg-sky-100 border border-transparent hover:border-sky-200 transition-colors ${option.className || 'bg-white shadow-sm mb-1'}`}
-                                            onClick={() => handleSelect(option.value)}
-                                        >
-                                            <span className={`block truncate ${value === option.value ? 'font-bold text-sky-700' : 'font-medium text-gray-700'}`}>
-                                                {option.label}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </React.Fragment>
-                            ))}
-                            {filteredOptions.length === 0 && searchTerm && (
-                                <li className="text-gray-500 cursor-default select-none relative py-8 px-4 text-center bg-gray-50 rounded-xl border border-gray-200 mt-2">
-                                    لا توجد منشأة مطابقة لهذا البحث.
-                                </li>
-                            )}
-                        </ul>
-                    </div>
-                </div>
-            )}
-        </>
-    );
-};
-
+// --- REFINED NEW FACILITY ENTRY FORM ---
 export function NewFacilityEntryForm({ setToast, serviceType }) {
     const [searchParams] = useState(new URLSearchParams(window.location.search));
     
     let formTypeKey = searchParams.get('service')?.toLowerCase() || serviceType?.toLowerCase() || 'imnci';
     if (formTypeKey === 'critical care') formTypeKey = 'critical';
 
-    const hideAddNew = searchParams.get('hideAddNew') === 'true';
     const showBack = searchParams.get('showBack') === 'true';
 
     const TABS = { IMNCI: 'IMNCI Services', EENC: 'EENC Services', NEONATAL: 'Neonatal Care Unit', CRITICAL: 'Emergency & Critical Care' };
@@ -410,42 +425,33 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
     const facilityOptions = useMemo(() => {
         const options = [];
-        if (!hideAddNew) {
-            options.push({ value: 'addNew', label: '--- إضافة منشأة جديدة ---', className: 'font-bold text-sky-700 bg-sky-50 text-center border border-sky-200' });
-        }
         facilitiesWithService.forEach(f => options.push({ value: f.id, label: f['اسم_المؤسسة'] }));
         if (showOtherFacilities) {
             facilitiesWithoutService.forEach(f => options.push({ value: f.id, label: f['اسم_المؤسسة'], group: facilitiesWithService.length > 0 ? 'منشآت أخرى في هذه المحلية' : 'جميع المنشآت في المحلية' }));
         }
         return options;
-    }, [hideAddNew, showOtherFacilities, facilitiesWithService, facilitiesWithoutService]);
+    }, [showOtherFacilities, facilitiesWithService, facilitiesWithoutService]);
 
     const handleProceed = async () => {
         if (!selectionData.facilityId) return;
-        if (selectionData.facilityId === 'addNew') {
-            setFormInitialData({ 'الولاية': selectionData.state, 'المحلية': selectionData.locality });
-            setPendingData(null);
-            setStep('form');
-        } else {
-            setIsLoading(true);
-            try {
-                const data = await getHealthFacilityById(selectionData.facilityId);
-                setFormInitialData(data);
-                
-                // Fetch pending submissions to show the badge
-                const pendingSubs = await listPendingFacilitySubmissions();
-                const facilityPending = pendingSubs.filter(s => 
-                    s['اسم_المؤسسة'] === data['اسم_المؤسسة'] && 
-                    s['الولاية'] === data['الولاية'] && 
-                    s['المحلية'] === data['المحلية']
-                ).sort((a,b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0))[0];
-                
-                setPendingData(facilityPending || null);
+        
+        setIsLoading(true);
+        try {
+            const data = await getHealthFacilityById(selectionData.facilityId);
+            setFormInitialData(data);
+            
+            const pendingSubs = await listPendingFacilitySubmissions();
+            const facilityPending = pendingSubs.filter(s => 
+                s['اسم_المؤسسة'] === data['اسم_المؤسسة'] && 
+                s['الولاية'] === data['الولاية'] && 
+                s['المحلية'] === data['المحلية']
+            ).sort((a,b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0))[0];
+            
+            setPendingData(facilityPending || null);
 
-                setStep('form');
-            } finally {
-                setIsLoading(false);
-            }
+            setStep('form');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -455,7 +461,6 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             await submitFacilityDataForApproval(formData);
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
 
-            // --- TRIGGER FIRE-AND-FORGET FCM NOTIFICATION & DB STORE ---
             if (navigator.onLine) {
                 try {
                     const currentUser = getAuth().currentUser;
@@ -471,20 +476,20 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     const notifTitle = isUpdate ? 'Facility Updated' : 'New Facility Added';
                     const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${formData['اسم_المؤسسة']}.`;
 
-                    // 1. DISTINCT DB SAVE
-                    await addDoc(collection(db, 'notifications'), {
-                        title: notifTitle,
-                        message: notifBody,
-                        targetUser: 'managers_and_super_users',
-                        createdAt: serverTimestamp(),
-                        deliveredTo: [],
-                        readBy: [],
-                        deletedBy: [],
-                        status: 'active',
-                        actionView: 'childHealthServices'
-                    });
+                    if (currentUser) {
+                        await addDoc(collection(db, 'notifications'), {
+                            title: notifTitle,
+                            message: notifBody,
+                            targetUser: 'managers_and_super_users',
+                            createdAt: serverTimestamp(),
+                            deliveredTo: [],
+                            readBy: [],
+                            deletedBy: [],
+                            status: 'active',
+                            actionView: 'childHealthServices'
+                        });
+                    }
 
-                    // 2. FIRE AND FORGET PUSH
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                     
@@ -516,38 +521,38 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
     if (step === 'selection') {
         return (
             <div className="min-h-screen bg-gray-50/50 p-4 sm:p-8 flex flex-col items-center">
-                <div className="w-full max-w-3xl space-y-4 animate-fade-in" dir="rtl">
+                <div className="w-full max-w-2xl space-y-4 animate-fade-in" dir="rtl">
                     {showBack && (
-                        <div className="flex justify-start">
+                        <div className="flex justify-start mb-2">
                             <Button variant="secondary" onClick={() => window.history.back()} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
                                 <ArrowLeft className="w-5 h-5 ml-2" /> الرجوع للخلف
                             </Button>
                         </div>
                     )}
                     
-                    <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-hidden">
+                    <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-visible rounded-2xl">
                         <div className="bg-gradient-to-r from-sky-50 to-white px-6 py-8 border-b border-sky-100 text-center flex flex-col items-center gap-3">
                             <Building2 className="text-sky-600 w-12 h-12" />
                             <div>
                                 <h2 className="text-2xl sm:text-3xl font-extrabold text-sky-900 leading-tight">
-                                    {hideAddNew ? `تحديث بيانات: ${serviceTitle}` : `إدخال بيانات: ${serviceTitle}`}
+                                    {`تحديث بيانات: ${serviceTitle}`}
                                 </h2>
                                 <p className="text-sky-700 mt-2 font-medium text-sm sm:text-base">
-                                    الرجاء تحديد الولاية والمحلية لعرض المنشآت الصحية المتاحة
+                                    حدد الولاية والمحلية، ثم ابحث عن المنشأة للمتابعة
                                 </p>
                             </div>
                         </div>
 
-                        <div className="p-6 sm:p-8 space-y-8 bg-white">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gray-50 border border-gray-200 rounded-xl shadow-sm">
+                        <div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-gray-50 border-b border-gray-200">
                                 <FormGroup label="الولاية (State)">
-                                    <Select name="state" value={selectionData.state} onChange={(e) => setSelectionData({...selectionData, state: e.target.value, locality: '', facilityId: ''})} required className="border-gray-300 focus:ring-sky-500 focus:border-sky-500 shadow-sm rounded-xl">
+                                    <Select name="state" value={selectionData.state} onChange={(e) => setSelectionData({...selectionData, state: e.target.value, locality: '', facilityId: ''})} required className="border-gray-300 focus:ring-sky-500 focus:border-sky-500 shadow-sm rounded-xl py-3">
                                         <option value="">-- اختر الولاية --</option>
                                         {Object.keys(STATE_LOCALITIES).map(sKey => <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey].ar}</option>)}
                                     </Select>
                                 </FormGroup>
                                 <FormGroup label="المحلية (Locality)">
-                                    <Select name="locality" value={selectionData.locality} onChange={(e) => setSelectionData({...selectionData, locality: e.target.value, facilityId: ''})} required disabled={!selectionData.state} className="border-gray-300 focus:ring-sky-500 focus:border-sky-500 shadow-sm rounded-xl">
+                                    <Select name="locality" value={selectionData.locality} onChange={(e) => setSelectionData({...selectionData, locality: e.target.value, facilityId: ''})} required disabled={!selectionData.state} className="border-gray-300 focus:ring-sky-500 focus:border-sky-500 shadow-sm rounded-xl py-3 disabled:opacity-50">
                                         <option value="">-- اختر المحلية --</option>
                                         {selectionData.state && STATE_LOCALITIES[selectionData.state]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                                     </Select>
@@ -555,39 +560,35 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                             </div>
 
                             {isLoading ? (
-                                <div className="flex flex-col items-center justify-center p-8 space-y-4">
-                                    <Spinner size="lg" />
-                                    <span className="text-sky-700 font-bold tracking-wide">جاري تحميل قائمة المنشآت...</span>
-                                </div>
+                                <div className="flex justify-center p-8 bg-white"><Spinner size="md" /></div>
                             ) : selectionData.locality && (
-                                <div className="p-6 sm:p-8 border border-sky-200 rounded-xl bg-sky-50/60 space-y-6 mt-6 animate-fade-in shadow-inner">
-                                    <FormGroup label={hideAddNew ? "اختر المنشأة المراد تحديث بياناتها:" : "اختر منشأة لتحديثها أو أضف واحدة جديدة:"}>
+                                <div className="p-6 bg-white animate-fade-in space-y-6">
+                                    <FormGroup label="المنشأة الصحية (ابحث للاختيار):">
                                        <SearchableSelect
                                             value={selectionData.facilityId}
                                             onChange={(e) => setSelectionData({...selectionData, facilityId: e.target.value})}
                                             options={facilityOptions}
-                                            placeholder="اضغط هنا للبحث واختيار منشأة..."
+                                            placeholder="اكتب اسم المنشأة للبحث..."
                                        />
                                     </FormGroup>
 
                                     {!showOtherFacilities && facilitiesWithoutService.length > 0 && (
-                                        <div className="flex justify-start">
-                                            <button type="button" onClick={() => setShowOtherFacilities(true)} className="text-sm font-bold text-sky-600 hover:text-sky-800 hover:underline focus:outline-none flex items-center gap-1.5 transition-colors bg-sky-100/50 px-4 py-2 rounded-lg border border-sky-200 shadow-sm">
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                عرض جميع المنشآت المسجلة في المحلية ({facilitiesWithoutService.length})
-                                            </button>
-                                        </div>
+                                        <button type="button" onClick={() => setShowOtherFacilities(true)} className="text-sm font-bold text-sky-600 hover:text-sky-800 hover:underline focus:outline-none flex items-center gap-1.5 transition-colors">
+                                            عرض جميع المنشآت الأخرى في هذه المحلية ({facilitiesWithoutService.length})
+                                        </button>
                                     )}
                                     
-                                    <div className="pt-4 flex justify-end">
-                                        <Button 
-                                            onClick={handleProceed} 
-                                            disabled={!selectionData.facilityId} 
-                                            className="px-10 py-3 font-bold text-lg shadow-md transition-transform active:scale-95 disabled:opacity-50 rounded-xl"
-                                        >
-                                            متابعة إلى الاستمارة &larr;
-                                        </Button>
-                                    </div>
+                                    {selectionData.facilityId && (
+                                        <div className="pt-2 flex justify-end animate-fade-in">
+                                            <Button 
+                                                onClick={handleProceed} 
+                                                className="px-8 py-3.5 font-bold text-lg shadow-md hover:shadow-lg transition-all active:scale-95 rounded-xl flex items-center gap-2 bg-sky-600 hover:bg-sky-700"
+                                            >
+                                                متابعة للاستمارة
+                                                <ArrowLeft className="w-5 h-5"/>
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -604,7 +605,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             <div className="w-full max-w-7xl space-y-4">
                 <div className="flex justify-start" dir="rtl">
                     <Button variant="secondary" onClick={() => setStep('selection')} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
-                        <ArrowLeft className="w-5 h-5 ml-2" /> العودة لاختيار المنشأة
+                        <ArrowLeft className="w-5 h-5 ml-2" /> العودة للبحث عن منشأة
                     </Button>
                 </div>
                 <GenericFacilityForm
@@ -810,7 +811,6 @@ export const SharedFacilityFields = ({ formData, pendingData, handleChange, hand
 };
 
 // --- MODALS FOR STAFF TRANSFER & COPY ---
-
 const MoveDepartmentModal = ({ isOpen, onClose, formData, currentServiceKey, onMove }) => {
     const [selectedStaffIndices, setSelectedStaffIndices] = useState([]);
     const [targetServiceKey, setTargetServiceKey] = useState('');
@@ -1056,10 +1056,6 @@ export const GenericFacilityForm = React.forwardRef(({
         if (!processedData.neonatal_staff) processedData.neonatal_staff = [];
         if (!processedData.critical_staff) processedData.critical_staff = [];
 
-        if (processedData.neonatal_level_of_care) {
-             delete processedData.neonatal_level_of_care;
-        }
-
         return processedData;
     });
 
@@ -1068,7 +1064,6 @@ export const GenericFacilityForm = React.forwardRef(({
     const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
     const isEditing = !!initialData?.id;
 
-    // --- MODALS STATE ---
     const [moveModalInfo, setMoveModalInfo] = useState({ isOpen: false, currentServiceKey: '' });
     const [transferModalInfo, setTransferModalInfo] = useState({ isOpen: false, currentServiceKey: '' });
 
@@ -1101,7 +1096,6 @@ export const GenericFacilityForm = React.forwardRef(({
         setFormData(prev => ({ ...prev, 'الولاية': e.target.value, 'المحلية': '' }));
     };
 
-    // --- CORE SAVE LOGIC ---
     const executeSave = async () => {
         setIsLocalSubmitting(true);
         const processedData = { ...formData };
@@ -1143,11 +1137,9 @@ export const GenericFacilityForm = React.forwardRef(({
         }
     };
 
-    // --- SUBMIT HANDLER ---
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // INTERCEPT PUBLIC FORM IF NAME IS MISSING
         if (isPublicForm && !isUserLoggedIn && submitterName.trim() === '') {
             setShowNamePrompt(true);
             return;
@@ -1164,7 +1156,6 @@ export const GenericFacilityForm = React.forwardRef(({
         await executeSave();
     };
 
-    // --- STAFF ARRAY HANDLERS ---
     const handleStaffChange = (serviceKey, index, event) => {
         const { name, value } = event.target;
         const updatedStaff = formData[serviceKey].map((staff, i) => i === index ? { ...staff, [name]: value } : staff);
