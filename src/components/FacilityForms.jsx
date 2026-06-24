@@ -50,7 +50,7 @@ export const SaveStatusModal = ({ statusData, onClose }) => {
                 <p className="text-gray-600 mb-6 text-sm font-medium">
                     {isSuccess && 'تم حفظ بيانات المنشأة في النظام وتحديثها بنجاح.'}
                     {isQueued && 'أنت غير متصل بالإنترنت حالياً. تم حفظ البيانات بأمان على جهازك وستتم المزامنة تلقائياً عند عودة الاتصال.'}
-                    {isError && `عذراً، حدث خطأ أثناء الحفظ: ${statusData.message}`}
+                    {isError && `عذراً، حدث خطأ أثناء الحفظ: ${statusData.message || 'خطأ غير معروف.'}`}
                 </p>
                 <Button onClick={onClose} className="w-full font-bold py-3 text-lg rounded-xl">حسناً (OK)</Button>
             </div>
@@ -222,26 +222,33 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     if (facility) {
                         setInitialData(facility);
                         
-                        const pendingSubs = await listPendingFacilitySubmissions();
-                        const facilityPending = pendingSubs.filter(s => 
-                            s['اسم_المؤسسة'] === facility['اسم_المؤسسة'] && 
-                            s['الولاية'] === facility['الولاية'] && 
-                            s['المحلية'] === facility['المحلية']
-                        ).sort((a,b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0))[0];
+                        let facilityPending = null;
+                        try {
+                            const pendingSubs = await listPendingFacilitySubmissions();
+                            facilityPending = pendingSubs.filter(s => 
+                                s['اسم_المؤسسة'] === facility['اسم_المؤسسة'] && 
+                                s['الولاية'] === facility['الولاية'] && 
+                                s['المحلية'] === facility['المحلية']
+                            ).sort((a,b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0))[0];
+                        } catch (pendingErr) {
+                            console.warn("Public user cannot fetch pending submissions (Expected Behavior).", pendingErr);
+                        }
                         
                         setPendingData(facilityPending || null);
                     } else {
-                        setError('Facility not found. The link may be invalid or the facility has been deleted.');
+                        setError('تعذر العثور على المنشأة. قد يكون الرابط غير صالح أو تم حذف المنشأة.');
                     }
                 } catch (err) {
-                    setError('Failed to load facility data.');
+                    const errorMsg = `خطأ في تحميل بيانات المنشأة: ${err.message}`;
+                    setError(errorMsg);
+                    alert(errorMsg);
                 } finally {
                     setLoading(false);
                 }
             };
             fetchFacility();
         } else {
-            setError('Invalid facility link.');
+            setError('رابط المنشأة غير صالح.');
             setLoading(false);
         }
     }, []);
@@ -277,20 +284,17 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     const notifTitle = isUpdate ? 'Facility Updated' : 'New Facility Added';
                     const notifBody = `${submitterName} (${submitterRole}) has ${actionText} facility: ${formData['اسم_المؤسسة']}.`;
 
-                    // Only push directly to notifications if authenticated
-                    if (currentUser) {
-                        await addDoc(collection(db, 'notifications'), {
-                            title: notifTitle,
-                            message: notifBody,
-                            targetUser: 'managers_and_super_users',
-                            createdAt: serverTimestamp(),
-                            deliveredTo: [],
-                            readBy: [],
-                            deletedBy: [],
-                            status: 'active',
-                            actionView: 'childHealthServices'
-                        });
-                    }
+                    await addDoc(collection(db, 'notifications'), {
+                        title: notifTitle,
+                        message: notifBody,
+                        targetUser: 'managers_and_super_users',
+                        createdAt: serverTimestamp(),
+                        deliveredTo: [],
+                        readBy: [],
+                        deletedBy: [],
+                        status: 'active',
+                        actionView: 'childHealthServices'
+                    });
 
                     const functions = getFunctions(db.app);
                     const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
@@ -320,7 +324,7 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     };
 
     if (loading) return <div className="p-8 text-center"><Spinner /></div>;
-    if (error) return <div className="p-8 text-center text-red-600 bg-red-50 border border-red-200 rounded-md">{error}</div>;
+    if (error) return <div className="p-8 text-center text-red-600 bg-red-50 border border-red-200 rounded-md font-bold">{error}</div>;
 
     return (
         <div className="min-h-screen bg-sky-50 p-4 sm:p-6 lg:p-8 flex justify-center">
@@ -414,7 +418,8 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     const freshData = await listHealthFacilities({ state: selectionData.state, locality: selectionData.locality });
                     partitionFacilities(freshData);
                 } catch (error) {
-                    if (!cachedData || cachedData.length === 0) setToast({ show: true, message: 'Could not fetch list.', type: 'error' });
+                    const errorMsg = `خطأ في تحميل المنشآت: ${error.message}`;
+                    if (!cachedData || cachedData.length === 0) setToast({ show: true, message: errorMsg, type: 'error' });
                 } finally {
                     setIsLoading(false);
                 }
@@ -438,18 +443,34 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
         setIsLoading(true);
         try {
             const data = await getHealthFacilityById(selectionData.facilityId);
+            if (!data) {
+                const msg = 'عذراً، تعذر العثور على بيانات هذه المنشأة.';
+                setToast({show: true, message: msg, type: 'error'});
+                alert(msg);
+                return;
+            }
+            
             setFormInitialData(data);
             
-            const pendingSubs = await listPendingFacilitySubmissions();
-            const facilityPending = pendingSubs.filter(s => 
-                s['اسم_المؤسسة'] === data['اسم_المؤسسة'] && 
-                s['الولاية'] === data['الولاية'] && 
-                s['المحلية'] === data['المحلية']
-            ).sort((a,b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0))[0];
+            let facilityPending = null;
+            try {
+                const pendingSubs = await listPendingFacilitySubmissions();
+                facilityPending = pendingSubs.filter(s => 
+                    s['اسم_المؤسسة'] === data['اسم_المؤسسة'] && 
+                    s['الولاية'] === data['الولاية'] && 
+                    s['المحلية'] === data['المحلية']
+                ).sort((a,b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0))[0];
+            } catch (pendingErr) {
+                console.warn("Public user cannot fetch pending submissions (Expected Behavior).", pendingErr);
+            }
             
             setPendingData(facilityPending || null);
 
             setStep('form');
+        } catch (error) {
+            const errorMsg = `حدث خطأ أثناء تحميل بيانات المنشأة: ${error.message}`;
+            setToast({ show: true, message: errorMsg, type: 'error' });
+            alert(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -1131,6 +1152,7 @@ export const GenericFacilityForm = React.forwardRef(({
             await onSave({ ...processedData, 'اخر تحديث': new Date().toISOString(), 'updated_by': updaterIdentifier });
         } catch (error) {
             setToast({ show: true, message: `Failed to save facility: ${error.message}`, type: 'error' });
+            alert(`حدث خطأ أثناء الحفظ: ${error.message}`);
         } finally {
             setIsLocalSubmitting(false);
             setShowNamePrompt(false); 
