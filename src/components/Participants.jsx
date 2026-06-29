@@ -14,7 +14,7 @@ import {
     Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
 } from "./CommonComponents";
 import {
-    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC, JOB_TITLES_SSNC
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC
 } from './constants.js';
 import {
     importParticipants,
@@ -961,7 +961,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
 
     const jobTitleOptions = useMemo(() => {
         if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
-        if (course.course_type === 'EENC') return JOB_TITLES_EENC;
+        if (course.course_type === 'EmONC') return JOB_TITLES_EMONC;
         if (course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
         if (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];

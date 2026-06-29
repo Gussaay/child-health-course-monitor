@@ -4,7 +4,7 @@ import {
     Card, PageHeader, Button, FormGroup, Select, Spinner, Input, Modal, CardBody, CardFooter, Table, EmptyState
 } from "./CommonComponents"; 
 import {
-    JOB_TITLES_ETAT, JOB_TITLES_EENC, STATE_LOCALITIES
+    JOB_TITLES_ETAT, JOB_TITLES_EMONC, STATE_LOCALITIES
 } from './constants.js';
 import {
     listHealthFacilities,
@@ -21,12 +21,122 @@ export const EENC_TEST_QUESTIONS = [
     { id: 'q5', text: '5. For which reason(s)should the baby’s mouth and nose be suctioned after thorough drying?', type: 'mc', options: [{ id: 'a', text: 'The baby is breathing and the amniotic fluid is thickly stained with meconium and the baby is covered in meconium.' }, { id: 'b', text: 'The baby is not breathing and the amniotic fluid is thickly stained with meconium and the baby is covered in meconium.' }, { id: 'c', text: 'The baby is not breathing and there is no airway obstruction visible.' }, { id: 'd', text: 'All of the above.' }], correctAnswer: 'b' },
     { id: 'q6', text: '6. Any baby is ready to breast feed immediately after birth.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
     { id: 'q7', text: '7. What is the approximate capacity of a newborn\'s stomach? Circle A, B, C or D.', type: 'mc', imageSrc: '/eenc-q7.jpg', options: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }, { id: 'c', text: 'C' }, { id: 'd', text: 'D' }], correctAnswer: 'd' },
-    { id: 'q8', text: '8. List 3 signs a newborn baby is ready to breast feed (“feeding cues”).', type: 'open', lines: 3 },
-    { id: 'q9', text: '9. List 3 signs a baby has good attachment to the breast.', type: 'open', lines: 3 },
-    { id: 'q10', text: '10. List 3 things you should do to improve bag-and-mask ventilation.', type: 'open', lines: 3 },
+    { 
+        id: 'q8', 
+        text: '8. Which of the following is an early feeding cue in a healthy newborn?', 
+        type: 'mc', 
+        options: [
+            { id: 'a', text: 'Strong crying with vigorous limb movements' }, 
+            { id: 'b', text: 'Opening the mouth, rooting, tonguing, and drooling saliva' }, 
+            { id: 'c', text: 'Sleeping quietly with occasional sucking movements.' }
+        ], 
+        correctAnswer: 'b' 
+    },
+    { 
+        id: 'q9', 
+        text: '9. Which of the following best indicates good attachment during breastfeeding?', 
+        type: 'mc', 
+        options: [
+            { id: 'a', text: 'The baby is close to and facing the mother.' }, 
+            { id: 'b', text: 'The baby\'s mouth is wide open, with the chin touching the breast' }, 
+            { id: 'c', text: 'The baby is well supported, with the head and neck kept straight.' }
+        ], 
+        correctAnswer: 'b' 
+    },
+    { 
+        id: 'q10', 
+        text: '10. Which of the following is the most appropriate first step to improve ineffective bag-and-mask ventilation?', 
+        type: 'mc', 
+        options: [
+            { id: 'a', text: 'Increase the ventilation pressure immediately.' }, 
+            { id: 'b', text: 'Reposition the baby\'s head and improve the mask seal before giving additional breaths' }, 
+            { id: 'c', text: 'Start chest compressions if the baby is not crying.' }
+        ], 
+        correctAnswer: 'b' 
+    },
     { id: 'q11', text: '11. When does a baby need bag-and-mask ventilation? After thorough drying for 30 seconds, the baby is:', type: 'mc', options: [{ id: 'a', text: 'Not breathing.' }, { id: 'b', text: 'Having difficulty breathing (gas ping respirations).' }, { id: 'c', text: 'Breathing but limp and very pale or blue in colour.' }, { id: 'd', text: 'All of the above.' }], correctAnswer: 'd' },
     { id: 'q12', text: '12. A baby required bag-and-mask ventilation for 2 minutes. You have stopped bag-and-mask ventilation. He is now crying, breathing without difficulty, pink, and the heart rate is > 100 beats per minute. What should you do now?', type: 'mc', options: [{ id: 'a', text: 'Place the baby in direct skin-to-skin contact with the mother/do routine newborn care.' }, { id: 'b', text: 'Move the baby to an observational area and monitor breathing every 10 minutes.' }, { id: 'c', text: 'Give oxygen by nasal cannula or mask.' }, { id: 'd', text: 'Do all of the above' }], correctAnswer: 'a' }
 ];
+
+export const EMONC_NEONATAL_QUESTIONS = [
+    { id: 'neo_q1', text: '13. The following is the most appropriate action for a newborn with Temp. 35.5 °C:', type: 'mc', options: [{id: 'a', text: 'Covering the head with a hat'}, {id: 'b', text: 'Covering the whole body with blankets'}, {id: 'c', text: 'Position skin-to-skin contact with the mother'}, {id: 'd', text: 'Warm the room'}], correctAnswer: 'c' },
+    { id: 'neo_q2', text: '14. The most important measure to reduce infection in the neonatal unit is:', type: 'mc', options: [{id: 'a', text: 'Wash hands before nursing or medical procedures'}, {id: 'b', text: 'Wash hands before and after nursing or medical procedures'}, {id: 'c', text: 'Wearing gloves'}, {id: 'd', text: 'Prohibit mothers from visiting the unit'}], correctAnswer: 'b' },
+    { id: 'neo_q3', text: '15. Regarding intravenous fluids prescribed for the neonate:', type: 'mc', options: [{id: 'a', text: 'Normal saline only is used in the first week.'}, {id: 'b', text: 'A term baby requires 80 ml/kg on day 1.'}, {id: 'c', text: 'A preterm requires 80 ml/kg on day 2.'}, {id: 'd', text: 'Dextrose 10% is usually given on days 1 and 2.'}], correctAnswer: 'd' },
+    { id: 'neo_q4', text: '16. The following is true about neonatal convulsions:', type: 'mc', options: [{id: 'a', text: 'They are voluntary movements generated by the baby'}, {id: 'b', text: 'When familial, they affect only some of the family members'}, {id: 'c', text: 'Normal EEG excludes the occurrence of convulsions'}, {id: 'd', text: 'They have no complications'}], correctAnswer: 'b' },
+    { id: 'neo_q5', text: '17. In symptomatic hypoglycemia, you have to give IV 10% dextrose:', type: 'mc', options: [{id: 'a', text: '5 ml/kg bolus of 50% dextrose'}, {id: 'b', text: '2 ml/kg bolus of 10% dextrose'}, {id: 'c', text: '2 ml/kg bolus of 5% dextrose'}, {id: 'd', text: '2 ml/kg at a rate of 1ml/min'}], correctAnswer: 'b' },
+    { id: 'neo_q6', text: '18. Self-inflating bag (ambubag) should be used to resuscitate a newborn immediately if:', type: 'mc', options: [{id: 'a', text: 'There is no response to suction and stimulation after 30 seconds.'}, {id: 'b', text: 'There is peripheral cyanosis.'}, {id: 'c', text: 'There is blue asphyxia (primary apnea).'}, {id: 'd', text: 'The heart rate is 102/min at 30 seconds.'}], correctAnswer: 'a' },
+    { id: 'neo_q7', text: '19. In case of meconium-stained liquor at birth:', type: 'mc', options: [{id: 'a', text: 'A crying baby with a 120/min pulse needs deep laryngeal suction.'}, {id: 'b', text: 'If the baby didn\'t start breathing after stimulation, an Ambu bag can be used.'}, {id: 'c', text: 'Use a laryngoscope to view the pharynx and larynx before the Ambu bag.'}, {id: 'd', text: 'Baby with 5 sec apnea needs an Ambu bag and chest compressions.'}], correctAnswer: 'b' },
+    { id: 'neo_q8', text: '20. The following is true regarding birth weight in term newborn:', type: 'mc', options: [{id: 'a', text: '2.7 kg is a low birth weight.'}, {id: 'b', text: 'The weight decreases gradually in the first two weeks after birth.'}, {id: 'c', text: 'Hypoglycemia is the most important complication of low birth weight.'}, {id: 'd', text: 'Low birth weight babies are surfactant-deficient and prone to respiratory distress.'}], correctAnswer: 'c' },
+    { id: 'neo_q9', text: '21. Regarding newborn temperature:', type: 'mc', options: [{id: 'a', text: 'A temperature of 36.3°C does not need intervention.'}, {id: 'b', text: 'A temperature of 37.5°C is abnormal.'}, {id: 'c', text: 'A temperature of 36.9°C is considered normal.'}, {id: 'd', text: 'Kangaroo nursing is suitable for a newborn with a weight of 2.8 kg.'}], correctAnswer: 'c' },
+    { id: 'neo_q10', text: '22. Central cyanosis in neonates most likely occurs with:', type: 'mc', options: [{id: 'a', text: 'Hypoglycemia'}, {id: 'b', text: 'Hyperthermia'}, {id: 'c', text: 'Sepsis'}, {id: 'd', text: 'Congenital heart disease.'}], correctAnswer: 'd' },
+    { id: 'neo_q11', text: '23. A common risk factor for neonatal infections is:', type: 'mc', options: [{id: 'a', text: 'Maternal Urinary Tract Infections'}, {id: 'b', text: 'Rupture of membranes 18 hours before delivery'}, {id: 'c', text: 'Hand washing only before touching the baby'}, {id: 'd', text: 'Maternal fever.'}], correctAnswer: 'd' },
+    { id: 'neo_q12', text: '24. Which of the following leads to successful breastfeeding?', type: 'mc', options: [{id: 'a', text: 'Psychological preparation and intention to breastfeed'}, {id: 'b', text: 'Low income and the need for the mother to work'}, {id: 'c', text: 'Poor maternal feeding'}, {id: 'd', text: 'Use of a pacifier'}], correctAnswer: 'a' },
+    { id: 'neo_q13', text: '25. Which of the following is true:', type: 'mc', options: [{id: 'a', text: 'In physiological jaundice, the color of the stool is pale'}, {id: 'b', text: 'Breast milk jaundice is serious and needs stopping breast feeding'}, {id: 'c', text: 'A high level of bilirubin on the second day can lead to deafness'}, {id: 'd', text: 'Neonatal jaundice on the first day is mostly caused by hepatitis'}], correctAnswer: 'c' },
+    { id: 'neo_q14', text: '26. In neonatal hypernatremia, the maximum safe rate of Na+ fall is:', type: 'mc', options: [{id: 'a', text: '2 mmol/L/hr'}, {id: 'b', text: '1.5 mmol/L/hr'}, {id: 'c', text: '0.5 mmol/L/hr'}, {id: 'd', text: '5 mmol/day'}], correctAnswer: 'c' },
+    { id: 'neo_q15', text: '27. The following is true about a self-inflating bag used in neonatal resuscitation:', type: 'mc', options: [{id: 'a', text: 'Without a reservoir, it gives 90% oxygen concentration'}, {id: 'b', text: 'It is usually used by the anesthetist in the theatre'}, {id: 'c', text: 'The usual volume of the bag is 250-500 ml'}, {id: 'd', text: 'The mask should cover the nose, mouth, and eyes'}], correctAnswer: 'c' }
+];
+
+export const EMONC_MATERNAL_QUESTIONS = [
+    { id: 'mat_q1', text: '13. Rapid initial assessment should be carried out on all women of childbearing age who present with a problem.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q2', text: '14. A woman who suffers shock as a result of an obstetric emergency may have a fast, weak pulse.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q3', text: '15. A woman who has an unruptured ectopic pregnancy usually presents with collapse and weakness.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q4', text: '16. A pregnant woman who has severe anaemia typically presents with difficulty in breathing and wheezing.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q5', text: '17. Management of inevitable abortion when the pregnancy is greater than 16 weeks usually involves administration of ergometrine or misoprostol.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q6', text: '18. Manual vacuum aspiration (MVA) is an effective method for treatment of incomplete abortion if the uterine size is not greater than eight weeks.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q7', text: '19. Assessment of a woman who presents with vaginal bleeding after 22 weeks of pregnancy should be limited to abdominal examination.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q8', text: '20. Postpartum haemorrhage is defined as sudden bleeding after childbirth.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q9', text: '21. If bleeding is heavy in the case of abruptio placentae and the cervix is fully dilated, delivery should be assisted by vacuum extraction.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q10', text: '22. Continuous slow bleeding or sudden bleeding after childbirth requires early and aggressive intervention.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q11', text: '23. Absent foetal movements and foetal heart sounds, together with intra-abdominal and/or vaginal bleeding and severe abdominal pain, suggest ruptured uterus.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q12', text: '24. Active management of the third stage of labour should be practised only on women who have a history of postpartum haemorrhage.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q13', text: '25. If a retained placenta is undelivered after 30 minutes of oxytocin administration and controlled cord traction and the uterus is contracted, controlled cord traction and fundal pressure should be attempted.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q14', text: '26. If the cervix is dilated in the case of delayed (secondary) postpartum haemorrhage, dilatation and curettage should be performed to evacuate the uterus.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q15', text: '27. Hypertension in pregnancy can be associated with protein in the urine.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q16', text: '28. The presenting signs and symptoms of eclampsia include convulsions, diastolic blood pressure of 90mm Hg or more after 20 weeks gestation and proteinuria of 2+ or more.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q17', text: '29. A pregnant woman who is convulsing should be protected from injury by moving objects away from her.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q18', text: '30. The management of mild pre-eclampsia should include sedatives and tranquillizers.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q19', text: '31. The drug of choice for preventing and treating convulsions in severe pre-eclampsia and eclampsia is diazepam.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q20', text: '32. Cervical dilatation plotted to the right of the alert line on the partograph indicates unsatisfactory progress of labour.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q21', text: '33. Findings diagnostic of cephalo-pelvic disproportion are secondary arrest of descent of the head in the presence of good contractions.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q22', text: '34. If the active phase of labour is prolonged, delivery should be by Caesarean section.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q23', text: '35. It is recommended to first perform artificial rupture of membranes (if the membranes are intact) for induction of labour, except in clients with HIV.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q24', text: '36. Conditions for vacuum extraction are foetal head at least at 0 station or not more than 2/5 above the symphysis pubis and a fully dilated cervix.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q25', text: '37. Abdominal palpation to assess descent of the foetal head is equivalent to assessing descent using the station on vaginal examination.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q26', text: '38. A head that is felt in the flank on abdominal examination indicates a shoulder presentation or transverse lie.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q27', text: '39. When the foetal head is well flexed with occiput anterior or occiput transverse (in early labour), normal childbirth should be anticipated.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q28', text: '40. If labour is prolonged in the case of a breech presentation, a Caesarean section should be performed.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q29', text: '41. In the case of a single large foetus, delivery should be by Caesarean section.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q30', text: '42. A transverse uterine scar in a previous pregnancy is an indication for elective Caesarean section.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q31', text: '43. If pre-labour rupture of membranes occurs before 37 weeks gestation and there are no signs of infection, labour should be induced.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'b' },
+    { id: 'mat_q32', text: '44. Meconium staining of amniotic fluid is seen frequently as the foetus matures and by itself is not an indicator of foetal distress.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q33', text: '45. Loin pain and/or tenderness may be present in acute pyelonephritis.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q34', text: '46. Breast pain and tenderness three to five days after childbirth is usually due to breast engorgement.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q35', text: '47. Lower abdominal pain and uterine tenderness, together with foul-smelling lochia, are characteristic of metritis.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' },
+    { id: 'mat_q36', text: '48. When using a bag and mask to resuscitate a newborn, the newborn\'s neck must be slightly extended to open the airway.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' }
+];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const ICCM_TEST_QUESTIONS = [
     { id: 'q1', text: '1. أي من الآتي علامة خطر تستوجب تحويلا عاجلا للمستشفى؟', type: 'mc', options: [{ id: 'a', text: 'حرارة خفيفة يوم واحد' }, { id: 'b', text: 'عدم القدرة على الشرب أو الرضاعة' }, { id: 'c', text: 'رشح بسيط' }, { id: 'd', text: 'سعال الثلاثة أيام' }], correctAnswer: 'b' },
@@ -677,6 +787,9 @@ export function CourseTestForm({
     // If it's a public view, default to 'entry'. If admin view, default to 'dashboard'
     const [viewMode, setViewMode] = useState(isPublicView ? 'entry' : 'dashboard'); 
     
+const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
+
+
     // Check if course is Program Management
     const isProgramManagement = course?.course_type === 'Program Management';
 
@@ -722,21 +835,36 @@ export function CourseTestForm({
             isIccm = true;
             return { testQuestions: ICCM_TEST_QUESTIONS, testTitle: 'ICCM Pre/Post Test Entry', isRtl: true, jobTitleOptions: titles, isIccm: isIccm };
         }
-        if (course?.course_type === 'EENC') {
-            titles = JOB_TITLES_EENC;
-            return { testQuestions: EENC_TEST_QUESTIONS, testTitle: 'EENC Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: isIccm };
+        
+        // --- UPDATED: Replaced EENC with EmONC and combined question blocks ---
+       if (course?.course_type === 'EmONC' || course?.course_type === 'EENC') {
+            titles = JOB_TITLES_EMONC; // FIXED
+            const extraQuestions = emoncSubCourse === 'Emergency Newborn Care' 
+                ? EMONC_NEONATAL_QUESTIONS 
+                : EMONC_MATERNAL_QUESTIONS;
+            return { 
+                testQuestions: [...EENC_TEST_QUESTIONS, ...extraQuestions], 
+                testTitle: `EmONC Pre/Post Test - ${emoncSubCourse}`, 
+                isRtl: false, 
+                jobTitleOptions: titles, 
+                isIccm: isIccm 
+            };
         }
+        
         if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
-            // Using JOB_TITLES_EENC as fallback if SSNC titles aren't imported or same, but using your logic
-            titles = JOB_TITLES_EENC; 
+            titles = JOB_TITLES_EMONC; // FIXED
             return { testQuestions: SSNB_WARMER_TEST_QUESTIONS, testTitle: 'SSNB Portable Warmer Test', isRtl: true, jobTitleOptions: titles, isIccm: false };
         }
         if (course?.course_type === 'IMNCI') {
-             titles = JOB_TITLES_EENC; 
+             titles = JOB_TITLES_EMONC; // FIXED
              return { testQuestions: IMNCI_TEST_QUESTIONS, testTitle: 'IMNCI Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: false };
+    
         }
         return { testQuestions: [], testTitle: 'Test Entry', isRtl: false, jobTitleOptions: [], isIccm: false }; 
-    }, [course?.course_type]);
+    }, [course?.course_type, emoncSubCourse]); //
+
+
+
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
     
@@ -1263,10 +1391,27 @@ export function CourseTestForm({
     // 4. ENTRY FORM (Questions)
     return (
         <Card>
-            {/* SETUP MODAL: Choose Test Type and Participant (Always First) */}
+
+
+
+           {/* SETUP MODAL: Choose Test Type and Participant (Always First) */}
             <Modal isOpen={isSetupModalOpen && !isNewParticipantModalOpen && viewMode === 'entry'} onClose={handleBackToDashboard} title="Select Test Details" size="lg">
                 <CardBody className="p-6">
                     <div className="grid gap-6">
+                        
+                        {/* --- NEW: EmONC Sub-Course Selection --- */}
+                        {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && (
+                            <FormGroup label="Select EmONC Module">
+                                <Select 
+                                    value={emoncSubCourse} 
+                                    onChange={(e) => setEmoncSubCourse(e.target.value)}
+                                >
+                                    <option value="Emergency Newborn Care">Emergency Newborn Care</option>
+                                    <option value="Emergency Maternal Care">Emergency Maternal Care</option>
+                                </Select>
+                            </FormGroup>
+                        )}
+                        
                         <FormGroup label="Select Test Type">
                             <Select 
                                 value={testType} 
@@ -1505,16 +1650,29 @@ export function CourseTestForm({
 
             {!isSetupModalOpen && !submissionResult && (
                 <div className="p-6">
-                    <div className="flex flex-wrap justify-between items-start gap-4">
+<div className="flex flex-wrap justify-between items-start gap-4">
                         <PageHeader 
                             title={`${isEditing ? 'Editing' : 'Enter'} ${testType === 'pre-test' ? 'Pre-Test' : 'Post-Test'}`} 
-                            subtitle={`${participantNameForDisplay || 'Unknown Participant'} - ${course.course_type}`} 
+                            /* Updated subtitle to use testTitle for more context */
+                            subtitle={`${participantNameForDisplay || 'Unknown Participant'} - ${testTitle}`} 
                             className="p-0 m-0" 
                         />
                         <div><Button variant="secondary" onClick={() => { const link = `${window.location.origin}/public/test/course/${course.id}`; navigator.clipboard.writeText(link).then(() => alert('Link copied!')).catch(() => alert('Failed to copy.')); }} title="Copy link">Share Test Form</Button></div>
                     </div>
+
+                    {/* NEW: BIG FONT HEADER FOR EMONC MODULE */}
+                    {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && (
+                        <div className="mt-6 mb-2 text-center p-5 bg-sky-50 border-2 border-sky-300 rounded-xl shadow-sm">
+                            <h2 className="text-3xl md:text-4xl font-extrabold text-sky-800 uppercase tracking-wide">
+                                {emoncSubCourse} Part
+                            </h2>
+                            <p className="text-sky-600 font-medium mt-1">Please answer the questions below for this specific module.</p>
+                        </div>
+                    )}
                     
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+
+
 
                     {/* Grading Mode Banner */}
                     {isEditing && canManageTests && (
@@ -1534,10 +1692,26 @@ export function CourseTestForm({
                     <fieldset disabled={isSaving}>
                         <legend className="text-xl font-semibold mb-4 text-gray-800">Test Questions</legend>
                         {isEditing && !canManageTests && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 mb-4 rounded-md font-semibold">Editing existing {testType} submission.</div>}
-                        <div className="space-y-6" style={{ direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
+                        
+
+
+
+
+
+<div className="space-y-6" style={{ direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
                             {testQuestions.map((q) => (
                                 <div key={q.id} className={`p-4 border rounded-md shadow-sm ${isEditing && canManageTests && q.type === 'open' ? 'bg-blue-50/30 border-blue-200' : 'bg-white'}`}>
-                                    {/* Question Header */}
+                                    
+
+
+
+
+
+
+
+
+
+{/* Question Header */}
                                     <div className="flex justify-between items-start mb-3">
                                         <label className="block text-base font-semibold text-gray-800 w-3/4">{q.text}</label>
                                         

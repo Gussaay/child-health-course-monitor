@@ -28,7 +28,7 @@ import {
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import {
-    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EENC
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC
 } from './constants.js';
 import { 
     Users, Share2, UserPlus, CheckCircle, 
@@ -375,7 +375,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
     const jobOptions = useMemo(() => {
         if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
-        if (course.course_type === 'EENC') return JOB_TITLES_EENC;
+        if (course.course_type === 'EmONC') return JOB_TITLES_EMONC;
         if (course.course_type === 'Small & Sick Newborn' || course.course_type === 'SSNC') return JOB_TITLES_SSNC;
         if (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') 
             return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
@@ -627,18 +627,23 @@ export function PublicParticipantRegistrationView({ courseId }) {
     );
 }
 
+// 
+
 const Landing = React.memo(function Landing({ active, onPick }) {
    const items = [
         { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
         { key: 'ICCM', title: 'Integrated Community case management for under 5 children (iCCM)', enabled: true },
         { key: 'Comprehensive Package For Community Midwives', title: 'Comprehensive Package For Community Midwives', enabled: true },
         { key: 'ETAT', title: 'Emergency Triage, Assessment & Treatment (ETAT)', enabled: true },
-        { key: 'EENC', title: 'Early Essential Newborn Care (EENC)', enabled: true },
+        
+        // REPLACE THE EENC LINE WITH THIS EMONC LINE:
+        { key: 'EmONC', title: 'Emergency Obstetric and Newborn Care (EmONC)', enabled: true },
+        
         { key: 'IPC', title: 'Infection Prevention & Control (Neonatal Unit)', enabled: true },
         { key: 'Small & Sick Newborn', title: 'Small & Sick Newborn Case Management', enabled: true },
         { key: 'Program Management', title: 'Program Management', enabled: true },
     ];
-
+  
     return (
         <Card className="p-6">
             <PageHeader title="Select a Course Package" subtitle="Choose a monitoring package to begin." />
@@ -1313,6 +1318,9 @@ export function CourseManagementView({
 
     const coursesForActiveType = useMemo(() => {
         if (!activeCourseType) return [];
+if (activeCourseType === 'EmONC') {
+        return allCourses.filter(c => c.course_type === 'EmONC' || c.course_type === 'EENC');
+    }
         return allCourses.filter(c => c.course_type === activeCourseType);
     }, [allCourses, activeCourseType]);
 
@@ -1423,14 +1431,15 @@ export function CourseManagementView({
         });
     }, [globalParticipants, userStates, userLocalities, manageLocation]);
 
-    const courseKPIs = useMemo(() => {
-        return { 
-            totalCourses: dashboardCourses.length, 
-            totalImnciCourses: dashboardCourses.filter(c => c.course_type === 'IMNCI').length, 
-            totalEtatCourses: dashboardCourses.filter(c => c.course_type === 'ETAT').length, 
-            totalEencCourses: dashboardCourses.filter(c => c.course_type === 'EENC').length 
-        };
-    }, [dashboardCourses]);
+   const courseKPIs = useMemo(() => {
+    return { 
+        totalCourses: dashboardCourses.length, 
+        totalImnciCourses: dashboardCourses.filter(c => c.course_type === 'IMNCI').length, 
+        totalEtatCourses: dashboardCourses.filter(c => c.course_type === 'ETAT').length, 
+        
+         totalEmoncCourses: dashboardCourses.filter(c => c.course_type === 'EmONC').length 
+    };
+}, [dashboardCourses]);
 
     const coursesByState = useMemo(() => {
         const data = {};
@@ -2152,8 +2161,9 @@ export function CourseForm({
     const CPCM_SUBCOURSE_TYPES = ['CPCM Community Module'];
     const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'CPAP training', 'Kangaroo mother Care'];
 
-    const EENC_SUBCOURSE_TYPES = [
-        'EENC EmONC', 
+    const EMONC_SUBCOURSE_TYPES = [
+        'Emergency Newborn Care', 
+        'Emergency Maternal Care', 
         'EENC Orientation', 
         'EENC TOT', 
         'EENC Mentorship'
@@ -2178,7 +2188,7 @@ export function CourseForm({
     const isIccm = courseType === 'ICCM';
     const isCpcm = courseType === 'Comprehensive Package For Community Midwives';
     const isSmallAndSick = courseType === 'Small & Sick Newborn';
-    const isEenc = courseType === 'EENC';
+    const isEmonc = courseType === 'EmONC';
     const isEtat = courseType === 'ETAT';
     const isProgramManagement = courseType === 'Program Management';
 
@@ -2616,7 +2626,7 @@ export function CourseForm({
                                                 label="اسم الميسر"
                                             />
                                         </FormGroup>
-                                        {!(isIccm || isCpcm) && (
+                                      {!(isIccm || isCpcm) && (
                                             <FormGroup label="اسم الورشة الفرعية">
                                                 <Select
                                                     disabled={isSaving}
@@ -2628,7 +2638,8 @@ export function CourseForm({
                                                     {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
                                                       isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
                                                       isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
-                                                      isEenc ? EENC_SUBCOURSE_TYPES :
+                                                      /* --- UPDATED --- */
+                                                      isEmonc ? EMONC_SUBCOURSE_TYPES :
                                                       isEtat ? ETAT_SUBCOURSE_TYPES :
                                                       isProgramManagement ? PROGRAM_MANAGEMENT_SUBCOURSE_TYPES :
                                                       []
@@ -2638,6 +2649,9 @@ export function CourseForm({
                                                 </Select>
                                             </FormGroup>
                                         )}
+
+
+
                                         <div className="flex items-end pb-1">
                                             <Button type="button" variant="danger" disabled={isSaving || facilitatorGroups[groupName]?.length <= 1} onClick={() => removeFacilitatorFromGroup(groupName, index)}>إزالة</Button>
                                         </div>
