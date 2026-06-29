@@ -10,6 +10,8 @@ import {
     SKILLS_ETAT, ETAT_DOMAINS, ETAT_DOMAIN_LABEL,
     DOMAINS_BY_AGE_IMNCI, DOMAIN_LABEL_IMNCI, getClassListImnci,
     SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL,
+    SKILLS_EMONC_NEONATAL, EMONC_DOMAINS_NEONATAL, EMONC_DOMAIN_LABEL_NEONATAL,
+    SKILLS_EMONC_MATERNAL, EMONC_DOMAINS_MATERNAL, EMONC_DOMAIN_LABEL_MATERNAL
 } from './constants.js';
 import {
     listObservationsForParticipant,
@@ -78,7 +80,7 @@ export function ObservationView({ course, participant, participants, onChangePar
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     
     const isImnci = course.course_type === 'IMNCI';
-    const isEenc = course.course_type === 'EENC';
+    const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC';
     const isLegalEtat = course.course_type === 'ETAT';
     const isIccm = course.course_type === 'ICCM';
 
@@ -165,8 +167,13 @@ export function ObservationView({ course, participant, participants, onChangePar
         const entries = Object.entries(buffer);
 
         if (isEenc) {
-            const skillsMap = eencScenario === 'breathing' ? SKILLS_EENC_BREATHING : SKILLS_EENC_NOT_BREATHING;
-            const totalSkills = Object.values(skillsMap).reduce((acc, domain) => acc + domain.length, 0);
+            let skillsMap;
+            if (eencScenario === 'breathing') skillsMap = SKILLS_EENC_BREATHING;
+            else if (eencScenario === 'not_breathing') skillsMap = SKILLS_EENC_NOT_BREATHING;
+            else if (eencScenario === 'neonatal_emergency') skillsMap = SKILLS_EMONC_NEONATAL;
+            else if (eencScenario === 'maternal_emergency') skillsMap = SKILLS_EMONC_MATERNAL;
+
+            const totalSkills = Object.values(skillsMap || {}).reduce((acc, domain) => acc + domain.length, 0);
             if (entries.length < totalSkills) {
                 alert('Please complete the form before submission');
                 setIsSaving(false);
@@ -295,7 +302,6 @@ export function ObservationView({ course, participant, participants, onChangePar
             {/* Case Setup Modal */}
             <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Case Setup Configuration" size="lg">
                 <div className="p-4">
-                    {/* Mentoring visits list container has been removed from here */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {!isPublicView && (
                             <FormGroup label="Select participant" className="sm:col-span-2">
@@ -311,7 +317,18 @@ export function ObservationView({ course, participant, participants, onChangePar
                                 <option value="LT2M">Young Infant (0-59 days)</option>
                             </Select>
                         </FormGroup>}
-                        {isEenc && <FormGroup label="EENC Scenario"><Select value={eencScenario} onChange={(e) => setEencScenario(e.target.value)} disabled={!!editingCase}><option value="breathing">Breathing Baby</option><option value="not_breathing">Not Breathing Baby</option></Select></FormGroup>}
+                        {isEenc && <FormGroup label={course.course_type === 'EmONC' ? "EmONC Module" : "EENC Scenario"}>
+                            <Select value={eencScenario} onChange={(e) => setEencScenario(e.target.value)} disabled={!!editingCase}>
+                                <option value="breathing">Essential Newborn Care (Breathing)</option>
+                                <option value="not_breathing">Essential Newborn Care (Not Breathing)</option>
+                                {course.course_type === 'EmONC' && (
+                                    <>
+                                        <option value="neonatal_emergency">Neonatal Emergency Care</option>
+                                        <option value="maternal_emergency">Maternal Emergency Care</option>
+                                    </>
+                                )}
+                            </Select>
+                        </FormGroup>}
                         <FormGroup label="Encounter Date"><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
                         <FormGroup label="Course Day"><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
                         <FormGroup label={isImnci && age === 'LT2M' ? "Age (wks)" : "Age (mos)"}>
@@ -347,7 +364,11 @@ export function ObservationView({ course, participant, participants, onChangePar
                                 <span className="font-semibold">Day:</span> {dayOfCourse} &bull; 
                                 <span className="font-semibold ml-2">Date:</span> {encounterDate}
                                 {isImnci && <>&bull; <span className="font-semibold ml-2">Setting:</span> {setting} &bull; <span className="font-semibold ml-2">Age:</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</>}
-                                {isEenc && <>&bull; <span className="font-semibold ml-2">Scenario:</span> {eencScenario === 'breathing' ? 'Breathing' : 'Not Breathing'}</>}
+                                {isEenc && <>&bull; <span className="font-semibold ml-2">Scenario:</span> {
+                                    eencScenario === 'breathing' ? 'ENC (Breathing)' : 
+                                    eencScenario === 'not_breathing' ? 'ENC (Not Breathing)' :
+                                    eencScenario === 'neonatal_emergency' ? 'Neonatal Emergency' : 'Maternal Emergency'
+                                }</>}
                             </p>
                         </div>
                         <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>
@@ -526,13 +547,28 @@ function EtatMonitoringGrid({ buffer, toggle }) {
 }
 
 function EencMonitoringGrid({ scenario, buffer, toggle }) {
-    const isBreathing = scenario === 'breathing';
-    const domains = isBreathing ? EENC_DOMAINS_BREATHING : EENC_DOMAINS_NOT_BREATHING;
-    const skillsMap = isBreathing ? SKILLS_EENC_BREATHING : SKILLS_EENC_NOT_BREATHING;
-    const labelsMap = isBreathing ? EENC_DOMAIN_LABEL_BREATHING : EENC_DOMAIN_LABEL_NOT_BREATHING;
+    let domains, skillsMap, labelsMap;
+
+    if (scenario === 'breathing') {
+        domains = EENC_DOMAINS_BREATHING;
+        skillsMap = SKILLS_EENC_BREATHING;
+        labelsMap = EENC_DOMAIN_LABEL_BREATHING;
+    } else if (scenario === 'not_breathing') {
+        domains = EENC_DOMAINS_NOT_BREATHING;
+        skillsMap = SKILLS_EENC_NOT_BREATHING;
+        labelsMap = EENC_DOMAIN_LABEL_NOT_BREATHING;
+    } else if (scenario === 'neonatal_emergency') {
+        domains = EMONC_DOMAINS_NEONATAL;
+        skillsMap = SKILLS_EMONC_NEONATAL;
+        labelsMap = EMONC_DOMAIN_LABEL_NEONATAL;
+    } else if (scenario === 'maternal_emergency') {
+        domains = EMONC_DOMAINS_MATERNAL;
+        skillsMap = SKILLS_EMONC_MATERNAL;
+        labelsMap = EMONC_DOMAIN_LABEL_MATERNAL;
+    }
     
     const [expandedDomains, setExpandedDomains] = useState(new Set());
-    const allDomains = domains; 
+    const allDomains = domains || []; 
 
     useEffect(() => {
         setExpandedDomains(new Set(allDomains.slice(0, 2)));
@@ -679,7 +715,7 @@ function IccmMonitoringGrid({ buffer, toggle }) {
 
 function SubmittedCases({ course, participant, observations, cases, onEditCase, onDeleteCase }) {
     const isImnci = course.course_type === 'IMNCI';
-    const isEenc = course.course_type === 'EENC';
+    const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC';
 
     const [dayFilter, setDayFilter] = useState('all');
     const [settingFilter, setSettingFilter] = useState('all');
@@ -716,7 +752,12 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
 
     const getAgeLabel = (age) => {
         if (isImnci) return age === 'LT2M' ? '0-59 d' : '2-59 m';
-        if (isEenc) return age?.includes('breathing') ? (age.includes('not_breathing') ? 'Not Breathing' : 'Breathing') : age;
+        if (isEenc) {
+            if (age?.includes('breathing') && !age.includes('not_')) return 'ENC (Breathing)';
+            if (age?.includes('not_breathing')) return 'ENC (Not Breathing)';
+            if (age?.includes('neonatal_emergency')) return 'Neonatal Emergency';
+            if (age?.includes('maternal_emergency')) return 'Maternal Emergency';
+        }
         return age;
     };
 
@@ -767,7 +808,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                                 </div>
                                 <div className="text-sm text-slate-600 grid grid-cols-2 gap-x-2">
                                     {isImnci && <span><span className="font-semibold">Setting:</span> {c.setting}</span>}
-                                    <span><span className="font-semibold">Age:</span> {getAgeLabel(c.age)}</span>
+                                    <span><span className="font-semibold">Scenario:</span> {getAgeLabel(c.age)}</span>
                                     {isEenc ? 
                                       <span><span className="font-semibold">Score:</span> {c.score}</span>
                                       : <span><span className="font-semibold">Items:</span> {c.total} ({c.correct} correct)</span>

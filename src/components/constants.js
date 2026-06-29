@@ -305,7 +305,8 @@ export const STATE_LOCALITIES = {
   }
 };
 
-export const COURSE_TYPES_FACILITATOR = ["IMNCI", "ETAT", "EENC", "IPC", "ICCM", "SSNC"];
+// Backward-compatible tracking with added EmONC structure
+export const COURSE_TYPES_FACILITATOR = ["IMNCI", "ETAT", "EENC", "EmONC", "IPC", "ICCM", "SSNC"];
 export const IMNCI_SUBCOURSE_TYPES = ["Standard 7 days course for medical assistants", "Standard 7 days course for medical doctor", "Refreshment course", "IMNCI in humanitarian setting", "online IMCI course", "preservice Course", "IMNCI Mentorship"];
 
 export const SKILLS_EENC_BREATHING = { pre_birth: [{ text: "Checked room temperature and turned off fans" }, { text: "Told the mother (and her support person) what is going to be done" }, { text: "Washed hands (first of two hand washings)" }, { text: "Placed dry cloth on mother's abdomen" }, { text: "Prepared the newborn resuscitation area" }, { text: "Checked that bag and mask are functional" }, { text: "Washed hands (second of two hand washings)" }, { text: "Put on two pairs of clean gloves" }, { text: "Put forceps, cord clamp in easy-to-use order" }], eenc: [{ text: "Call out time of birth" }, { text: "Start Drying within 5 seconds of birth" }, { text: "Dry the baby thoroughly" }, { text: "Stimulate baby by gently rubbing" }, { text: "Suction only if airway blocked" }, { text: "Remove the wet cloth" }, { text: "Put baby in direct skin-to-skin contact" }, { text: "Cover baby’s body with dry cloth and the head with a hat" }], oxytocin: [{ text: "Check for a second baby" }, { text: "Give oxytocin to mother within 1 minute of delivery" }], cord_clamp: [{ text: "Removed outer pair of gloves" }, { text: "Check cord pulsations, clamp after cord pulsations stopped" }, { text: "Place clamp at 2 cm, forceps at 5 cm" }], placenta: [{ text: "Delivered placenta" }, { text: "Counsel mother on feeding cues" }] };
@@ -318,7 +319,39 @@ export const SKILLS_ETAT = { triage: ["Triage Assessment", "Assigns Triage Categ
 export const ETAT_DOMAIN_LABEL = { triage: "Triage", airway_breathing: "Airway and Breathing", circulation: "Circulation", coma: "Coma", convulsion: "Convulsion", dehydration: "Dehydration (Severe)" };
 export const ETAT_DOMAINS = Object.keys(SKILLS_ETAT);
 
-// --- MODIFICATION: Added "PLAN C" into treatment_2_59m ---
+// --- EmONC NEW CLINICAL OBSERVATION FORMS SKILLS ---
+export const SKILLS_EMONC_NEONATAL = {
+    assessment: [
+        { text: "Assess temperature and breathing" }, 
+        { text: "Check for signs of neonatal sepsis" }
+    ],
+    resuscitation: [
+        { text: "Perform advanced neonatal resuscitation if indicated" },
+        { text: "Administer oxygen therapy correctly" }
+    ]
+};
+export const EMONC_DOMAIN_LABEL_NEONATAL = {
+    assessment: "Initial Neonatal Assessment",
+    resuscitation: "Advanced Resuscitation & Management"
+};
+export const EMONC_DOMAINS_NEONATAL = Object.keys(SKILLS_EMONC_NEONATAL);
+
+export const SKILLS_EMONC_MATERNAL = {
+    assessment: [
+        { text: "Check maternal vital signs accurately" }, 
+        { text: "Assess for postpartum hemorrhage (PPH)" }
+    ],
+    management: [
+        { text: "Administer uterotonics (e.g., Oxytocin) if indicated" },
+        { text: "Manage pre-eclampsia/eclampsia protocols" }
+    ]
+};
+export const EMONC_DOMAIN_LABEL_MATERNAL = {
+    assessment: "Maternal Assessment",
+    management: "Emergency Management"
+};
+export const EMONC_DOMAINS_MATERNAL = Object.keys(SKILLS_EMONC_MATERNAL);
+
 export const CLASS_2_59M = { 
     danger: ["Any Danger Sign"], 
     respiratory: ["Severe pneumonia/disease", "Pneumonia", "Cough/cold", "Severe pneumonia/disease (Wheeze)", "Pneumonia (Wheeze)", "Cough/cold (Wheeze)"], 
@@ -339,9 +372,8 @@ export const getClassListImnci = (age, d) => (age === "GE2M_LE5Y" ? CLASS_2_59M[
 
 export const JOB_TITLES_IMNCI = ["Pediatric Doctor", "Family Medicine Doctor", "General Practioner", "Medical Assistance", "Treating Nurse", "Other"];
 export const JOB_TITLES_ETAT = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
-export const JOB_TITLES_EMONC = ["Obstetric Specialist", "Obstetric Registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
+export const JOB_TITLES_EMONC = ["Obstetric Specialist", "Obstetric Registrar", "Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
 export const JOB_TITLES_SSNC = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
-
 
 export const SKILLS_ICCM = {
     danger: [
