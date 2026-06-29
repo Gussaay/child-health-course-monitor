@@ -926,10 +926,10 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         return Array.from(groupSet).sort();
     }, [localParticipants]);
 
-    const sortedParticipants = useMemo(() => {
-        // Defensive check: Filter out any invalid participants (null, undefined, missing name) to prevent crash
+   const sortedParticipants = useMemo(() => {
+        // Defensive check: Filter out any invalid participants AND soft-deleted ones
         return [...localParticipants]
-            .filter(p => p && p.name) 
+            .filter(p => p && p.name && p.isDeleted !== true && p.isDeleted !== "true") 
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [localParticipants]);
 
