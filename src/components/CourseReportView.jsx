@@ -15,7 +15,6 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
-// 🟢 FIX: Added upsertFinalReport to imports
 import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport } from '../data.js';
 import { useAuth } from '../hooks/useAuth';
 import { useDataCache } from '../DataContext';
@@ -373,7 +372,6 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
         return currentY;
     };
 
-    // 🟢 FIX: Added logic to expand horizontal scroll elements during PDF capture
     const addCanvasImageToPdf = async (elementId, currentY) => {
         const element = document.getElementById(elementId);
         if (!element) return currentY;
@@ -532,7 +530,6 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
             doc.text(text, x, pageHeight - 10);
         }
 
-        // 🟢 FIX: Mobile download with Directory.Data and recursive folder creation
         if (Capacitor.isNativePlatform()) {
             try {
                 const base64Data = doc.output('datauristring').split('base64,')[1];
@@ -1051,6 +1048,9 @@ export function CourseReportView({
     if (!isSharedView) practicalTableHeaders.push('Practical Case Score');
     const writtenTableHeaders = ['#', 'Participant Name', 'Pre-Test Result', 'Post-Test Result', '% Increase', 'Average Improvement'];
 
+    // --- REPLACED EENC WITH EmONC HERE ---
+    const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC';
+
     const handlePdfGeneration = async (quality) => {
         setIsPdfGenerating(true);
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1165,7 +1165,6 @@ export function CourseReportView({
     const hasTestScoreDataForKpis = preTestStats.avg > 0 || postTestStats.avg > 0;
     const hasChartParticipants = chartParticipants.length > 0;
 
-    // 🟢 FIX: Used Grid layout for buttons on mobile devices
     return (
         <div className="flex flex-col gap-6 pb-28 lg:pb-8 w-full max-w-full min-w-0">
             <PageHeader 
@@ -1701,6 +1700,13 @@ export function CourseReportView({
                                                         <td className="p-3 font-semibold text-gray-800 min-w-[200px] whitespace-normal break-words">{p.name}</td>
                                                         <td className="p-3 text-center text-gray-700">{p.total_cases_seen}</td>
                                                         {!isSharedView && <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</span></td>}
+                                                        
+                                                        {/* This fixes the table rendering loop for EENC and EmONC scores */}
+                                                        <td className="p-3 text-center">
+                                                            <span className={`font-mono text-sm px-2 py-1 rounded ${pctBgClass((course.course_type === 'EENC' || course.course_type === 'EmONC') ? calcPct(p.score, p.maxScore) : calcPct(p.correctness, p.total))}`}>
+                                                                {fmtPct((course.course_type === 'EENC' || course.course_type === 'EmONC') ? calcPct(p.score, p.maxScore) : calcPct(p.correctness, p.total))}
+                                                            </span>
+                                                        </td>
                                                     </tr>
                                                 ))
                                             )}

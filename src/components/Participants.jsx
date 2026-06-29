@@ -528,7 +528,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
 
     const jobTitleOptions = useMemo(() => {
         if (courseType === 'ETAT') return JOB_TITLES_ETAT;
-        if (courseType === 'EENC') return JOB_TITLES_EENC;
+        if (courseType === 'EENC' || courseType === 'EmONC') return JOB_TITLES_EMONC; // FIXED
         if (courseType === 'SSNC' || courseType === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
         if (courseType === 'ICCM' || courseType === 'Comprehensive Package For Community Midwives') return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
@@ -587,7 +587,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
             };
         }
 
-        if (courseType === 'EENC' || courseType === 'SSNC' || courseType === 'Small & Sick Newborn') {
+        if (courseType === 'EENC' || courseType === 'EmONC' || courseType === 'SSNC' || courseType === 'Small & Sick Newborn') {
             config['hospital_type'] = {
                 label: `Hospital Type (${courseType})`,
                 standardValues: ['Comprehensive EmONC', 'Basic EmONC', 'other'],
@@ -650,12 +650,12 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
 
         const facilitiesToUpsert = [];
         
-        if (['IMNCI', 'EENC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(courseType)) {
+        if (['IMNCI', 'EENC', 'EmONC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(courseType)) {
             const facilityUpdatesMap = new Map();
             
             const staffField = courseType === 'ETAT' ? 'critical_staff' : 
                                (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') ? 'neonatal_staff' : 
-                               courseType === 'EENC' ? 'eenc_staff' : 
+                               (courseType === 'EENC' || courseType === 'EmONC') ? 'eenc_staff' : 
                                'imnci_staff';
 
             participantsToUpdate.forEach(p => {
@@ -784,7 +784,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
 
     const jobTitleOptions = useMemo(() => {
         if (courseType === 'ETAT') return JOB_TITLES_ETAT;
-        if (courseType === 'EENC') return JOB_TITLES_EENC;
+        if (courseType === 'EENC' || courseType === 'EmONC') return JOB_TITLES_EMONC; // FIXED
         if (courseType === 'SSNC' || courseType === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
         if (courseType === 'ICCM' || courseType === 'Comprehensive Package For Community Midwives') return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
@@ -825,12 +825,12 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
 
         const facilitiesToUpsert = [];
         
-        if (['IMNCI', 'EENC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(courseType)) {
+        if (['IMNCI', 'EENC', 'EmONC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(courseType)) {
             const facilityUpdatesMap = new Map();
             
             const staffField = courseType === 'ETAT' ? 'critical_staff' : 
                                (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') ? 'neonatal_staff' : 
-                               courseType === 'EENC' ? 'eenc_staff' : 
+                               (courseType === 'EENC' || courseType === 'EmONC') ? 'eenc_staff' : 
                                'imnci_staff';
 
             participantsToUpdate.forEach(p => {
@@ -961,7 +961,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
 
     const jobTitleOptions = useMemo(() => {
         if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
-        if (course.course_type === 'EmONC') return JOB_TITLES_EMONC;
+        if (course.course_type === 'EmONC' || course.course_type === 'EENC') return JOB_TITLES_EMONC; // FIXED
         if (course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
         if (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
@@ -1017,7 +1017,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
             { key: 'hours_to_facility', label: 'Hours to Facility (on foot)' },
         ] : []),
         ...(course.course_type === 'ETAT' ? [ { key: 'hospital_type', label: 'Hospital Type' }, { key: 'trained_etat_before', label: 'Previously trained on ETAT?' }, ] : []),
-        ...(course.course_type === 'EENC' || course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn' ? [ { key: 'hospital_type', label: 'Hospital Type' }, { key: 'trained_eenc_before', label: `Previously trained on ${course.course_type}?` }, ] : [])
+        ...(course.course_type === 'EENC' || course.course_type === 'EmONC' || course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn' ? [ { key: 'hospital_type', label: 'Hospital Type' }, { key: 'trained_eenc_before', label: `Previously trained on ${course.course_type}?` }, ] : [])
     ], [course.course_type]);
 
     const handleDownloadTemplate = () => {
@@ -1189,7 +1189,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
 
             const staffField = course.course_type === 'ETAT' ? 'critical_staff' : 
                                (course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn' || course.course_type === 'IPC') ? 'neonatal_staff' : 
-                               course.course_type === 'EENC' ? 'eenc_staff' : 
+                               (course.course_type === 'EENC' || course.course_type === 'EmONC') ? 'eenc_staff' : 
                                'imnci_staff';
 
             let staffList = [];
@@ -1225,7 +1225,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
                 payload['growth_monitoring_service_exists'] = participant.has_growth_monitoring ? 'Yes' : 'No';
                 payload['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] = participant.num_other_providers ?? staffList.length;
                 payload['العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل'] = participant.num_other_providers_imci ?? staffList.filter(s => s.is_trained === 'Yes').length;
-            } else if (course.course_type === 'EENC') {
+            } else if (course.course_type === 'EENC' || course.course_type === 'EmONC') {
                 payload['eenc_provides_essential_care'] = 'Yes';
             } else if (course.course_type === 'ETAT') {
                 payload['etat_has_service'] = 'Yes';
@@ -1783,7 +1783,7 @@ export function ParticipantsView({
 
     // Load HealthFacilities immediately if we are viewing courses that require facility mapping.
     useEffect(() => {
-        const requiresFacilities = ['IMNCI', 'EENC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(course?.course_type);
+        const requiresFacilities = ['IMNCI', 'EENC', 'EmONC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(course?.course_type);
         if (requiresFacilities && (!healthFacilities || healthFacilities.length === 0)) {
             fetchHealthFacilities();
         }
@@ -1988,7 +1988,7 @@ export function ParticipantsView({
 
         const staffField = courseType === 'ETAT' ? 'critical_staff' : 
                            (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') ? 'neonatal_staff' : 
-                           courseType === 'EENC' ? 'eenc_staff' : 
+                           (courseType === 'EENC' || courseType === 'EmONC') ? 'eenc_staff' : 
                            'imnci_staff';
 
         const validParticipants = participants.filter(p => p.facilityId || p.center_name);
@@ -2036,7 +2036,7 @@ export function ParticipantsView({
             existingPayload[staffField] = staffList;
 
             if (courseType === 'IMNCI') existingPayload['وجود_العلاج_المتكامل_لامراض_الطفولة'] = 'Yes';
-            if (courseType === 'EENC') existingPayload['eenc_provides_essential_care'] = 'Yes';
+            if (courseType === 'EENC' || courseType === 'EmONC') existingPayload['eenc_provides_essential_care'] = 'Yes';
             if (courseType === 'ETAT') existingPayload['etat_has_service'] = 'Yes';
             if (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') existingPayload['neonatal_level_secondary'] = 'Yes';
 
@@ -2704,7 +2704,7 @@ export function ParticipantsView({
                                                 Report
                                             </Button>
 
-                                            {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC') && (
+                                            {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') && (
                                                 <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>
                                                     Test
                                                 </Button>
@@ -2776,7 +2776,7 @@ export function ParticipantsView({
 
                             {isExpanded && (
                                 <div className="p-4 bg-gray-50 border-t border-gray-100">
-                                    <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-500 border-b border-gray-200 pb-3">
+                                    <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-50 border-b border-gray-200 pb-3">
                                         <div><span className="block font-semibold text-gray-700">Created:</span>{createdDate}<br/>By: {p.createdBy || 'Legacy'}</div>
                                         <div><span className="block font-semibold text-gray-700">Last Edit:</span>{lastEditDate}<br/>By: {p.updatedBy || 'Legacy'}</div>
                                     </div>
@@ -2791,7 +2791,7 @@ export function ParticipantsView({
                                             </Button>
                                         )}
 
-                                        {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC') && (
+                                        {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') && (
                                             <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>Test Score</Button>
                                         )}
                                         
@@ -2825,7 +2825,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const isIccm = course.course_type === 'ICCM';
     const isCpcm = course.course_type === 'Comprehensive Package For Community Midwives';
     const isEtat = course.course_type === 'ETAT';
-    const isEenc = course.course_type === 'EENC';
+    const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC'; // FIXED
     const isSsnc = course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn';
     const isProgramManagement = course.course_type === 'Program Management';
 
@@ -2834,7 +2834,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
     const jobTitleOptions = useMemo(() => {
         if (isEtat) return JOB_TITLES_ETAT;
-        if (isEenc) return JOB_TITLES_EENC;
+        if (isEenc) return JOB_TITLES_EMONC; // FIXED
         if (isSsnc) return JOB_TITLES_SSNC;
         if (isIccm || isCpcm) return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
@@ -3205,8 +3205,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
                 };
             } else if (isEenc || isSsnc) {
-                if (!hospitalTypeEenc) { setError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC' : 'SSNC'}.`); setIsSaving(false); return; }
-                if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC' : 'SSNC'}.`); setIsSaving(false); return; }
+                if (!hospitalTypeEenc) { setError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
+                if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
                 p = { 
                     ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, 
                     trained_eenc_before: parseBool(trainedEENC), 
@@ -3589,12 +3589,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                             </Select>
                                         </FormGroup>
                                         {hospitalTypeEenc === 'other' && <FormGroup label="حدد نوع المستشفى"><Input disabled={isSaving} value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
-                                        <FormGroup label={`هل تم التدريب مسبقاً على ${isEenc ? 'EENC' : 'SSNC'}؟`}>
+                                        <FormGroup label={`هل تم التدريب مسبقاً على ${isEenc ? 'EENC/EmONC' : 'SSNC'}؟`}>
                                             <Select disabled={isSaving} value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        {trainedEENC === 'yes' && <FormGroup label={`تاريخ آخر تدريب (${isEenc ? 'EENC' : 'SSNC'})`}><Input disabled={isSaving} type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
+                                        {trainedEENC === 'yes' && <FormGroup label={`تاريخ آخر تدريب (${isEenc ? 'EENC/EmONC' : 'SSNC'})`}><Input disabled={isSaving} type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
                                         <FormGroup label="هل توجد وحدة رعاية حديثي الولادة الخاصة (SNCU)؟">
                                             <Select disabled={isSaving} value={hasSncu} onChange={e => setHasSncu(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
@@ -3612,7 +3612,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                         </FormGroup>
 
                                         <FormGroup label={`عدد الـ (${professionalCategory}) في غرفة الولادة`}><Input disabled={isSaving} type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ${isEenc ? 'EENC' : 'SSNC'}`}><Input disabled={isSaving} type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ${isEenc ? 'EENC/EmONC' : 'SSNC'}`}><Input disabled={isSaving} type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
                                     </div>
                                 )}
                             </div>

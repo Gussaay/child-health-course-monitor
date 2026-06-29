@@ -10,7 +10,8 @@ import {
 import {
     calcPct, fmtPct, pctBgClass,
     DOMAIN_LABEL_IMNCI, ETAT_DOMAIN_LABEL, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING,
-    ETAT_DOMAINS, DOMAINS_BY_AGE_IMNCI
+    ETAT_DOMAINS, DOMAINS_BY_AGE_IMNCI,
+    EMONC_DOMAIN_LABEL_NEONATAL, EMONC_DOMAIN_LABEL_MATERNAL
 } from './constants.js';
 
 // --- Reusable Share Icon for the button ---
@@ -167,14 +168,14 @@ export function ParticipantReportView({
         } else {
             let orderedDomains = [];
             let labelMap = {};
-            const isEenc = course.course_type === 'EENC';
+            const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC';
 
             if (course.course_type === 'ETAT') {
                 orderedDomains = ETAT_DOMAINS;
                 labelMap = ETAT_DOMAIN_LABEL;
-            } else { // EENC
-                orderedDomains = Object.keys({ ...EENC_DOMAIN_LABEL_BREATHING, ...EENC_DOMAIN_LABEL_NOT_BREATHING });
-                labelMap = { ...EENC_DOMAIN_LABEL_BREATHING, ...EENC_DOMAIN_LABEL_NOT_BREATHING };
+            } else { // EmONC/EENC
+                orderedDomains = Object.keys({ ...EENC_DOMAIN_LABEL_BREATHING, ...EENC_DOMAIN_LABEL_NOT_BREATHING, ...EMONC_DOMAIN_LABEL_NEONATAL, ...EMONC_DOMAIN_LABEL_MATERNAL });
+                labelMap = { ...EENC_DOMAIN_LABEL_BREATHING, ...EENC_DOMAIN_LABEL_NOT_BREATHING, ...EMONC_DOMAIN_LABEL_NEONATAL, ...EMONC_DOMAIN_LABEL_MATERNAL };
             }
 
             return orderedDomains.map(domainKey => {
@@ -513,19 +514,19 @@ export function ParticipantReportView({
                                         <span>{domain.label}</span>
                                         <div className="flex items-center gap-4 mt-2 sm:mt-0">
                                             <span className="text-sm font-normal text-gray-600">Cases: {domain.totalCases}</span>
-                                            <span className={`font-mono text-sm px-2 py-1 rounded ${pctBgClass(course.course_type === 'EENC' ? calcPct(domain.score, domain.maxScore) : calcPct(domain.correct, domain.total))}`}>
-                                                {fmtPct(course.course_type === 'EENC' ? calcPct(domain.score, domain.maxScore) : calcPct(domain.correct, domain.total))}
+                                            <span className={`font-mono text-sm px-2 py-1 rounded ${pctBgClass(course.course_type === 'EENC' || course.course_type === 'EmONC' ? calcPct(domain.score, domain.maxScore) : calcPct(domain.correct, domain.total))}`}>
+                                                {fmtPct(course.course_type === 'EENC' || course.course_type === 'EmONC' ? calcPct(domain.score, domain.maxScore) : calcPct(domain.correct, domain.total))}
                                             </span>
                                         </div>
                                     </summary>
                                     <div className="mt-2 pl-2 sm:pl-4 border-l-2 border-gray-200 w-full max-w-full overflow-x-auto touch-pan-x">
                                         <Table headers={["Skill/Classification", "Performance", "%"]}>
                                             {Object.entries(domain.skills).map(([skill, data]) => {
-                                                const pct = course.course_type === 'EENC' ? calcPct(data.score, data.maxScore) : calcPct(data.correct, data.total);
+                                                const pct = course.course_type === 'EENC' || course.course_type === 'EmONC' ? calcPct(data.score, data.maxScore) : calcPct(data.correct, data.total);
                                                 return (
                                                     <tr key={skill}>
                                                         <td className="p-2 border min-w-[200px]">{skill}</td>
-                                                        <td className="p-2 border text-center">{course.course_type === 'EENC' ? `${data.score}/${data.maxScore}` : `${data.correct}/${data.total}`}</td>
+                                                        <td className="p-2 border text-center">{course.course_type === 'EENC' || course.course_type === 'EmONC' ? `${data.score}/${data.maxScore}` : `${data.correct}/${data.total}`}</td>
                                                         <td className={`p-2 border font-mono text-center min-w-[80px] ${pctBgClass(pct)}`}>{fmtPct(pct)}</td>
                                                     </tr>
                                                 );
