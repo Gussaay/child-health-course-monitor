@@ -53,6 +53,8 @@ import {
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
 const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
 
+// --- NEW EmONC FOLDER SUITE LAZY IMPORTS ---
+const EmoncMonitoring = React.lazy(() => import('./EmONC/EmoncMonitoring').then(module => ({ default: module.EmoncMonitoring })));
 
 // --- BULLETPROOF FACILITATOR ID & SYNC MIGRATION MODAL ---
 export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
@@ -627,18 +629,13 @@ export function PublicParticipantRegistrationView({ courseId }) {
     );
 }
 
-// 
-
 const Landing = React.memo(function Landing({ active, onPick }) {
    const items = [
         { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
         { key: 'ICCM', title: 'Integrated Community case management for under 5 children (iCCM)', enabled: true },
         { key: 'Comprehensive Package For Community Midwives', title: 'Comprehensive Package For Community Midwives', enabled: true },
         { key: 'ETAT', title: 'Emergency Triage, Assessment & Treatment (ETAT)', enabled: true },
-        
-        // REPLACE THE EENC LINE WITH THIS EMONC LINE:
         { key: 'EmONC', title: 'Emergency Obstetric and Newborn Care (EmONC)', enabled: true },
-        
         { key: 'IPC', title: 'Infection Prevention & Control (Neonatal Unit)', enabled: true },
         { key: 'Small & Sick Newborn', title: 'Small & Sick Newborn Case Management', enabled: true },
         { key: 'Program Management', title: 'Program Management', enabled: true },
@@ -1318,9 +1315,9 @@ export function CourseManagementView({
 
     const coursesForActiveType = useMemo(() => {
         if (!activeCourseType) return [];
-if (activeCourseType === 'EmONC') {
-        return allCourses.filter(c => c.course_type === 'EmONC' || c.course_type === 'EENC');
-    }
+        if (activeCourseType === 'EmONC') {
+            return allCourses.filter(c => c.course_type === 'EmONC' || c.course_type === 'EENC');
+        }
         return allCourses.filter(c => c.course_type === activeCourseType);
     }, [allCourses, activeCourseType]);
 
@@ -1432,14 +1429,13 @@ if (activeCourseType === 'EmONC') {
     }, [globalParticipants, userStates, userLocalities, manageLocation]);
 
    const courseKPIs = useMemo(() => {
-    return { 
-        totalCourses: dashboardCourses.length, 
-        totalImnciCourses: dashboardCourses.filter(c => c.course_type === 'IMNCI').length, 
-        totalEtatCourses: dashboardCourses.filter(c => c.course_type === 'ETAT').length, 
-        
-         totalEmoncCourses: dashboardCourses.filter(c => c.course_type === 'EmONC').length 
-    };
-}, [dashboardCourses]);
+        return { 
+            totalCourses: dashboardCourses.length, 
+            totalImnciCourses: dashboardCourses.filter(c => c.course_type === 'IMNCI').length, 
+            totalEtatCourses: dashboardCourses.filter(c => c.course_type === 'ETAT').length, 
+            totalEmoncCourses: dashboardCourses.filter(c => c.course_type === 'EmONC').length 
+        };
+    }, [dashboardCourses]);
 
     const coursesByState = useMemo(() => {
         const data = {};
@@ -1804,7 +1800,17 @@ if (activeCourseType === 'EmONC') {
                 {!isGlobalView && selectedCourse && (
                     <>
                         <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
-                        <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>Monitoring</Button>
+                        
+                        {/* --- DYNAMIC MONITORS BLOCK --- */}
+                        {selectedCourse.course_type === 'EmONC' ? (
+                            <>
+                                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'maternal-monitoring'} onClick={() => setActiveCoursesTab('maternal-monitoring')}>Maternal Monitoring</Button>
+                                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'neonatal-monitoring'} onClick={() => setActiveCoursesTab('neonatal-monitoring')}>Neonatal Monitoring</Button>
+                            </>
+                        ) : (
+                            <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>Monitoring</Button>
+                        )}
+                        
                         <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Individual Participant Report</Button>
                         {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(selectedCourse.course_type)) && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
@@ -1901,7 +1907,16 @@ if (activeCourseType === 'EmONC') {
                             <ParticipantsView
                                 course={selectedCourse} 
                                 participants={participants} 
-                                onOpen={(id) => { onSetSelectedParticipantId(id); setActiveCoursesTab('monitoring'); }}
+                                onOpen={(id) => { 
+                                    onSetSelectedParticipantId(id); 
+                                    if (selectedCourse.course_type === 'EmONC') {
+                                        setActiveCoursesTab('maternal-monitoring'); 
+                                    } else {
+                                        setActiveCoursesTab('monitoring'); 
+                                    }
+                                }}
+                                onOpenMaternalMonitoring={(id) => { onSetSelectedParticipantId(id); setActiveCoursesTab('maternal-monitoring'); }}
+                                onOpenNeonatalMonitoring={(id) => { onSetSelectedParticipantId(id); setActiveCoursesTab('neonatal-monitoring'); }}
                                 onOpenReport={onOpenParticipantReport} 
                                 onBatchUpdate={onBatchUpdate} 
                                 onOpenTestFormForParticipant={handleOpenTestFormForParticipant}
@@ -1920,8 +1935,31 @@ if (activeCourseType === 'EmONC') {
                         )}
                         
                         {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message="Please select a course from the 'Courses' tab to view participants." />}
+                        
+                        {/* --- STANDARD MONITOR VIEW --- */}
                         {activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && <Suspense fallback={<Spinner />}><ObservationView course={selectedCourse} participant={currentParticipant} participants={participants} onChangeParticipant={(id) => onSetSelectedParticipantId(id)} /></Suspense>}
                         {activeCoursesTab === 'monitoring' && selectedCourse && !currentParticipant && activeCoursesTab !== 'courses' && <EmptyState message="Please select a participant from the 'Participants' tab to begin monitoring." />}
+                        
+                        {/* --- SEPARATED EmONC VIEW ROUTING MATRIX --- */}
+                        {activeCoursesTab === 'maternal-monitoring' && selectedCourse && currentParticipant && (
+                            <Suspense fallback={<Spinner />}>
+                                <MaternalEmergencyMonitoring 
+                                    course={selectedCourse} 
+                                    participant={currentParticipant} 
+                                    onCancel={() => setActiveCoursesTab('participants')} 
+                                />
+                            </Suspense>
+                        )}
+                        {activeCoursesTab === 'neonatal-monitoring' && selectedCourse && currentParticipant && (
+                            <Suspense fallback={<Spinner />}>
+                                <NeonatalEmergencyMonitoring 
+                                    course={selectedCourse} 
+                                    participant={currentParticipant} 
+                                    onCancel={() => setActiveCoursesTab('participants')} 
+                                />
+                            </Suspense>
+                        )}
+
                         {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>}
                         
                         {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
@@ -2638,7 +2676,6 @@ export function CourseForm({
                                                     {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
                                                       isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
                                                       isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
-                                                      /* --- UPDATED --- */
                                                       isEmonc ? EMONC_SUBCOURSE_TYPES :
                                                       isEtat ? ETAT_SUBCOURSE_TYPES :
                                                       isProgramManagement ? PROGRAM_MANAGEMENT_SUBCOURSE_TYPES :
@@ -2685,40 +2722,81 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
     const [selectedParticipantId, setSelectedParticipantId] = useState(
         allParticipants && allParticipants.length > 0 ? allParticipants[0].id : null
     );
+    const [emoncTab, setEmoncTab] = useState('maternal'); // Default to maternal
     
-    const currentParticipant = allParticipants.find(p => p.id === selectedParticipantId);
+    const currentParticipant = allParticipants?.find(p => p.id === selectedParticipantId);
 
     if (!course) return <EmptyState message="Course data unavailable." />;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-5xl mx-auto p-4">
             <Card>
-                <div className="p-6 border-b border-gray-100">
-                     <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-sky-100 rounded-lg">
-                            <Eye className="w-6 h-6 text-sky-600" />
+                <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                         <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-sky-100 rounded-lg">
+                                <Eye className="w-6 h-6 text-sky-600" />
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-900">Course Monitoring</h1>
+                         </div>
+                         <div className="text-gray-600">
+                            <span className="font-semibold text-gray-900">{course.course_type}</span>
+                            <span className="mx-2">•</span>
+                            <span>{course.state} - {course.locality}</span>
+                         </div>
+                    </div>
+                    
+                    {/* Global Participant Selector for Public View */}
+                    {allParticipants && allParticipants.length > 0 && (
+                        <div className="w-full sm:w-auto">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Select Participant</label>
+                            <Select value={selectedParticipantId || ''} onChange={(e) => setSelectedParticipantId(e.target.value)} className="min-w-[200px]">
+                                {allParticipants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
+                            </Select>
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-900">Course Monitoring</h1>
-                     </div>
-                     <div className="text-gray-600">
-                        <span className="font-semibold text-gray-900">{course.course_type}</span>
-                        <span className="mx-2">•</span>
-                        <span>{course.state} - {course.locality}</span>
-                        <span className="mx-2">•</span>
-                        <span>{course.start_date}</span>
-                     </div>
+                    )}
                 </div>
             </Card>
+
+            {course.course_type === 'EmONC' && (
+                 <div className="flex gap-2">
+                     <Button variant="tab" isActive={emoncTab === 'maternal'} onClick={() => setEmoncTab('maternal')}>Maternal Emergency Monitor</Button>
+                     <Button variant="tab" isActive={emoncTab === 'neonatal'} onClick={() => setEmoncTab('neonatal')}>Neonatal Emergency Monitor</Button>
+                 </div>
+            )}
 
             <Suspense fallback={<div className="flex justify-center p-10"><Spinner /></div>}>
                 {allParticipants && allParticipants.length > 0 ? (
                     currentParticipant ? (
-                        <ObservationView 
-                            course={course} 
-                            participant={currentParticipant} 
-                            participants={allParticipants}
-                            onChangeParticipant={setSelectedParticipantId}
-                        />
+                        course.course_type === 'EmONC' ? (
+                             emoncTab === 'maternal' ? (
+                                  <MaternalEmergencyMonitoring 
+                                      course={course} 
+                                      participant={currentParticipant} 
+                                      participants={allParticipants}
+                                      onChangeParticipant={setSelectedParticipantId}
+                                      onCancel={() => {}} 
+                                      isPublicView={true}
+                                  />
+                             ) : (
+                                  <NeonatalEmergencyMonitoring 
+                                      course={course} 
+                                      participant={currentParticipant} 
+                                      participants={allParticipants}
+                                      onChangeParticipant={setSelectedParticipantId}
+                                      onCancel={() => {}} 
+                                      isPublicView={true}
+                                  />
+                             )
+                        ) : (
+                            <ObservationView 
+                                course={course} 
+                                participant={currentParticipant} 
+                                participants={allParticipants}
+                                onChangeParticipant={setSelectedParticipantId}
+                                isPublicView={true}
+                            />
+                        )
                     ) : (
                          <div className="flex justify-center p-10"><Spinner /></div>
                     )

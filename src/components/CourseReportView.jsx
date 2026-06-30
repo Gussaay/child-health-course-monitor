@@ -1702,11 +1702,11 @@ export function CourseReportView({
                                                         {!isSharedView && <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</span></td>}
                                                         
                                                         {/* This fixes the table rendering loop for EENC and EmONC scores */}
-                                                        <td className="p-3 text-center">
-                                                            <span className={`font-mono text-sm px-2 py-1 rounded ${pctBgClass((course.course_type === 'EENC' || course.course_type === 'EmONC') ? calcPct(p.score, p.maxScore) : calcPct(p.correctness, p.total))}`}>
-                                                                {fmtPct((course.course_type === 'EENC' || course.course_type === 'EmONC') ? calcPct(p.score, p.maxScore) : calcPct(p.correctness, p.total))}
-                                                            </span>
-                                                        </td>
+<td className="p-3 text-center">
+    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass((course.course_type === 'EENC' || course.course_type === 'EmONC') ? calcPct(p.score, p.maxScore) : calcPct(p.correctness, p.total))}`}>
+        {fmtPct((course.course_type === 'EENC' || course.course_type === 'EmONC') ? calcPct(p.score, p.maxScore) : calcPct(p.correctness, p.total))}
+    </span>
+</td>
                                                     </tr>
                                                 ))
                                             )}

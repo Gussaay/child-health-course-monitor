@@ -15,8 +15,12 @@ import {
     SKILLS_ETAT, ETAT_DOMAINS, ETAT_DOMAIN_LABEL,
     DOMAINS_BY_AGE_IMNCI, DOMAIN_LABEL_IMNCI, getClassListImnci,
     pctBgClass, fmtPct, calcPct, formatAsPercentageAndCount, formatAsPercentageAndScore,
-    SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL
+    SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL,
+    SKILLS_EMONC_NEONATAL, EMONC_DOMAIN_LABEL_NEONATAL,
+    SKILLS_EMONC_MATERNAL, EMONC_DOMAIN_LABEL_MATERNAL
 } from './constants.js';
+
+
 import {
     listAllDataForCourse,
     listParticipantTestsForCourse 
@@ -136,15 +140,16 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
             try {
                 // 1. Try Cache First for instant rendering
                 let courseData = await listAllDataForCourse(course.id, { source: 'cache' }).catch(() => ({allObs: [], allCases: []}));
-                let testData = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC') ? await listParticipantTestsForCourse(course.id, { source: 'cache' }).catch(() => []) : [];
+                let testData = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') ? await listParticipantTestsForCourse(course.id, { source: 'cache' }).catch(() => []) : [];
 
                 const hasData = (courseData.allObs && courseData.allObs.length > 0) || (courseData.allCases && courseData.allCases.length > 0);
 
                 // 2. Fetch from Server ONLY if Cache is empty
                 if (!hasData) {
                     courseData = await listAllDataForCourse(course.id, { source: 'server' }).catch(() => ({allObs: [], allCases: []}));
-                    testData = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC') ? await listParticipantTestsForCourse(course.id, { source: 'server' }).catch(() => []) : [];
+                    testData = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') ? await listParticipantTestsForCourse(course.id, { source: 'server' }).catch(() => []) : [];
                 }
+
 
                 // 3. Apply Soft Delete Filter
                 const activeObs = (courseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
@@ -165,8 +170,8 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
 
     if (loading) { return <Card><Spinner /></Card>; }
 
-    const StandardReportComponent = { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports, 'ICCM': IccmReports, 'Comprehensive Package For Community Midwives': IccmReports }[course.course_type];
-    const hasTestReports = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC');
+    const StandardReportComponent = { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports, 'EmONC': EencReports, 'ICCM': IccmReports, 'Comprehensive Package For Community Midwives': IccmReports }[course.course_type];
+    const hasTestReports = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC');
 
     return (
         <Card>
@@ -227,7 +232,7 @@ function CourseTestReports({ course, participants, allTests }) {
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
     const questions = useMemo(() => {
-        return course.course_type === 'EENC' ? EENC_TEST_QUESTIONS : ICCM_TEST_QUESTIONS;
+        return (course.course_type === 'EENC' || course.course_type === 'EmONC') ? EENC_TEST_QUESTIONS : ICCM_TEST_QUESTIONS;
     }, [course.course_type]);
 
     const filteredParticipants = useMemo(() => 
@@ -1243,17 +1248,37 @@ function EencReports({ course, participants, allObs, allCases }) {
 
     const EencDetailedMatrix = ({ group, scenario }) => {
         const parts = participants.filter(p => p.group === group).sort((a, b) => a.name.localeCompare(b.name));
-        const skillsMap = scenario === 'breathing' ? SKILLS_EENC_BREATHING : SKILLS_EENC_NOT_BREATHING;
-        const domains = Object.keys(skillsMap);
-        const labelsMap = scenario === 'breathing' ? EENC_DOMAIN_LABEL_BREATHING : EENC_DOMAIN_LABEL_NOT_BREATHING;
+        
+        let skillsMap, labelsMap, title;
+
+        if (scenario === 'breathing') {
+            skillsMap = SKILLS_EENC_BREATHING; labelsMap = EENC_DOMAIN_LABEL_BREATHING; title = "Breathing Baby";
+        } else if (scenario === 'not_breathing') {
+            skillsMap = SKILLS_EENC_NOT_BREATHING; labelsMap = EENC_DOMAIN_LABEL_NOT_BREATHING; title = "Not Breathing Baby";
+        } else if (scenario === 'neonatal_emergency') {
+            skillsMap = SKILLS_EMONC_NEONATAL; labelsMap = EMONC_DOMAIN_LABEL_NEONATAL; title = "Neonatal Emergency Care";
+        } else if (scenario === 'maternal_emergency') {
+            skillsMap = SKILLS_EMONC_MATERNAL; labelsMap = EMONC_DOMAIN_LABEL_MATERNAL; title = "Maternal Emergency Care";
+        }
+
+        const domains = Object.keys(skillsMap || {});
 
         if (parts.length === 0) return null;
-        const hasData = parts.some(p => filteredObs.some(o => o.participant_id === p.id && o.age_group === `EENC_${scenario}`));
+        // FIXED: Now checks for both 'breathing' and 'EENC_breathing' formats
+        const hasData = parts.some(p => filteredObs.some(o => o.participant_id === p.id && (o.age_group === scenario || o.age_group === `EENC_${scenario}`)));
         if (!hasData && scenarioFilter !== 'All') return null;
 
         return (
+
+
+
             <div className="grid gap-2 mt-6">
-                <h3 className="text-xl font-semibold">{group} - {scenario === 'breathing' ? "Breathing Baby" : "Not Breathing Baby"}</h3>
+                <h3 className="text-xl font-semibold">{group} - {title}</h3>
+
+
+
+
+
                 <div className="no-scroll-wrapper">
                     <table className="min-w-full text-xs">
                         <thead>
@@ -1268,8 +1293,12 @@ function EencReports({ course, participants, allObs, allCases }) {
                                     <tr className="border-b"><td colSpan={parts.length + 1} className="py-2 px-2 font-semibold bg-gray-100">{labelsMap[domain]}</td></tr>
                                     {skillsMap[domain].map((skill) => {
                                         const participantCells = parts.map(p => {
-                                            const skillObservations = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === skill.text && o.age_group === `EENC_${scenario}`);
+                                            // FIXED: Now filters correctly using both format possibilities
+                                            const skillObservations = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === skill.text && (o.age_group === scenario || o.age_group === `EENC_${scenario}`));
                                             if (skillObservations.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">N/A</td>;
+
+
+
                                             const totalScore = skillObservations.reduce((acc, o) => acc + o.item_correct, 0);
                                             const maxPossibleScore = skillObservations.length * 2;
                                             const percentage = calcPct(totalScore, maxPossibleScore);
@@ -1299,7 +1328,24 @@ function EencReports({ course, participants, allObs, allCases }) {
             <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>Score Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Skill Report</Button></div>
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex gap-4 items-center">
-                    {tab === 'matrix' && <FormGroup label="Scenario"><Select value={scenarioFilter} onChange={(e) => setScenarioFilter(e.target.value)}><option value="All">All (Combined)</option><option value="breathing">Breathing Baby</option><option value="not_breathing">Not Breathing Baby</option></Select></FormGroup>}
+                    {tab === 'matrix' && (
+                        <FormGroup label="Scenario">
+                            <Select value={scenarioFilter} onChange={(e) => setScenarioFilter(e.target.value)}>
+                                <option value="All">All (Combined)</option>
+                                <option value="breathing">Breathing Baby</option>
+                                <option value="not_breathing">Not Breathing Baby</option>
+                                {course.course_type === 'EmONC' && (
+                                    <>
+                                        <option value="neonatal_emergency">Neonatal Emergency</option>
+                                        <option value="maternal_emergency">Maternal Emergency</option>
+                                    </>
+                                )}
+                            </Select>
+                        </FormGroup>
+                    )}
+
+
+
                     <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
                     <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
                 </div>
@@ -1357,10 +1403,12 @@ function EencReports({ course, participants, allObs, allCases }) {
                 );
             })}
 
-            {tab === 'matrix' && groupsToRender.map(g => (
+          {tab === 'matrix' && groupsToRender.map(g => (
                 <div key={g} className="report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                     {(scenarioFilter === 'All' || scenarioFilter === 'breathing') && <EencDetailedMatrix group={g} scenario="breathing" />}
                     {(scenarioFilter === 'All' || scenarioFilter === 'not_breathing') && <EencDetailedMatrix group={g} scenario="not_breathing" />}
+                    {(course.course_type === 'EmONC' && (scenarioFilter === 'All' || scenarioFilter === 'neonatal_emergency')) && <EencDetailedMatrix group={g} scenario="neonatal_emergency" />}
+                    {(course.course_type === 'EmONC' && (scenarioFilter === 'All' || scenarioFilter === 'maternal_emergency')) && <EencDetailedMatrix group={g} scenario="maternal_emergency" />}
                 </div>
             ))}
         </div>
