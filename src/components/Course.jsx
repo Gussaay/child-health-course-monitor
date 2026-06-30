@@ -54,7 +54,10 @@ const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ d
 const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
 
 // --- NEW EmONC FOLDER SUITE LAZY IMPORTS ---
-const EmoncMonitoring = React.lazy(() => import('./EmONC/EmoncMonitoring').then(module => ({ default: module.EmoncMonitoring })));
+const MaternalEmergencyMonitoring = React.lazy(() => import('./EmONC/MaternalEmergencyMonitoring').then(module => ({ default: module.MaternalEmergencyMonitoring })));
+const NeonatalEmergencyMonitoring = React.lazy(() => import('./EmONC/NeonatalEmergencyMonitoring').then(module => ({ default: module.NeonatalEmergencyMonitoring })));
+
+
 
 // --- BULLETPROOF FACILITATOR ID & SYNC MIGRATION MODAL ---
 export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
@@ -1281,6 +1284,7 @@ export function CourseManagementView({
 
     const { user } = useAuth();
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
+const [emoncModule, setEmoncModule] = useState('maternal');
 
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -1798,25 +1802,27 @@ export function CourseManagementView({
                 )}
 
                 {!isGlobalView && selectedCourse && (
-                    <>
-                        <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
-                        
-                        {/* --- DYNAMIC MONITORS BLOCK --- */}
-                        {selectedCourse.course_type === 'EmONC' ? (
-                            <>
-                                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'maternal-monitoring'} onClick={() => setActiveCoursesTab('maternal-monitoring')}>Maternal Monitoring</Button>
-                                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'neonatal-monitoring'} onClick={() => setActiveCoursesTab('neonatal-monitoring')}>Neonatal Monitoring</Button>
-                            </>
-                        ) : (
-                            <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>Monitoring</Button>
-                        )}
-                        
-                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Individual Participant Report</Button>
-                        {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(selectedCourse.course_type)) && (
-                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
-                        )}
-                    </>
-                )}
+    <>
+        <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
+        
+        {/* --- DYNAMIC MONITORS BLOCK --- */}
+        {selectedCourse.course_type === 'EmONC' ? (
+            <>
+                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'maternal-monitoring'} onClick={() => setActiveCoursesTab('maternal-monitoring')}>Maternal Monitor</Button>
+                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'neonatal-monitoring'} onClick={() => setActiveCoursesTab('neonatal-monitoring')}>Neonatal Monitor</Button>
+            </>
+        ) : (
+            <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>Monitoring</Button>
+        )}
+        
+        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Individual Participant Report</Button>
+        {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(selectedCourse.course_type)) && (
+            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
+        )}
+    </>
+)}
+
+
             </div>
             
             <div className="p-4">
@@ -1902,82 +1908,96 @@ export function CourseManagementView({
                 )}
                 
                 {loadingDetails && (!globalTabs.includes(activeCoursesTab)) ? <div className="flex justify-center p-8"><Spinner /></div> : (
-                    <>
-                        {['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) && selectedCourse && (
-                            <ParticipantsView
-                                course={selectedCourse} 
-                                participants={participants} 
-                                onOpen={(id) => { 
-                                    onSetSelectedParticipantId(id); 
-                                    if (selectedCourse.course_type === 'EmONC') {
-                                        setActiveCoursesTab('maternal-monitoring'); 
-                                    } else {
-                                        setActiveCoursesTab('monitoring'); 
-                                    }
-                                }}
-                                onOpenMaternalMonitoring={(id) => { onSetSelectedParticipantId(id); setActiveCoursesTab('maternal-monitoring'); }}
-                                onOpenNeonatalMonitoring={(id) => { onSetSelectedParticipantId(id); setActiveCoursesTab('neonatal-monitoring'); }}
-                                onOpenReport={onOpenParticipantReport} 
-                                onBatchUpdate={onBatchUpdate} 
-                                onOpenTestFormForParticipant={handleOpenTestFormForParticipant}
-                                isCourseActive={isCourseActive} 
-                                canAddParticipant={canManageCourse} 
-                                canImportParticipants={canUseSuperUserAdvancedFeatures}
-                                canCleanParticipantData={canUseSuperUserAdvancedFeatures} 
-                                canBulkChangeParticipants={canUseSuperUserAdvancedFeatures}
-                                canBulkMigrateParticipants={canUseSuperUserAdvancedFeatures} 
-                                canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures || canEditDeleteInactiveCourse}
-                                canEditDeleteParticipantActiveCourse={canManageCourse} 
-                                canEditDeleteParticipantInactiveCourse={canEditDeleteInactiveCourse}
-                                canManageCertificates={canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures}
-                                canUseSuperUserAdvancedFeatures={canUseSuperUserAdvancedFeatures}
-                            />
-                        )}
-                        
-                        {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message="Please select a course from the 'Courses' tab to view participants." />}
-                        
-                        {/* --- STANDARD MONITOR VIEW --- */}
-                        {activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && <Suspense fallback={<Spinner />}><ObservationView course={selectedCourse} participant={currentParticipant} participants={participants} onChangeParticipant={(id) => onSetSelectedParticipantId(id)} /></Suspense>}
-                        {activeCoursesTab === 'monitoring' && selectedCourse && !currentParticipant && activeCoursesTab !== 'courses' && <EmptyState message="Please select a participant from the 'Participants' tab to begin monitoring." />}
-                        
-                        {/* --- SEPARATED EmONC VIEW ROUTING MATRIX --- */}
-                        {activeCoursesTab === 'maternal-monitoring' && selectedCourse && currentParticipant && (
-                            <Suspense fallback={<Spinner />}>
-                                <MaternalEmergencyMonitoring 
-                                    course={selectedCourse} 
-                                    participant={currentParticipant} 
-                                    onCancel={() => setActiveCoursesTab('participants')} 
-                                />
-                            </Suspense>
-                        )}
-                        {activeCoursesTab === 'neonatal-monitoring' && selectedCourse && currentParticipant && (
-                            <Suspense fallback={<Spinner />}>
-                                <NeonatalEmergencyMonitoring 
-                                    course={selectedCourse} 
-                                    participant={currentParticipant} 
-                                    onCancel={() => setActiveCoursesTab('participants')} 
-                                />
-                            </Suspense>
-                        )}
+    <>
+        {/* --- PARTICIPANTS TABLE --- */}
+{['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) && selectedCourse && (
+    <ParticipantsView
+        course={selectedCourse} 
+        participants={participants} 
+        onOpen={(id) => { 
+            onSetSelectedParticipantId(id); 
+            setActiveCoursesTab('monitoring'); // Fix: Force to monitoring tab
+            setEmoncModule('maternal'); // Fix: Always start on Maternal to ensure state clears
+        }}
+        onOpenReport={onOpenParticipantReport} 
+        onBatchUpdate={onBatchUpdate} 
+        onOpenTestFormForParticipant={handleOpenTestFormForParticipant}
+        isCourseActive={isCourseActive} 
+        canAddParticipant={canManageCourse} 
+        canImportParticipants={canUseSuperUserAdvancedFeatures}
+        canCleanParticipantData={canUseSuperUserAdvancedFeatures} 
+        canBulkChangeParticipants={canUseSuperUserAdvancedFeatures}
+        canBulkMigrateParticipants={canUseSuperUserAdvancedFeatures} 
+        canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures || canEditDeleteInactiveCourse}
+        canEditDeleteParticipantActiveCourse={canManageCourse} 
+        canEditDeleteParticipantInactiveCourse={canEditDeleteInactiveCourse}
+        canManageCertificates={canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures}
+        canUseSuperUserAdvancedFeatures={canUseSuperUserAdvancedFeatures}
+    />
+)}
 
-                        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>}
-                        
-                        {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
-                            <CourseTestForm
-                                course={selectedCourse} participants={participants} participantTests={participantTests} initialParticipantId={selectedParticipantId}
-                                onSaveTest={handleSaveParticipantTest} 
-                                onCancel={() => setActiveCoursesTab(selectedParticipantId ? 'participants' : 'courses')}
-                                onSave={() => { setActiveCoursesTab('participants'); onBatchUpdate(); }} 
-                                canManageTests={canManageCourse || canUseFederalManagerAdvancedFeatures} 
-                                onSaveParticipant={async (participantData, facilityUpdateData) => {
-                                    const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData, currentUserIdentifier);
-                                    if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
-                                    return savedParticipant;
-                                }}
-                            />
-                        )}
-                    </>
-                )}
+{activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message="Please select a course from the 'Courses' tab to view participants." />}
+
+{/* --- SPLIT SCREEN MONITORS VIEW OR STANDALONE --- */}
+{activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && (
+    <Suspense fallback={<Spinner />}>
+        {selectedCourse.course_type === 'EmONC' ? (
+            emoncModule === 'maternal' ? (
+                <MaternalEmergencyMonitoring 
+                    course={selectedCourse} 
+                    participant={currentParticipant} 
+                    participants={participants}
+                    onChangeParticipant={(id) => onSetSelectedParticipantId(id)}
+                    onCancel={() => setActiveCoursesTab('participants')} 
+                    switchModule={(mod) => setEmoncModule(mod)} 
+                />
+            ) : (
+                <NeonatalEmergencyMonitoring 
+                    course={selectedCourse} 
+                    participant={currentParticipant} 
+                    participants={participants}
+                    onChangeParticipant={(id) => onSetSelectedParticipantId(id)}
+                    onCancel={() => setActiveCoursesTab('participants')} 
+                    switchModule={(mod) => setEmoncModule(mod)} 
+                />
+            )
+        ) : (
+            <ObservationView 
+                course={selectedCourse} 
+                participant={currentParticipant} 
+                participants={participants} 
+                onChangeParticipant={(id) => onSetSelectedParticipantId(id)} 
+            />
+        )}
+    </Suspense>
+)}
+
+
+
+
+        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>}
+        
+        {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
+            <CourseTestForm
+                course={selectedCourse} participants={participants} participantTests={participantTests} initialParticipantId={selectedParticipantId}
+                onSaveTest={handleSaveParticipantTest} 
+                onCancel={() => setActiveCoursesTab(selectedParticipantId ? 'participants' : 'courses')}
+                onSave={() => { setActiveCoursesTab('participants'); onBatchUpdate(); }} 
+                canManageTests={canManageCourse || canUseFederalManagerAdvancedFeatures} 
+                onSaveParticipant={async (participantData, facilityUpdateData) => {
+                    const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData, currentUserIdentifier);
+                    if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
+                    return savedParticipant;
+                }}
+            />
+        )}
+    </>
+)}
+
+
+
+
+
             </div>
 
             {/* RENDER THE MODAL COMPONENT */}
@@ -2722,7 +2742,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
     const [selectedParticipantId, setSelectedParticipantId] = useState(
         allParticipants && allParticipants.length > 0 ? allParticipants[0].id : null
     );
-    const [emoncTab, setEmoncTab] = useState('maternal'); // Default to maternal
+    const [emoncModule, setEmoncModule] = useState('maternal'); // Internal file pointer router
     
     const currentParticipant = allParticipants?.find(p => p.id === selectedParticipantId);
 
@@ -2746,7 +2766,6 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                          </div>
                     </div>
                     
-                    {/* Global Participant Selector for Public View */}
                     {allParticipants && allParticipants.length > 0 && (
                         <div className="w-full sm:w-auto">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Select Participant</label>
@@ -2758,24 +2777,18 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                 </div>
             </Card>
 
-            {course.course_type === 'EmONC' && (
-                 <div className="flex gap-2">
-                     <Button variant="tab" isActive={emoncTab === 'maternal'} onClick={() => setEmoncTab('maternal')}>Maternal Emergency Monitor</Button>
-                     <Button variant="tab" isActive={emoncTab === 'neonatal'} onClick={() => setEmoncTab('neonatal')}>Neonatal Emergency Monitor</Button>
-                 </div>
-            )}
-
             <Suspense fallback={<div className="flex justify-center p-10"><Spinner /></div>}>
                 {allParticipants && allParticipants.length > 0 ? (
                     currentParticipant ? (
                         course.course_type === 'EmONC' ? (
-                             emoncTab === 'maternal' ? (
+                             emoncModule === 'maternal' ? (
                                   <MaternalEmergencyMonitoring 
                                       course={course} 
                                       participant={currentParticipant} 
                                       participants={allParticipants}
                                       onChangeParticipant={setSelectedParticipantId}
                                       onCancel={() => {}} 
+                                      switchModule={setEmoncModule}
                                       isPublicView={true}
                                   />
                              ) : (
@@ -2785,6 +2798,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                                       participants={allParticipants}
                                       onChangeParticipant={setSelectedParticipantId}
                                       onCancel={() => {}} 
+                                      switchModule={setEmoncModule}
                                       isPublicView={true}
                                   />
                              )
