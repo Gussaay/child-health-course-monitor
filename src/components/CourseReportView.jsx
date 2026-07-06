@@ -459,7 +459,12 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
             const head = [practicalTableHeaders];
             const body = filteredPracticalParticipants.map((p, index) => {
                 const row = [index + 1, p.name, p.total_cases_seen];
-                if (!isSharedView) row.push(getCaseCorrectnessName(p.correctness_percentage));
+                if (course.course_type === 'EmONC' || course.course_type === 'EENC') {
+                    row.push(fmtPct(p.eenc_score), fmtPct(p.maternal_score), fmtPct(p.neonatal_score), fmtPct(p.correctness_percentage));
+                } else {
+                    if (!isSharedView) row.push(getCaseCorrectnessName(p.correctness_percentage));
+                    row.push(fmtPct(p.correctness_percentage));
+                }
                 return row;
             });
 
@@ -477,7 +482,14 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
                         const participant = filteredPracticalParticipants[data.row.index];
                         if (!participant) return;
                         let styles = null;
-                        if (colKey === 'Practical Case Score') styles = getPdfScoreStyles(participant.correctness_percentage);
+                        if (['Practical Category', 'Practical Case Score', 'EENC Score', 'Maternal Score', 'Neonatal Score', 'Overall Score'].includes(colKey)) {
+                            let scoreVal = participant.correctness_percentage;
+                            if (colKey === 'EENC Score') scoreVal = participant.eenc_score;
+                            else if (colKey === 'Maternal Score') scoreVal = participant.maternal_score;
+                            else if (colKey === 'Neonatal Score') scoreVal = participant.neonatal_score;
+                            
+                            styles = getPdfScoreStyles(scoreVal);
+                        }
                         if (styles) { data.cell.styles.fillColor = styles.fillColor; data.cell.styles.textColor = styles.textColor; }
                         if (colKey === 'Participant Name') data.cell.styles.halign = 'right'; else data.cell.styles.halign = 'center';
                     }
@@ -802,10 +814,41 @@ export function CourseReportView({
         const participantsWithStats = reportParticipants.map(p => {
             const participantCases = allCases.filter(c => c.participant_id === p.id);
             const participantObs = allObs.filter(o => o.participant_id === p.id);
+            
             const correctSkills = participantObs.filter(o => o.item_correct > 0).length;
             const totalSkills = participantObs.length;
+
+            // EENC (Early Essential Newborn Care)
+            const eencObs = participantObs.filter(o => o.age_group?.includes('eenc_breathing') || o.age_group?.includes('eenc_not_breathing'));
+            const eencCorrect = eencObs.filter(o => o.item_correct > 0).length;
+            const eencTotal = eencObs.length;
+
+            // Maternal Emergency
+            const maternalObs = participantObs.filter(o => o.age_group?.startsWith('Maternal_') && !o.age_group?.includes('eenc_'));
+            const maternalCorrect = maternalObs.filter(o => o.item_correct > 0).length;
+            const maternalTotal = maternalObs.length;
+
+            // Neonatal Emergency
+            const neonatalObs = participantObs.filter(o => o.age_group?.startsWith('Neonatal_') && !o.age_group?.includes('eenc_'));
+            const neonatalCorrect = neonatalObs.filter(o => o.item_correct > 0).length;
+            const neonatalTotal = neonatalObs.length;
+
             return {
-                ...p, total_cases_seen: participantCases.length, total_skills_recorded: totalSkills, correctness_percentage: calcPct(correctSkills, totalSkills)
+                ...p, 
+                total_cases_seen: participantCases.length, 
+                total_skills_recorded: totalSkills, 
+                correctness_percentage: calcPct(correctSkills, totalSkills),
+                correctness: correctSkills,
+                total: totalSkills,
+                eenc_correct: eencCorrect,
+                eenc_total: eencTotal,
+                eenc_score: calcPct(eencCorrect, eencTotal),
+                maternal_correct: maternalCorrect,
+                maternal_total: maternalTotal,
+                maternal_score: calcPct(maternalCorrect, maternalTotal),
+                neonatal_correct: neonatalCorrect,
+                neonatal_total: neonatalTotal,
+                neonatal_score: calcPct(neonatalCorrect, neonatalTotal)
             };
         });
         
@@ -1044,12 +1087,16 @@ export function CourseReportView({
 
     const showTestScoreColumns = hasTestScores;
     const showCaseColumns = hasCases;
+    
     const practicalTableHeaders = ['#', 'Participant Name', 'Total Cases'];
-    if (!isSharedView) practicalTableHeaders.push('Practical Case Score');
-    const writtenTableHeaders = ['#', 'Participant Name', 'Pre-Test Result', 'Post-Test Result', '% Increase', 'Average Improvement'];
+    if (course.course_type === 'EmONC' || course.course_type === 'EENC') {
+        practicalTableHeaders.push('EENC Score', 'Maternal Score', 'Neonatal Score', 'Overall Score');
+    } else {
+        if (!isSharedView) practicalTableHeaders.push('Practical Category');
+        practicalTableHeaders.push('Overall Score');
+    }
 
-    // --- REPLACED EENC WITH EmONC HERE ---
-    const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC';
+    const writtenTableHeaders = ['#', 'Participant Name', 'Pre-Test Result', 'Post-Test Result', '% Increase', 'Average Improvement'];
 
     const handlePdfGeneration = async (quality) => {
         setIsPdfGenerating(true);
@@ -1699,14 +1746,32 @@ export function CourseReportView({
                                                         <td className="p-3 text-center text-gray-600">{index + 1}</td>
                                                         <td className="p-3 font-semibold text-gray-800 min-w-[200px] whitespace-normal break-words">{p.name}</td>
                                                         <td className="p-3 text-center text-gray-700">{p.total_cases_seen}</td>
-                                                        {!isSharedView && <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</span></td>}
                                                         
-                                                        {/* This fixes the table rendering loop for EENC and EmONC scores */}
-<td className="p-3 text-center">
-    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass((course.course_type === 'EENC' || course.course_type === 'EmONC') ? calcPct(p.score, p.maxScore) : calcPct(p.correctness, p.total))}`}>
-        {fmtPct((course.course_type === 'EENC' || course.course_type === 'EmONC') ? calcPct(p.score, p.maxScore) : calcPct(p.correctness, p.total))}
-    </span>
-</td>
+                                                        {(course.course_type === 'EmONC' || course.course_type === 'EENC') ? (
+                                                            <>
+                                                                <td className="p-3 text-center">
+                                                                    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.eenc_score)}`}>{fmtPct(p.eenc_score)}</span>
+                                                                </td>
+                                                                <td className="p-3 text-center">
+                                                                    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.maternal_score)}`}>{fmtPct(p.maternal_score)}</span>
+                                                                </td>
+                                                                <td className="p-3 text-center">
+                                                                    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.neonatal_score)}`}>{fmtPct(p.neonatal_score)}</span>
+                                                                </td>
+                                                                <td className="p-3 text-center">
+                                                                    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.correctness_percentage)}`}>{fmtPct(p.correctness_percentage)}</span>
+                                                                </td>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {!isSharedView && <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</span></td>}
+                                                                <td className="p-3 text-center">
+                                                                    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.correctness_percentage)}`}>
+                                                                        {fmtPct(p.correctness_percentage)}
+                                                                    </span>
+                                                                </td>
+                                                            </>
+                                                        )}
                                                     </tr>
                                                 ))
                                             )}
