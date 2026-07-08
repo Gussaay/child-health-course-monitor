@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp, collection, getDocs, doc, query, where, orderBy, limit } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle, ShieldCheck } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -28,6 +28,8 @@ import {
 import { STATE_LOCALITIES } from "../constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard';
+import IPCAssessmentForm from './IPCAssessmentForm';
+import HandwashingAssessmentForm from './HandwashingAssessmentForm';
 import { useTranslation } from 'react-i18next';
 import { getAuth } from "firebase/auth";
 import { db } from '../../firebase'; 
@@ -72,9 +74,7 @@ const normalizeState = (stateVal) => {
 
 const normalizeLocality = (stateEnKey, localityVal) => {
     if (!localityVal || localityVal === 'N/A') return 'N/A';
-    
     const cleanVal = localityVal.trim();
-    
     if (stateEnKey && stateEnKey !== 'N/A' && STATE_LOCALITIES[stateEnKey]) {
         const locObj = STATE_LOCALITIES[stateEnKey].localities.find(l => l.en === cleanVal || l.ar === cleanVal || l.ar.trim() === cleanVal);
         if (locObj) return locObj.en;
@@ -88,12 +88,9 @@ const normalizeLocality = (stateEnKey, localityVal) => {
 
 const isDateInRange = (dateString, filterType, customStart, customEnd) => {
     if (!dateString || dateString === 'N/A') return false;
-    
     const dParts = dateString.split('-');
     if (dParts.length !== 3) return false;
     const dateToCompare = new Date(parseInt(dParts[0]), parseInt(dParts[1]) - 1, parseInt(dParts[2]));
-    
-    // Check Custom Start/End first (Overrides dropdown)
     if (customStart || customEnd) {
         let isValid = true;
         if (customStart) {
@@ -108,40 +105,19 @@ const isDateInRange = (dateString, filterType, customStart, customEnd) => {
         }
         return isValid;
     }
-
     if (!filterType) return true;
-
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
     switch (filterType) {
-        case 'today':
-            return dateToCompare.getTime() === today.getTime();
-        case 'yesterday':
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            return dateToCompare.getTime() === yesterday.getTime();
-        case 'this_week':
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - today.getDay());
-            return dateToCompare >= startOfWeek;
-        case 'last_week':
-            const startOfLastWeek = new Date(today);
-            startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
-            const endOfLastWeek = new Date(startOfLastWeek);
-            endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
-            return dateToCompare >= startOfLastWeek && dateToCompare <= endOfLastWeek;
-        case 'this_month':
-            return dateToCompare.getMonth() === today.getMonth() && dateToCompare.getFullYear() === today.getFullYear();
-        case 'last_month':
-            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-            return dateToCompare.getMonth() === lastMonth.getMonth() && dateToCompare.getFullYear() === lastMonth.getFullYear();
-        case 'this_year':
-            return dateToCompare.getFullYear() === today.getFullYear();
-        case 'last_year':
-            return dateToCompare.getFullYear() === today.getFullYear() - 1;
-        default:
-            return true;
+        case 'today': return dateToCompare.getTime() === today.getTime();
+        case 'yesterday': const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1); return dateToCompare.getTime() === yesterday.getTime();
+        case 'this_week': const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - today.getDay()); return dateToCompare >= startOfWeek;
+        case 'last_week': const startOfLastWeek = new Date(today); startOfLastWeek.setDate(today.getDate() - today.getDay() - 7); const endOfLastWeek = new Date(startOfLastWeek); endOfLastWeek.setDate(startOfLastWeek.getDate() + 6); return dateToCompare >= startOfLastWeek && dateToCompare <= endOfLastWeek;
+        case 'this_month': return dateToCompare.getMonth() === today.getMonth() && dateToCompare.getFullYear() === today.getFullYear();
+        case 'last_month': const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1); return dateToCompare.getMonth() === lastMonth.getMonth() && dateToCompare.getFullYear() === lastMonth.getFullYear();
+        case 'this_year': return dateToCompare.getFullYear() === today.getFullYear();
+        case 'last_year': return dateToCompare.getFullYear() === today.getFullYear() - 1;
+        default: return true;
     }
 };
 
@@ -155,7 +131,7 @@ const normalizeJobTitle = (title) => {
     return t;
 };
 
-// Keys mapped to match what is actually saved in VisitReports.jsx
+// --- Visit Report Labels (unchanged) ---
 const IMNCI_SKILLS_LABELS = {
     skill_weight: "قياس الوزن",
     skill_height: "قياس الطول",
@@ -395,10 +371,26 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         ['super_user', 'federal_manager', 'states_manager', 'locality_manager'].includes(permissions?.role);
 
     const addItems = [
-        { id: 'new_skill', label: 'Add New Skill Form', icon: PlusCircle, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
+        { 
+            id: 'new_skill', 
+            label: activeService === 'IPC' ? 'تقييم نظافة الأيدي (Hand Hygiene)' : 'Add New Skill Form', 
+            icon: activeService === 'IPC' ? ShieldCheck : PlusCircle, 
+            color: activeService === 'IPC' ? 'text-cyan-600' : 'text-emerald-600', 
+            bg: activeService === 'IPC' ? 'bg-cyan-100' : 'bg-emerald-100', 
+            border: activeService === 'IPC' ? 'hover:border-cyan-400' : 'hover:border-emerald-400', 
+            shadow: activeService === 'IPC' ? 'hover:shadow-cyan-100' : 'hover:shadow-emerald-100' 
+        },
+        { 
+            id: 'update_facility', 
+            label: activeService === 'IPC' ? 'تقييم برنامج مكافحة العدوى للمنشأة' : 'Update Facility Info', 
+            icon: Building, 
+            color: 'text-cyan-600', 
+            bg: 'bg-cyan-100', 
+            border: 'hover:border-cyan-400', 
+            shadow: 'hover:shadow-cyan-100' 
+        },
         { id: 'new_mother', label: 'Add New Mother Form', icon: Users, color: 'text-pink-600', bg: 'bg-pink-100', border: 'hover:border-pink-400', shadow: 'hover:shadow-pink-100' },
         { id: 'new_visit_report', label: 'Add New Visit Report', icon: ClipboardCheck, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
-        { id: 'update_facility', label: 'Update Facility Info', icon: Building, color: 'text-cyan-600', bg: 'bg-cyan-100', border: 'hover:border-cyan-400', shadow: 'hover:shadow-cyan-100' },
     ];
 
     const viewItems = [
@@ -1713,7 +1705,7 @@ const ServiceSelector = ({ onSelectService }) => {
         { key: 'IMNCI', title: 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
         { key: 'EENC', title: 'Mentorship on Early Essential Newborn Care (EENC)', enabled: true },
         { key: 'ETAT', title: 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)', enabled: false },
-        { key: 'IPC', title: 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)', enabled: false }
+        { key: 'IPC', title: 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)', enabled: true }
     ];
 
     return (
@@ -2096,6 +2088,7 @@ const SkillsMentorshipView = ({
         return map;
     }, [localHealthFacilities]);
 
+    // --- CRITICAL: Normalize IPC service type in processedSubmissions ---
     const processedSubmissions = useMemo(() => {
         const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
         if (!sourceData) return [];
@@ -2114,9 +2107,13 @@ const SkillsMentorshipView = ({
             const normState = normalizeState(rawState);
             const normLocality = normalizeLocality(normState, rawLocality);
 
+            // --- FIX: Normalize IPC service type ---
+            let serviceType = sub.serviceType;
+            if (serviceType === 'IPC_ASSESSMENT') serviceType = 'IPC';
+
             return {
                 id: sub.id,
-                service: sub.serviceType,
+                service: serviceType, // now 'IPC' for IPC assessments
                 date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : (sub.sessionDate || 'N/A'),
                 effectiveDateTimestamp: sub.effectiveDate,
                 state: normState,
@@ -3075,7 +3072,7 @@ const SkillsMentorshipView = ({
         } else if (action === 'update_facility') {
             if (!canAddMentorshipData) return;
             resetSelection();
-            setActiveFormType('facility_update');
+            setActiveFormType(activeService === 'IPC' ? 'ipc_facility_assessment' : 'facility_update');
             setCurrentView('form_setup');
         }
     };
@@ -3190,23 +3187,30 @@ const SkillsMentorshipView = ({
             setIsStandaloneFacilityModalOpen(true);
         }
         else if (activeFormType === 'skills_assessment') {
-            const draftForSelectedWorker = currentUserDrafts.find(d => 
-                d.facilityId === selectedFacilityId && 
-                d.staff === selectedHealthWorkerName
-            );
-
-            if (draftForSelectedWorker) {
-                const confirmEdit = window.confirm(
-                    `يوجد لديك مسودة محفوظة لهذا العامل الصحي: \n\n${draftForSelectedWorker.staff} \n${draftForSelectedWorker.facility} \nبتاريخ: ${draftForSelectedWorker.date}\n\nهل تريد تعديل هذه المسودة؟ \n\n(ملاحظة: الضغط على 'Cancel' سيبدأ جلسة جديدة فارغة لهذا العامل.)`
+            // Skip draft check for IPC
+            if (activeService !== 'IPC') {
+                const draftForSelectedWorker = currentUserDrafts.find(d => 
+                    d.facilityId === selectedFacilityId && 
+                    d.staff === selectedHealthWorkerName
                 );
-                
-                if (confirmEdit) {
-                    handleEditSubmission(draftForSelectedWorker.id);
+
+                if (draftForSelectedWorker) {
+                    const confirmEdit = window.confirm(
+                        `يوجد لديك مسودة محفوظة لهذا العامل الصحي: \n\n${draftForSelectedWorker.staff} \n${draftForSelectedWorker.facility} \nبتاريخ: ${draftForSelectedWorker.date}\n\nهل تريد تعديل هذه المسودة؟ \n\n(ملاحظة: الضغط على 'Cancel' سيبدأ جلسة جديدة فارغة لهذا العامل.)`
+                    );
+                    
+                    if (confirmEdit) {
+                        handleEditSubmission(draftForSelectedWorker.id);
+                    } else {
+                        setEditingSubmission(null);
+                        setIsReadyToStart(true); 
+                    }
                 } else {
                     setEditingSubmission(null);
-                    setIsReadyToStart(true); 
+                    setIsReadyToStart(true);
                 }
             } else {
+                // IPC: directly start without draft check
                 setEditingSubmission(null);
                 setIsReadyToStart(true);
             }
@@ -3396,6 +3400,7 @@ const SkillsMentorshipView = ({
         setIsDraftsModalOpen(false);
     };
 
+    // --- handleEditSubmission with IPC support ---
     const handleEditSubmission = async (submissionId) => {
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
         if (!fullSubmission) return;
@@ -3412,7 +3417,9 @@ const SkillsMentorshipView = ({
         } else if (fullSubmission.serviceType === 'IMNCI') {
             setActiveFormType('skills_assessment');
         } else if (fullSubmission.serviceType === 'EENC') {
-             setActiveFormType('skills_assessment');
+            setActiveFormType('skills_assessment');
+        } else if (fullSubmission.serviceType === 'IPC' || fullSubmission.serviceType === 'IPC_ASSESSMENT') {
+            setActiveFormType('skills_assessment');
         } else {
             setToast({ show: true, message: 'لا يمكن تعديل هذا النوع من الجلسات.', type: 'error' });
             return;
@@ -4074,9 +4081,11 @@ const SkillsMentorshipView = ({
           })
         : selectedFacility;
 
-    if (currentView === 'form_setup' && activeFormType === 'skills_assessment' && (editingSubmission || (isReadyToStart && selectedHealthWorkerName && selectedFacility)) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
+    // --- FORM RENDERING LOGIC WITH IPC SUPPORT ---
+    if (currentView === 'form_setup' && activeFormType === 'skills_assessment' && (editingSubmission || (isReadyToStart && selectedFacility)) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
         
-        if (activeService === 'IMNCI') {
+        // IMNCI
+        if (activeService === 'IMNCI' && (editingSubmission || (isReadyToStart && selectedHealthWorkerName && selectedFacility))) {
             return (
                 <>
                     <SkillsAssessmentForm
@@ -4280,7 +4289,8 @@ const SkillsMentorshipView = ({
                 </>
             );
         }
-        else if (activeService === 'EENC') {
+        // EENC
+        else if (activeService === 'EENC' && (editingSubmission || (isReadyToStart && selectedHealthWorkerName && selectedFacility))) {
             return (
                 <>
                     <EENCSkillsAssessmentForm
@@ -4310,9 +4320,41 @@ const SkillsMentorshipView = ({
                 </>
             );
         }
+        // IPC
+        else if (activeService === 'IPC' && activeFormType === 'skills_assessment' && (editingSubmission || (isReadyToStart && selectedHealthWorkerName && selectedFacility))) {
+            return (
+                <>
+                    <HandwashingAssessmentForm
+                        facility={facilityData}
+                        healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
+                        healthWorkerJobTitle={editingSubmission ? editingSubmission.workerType : workerJobTitle}
+                        onExit={handleExitForm}
+                        onSaveComplete={handleSaveSuccess}
+                        setToast={setToast}
+                        existingSessionData={editingSubmission}
+                    />
+                    <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
+                </>
+            );
+        }
+        // IPC: Facility Assessment Program (Does NOT Require Health Worker)
+        else if (activeService === 'IPC' && activeFormType === 'ipc_facility_assessment' && (editingSubmission || (isReadyToStart && selectedFacility))) {
+            return (
+                <>
+                    <IPCAssessmentForm
+                        facility={facilityData}
+                        onExit={handleExitForm}
+                        onSaveComplete={handleSaveSuccess}
+                        setToast={setToast}
+                        // Note: IPCAssessmentForm assigns 'N/A' to healthworker under the hood automatically
+                    />
+                    <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
+                </>
+            );
+        }
     }
     
-     if (currentView === 'form_setup' && activeFormType === 'mothers_form' && (isReadyToStart && selectedFacility) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
+    if (currentView === 'form_setup' && activeFormType === 'mothers_form' && (isReadyToStart && selectedFacility) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
         
         if (activeService === 'IMNCI') {
             return (
@@ -4353,7 +4395,7 @@ const SkillsMentorshipView = ({
         }
     }
 
-     if (currentView === 'form_setup' && activeFormType === 'visit_report' && (editingSubmission || (isReadyToStart && selectedFacility)) && activeService) {
+    if (currentView === 'form_setup' && activeFormType === 'visit_report' && (editingSubmission || (isReadyToStart && selectedFacility)) && activeService) {
         
         const ReportComponent = activeService === 'IMNCI' ? IMNCIVisitReport : EENCVisitReport;
         
@@ -4397,6 +4439,7 @@ const SkillsMentorshipView = ({
     const isLocalityFilterDisabled = (publicSubmissionMode || publicDashboardMode) ? !selectedState : (isLocalityManager || !selectedState);
 
     if (currentView === 'form_setup') {
+        
         const serviceTitleArabic = activeService === 'EENC' 
             ? "الاشراف التدريبي الداعم على الرعاية الضرورية المبكرة (EENC)"
             : "الاشراف التدريبي الداعم على تطبيق العلاج المتكامل للاطفال اقل من 5 سنوات";
@@ -4577,20 +4620,25 @@ const SkillsMentorshipView = ({
                                 <Button onClick={handleBackToMainMenu} variant="secondary" disabled={isFacilitiesLoading}>إلغاء</Button>
                                 <Button
                                     onClick={handleProceedToForm}
-                                    disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading}
+                                    disabled={
+                                        !selectedFacilityId ||
+                                        (isSkillsAssessmentSetup && !selectedHealthWorkerName) ||
+                                        isFacilitiesLoading
+                                    }
                                     variant="primary"
                                     className="px-8"
                                 >
-                                    {isSkillsAssessmentSetup ? 'بدء الجلسة' : 
-                                     (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير EENC' : 'بدء تقرير زيارة') : 
-                                     (isFacilityUpdateSetup ? 'تحديث بيانات المنشأة' : 'بدء الاستبيان'))}
+                                    {isSkillsAssessmentSetup
+                                        ? (activeService === 'IPC' ? 'بدء التقييم' : 'بدء الجلسة')
+                                        : (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير EENC' : 'بدء تقرير زيارة') : 
+                                           (isFacilityUpdateSetup ? 'تحديث بيانات المنشأة' : 'بدء الاستبيان'))}
                                 </Button>
                             </div>
                         </div>
                     </div>
                 </Modal>
 
-                 {isAddWorkerModalOpen && (
+                {isAddWorkerModalOpen && (
                     <AddHealthWorkerModal
                         isOpen={isAddWorkerModalOpen}
                         onClose={() => setIsAddWorkerModalOpen(false)}
@@ -4609,7 +4657,7 @@ const SkillsMentorshipView = ({
                     />
                 )}
 
-                 <DraftsModal
+                <DraftsModal
                     isOpen={isDraftsModalOpen}
                     onClose={() => setIsDraftsModalOpen(false)}
                     drafts={currentUserDrafts}
@@ -4621,13 +4669,13 @@ const SkillsMentorshipView = ({
                     onEditReport={handleEditVisitReport}
                     canManage={canManageMentorship}
                     userEmail={user?.email}
-                 />
-                 {viewingSubmission && (
+                />
+                {viewingSubmission && (
                     <ViewSubmissionModal
                         submission={viewingSubmission}
                         onClose={() => setViewingSubmission(null)}
                     />
-                 )}
+                )}
                 
                 {isTrainingPrioritiesModalOpen && (
                     <TrainingPrioritiesModal
@@ -4640,7 +4688,7 @@ const SkillsMentorshipView = ({
                     />
                 )}
 
-               {isStandaloneFacilityModalOpen && selectedFacility && (
+                {isStandaloneFacilityModalOpen && selectedFacility && (
                     <Modal 
                         isOpen={isStandaloneFacilityModalOpen} 
                         onClose={() => setIsStandaloneFacilityModalOpen(false)} 
@@ -4798,7 +4846,7 @@ const SkillsMentorshipView = ({
                                     setActiveDashboardWorkerType("");
                                 }}
 
-                                 activeWorkerName={activeDashboardWorkerName}
+                                activeWorkerName={activeDashboardWorkerName}
                                 onWorkerNameChange={(value) => {
                                     setActiveDashboardWorkerName(value);
                                 }}
@@ -4815,7 +4863,7 @@ const SkillsMentorshipView = ({
                     </Modal>
                 )}
 
-                 <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
+                <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );
     }

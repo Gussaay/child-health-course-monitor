@@ -8,13 +8,15 @@ import {
     KpiCard, 
     KpiBarChart,
     IMNCI_MOTHER_SURVEY_ITEMS_EN,
-    EENC_MOTHER_SURVEY_ITEMS_EN   
+    EENC_MOTHER_SURVEY_ITEMS_EN,
+    ipcKpiHelper   // <-- ADDED
 } from './MentorshipDashboardShared';
 import AdminDashboardTab from './AdminDashboardTab';
 import ProviderSkillsTab from './ProviderSkillsTab';
 import MotherInterviewsTab from './MotherInterviewsTab';
 import VisitReportDashboardTab from './VisitReportDashboardTab';
 import FacilityInformationDashboardTab from './FacilityInformationDashboardTab';
+import IPCDashboardTab from './IPCDashboardTab';  // <-- ADDED
 
 import { IMNCI_FORM_STRUCTURE, calculateScores, rehydrateDraftData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS } from './IMNCSkillsAssessmentForm.jsx';
 import { PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS, NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS } from './EENCSkillsAssessmentForm.jsx';
@@ -531,6 +533,8 @@ const MentorshipDashboard = ({
         && sub.status === 'complete'
     ), [reCalculatedSubmissions, activeService]);
 
+    // --- UPDATED: IPC KPI Helper imported above ---
+
     const stateOptions = useMemo(() => !STATE_LOCALITIES ? [] : Object.keys(STATE_LOCALITIES).map(k => ({ key: k, name: STATE_LOCALITIES?.[k]?.[language === 'ar' ? 'ar' : 'en'] || k })).sort((a, b) => a.name.localeCompare(b.name, language)), [STATE_LOCALITIES, language]);
     
     const localityOptions = useMemo(() => (!activeState || !STATE_LOCALITIES?.[activeState]?.localities) ? [] : STATE_LOCALITIES?.[activeState]?.localities.map(l => ({ key: l.en, name: l[language === 'ar' ? 'ar' : 'en'] || l.en })).sort((a, b) => a.name.localeCompare(b.name, language)), [activeState, STATE_LOCALITIES, language]);
@@ -585,11 +589,13 @@ const MentorshipDashboard = ({
         });
     }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter, customStartDate, customEndDate, STATE_LOCALITIES]);
 
+    // --- UPDATED: overallKpis includes IPC ---
     const overallKpis = useMemo(() => {
         if (activeService === 'IMNCI') return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
         if (activeService === 'EENC') return eencKpiHelper(filteredSubmissions.filter(s => s.service === 'EENC'));
+        if (activeService === 'IPC') return ipcKpiHelper(filteredSubmissions);  // <-- ADDED
         return { totalVisits: filteredSubmissions.length, totalCasesObserved: filteredSubmissions.length, totalHealthWorkers: 0, skillStats: {} };
-    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService]);
+    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, ipcKpiHelper, activeService]);
 
     const motherKpis = useMemo(() => {
         if (activeService === 'EENC') return eencMotherKpiHelper(filteredSubmissions);
@@ -977,92 +983,115 @@ const MentorshipDashboard = ({
             
             {/* 3. OPTIMIZED TABS: Stronger visual contrast for the active state */}
             <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-slate-300 w-fit">
-                <button 
-                    className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                    onClick={() => setActiveTabFunc('skills')}
-                >
-                    {t('tab.skills')}
-                </button>
-                <button 
-                    className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'mothers' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                    onClick={() => setActiveTabFunc('mothers')}
-                >
-                    {t('tab.mothers')}
-                </button>
-                <button 
-                    className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'visit_reports' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                    onClick={() => setActiveTabFunc('visit_reports')}
-                >
-                    {t('tab.visit_reports')}
-                </button>
-                <button 
-                    className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'facility_info' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                    onClick={() => setActiveTabFunc('facility_info')}
-                >
-                    {t('Facility Information') || 'Facility Information'}
-                </button>
-                {canEditStatus && (
-                    <button 
-                        className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'admin' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                        onClick={() => setActiveTabFunc('admin')}
-                    >
-                        {t('tab.admin')}
+                {/* --- CONDITIONAL TABS FOR IPC --- */}
+                {activeService !== 'IPC' ? (
+                    <>
+                        <button 
+                            className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                            onClick={() => setActiveTabFunc('skills')}
+                        >
+                            {t('tab.skills')}
+                        </button>
+                        <button 
+                            className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'mothers' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                            onClick={() => setActiveTabFunc('mothers')}
+                        >
+                            {t('tab.mothers')}
+                        </button>
+                        <button 
+                            className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'visit_reports' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                            onClick={() => setActiveTabFunc('visit_reports')}
+                        >
+                            {t('tab.visit_reports')}
+                        </button>
+                        <button 
+                            className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'facility_info' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                            onClick={() => setActiveTabFunc('facility_info')}
+                        >
+                            {t('Facility Information') || 'Facility Information'}
+                        </button>
+                        {canEditStatus && (
+                            <button 
+                                className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'admin' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
+                                onClick={() => setActiveTabFunc('admin')}
+                            >
+                                {t('tab.admin')}
+                            </button>
+                        )}
+                    </>
+                ) : (
+                    // IPC: only one tab (Assessment)
+                    <button className="py-2 px-5 font-semibold text-sm rounded-lg bg-sky-600 shadow-md text-white border border-transparent">
+                        {t('Assessment')}
                     </button>
                 )}
             </div>
 
             <div>
-                {activeTab === 'admin' && canEditStatus && (
-                    <AdminDashboardTab
-                        activeService={activeService} 
-                        overallKpis={overallKpis} 
-                        visitReportStats={visitReportStats} 
-                        motherKpis={motherKpis} 
-                        volumeChartData={volumeChartData}
-                        geographicKpis={geographicKpis} 
-                        filteredSubmissions={filteredSubmissions} 
-                        geographicLevelName={geographicLevelName} 
-                        scopeTitle={scopeTitle} 
-                        dateFilter={dateFilter} 
-                        onDateFilterChange={onDateFilterChange}
-                    />
-                )}
+                {activeService !== 'IPC' ? (
+                    <>
+                        {activeTab === 'admin' && canEditStatus && (
+                            <AdminDashboardTab
+                                activeService={activeService} 
+                                overallKpis={overallKpis} 
+                                visitReportStats={visitReportStats} 
+                                motherKpis={motherKpis} 
+                                volumeChartData={volumeChartData}
+                                geographicKpis={geographicKpis} 
+                                filteredSubmissions={filteredSubmissions} 
+                                geographicLevelName={geographicLevelName} 
+                                scopeTitle={scopeTitle} 
+                                dateFilter={dateFilter} 
+                                onDateFilterChange={onDateFilterChange}
+                            />
+                        )}
 
-                {activeTab === 'skills' && (
-                    <ProviderSkillsTab 
-                        activeService={activeService} overallKpis={overallKpis} chartData={activeService === 'IMNCI' ? imnciChartData : eencChartData}
-                        geographicKpis={geographicKpis} kpisByWorkerType={kpisByWorkerType} imnciSummaryDefs={imnciSummaryDefs} eencSummaryDefs={eencSummaryDefs} scopeTitle={scopeTitle} geographicLevelName={geographicLevelName}
-                        filteredSubmissions={filteredSubmissions}
-                    />
-                )}
+                        {activeTab === 'skills' && (
+                            <ProviderSkillsTab 
+                                activeService={activeService} overallKpis={overallKpis} chartData={activeService === 'IMNCI' ? imnciChartData : eencChartData}
+                                geographicKpis={geographicKpis} kpisByWorkerType={kpisByWorkerType} imnciSummaryDefs={imnciSummaryDefs} eencSummaryDefs={eencSummaryDefs} scopeTitle={scopeTitle} geographicLevelName={geographicLevelName}
+                                filteredSubmissions={filteredSubmissions}
+                            />
+                        )}
 
-                {activeTab === 'mothers' && (
-                    <MotherInterviewsTab 
-                        activeService={activeService} 
-                        motherKpis={motherKpis} 
-                        chartData={activeService === 'IMNCI' ? imnciMotherChartData : eencMotherChartData}
-                        motherGeographicKpis={motherGeographicKpis} 
-                        scopeTitle={scopeTitle} 
+                        {activeTab === 'mothers' && (
+                            <MotherInterviewsTab 
+                                activeService={activeService} 
+                                motherKpis={motherKpis} 
+                                chartData={activeService === 'IMNCI' ? imnciMotherChartData : eencMotherChartData}
+                                motherGeographicKpis={motherGeographicKpis} 
+                                scopeTitle={scopeTitle} 
+                                geographicLevelName={geographicLevelName}
+                                filteredSubmissions={filteredSubmissions}
+                            />
+                        )}
+
+                        {activeTab === 'visit_reports' && (
+                            <VisitReportDashboardTab 
+                                activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILL_GROUPS={EENC_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
+                            />
+                        )}
+
+                        {activeTab === 'facility_info' && (
+                            <FacilityInformationDashboardTab
+                                facilities={localHealthFacilities}
+                                visitReports={visitReports}
+                                allSubmissions={allSubmissions}
+                                activeService={activeService}
+                                activeState={activeState}
+                                activeLocality={activeLocality}
+                                STATE_LOCALITIES={STATE_LOCALITIES}
+                            />
+                        )}
+                    </>
+                ) : (
+                    // --- IPC DASHBOARD ---
+                    <IPCDashboardTab
+                        overallKpis={overallKpis}
+                        geographicKpis={geographicKpis}
+                        scopeTitle={scopeTitle}
                         geographicLevelName={geographicLevelName}
                         filteredSubmissions={filteredSubmissions}
-                    />
-                )}
-
-                {activeTab === 'visit_reports' && (
-                    <VisitReportDashboardTab 
-                        activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILL_GROUPS={EENC_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
-                    />
-                )}
-
-                {activeTab === 'facility_info' && (
-                    <FacilityInformationDashboardTab
-                        facilities={localHealthFacilities}
-                        visitReports={visitReports}
-                        allSubmissions={allSubmissions}
-                        activeService={activeService}
-                        activeState={activeState}
-                        activeLocality={activeLocality}
-                        STATE_LOCALITIES={STATE_LOCALITIES}
                     />
                 )}
             </div>

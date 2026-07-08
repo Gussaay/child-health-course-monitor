@@ -182,6 +182,18 @@ export const EENC_MOTHER_SURVEY_ITEMS_EN = [
     ]}
 ];
 
+// --- IPC Core Components for dashboard ---
+export const IPC_CORE_COMPONENTS = [
+  { key: 'cc1', label: 'Core Component 1: IPC Program' },
+  { key: 'cc2', label: 'Core Component 2: IPC Guidelines' },
+  { key: 'cc3', label: 'Core Component 3: IPC Training' },
+  { key: 'cc4', label: 'Core Component 4: Surveillance' },
+  { key: 'cc5', label: 'Core Component 5: Multimodal Strategies' },
+  { key: 'cc6', label: 'Core Component 6: Monitoring/Audit' },
+  { key: 'cc7', label: 'Core Component 7: Workload & Staffing' },
+  { key: 'cc8', label: 'Core Component 8: Environment & Materials' }
+];
+
 const calculateAverage = (scores) => {
     if (!scores || !Array.isArray(scores)) return null;
     const validScores = scores.filter(s => isFinite(s) && !isNaN(s) && s !== null);
@@ -1290,4 +1302,69 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
             )}
         </div>
     );
+};
+
+// --- IPC KPI Helper ---
+export const ipcKpiHelper = (submissions) => {
+  // Filter IPC assessments
+  const ipcSubmissions = submissions.filter(sub => sub.service === 'IPC' || sub.serviceType === 'IPC');
+  if (ipcSubmissions.length === 0) {
+    return {
+      totalVisits: 0,
+      totalFacilities: 0,
+      avgOverall: null,
+      totalScore: 0,
+      totalMax: 0,
+      skillStats: {}
+    };
+  }
+
+  const uniqueVisits = new Set(ipcSubmissions.map(s => s.id || `${s.facilityId}_${s.date}`));
+  const uniqueFacilities = new Set(ipcSubmissions.map(s => s.facilityId).filter(Boolean));
+
+  // Initialize stats for each core component
+  const skillStats = {};
+  IPC_CORE_COMPONENTS.forEach(cc => {
+    skillStats[cc.key] = { score: 0, max: 0 };
+  });
+
+  let totalScore = 0;
+  let totalMax = 0;
+
+  ipcSubmissions.forEach(sub => {
+    const scores = sub.scores || {};
+    const sectionScores = scores.sections || {};
+    let subTotal = 0;
+    let subMax = 0;
+
+    IPC_CORE_COMPONENTS.forEach(cc => {
+      const secScore = sectionScores[cc.key] || 0;
+      const secMax = 100; // each component max score is 100
+      subTotal += secScore;
+      subMax += secMax;
+      skillStats[cc.key].score += secScore;
+      skillStats[cc.key].max += secMax;
+    });
+
+    totalScore += subTotal;
+    totalMax += subMax;
+  });
+
+  const avgOverall = totalMax > 0 ? (totalScore / totalMax) : null;
+
+  const avgPerComponent = {};
+  IPC_CORE_COMPONENTS.forEach(cc => {
+    const max = skillStats[cc.key].max;
+    avgPerComponent[`avg${cc.key.toUpperCase()}`] = max > 0 ? (skillStats[cc.key].score / max) : null;
+  });
+
+  return {
+    totalVisits: uniqueVisits.size,
+    totalFacilities: uniqueFacilities.size,
+    avgOverall,
+    totalScore,
+    totalMax,
+    ...avgPerComponent,
+    skillStats
+  };
 };
