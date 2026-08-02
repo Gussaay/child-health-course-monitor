@@ -115,29 +115,6 @@ export const EMONC_MATERNAL_QUESTIONS = [
     { id: 'mat_q36', text: '48. When using a bag and mask to resuscitate a newborn, the newborn\'s neck must be slightly extended to open the airway.', type: 'mc', options: [{id: 'a', text: 'True'}, {id: 'b', text: 'False'}], correctAnswer: 'a' }
 ];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export const ICCM_TEST_QUESTIONS = [
     { id: 'q1', text: '1. أي من الآتي علامة خطر تستوجب تحويلا عاجلا للمستشفى؟', type: 'mc', options: [{ id: 'a', text: 'حرارة خفيفة يوم واحد' }, { id: 'b', text: 'عدم القدرة على الشرب أو الرضاعة' }, { id: 'c', text: 'رشح بسيط' }, { id: 'd', text: 'سعال الثلاثة أيام' }], correctAnswer: 'b' },
     { id: 'q2', text: '2. التشنجات أثناء المرض الحالي تتطلب', type: 'mc', options: [{ id: 'a', text: 'علاج منزلي' }, { id: 'b', text: 'متابعة بعد يومين' }, { id: 'c', text: 'تحويل فوري' }], correctAnswer: 'c' },
@@ -164,6 +141,19 @@ export const SSNB_WARMER_TEST_QUESTIONS = [
     { id: 'q5', text: '5. كيف يتم تعقيم لبسة الدفاية', type: 'mc', options: [{ id: 'a', text: 'غسلها بالماء والصابون ثم المسح بالكجول قبل الاستخدام' }, { id: 'b', text: 'نقعها في محلول الكلور' }], correctAnswer: 'a' }
 ];
 
+export const SSNB_SEPSIS_TEST_QUESTIONS = [
+    { id: 'sep_q1', text: '1. Rupture of membranes is considered prolonged if it occurs before labor by:', type: 'mc', options: [{ id: 'a', text: '12 hours' }, { id: 'b', text: '18 hours' }, { id: 'c', text: '24 hours' }, { id: 'd', text: '36 hours' }], correctAnswer: 'b' },
+    { id: 'sep_q2', text: '2. The most common source of postnatal infections in hospitalized newborns?', type: 'mc', options: [{ id: 'a', text: 'Contaminated I.V sets and cannulas' }, { id: 'b', text: 'Hand contamination by staff' }, { id: 'c', text: 'Incubators' }], correctAnswer: 'b' },
+    { id: 'sep_q3', text: '3. What is the most common source for neonatal tetanus infection?', type: 'mc', options: [{ id: 'a', text: 'Birth canal colonization with bacteria' }, { id: 'b', text: 'Septic umbilical cord care measures' }, { id: 'c', text: 'Transmission through the placenta' }], correctAnswer: 'b' },
+    { id: 'sep_q4', text: '4. The commonest bacteria that causes early neonatal sepsis is?', type: 'mc', options: [{ id: 'a', text: 'Staph aureus' }, { id: 'b', text: 'E. coli' }, { id: 'c', text: 'Listeria' }, { id: 'd', text: 'None of the above' }], correctAnswer: 'b' },
+    { id: 'sep_q5', text: '5. A primigravida presents in labor at 38 weeks. She has temperature of 38.5°C. What is the best management?', type: 'mc', options: [{ id: 'a', text: 'Observe only' }, { id: 'b', text: 'Start intrapartum antibiotics' }, { id: 'c', text: 'Antibiotics after delivery only' }, { id: 'd', text: 'Immediate cesarean section' }], correctAnswer: 'b' },
+    { id: 'sep_q6', text: '6. What is the best preventive measure to reduce hospital-acquired infections?', type: 'mc', options: [{ id: 'a', text: '1. Hand hygiene' }, { id: 'b', text: '2. Use of antibiotics' }, { id: 'c', text: '3. Environmental cleaning and hygiene' }, { id: 'd', text: '4. Safe injection practices' }], correctAnswer: 'a' },
+    { id: 'sep_q7', text: '7. Signs of neonatal sepsis suspicion include:', type: 'mc', options: [{ id: 'a', text: 'Poor feeding, lethargy, or decreased activity' }, { id: 'b', text: 'Temperature instability and respiratory distress' }, { id: 'c', text: 'Irritability, severe jaundice, or poor perfusion' }, { id: 'd', text: 'All of the above' }], correctAnswer: 'd' },
+    { id: 'sep_q8', text: '8. Use of antibiotics in suspected neonatal sepsis should be:', type: 'mc', options: [{ id: 'a', text: '1. Started only after culture results are available' }, { id: 'b', text: '2. Take culture and started empirically until culture results are reported' }, { id: 'c', text: '3. Given blindly according to previous experience' }, { id: 'd', text: '4. Initiated with broad-spectrum antibiotics regardless of results' }], correctAnswer: 'b' },
+    { id: 'sep_q9', text: '9. Regarding negative blood culture:', type: 'mc', options: [{ id: 'a', text: '1. It excludes the diagnosis of sepsis' }, { id: 'b', text: '2. It is not a specific investigation' }, { id: 'c', text: '3. It must be correlated with clinical condition to diagnose sepsis' }, { id: 'd', text: '4. Stop antibiotics temporarily and collect another sample' }], correctAnswer: 'c' },
+    { id: 'sep_q10', text: '10. Control measures when MDR (multidrug-resistant) bacteria are isolated:', type: 'mc', options: [{ id: 'a', text: '1. Isolate the patient, assign dedicated nurse and equipment, and ensure strict hand hygiene' }, { id: 'b', text: '2. Use gloves and disinfect the environment regularly' }, { id: 'c', text: '3. Discharge to the ward beside the mother' }, { id: 'd', text: '4. Report the case to the Ministry of Health' }], correctAnswer: 'a' }
+];
+
 export const IMNCI_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Which of the following signs are "general danger sign" in a sick child aged 2 months up to five years?', type: 'mc', options: [{ id: 'a', text: 'Axillary temperature ≥39.0°c' }, { id: 'b', text: 'Lethargy' }, { id: 'c', text: 'Blood in the stool' }, { id: 'd', text: 'Axillary temperature ≥37.5°c for more than 7 days' }], correctAnswer: 'b' },
     { id: 'q2', text: '2. All of the following are the main causes of mortality in under-five children in the country except?', type: 'mc', options: [{ id: 'a', text: 'Diarrheal diseases' }, { id: 'b', text: 'Pneumonia' }, { id: 'c', text: 'Road traffic injuries' }, { id: 'd', text: 'Malnutrition' }], correctAnswer: 'c' },
@@ -177,7 +167,7 @@ export const IMNCI_TEST_QUESTIONS = [
     { id: 'q10', text: '10. How do you classify a 3-year-old child who has a history of fever for 2 days, has an axillary temperature of 39.5°c, and in whom there is resistance when you try to bend his neck forward toward his chest?', type: 'mc', options: [{ id: 'a', text: 'very severe febrile disease' }, { id: 'b', text: 'malaria' }, { id: 'c', text: 'fever– malaria unlikely' }, { id: 'd', text: 'mastoiditis' }], correctAnswer: 'a' },
     { id: 'q11', text: '11. Which of the following signs classify a 3-year-old child as having mastoiditis?', type: 'mc', options: [{ id: 'a', text: 'pus draining from the ear for 5 days' }, { id: 'b', text: 'redness of ear pinna (auricle)' }, { id: 'c', text: 'tender swelling behind the ear' }, { id: 'd', text: 'ear pain' }], correctAnswer: 'c' },
     { id: 'q12', text: '12. Which of the following signs are used to classify the child as having SAM malnutrition?', type: 'mc', options: [{ id: 'a', text: 'mouth ulcers' }, { id: 'b', text: 'edema of both feet' }, { id: 'c', text: 'skin pigmentation' }, { id: 'd', text: 'Hair changes' }], correctAnswer: 'b' },
-    { id: 'q13', text: '13. In a 12-month-old child with cough and diarrhea, which of the following signs is an indication for an urgent referral?', type: 'mc', options: [{ id: 'a', text: 'restless, irritable' }, { id: 'b', text: 'respiratory rate of 65 per minute' }, { id: 'c', text: 'axillary temperature ≥ 39.0°c' }, { id: 'd', text: 'child unable to breastfeed' }], correctAnswer: 'd' },
+    { id: 'q13', text: '13. In a 12-month-old child with cough and diarrhea, which of the following signs is an indication for urgent referral?', type: 'mc', options: [{ id: 'a', text: 'restless, irritable' }, { id: 'b', text: 'respiratory rate of 65 per minute' }, { id: 'c', text: 'axillary temperature ≥ 39.0°c' }, { id: 'd', text: 'child unable to breastfeed' }], correctAnswer: 'd' },
     { id: 'q14', text: '14. Which of the following statements are true?', type: 'mc', options: [{ id: 'a', text: 'a child who is immunocompromised should not be given BCG vaccine' }, { id: 'b', text: 'a child who has a fever should not be immunized' }, { id: 'c', text: 'a child who is being referred for severe classification should be immunized before referral.' }, { id: 'd', text: 'a child who is low weight should not be immunized' }], correctAnswer: 'a' },
     { id: 'q15', text: '15. Which treatment is not given to a 2-year-old child who is having convulsions at the PHC health facility?', type: 'mc', options: [{ id: 'a', text: 'diazepam rectally' }, { id: 'b', text: 'first dose of an appropriate antibiotic' }, { id: 'c', text: 'first dose of IV calcium' }, { id: 'd', text: 'sugar water to prevent low blood sugar' }], correctAnswer: 'c' },
     { id: 'q16', text: '16. How can a zinc tablet be given? All of the following are correct except?', type: 'mc', options: [{ id: 'a', text: 'dissolved in a small amount of expressed breast milk' }, { id: 'b', text: 'dissolved in ORS' }, { id: 'c', text: 'dissolved in clean water' }, { id: 'd', text: 'let the child chew it if less than 12 months old' }], correctAnswer: 'd' },
@@ -402,8 +392,6 @@ const initializeAnswers = (questions) => {
     return initialAnswers;
 };
 
-// Initialize manual scores array. 
-// For open questions with 'n' lines, we store an array of size 'n'.
 const initializeManualScores = (questions, existingScores = {}) => {
     const scores = {};
     questions.forEach(q => {
@@ -411,7 +399,6 @@ const initializeManualScores = (questions, existingScores = {}) => {
             if (existingScores[q.id] && Array.isArray(existingScores[q.id])) {
                  scores[q.id] = existingScores[q.id];
             } else {
-                 // Initialize with 0s for all lines
                  scores[q.id] = Array(q.lines).fill(0);
             }
         }
@@ -419,13 +406,19 @@ const initializeManualScores = (questions, existingScores = {}) => {
     return scores;
 };
 
+const getQueryParam = (param) => {
+    if (typeof window !== 'undefined' && window.location && window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(param);
+    }
+    return null;
+};
+
 const TestResultScreen = ({ 
     participantName, testType, score, total, percentage, onBack, 
     canManageTests, onEdit, onDelete, isExistingResult, resultData
 }) => {
-    // Determine if we should only show the MCQ score (has open questions and not yet graded)
     const showMcqOnly = resultData?.hasOpenQuestions && !resultData?.isGraded;
-    
     const displayPercent = showMcqOnly ? (resultData.mcqPercentage || 0) : percentage;
     const displayScore = showMcqOnly ? (resultData.mcqScore || 0) : score;
     const displayTotal = showMcqOnly ? (resultData.mcqTotal || 0) : total;
@@ -434,7 +427,7 @@ const TestResultScreen = ({
     const scoreClass = percent >= 80 ? 'text-green-600' : percent >= 60 ? 'text-yellow-600' : 'text-red-600';
 
     return (
-        <Card>
+        <Card style={{ direction: 'ltr', textAlign: 'left' }}>
             <div className="p-6 text-center">
                 <PageHeader title="Test Result" subtitle={`Score for ${participantName} (${testType})`} />
                 {isExistingResult && (
@@ -444,12 +437,10 @@ const TestResultScreen = ({
                 )}
                 <div className="my-8">
                     <div className={`text-6xl font-bold ${scoreClass}`}>{percent}%</div>
-                    {/* Only show scores if it's not a legacy record missing score totals */}
                     {!resultData?.isLegacy && (
                         <div className="text-xl text-gray-700 mt-2">({displayScore} / {displayTotal} Total Points)</div>
                     )}
                     
-                    {/* Dynamic helper text based on grading status */}
                     {showMcqOnly ? (
                         <p className="text-sm text-blue-600 mt-4 font-medium max-w-lg mx-auto">
                             * Score reflects auto-graded multiple choice questions only. Open-ended questions will be graded later by a facilitator.
@@ -474,7 +465,6 @@ const TestResultScreen = ({
     );
 };
 
-// --- NEW COMPONENT: Test Scores Dashboard ---
 const TestScoresDashboard = ({ 
     courseId,
     participants, 
@@ -485,13 +475,10 @@ const TestScoresDashboard = ({
     canManageTests
 }) => {
     
-    // --- UPDATED: Helper to get a specific test result, falling back to legacy flat scores ---
     const getTest = (participant, type) => {
-        // 1. Try to find the new, detailed test record format first
         const detailedTest = participantTests.find(t => t.participantId === participant.id && t.testType === type);
         if (detailedTest) return detailedTest;
 
-        // 2. Fallback to the legacy flat score stored directly on the participant profile
         const legacyScore = type === 'pre-test' ? participant.pre_test_score : participant.post_test_score;
         if (legacyScore !== undefined && legacyScore !== null && legacyScore !== '') {
             return { 
@@ -502,10 +489,9 @@ const TestScoresDashboard = ({
             };
         }
         
-        return null; // No test found
+        return null;
     };
 
-    // Helper for Percentage Styling
     const getScoreStyle = (percentage) => {
         if (percentage >= 80) return "text-green-700 font-bold bg-green-50 px-2 py-1 rounded";
         if (percentage >= 60) return "text-yellow-700 font-bold bg-yellow-50 px-2 py-1 rounded";
@@ -513,7 +499,7 @@ const TestScoresDashboard = ({
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4" style={{ direction: 'ltr', textAlign: 'left' }}>
              <div className="flex justify-between items-center">
                  <h2 className="text-xl font-bold text-gray-800">Test Scores Overview</h2>
                  <div className="flex gap-2">
@@ -553,7 +539,6 @@ const TestScoresDashboard = ({
                                 <td className="p-4 border font-medium">{p.name}</td>
                                 <td className="p-4 border">{p.group || '-'}</td>
                                 
-                                {/* Pre-Test Column */}
                                 <td className="p-4 border">
                                     <div className="flex items-center gap-4">
                                         {preTest ? (
@@ -625,7 +610,6 @@ const TestScoresDashboard = ({
                                     </div>
                                 </td>
 
-                                {/* Post-Test Column */}
                                 <td className="p-4 border">
                                     <div className="flex items-center gap-4">
                                         {postTest ? (
@@ -705,7 +689,6 @@ const TestScoresDashboard = ({
     );
 };
 
-// --- NEW COMPONENT: Facility Selection Popup ---
 const FacilitySelectionModal = ({ 
     isOpen, 
     onClose, 
@@ -714,7 +697,6 @@ const FacilitySelectionModal = ({
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Reset search when modal opens
     useEffect(() => {
         if (isOpen) setSearchTerm('');
     }, [isOpen]);
@@ -728,7 +710,7 @@ const FacilitySelectionModal = ({
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Select Health Facility">
-            <div className="p-4 flex flex-col h-[60vh]">
+            <div className="p-4 flex flex-col h-[60vh]" style={{ direction: 'ltr', textAlign: 'left' }}>
                 <div className="mb-4">
                     <Input 
                         placeholder="Search for a facility..." 
@@ -776,106 +758,124 @@ export function CourseTestForm({
     canManageTests = false,
     testType: initialTestType
 }) {
-    // Helper to normalize URL parameters ("pre", "post") to matched database values ("pre-test", "post-test")
     const normalizeTestType = (type) => {
         if (type === 'pre') return 'pre-test';
         if (type === 'post') return 'post-test';
         return type;
     };
 
-    // --- MAIN STATE: Controls View Mode (Dashboard vs Entry Form) ---
-    // If it's a public view, default to 'entry'. If admin view, default to 'dashboard'
+    const lockedModule = getQueryParam('module');
+    const lockedType = getQueryParam('type');
+
+    // --- Auto-assign sub-course from course facilitator assignments for shared (public) links ---
+    const autoSubCourse = useMemo(() => {
+        if (!isPublicView || !course?.facilitatorAssignments?.length) return null;
+        const subTypes = [...new Set(course.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))];
+        return subTypes.length > 0 ? subTypes[0] : null;
+    }, [isPublicView, course]);
+
+    const effectiveLockedModule = lockedModule || (isPublicView ? autoSubCourse : null);
+
     const [viewMode, setViewMode] = useState(isPublicView ? 'entry' : 'dashboard'); 
     
-const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
+    const [emoncSubCourse, setEmoncSubCourse] = useState(() => {
+        if ((course?.course_type === 'EmONC' || course?.course_type === 'EENC') && effectiveLockedModule) return effectiveLockedModule;
+        return 'Emergency Newborn Care';
+    });
 
+    const [ssnbSubCourse, setSsnbSubCourse] = useState(() => {
+        if ((course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && effectiveLockedModule) return effectiveLockedModule;
+        return 'Portable warmer training'; 
+    });
 
-    // Check if course is Program Management
     const isProgramManagement = course?.course_type === 'Program Management';
 
-    const { testQuestions, testTitle, isRtl, jobTitleOptions, isIccm } = useMemo(() => {
+    // Sync sub-course state when auto-detected from course facilitator assignments (shared public links)
+    useEffect(() => {
+        if (!isPublicView || !autoSubCourse) return;
+        if (course?.course_type === 'EmONC' || course?.course_type === 'EENC') {
+            setEmoncSubCourse(autoSubCourse);
+        }
+        if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
+            setSsnbSubCourse(autoSubCourse);
+        }
+    }, [autoSubCourse, isPublicView, course?.course_type]);
+
+    // Enforce left-to-right alignment across all test views and course types
+    const { testQuestions, testTitle, jobTitleOptions, isIccm } = useMemo(() => {
         let titles = [];
-        let isIccm = false;
+        let isIccmFlag = false;
         
         if (course?.course_type === 'ETAT') {
              titles = JOB_TITLES_ETAT;
              return { 
                  testQuestions: ETAT_TEST_QUESTIONS, 
                  testTitle: 'ETAT Pre/Post Test Entry', 
-                 isRtl: false, 
                  jobTitleOptions: titles, 
                  isIccm: false 
              };
         }
         
         if (course?.course_type === 'Comprehensive Package For Community Midwives') {
-            titles = ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
+            titles = ["Community Midwife", "Health Visitor", "Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
             return { 
                 testQuestions: CPCM_TEST_QUESTIONS, 
                 testTitle: 'Comprehensive Package For Community Midwives Test', 
-                isRtl: true, 
                 jobTitleOptions: titles, 
                 isIccm: true 
             };
         }
 
         if (course?.course_type === 'Program Management') {
-            titles = ["مدير", "منسق", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
+            titles = ["Manager", "Coordinator", "Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
             return { 
                 testQuestions: PROGRAM_MANAGEMENT_TEST_QUESTIONS, 
                 testTitle: 'Program Management (Operational Guide) Test', 
-                isRtl: true, 
                 jobTitleOptions: titles, 
                 isIccm: false 
             };
         }
 
         if (course?.course_type === 'ICCM') {
-            titles = ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
-            isIccm = true;
-            return { testQuestions: ICCM_TEST_QUESTIONS, testTitle: 'ICCM Pre/Post Test Entry', isRtl: true, jobTitleOptions: titles, isIccm: isIccm };
+            titles = ["Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
+            isIccmFlag = true;
+            return { testQuestions: ICCM_TEST_QUESTIONS, testTitle: 'ICCM Pre/Post Test Entry', jobTitleOptions: titles, isIccm: isIccmFlag };
         }
         
-        // --- UPDATED: Replaced EENC with EmONC and combined question blocks ---
        if (course?.course_type === 'EmONC' || course?.course_type === 'EENC') {
-            titles = JOB_TITLES_EMONC; // FIXED
+            titles = JOB_TITLES_EMONC; 
             const extraQuestions = emoncSubCourse === 'Emergency Newborn Care' 
                 ? EMONC_NEONATAL_QUESTIONS 
                 : EMONC_MATERNAL_QUESTIONS;
             return { 
                 testQuestions: [...EENC_TEST_QUESTIONS, ...extraQuestions], 
                 testTitle: `EmONC Pre/Post Test - ${emoncSubCourse}`, 
-                isRtl: false, 
                 jobTitleOptions: titles, 
-                isIccm: isIccm 
+                isIccm: isIccmFlag 
             };
         }
         
         if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
-            titles = JOB_TITLES_EMONC; // FIXED
-            return { testQuestions: SSNB_WARMER_TEST_QUESTIONS, testTitle: 'SSNB Portable Warmer Test', isRtl: true, jobTitleOptions: titles, isIccm: false };
+            titles = JOB_TITLES_EMONC; 
+            let questionsToUse = SSNB_WARMER_TEST_QUESTIONS;
+            if (ssnbSubCourse === 'Sepsis surveillance and management') {
+                questionsToUse = SSNB_SEPSIS_TEST_QUESTIONS;
+            }
+            return { testQuestions: questionsToUse, testTitle: `SSNB Test - ${ssnbSubCourse}`, jobTitleOptions: titles, isIccm: false };
         }
         if (course?.course_type === 'IMNCI') {
-             titles = JOB_TITLES_EMONC; // FIXED
-             return { testQuestions: IMNCI_TEST_QUESTIONS, testTitle: 'IMNCI Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: false };
+             titles = JOB_TITLES_EMONC; 
+             return { testQuestions: IMNCI_TEST_QUESTIONS, testTitle: 'IMNCI Pre/Post Test Entry', jobTitleOptions: titles, isIccm: false };
     
         }
-        return { testQuestions: [], testTitle: 'Test Entry', isRtl: false, jobTitleOptions: [], isIccm: false }; 
-    }, [course?.course_type, emoncSubCourse]); //
-
-
-
+        return { testQuestions: [], testTitle: 'Test Entry', jobTitleOptions: [], isIccm: false }; 
+    }, [course?.course_type, emoncSubCourse, ssnbSubCourse]); 
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
-    
-    // --- UPDATED: Normalize test type on initial load so internal references always use 'pre-test' or 'post-test' ---
-    const [testType, setTestType] = useState(() => normalizeTestType(initialTestType) || 'pre-test'); 
+    const [testType, setTestType] = useState(() => normalizeTestType(lockedType || initialTestType) || 'pre-test'); 
     
     const [answers, setAnswers] = useState(() => initializeAnswers(testQuestions));
-    
-    // --- Manual Grading State ---
     const [manualScores, setManualScores] = useState({});
-
     const [error, setError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [submissionResult, setSubmissionResult] = useState(null);
@@ -885,15 +885,11 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
     const [isNewParticipantModalOpen, setIsNewParticipantModalOpen] = useState(false);
     const [localParticipants, setLocalParticipants] = useState(participants);
 
-    // --- NEW STATE for Facility Selector ---
     const [isFacilitySelectorOpen, setIsFacilitySelectorOpen] = useState(false);
-    
-    // --- NEW STATE for Success Popups ---
     const [showParticipantSuccessModal, setShowParticipantSuccessModal] = useState(false);
     const [showTestSubmitSuccessModal, setShowTestSubmitSuccessModal] = useState(false);
     const [lastSubmissionStats, setLastSubmissionStats] = useState(null);
 
-    // Multi-state setup for Registration inside Test form
     const courseStates = useMemo(() => course?.states || (course?.state ? course.state.split(',').map(s=>s.trim()) : []), [course]);
     const courseLocalities = useMemo(() => course?.localities || (course?.locality ? course.locality.split(',').map(l=>l.trim()) : []), [course]);
 
@@ -912,7 +908,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
     const [isParticipantInfoSaved, setIsParticipantInfoSaved] = useState(false);
     const [participantNameForDisplay, setParticipantNameForDisplay] = useState('');
 
-    // --- UPDATED: Update testType if prop changes and normalize it ---
     useEffect(() => {
         if (initialTestType) {
             setTestType(normalizeTestType(initialTestType));
@@ -927,7 +922,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
     }, [localParticipants]);
 
    const sortedParticipants = useMemo(() => {
-        // Defensive check: Filter out any invalid participants AND soft-deleted ones
         return [...localParticipants]
             .filter(p => p && p.name && p.isDeleted !== true && p.isDeleted !== "true") 
             .sort((a, b) => a.name.localeCompare(b.name));
@@ -939,7 +933,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         return filtered;
     }, [sortedParticipants, selectedSetupGroup]);
     
-    // Update existing results detection to safely handle `participantTests`
     const existingResults = useMemo(() => {
         const results = { 'pre-test': null, 'post-test': null };
         if (!selectedParticipantId || !participantTests) return results;
@@ -952,23 +945,20 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         return results;
     }, [selectedParticipantId, participantTests]);
 
-    // Handle "View/Edit" click from Dashboard
     const handleDashboardEdit = (pId, type) => {
         setSelectedParticipantId(pId);
         setTestType(type);
         setViewMode('entry');
         
-        // Find existing result to load
         const result = (participantTests || []).find(t => t.participantId === pId && t.testType === type);
         if (result) {
             setAnswers(result.answers || initializeAnswers(testQuestions));
             setManualScores(initializeManualScores(testQuestions, result.manualScores));
             setIsEditing(true);
-            setIsSetupModalOpen(false); // Skip modal, go straight to form
+            setIsSetupModalOpen(false); 
         }
     };
 
-    // Handle "Add Score" click from Dashboard
     const handleDashboardAdd = (type, pId = null, isNewUser = false) => {
         setTestType(type);
         if (isNewUser) {
@@ -979,10 +969,10 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         }
         setViewMode('entry');
         setIsEditing(false);
-        setIsSetupModalOpen(isNewUser ? false : true); // If add existing, confirm in modal (or skip if we want direct entry)
-        if(pId && !isNewUser) setIsSetupModalOpen(false); // Direct entry if ID known
+        setIsSetupModalOpen(isNewUser ? false : true);
+        if(pId && !isNewUser) setIsSetupModalOpen(false); 
         setAnswers(initializeAnswers(testQuestions));
-        setManualScores(initializeManualScores(testQuestions)); // Initialize fresh scores
+        setManualScores(initializeManualScores(testQuestions)); 
         setSubmissionResult(null);
     };
 
@@ -990,22 +980,12 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         if (!window.confirm(`Are you sure you want to delete the ${type} result?`)) return;
         try {
             await deleteParticipantTest(course.id, pId, type);
-            // Trigger parent refresh
             const refreshPayload = { participantId: pId, deleted: true };
             if (onSaveTest) await onSaveTest(refreshPayload); else onSave(refreshPayload);
         } catch (err) {
             alert(`Failed to delete: ${err.message}`);
         }
     };
-
-    // --- EFFECT HOOKS ---
-
-    useEffect(() => {
-        if (!isPublicView && viewMode === 'entry' && selectedParticipantId && selectedParticipantId !== 'addNew' && !isEditing) {
-            // Auto-detect test type logic only if not explicitly set by dashboard action
-            // (We skip this if coming from Dashboard Actions usually)
-        }
-    }, [isPublicView, selectedParticipantId, existingResults, viewMode, isEditing]);
 
     useEffect(() => {
         if (!isEditing) {
@@ -1052,8 +1032,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         }
     }, [selectedParticipantId, localParticipants]);
 
-    // --- HANDLERS ---
-
     const handleSetupGroupChange = (e) => {
         setSelectedSetupGroup(e.target.value);
         setSelectedParticipantId(''); 
@@ -1077,24 +1055,20 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         setAnswers(prev => ({ ...prev, [questionId]: prev[questionId].map((item, i) => (i === lineIndex ? textValue : item)) }));
     };
 
-    // --- UPDATED: Handle Manual Scoring per Line ---
     const handleLineScoreChange = (questionId, lineIndex, score) => {
         setManualScores(prev => {
-            // Ensure we have an array for this question
             const currentScores = prev[questionId] ? [...prev[questionId]] : Array(testQuestions.find(q=>q.id === questionId).lines).fill(0);
-            currentScores[lineIndex] = score; // Set 1 for Correct, 0 for Wrong
+            currentScores[lineIndex] = score;
             return { ...prev, [questionId]: currentScores };
         });
     };
 
-    // MODIFIED: Updated handler to accept the facility object directly from the new modal
     const handleFacilitySelect = (facility) => {
         setError('');
         setSelectedFacilityId(facility.id);
-        setNewParticipantCenter(facility.name); // or facility['اسم_المؤسسة'] depending on object passed
+        setNewParticipantCenter(facility.name); 
     };
     
-    // UPDATED: Removed "Add New" from options list
     const facilityOptionsForSelect = useMemo(() => {
         if (isIccm || isProgramManagement) return [];
         const options = (facilitiesInLocality || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
@@ -1111,7 +1085,7 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
             if (!isProgramManagement && !newParticipantState) throw new Error('State is required.');
             if (!isProgramManagement && !newParticipantLocality) throw new Error('Locality is required.');
             if (!isProgramManagement && !newParticipantCenter.trim()) throw new Error(`${centerNameLabel} is required.`);
-            if (isProgramManagement && !newParticipantDepartment.trim()) throw new Error('Department (الادارة) is required.');
+            if (isProgramManagement && !newParticipantDepartment.trim()) throw new Error('Department is required.');
             
             if (!newParticipantName.trim()) throw new Error('Participant Name is required.');
             if (!finalJobTitle) throw new Error('Job Title is required.');
@@ -1131,7 +1105,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                 ...(isIccm && { trained_before: false, last_imci_training: null, nearest_health_facility: null, hours_to_facility: null })
             };
 
-            // --- NEW: Dynamic Facility Update Payload ---
             const isImnci = course.course_type === 'IMNCI';
             const isEenc = course.course_type === 'EENC';
             const isEtat = course.course_type === 'ETAT';
@@ -1202,8 +1175,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
             
             setIsParticipantInfoSaved(true); 
             setIsNewParticipantModalOpen(false);
-            // MODIFIED: Do NOT close setup modal yet, show success modal instead
-            // setIsSetupModalOpen(false); 
             setShowParticipantSuccessModal(true);
         } catch (err) { setError(`Failed to save participant: ${err.message}`); } finally { setIsSaving(false); }
     };
@@ -1214,7 +1185,7 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
             setAnswers(resultToEdit.answers || initializeAnswers(testQuestions));
             setManualScores(initializeManualScores(testQuestions, resultToEdit.manualScores));
             setIsEditing(true);
-            setSubmissionResult(null); // Clear result screen to show form
+            setSubmissionResult(null); 
         }
     };
 
@@ -1226,7 +1197,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
             const refreshPayload = { participantId: selectedParticipantId, deleted: true };
             if (onSaveTest) await onSaveTest(refreshPayload); else onSave(refreshPayload);
             
-            // Go back to Dashboard after delete
             setViewMode('dashboard');
             setIsEditing(false);
             setSubmissionResult(null);
@@ -1241,17 +1211,14 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         const mcQuestions = testQuestions.filter(q => q.type === 'mc');
         const unanswered = mcQuestions.filter(q => !answers[q.id]);
         
-        // Only block if it is public view (user taking test), otherwise allow partial updates by admin
         if (isPublicView && unanswered.length > 0) { setError(`Please answer all multiple-choice questions.`); return; }
         
         setIsSaving(true);
         try {
-            // 1. Calculate MCQ Score
             const scorableQuestions = testQuestions.filter(q => q.type === 'mc');
             let correctMCQ = 0;
             scorableQuestions.forEach(q => { if (answers[q.id] === q.correctAnswer) correctMCQ++; });
             
-            // 2. Calculate Manual Score (Open Ended)
             let manualTotal = 0;
             let openQuestionsTotalLines = 0;
             
@@ -1261,19 +1228,16 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                 
                 const qScores = manualScores[q.id];
                 if (Array.isArray(qScores)) {
-                    // Sum up 1s and 0s in the array
                     manualTotal += qScores.reduce((acc, curr) => acc + (parseFloat(curr) || 0), 0);
                 }
             });
 
-            // 3. Total Score Calculation
             const mcqTotal = scorableQuestions.length;
             const total = mcqTotal + openQuestionsTotalLines; 
             const finalScore = correctMCQ + manualTotal;
             const percentage = total > 0 ? (finalScore / total) * 100 : 0;
             const mcqPercentage = mcqTotal > 0 ? (correctMCQ / mcqTotal) * 100 : 0;
 
-            // Mark as graded if a facilitator is editing/saving it, or if it was already marked graded
             const existingResult = existingResults[testType];
             const isGradedStatus = (isEditing && canManageTests) || (existingResult && existingResult.isGraded) ? true : false;
 
@@ -1297,8 +1261,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
             };
 
             if (onSaveTest) await onSaveTest(payload); else await new Promise(resolve => setTimeout(resolve, 1000));
-            // MODIFIED: Instead of setting submissionResult immediately (which changes view), show success modal first
-            // setSubmissionResult(payload); 
             setLastSubmissionStats(payload);
             setShowTestSubmitSuccessModal(true);
             setIsEditing(false); 
@@ -1308,7 +1270,7 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
     const handleBackToDashboard = () => {
         if(isPublicView) {
             setIsSetupModalOpen(true);
-            setTestType(normalizeTestType(initialTestType) || ''); // Reset to initial prop value if exists, else empty
+            setTestType(normalizeTestType(lockedType || initialTestType) || ''); 
             setSelectedParticipantId('');
         } else {
             setViewMode('dashboard');
@@ -1318,12 +1280,9 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         }
     };
 
-    // --- RENDER LOGIC ---
-    
-    // 1. DASHBOARD VIEW (Default for Admin)
     if (viewMode === 'dashboard' && !isPublicView) {
         return (
-            <Card>
+            <Card style={{ direction: 'ltr', textAlign: 'left' }}>
                 <div className="p-6">
                     <TestScoresDashboard 
                         courseId={course.id}
@@ -1342,7 +1301,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         );
     }
 
-    // 2. RESULT SCREEN
     if (submissionResult) {
         return (
             <TestResultScreen
@@ -1360,11 +1318,8 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
         );
     }
     
-    // 3. EXISTING RESULT (When entering Edit mode)
     const existingTestResult = existingResults[testType];
     if (!isSetupModalOpen && existingTestResult && !isNewParticipantModalOpen && !isEditing && viewMode === 'entry') {
-        // If we are in entry mode but not editing, and result exists, show result screen
-        // (This happens if we select a participant in setup who already has a score)
         const participantName = localParticipants.find(p => p.id === existingTestResult.participantId)?.name || 'Participant';
         return (
             <TestResultScreen
@@ -1388,19 +1343,13 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
     const showQuestions = !isSetupModalOpen; 
     const submitDisabled = isSaving || !showQuestions;
 
-    // 4. ENTRY FORM (Questions)
     return (
-        <Card>
-
-
-
-           {/* SETUP MODAL: Choose Test Type and Participant (Always First) */}
+        <Card style={{ direction: 'ltr', textAlign: 'left' }}>
             <Modal isOpen={isSetupModalOpen && !isNewParticipantModalOpen && viewMode === 'entry'} onClose={handleBackToDashboard} title="Select Test Details" size="lg">
-                <CardBody className="p-6">
+                <CardBody className="p-6" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="grid gap-6">
                         
-                        {/* --- NEW: EmONC Sub-Course Selection --- */}
-                        {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && (
+                        {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && !(isPublicView && effectiveLockedModule) && (
                             <FormGroup label="Select EmONC Module">
                                 <Select 
                                     value={emoncSubCourse} 
@@ -1411,20 +1360,35 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                                 </Select>
                             </FormGroup>
                         )}
-                        
-                        <FormGroup label="Select Test Type">
-                            <Select 
-                                value={testType} 
-                                onChange={(e) => setTestType(e.target.value)}
-                                disabled={!!initialTestType} // Disable if type is forced by public link
-                            >
-                                <option value="">-- Select Test Type --</option>
-                                <option value="pre-test">Pre-Test</option>
-                                <option value="post-test">Post-Test</option>
-                            </Select>
-                        </FormGroup>
 
-                        {/* Only show participant select if not pre-selected by Dashboard */}
+                        {(course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && !(isPublicView && effectiveLockedModule) && (
+                            <FormGroup label="Select Small & Sick Newborn Module">
+                                <Select 
+                                    value={ssnbSubCourse} 
+                                    onChange={(e) => setSsnbSubCourse(e.target.value)}
+                                >
+                                    <option value="Portable warmer training">Portable warmer training</option>
+                                    <option value="CPAP training">CPAP training</option>
+                                    <option value="Kangaroo mother Care">Kangaroo mother Care</option>
+                                    <option value="Sepsis surveillance and management">Sepsis surveillance and management</option>
+                                </Select>
+                            </FormGroup>
+                        )}
+                        
+                        {!(isPublicView && lockedType) && (
+                            <FormGroup label="Select Test Type">
+                                <Select 
+                                    value={testType} 
+                                    onChange={(e) => setTestType(e.target.value)}
+                                    disabled={!!initialTestType} 
+                                >
+                                    <option value="">-- Select Test Type --</option>
+                                    <option value="pre-test">Pre-Test</option>
+                                    <option value="post-test">Post-Test</option>
+                                </Select>
+                            </FormGroup>
+                        )}
+
                         {((isPublicView && testType) || !isPublicView) && (
                             <>
                                 <FormGroup label="Select Group (Optional)">
@@ -1437,7 +1401,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                                 <FormGroup label="Select Participant">
                                     <Select value={selectedParticipantId} onChange={handleParticipantSelectChange}>
                                         <option value="">-- Select a Participant --</option>
-                                        {/* Only show Add New if onSaveParticipant exists AND testType is pre-test */}
                                         {onSaveParticipant && testType === 'pre-test' && (
                                             <option value="addNew" className="font-bold text-sky-600">
                                                 + Register New Participant
@@ -1452,23 +1415,20 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                         )}
                     </div>
                 </CardBody>
-                <CardFooter className="p-4 border-t flex justify-end gap-3">
+                <CardFooter className="p-4 border-t flex justify-end gap-3" style={{ direction: 'ltr' }}>
                     <Button variant="secondary" onClick={handleBackToDashboard}>Cancel</Button>
                     <Button onClick={() => setIsSetupModalOpen(false)} disabled={!testType || !selectedParticipantId}>Start</Button>
                 </CardFooter>
             </Modal>
 
-            {/* REGISTER NEW PARTICIPANT MODAL */}
-            {/* Note: This comes second, so it sits on top of SetupModal if both were open (unlikely), but crucially acts as the "base" for the subsequent popups */}
             <Modal isOpen={isNewParticipantModalOpen} onClose={() => setIsNewParticipantModalOpen(false)} title="Register New Participant" size="2xl">
-                 <div className="p-4 border-b">
+                 <div className="p-4 border-b" style={{ direction: 'ltr', textAlign: 'left' }}>
                      <h3 className="text-lg font-medium">New Participant Information</h3>
                      <p className="text-sm text-gray-500">Please fill out the details below.</p>
                  </div>
-                 <CardBody className="p-6 max-h-[70vh] overflow-y-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" style={{ direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
+                 <CardBody className="p-6 max-h-[70vh] overflow-y-auto" style={{ direction: 'ltr', textAlign: 'left' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             
-                            {/* Hide State, Locality, Group for Program Management */}
                             {!isProgramManagement && (
                                 <>
                                     <FormGroup label="State">
@@ -1480,7 +1440,7 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                                             setFacilitiesInLocality([]); 
                                         }}>
                                             <option value="">— Select State —</option>
-                                            {courseStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)}
+                                            {courseStates.map(s => <option key={s} value={s}>{s}</option>)}
                                         </Select>
                                     </FormGroup>
 
@@ -1495,7 +1455,7 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                                                 .filter(l => STATE_LOCALITIES[newParticipantState]?.localities.some(loc => loc.en === l))
                                                 .map(l => {
                                                     const locData = STATE_LOCALITIES[newParticipantState]?.localities.find(loc => loc.en === l);
-                                                    return <option key={l} value={l}>{locData?.ar || l}</option>;
+                                                    return <option key={l} value={l}>{locData?.en || l}</option>;
                                                 })
                                             }
                                         </Select>
@@ -1507,9 +1467,8 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                                 </>
                             )}
                             
-                            {/* FACILITY OR DEPARTMENT SELECTION UI */}
                             {isProgramManagement ? (
-                                <FormGroup label="Department (الادارة)">
+                                <FormGroup label="Department">
                                     <Input value={newParticipantDepartment} onChange={(e) => setNewParticipantDepartment(e.target.value)} placeholder="Enter department name" />
                                 </FormGroup>
                             ) : isIccm ? (
@@ -1543,20 +1502,18 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                                 </FormGroup>
                             )}
 
-                            <FormGroup label="Participant Name (الاسم)"><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="Enter name" disabled={!isProgramManagement && !newParticipantLocality} /></FormGroup>
-                            <FormGroup label="Phone Number (رقم الهاتف)"><Input type="tel" value={newParticipantPhone} onChange={(e) => setNewParticipantPhone(e.target.value)} placeholder="0xxxxxxxxx" /></FormGroup>
-                            <FormGroup label="Job Title (الوصف الوظيفي)"><Select value={newParticipantJob} onChange={(e) => setNewParticipantJob(e.target.value)}><option value="">— Select Job —</option>{jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}<option value="Other">Other</option></Select></FormGroup>
+                            <FormGroup label="Participant Name"><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="Enter name" disabled={!isProgramManagement && !newParticipantLocality} /></FormGroup>
+                            <FormGroup label="Phone Number"><Input type="tel" value={newParticipantPhone} onChange={(e) => setNewParticipantPhone(e.target.value)} placeholder="0xxxxxxxxx" /></FormGroup>
+                            <FormGroup label="Job Title"><Select value={newParticipantJob} onChange={(e) => setNewParticipantJob(e.target.value)}><option value="">— Select Job —</option>{jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}<option value="Other">Other</option></Select></FormGroup>
                             {newParticipantJob === 'Other' && (<FormGroup label="Specify Job Title"><Input value={newParticipantJobOther} onChange={(e) => setNewParticipantJobOther(e.target.value)} placeholder="Please specify" /></FormGroup>)}
                         </div>
                  </CardBody>
-                 <CardFooter className="p-4 border-t flex justify-end gap-3">
+                 <CardFooter className="p-4 border-t flex justify-end gap-3" style={{ direction: 'ltr' }}>
                      <Button variant="secondary" onClick={() => setIsNewParticipantModalOpen(false)} disabled={isSaving}>Cancel</Button>
                      <Button onClick={handleSaveParticipantInfo} disabled={isSaving}>{isSaving ? <Spinner /> : "Save Participant"}</Button>
                  </CardFooter>
             </Modal>
 
-            {/* FACILITY SELECTION POPUP */}
-            {/* Defined AFTER NewParticipantModal so it renders ON TOP of it */}
             <FacilitySelectionModal 
                 isOpen={isFacilitySelectorOpen}
                 onClose={() => setIsFacilitySelectorOpen(false)}
@@ -1564,21 +1521,20 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                 onSelect={handleFacilitySelect}
             />
 
-            {/* NEW: PARTICIPANT SUCCESS MODAL */}
             <Modal isOpen={showParticipantSuccessModal} onClose={() => {}} title="Registration Successful" size="sm">
-                <div className="p-6 text-center">
+                <div className="p-6 text-center" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                         <CheckCircle className="h-10 w-10 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Participant Registered!</h3>
-                    <p className="text-gray-500 mb-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">Participant Registered!</h3>
+                    <p className="text-gray-500 mb-6 text-center">
                         {participantNameForDisplay} has been successfully registered to the course.
                     </p>
                     <Button 
                         className="w-full justify-center" 
                         onClick={() => {
                             setShowParticipantSuccessModal(false);
-                            setIsSetupModalOpen(false); // Close setup to reveal questions
+                            setIsSetupModalOpen(false); 
                         }}
                     >
                         Start Pre-Test
@@ -1586,20 +1542,18 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                 </div>
             </Modal>
 
-            {/* NEW: TEST SUBMIT SUCCESS MODAL */}
             <Modal isOpen={showTestSubmitSuccessModal} onClose={() => {}} title="Test Submitted" size="sm">
-                <div className="p-6 text-center">
+                <div className="p-6 text-center" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                         <CheckCircle className="h-10 w-10 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Submission Successful!</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">Submission Successful!</h3>
                     
                     {course.course_type !== 'ETAT' ? (
                         lastSubmissionStats && (
-                            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
                                 <p className="text-sm text-gray-500 mb-1">Score Achieved</p>
                                 {(() => {
-                                    // Determine what score to show on successful submission
                                     const showMcqOnly = lastSubmissionStats.hasOpenQuestions && !lastSubmissionStats.isGraded;
                                     const displayPercent = showMcqOnly ? lastSubmissionStats.mcqPercentage : lastSubmissionStats.percentage;
                                     const displayScore = showMcqOnly ? lastSubmissionStats.mcqScore : lastSubmissionStats.score;
@@ -1624,7 +1578,7 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                             </div>
                         )
                     ) : (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-center">
                             <p className="text-sm text-blue-800">
                                 Your test has been submitted for manual grading. Your score will be available once reviewed by a facilitator.
                             </p>
@@ -1635,7 +1589,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                         className="w-full justify-center" 
                         onClick={() => {
                             setShowTestSubmitSuccessModal(false);
-                            // If ETAT, don't show result screen, just go back
                             if (course.course_type === 'ETAT') {
                                 handleBackToDashboard();
                             } else {
@@ -1649,22 +1602,38 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
             </Modal>
 
             {!isSetupModalOpen && !submissionResult && (
-                <div className="p-6">
-<div className="flex flex-wrap justify-between items-start gap-4">
+                <div className="p-6" style={{ direction: 'ltr', textAlign: 'left' }}>
+                    <div className="flex flex-wrap justify-between items-start gap-4">
                         <PageHeader 
                             title={`${isEditing ? 'Editing' : 'Enter'} ${testType === 'pre-test' ? 'Pre-Test' : 'Post-Test'}`} 
-                            /* Updated subtitle to use testTitle for more context */
                             subtitle={`${participantNameForDisplay || 'Unknown Participant'} - ${testTitle}`} 
                             className="p-0 m-0" 
                         />
-                        <div><Button variant="secondary" onClick={() => { const link = `${window.location.origin}/public/test/course/${course.id}`; navigator.clipboard.writeText(link).then(() => alert('Link copied!')).catch(() => alert('Failed to copy.')); }} title="Copy link">Share Test Form</Button></div>
+                        <div>
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => { 
+                                    const params = new URLSearchParams();
+                                    params.set('type', testType);
+                                    if (course?.course_type === 'EmONC' || course?.course_type === 'EENC') {
+                                        params.set('module', emoncSubCourse);
+                                    } else if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
+                                        params.set('module', ssnbSubCourse);
+                                    }
+                                    const link = `${window.location.origin}/public/test/course/${course.id}?${params.toString()}`;
+                                    navigator.clipboard.writeText(link).then(() => alert('Link copied!')).catch(() => alert('Failed to copy.')); 
+                                }} 
+                                title="Copy link"
+                            >
+                                Share Test Form
+                            </Button>
+                        </div>
                     </div>
 
-                    {/* NEW: BIG FONT HEADER FOR EMONC MODULE */}
-                    {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && (
+                    {(course?.course_type === 'EmONC' || course?.course_type === 'EENC' || course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && (
                         <div className="mt-6 mb-2 text-center p-5 bg-sky-50 border-2 border-sky-300 rounded-xl shadow-sm">
                             <h2 className="text-3xl md:text-4xl font-extrabold text-sky-800 uppercase tracking-wide">
-                                {emoncSubCourse} Part
+                                {course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC' ? ssnbSubCourse : emoncSubCourse} Part
                             </h2>
                             <p className="text-sky-600 font-medium mt-1">Please answer the questions below for this specific module.</p>
                         </div>
@@ -1672,9 +1641,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                     
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
 
-
-
-                    {/* Grading Mode Banner */}
                     {isEditing && canManageTests && (
                         <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 mb-6 rounded-md flex justify-between items-center mt-4">
                             <div className="font-semibold flex items-center gap-2">
@@ -1693,29 +1659,13 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                         <legend className="text-xl font-semibold mb-4 text-gray-800">Test Questions</legend>
                         {isEditing && !canManageTests && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 mb-4 rounded-md font-semibold">Editing existing {testType} submission.</div>}
                         
-
-
-
-
-
-<div className="space-y-6" style={{ direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
+                        <div className="space-y-6">
                             {testQuestions.map((q) => (
                                 <div key={q.id} className={`p-4 border rounded-md shadow-sm ${isEditing && canManageTests && q.type === 'open' ? 'bg-blue-50/30 border-blue-200' : 'bg-white'}`}>
                                     
-
-
-
-
-
-
-
-
-
-{/* Question Header */}
                                     <div className="flex justify-between items-start mb-3">
                                         <label className="block text-base font-semibold text-gray-800 w-3/4">{q.text}</label>
                                         
-                                        {/* Auto-Grade Badge for MCQs */}
                                         {canManageTests && isEditing && q.type === 'mc' && (
                                             <div className={`px-2 py-1 rounded text-xs font-bold border ${answers[q.id] === q.correctAnswer ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
                                                 {answers[q.id] === q.correctAnswer ? 'Correct (+1)' : 'Incorrect (0)'}
@@ -1723,22 +1673,18 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                                         )}
                                     </div>
 
-                                    {/* Question Body (Inputs) */}
                                     {q.imageSrc && <div className="my-3"><img src={q.imageSrc} alt="Visual" className="max-w-full h-auto rounded-lg border border-gray-200" /></div>}
                                     
                                     {q.type === 'mc' && (<div className="flex flex-col gap-2 mt-2">{q.options.map(opt => (<label key={opt.id} className="flex items-center gap-3 p-2 rounded hover:bg-sky-50 cursor-pointer"><input type="radio" name={q.id} value={opt.id} checked={answers[q.id] === opt.id} onChange={() => handleRadioChange(q.id, opt.id)} className="w-4 h-4" /><span className="text-sm text-gray-700">{opt.text}</span></label>))}</div>)}
                                     
-                                    {/* Open-Ended Question Rendering with Grading UI */}
                                     {q.type === 'open' && (
                                         <div className="flex flex-col gap-3 mt-2">
                                             {Array.from({ length: q.lines }).map((_, index) => {
                                                 const isGradingMode = canManageTests && isEditing;
-                                                const currentScore = manualScores[q.id]?.[index] || 0; // Default 0 (Incorrect)
+                                                const currentScore = manualScores[q.id]?.[index] || 0; 
 
                                                 return (
                                                     <div key={index} className="flex items-center gap-2 w-full">
-                                                        {/* Answer Input - Takes Full Width */}
-                                                        {/* Wrapper div to force flex expansion */}
                                                         <div className="flex-1 relative">
                                                             <Input 
                                                                 type="text" 
@@ -1750,7 +1696,6 @@ const [emoncSubCourse, setEmoncSubCourse] = useState('Emergency Newborn Care');
                                                             />
                                                         </div>
 
-                                                        {/* Grading Controls - Right Side - Visible Only in Edit Mode for Admins */}
                                                         {isGradingMode && (
                                                             <div className="flex gap-1 shrink-0 ml-2">
                                                                 <button

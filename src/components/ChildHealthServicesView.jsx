@@ -1100,6 +1100,7 @@ const ChildHealthServicesView = ({
     const [functioningFilter, setFunctioningFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
     const [serviceTypeFilter, setServiceTypeFilter] = useState('');
+    const [eencServiceTypeFilter, setEencServiceTypeFilter] = useState('');
     const [pendingSubmissions, setPendingSubmissions] = useState([]);
     const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
     const [uploadStatus, setUploadStatus] = useState({ inProgress: false, processed: 0, total: 0, errors: [], message: '' });
@@ -1437,6 +1438,8 @@ const ChildHealthServicesView = ({
                     default: break;
                 }
             }
+            if (eencServiceTypeFilter && f.eenc_service_type !== eencServiceTypeFilter) return false;
+
             return true;
         });
         
@@ -1446,7 +1449,7 @@ const ChildHealthServicesView = ({
         });
 
         return filtered;
-    }, [ scopedFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, permissions.manageScope, hasManuallySelected ]);
+    }, [ scopedFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, permissions.manageScope, hasManuallySelected, eencServiceTypeFilter ]);
 
     useEffect(() => { setCurrentPage(1); }, [filteredFacilities]);
     
@@ -1828,6 +1831,7 @@ const ChildHealthServicesView = ({
             'Neonatal (Tertiary)', 
             'Critical Care'
         ];
+        const EENC_SERVICE_TYPES = ["CEmONC", "BEmONC", "general", "pediatric"];
         
         const isLocalityManager = permissions.manageScope === 'locality';
         const isStateManager = permissions.manageScope === 'state';
@@ -1915,6 +1919,9 @@ const ChildHealthServicesView = ({
                         </div>
                         <div className="flex-1 min-w-[160px]"><FormGroup label="Filter by Facility Type"><Select value={facilityTypeFilter} onChange={(e) => { setFacilityTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All Types</option>{FACILITY_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
                         <div className="flex-1 min-w-[160px]"><FormGroup label="Filter by Service"><Select value={serviceTypeFilter} onChange={(e) => { setServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All Services</option>{SERVICE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
+                        
+                        <div className="flex-1 min-w-[160px]"><FormGroup label="نوع الخدمات المقدمة"><Select value={eencServiceTypeFilter} onChange={(e) => { setEencServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All Types</option>{EENC_SERVICE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
+
                         <div className="flex-1 min-w-[160px]"><FormGroup label="Functioning Status"><Select value={functioningFilter} onChange={(e) => { setFunctioningFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All</option><option value="Yes">Yes</option><option value="No">No</option><option value="NOT_SET">Not Set</option></Select></FormGroup></div>
                         <div className="flex-1 min-w-[160px]"><FormGroup label="Filter by Project Name"><Select value={projectFilter} onChange={(e) => { setProjectFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All Projects</option>{(projectNames || []).map(name => <option key={name} value={name}>{name}</option>)}</Select></FormGroup></div>
                     </div>

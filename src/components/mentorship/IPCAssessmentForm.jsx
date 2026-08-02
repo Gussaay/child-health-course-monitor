@@ -470,8 +470,13 @@ const IPCAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToa
             const savedId = await saveMentorshipSession(payload);
             payload.id = savedId;
 
-            if (onSaveComplete) onSaveComplete('complete', payload);
+            // Option 1 Implementation: Show toast immediately, then defer unmounting
             if (setToast) setToast({ show: true, message: "تم حفظ تقييم الطب الوقائي ومكافحة العدوى بنجاح!", type: 'success' });
+            
+            setTimeout(() => {
+                if (onSaveComplete) onSaveComplete('complete', payload);
+            }, 100);
+
         } catch (error) {
             console.error("Error saving IPC:", error);
             if (setToast) setToast({ show: true, message: `حدث خطأ أثناء الحفظ: ${error.message}`, type: 'error' });

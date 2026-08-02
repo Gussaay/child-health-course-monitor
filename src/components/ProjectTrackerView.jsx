@@ -1,26 +1,13 @@
 // src/components/ProjectTrackerView.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title as ChartTitle, Tooltip, Legend } from 'chart.js';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { FileOpener } from '@capacitor-community/file-opener';
-import { amiriFontBase64 } from './AmiriFont.js';
-
 import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
-import { upsertProject, deleteProject, upsertUnitMeeting, deleteUnitMeeting } from '../data';
+import { upsertProject, deleteProject } from '../data';
 import { useDataCache } from '../DataContext';
-import { STATE_LOCALITIES } from './constants';
 import { 
     Plus, Edit, Trash2, CheckCircle, Clock, PlayCircle, FolderKanban, 
-    Calendar, Baby, Stethoscope, Users, Activity, Package, HeartPulse, ChevronLeft,
-    BarChart2, AlertCircle, Target, ListTodo, AlertTriangle, ArrowRight, UserCheck, Layers,
-    Video, MapPin, FileText, CheckSquare, Eye, Share2, Link as LinkIcon, Search, UserPlus, Save, Download
+    Baby, Stethoscope, Users, Activity, Package, HeartPulse, 
+    BarChart2, AlertCircle, Target, ListTodo, Search
 } from 'lucide-react';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTitle, Tooltip, Legend);
 
 const PROGRAM_UNITS_DATA = [
     { id: "Neonatal Health Unit", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100", border: "border-blue-200" },
@@ -33,353 +20,33 @@ const PROGRAM_UNITS_DATA = [
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Completed'];
 
-// --- HELPER FUNCTIONS FOR INVITEE DETAILS ---
-const getInviteeDetails = (baseName, allTeamMembers) => {
-    const member = allTeamMembers.find(m => m.name === baseName);
-    if (member) {
-        return {
-            name: baseName,
-            displayName: member.nameAr || member.name,
-            state: member.state ? (STATE_LOCALITIES[member.state]?.ar || member.state) : 'Federal (إتحادي)',
-            position: member.role || (member.jobTitle === 'اخرى' ? member.jobTitleOther : member.jobTitle) || 'Unspecified',
-            level: member._level,
-            isGuest: false
-        };
-    }
-    return { name: baseName, displayName: baseName, state: 'Unknown', position: 'Unknown', level: 'Unknown', isGuest: false };
-};
-
-const groupInviteesByState = (inviteeNames, guests, allTeamMembers) => {
-    const details = (inviteeNames || []).map(name => getInviteeDetails(name, allTeamMembers));
-    const guestDetails = (guests || []).map(g => ({
-        name: g.name,
-        displayName: g.name,
-        state: 'External / Guests',
-        position: g.position,
-        level: 'guest',
-        isGuest: true
-    }));
-    
-    const all = [...details, ...guestDetails];
-    return all.reduce((acc, inv) => {
-        if (!acc[inv.state]) acc[inv.state] = [];
-        acc[inv.state].push(inv);
-        return acc;
-    }, {});
-};
-
-const getStatusDetails = (attended, totalSessions) => {
-    if (totalSessions === 0) return { text: '-', textAr: '-', class: 'bg-gray-100 text-gray-800 border-gray-200' };
-    const percentage = (attended / totalSessions) * 100;
-    if (percentage === 100) return { text: 'Excellent', textAr: 'ممتاز', class: 'bg-green-100 text-green-800 border-green-200' };
-    if (percentage >= 80) return { text: 'Adequate', textAr: 'جيد', class: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
-    if (percentage >= 50) return { text: 'Poor', textAr: 'ضعيف', class: 'bg-orange-100 text-orange-800 border-orange-200' };
-    return { text: 'Not Accepted', textAr: 'غير مقبول', class: 'bg-red-100 text-red-800 border-red-200' };
-};
-
-// --- PDF GENERATOR ---
-const generateMeetingAttendancePdf = async (meeting, allInvitees, onSuccess, onError) => {
-    try {
-        const doc = new jsPDF('landscape'); 
-        doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
-        doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
-        doc.setFont('Amiri');
-        
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const sessionDates = meeting.sessionDates || [];
-        
-        doc.setFontSize(18);
-        doc.setTextColor(40); 
-        doc.text(`سجل حضور الاجتماع: ${meeting.title}`, pageWidth / 2, 20, { align: 'center' });
-        
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`الجهة: ${meeting.unit} | التكرار: ${meeting.schedule || '-'}`, pageWidth / 2, 28, { align: 'center' });
-        
-        const dateHeaders = sessionDates.map((date, index) => `جلسة ${index + 1}\n${date}`);
-        const headRow = [['م', 'الاسم', 'الولاية / الجهة', 'الصفة', ...dateHeaders, 'المجموع', 'الحالة']];
-
-        const sortedInvitees = [...allInvitees].sort((a, b) => {
-            const countA = (meeting.attendance?.[a.name] || []).length;
-            const countB = (meeting.attendance?.[b.name] || []).length;
-            if (countB !== countA) return countB - countA;
-            return a.displayName.localeCompare(b.displayName);
-        });
-
-        const tableData = sortedInvitees.map((inv, index) => {
-            const row = [index + 1, inv.displayName, inv.state, inv.position];
-            
-            sessionDates.forEach(date => {
-                const isPresent = (meeting.attendance?.[inv.name] || []).includes(date);
-                row.push(isPresent ? 'PRESENT' : 'ABSENT');
-            });
-
-            const daysCount = (meeting.attendance?.[inv.name] || []).length;
-            const percentage = sessionDates.length > 0 ? Math.round((daysCount / sessionDates.length) * 100) : 0;
-            row.push(`${daysCount} (${percentage}%)`);
-            
-            const status = getStatusDetails(daysCount, sessionDates.length).textAr;
-            row.push(status);
-
-            return row;
-        });
-
-        autoTable(doc, {
-            head: headRow,
-            body: tableData,
-            startY: 34, 
-            theme: 'grid',
-            headStyles: { font: 'Amiri', fillColor: [79, 70, 229], textColor: 255, halign: 'center', fontSize: 9, cellPadding: 2 },
-            styles: { font: 'Amiri', fontSize: 8, cellPadding: 1.5, valign: 'middle', lineColor: [200, 200, 200], lineWidth: 0.1, overflow: 'ellipsize' },
-            columnStyles: {
-                0: { cellWidth: 8, halign: 'center', fontStyle: 'bold' },
-                1: { cellWidth: 45, halign: 'right', font: 'Amiri' },
-                2: { cellWidth: 35, halign: 'right', font: 'Amiri' },
-                3: { cellWidth: 35, halign: 'right', font: 'Amiri' }
-            },
-            didParseCell: function (data) {
-                data.cell.styles.font = 'Amiri'; 
-                const dateColumnStartIndex = 4; 
-                const dateColumnEndIndex = 4 + sessionDates.length; 
-
-                if (data.section === 'body' && data.column.index >= dateColumnStartIndex && data.column.index < dateColumnEndIndex) {
-                    data.cell.rawStatus = data.cell.raw; 
-                    data.cell.text = ''; 
-                }
-                
-                if (data.section === 'body' && data.column.index === dateColumnEndIndex) {
-                    data.cell.styles.halign = 'center'; data.cell.styles.fontStyle = 'bold';
-                }
-                
-                if (data.section === 'body' && data.column.index === dateColumnEndIndex + 1) {
-                    data.cell.styles.halign = 'center'; data.cell.styles.fontStyle = 'bold';
-                    const text = data.cell.raw;
-                    if (text === 'ممتاز') data.cell.styles.textColor = [22, 163, 74]; 
-                    else if (text === 'جيد') data.cell.styles.textColor = [202, 138, 4]; 
-                    else if (text === 'ضعيف') data.cell.styles.textColor = [234, 88, 12]; 
-                    else if (text === 'غير مقبول') data.cell.styles.textColor = [220, 38, 38]; 
-                }
-            },
-            didDrawCell: function (data) {
-                if (data.cell.rawStatus) {
-                    const cx = data.cell.x + data.cell.width / 2;
-                    const cy = data.cell.y + data.cell.height / 2;
-                    if (data.cell.rawStatus === 'PRESENT') {
-                        doc.setDrawColor(22, 163, 74); doc.setLineWidth(0.5);
-                        doc.line(cx - 1.5, cy, cx - 0.5, cy + 1.5); doc.line(cx - 0.5, cy + 1.5, cx + 2, cy - 1.5);
-                    } else if (data.cell.rawStatus === 'ABSENT') {
-                        doc.setDrawColor(220, 38, 38); doc.setLineWidth(0.5);
-                        const s = 1.2; 
-                        doc.line(cx - s, cy - s, cx + s, cy + s); doc.line(cx + s, cy - s, cx - s, cy + s);
-                    }
-                }
-            }
-        });
-
-        const sanitizeForFilename = (str) => (str || '').toString().replace(/[\/\\]/g, '-').replace(/\s+/g, '_');
-        const fileName = `Meeting_Attendance_${sanitizeForFilename(meeting.title)}_${new Date().toISOString().split('T')[0]}.pdf`;
-        
-        if (Capacitor.isNativePlatform()) {
-            const base64Data = doc.output('datauristring').split('base64,')[1];
-            const writeResult = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Downloads });
-            await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
-            if (onSuccess) onSuccess(`PDF saved to Downloads folder: ${fileName}`);
-        } else {
-            doc.save(fileName);
-            if (onSuccess) onSuccess("PDF download initiated.");
-        }
-
-    } catch (error) {
-        console.error("Error generating attendance report:", error);
-        if (onError) onError("Failed to generate report: " + error.message);
-    }
-};
-
-// --- INVITEE SELECTION MODAL ---
-function InviteeSelectionModal({ isOpen, onClose, allMembers, selectedNames, onConfirm }) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [levelFilter, setLevelFilter] = useState('all');
-    const [positionFilter, setPositionFilter] = useState('all');
-    const [selected, setSelected] = useState(new Set(selectedNames));
-
-    const allPositions = useMemo(() => {
-        const positions = new Set();
-        allMembers.forEach(m => {
-            if (m.role) positions.add(m.role);
-            const job = m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle;
-            if (job) positions.add(job);
-        });
-        return Array.from(positions).sort();
-    }, [allMembers]);
-
-    useEffect(() => {
-        if (isOpen) setSelected(new Set(selectedNames));
-    }, [isOpen, selectedNames]);
-
-    const filteredMembers = useMemo(() => {
-        return allMembers.filter(m => {
-            const nameToMatch = (m.nameAr || m.name || '').toLowerCase();
-            const matchesSearch = nameToMatch.includes(searchTerm.toLowerCase());
-            const matchesLevel = levelFilter === 'all' || m._level === levelFilter;
-            const memberPos = m.role || (m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle);
-            const matchesPosition = positionFilter === 'all' || memberPos === positionFilter;
-            return matchesSearch && matchesLevel && matchesPosition;
-        });
-    }, [allMembers, searchTerm, levelFilter, positionFilter]);
-
-    const toggleMember = (name) => {
-        const next = new Set(selected);
-        if (next.has(name)) next.delete(name);
-        else next.add(name);
-        setSelected(next);
-    };
-
-    const handleSelectAll = () => {
-        const next = new Set(selected);
-        filteredMembers.forEach(m => next.add(m.name));
-        setSelected(next);
-    };
-
-    const handleDeselectAll = () => {
-        const next = new Set(selected);
-        filteredMembers.forEach(m => next.delete(m.name));
-        setSelected(next);
-    };
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Select Meeting Invitees" size="xl">
-            <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <Input
-                            placeholder="Search by name..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="pl-9 w-full"
-                        />
-                    </div>
-                    <Select value={levelFilter} onChange={e => setLevelFilter(e.target.value)}>
-                        <option value="all">All Levels</option>
-                        <option value="federal">Federal</option>
-                        <option value="state">State</option>
-                        <option value="locality">Locality</option>
-                    </Select>
-                    <Select value={positionFilter} onChange={e => setPositionFilter(e.target.value)}>
-                        <option value="all">All Positions</option>
-                        {allPositions.map(pos => (
-                            <option key={pos} value={pos}>{pos}</option>
-                        ))}
-                    </Select>
-                </div>
-
-                <div className="flex justify-between items-center text-sm bg-gray-50 p-3 rounded-md border border-gray-200">
-                    <span className="text-gray-700 font-semibold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
-                        {selected.size} selected
-                    </span>
-                    <div className="space-x-2 flex">
-                        <Button size="sm" variant="secondary" onClick={handleSelectAll}>Select All Filtered</Button>
-                        <Button size="sm" variant="secondary" onClick={handleDeselectAll}>Deselect All Filtered</Button>
-                    </div>
-                </div>
-
-                <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-md divide-y">
-                    {filteredMembers.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">No team members found matching criteria.</div>
-                    ) : (
-                        filteredMembers.map(m => {
-                            const pos = m.role || (m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle);
-                            return (
-                                <label key={m.id} className="flex items-center gap-4 p-3 hover:bg-indigo-50 cursor-pointer transition-colors">
-                                    <input
-                                        type="checkbox"
-                                        checked={selected.has(m.name)}
-                                        onChange={() => toggleMember(m.name)}
-                                        className="h-5 w-5 text-indigo-600 rounded border-gray-300"
-                                    />
-                                    <div>
-                                        <div className="font-bold text-gray-900">{m.nameAr || m.name}</div>
-                                        <div className="text-xs text-gray-500 font-medium mt-0.5">
-                                            <span className={`uppercase text-[10px] tracking-wider px-1.5 py-0.5 rounded mr-2 ${m._level === 'federal' ? 'bg-blue-100 text-blue-800' : m._level === 'state' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
-                                                {m._level}
-                                            </span>
-                                            <span className="font-semibold text-gray-700">
-                                                {m.state ? `${STATE_LOCALITIES[m.state]?.ar || m.state}` : 'Federal'}
-                                                {m.locality ? ` - ${m.locality}` : ''}
-                                            </span>
-                                            <span className="mx-2 text-gray-300">|</span>
-                                            <span className="text-indigo-600">{pos}</span>
-                                        </div>
-                                    </div>
-                                </label>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
-            <div className="p-4 border-t flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                <Button onClick={() => { onConfirm(Array.from(selected)); onClose(); }}>Confirm Selection</Button>
-            </div>
-        </Modal>
-    );
-}
-
 export default function ProjectTrackerView({ permissions }) {
     const { 
         projects: rawProjects, 
-        unitMeetings: rawMeetings,
         fetchProjects, 
-        fetchUnitMeetings,
         isLoading, 
-        federalCoordinators, 
-        fetchFederalCoordinators,
-        stateCoordinators,
-        fetchStateCoordinators,
-        localityCoordinators,
-        fetchLocalityCoordinators
+        federalCoordinators 
     } = useDataCache();
     
-    // --- Navigation State ---
-    const [mainTab, setMainTab] = useState('units'); 
-    const [viewMode, setViewMode] = useState('units'); 
-    const [unitSubTab, setUnitSubTab] = useState('projects'); 
-    const [meetingSubTab, setMeetingSubTab] = useState('overview'); 
+    // --- Navigation & UI State ---
+    const [viewMode, setViewMode] = useState('dashboard');  // 'dashboard' or 'entry'
+    const [dashboardTab, setDashboardTab] = useState('overview'); // 'overview', 'active', 'completed'
     
-    const [activeUnit, setActiveUnit] = useState(null);
-    const [activeProjectId, setActiveProjectId] = useState(null);
-    const [activeMeetingId, setActiveMeetingId] = useState(null);
-    const [activeMeetingDate, setActiveMeetingDate] = useState(''); 
-    const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+    // --- Entry Selection State ---
+    const [selectedUnit, setSelectedUnit] = useState('');
+    const [selectedProjectId, setSelectedProjectId] = useState('');
+    const [newProjectTitle, setNewProjectTitle] = useState('');
     
-    // NEW: State for filtering attendance by date
-    const [attendanceDateFilter, setAttendanceDateFilter] = useState('All');
-    
+    // --- Filtering State for Dashboard Tables ---
+    const [taskFilter, setTaskFilter] = useState({ project: '', responsible: '', status: '', search: '' });
+
     // --- Modal State ---
-    const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
     const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
-    const [isInviteeModalOpen, setIsInviteeModalOpen] = useState(false); 
-    const [isAddGuestModalOpen, setIsAddGuestModalOpen] = useState(false);
-    const [shareMeeting, setShareMeeting] = useState(null);
-    const [shareSelectedDate, setShareSelectedDate] = useState('');
-    
-    const [currentProject, setCurrentProject] = useState(null);
     const [currentSubtask, setCurrentSubtask] = useState(null);
-    const [currentMeeting, setCurrentMeeting] = useState(null);
 
-    // --- Guest & Action Points State ---
-    const [newGuestName, setNewGuestName] = useState('');
-    const [newGuestPosition, setNewGuestPosition] = useState('');
-    const [localActionPoints, setLocalActionPoints] = useState([]);
-
-    // --- Data Aggregation ---
     const allTeamMembers = useMemo(() => {
-        const fed = (federalCoordinators || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true").map(c => ({ ...c, _level: 'federal' }));
-        const state = (stateCoordinators || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true").map(c => ({ ...c, _level: 'state' }));
-        const loc = (localityCoordinators || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true").map(c => ({ ...c, _level: 'locality' }));
-        
-        return [...fed, ...state, ...loc].sort((a, b) => (a.nameAr || a.name).localeCompare(b.nameAr || b.name));
-    }, [federalCoordinators, stateCoordinators, localityCoordinators]);
+        return (federalCoordinators || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true").map(c => ({ ...c, _level: 'federal' }));
+    }, [federalCoordinators]);
 
     const allActiveProjects = useMemo(() => {
         return (rawProjects || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
@@ -387,210 +54,108 @@ export default function ProjectTrackerView({ permissions }) {
 
     const projects = useMemo(() => {
         return allActiveProjects
-            .filter(p => p.unit === activeUnit)
+            .filter(p => p.unit === selectedUnit)
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-    }, [allActiveProjects, activeUnit]);
+    }, [allActiveProjects, selectedUnit]);
 
-    const meetings = useMemo(() => {
-        return (rawMeetings || [])
-            .filter(m => m.unit === activeUnit && m.isDeleted !== true && m.isDeleted !== "true")
-            .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-    }, [rawMeetings, activeUnit]);
+    const activeProject = useMemo(() => projects.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
 
-    const activeProject = useMemo(() => projects.find(p => p.id === activeProjectId) || null, [projects, activeProjectId]);
-    const activeMeeting = useMemo(() => meetings.find(m => m.id === activeMeetingId) || null, [meetings, activeMeetingId]);
-
-    // NEW: Real-time polling for live attendance updates
-    useEffect(() => {
-        let intervalId;
-        // Only poll if we are viewing the attendance tracker to save bandwidth
-        if (viewMode === 'meeting' && meetingSubTab === 'attendance' && activeMeetingId) {
-            intervalId = setInterval(() => {
-                fetchUnitMeetings(true); // Force bypass cache to get live data
-            }, 3000); // Poll every 3 seconds
-        }
-        return () => {
-            if (intervalId) clearInterval(intervalId);
-        };
-    }, [viewMode, meetingSubTab, activeMeetingId, fetchUnitMeetings]);
-
-    useEffect(() => {
-        if (activeMeeting && activeMeeting.sessionDates?.length > 0) {
-            if (!activeMeetingDate || !activeMeeting.sessionDates.includes(activeMeetingDate)) {
-                setActiveMeetingDate(activeMeeting.sessionDates[activeMeeting.sessionDates.length - 1]);
-            }
-        } else {
-            setActiveMeetingDate('');
-        }
-    }, [activeMeeting, activeMeetingDate]);
-
-    const actionPointAssignees = useMemo(() => {
-        const invitees = (activeMeeting?.invitees || []).map(name => ({
-            value: name,
-            label: getInviteeDetails(name, allTeamMembers).displayName
-        }));
-        const guests = (activeMeeting?.guests || []).map(g => ({
-            value: g.name,
-            label: `${g.name} (Guest)`
-        }));
-        return [...invitees, ...guests].sort((a, b) => a.label.localeCompare(b.label));
-    }, [activeMeeting, allTeamMembers]);
-
-    // Dashboard KPIs & Chart for active meeting attendance
-    const attendanceDashboard = useMemo(() => {
-        if (!activeMeeting) return null;
-
-        // Filter dates based on selection
-        const filteredDates = attendanceDateFilter === 'All' 
-            ? (activeMeeting.sessionDates || []) 
-            : (activeMeeting.sessionDates || []).filter(d => d === attendanceDateFilter);
-        
-        const totalSessions = filteredDates.length;
-        const regularDetails = (activeMeeting.invitees || []).map(name => getInviteeDetails(name, allTeamMembers));
-        const guestDetails = (activeMeeting.guests || []).map(g => ({
-            name: g.name, displayName: g.name, state: 'External / Guests', position: g.position, level: 'guest', isGuest: true
-        }));
-        
-        const allInvitees = [...regularDetails, ...guestDetails].sort((a, b) => {
-            // Sort by attendance count on the filtered dates
-            const getFilteredAttCount = (invName) => (activeMeeting.attendance?.[invName] || []).filter(d => filteredDates.includes(d)).length;
-            const countA = getFilteredAttCount(a.name);
-            const countB = getFilteredAttCount(b.name);
-            if (countB !== countA) return countB - countA;
-            return a.displayName.localeCompare(b.displayName);
-        });
-        
-        let totalActual = 0;
-        const stateStats = {};
-        
-        allInvitees.forEach(inv => {
-            // Only count attendance for the filtered dates
-            const attCount = (activeMeeting.attendance?.[inv.name] || []).filter(d => filteredDates.includes(d)).length;
-            totalActual += attCount;
-            if (!stateStats[inv.state]) stateStats[inv.state] = { expected: 0, actual: 0 };
-            stateStats[inv.state].expected += totalSessions;
-            stateStats[inv.state].actual += attCount;
-        });
-        
-        const totalExpected = allInvitees.length * totalSessions;
-        const globalRate = totalExpected > 0 ? (totalActual / totalExpected) * 100 : 0;
-        
-        const stateChartData = {
-            labels: Object.keys(stateStats),
-            datasets: [{
-                label: 'Attendance Rate (%)',
-                data: Object.values(stateStats).map(s => s.expected > 0 ? Math.round((s.actual / s.expected) * 100) : 0),
-                backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                borderColor: 'rgb(79, 70, 229)',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        };
-
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                title: { display: true, text: 'Attendance Rate by State / Region' }
-            },
-            scales: { y: { beginAtZero: true, max: 100 } }
-        };
-
-        return { allInvitees, totalSessions, globalRate, stateChartData, chartOptions, filteredDates };
-    }, [activeMeeting, allTeamMembers, attendanceDateFilter]);
-
-    // --- KPI Calculations ---
-    const { kpiStats, overdueTasksList, unitPerformance, personPerformance } = useMemo(() => {
+    // --- Aggregated Data for Dashboard ---
+    const { kpiStats, overdueTasksList, allActiveTasks, allCompletedTasks } = useMemo(() => {
         let totalProjects = allActiveProjects.length;
-        let totalTasks = 0, completedTasks = 0, inProgressTasks = 0, pendingTasks = 0, overdueTasks = 0;
+        let totalTasks = 0, completedTasksCount = 0, inProgressTasks = 0, pendingTasks = 0, overdueTasks = 0;
         let overdueList = [];
-        const unitStats = {};
-        const personStats = {};
+        let activeList = [];
+        let completedList = [];
 
         const now = new Date();
         now.setHours(0, 0, 0, 0); 
 
         allActiveProjects.forEach(p => {
-            const uName = p.unit || 'Unknown Unit';
-            if (!unitStats[uName]) unitStats[uName] = { total: 0, completed: 0 };
+            const unitObj = PROGRAM_UNITS_DATA.find(u => u.id === p.unit);
+            const unitTitle = unitObj ? unitObj.title : p.unit;
 
             if (p.subtasks && Array.isArray(p.subtasks)) {
                 totalTasks += p.subtasks.length;
+                
                 p.subtasks.forEach(task => {
-                    if (task.status === 'Completed') completedTasks++;
-                    else if (task.status === 'In Progress') inProgressTasks++;
-                    else pendingTasks++;
+                    const enrichedTask = { ...task, projectName: p.title, unitName: unitTitle, projectId: p.id };
+                    
+                    if (task.status === 'Completed') {
+                        completedTasksCount++;
+                        completedList.push(enrichedTask);
+                    } else {
+                        activeList.push(enrichedTask);
+                        if (task.status === 'In Progress') inProgressTasks++;
+                        else pendingTasks++;
 
-                    unitStats[uName].total++;
-                    if (task.status === 'Completed') unitStats[uName].completed++;
-
-                    const rName = task.responsible || 'Unassigned';
-                    if (!personStats[rName]) personStats[rName] = { total: 0, completed: 0 };
-                    personStats[rName].total++;
-                    if (task.status === 'Completed') personStats[rName].completed++;
-
-                    if (task.status !== 'Completed' && task.dueDate) {
-                        const dueDateObj = new Date(task.dueDate);
-                        dueDateObj.setHours(0, 0, 0, 0);
-                        if (dueDateObj < now) {
-                            overdueTasks++;
-                            overdueList.push({ ...task, projectName: p.title, unitName: p.unit, projectId: p.id });
+                        if (task.dueDate) {
+                            const dueDateObj = new Date(task.dueDate);
+                            dueDateObj.setHours(0, 0, 0, 0);
+                            if (dueDateObj < now) {
+                                overdueTasks++;
+                                overdueList.push(enrichedTask);
+                            }
                         }
                     }
                 });
             }
         });
 
+        // Sort lists
         overdueList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-        const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        activeList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        completedList.sort((a, b) => new Date(b.completedAt || b.statusUpdatedAt || 0) - new Date(a.completedAt || a.statusUpdatedAt || 0));
 
-        const formattedUnitPerformance = Object.entries(unitStats).map(([unit, stats]) => ({
-            unit, total: stats.total, completed: stats.completed, rate: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
-        })).sort((a, b) => b.rate - a.rate);
-
-        const formattedPersonPerformance = Object.entries(personStats).map(([name, stats]) => ({
-            name, total: stats.total, completed: stats.completed, rate: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
-        })).sort((a, b) => b.total - a.total);
+        const completionRate = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0;
 
         return { 
-            kpiStats: { totalProjects, totalTasks, completedTasks, inProgressTasks, pendingTasks, overdueTasks, completionRate },
-            overdueTasksList: overdueList, unitPerformance: formattedUnitPerformance, personPerformance: formattedPersonPerformance
+            kpiStats: { totalProjects, totalTasks, completedTasks: completedTasksCount, inProgressTasks, pendingTasks, overdueTasks, completionRate },
+            overdueTasksList: overdueList,
+            allActiveTasks: activeList,
+            allCompletedTasks: completedList
         };
     }, [allActiveProjects]);
 
+    // --- Filter Handlers ---
+    const filteredActiveTasks = useMemo(() => {
+        return allActiveTasks.filter(t => 
+            (taskFilter.project === '' || t.projectId === taskFilter.project) &&
+            (taskFilter.responsible === '' || t.responsible === taskFilter.responsible) &&
+            (taskFilter.status === '' || t.status === taskFilter.status) &&
+            (taskFilter.search === '' || t.description.toLowerCase().includes(taskFilter.search.toLowerCase()))
+        );
+    }, [allActiveTasks, taskFilter]);
+
+    const filteredCompletedTasks = useMemo(() => {
+        return allCompletedTasks.filter(t => 
+            (taskFilter.project === '' || t.projectId === taskFilter.project) &&
+            (taskFilter.responsible === '' || t.responsible === taskFilter.responsible) &&
+            (taskFilter.search === '' || t.description.toLowerCase().includes(taskFilter.search.toLowerCase()))
+        );
+    }, [allCompletedTasks, taskFilter]);
+
     useEffect(() => {
         fetchProjects();
-        fetchUnitMeetings();
-        fetchFederalCoordinators();
-        fetchStateCoordinators();
-        fetchLocalityCoordinators();
-    }, [fetchProjects, fetchUnitMeetings, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
+    }, [fetchProjects]);
 
-    // --- Project Handlers ---
-    const handleSaveProject = async (e) => {
+    const handleCreateProject = async (e) => {
         e.preventDefault();
-        const payload = { id: currentProject?.id, title: currentProject.title, unit: activeUnit, subtasks: currentProject.subtasks || [] };
-        await upsertProject(payload);
-        fetchProjects(true);
-        setIsProjectModalOpen(false);
-    };
-
-    const handleDeleteProject = async (id, e) => {
-        e.stopPropagation(); 
-        if (window.confirm("Are you sure you want to delete this project and all its tasks?")) {
-            await deleteProject(id);
-            fetchProjects(true);
-            if (activeProjectId === id) {
-                setViewMode('unit-dashboard');
-                setActiveProjectId(null);
-            }
-        }
+        if (!newProjectTitle.trim() || !selectedUnit) return;
+        const payload = { title: newProjectTitle, unit: selectedUnit, subtasks: [] };
+        const newProjectRef = await upsertProject(payload);
+        await fetchProjects(true);
+        setSelectedProjectId(newProjectRef?.id || ''); 
+        setNewProjectTitle('');
     };
 
     const handleSaveSubtask = async (e) => {
         e.preventDefault();
-        const projectToUpdate = allActiveProjects.find(p => p.id === activeProjectId);
+        // Support saving from Dashboard (where activeProject is null) using currentSubtask.projectId
+        const targetProjectId = activeProject?.id || currentSubtask?.projectId;
+        if (!targetProjectId) return;
+        
+        const projectToUpdate = allActiveProjects.find(p => p.id === targetProjectId);
         if (!projectToUpdate) return;
 
         let updatedSubtasks = [...(projectToUpdate.subtasks || [])];
@@ -620,168 +185,16 @@ export default function ProjectTrackerView({ permissions }) {
         setIsSubtaskModalOpen(false);
     };
 
-    const handleDeleteSubtask = async (subtaskId) => {
+    const handleDeleteSubtask = async (subtaskId, projectId) => {
         if (window.confirm("Delete this task?")) {
-            const updatedSubtasks = activeProject.subtasks.filter(st => st.id !== subtaskId);
-            await upsertProject({ ...activeProject, subtasks: updatedSubtasks });
+            const targetProjectId = projectId || activeProject?.id;
+            const targetProject = allActiveProjects.find(p => p.id === targetProjectId);
+            
+            if (!targetProject) return;
+            const updatedSubtasks = targetProject.subtasks.filter(st => st.id !== subtaskId);
+            await upsertProject({ ...targetProject, subtasks: updatedSubtasks });
             fetchProjects(true);
         }
-    };
-
-    // --- Meeting Handlers ---
-    const handleSaveMeeting = async (e) => {
-        e.preventDefault();
-        try {
-            const map = currentMeeting.inviteeNamesMap || {};
-            (currentMeeting.invitees || []).forEach(inv => {
-                if (!map[inv]) {
-                    const m = allTeamMembers.find(x => x.name === inv);
-                    map[inv] = m?.nameAr || m?.name || inv;
-                }
-            });
-
-            const meetingData = {
-                ...currentMeeting,
-                unit: activeUnit,
-                inviteeNamesMap: map,
-                inviterNameAr: allTeamMembers.find(x => x.name === currentMeeting.inviter)?.nameAr || currentMeeting.inviter
-            };
-
-            await upsertUnitMeeting(meetingData);
-            fetchUnitMeetings(true);
-            setViewMode('unit-dashboard'); 
-        } catch (error) {
-            console.error("Error saving meeting", error);
-            alert("Failed to save meeting.");
-        }
-    };
-
-    const handleDeleteMeeting = async (id) => {
-        if (window.confirm("Delete this entire meeting series and all associated reports?")) {
-            await deleteUnitMeeting(id);
-            fetchUnitMeetings(true);
-            if (activeMeetingId === id) setViewMode('unit-dashboard');
-        }
-    };
-
-    const handleUpdateActiveMeeting = async (updatedMeetingData) => {
-        try {
-            const map = updatedMeetingData.inviteeNamesMap || {};
-            (updatedMeetingData.invitees || []).forEach(inv => {
-                if (!map[inv]) {
-                    const m = allTeamMembers.find(x => x.name === inv);
-                    map[inv] = m?.nameAr || m?.name || inv;
-                }
-            });
-            updatedMeetingData.inviteeNamesMap = map;
-            updatedMeetingData.inviterNameAr = allTeamMembers.find(x => x.name === updatedMeetingData.inviter)?.nameAr || updatedMeetingData.inviter;
-
-            await upsertUnitMeeting(updatedMeetingData);
-            fetchUnitMeetings(true); 
-        } catch (error) {
-            console.error("Error updating meeting details", error);
-        }
-    };
-
-    const handleAddMeetingSession = () => {
-        const today = new Date().toISOString().split('T')[0];
-        const newDate = window.prompt("Enter new session date (YYYY-MM-DD):", today);
-        if (newDate) {
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
-                alert("Invalid format. Use YYYY-MM-DD.");
-                return;
-            }
-            const currentDates = activeMeeting.sessionDates || [];
-            if (!currentDates.includes(newDate)) {
-                const updatedDates = [...currentDates, newDate].sort();
-                handleUpdateActiveMeeting({ ...activeMeeting, sessionDates: updatedDates });
-            } else {
-                alert("This session date already exists.");
-            }
-        }
-    };
-
-    const handleToggleAttendance = (invitee, date) => {
-        const currentAtt = activeMeeting.attendance || {};
-        const inviteeAtt = currentAtt[invitee] || [];
-        
-        let newInviteeAtt;
-        if (inviteeAtt.includes(date)) {
-            newInviteeAtt = inviteeAtt.filter(d => d !== date);
-        } else {
-            newInviteeAtt = [...inviteeAtt, date];
-        }
-
-        handleUpdateActiveMeeting({
-            ...activeMeeting,
-            attendance: { ...currentAtt, [invitee]: newInviteeAtt }
-        });
-    };
-
-    const handleAddGuestToMeeting = async () => {
-        if (!newGuestName.trim()) {
-            alert("Guest name is required.");
-            return;
-        }
-
-        const newGuest = {
-            name: newGuestName.trim(),
-            position: newGuestPosition.trim() || 'Guest'
-        };
-
-        const updatedGuests = [...(activeMeeting.guests || []), newGuest];
-        
-        try {
-            await handleUpdateActiveMeeting({
-                ...activeMeeting,
-                guests: updatedGuests
-            });
-            setNewGuestName('');
-            setNewGuestPosition('');
-            setIsAddGuestModalOpen(false);
-        } catch (e) {
-            console.error("Failed to add guest:", e);
-        }
-    };
-
-    const handleConfirmInvitees = (newInvitees) => {
-        const map = {};
-        newInvitees.forEach(inv => {
-            const m = allTeamMembers.find(x => x.name === inv);
-            map[inv] = m?.nameAr || inv;
-        });
-
-        if (viewMode === 'meeting-form') {
-            setCurrentMeeting({ ...currentMeeting, invitees: newInvitees, inviteeNamesMap: map });
-        } else {
-            handleUpdateActiveMeeting({ ...activeMeeting, invitees: newInvitees, inviteeNamesMap: map });
-        }
-    };
-
-    const handleDateSelect = (e) => {
-        const newDate = e.target.value;
-        setActiveMeetingDate(newDate);
-        if (activeMeeting) {
-            setLocalActionPoints(activeMeeting.reports?.[newDate]?.actionPoints || []);
-        }
-    };
-    
-    const handleGenerateMeetingPdf = async () => {
-        setIsPdfGenerating(true);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await generateMeetingAttendancePdf(
-            activeMeeting, 
-            attendanceDashboard.allInvitees,
-            (msg) => { alert(msg); setIsPdfGenerating(false); },
-            (msg) => { alert(msg); setIsPdfGenerating(false); }
-        );
-    };
-
-    // --- Helper Functions ---
-    const getStatusIcon = (status) => {
-        if (status === 'Completed') return <CheckCircle className="w-4 h-4 text-green-500" />;
-        if (status === 'In Progress') return <PlayCircle className="w-4 h-4 text-blue-500" />;
-        return <Clock className="w-4 h-4 text-orange-500" />;
     };
 
     const formatDate = (isoString) => {
@@ -790,1014 +203,258 @@ export default function ProjectTrackerView({ permissions }) {
         return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
-    if (isLoading.projects || isLoading.federalCoordinators || isLoading.unitMeetings) return <Spinner />;
+    const getStatusIcon = (status) => {
+        if (status === 'Completed') return <CheckCircle className="w-4 h-4 text-green-500" />;
+        if (status === 'In Progress') return <PlayCircle className="w-4 h-4 text-blue-500" />;
+        return <Clock className="w-4 h-4 text-orange-500" />;
+    };
+
+    if (isLoading.projects) return <Spinner />;
 
     return (
         <div className="space-y-6">
-            <PageHeader 
-                title="Project & Task Tracker" 
-                subtitle="Manage and track projects and meetings across Child Health Program units."
-            />
+            <PageHeader title="Federal Project Tracker" subtitle="Manage and track federal projects and tasks across program units." />
 
-            {/* --- MAIN TABS --- */}
-            <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex gap-6" aria-label="Tabs">
-                    <button
-                        onClick={() => {
-                            setMainTab('units');
-                            if (viewMode !== 'tasks' && viewMode !== 'meeting' && viewMode !== 'unit-dashboard' && viewMode !== 'meeting-form') {
-                                setViewMode('units');
-                            }
-                        }}
-                        className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                            mainTab === 'units' 
-                                ? 'border-sky-500 text-sky-600' 
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                    >
-                        <FolderKanban className="w-4 h-4 inline-block mr-2 mb-1"/> Program Units
-                    </button>
-                    <button
-                        onClick={() => setMainTab('dashboard')}
-                        className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                            mainTab === 'dashboard' 
-                                ? 'border-sky-500 text-sky-600' 
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                    >
-                        <BarChart2 className="w-4 h-4 inline-block mr-2 mb-1"/> Dashboard
-                    </button>
-                </nav>
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-max mb-4 border border-gray-200">
+                <Button 
+                    variant={viewMode === 'dashboard' ? 'primary' : 'ghost'} 
+                    onClick={() => setViewMode('dashboard')}
+                >
+                    <BarChart2 className="w-4 h-4 mr-2" /> Dashboard Overview
+                </Button>
+                <Button 
+                    variant={viewMode === 'entry' ? 'primary' : 'ghost'} 
+                    onClick={() => { setViewMode('entry'); setSelectedProjectId(''); }}
+                >
+                    <Edit className="w-4 h-4 mr-2" /> Data Entry
+                </Button>
             </div>
 
-            {/* ========================================== */}
-            {/* VIEW: DASHBOARD TAB                        */}
-            {/* ========================================== */}
-            {mainTab === 'dashboard' && (
-                <div className="animate-in fade-in duration-300 space-y-6">
-                    {/* GLOBAL KPI Summary Cards */}
-                    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                            <Target className="text-sky-600" /> Overall Program Performance
-                        </h3>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            <div className="bg-gray-50 border-l-4 border-l-sky-500 p-4 rounded-r-lg">
-                                <div className="flex items-center gap-2 text-gray-500 text-sm font-medium mb-1">
-                                    <FolderKanban size={16} /> Total Projects
-                                </div>
-                                <div className="text-2xl font-bold text-gray-900">{kpiStats.totalProjects}</div>
-                            </div>
-                            <div className="bg-gray-50 border-l-4 border-l-indigo-500 p-4 rounded-r-lg">
-                                <div className="flex items-center gap-2 text-gray-500 text-sm font-medium mb-1">
-                                    <ListTodo size={16} /> Total Tasks
-                                </div>
-                                <div className="text-2xl font-bold text-gray-900">{kpiStats.totalTasks}</div>
-                            </div>
-                            <div className="bg-green-50 border-l-4 border-l-green-500 p-4 rounded-r-lg">
-                                <div className="flex items-center gap-2 text-green-700 text-sm font-medium mb-1">
-                                    <CheckCircle size={16} /> Completed Tasks
-                                </div>
-                                <div className="text-2xl font-bold text-green-800">{kpiStats.completedTasks}</div>
-                            </div>
-                            <div className="bg-red-50 border-l-4 border-l-red-500 p-4 rounded-r-lg">
-                                <div className="flex items-center gap-2 text-red-600 text-sm font-medium mb-1">
-                                    <AlertCircle size={16} /> Overdue Tasks
-                                </div>
-                                <div className="text-2xl font-bold text-red-700">{kpiStats.overdueTasks}</div>
-                            </div>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div>
-                            <div className="flex justify-between text-sm mb-1">
-                                <span className="font-semibold text-gray-700">Global Task Completion Rate</span>
-                                <span className="font-bold text-sky-700">{kpiStats.completionRate}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-3">
-                                <div className="bg-sky-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${kpiStats.completionRate}%` }}></div>
-                            </div>
-                            <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                                <span><strong className="text-blue-600">{kpiStats.inProgressTasks}</strong> In Progress</span>
-                                <span><strong className="text-orange-500">{kpiStats.pendingTasks}</strong> Pending</span>
-                            </div>
-                        </div>
+            {viewMode === 'dashboard' ? (
+                <div className="space-y-6">
+                    {/* Dashboard Tabs */}
+                    <div className="flex gap-4 border-b border-gray-200">
+                        <button 
+                            onClick={() => { setDashboardTab('overview'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
+                            className={`pb-2 px-2 font-semibold transition-colors ${dashboardTab === 'overview' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            Overview
+                        </button>
+                        <button 
+                            onClick={() => { setDashboardTab('active'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
+                            className={`pb-2 px-2 font-semibold transition-colors flex items-center gap-2 ${dashboardTab === 'active' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            Active Tasks <span className="bg-sky-100 text-sky-700 text-xs py-0.5 px-2 rounded-full">{allActiveTasks.length}</span>
+                        </button>
+                        <button 
+                            onClick={() => { setDashboardTab('completed'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
+                            className={`pb-2 px-2 font-semibold transition-colors flex items-center gap-2 ${dashboardTab === 'completed' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            Completed Tasks <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full">{allCompletedTasks.length}</span>
+                        </button>
                     </div>
 
-                    {/* Granular KPI Breakdowns */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card>
-                            <div className="p-4 border-b flex items-center gap-2 bg-gray-50 rounded-t-lg">
-                                <Layers className="text-indigo-600" size={20} />
-                                <h3 className="text-lg font-bold text-gray-800">Performance by Unit</h3>
-                            </div>
-                            <CardBody className="p-0 max-h-96 overflow-y-auto">
-                                {unitPerformance.length > 0 ? (
-                                    <Table headers={["Program Unit", "Progress", "Rate"]}>
-                                        {unitPerformance.map(u => (
-                                            <tr key={u.unit} className="hover:bg-gray-50">
-                                                <td className="p-3 text-sm font-medium text-gray-800">{u.unit}</td>
-                                                <td className="p-3 w-1/2">
-                                                    <div className="flex justify-between text-xs text-gray-500 mb-1"><span>{u.completed} / {u.total}</span></div>
-                                                    <div className="w-full bg-gray-100 rounded-full h-2"><div className={`h-2 rounded-full ${u.rate === 100 ? 'bg-green-500' : 'bg-indigo-500'}`} style={{ width: `${u.rate}%` }}></div></div>
-                                                </td>
-                                                <td className="p-3 text-sm font-bold text-right"><span className={u.rate === 100 ? 'text-green-600' : 'text-gray-700'}>{u.rate}%</span></td>
-                                            </tr>
-                                        ))}
-                                    </Table>
-                                ) : (
-                                    <div className="p-6 text-center text-gray-500 text-sm">No unit data available.</div>
-                                )}
-                            </CardBody>
-                        </Card>
-
-                        <Card>
-                            <div className="p-4 border-b flex items-center gap-2 bg-gray-50 rounded-t-lg">
-                                <UserCheck className="text-emerald-600" size={20} />
-                                <h3 className="text-lg font-bold text-gray-800">Performance by Team Member</h3>
-                            </div>
-                            <CardBody className="p-0 max-h-96 overflow-y-auto">
-                                {personPerformance.length > 0 ? (
-                                    <Table headers={["Team Member", "Progress", "Rate"]}>
-                                        {personPerformance.map(p => (
-                                            <tr key={p.name} className="hover:bg-gray-50">
-                                                <td className="p-3 text-sm font-medium text-gray-800">{p.name}</td>
-                                                <td className="p-3 w-1/2">
-                                                    <div className="flex justify-between text-xs text-gray-500 mb-1"><span>{p.completed} / {p.total}</span></div>
-                                                    <div className="w-full bg-gray-100 rounded-full h-2"><div className={`h-2 rounded-full ${p.rate === 100 ? 'bg-green-500' : 'bg-emerald-500'}`} style={{ width: `${p.rate}%` }}></div></div>
-                                                </td>
-                                                <td className="p-3 text-sm font-bold text-right"><span className={p.rate === 100 ? 'text-green-600' : 'text-gray-700'}>{p.rate}%</span></td>
-                                            </tr>
-                                        ))}
-                                    </Table>
-                                ) : (
-                                    <div className="p-6 text-center text-gray-500 text-sm">No team member data available.</div>
-                                )}
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    <Card>
-                        <div className="p-4 border-b flex items-center gap-2 bg-red-50 text-red-800 rounded-t-lg">
-                            <AlertTriangle className="w-5 h-5" />
-                            <h3 className="text-lg font-bold">Action Required: Overdue Tasks</h3>
-                        </div>
-                        <CardBody className="p-0 max-h-96 overflow-y-auto">
-                            {overdueTasksList.length > 0 ? (
-                                <Table headers={["Program Unit", "Project", "Task", "Responsible", "Due Date", "Action"]}>
-                                    {overdueTasksList.map((task, idx) => (
-                                        <tr key={`${task.id}-${idx}`} className="hover:bg-red-50/50 transition-colors">
-                                            <td className="p-3 text-sm font-medium text-gray-800">{task.unitName}</td>
-                                            <td className="p-3 text-sm text-gray-600">{task.projectName}</td>
-                                            <td className="p-3 text-sm text-gray-800">{task.description}</td>
-                                            <td className="p-3 text-sm text-gray-600">{task.responsible || 'Unassigned'}</td>
-                                            <td className="p-3 text-sm font-bold text-red-600">{formatDate(task.dueDate)}</td>
-                                            <td className="p-3 text-right">
-                                                <Button size="sm" variant="secondary" onClick={() => {
-                                                    setActiveUnit(task.unitName);
-                                                    setActiveProjectId(task.projectId);
-                                                    setMainTab('units');
-                                                    setViewMode('tasks');
-                                                }}>
-                                                    Go to Project <ArrowRight className="w-3 h-3 ml-1 inline" />
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </Table>
-                            ) : (
-                                <div className="p-10 text-center flex flex-col items-center justify-center">
-                                    <div className="bg-green-100 p-4 rounded-full mb-3"><CheckCircle className="w-8 h-8 text-green-600" /></div>
-                                    <h4 className="text-gray-800 font-bold text-lg">You're all caught up!</h4>
-                                    <p className="text-gray-500 text-sm">There are no overdue tasks in the system right now.</p>
+                    {/* Dashboard Tab Content: OVERVIEW */}
+                    {dashboardTab === 'overview' && (
+                        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm animate-in fade-in">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                                <Target className="text-sky-600" /> Overall Project Performance
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-gray-50 border-l-4 border-l-sky-500 p-4 rounded-r-lg">
+                                    <div className="text-gray-500 text-sm font-medium mb-1">Total Projects</div>
+                                    <div className="text-2xl font-bold text-gray-900">{kpiStats.totalProjects}</div>
                                 </div>
-                            )}
-                        </CardBody>
-                    </Card>
-                </div>
-            )}
-
-            {/* ========================================== */}
-            {/* VIEW: UNITS TAB                            */}
-            {/* ========================================== */}
-            {mainTab === 'units' && (
-                <div className="animate-in fade-in duration-300">
-                    
-                    {/* Level 1: UNITS GRID */}
-                    {viewMode === 'units' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {PROGRAM_UNITS_DATA.map((unit) => {
-                                const Icon = unit.icon;
-                                const unitProjects = allActiveProjects.filter(p => p.unit === unit.id);
-                                const unitMeetings = (rawMeetings || []).filter(m => m.unit === unit.id && !m.isDeleted);
-                                const unitTaskCount = unitProjects.reduce((acc, p) => acc + (p.subtasks?.length || 0), 0);
-
-                                return (
-                                    <div 
-                                        key={unit.id}
-                                        onClick={() => {
-                                            setActiveUnit(unit.id);
-                                            setViewMode('unit-dashboard');
-                                            setUnitSubTab('projects');
-                                        }}
-                                        className="cursor-pointer h-full"
-                                    >
-                                        <Card className={`hover:-translate-y-1 hover:shadow-lg transition-all border ${unit.border} h-full`}>
-                                            <CardBody className="flex flex-col items-center justify-center p-6 text-center">
-                                                <div className={`p-4 rounded-full ${unit.bg} ${unit.color} mb-4`}>
-                                                    <Icon size={40} />
-                                                </div>
-                                                <h3 className="text-xl font-bold text-gray-800">{unit.title}</h3>
-                                                <div className="flex gap-2 mt-3 text-xs font-medium text-gray-500 bg-white px-3 py-1.5 rounded-full border shadow-sm items-center flex-wrap justify-center">
-                                                    <span>{unitProjects.length} Projects</span>
-                                                    <span className="text-gray-300">|</span>
-                                                    <span>{unitTaskCount} Tasks</span>
-                                                    <span className="text-gray-300">|</span>
-                                                    <span>{unitMeetings.length} Meetings</span>
-                                                </div>
-                                            </CardBody>
-                                        </Card>
-                                    </div>
-                                );
-                            })}
+                                <div className="bg-gray-50 border-l-4 border-l-indigo-500 p-4 rounded-r-lg">
+                                    <div className="text-gray-500 text-sm font-medium mb-1">Total Tasks</div>
+                                    <div className="text-2xl font-bold text-gray-900">{kpiStats.totalTasks}</div>
+                                </div>
+                                <div className="bg-green-50 border-l-4 border-l-green-500 p-4 rounded-r-lg">
+                                    <div className="text-green-700 text-sm font-medium mb-1">Completed Tasks</div>
+                                    <div className="text-2xl font-bold text-green-800">{kpiStats.completedTasks}</div>
+                                </div>
+                                <div className="bg-red-50 border-l-4 border-l-red-500 p-4 rounded-r-lg">
+                                    <div className="text-red-600 text-sm font-medium mb-1">Overdue Tasks</div>
+                                    <div className="text-2xl font-bold text-red-700">{kpiStats.overdueTasks}</div>
+                                </div>
+                            </div>
                         </div>
                     )}
 
-                    {/* Level 2: UNIT DASHBOARD */}
-                    {viewMode === 'unit-dashboard' && (
-                        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <Button variant="secondary" onClick={() => setViewMode('units')}>
-                                        <ChevronLeft className="w-4 h-4 mr-1" /> Back to Units
-                                    </Button>
-                                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                        <FolderKanban className="text-sky-600" /> {activeUnit} Dashboard
-                                    </h3>
-                                </div>
-                                <div className="flex gap-4 border-b">
-                                    <button 
-                                        onClick={() => setUnitSubTab('projects')} 
-                                        className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${unitSubTab === 'projects' ? 'border-sky-500 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
-                                    >
-                                        <FolderKanban className="w-4 h-4 inline mr-1 mb-0.5"/> Projects & Tasks
-                                    </button>
-                                    <button 
-                                        onClick={() => setUnitSubTab('meetings')} 
-                                        className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${unitSubTab === 'meetings' ? 'border-sky-500 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
-                                    >
-                                        <Users className="w-4 h-4 inline mr-1 mb-0.5"/> Meetings & Minutes
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Sub-Tab: PROJECTS */}
-                            {unitSubTab === 'projects' && (
-                                <div>
-                                    <div className="flex justify-end mb-4">
-                                        <Button onClick={() => { 
-                                            setCurrentProject({ title: '', subtasks: [] }); 
-                                            setIsProjectModalOpen(true); 
-                                        }}>
-                                            <Plus className="w-4 h-4 mr-1" /> Add Project
-                                        </Button>
+                    {/* Dashboard Tab Content: ACTIVE / COMPLETED TASKS */}
+                    {(dashboardTab === 'active' || dashboardTab === 'completed') && (
+                        <Card className="animate-in fade-in">
+                            <CardBody className="p-0">
+                                {/* Filters Row */}
+                                <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-4 items-center">
+                                    <div className="relative flex-1 min-w-[200px]">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <Input
+                                            placeholder="Search tasks..."
+                                            value={taskFilter.search}
+                                            onChange={e => setTaskFilter({...taskFilter, search: e.target.value})}
+                                            className="pl-9 w-full"
+                                        />
                                     </div>
-
-                                    {projects.length === 0 ? (
-                                        <EmptyState message={`No projects found for ${activeUnit}. Click "Add Project" to get started.`} />
-                                    ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {projects.map(project => {
-                                                const totalTasks = project.subtasks?.length || 0;
-                                                const completedTasks = project.subtasks?.filter(t => t.status === 'Completed').length || 0;
-                                                const completionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-                                                return (
-                                                    <div 
-                                                        key={project.id}
-                                                        onClick={() => {
-                                                            setActiveProjectId(project.id);
-                                                            setViewMode('tasks');
-                                                        }}
-                                                        className="cursor-pointer h-full"
-                                                    >
-                                                        <Card className="hover:border-sky-400 hover:shadow-md transition-all group h-full">
-                                                            <CardBody className="p-5 flex justify-between items-start">
-                                                                <div className="w-full">
-                                                                    <h4 className="text-lg font-bold text-gray-800 mb-2 pr-12">{project.title}</h4>
-                                                                    
-                                                                    <div className="mb-2">
-                                                                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                                            <span>{completedTasks} of {totalTasks} tasks</span>
-                                                                            <span>{completionPct}%</span>
-                                                                        </div>
-                                                                        <div className="w-full bg-gray-100 rounded-full h-1.5">
-                                                                            <div className="bg-sky-500 h-1.5 rounded-full" style={{ width: `${completionPct}%` }}></div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-4">
-                                                                    <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setCurrentProject(project); setIsProjectModalOpen(true); }}>
-                                                                        <Edit className="w-4 h-4" />
-                                                                    </Button>
-                                                                    <Button size="sm" variant="danger" onClick={(e) => handleDeleteProject(project.id, e)}>
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </Button>
-                                                                </div>
-                                                            </CardBody>
-                                                        </Card>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                    <Select value={taskFilter.project} onChange={e => setTaskFilter({...taskFilter, project: e.target.value})} className="w-48">
+                                        <option value="">All Projects</option>
+                                        {allActiveProjects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                                    </Select>
+                                    <Select value={taskFilter.responsible} onChange={e => setTaskFilter({...taskFilter, responsible: e.target.value})} className="w-48">
+                                        <option value="">All Members</option>
+                                        {allTeamMembers.map(m => <option key={m.id} value={m.name}>{m.nameAr || m.name}</option>)}
+                                    </Select>
+                                    {dashboardTab === 'active' && (
+                                        <Select value={taskFilter.status} onChange={e => setTaskFilter({...taskFilter, status: e.target.value})} className="w-40">
+                                            <option value="">All Statuses</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="In Progress">In Progress</option>
+                                        </Select>
                                     )}
                                 </div>
-                            )}
 
-                            {/* Sub-Tab: MEETINGS (TABLE VIEW) */}
-                            {unitSubTab === 'meetings' && (
-                                <div>
-                                    <div className="flex justify-end mb-4">
-                                        <Button onClick={() => { 
-                                            setCurrentMeeting({ 
-                                                title: '', schedule: '', inviter: '', invitees: [], guests: [], agenda: '', link: '', place: '', 
-                                                sessionDates: [], attendance: {}, reports: {} 
-                                            }); 
-                                            setViewMode('meeting-form'); 
-                                        }}>
-                                            <Plus className="w-4 h-4 mr-1" /> Add New Meeting
-                                        </Button>
-                                    </div>
-                                    
-                                    {meetings.length === 0 ? (
-                                        <EmptyState message={`No meetings configured for ${activeUnit}.`} />
-                                    ) : (
-                                        <Card className="overflow-hidden">
-                                            <Table headers={["Meeting Title", "Schedule / Frequency", "Inviter", "Attendees", "Recorded Sessions", "Actions"]}>
-                                                {meetings.map(m => {
-                                                    const totalAttendees = (m.invitees?.length || 0) + (m.guests?.length || 0);
-                                                    return (
-                                                        <tr key={m.id} className="hover:bg-gray-50">
-                                                            <td className="p-3 border font-medium text-gray-900">{m.title}</td>
-                                                            <td className="p-3 border text-gray-600 text-sm">{m.schedule || 'Not specified'}</td>
-                                                            <td className="p-3 border text-gray-600 text-sm">
-                                                                {m.inviterNameAr || m.inviter}
-                                                            </td>
-                                                            <td className="p-3 border text-gray-600 text-sm">
-                                                                <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">
-                                                                    {totalAttendees}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-3 border text-gray-600 text-sm">
-                                                                <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-bold">
-                                                                    {m.sessionDates?.length || 0}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-3 border text-right">
-                                                                <div className="flex gap-2 justify-end">
-                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { setActiveMeetingId(m.id); setMeetingSubTab('overview'); setViewMode('meeting'); }}>
-                                                                        <Eye className="w-3.5 h-3.5" /> View
-                                                                    </Button>
-                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { setActiveMeetingId(m.id); setMeetingSubTab('attendance'); setViewMode('meeting'); }}>
-                                                                        <Users className="w-3.5 h-3.5" /> Attendance
-                                                                    </Button>
-                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { setActiveMeetingId(m.id); setMeetingSubTab('reports'); setViewMode('meeting'); }}>
-                                                                        <FileText className="w-3.5 h-3.5" /> Report
-                                                                    </Button>
-                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { 
-                                                                        setActiveMeetingId(m.id); 
-                                                                        setMeetingSubTab('actions'); 
-                                                                        const latestDate = activeMeetingDate || m.sessionDates?.[m.sessionDates?.length - 1];
-                                                                        setLocalActionPoints(m.reports?.[latestDate]?.actionPoints || []);
-                                                                        setViewMode('meeting'); 
-                                                                    }}>
-                                                                        <CheckSquare className="w-3.5 h-3.5" /> Actions
-                                                                    </Button>
-                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { setCurrentMeeting(m); setViewMode('meeting-form'); }}>
-                                                                        <Edit className="w-3.5 h-3.5" /> Edit
-                                                                    </Button>
-                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => {
-                                                                        setShareMeeting(m);
-                                                                        setShareSelectedDate(m.sessionDates?.[m.sessionDates.length - 1] || '');
-                                                                    }}>
-                                                                        <Share2 className="w-3.5 h-3.5" />
-                                                                    </Button>
-                                                                    <Button size="sm" variant="danger" onClick={() => handleDeleteMeeting(m.id)}>
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                    </Button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                })}
-                                            </Table>
-                                        </Card>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Level 3: FULL PAGE MEETING FORM (Add / Edit) */}
-                    {viewMode === 'meeting-form' && (
-                        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                            <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-indigo-500">
-                                <div className="flex items-center gap-4">
-                                    <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); setViewMode('unit-dashboard'); }}>
-                                        <ChevronLeft className="w-4 h-4 mr-1" /> Back to Dashboard
-                                    </Button>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-gray-800">{currentMeeting?.id ? 'Edit Meeting Series' : 'Setup New Meeting Series'}</h3>
-                                        <p className="text-sm text-gray-500">{activeUnit}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Card>
-                                <form onSubmit={handleSaveMeeting}>
-                                    <CardBody className="space-y-6 p-6">
-                                        <FormGroup label="Meeting Title">
-                                            <Input value={currentMeeting?.title || ''} onChange={(e) => setCurrentMeeting({...currentMeeting, title: e.target.value})} required placeholder="e.g., Q3 Strategy Review"/>
-                                        </FormGroup>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <FormGroup label="Schedule / Frequency">
-                                                <Input value={currentMeeting?.schedule || ''} onChange={(e) => setCurrentMeeting({...currentMeeting, schedule: e.target.value})} placeholder="e.g., Every Monday at 10 AM"/>
-                                            </FormGroup>
-                                            <FormGroup label="Location / Place">
-                                                <Input value={currentMeeting?.place || ''} onChange={(e) => setCurrentMeeting({...currentMeeting, place: e.target.value})} placeholder="e.g., Conference Room B"/>
-                                            </FormGroup>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <FormGroup label="Inviter">
-                                                <Select value={currentMeeting?.inviter || ''} onChange={(e) => setCurrentMeeting({...currentMeeting, inviter: e.target.value})} required>
-                                                    <option value="">-- Select Inviter --</option>
-                                                    {allTeamMembers.map(t=><option key={t.id} value={t.name}>{t.nameAr || t.name} ({t._level})</option>)}
-                                                </Select>
-                                            </FormGroup>
-                                            <FormGroup label="Virtual Link (Optional)">
-                                                <Input type="url" value={currentMeeting?.link || ''} onChange={(e) => setCurrentMeeting({...currentMeeting, link: e.target.value})} placeholder="https://zoom.us/j/..."/>
-                                            </FormGroup>
-                                        </div>
-                                        
-                                        <FormGroup label="Invitees">
-                                            <div className="border border-gray-300 rounded-md p-4 min-h-[6rem] max-h-96 overflow-y-auto bg-gray-50 flex flex-col gap-3 shadow-sm mb-3">
-                                                {currentMeeting?.invitees?.length > 0 || currentMeeting?.guests?.length > 0 ? (
-                                                    Object.entries(groupInviteesByState(currentMeeting.invitees, currentMeeting.guests, allTeamMembers)).map(([state, invs]) => (
-                                                        <div key={state} className="w-full bg-white p-3 rounded border border-gray-200">
-                                                            <div className="text-sm font-bold text-gray-700 mb-2 border-b pb-1">{state}</div>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {invs.map(inv => (
-                                                                    <span key={inv.name} className="bg-indigo-50 text-indigo-900 border border-indigo-200 px-2.5 py-1 rounded-md text-sm font-medium shadow-sm flex items-center">
-                                                                        {inv.displayName} <span className="text-indigo-300 mx-2">|</span> <span className="text-indigo-600 text-xs font-normal">{inv.position}</span>
-                                                                    </span>
-                                                                ))}
-                                                            </div>
+                                {/* Data Table */}
+                                <div className="overflow-x-auto">
+                                    <Table headers={["Program Unit", "Project", "Task Description", "Responsible", "Due Date", "Status", "Actions"]}>
+                                        {(dashboardTab === 'active' ? filteredActiveTasks : filteredCompletedTasks).map(task => {
+                                            const isOverdue = dashboardTab === 'active' && task.dueDate && new Date(task.dueDate) < new Date();
+                                            return (
+                                                <tr key={`${task.projectId}-${task.id}`} className="hover:bg-gray-50 border-b">
+                                                    <td className="p-3 text-xs text-gray-500 font-medium">{task.unitName}</td>
+                                                    <td className="p-3 text-sm font-semibold text-gray-700">{task.projectName}</td>
+                                                    <td className="p-3 text-sm text-gray-900">{task.description}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{task.responsible || 'Unassigned'}</td>
+                                                    <td className="p-3 text-sm">
+                                                        <span className={isOverdue ? 'text-red-600 font-bold bg-red-50 p-1 rounded inline-block' : ''}>
+                                                            {formatDate(task.dueDate)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 text-sm">
+                                                        <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full w-max border whitespace-nowrap">
+                                                            {getStatusIcon(task.status)} {task.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button size="sm" variant="secondary" onClick={() => { 
+                                                                setCurrentSubtask(task); 
+                                                                setIsSubtaskModalOpen(true); 
+                                                            }}>
+                                                                Edit
+                                                            </Button>
+                                                            <Button size="sm" variant="danger" onClick={() => handleDeleteSubtask(task.id, task.projectId)}>
+                                                                Delete
+                                                            </Button>
                                                         </div>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-gray-400 italic text-sm mt-2 text-center">No invitees selected yet. Click the button below to add.</span>
-                                                )}
-                                            </div>
-                                            <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); setIsInviteeModalOpen(true); }} className="w-full md:w-auto justify-center">
-                                                <Users className="w-4 h-4 mr-2" /> Select / Manage Invitees
-                                            </Button>
-                                        </FormGroup>
-                                        
-                                        <FormGroup label="Standard Agenda">
-                                            <textarea className="w-full border rounded-md p-3 text-sm focus:ring-sky-500 focus:border-sky-500 min-h-[100px]" value={currentMeeting?.agenda || ''} onChange={(e) => setCurrentMeeting({...currentMeeting, agenda: e.target.value})} placeholder="Main topics routinely covered..."/>
-                                        </FormGroup>
-                                    </CardBody>
-                                    <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 rounded-b-lg">
-                                        <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); setViewMode('unit-dashboard'); }}>Cancel</Button>
-                                        <Button type="submit">Save Meeting Settings</Button>
-                                    </div>
-                                </form>
-                            </Card>
-                        </div>
-                    )}
-
-                    {/* Level 3: TASKS LIST */}
-                    {viewMode === 'tasks' && activeProject && (
-                        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                            <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-sky-500">
-                                <div className="flex items-center gap-4">
-                                    <Button variant="secondary" onClick={() => { setViewMode('unit-dashboard'); setUnitSubTab('projects'); }}>
-                                        <ChevronLeft className="w-4 h-4 mr-1" /> Back to Projects
-                                    </Button>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-gray-800">{activeProject.title}</h3>
-                                        <p className="text-sm text-gray-500">{activeUnit}</p>
-                                    </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {(dashboardTab === 'active' ? filteredActiveTasks : filteredCompletedTasks).length === 0 && (
+                                            <tr>
+                                                <td colSpan="7" className="p-8 text-center text-gray-500">
+                                                    No {dashboardTab} tasks found matching your filters.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </Table>
                                 </div>
-                                <Button onClick={() => {
-                                    setCurrentSubtask({ description: '', responsible: '', dueDate: '', status: 'Pending' });
-                                    setIsSubtaskModalOpen(true);
-                                }}>
-                                    <Plus className="w-4 h-4 mr-1" /> Add Task
-                                </Button>
-                            </div>
-
-                            <Card>
-                                <CardBody className="p-0">
-                                    {activeProject.subtasks && activeProject.subtasks.length > 0 ? (
-                                        <Table headers={["Task Description", "Responsible", "Due Date", "Status", "Timestamps", "Actions"]}>
-                                            {activeProject.subtasks.map(task => {
-                                                const isOverdue = task.status !== 'Completed' && task.dueDate && new Date(task.dueDate) < new Date();
-                                                return (
-                                                    <tr key={task.id} className="hover:bg-gray-50">
-                                                        <td className="p-4 text-sm font-medium">{task.description}</td>
-                                                        <td className="p-4 text-sm text-gray-600">{task.responsible || 'Unassigned'}</td>
-                                                        <td className="p-4 text-sm">
-                                                            <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 font-bold bg-red-50 p-1 rounded w-max' : 'text-gray-600'}`}>
-                                                                <Calendar className="w-3 h-3" /> {formatDate(task.dueDate)}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-4 text-sm">
-                                                            <span className="flex items-center gap-1 font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded-full w-max border">
-                                                                {getStatusIcon(task.status)} {task.status}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-4 text-xs text-gray-500 space-y-1">
-                                                            <div><strong className="text-gray-700">Created:</strong> {formatDate(task.createdAt)}</div>
-                                                            {task.statusUpdatedAt && <div><strong className="text-gray-700">Updated:</strong> {formatDate(task.statusUpdatedAt)}</div>}
-                                                            {task.completedAt && <div className="text-green-600"><strong className="text-green-700">Completed:</strong> {formatDate(task.completedAt)}</div>}
-                                                        </td>
-                                                        <td className="p-4 text-right border-l">
-                                                            <div className="flex justify-end gap-2">
-                                                                <Button size="sm" variant="secondary" onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    setCurrentSubtask(task);
-                                                                    setIsSubtaskModalOpen(true);
-                                                                }}>Edit</Button>
-                                                                <Button size="sm" variant="danger" onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    handleDeleteSubtask(task.id);
-                                                                }}>Delete</Button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </Table>
-                                    ) : (
-                                        <div className="p-10 text-center">
-                                            <div className="mx-auto bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-                                                <Clock className="w-8 h-8 text-gray-400" />
-                                            </div>
-                                            <h4 className="text-gray-800 font-semibold text-lg">No tasks assigned yet</h4>
-                                            <p className="text-gray-500 text-sm mt-1 mb-4">Break down this project into actionable tasks.</p>
-                                            <Button variant="secondary" onClick={(e) => {
-                                                e.preventDefault();
-                                                setCurrentSubtask({ description: '', responsible: '', dueDate: '', status: 'Pending' });
-                                                setIsSubtaskModalOpen(true);
-                                            }}>
-                                                Create First Task
-                                            </Button>
-                                        </div>
-                                    )}
-                                </CardBody>
-                            </Card>
-                        </div>
+                            </CardBody>
+                        </Card>
                     )}
-
-                    {/* Level 3: MEETING TABS (Overview, Attendance, Reports) */}
-                    {viewMode === 'meeting' && activeMeeting && (
-                        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                </div>
+            ) : (
+                <Card>
+                    <CardBody className="p-6 space-y-6">
+                        {/* Data Entry Flow */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded border border-gray-200">
+                            <FormGroup label="Select Program Unit">
+                                <Select value={selectedUnit} onChange={(e) => { setSelectedUnit(e.target.value); setSelectedProjectId(''); }}>
+                                    <option value="">-- Choose Unit --</option>
+                                    {PROGRAM_UNITS_DATA.map(u => <option key={u.id} value={u.id}>{u.title}</option>)}
+                                </Select>
+                            </FormGroup>
                             
-                            {/* Meeting Header */}
-                            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-indigo-500">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <Button variant="secondary" onClick={() => { setViewMode('unit-dashboard'); setUnitSubTab('meetings'); }}>
-                                        <ChevronLeft className="w-4 h-4 mr-1" /> Back to Meetings List
-                                    </Button>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-gray-800">{activeMeeting.title}</h3>
-                                        <p className="text-sm text-gray-500">{activeUnit} • {activeMeeting.schedule || 'No schedule set'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-4 border-b">
-                                    <button onClick={() => setMeetingSubTab('overview')} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'overview' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Overview</button>
-                                    <button onClick={() => setMeetingSubTab('attendance')} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'attendance' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Attendance Tracker</button>
-                                    <button onClick={() => setMeetingSubTab('reports')} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'reports' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Meeting Minutes</button>
-                                    <button onClick={() => { 
-                                        setMeetingSubTab('actions'); 
-                                        setLocalActionPoints(activeMeeting?.reports?.[activeMeetingDate]?.actionPoints || []);
-                                    }} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'actions' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Action Points</button>
-                                </div>
-                            </div>
-
-                            {/* Meeting Sub-Tab: OVERVIEW */}
-                            {meetingSubTab === 'overview' && (
-                                <Card>
-                                    <CardBody className="p-6">
-                                        <h4 className="font-bold border-b pb-2 text-gray-800 mb-4 flex items-center gap-2"><Eye className="w-5 h-5"/> Meeting Details</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="space-y-4">
-                                                <div className="flex gap-2"><Calendar className="w-5 h-5 text-gray-400"/> <span><strong>Schedule:</strong> {activeMeeting.schedule || 'N/A'}</span></div>
-                                                <div className="flex gap-2"><UserCheck className="w-5 h-5 text-gray-400"/> <span><strong>Inviter:</strong> {activeMeeting.inviterNameAr || activeMeeting.inviter}</span></div>
-                                                <div className="flex gap-2">
-                                                    <Users className="w-5 h-5 text-gray-400"/> 
-                                                    <span><strong>Total Attendees:</strong> {(activeMeeting.invitees?.length || 0) + (activeMeeting.guests?.length || 0)}</span>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-4">
-                                                {activeMeeting.place && <div className="flex gap-2"><MapPin className="w-5 h-5 text-gray-400"/> <span><strong>Location:</strong> {activeMeeting.place}</span></div>}
-                                                {activeMeeting.link && <div className="flex gap-2"><Video className="w-5 h-5 text-gray-400"/> <span><strong>Link:</strong> <a href={activeMeeting.link} target="_blank" rel="noreferrer" className="text-blue-500 underline truncate">{activeMeeting.link}</a></span></div>}
-                                            </div>
-                                        </div>
-                                        <div className="mt-6">
-                                            <h5 className="font-bold text-gray-700 mb-2">Standard Agenda</h5>
-                                            <div className="p-4 bg-gray-50 rounded border text-gray-700 whitespace-pre-wrap">
-                                                {activeMeeting.agenda || 'No agenda provided.'}
-                                            </div>
-                                        </div>
-                                        <div className="mt-6 border-t pt-4">
-                                            <h5 className="font-bold text-gray-700 mb-4 flex items-center gap-2"><Users className="w-5 h-5"/> Detailed Invitee List</h5>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {Object.entries(groupInviteesByState(activeMeeting.invitees, activeMeeting.guests, allTeamMembers)).map(([state, invs]) => (
-                                                    <div key={state} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                                        <h6 className="font-bold text-indigo-900 border-b border-indigo-100 pb-2 mb-3">{state}</h6>
-                                                        <ul className="space-y-2">
-                                                            {invs.map(inv => (
-                                                                <li key={inv.name} className="text-sm">
-                                                                    <div className="font-semibold text-gray-800">{inv.displayName}</div>
-                                                                    <div className="text-xs text-gray-500">{inv.position}</div>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                ))}
-                                                {(!activeMeeting.invitees || activeMeeting.invitees.length === 0) && (!activeMeeting.guests || activeMeeting.guests.length === 0) && (
-                                                    <div className="text-sm text-gray-500 col-span-full">No invitees added yet.</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CardBody>
-                                </Card>
+                            {selectedUnit && (
+                                <FormGroup label="Select or Add Project">
+                                    <Select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+                                        <option value="">-- Choose Project --</option>
+                                        {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                                        <option value="NEW" className="font-bold text-sky-600">+ Add New Project</option>
+                                    </Select>
+                                </FormGroup>
                             )}
-
-                            {/* Meeting Sub-Tab: ATTENDANCE DASHBOARD */}
-                            {meetingSubTab === 'attendance' && attendanceDashboard && (
-                                <div className="space-y-6">
-                                    {/* Dashboard KPI Header */}
-                                    <div className="p-4 border flex justify-between items-center bg-gray-50 flex-wrap gap-4 rounded-lg shadow-sm">
-                                        <div className="flex items-center gap-4">
-                                            <h4 className="font-bold text-gray-800 flex items-center gap-2">
-                                                <Users className="w-5 h-5"/> Attendance Tracker
-                                            </h4>
-                                            {activeMeeting.sessionDates?.length > 0 && (
-                                                <div className="flex items-center gap-2 border-l pl-4 ml-2 border-gray-300">
-                                                    <span className="text-sm font-medium text-gray-600">Filter Date:</span>
-                                                    <Select bsSize="sm" value={attendanceDateFilter} onChange={(e) => setAttendanceDateFilter(e.target.value)} className="bg-white min-w-[120px]">
-                                                        <option value="All">All Dates</option>
-                                                        {activeMeeting.sessionDates.map(d => <option key={d} value={d}>{d}</option>)}
-                                                    </Select>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button size="sm" variant="secondary" onClick={(e) => { e.preventDefault(); setIsAddGuestModalOpen(true); }}>
-                                                <UserPlus className="w-4 h-4 mr-1" /> Add Guest
-                                            </Button>
-                                            <Button size="sm" variant="secondary" onClick={(e) => { e.preventDefault(); setIsInviteeModalOpen(true); }}>
-                                                <Users className="w-4 h-4 mr-1" /> Manage Invitees
-                                            </Button>
-                                            <Button size="sm" variant="secondary" onClick={handleGenerateMeetingPdf} disabled={isPdfGenerating}>
-                                                {isPdfGenerating ? <Spinner size="sm" className="mr-1" /> : <Download className="w-4 h-4 mr-1" />}
-                                                {isPdfGenerating ? 'Generating...' : 'PDF'}
-                                            </Button>
-                                            <Button size="sm" onClick={handleAddMeetingSession}>
-                                                <Plus className="w-4 h-4 mr-1"/> Add Session Date
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    {!activeMeeting.sessionDates || activeMeeting.sessionDates.length === 0 ? (
-                                        <EmptyState message="No session dates added. Click 'Add Session Date' to begin tracking attendance." />
-                                    ) : (
-                                        <>
-                                            {/* KPI Row */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center relative">
-                                                    <div className="absolute top-2 right-2 flex h-3 w-3">
-                                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-                                                    </div>
-                                                    <div className="text-2xl font-bold text-blue-700">{attendanceDashboard.allInvitees.length}</div>
-                                                    <div className="text-xs text-blue-600 uppercase font-semibold leading-tight mt-1">Total Invitees</div>
-                                                </div>
-                                                <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
-                                                    <div className="text-2xl font-bold text-green-700">{attendanceDashboard.globalRate.toFixed(1)}%</div>
-                                                    <div className="text-xs text-green-600 uppercase font-semibold leading-tight mt-1">Global Avg. Rate</div>
-                                                </div>
-                                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-center">
-                                                    <div className="text-2xl font-bold text-purple-700">{attendanceDashboard.totalSessions}</div>
-                                                    <div className="text-xs text-purple-600 uppercase font-semibold leading-tight mt-1">Filtered Sessions</div>
-                                                </div>
-                                            </div>
-
-                                            {/* Disaggregated Chart */}
-                                            <Card>
-                                                <CardBody>
-                                                    <div className="h-64">
-                                                        <Bar data={attendanceDashboard.stateChartData} options={attendanceDashboard.chartOptions} />
-                                                    </div>
-                                                </CardBody>
-                                            </Card>
-
-                                            {/* Attendance Table */}
-                                            <Card>
-                                                <CardBody className="p-0">
-                                                    <div className="overflow-x-auto">
-                                                        <table className="w-full text-left text-sm border-collapse">
-                                                            <thead className="bg-gray-100 text-gray-600">
-                                                                <tr>
-                                                                    <th className="p-3 border font-semibold">Invitee Name</th>
-                                                                    <th className="p-3 border font-semibold">State / Level</th>
-                                                                    <th className="p-3 border font-semibold">Position</th>
-                                                                    {attendanceDashboard.filteredDates.map(date => (
-                                                                        <th key={date} className="p-3 border font-semibold text-center whitespace-nowrap text-xs">{date}</th>
-                                                                    ))}
-                                                                    <th className="p-3 border font-semibold text-center">Total</th>
-                                                                    <th className="p-3 border font-semibold text-center">Status</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {attendanceDashboard.allInvitees.map(inv => {
-                                                                    const inviteeAtt = activeMeeting.attendance?.[inv.name] || [];
-                                                                    // Only count days present within the currently filtered view
-                                                                    const daysCount = inviteeAtt.filter(d => attendanceDashboard.filteredDates.includes(d)).length;
-                                                                    const totalSessions = attendanceDashboard.filteredDates.length;
-                                                                    const percentage = totalSessions > 0 ? Math.round((daysCount / totalSessions) * 100) : 0;
-                                                                    const status = getStatusDetails(daysCount, totalSessions);
-
-                                                                    return (
-                                                                        <tr key={inv.name} className="border-b hover:bg-gray-50 transition-colors">
-                                                                            <td className="p-3 border font-medium text-gray-800">
-                                                                                {inv.displayName} {inv.isGuest && <span className="text-xs text-indigo-500 ml-1">(Guest)</span>}
-                                                                            </td>
-                                                                            <td className="p-3 border text-gray-600 text-xs">
-                                                                                {inv.state}
-                                                                            </td>
-                                                                            <td className="p-3 border text-gray-600 text-xs">{inv.position}</td>
-                                                                            {attendanceDashboard.filteredDates.map(date => (
-                                                                                <td key={date} className="p-3 border text-center">
-                                                                                    <input 
-                                                                                        type="checkbox" 
-                                                                                        checked={inviteeAtt.includes(date)} 
-                                                                                        onChange={() => handleToggleAttendance(inv.name, date)}
-                                                                                        className="h-4 w-4 text-indigo-600 rounded cursor-pointer border-gray-300 focus:ring-indigo-500"
-                                                                                    />
-                                                                                </td>
-                                                                            ))}
-                                                                            <td className="p-3 border text-center font-bold text-gray-600 bg-gray-50 leading-tight">
-                                                                                <div className="flex flex-col items-center">
-                                                                                    <span>{daysCount}</span>
-                                                                                    <span className="text-[10px] font-normal text-gray-500">({percentage}%)</span>
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="p-3 border text-center font-bold bg-gray-50">
-                                                                                <span className={`px-2 py-1 rounded border text-xs inline-block text-center leading-tight whitespace-nowrap ${status.class}`}>
-                                                                                    {status.text}
-                                                                                </span>
-                                                                            </td>
-                                                                        </tr>
-                                                                    );
-                                                                })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </CardBody>
-                                            </Card>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Meeting Sub-Tab: MEETING MINUTES (No Auto-save Actions here anymore) */}
-                            {meetingSubTab === 'reports' && (
-                                <div className="space-y-6">
-                                    {!activeMeeting.sessionDates || activeMeeting.sessionDates.length === 0 ? (
-                                        <EmptyState message="No sessions available to report on. Go to the Attendance Tracker to add a session date first." />
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center gap-4 bg-gray-50 p-4 border rounded-lg">
-                                                <span className="font-semibold text-gray-700">Select Session Date:</span>
-                                                <Select value={activeMeetingDate} onChange={handleDateSelect} className="w-48 bg-white">
-                                                    {activeMeeting.sessionDates.map(d => <option key={d} value={d}>{d}</option>)}
-                                                </Select>
-                                            </div>
-
-                                            {activeMeetingDate && (
-                                                <Card>
-                                                    <CardBody className="p-4">
-                                                        <h4 className="font-bold border-b pb-2 text-gray-800 mb-3 flex items-center gap-2"><FileText className="w-5 h-5"/> Meeting Minutes & Discussion ({activeMeetingDate})</h4>
-                                                        <textarea 
-                                                            className="w-full h-64 p-3 border rounded focus:ring-indigo-500 focus:border-indigo-500" 
-                                                            placeholder="Document main discussion points from this specific meeting..."
-                                                            value={activeMeeting.reports?.[activeMeetingDate]?.discussionPoints || ''}
-                                                            onChange={(e) => {
-                                                                const dateReport = activeMeeting.reports?.[activeMeetingDate] || { discussionPoints: '', actionPoints: [] };
-                                                                const updated = { 
-                                                                    ...activeMeeting, 
-                                                                    reports: { ...activeMeeting.reports, [activeMeetingDate]: { ...dateReport, discussionPoints: e.target.value } }
-                                                                };
-                                                                handleUpdateActiveMeeting(updated);
-                                                            }}
-                                                        />
-                                                    </CardBody>
-                                                </Card>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Meeting Sub-Tab: ACTION POINTS (Manual Save) */}
-                            {meetingSubTab === 'actions' && (
-                                <div className="space-y-6">
-                                    {!activeMeeting.sessionDates || activeMeeting.sessionDates.length === 0 ? (
-                                        <EmptyState message="No sessions available to add actions to. Go to the Attendance Tracker to add a session date first." />
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center gap-4 bg-gray-50 p-4 border rounded-lg">
-                                                <span className="font-semibold text-gray-700">Select Session Date:</span>
-                                                <Select value={activeMeetingDate} onChange={handleDateSelect} className="w-48 bg-white">
-                                                    {activeMeeting.sessionDates.map(d => <option key={d} value={d}>{d}</option>)}
-                                                </Select>
-                                            </div>
-
-                                            {activeMeetingDate && (
-                                                <Card>
-                                                    <CardBody className="p-4">
-                                                        <div className="flex justify-between items-center border-b pb-2 mb-3">
-                                                            <h4 className="font-bold text-gray-800 flex items-center gap-2"><CheckSquare className="w-5 h-5"/> Action Points Matrix ({activeMeetingDate})</h4>
-                                                            <div className="flex gap-2">
-                                                                <Button size="sm" variant="secondary" onClick={() => {
-                                                                    const newAction = { id: Date.now().toString(), what: '', who: '', when: '', indicator: '', status: 'Pending' };
-                                                                    setLocalActionPoints([...localActionPoints, newAction]);
-                                                                }}>
-                                                                    <Plus className="w-4 h-4 mr-1"/> Add Action
-                                                                </Button>
-                                                                <Button size="sm" className="bg-green-600 hover:bg-green-700 border-green-600" onClick={() => {
-                                                                    const dateReport = activeMeeting.reports?.[activeMeetingDate] || { discussionPoints: '', actionPoints: [] };
-                                                                    handleUpdateActiveMeeting({ 
-                                                                        ...activeMeeting, 
-                                                                        reports: { ...activeMeeting.reports, [activeMeetingDate]: { ...dateReport, actionPoints: localActionPoints } }
-                                                                    });
-                                                                    alert('Action points saved successfully!');
-                                                                }}>
-                                                                    <Save className="w-4 h-4 mr-1"/> Save Changes
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div className="overflow-x-auto">
-                                                            <table className="w-full text-left text-sm">
-                                                                <thead className="bg-gray-100 text-gray-600">
-                                                                    <tr>
-                                                                        <th className="p-2">What (Action)</th>
-                                                                        <th className="p-2 w-40">Who</th>
-                                                                        <th className="p-2 w-36">When</th>
-                                                                        <th className="p-2">Indicator</th>
-                                                                        <th className="p-2 w-36">Status</th>
-                                                                        <th className="p-2 w-12"></th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {localActionPoints.map((action, idx) => (
-                                                                        <tr key={action.id} className="border-b">
-                                                                            <td className="p-1">
-                                                                                <Input bsSize="sm" value={action.what} onChange={e => { 
-                                                                                    const copy = [...localActionPoints]; 
-                                                                                    copy[idx].what = e.target.value; 
-                                                                                    setLocalActionPoints(copy);
-                                                                                }}/>
-                                                                            </td>
-                                                                            <td className="p-1">
-                                                                                <Select bsSize="sm" value={action.who} onChange={e => { 
-                                                                                    const copy = [...localActionPoints]; 
-                                                                                    copy[idx].who = e.target.value; 
-                                                                                    setLocalActionPoints(copy);
-                                                                                }}>
-                                                                                    <option value="">- Select -</option>
-                                                                                    {actionPointAssignees.map(opt=><option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                                                                </Select>
-                                                                            </td>
-                                                                            <td className="p-1">
-                                                                                <Input type="date" bsSize="sm" value={action.when} onChange={e => { 
-                                                                                    const copy = [...localActionPoints]; 
-                                                                                    copy[idx].when = e.target.value; 
-                                                                                    setLocalActionPoints(copy);
-                                                                                }}/>
-                                                                            </td>
-                                                                            <td className="p-1">
-                                                                                <Input bsSize="sm" value={action.indicator} onChange={e => { 
-                                                                                    const copy = [...localActionPoints]; 
-                                                                                    copy[idx].indicator = e.target.value; 
-                                                                                    setLocalActionPoints(copy);
-                                                                                }}/>
-                                                                            </td>
-                                                                            <td className="p-1">
-                                                                                <Select bsSize="sm" value={action.status} onChange={e => { 
-                                                                                    const copy = [...localActionPoints]; 
-                                                                                    copy[idx].status = e.target.value; 
-                                                                                    setLocalActionPoints(copy);
-                                                                                }}>
-                                                                                    {STATUS_OPTIONS.map(opt=><option key={opt} value={opt}>{opt}</option>)}
-                                                                                </Select>
-                                                                            </td>
-                                                                            <td className="p-1 text-right">
-                                                                                <Button size="sm" variant="danger" onClick={() => { 
-                                                                                    const copy = localActionPoints.filter(a => a.id !== action.id); 
-                                                                                    setLocalActionPoints(copy);
-                                                                                }}>
-                                                                                    <Trash2 className="w-3 h-3"/>
-                                                                               </Button>
-                                                                            </td>
-                                                                        </tr>
-                                                                    ))}
-                                                                    {localActionPoints.length === 0 && (
-                                                                        <tr>
-                                                                            <td colSpan="6" className="text-center p-4 text-gray-500 italic">No action points drafted. Click "Add Action" to begin.</td>
-                                                                        </tr>
-                                                                    )}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </CardBody>
-                                                </Card>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
                         </div>
-                    )}
-                </div>
+
+                        {selectedProjectId === 'NEW' && (
+                            <div className="bg-sky-50 p-4 rounded border border-sky-200 flex gap-4 items-end animate-in">
+                                <FormGroup label="New Project Name" className="flex-1">
+                                    <Input value={newProjectTitle} onChange={(e) => setNewProjectTitle(e.target.value)} placeholder="e.g., Annual Federal Strategy Plan" />
+                                </FormGroup>
+                                <Button onClick={handleCreateProject} disabled={!newProjectTitle.trim()}>Create Project</Button>
+                            </div>
+                        )}
+
+                        {activeProject && (
+                            <div className="space-y-4 animate-in fade-in">
+                                <div className="flex items-center justify-between border-b pb-2">
+                                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                        <FolderKanban className="text-sky-600 w-5 h-5"/> {activeProject.title} Tasks
+                                    </h3>
+                                    <Button size="sm" onClick={() => {
+                                        setCurrentSubtask({ description: '', responsible: '', dueDate: '', status: 'Pending', projectId: activeProject.id });
+                                        setIsSubtaskModalOpen(true);
+                                    }}>
+                                        <Plus className="w-4 h-4 mr-1" /> Add Task
+                                    </Button>
+                                </div>
+                                
+                                {activeProject.subtasks && activeProject.subtasks.length > 0 ? (
+                                    <Table headers={["Task Description", "Responsible", "Due Date", "Status", "Actions"]}>
+                                        {activeProject.subtasks.map(task => (
+                                            <tr key={task.id} className="hover:bg-gray-50">
+                                                <td className="p-3 text-sm font-medium">{task.description}</td>
+                                                <td className="p-3 text-sm text-gray-600">{task.responsible || 'Unassigned'}</td>
+                                                <td className="p-3 text-sm">{formatDate(task.dueDate)}</td>
+                                                <td className="p-3 text-sm">
+                                                    <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full w-max border">
+                                                        {getStatusIcon(task.status)} {task.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button size="sm" variant="secondary" onClick={() => { 
+                                                            setCurrentSubtask({...task, projectId: activeProject.id}); 
+                                                            setIsSubtaskModalOpen(true); 
+                                                        }}>Edit</Button>
+                                                        <Button size="sm" variant="danger" onClick={() => handleDeleteSubtask(task.id, activeProject.id)}>Delete</Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </Table>
+                                ) : (
+                                    <EmptyState message="No tasks assigned to this project yet." />
+                                )}
+                            </div>
+                        )}
+                    </CardBody>
+                </Card>
             )}
 
-            {/* --- MODALS --- */}
-            
-            {/* Guest Modal */}
-            <Modal isOpen={isAddGuestModalOpen} onClose={() => setIsAddGuestModalOpen(false)} title="Add Guest Attendee">
-                <div className="p-6 space-y-4">
-                    <FormGroup label="Guest Name">
-                        <Input value={newGuestName} onChange={(e) => setNewGuestName(e.target.value)} placeholder="e.g., John Doe" />
-                    </FormGroup>
-                    <FormGroup label="Position / Role (Optional)">
-                        <Input value={newGuestPosition} onChange={(e) => setNewGuestPosition(e.target.value)} placeholder="e.g., External Consultant" />
-                    </FormGroup>
-                </div>
-                <div className="p-4 border-t flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                    <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); setIsAddGuestModalOpen(false); }}>Cancel</Button>
-                    <Button onClick={(e) => { e.preventDefault(); handleAddGuestToMeeting(); }}>Add Guest</Button>
-                </div>
-            </Modal>
-
-            <InviteeSelectionModal
-                isOpen={isInviteeModalOpen}
-                onClose={() => setIsInviteeModalOpen(false)}
-                allMembers={allTeamMembers}
-                selectedNames={viewMode === 'meeting-form' ? (currentMeeting?.invitees || []) : (activeMeeting?.invitees || [])}
-                onConfirm={handleConfirmInvitees}
-            />
-
-            {/* Project Modal */}
-            <Modal isOpen={isProjectModalOpen} onClose={() => setIsProjectModalOpen(false)} title={`${currentProject?.id ? 'Edit' : 'Add'} Project`}>
-                <form onSubmit={handleSaveProject}>
-                    <CardBody className="space-y-4">
-                        <FormGroup label="Project / Main Task Title">
-                            <Input 
-                                value={currentProject?.title || ''} 
-                                onChange={(e) => setCurrentProject({...currentProject, title: e.target.value})} 
-                                required 
-                                placeholder="Enter project name..."
-                            />
-                        </FormGroup>
-                    </CardBody>
-                    <div className="p-4 border-t flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                        <Button type="button" variant="secondary" onClick={() => setIsProjectModalOpen(false)}>Cancel</Button>
-                        <Button type="submit">Save Project</Button>
-                    </div>
-                </form>
-            </Modal>
-
-            {/* Subtask Modal */}
             <Modal isOpen={isSubtaskModalOpen} onClose={() => setIsSubtaskModalOpen(false)} title={`${currentSubtask?.id ? 'Edit' : 'Add'} Task`}>
                 <form onSubmit={handleSaveSubtask}>
                     <CardBody className="space-y-4">
                         <FormGroup label="Task Description">
-                            <Input value={currentSubtask?.description || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, description: e.target.value})} required placeholder="Describe the task..."/>
+                            <Input value={currentSubtask?.description || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, description: e.target.value})} required placeholder="Describe task..."/>
                         </FormGroup>
-                        <FormGroup label="Who is Responsible?">
+                        <FormGroup label="Responsible Member">
                             <Select value={currentSubtask?.responsible || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, responsible: e.target.value})} required>
-                                <option value="">-- Select Team Member --</option>
-                                {allTeamMembers.map(t => <option key={t.id} value={t.name}>{t.nameAr || t.name} ({t._level})</option>)}
+                                <option value="">-- Select Member --</option>
+                                {allTeamMembers.map(t => <option key={t.id} value={t.name}>{t.nameAr || t.name}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="Target Completion Date (Due Date)">
+                        <FormGroup label="Due Date">
                             <Input type="date" value={currentSubtask?.dueDate || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, dueDate: e.target.value})} required />
                         </FormGroup>
                         <FormGroup label="Status">
@@ -1812,190 +469,6 @@ export default function ProjectTrackerView({ permissions }) {
                     </div>
                 </form>
             </Modal>
-
-            {/* Share Modal */}
-            {shareMeeting && (
-                <Modal isOpen={!!shareMeeting} onClose={() => setShareMeeting(null)} title="Share Meeting Link">
-                    <CardBody className="p-6 text-center space-y-4">
-                        <Share2 className="w-12 h-12 text-sky-500 mx-auto" />
-                        <h4 className="font-bold text-gray-800">Share Public Meeting Link</h4>
-                        <p className="text-sm text-gray-600">Select the date you want to track attendance for.</p>
-                        
-                        <div className="text-left bg-indigo-50 p-3 rounded-md border border-indigo-100">
-                            <label className="block text-sm font-bold text-indigo-900 mb-2">Target Session Date:</label>
-                            <Select value={shareSelectedDate} onChange={(e) => setShareSelectedDate(e.target.value)} className="bg-white w-full">
-                                <option value="">-- Select Date --</option>
-                                {shareMeeting.sessionDates?.map(d => <option key={d} value={d}>{d}</option>)}
-                            </Select>
-                        </div>
-
-                        <div className="bg-gray-100 p-3 rounded border flex justify-between items-center mt-4">
-                            <span className="text-sm truncate text-gray-500 select-all">
-                                {`${window.location.origin}/public/meeting/${shareMeeting.id}${shareSelectedDate ? `?date=${shareSelectedDate}` : ''}`}
-                            </span>
-                            <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={(e) => {
-                                e.preventDefault();
-                                if (!shareSelectedDate) {
-                                    alert("Please select a date first.");
-                                    return;
-                                }
-                                navigator.clipboard.writeText(`${window.location.origin}/public/meeting/${shareMeeting.id}?date=${shareSelectedDate}`);
-                                alert('Link copied to clipboard!');
-                            }}>
-                                <LinkIcon size={14} /> Copy
-                            </Button>
-                        </div>
-                    </CardBody>
-                    <div className="p-4 border-t flex justify-end bg-gray-50 rounded-b-lg">
-                        <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); setShareMeeting(null); }}>Close</Button>
-                    </div>
-                </Modal>
-            )}
-        </div>
-    );
-}
-
-// --- PUBLIC MEETING ATTENDANCE VIEW ---
-export function PublicMeetingAttendanceView({ meeting, onSave, targetDate }) {
-    const [selectedInvitee, setSelectedInvitee] = useState('');
-    const [newGuestName, setNewGuestName] = useState('');
-    const [newGuestPosition, setNewGuestPosition] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-
-    if (!meeting) return <EmptyState message="بيانات الاجتماع غير متوفرة." />;
-
-    const handleToggleAttendance = async (date) => {
-        if (!selectedInvitee || selectedInvitee === 'NEW_GUEST') return;
-        setIsSaving(true);
-        try {
-            const currentAtt = meeting.attendance || {};
-            const inviteeAtt = currentAtt[selectedInvitee] || [];
-
-            let newInviteeAtt;
-            if (inviteeAtt.includes(date)) {
-                newInviteeAtt = inviteeAtt.filter(d => d !== date); 
-            } else {
-                newInviteeAtt = [...inviteeAtt, date]; 
-            }
-
-            const updatedMeeting = {
-                ...meeting,
-                attendance: { ...currentAtt, [selectedInvitee]: newInviteeAtt }
-            };
-
-            await onSave(updatedMeeting);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleAddSelfAsGuest = async () => {
-        if (!newGuestName.trim()) {
-            alert("الاسم مطلوب.");
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            const newGuest = {
-                name: newGuestName.trim(),
-                position: newGuestPosition.trim() || 'ضيف (Guest)'
-            };
-            const updatedMeeting = {
-                ...meeting,
-                guests: [...(meeting.guests || []), newGuest]
-            };
-            
-            await onSave(updatedMeeting);
-            
-            setSelectedInvitee(newGuest.name);
-            setNewGuestName('');
-            setNewGuestPosition('');
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const inviteeNamesMap = meeting.inviteeNamesMap || {};
-
-    const allOptions = [
-        ...(meeting.invitees || []).map(name => ({ id: name, display: inviteeNamesMap[name] || name })),
-        ...(meeting.guests || []).map(g => ({ id: g.name, display: g.name }))
-    ].sort((a, b) => a.display.localeCompare(b.display));
-
-    const datesToShow = targetDate && (meeting.sessionDates || []).includes(targetDate) 
-        ? [targetDate] 
-        : [];
-
-    return (
-        <div className="max-w-3xl mx-auto mt-8" dir="rtl">
-            <Card>
-                <div className="p-6 border-b border-gray-100 bg-indigo-50 rounded-t-lg">
-                    <h2 className="text-2xl font-bold text-indigo-900 mb-2">{meeting.title}</h2>
-                    <p className="text-indigo-700 font-medium flex items-center gap-2">
-                        <Layers className="w-4 h-4" /> {meeting.unit} 
-                        <span className="text-indigo-300">|</span> 
-                        <Clock className="w-4 h-4" /> {meeting.schedule || 'لم يتم تحديد موعد'}
-                    </p>
-                </div>
-                <CardBody className="p-6 space-y-6">
-                    <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
-                        <label className="block text-sm font-bold text-gray-800 mb-2">1. اختر اسمك</label>
-                        <Select value={selectedInvitee} onChange={(e) => setSelectedInvitee(e.target.value)} className="w-full max-w-md bg-white">
-                            <option value="">-- اختر اسمك --</option>
-                            {allOptions.map(opt => (
-                                <option key={opt.id} value={opt.id}>{opt.display}</option>
-                            ))}
-                            <option value="NEW_GUEST" className="font-bold text-indigo-600">+ أنا لست في القائمة (إضافة كضيف)</option>
-                        </Select>
-                        <p className="text-xs text-gray-500 mt-2">اختر اسمك من القائمة لعرض وإثبات حضورك.</p>
-                    </div>
-
-                    {selectedInvitee === 'NEW_GUEST' && (
-                        <div className="bg-indigo-50 p-5 rounded-lg border border-indigo-200 shadow-sm animate-in fade-in slide-in-from-bottom-2 space-y-4">
-                            <h3 className="font-bold text-indigo-900 flex items-center gap-2"><UserPlus className="w-4 h-4"/> التسجيل كضيف</h3>
-                            <Input label="اسمك بالكامل" value={newGuestName} onChange={e => setNewGuestName(e.target.value)} placeholder="أدخل اسمك بالكامل" />
-                            <Input label="المنصب / الصفة الوظيفية" value={newGuestPosition} onChange={e => setNewGuestPosition(e.target.value)} placeholder="مثال: استشاري، منسق" />
-                            <Button type="button" onClick={(e) => { e.preventDefault(); handleAddSelfAsGuest(); }} disabled={isSaving || !newGuestName.trim()}>{isSaving ? <Spinner size="sm" /> : 'التسجيل لإثبات الحضور'}</Button>
-                        </div>
-                    )}
-
-                    {selectedInvitee && selectedInvitee !== 'NEW_GUEST' && (
-                        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm animate-in fade-in slide-in-from-bottom-2">
-                            <label className="block text-sm font-bold text-gray-800 mb-4">2. إثبات الحضور</label>
-                            {!datesToShow || datesToShow.length === 0 ? (
-                                <p className="text-gray-500 italic bg-gray-50 p-4 rounded text-center">
-                                    {targetDate ? "تاريخ الجلسة غير صالح." : "لم يتم تحديد تاريخ محدد للجلسة في الرابط."}
-                                </p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {datesToShow.map(date => {
-                                        const isPresent = (meeting.attendance?.[selectedInvitee] || []).includes(date);
-                                        return (
-                                            <div key={date} className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${isPresent ? 'bg-green-50 border-green-200' : 'bg-gray-50 hover:bg-gray-100 border-gray-200'}`}>
-                                                <span className={`font-bold ${isPresent ? 'text-green-800' : 'text-gray-700'}`}>
-                                                    <Calendar className="w-4 h-4 inline ml-2 mb-0.5" />
-                                                    {date}
-                                                </span>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant={isPresent ? "primary" : "secondary"}
-                                                    onClick={(e) => { e.preventDefault(); handleToggleAttendance(date); }}
-                                                    disabled={isSaving}
-                                                    className={isPresent ? "bg-green-600 hover:bg-green-700 text-white border-green-600 shadow-sm" : "bg-white"}
-                                                >
-                                                    {isPresent ? <><CheckCircle className="w-4 h-4 ml-1 inline"/> حاضر</> : "إثبات كحاضر"}
-                                                </Button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </CardBody>
-            </Card>
         </div>
     );
 }

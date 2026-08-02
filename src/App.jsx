@@ -67,6 +67,8 @@ const NewFacilityEntryForm = lazy(() => import('./components/FacilityForms.jsx')
 const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMentorshipView.jsx'));
 
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
+const MeetingTrackerView = lazy(() => import('./components/MeetingTrackerView'));
+
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
 const PlanningView = lazy(() => import('./components/PlanningView'));
 const LocalityPlanView = lazy(() => import('./components/LocalityPlanView'));
@@ -289,7 +291,8 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMCI Assessment'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
-        { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: 'Project Tracker', view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
+{ label: 'Meeting Tracker', view: 'meetings', icon: Users, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
         { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
@@ -1206,7 +1209,11 @@ export default function App() {
             'finalReport': permissions.canViewCourse, 'participantMigration': permissions.canUseSuperUserAdvancedFeatures, 'childHealthServices': permissions.canViewFacilities,
             'skillsMentorship': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
             'partnersPage': permissions.canViewHumanResource, 'attendanceManager': permissions.canManageCourse, 
-            'projects': permissions.canUseFederalManagerAdvancedFeatures, 'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
+            'projects': permissions.canUseFederalManagerAdvancedFeatures,
+'meetings': permissions.canUseFederalManagerAdvancedFeatures,
+
+
+ 'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
             'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
 
@@ -1515,8 +1522,11 @@ export default function App() {
                     <SkillsMentorshipView setToast={setToast} permissions={permissions} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
                 ) : null;
 
-            case 'projects':
-                return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><ProjectTrackerView permissions={permissions} /></Suspense> ) : null;
+           case 'projects':
+    return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><ProjectTrackerView permissions={permissions} /></Suspense> ) : null;
+
+case 'meetings':
+    return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><MeetingTrackerView permissions={permissions} /></Suspense> ) : null;
 
             case 'planning':
                 return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><PlanningView permissions={permissions} userStates={userStates} /></Suspense> ) : null;

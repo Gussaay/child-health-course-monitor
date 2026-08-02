@@ -4,9 +4,9 @@ import jsPDF from "jspdf";
 import html2canvas from 'html2canvas';
 import { amiriFontBase64 } from './AmiriFont.js'; 
 import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner } from './CommonComponents';
-import { upsertMasterPlan, deleteMasterPlan } from '../data';
+import { upsertMasterPlan, deleteMasterPlan, hardDeleteMasterPlan } from '../data';
 import { useDataCache } from '../DataContext';
-import { Save, Plus, Edit, Trash2, X, ChevronDown, ChevronUp, Layers, BarChart2, PieChart, Activity, Users, Calendar, Download, FileText, Target, CheckSquare, Settings } from 'lucide-react';
+import { Save, Plus, Edit, Trash2, X, ChevronDown, ChevronUp, Layers, BarChart2, PieChart, Activity, Users, Calendar, Download, FileText, Target, CheckSquare, Settings, RefreshCw, AlertTriangle } from 'lucide-react';
 import { STATE_LOCALITIES } from './constants';
 
 import { Capacitor } from '@capacitor/core';
@@ -261,8 +261,18 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         }
     }, [healthFacilities, skillMentorshipSubmissions]);
 
+    // عزل الخطط القاعدية بالكامل بناءً على planCategory او المؤشرات القديمة
+    const allBaseLocalityPlans = useMemo(() => {
+        return (masterPlans || []).filter(p => 
+            p.planCategory === 'locality' || 
+            p.isLocalityBasePlan || 
+            p.expectedOutcome === 'خطة قاعدية (ربعية)' || 
+            p.expectedOutcome === 'قالب خطة إتحادية'
+        );
+    }, [masterPlans]);
+
     const federalTemplates = useMemo(() => {
-        return (masterPlans || [])
+        return allBaseLocalityPlans
             .filter(p => !p.isDeleted && p.level === 'federal' && String(p.year || CURRENT_YEAR) === String(globalFilter.year))
             .filter(p => {
                 if (!globalFilter.quarter) return true;
@@ -274,16 +284,14 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                 const timeB = b.createdAt?.seconds || b.lastUpdatedAt?.seconds || 0;
                 return timeB - timeA;
             });
-    }, [masterPlans, globalFilter.year, globalFilter.quarter]);
+    }, [allBaseLocalityPlans, globalFilter.year, globalFilter.quarter]);
 
     const localityPlans = useMemo(() => {
-        return (masterPlans || [])
-            .filter(p => !p.isDeleted)
-            .filter(p => p.level !== 'federal')
+        return allBaseLocalityPlans
+            .filter(p => !p.isDeleted && p.level !== 'federal')
             .filter(p => {
                 if (!globalFilter.year) return true;
-                const planYear = p.year ? String(p.year) : String(CURRENT_YEAR);
-                return planYear === String(globalFilter.year);
+                return String(p.year || CURRENT_YEAR) === String(globalFilter.year);
             })
             .filter(p => {
                 if (!globalFilter.state) return true;
@@ -303,7 +311,18 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                 const timeB = b.createdAt?.seconds || b.lastUpdatedAt?.seconds || 0;
                 return timeB - timeA;
             });
-    }, [masterPlans, globalFilter]);
+    }, [allBaseLocalityPlans, globalFilter]);
+
+    // بيانات سلة المهملات
+    const deletedLocalityPlans = useMemo(() => {
+        return allBaseLocalityPlans
+            .filter(p => p.isDeleted === true || p.isDeleted === "true")
+            .sort((a, b) => {
+                const timeA = a.createdAt?.seconds || 0;
+                const timeB = b.createdAt?.seconds || 0;
+                return timeB - timeA;
+            });
+    }, [allBaseLocalityPlans]);
 
     const dashboardStats = useMemo(() => {
         let totalBudget = 0; let totalTarget = 0; let activeLocalities = new Set();
@@ -314,7 +333,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                 const fedInv = fedTemplate?.interventions?.find(f => f.name === inv.name);
                 const unitPrice = Number(inv.unitPrice || fedInv?.unitPrice || 0);
                 const plannedVal = Number(inv.planned || 0);
-                const computedCost = plannedVal * unitPrice; // FORCE CALCULATION
+                const computedCost = plannedVal * unitPrice; 
                 
                 totalBudget += computedCost;
                 totalTarget += Number(inv.target) || 0;
@@ -331,7 +350,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                 const fedInv = fedTemplate?.interventions?.find(f => f.name === inv.name);
                 const unitPrice = Number(inv.unitPrice || fedInv?.unitPrice || 0);
                 const plannedVal = Number(inv.planned || 0);
-                const computedCost = plannedVal * unitPrice; // FORCE CALCULATION
+                const computedCost = plannedVal * unitPrice; 
 
                 const actualIndicator = ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator || 'عدد';
                 const key = `${inv.axis}_${inv.name}`;
@@ -341,7 +360,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                 map[key].planned += plannedVal;
                 map[key].baseline += Number(inv.baseline) || 0;
                 map[key].target += Number(inv.target) || 0;
-                map[key].totalCost += computedCost; // Add forced cost
+                map[key].totalCost += computedCost; 
             });
         });
         return Object.values(map);
@@ -366,66 +385,6 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         );
     }, [aggregatedPlan]);
 
-    const exportDashboardPDF = async () => {
-        setIsPdfGenerating(true);
-        try {
-            const doc = new jsPDF('landscape', 'mm', 'a4');
-            doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
-            doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
-            doc.setFont('Amiri');
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = 8; 
-            let currentY = 12;
-
-            doc.setFontSize(22);
-            doc.text(`تقرير التخطيط القاعدي المجمع`, pageWidth / 2, currentY, { align: 'center' });
-            currentY += 10;
-
-            doc.setFontSize(13);
-            doc.setTextColor(100);
-            const filterText = `السنة: ${globalFilter.year} | الولاية: ${globalFilter.state || 'الكل'} | المحلية: ${globalFilter.locality || 'الكل'} | الربع: ${globalFilter.quarter || 'الكل'}`;
-            doc.text(filterText, pageWidth / 2, currentY, { align: 'center' });
-            currentY += 8; 
-
-            const element = document.getElementById('locality-dashboard-export');
-            if (element) {
-                const style = document.createElement('style');
-                style.innerHTML = `
-                    #locality-dashboard-export { width: 1500px !important; max-width: 1500px !important; background-color: #ffffff !important; direction: rtl !important; }
-                    #locality-dashboard-export .space-y-6 > * + * { margin-top: 0.75rem !important; }
-                    #locality-dashboard-export .p-4 { padding: 0.75rem !important; }
-                    #locality-dashboard-export table th { font-size: 15px !important; padding: 8px 6px !important; }
-                    #locality-dashboard-export table td { font-size: 15px !important; padding: 8px 6px !important; line-height: 1.5 !important; }
-                `;
-                document.head.appendChild(style);
-                await new Promise(resolve => setTimeout(resolve, 200));
-
-                const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 1500 });
-                document.head.removeChild(style);
-
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                const maxImgWidth = pageWidth - (margin * 2);
-                const maxImgHeight = pageHeight - currentY - margin;
-                const bestRatio = Math.min(maxImgWidth / canvas.width, maxImgHeight / canvas.height); 
-                
-                doc.addImage(imgData, 'JPEG', margin + (maxImgWidth - (canvas.width * bestRatio)) / 2, currentY, canvas.width * bestRatio, canvas.height * bestRatio);
-            }
-
-            const fileName = `Locality_Plan_${globalFilter.year}.pdf`;
-            if (Capacitor.isNativePlatform()) {
-                const base64Data = doc.output('datauristring').split('base64,')[1];
-                const writeResult = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Downloads });
-                await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
-            } else { doc.save(fileName); }
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            alert("حدث خطأ أثناء تصدير الـ PDF.");
-        } finally {
-            setIsPdfGenerating(false);
-        }
-    };
-
     const handleCreateNewMaster = (asFederalTemplate = false) => {
         let selectedQuarter = globalFilter.quarter || QUARTERS_LIST[0];
 
@@ -438,11 +397,12 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
             const quarterIndex = QUARTERS_LIST.indexOf(selectedQuarter);
             const prevQuarter = quarterIndex > 0 ? QUARTERS_LIST[quarterIndex - 1] : null;
-            const prevFedTemplate = (masterPlans || []).find(p => !p.isDeleted && p.level === 'federal' && String(p.year) === String(globalFilter.year) && p.quarter === prevQuarter);
+            const prevFedTemplate = allBaseLocalityPlans.find(p => !p.isDeleted && p.level === 'federal' && String(p.year) === String(globalFilter.year) && p.quarter === prevQuarter);
             
             let baseItems = prevFedTemplate && prevFedTemplate.interventions?.length > 0 ? prevFedTemplate.interventions : LOCALITY_TEMPLATE;
 
             setCurrentPlan({
+                planCategory: 'locality', // فصل صريح
                 level: 'federal',
                 year: globalFilter.year,
                 quarter: selectedQuarter,
@@ -479,7 +439,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         const quarterIndex = QUARTERS_LIST.indexOf(selectedQuarter);
         const prevQuarter = quarterIndex > 0 ? QUARTERS_LIST[quarterIndex - 1] : null;
 
-        const prevPlan = (masterPlans || []).find(p => 
+        const prevPlan = allBaseLocalityPlans.find(p => 
             p.level !== 'federal' && 
             p.state === stateToUse && 
             p.locality === assignedLocality && 
@@ -488,7 +448,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
             !p.isDeleted
         );
         
-        const fedTemplate = (masterPlans || []).find(p => !p.isDeleted && p.level === 'federal' && String(p.year || CURRENT_YEAR) === String(globalFilter.year) && p.quarter === selectedQuarter);
+        const fedTemplate = allBaseLocalityPlans.find(p => !p.isDeleted && p.level === 'federal' && String(p.year || CURRENT_YEAR) === String(globalFilter.year) && p.quarter === selectedQuarter);
 
         let baseItems = LOCALITY_TEMPLATE;
         if (prevPlan && prevPlan.interventions?.length > 0) {
@@ -501,7 +461,6 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
             const systemData = computeSystemBaseline(item.name, stateToUse, assignedLocality);
             const plannedVal = Number(item.planned || 0);
             
-            // Try to pull unit price from federal template if missing
             const fedInv = fedTemplate?.interventions?.find(f => f.name === item.name);
             const unitPriceVal = Number(item.unitPrice || fedInv?.unitPrice || 0);
 
@@ -514,7 +473,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                 baseline: systemData.value.toString(), 
                 target: (plannedVal + systemData.value).toString(),
                 unitPrice: unitPriceVal ? String(unitPriceVal) : '', 
-                totalCost: String(plannedVal * unitPriceVal), // FORCE CALCULATION
+                totalCost: String(plannedVal * unitPriceVal), 
                 notes: item.notes || '',
                 targetedFacilities: item.targetedFacilities || [],
                 isCustom: item.isCustom || false 
@@ -522,6 +481,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         });
 
         setCurrentPlan({
+            planCategory: 'locality', // فصل صريح
             level: 'locality',
             year: globalFilter.year,
             quarter: selectedQuarter, 
@@ -543,6 +503,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         try {
             const payloadToSave = {
                 ...currentPlan,
+                planCategory: 'locality', // ضمان الحفظ كخطة محلية
                 interventions: currentPlan.interventions.map(inv => {
                     const pVal = Number(inv.planned || 0);
                     const uVal = Number(inv.unitPrice || 0);
@@ -555,7 +516,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                         baseline: Number(inv.baseline) || 0,
                         target: Number(inv.target) || 0,
                         unitPrice: uVal,
-                        totalCost: pVal * uVal, // FORCE CALCULATION ON SAVE
+                        totalCost: pVal * uVal,
                         notes: inv.notes || '',
                         targetedFacilities: inv.targetedFacilities || [],
                         isCustom: currentPlan.level === 'federal' ? false : !!inv.isCustom
@@ -567,32 +528,51 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
             await fetchMasterPlans(true);
             setIsEditing(false);
         } catch (error) {
-            console.error("Firebase Save Error:", error);
             alert("حدث خطأ أثناء الحفظ.\nالتفاصيل: " + error.message);
         } finally {
             setIsSaving(false);
         }
     };
 
+    // دوال الاستعادة والحذف النهائي
+    const handleRestorePlan = async (plan) => {
+        if(window.confirm("هل أنت متأكد من استعادة هذه الخطة المحذوفة؟")) {
+            await upsertMasterPlan({ ...plan, isDeleted: false });
+            fetchMasterPlans(true);
+        }
+    };
+
+    const handlePermanentDelete = async (id) => {
+        if(window.confirm("⚠️ تحذير: هذا الإجراء سيقوم بمسح الخطة بشكل نهائي من قاعدة البيانات ولن يمكن التراجع عنه! هل أنت متأكد؟")) {
+            try {
+                if (hardDeleteMasterPlan) {
+                    await hardDeleteMasterPlan(id);
+                } else {
+                    alert("يرجى إضافة دالة hardDeleteMasterPlan في ملف data.js أولاً.");
+                    return;
+                }
+                fetchMasterPlans(true);
+            } catch(e) {
+                alert("حدث خطأ أثناء الحذف النهائي.");
+            }
+        }
+    };
+
     const updateIntervention = (idx, field, value) => {
         const updated = [...currentPlan.interventions];
-        
         if (field === 'targetedFacilities') {
             updated[idx][field] = value;
         } else if (['planned', 'baseline', 'unitPrice'].includes(field)) {
             let cleanValue = value ? String(value).replace(/[^0-9]/g, '') : '';
             updated[idx][field] = cleanValue;
-            
             const pVal = Number(updated[idx].planned) || 0;
             const bVal = Number(updated[idx].baseline) || 0;
             const uVal = Number(updated[idx].unitPrice) || 0;
-            
             updated[idx].target = (pVal + bVal).toString(); 
-            updated[idx].totalCost = (pVal * uVal).toString(); // FORCE CALCULATION ON EVERY EDIT
+            updated[idx].totalCost = (pVal * uVal).toString(); 
         } else {
             updated[idx][field] = value;
         }
-        
         setCurrentPlan({ ...currentPlan, interventions: updated });
     };
 
@@ -618,8 +598,8 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
     const numInputClass = "w-full h-full min-h-[48px] px-1 py-2 outline-none text-center font-bold text-sm sm:text-base bg-transparent focus:bg-white focus:ring-2 focus:ring-teal-500 rounded transition-all";
 
     if (isEditing && currentPlan) {
+        // [نفس كود شاشة التعديل بدون تغيير]
         const isFederalPlan = currentPlan.level === 'federal';
-
         return (
             <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col animate-in fade-in" dir="rtl">
                 <div className="bg-white shadow px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-teal-200 shrink-0 gap-3">
@@ -711,7 +691,6 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                         targetDisplay = `${targetVal.toLocaleString('en-US')} (${percentage}%)`;
                                     }
 
-                                    // Strictly compute cost to ensure display accuracy in edit mode
                                     const computedTotalCost = (Number(inv.planned) || 0) * (Number(inv.unitPrice) || 0);
 
                                     return (
@@ -851,6 +830,9 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                     <button onClick={() => setActiveTab('dashboard')} className={`pb-4 px-2 sm:px-1 border-b-2 font-bold text-sm sm:text-base flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                         <BarChart2 size={20} /> لوحة المؤشرات المجمعة
                     </button>
+                    <button onClick={() => setActiveTab('trash')} className={`pb-4 px-2 sm:px-1 border-b-2 font-bold text-sm sm:text-base flex items-center gap-2 transition-colors ${activeTab === 'trash' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-red-700'}`}>
+                        <Trash2 size={20} /> سلة المهملات
+                    </button>
                 </nav>
             </div>
 
@@ -985,7 +967,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                             setCurrentPlan({ ...plan, interventions: syncedInterventions }); 
                                                             setIsEditing(true); 
                                                         }} className="px-4 py-2"><Edit size={16}/></Button>
-                                                        <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); if(window.confirm("حذف الخطة؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }} className="px-4 py-2"><Trash2 size={16}/></Button></>
+                                                        <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); if(window.confirm("حذف الخطة للتوجه لسلة المهملات؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }} className="px-4 py-2"><Trash2 size={16}/></Button></>
                                                     )}
                                                 </div>
                                                 {expandedPlanId === plan.id ? <ChevronUp size={24} className="text-gray-500"/> : <ChevronDown size={24} className="text-gray-500"/>}
@@ -1161,6 +1143,48 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                     </div>
                 </div>
             )}
+
+            {/* TAB: TRASH (RECYCLE BIN) */}
+            {activeTab === 'trash' && (
+                <div className="space-y-4 animate-in fade-in pt-4">
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-200 flex items-start gap-3">
+                        <AlertTriangle className="text-red-600 shrink-0 mt-1" />
+                        <div>
+                            <h4 className="font-bold text-red-800">سلة المهملات (الخطط القاعدية)</h4>
+                            <p className="text-xs sm:text-sm text-red-700 mt-1">الخطط المحذوفة مؤقتاً تظهر هنا. يمكنك استعادتها للعمل أو حذفها بشكل نهائي.</p>
+                        </div>
+                    </div>
+
+                    {deletedLocalityPlans.length === 0 ? (
+                        <EmptyState message="سلة المهملات فارغة حالياً." />
+                    ) : (
+                        <div className="space-y-4">
+                            {deletedLocalityPlans.map(plan => (
+                                <div key={plan.id} className="border border-red-200 rounded-lg overflow-hidden bg-white shadow-sm opacity-80 hover:opacity-100 transition-opacity">
+                                    <div className="p-4 bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                                            <span className="px-3 py-1.5 rounded text-xs font-bold bg-gray-200 text-gray-600 w-fit">
+                                                {plan.level === 'federal' ? 'قالب إتحادي' : `محلي - ${plan.locality || 'غير محدد'} (${STATE_LOCALITIES[plan.state]?.ar || plan.state})`}
+                                            </span>
+                                            <span className="px-3 py-1.5 rounded text-xs font-bold bg-gray-200 text-gray-600 w-fit">{plan.quarter || 'غير محدد'}</span>
+                                            <span className="text-sm font-bold text-gray-500">{plan.expectedOutcome}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                            <Button size="sm" variant="success" onClick={() => handleRestorePlan(plan)} className="px-4 py-2">
+                                                <RefreshCw size={16} className="ml-1"/> استعادة
+                                            </Button>
+                                            <Button size="sm" variant="danger" onClick={() => handlePermanentDelete(plan.id)} className="px-4 py-2 bg-red-700 hover:bg-red-800">
+                                                <Trash2 size={16} className="ml-1"/> حذف نهائي
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
         </div>
     );
 }

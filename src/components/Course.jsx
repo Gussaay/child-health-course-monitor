@@ -2217,7 +2217,7 @@ export function CourseForm({
 
     const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
     const CPCM_SUBCOURSE_TYPES = ['CPCM Community Module'];
-    const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'CPAP training', 'Kangaroo mother Care'];
+    const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'Sepsis surveillance and management', 'CPAP training', 'Kangaroo mother Care'];
 
     const EMONC_SUBCOURSE_TYPES = [
         'Emergency Newborn Care', 

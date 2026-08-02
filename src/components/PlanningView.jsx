@@ -1,18 +1,17 @@
 // src/components/PlanningView.jsx
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { amiriFontBase64 } from './AmiriFont.js'; 
-import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
+import { Card, CardBody, Button, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
 import { upsertMasterPlan, deleteMasterPlan, upsertOperationalPlan, deleteOperationalPlan } from '../data';
 import { useDataCache } from '../DataContext';
 import { 
     Plus, Edit, Trash2, TrendingUp, Target, ChevronDown, 
     ChevronUp, Calendar, Activity, FileSpreadsheet, CheckCircle2, 
-    AlertTriangle, Briefcase, Calculator, Upload, Download, Save, X, BarChart2, PieChart, Layers, ListFilter, FileText
+    AlertTriangle, Briefcase, Save, X, BarChart2, PieChart, Layers, ListFilter, FileText, Download, Upload
 } from 'lucide-react';
-import { STATE_LOCALITIES } from './constants'; 
 
 // --- الثوابت الأساسية والقوائم ---
 const AXIS_OPTIONS = ['الحاكمية', 'بناء القدرات', 'تقديم الخدمات', 'نظام المعلومات', 'الإمداد', 'التمويل'];
@@ -131,7 +130,7 @@ const SelectWithOther = ({ options, value, onChange, placeholder, otherLabel = '
     );
 };
 
-export default function PlanningView({ permissions, userStates }) {
+export default function PlanningView() {
     const { 
         masterPlans: rawPlans, fetchMasterPlans, 
         operationalPlans: rawOpPlans, fetchOperationalPlans, 
@@ -144,32 +143,23 @@ export default function PlanningView({ permissions, userStates }) {
     const [isEditingMatrix, setIsEditingMatrix] = useState(false); 
     const [isEditingOpPlan, setIsEditingOpPlan] = useState(false); 
     const [isEditingTracking, setIsEditingTracking] = useState(false);
+    const [isDashboardCollapsed, setIsDashboardCollapsed] = useState(false);
+    
+    // State for Collapsible Evaluation Groups
+    const [collapsedGroups, setCollapsedGroups] = useState({});
 
     // Pop-up states for Matrix and Operational Plan enhancement
     const [scheduleModalIdx, setScheduleModalIdx] = useState(null);
     const [supportModalIdx, setSupportModalIdx] = useState(null);
     const [opSupportModalIdx, setOpSupportModalIdx] = useState(null);
 
-    const isFederalManager = permissions?.canUseFederalManagerAdvancedFeatures || permissions?.manageScope === 'federal';
-
     // ==========================================
-    // 1. GLOBAL CONTEXT STATE (الموجه الأساسي للنظام)
+    // 1. GLOBAL CONTEXT STATE (Simplified to Year Only)
     // ==========================================
-    const [globalFilter, setGlobalFilter] = useState({
-        year: CURRENT_YEAR,
-        level: isFederalManager ? 'federal' : 'state',
-        state: isFederalManager ? '' : (userStates?.[0] || ''),
-        locality: '' 
-    });
+    const [globalFilter, setGlobalFilter] = useState({ year: CURRENT_YEAR });
 
     // Evaluation Granular Filters
-    const [evalFilters, setEvalFilters] = useState({
-        quarter: '',
-        month: '',
-        week: '',
-        outcome: '',
-        axis: ''
-    });
+    const [evalFilters, setEvalFilters] = useState({ outcome: '', axis: '' });
 
     const [currentPlan, setCurrentPlan] = useState(null);
     const [currentOpPlan, setCurrentOpPlan] = useState(null);
@@ -180,16 +170,22 @@ export default function PlanningView({ permissions, userStates }) {
         if (fetchHealthFacilities) fetchHealthFacilities(); 
     }, [fetchMasterPlans, fetchOperationalPlans, fetchHealthFacilities]);
 
+    const toggleEvaluationGroup = (index) => {
+        setCollapsedGroups(prev => ({
+            ...prev,
+            [index]: !prev[index]
+        }));
+    };
+
     // ==========================================
-    // 2. FILTERED DATA MEMOS
+    // 2. FILTERED DATA MEMOS (Strictly Federal)
     // ==========================================
     const filteredPlans = useMemo(() => {
         return (rawPlans || [])
             .filter(p => !p.isDeleted)
-            .filter(p => (p.year || CURRENT_YEAR) === globalFilter.year) 
-            .filter(p => (p.level || 'federal') === globalFilter.level) 
-            .filter(p => globalFilter.level === 'federal' || !globalFilter.state || (p.state || '') === globalFilter.state)
-            .filter(p => globalFilter.level !== 'locality' || !globalFilter.locality || (p.locality || '') === globalFilter.locality)
+            .filter(p => (p.year || CURRENT_YEAR) === globalFilter.year)
+            .filter(p => (p.level || 'federal') === 'federal') // Strict Federal filter
+            .filter(p => !p.isLocalityBasePlan && p.expectedOutcome !== 'خطة قاعدية (ربعية)' && p.expectedOutcome !== 'قالب خطة إتحادية')
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }, [rawPlans, globalFilter]);
 
@@ -197,32 +193,17 @@ export default function PlanningView({ permissions, userStates }) {
         return (rawOpPlans || [])
             .filter(p => !p.isDeleted)
             .filter(p => (p.year || CURRENT_YEAR) === globalFilter.year)
-            .filter(p => (p.level || 'federal') === globalFilter.level)
-            .filter(p => globalFilter.level === 'federal' || !globalFilter.state || (p.state || '') === globalFilter.state)
-            .filter(p => globalFilter.level !== 'locality' || !globalFilter.locality || (p.locality || '') === globalFilter.locality)
+            .filter(p => (p.level || 'federal') === 'federal') // Strict Federal filter
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }, [rawOpPlans, globalFilter]);
 
-    // قائمة المؤسسات الديناميكية الذكية للتخطيط
+    // قائمة المؤسسات الديناميكية
     const dynamicFacilityOptions = useMemo(() => {
         if (!healthFacilities) return [];
-        
-        let validFacilities = healthFacilities.filter(f => 
-            f.isDeleted !== true && f.isDeleted !== "true" && f['اسم_المؤسسة']
-        );
-        
-        if (currentOpPlan && (currentOpPlan.level === 'state' || currentOpPlan.level === 'locality') && currentOpPlan.state) {
-            validFacilities = validFacilities.filter(f => f['الولاية'] === currentOpPlan.state);
-        }
-
-        if (currentOpPlan && currentOpPlan.level === 'locality' && currentOpPlan.locality) {
-            validFacilities = validFacilities.filter(f => f['المحلية'] === currentOpPlan.locality);
-        }
-        
+        let validFacilities = healthFacilities.filter(f => f.isDeleted !== true && f.isDeleted !== "true" && f['اسم_المؤسسة']);
         const names = [...new Set(validFacilities.map(f => f['اسم_المؤسسة']))];
         return names.sort();
-    }, [healthFacilities, currentOpPlan?.level, currentOpPlan?.state, currentOpPlan?.locality]);
-
+    }, [healthFacilities]);
 
     const calculateGap = (inv) => {
         const total = Number(inv.totalCost) || 0;
@@ -237,8 +218,84 @@ export default function PlanningView({ permissions, userStates }) {
         return mp.interventions;
     };
 
-    const getAvailableMasterPlans = (actRow) => {
+    const getAvailableMasterPlans = () => {
         return filteredPlans;
+    };
+
+    // --- AGGREGATION LOGIC FOR QUARTERLY PLANS: Strict Replacement (Federal Only) ---
+    const mergeAggregatedQuarterlyActivities = (quarter, year, allOpPlans) => {
+        if (!quarter) return []; 
+        const months = QUARTERS_MAP[quarter] || [];
+        
+        // Find all relevant monthly plans
+        const monthlyPlans = allOpPlans.filter(p =>
+            p.planType === PLAN_TYPES.MONTHLY &&
+            months.includes(p.periodMonth) &&
+            p.year === year
+        );
+
+        const aggregatedMap = {};
+
+        // Calculate aggregated sums from Monthly Plans
+        monthlyPlans.forEach(mp => {
+            mp.activities?.forEach(act => {
+                const key = act.isUnplanned ? `unplanned_${act.name}` : `planned_${act.masterPlanId}_${act.interventionId}`;
+                
+                if (!aggregatedMap[key]) {
+                    aggregatedMap[key] = {
+                        target: 0, totalCost: 0, govValue: 0, extValue1: 0, extValue2: 0, extValue3: 0,
+                        targetFacilities: new Set(),
+                        sourceAct: act 
+                    };
+                }
+                aggregatedMap[key].target += Number(act.target || 0);
+                aggregatedMap[key].totalCost += Number(act.totalCost || 0);
+                aggregatedMap[key].govValue += Number(act.govValue || 0);
+                aggregatedMap[key].extValue1 += Number(act.extValue1 || 0);
+                aggregatedMap[key].extValue2 += Number(act.extValue2 || 0);
+                aggregatedMap[key].extValue3 += Number(act.extValue3 || 0);
+                
+                if (act.targetFacilities) {
+                    act.targetFacilities.forEach(f => aggregatedMap[key].targetFacilities.add(f));
+                }
+            });
+        });
+
+        // Strict Replacement mapped final activities
+        const finalActivities = Object.keys(aggregatedMap).map(key => {
+            const item = aggregatedMap[key];
+            const source = item.sourceAct;
+            return {
+                ...source,
+                id: `act_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+                target: item.target,
+                totalCost: item.totalCost,
+                govValue: item.govValue,
+                extValue1: item.extValue1,
+                extValue2: item.extValue2,
+                extValue3: item.extValue3,
+                targetFacilities: Array.from(item.targetFacilities)
+            };
+        });
+
+        return finalActivities;
+    };
+
+    const handleOpPlanFieldChange = (field, value) => {
+        if (!currentOpPlan) return;
+        
+        let updatedOpPlan = { ...currentOpPlan, [field]: value };
+
+        // Auto-aggregate monthly plans into quarter plan on context change (Strict Replace)
+        if (updatedOpPlan.planType === PLAN_TYPES.QUARTERLY && ['year', 'periodQuarter'].includes(field)) {
+             updatedOpPlan.activities = mergeAggregatedQuarterlyActivities(
+                 updatedOpPlan.periodQuarter, 
+                 updatedOpPlan.year, 
+                 filteredOpPlans
+             );
+        }
+        
+        setCurrentOpPlan(updatedOpPlan);
     };
 
     const getAggregatedData = (targetPlan) => {
@@ -296,6 +353,267 @@ export default function PlanningView({ permissions, userStates }) {
         }
     };
 
+    // ==========================================
+    // EXCEL IMPORT & EXPORT (TEMPLATES & ALL PLANS)
+    // ==========================================
+
+    const exportAllMasterPlansExcel = () => {
+        if (!filteredPlans || filteredPlans.length === 0) {
+            alert("لا توجد خطط سنوية لتصديرها");
+            return;
+        }
+
+        const rows = [];
+        filteredPlans.forEach(plan => {
+            (plan.interventions || []).forEach(inv => {
+                const totalExt = (Number(inv.extValue1)||0) + (Number(inv.extValue2)||0) + (Number(inv.extValue3)||0);
+                const gap = calculateGap(inv);
+                
+                rows.push({
+                    'السنة': plan.year,
+                    'المستوى': plan.level === 'federal' ? 'اتحادي' : 'ولائي/قاعدي',
+                    'النتيجة المتوقعة': plan.expectedOutcome,
+                    'المحور': inv.axis || '',
+                    'النشاط': inv.name || '',
+                    'المؤشر': inv.indicator || '',
+                    'الأساس': inv.baseline || 0,
+                    'الهدف': inv.target || 0,
+                    'الربع الاول': inv.q1 ? 'نعم' : 'لا',
+                    'الربع الثاني': inv.q2 ? 'نعم' : 'لا',
+                    'الربع الثالث': inv.q3 ? 'نعم' : 'لا',
+                    'الربع الرابع': inv.q4 ? 'نعم' : 'لا',
+                    'التكلفة الإجمالية': inv.totalCost || 0,
+                    'الدعم الحكومي': inv.govValue || 0,
+                    'دعم الشركاء': totalExt,
+                    'العجز (Gap)': gap,
+                    'ملاحظات': inv.notes || ''
+                });
+            });
+        });
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!views'] = [{ rightToLeft: true }];
+        ws['!cols'] = [ {wch:10}, {wch:10}, {wch:35}, {wch:15}, {wch:40}, {wch:20}, {wch:10}, {wch:10}, {wch:10}, {wch:10}, {wch:10}, {wch:10}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:30} ];
+        
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "الخطط السنوية (القومية)");
+        XLSX.writeFile(wb, `All_Master_Plans_${globalFilter.year}.xlsx`);
+    };
+
+    const exportAllOpPlansExcel = () => {
+        const activePlans = filteredOpPlans.filter(op => op.planType === PLAN_TYPES[activeTab.toUpperCase()]);
+        
+        if (!activePlans || activePlans.length === 0) {
+            alert("لا توجد خطط تشغيلية لتصديرها");
+            return;
+        }
+
+        const rows = [];
+        activePlans.forEach(op => {
+            (op.activities || []).forEach(act => {
+                const totalExt = (Number(act.extValue1)||0) + (Number(act.extValue2)||0) + (Number(act.extValue3)||0);
+                const gap = calculateGap(act);
+                
+                let outcomeName = 'مستحدث / غير مخطط';
+                if (!act.isUnplanned && act.masterPlanId) {
+                    const mp = filteredPlans.find(p => p.id === act.masterPlanId);
+                    if (mp) outcomeName = mp.expectedOutcome;
+                }
+
+                rows.push({
+                    'السنة': op.year,
+                    'الفترة': op.periodName,
+                    'نوع الخطة': op.planType,
+                    'النتيجة المتوقعة': outcomeName,
+                    'النوع': act.isUnplanned ? 'غير مخطط' : 'مخطط',
+                    'المحور': act.axis || '',
+                    'النشاط': act.name || '',
+                    'المؤسسات المستهدفة': (act.targetFacilities || []).join('، '),
+                    'المؤشر': act.indicator || '',
+                    'الهدف': act.target || 0,
+                    'التكلفة الإجمالية': act.totalCost || 0,
+                    'الدعم الحكومي': act.govValue || 0,
+                    'دعم الشركاء': totalExt,
+                    'العجز (Gap)': gap,
+                    'المنفذ الفعلي': act.achieved || 0,
+                    'التكلفة الفعلية': act.actualCost || 0,
+                    'ملاحظات': act.notes || ''
+                });
+            });
+        });
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!views'] = [{ rightToLeft: true }];
+        ws['!cols'] = [ {wch:10}, {wch:20}, {wch:15}, {wch:35}, {wch:12}, {wch:15}, {wch:40}, {wch:30}, {wch:20}, {wch:10}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:30} ];
+        
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, `الخطط_${activeTab}_${globalFilter.year}`);
+        XLSX.writeFile(wb, `All_${activeTab}_Plans_${globalFilter.year}.xlsx`);
+    };
+
+    const downloadMasterPlanTemplate = () => {
+        const rows = (currentPlan.interventions || []).map(inv => ({
+            'ID (لا تقم بتعديله)': inv.id,
+            'المحور': inv.axis || '',
+            'النشاط': inv.name || '',
+            'المؤشر': inv.indicator || '',
+            'الأساس': inv.baseline || 0,
+            'الهدف': inv.target || 0,
+            'التكلفة الإجمالية': inv.totalCost || 0,
+            'الربع الاول': inv.q1 ? 'نعم' : 'لا',
+            'الربع الثاني': inv.q2 ? 'نعم' : 'لا',
+            'الربع الثالث': inv.q3 ? 'نعم' : 'لا',
+            'الربع الرابع': inv.q4 ? 'نعم' : 'لا',
+            'ملاحظات': inv.notes || ''
+        }));
+        
+        if (rows.length === 0) {
+            rows.push({
+                'ID (لا تقم بتعديله)': '',
+                'المحور': AXIS_OPTIONS[0],
+                'النشاط': 'أدخل النشاط هنا',
+                'المؤشر': INDICATOR_OPTIONS[0],
+                'الأساس': 0,
+                'الهدف': 0,
+                'التكلفة الإجمالية': 0,
+                'الربع الاول': 'نعم',
+                'الربع الثاني': 'لا',
+                'الربع الثالث': 'لا',
+                'الربع الرابع': 'لا',
+                'ملاحظات': ''
+            });
+        }
+        
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!views'] = [{ rightToLeft: true }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "الخطة السنوية");
+        XLSX.writeFile(wb, `Template_MasterPlan_${currentPlan.year}.xlsx`);
+    };
+
+    const handleMasterPlanUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const bstr = evt.target.result;
+            const wb = XLSX.read(bstr, { type: 'binary' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(ws);
+
+            const updatedInvs = [...(currentPlan.interventions || [])];
+            
+            data.forEach(row => {
+                const rowId = row['ID (لا تقم بتعديله)'];
+                const existingIdx = updatedInvs.findIndex(i => i.id === rowId);
+                
+                const newInv = {
+                    id: rowId || `inv_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+                    axis: row['المحور'] || AXIS_OPTIONS[0],
+                    name: row['النشاط'] || '',
+                    indicator: row['المؤشر'] || '',
+                    baseline: Number(row['الأساس']) || 0,
+                    target: Number(row['الهدف']) || 0,
+                    totalCost: Number(row['التكلفة الإجمالية']) || 0,
+                    q1: row['الربع الاول'] === 'نعم',
+                    q2: row['الربع الثاني'] === 'نعم',
+                    q3: row['الربع الثالث'] === 'نعم',
+                    q4: row['الربع الرابع'] === 'نعم',
+                    notes: row['ملاحظات'] || ''
+                };
+
+                if (existingIdx >= 0) {
+                    updatedInvs[existingIdx] = { ...updatedInvs[existingIdx], ...newInv };
+                } else {
+                    updatedInvs.push({ ...DEFAULT_INTERVENTION(), ...newInv });
+                }
+            });
+            setCurrentPlan({ ...currentPlan, interventions: updatedInvs });
+        };
+        reader.readAsBinaryString(file);
+        e.target.value = null; // Reset input
+    };
+
+    const downloadOpPlanTemplate = () => {
+        const rows = (currentOpPlan.activities || []).map(act => ({
+            'ID (لا تقم بتعديله)': act.id,
+            'Master ID (لا تقم بتعديله)': act.masterPlanId || '',
+            'Intervention ID (لا تقم بتعديله)': act.interventionId || '',
+            'النوع': act.isUnplanned ? 'غير مخطط' : 'مخطط',
+            'المحور': act.axis || '',
+            'النشاط': act.name || '',
+            'المؤشر': act.indicator || '',
+            'الهدف': act.target || 0,
+            'التكلفة الإجمالية': act.totalCost || 0,
+            'ملاحظات': act.notes || ''
+        }));
+        
+        if (rows.length === 0) {
+            rows.push({
+                'ID (لا تقم بتعديله)': '',
+                'Master ID (لا تقم بتعديله)': '',
+                'Intervention ID (لا تقم بتعديله)': '',
+                'النوع': 'غير مخطط',
+                'المحور': AXIS_OPTIONS[0],
+                'النشاط': 'نشاط جديد مستحدث',
+                'المؤشر': INDICATOR_OPTIONS[0],
+                'الهدف': 0,
+                'التكلفة الإجمالية': 0,
+                'ملاحظات': ''
+            });
+        }
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!views'] = [{ rightToLeft: true }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "الخطة التشغيلية");
+        XLSX.writeFile(wb, `Template_OpPlan_${currentOpPlan.periodName || 'New'}.xlsx`);
+    };
+
+    const handleOpPlanUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const bstr = evt.target.result;
+            const wb = XLSX.read(bstr, { type: 'binary' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(ws);
+
+            const updatedActs = [...(currentOpPlan.activities || [])];
+            
+            data.forEach(row => {
+                const rowId = row['ID (لا تقم بتعديله)'];
+                const masterId = row['Master ID (لا تقم بتعديله)'];
+                const existingIdx = updatedActs.findIndex(a => a.id === rowId);
+                
+                const newAct = {
+                    id: rowId || `act_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+                    isUnplanned: !masterId, 
+                    masterPlanId: masterId || '',
+                    interventionId: row['Intervention ID (لا تقم بتعديله)'] || '',
+                    name: row['النشاط'] || '',
+                    axis: row['المحور'] || AXIS_OPTIONS[0],
+                    indicator: row['المؤشر'] || '',
+                    target: Number(row['الهدف']) || 0,
+                    totalCost: Number(row['التكلفة الإجمالية']) || 0,
+                    notes: row['ملاحظات'] || ''
+                };
+
+                if (existingIdx >= 0) {
+                    updatedActs[existingIdx] = { ...updatedActs[existingIdx], ...newAct };
+                } else {
+                    updatedActs.push({ ...DEFAULT_OP_ACTIVITY(), ...newAct });
+                }
+            });
+            setCurrentOpPlan({ ...currentOpPlan, activities: updatedActs });
+        };
+        reader.readAsBinaryString(file);
+        e.target.value = null; // Reset input
+    };
+
     // Updating Handlers for Modals
     const updateMasterPlanIntervention = (idx, field, val) => {
         const newInvs = [...currentPlan.interventions];
@@ -311,20 +629,6 @@ export default function PlanningView({ permissions, userStates }) {
 
     const handleSaveMasterPlan = async (e) => {
         if (e) e.preventDefault();
-        
-        if (!currentPlan.level) {
-            alert("الرجاء تحديد نوع الخطة.");
-            return;
-        }
-        if ((currentPlan.level === 'state' || currentPlan.level === 'locality') && !currentPlan.state) {
-            alert("الرجاء تحديد الولاية.");
-            return;
-        }
-        if (currentPlan.level === 'locality' && !currentPlan.locality) {
-            alert("الرجاء تحديد المحلية.");
-            return;
-        }
-        
         await upsertMasterPlan(currentPlan);
         fetchMasterPlans(true);
         setIsEditingMatrix(false);
@@ -334,20 +638,6 @@ export default function PlanningView({ permissions, userStates }) {
 
     const handleSaveOpPlan = async (e) => {
         if (e) e.preventDefault();
-        
-        if (!currentOpPlan.level) {
-            alert("الرجاء تحديد مستوى الخطة.");
-            return;
-        }
-        if ((currentOpPlan.level === 'state' || currentOpPlan.level === 'locality') && !currentOpPlan.state) {
-            alert("الرجاء تحديد الولاية.");
-            return;
-        }
-        if (currentOpPlan.level === 'locality' && !currentOpPlan.locality) {
-            alert("الرجاء تحديد المحلية.");
-            return;
-        }
-
         let name = currentOpPlan.planType === PLAN_TYPES.QUARTERLY ? currentOpPlan.periodQuarter : 
                    currentOpPlan.planType === PLAN_TYPES.MONTHLY ? currentOpPlan.periodMonth : 
                    `${currentOpPlan.periodWeek} - ${currentOpPlan.periodMonth}`;
@@ -369,9 +659,7 @@ export default function PlanningView({ permissions, userStates }) {
         setCurrentPlan({ 
             year: globalFilter.year, 
             expectedOutcome: OUTCOME_OPTIONS[0], 
-            level: globalFilter.level,
-            state: (globalFilter.level === 'state' || globalFilter.level === 'locality') && !globalFilter.state && isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : globalFilter.state,
-            locality: globalFilter.locality || '',
+            level: 'federal',
             interventions: [DEFAULT_INTERVENTION()] 
         }); 
         setIsEditingMatrix(true);
@@ -381,12 +669,14 @@ export default function PlanningView({ permissions, userStates }) {
         let base = { 
             planType: type, 
             year: globalFilter.year, 
-            level: globalFilter.level,
-            state: (globalFilter.level === 'state' || globalFilter.level === 'locality') && !globalFilter.state && isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : globalFilter.state,
-            locality: globalFilter.locality || '',
+            level: 'federal',
             activities: [] 
         };
-        if (type === PLAN_TYPES.QUARTERLY) base.periodQuarter = QUARTERS_LIST[0];
+        if (type === PLAN_TYPES.QUARTERLY) {
+            base.periodQuarter = QUARTERS_LIST[0];
+            // Strictly aggregate immediately on creation
+            base.activities = mergeAggregatedQuarterlyActivities(base.periodQuarter, base.year, filteredOpPlans);
+        }
         if (type === PLAN_TYPES.MONTHLY) base.periodMonth = MONTHS_LIST[0];
         if (type === PLAN_TYPES.WEEKLY) {
             base.periodMonth = MONTHS_LIST[0];
@@ -398,30 +688,17 @@ export default function PlanningView({ permissions, userStates }) {
 
     const handleEditOpPlan = (op) => {
         const enrichedOp = { ...op };
-        const existingInvIds = new Set(enrichedOp.activities?.map(a => a.interventionId) || []);
-        const newActivities = [];
 
         if (op.planType === PLAN_TYPES.QUARTERLY) {
-            const months = QUARTERS_MAP[op.periodQuarter] || [];
-            const childPlans = filteredOpPlans.filter(p => 
-                (p.planType === PLAN_TYPES.MONTHLY || p.planType === PLAN_TYPES.WEEKLY) && 
-                months.includes(p.periodMonth) && 
-                p.year === op.year && p.level === op.level && p.state === op.state && p.locality === op.locality
-            );
-            
-            childPlans.forEach(cp => {
-                cp.activities?.forEach(act => {
-                    if (!existingInvIds.has(act.interventionId)) {
-                        newActivities.push({ ...act, id: `act_${Date.now()}_${Math.floor(Math.random() * 10000)}` });
-                        existingInvIds.add(act.interventionId);
-                    }
-                });
-            });
+            // Strictly update amounts and list by enforcing what is retrieved from the monthly plans
+            enrichedOp.activities = mergeAggregatedQuarterlyActivities(op.periodQuarter, op.year, filteredOpPlans);
         } else if (op.planType === PLAN_TYPES.MONTHLY) {
+            const existingInvIds = new Set(enrichedOp.activities?.map(a => a.interventionId) || []);
+            const newActivities = [];
             const childPlans = filteredOpPlans.filter(p => 
                 p.planType === PLAN_TYPES.WEEKLY && 
                 p.periodMonth === op.periodMonth && 
-                p.year === op.year && p.level === op.level && p.state === op.state && p.locality === op.locality
+                p.year === op.year
             );
             
             childPlans.forEach(cp => {
@@ -432,9 +709,9 @@ export default function PlanningView({ permissions, userStates }) {
                     }
                 });
             });
+            enrichedOp.activities = [...(enrichedOp.activities || []), ...newActivities];
         }
 
-        enrichedOp.activities = [...(enrichedOp.activities || []), ...newActivities];
         setCurrentOpPlan(enrichedOp);
         setIsEditingOpPlan(true);
     };
@@ -444,82 +721,38 @@ export default function PlanningView({ permissions, userStates }) {
         let totalGap = 0;
         let totalActualCost = 0;
 
-        const { quarter, month, week, outcome, axis } = evalFilters;
-
-        const monthIdx = new Date().getMonth();
-        const actualCurrentMonth = MONTHS_LIST[monthIdx];
-        
-        let targetMonth = month;
-        let targetQuarter = quarter;
-
-        if (!targetQuarter && targetMonth) {
-            targetQuarter = Object.keys(QUARTERS_MAP).find(q => QUARTERS_MAP[q].includes(targetMonth));
-        } else if (targetQuarter && !targetMonth) {
-            if (!QUARTERS_MAP[targetQuarter].includes(actualCurrentMonth)) {
-                targetMonth = QUARTERS_MAP[targetQuarter][2]; 
-            } else {
-                targetMonth = actualCurrentMonth;
-            }
-        } else if (!targetQuarter && !targetMonth) {
-            targetMonth = actualCurrentMonth;
-            targetQuarter = Object.keys(QUARTERS_MAP).find(q => QUARTERS_MAP[q].includes(targetMonth));
-        }
-        
-        const quarterMonths = QUARTERS_MAP[targetQuarter] || [];
-        const isH1 = QUARTERS_MAP['الربع الاول'].includes(targetMonth) || QUARTERS_MAP['الربع الثاني'].includes(targetMonth);
-        const targetHalfMonths = isH1 ? MONTHS_LIST.slice(0, 6) : MONTHS_LIST.slice(6, 12);
+        const { outcome, axis } = evalFilters;
 
         const groupedData = [];
 
         filteredPlans.forEach(p => {
             if (outcome && p.expectedOutcome !== outcome) return;
 
-            let levelLabel = (p.level || 'federal') === 'federal' 
-                ? 'خطة اتحادية' 
-                : p.level === 'locality' 
-                    ? `خطة محلية - ${p.locality || 'غير محدد'}` 
-                    : `خطة ولائية - ${STATE_LOCALITIES[p.state]?.ar || p.state || 'غير محدد'}`;
-
             const outcomeGroup = {
                 outcomeName: p.expectedOutcome || 'نتيجة غير محددة',
-                levelInfo: levelLabel,
                 rows: []
             };
 
             p.interventions?.forEach(inv => {
                 if (axis && inv.axis !== axis) return;
                 
-                if (quarter) {
-                    const qKey = quarter === 'الربع الاول' ? 'q1' : quarter === 'الربع الثاني' ? 'q2' : quarter === 'الربع الثالث' ? 'q3' : 'q4';
-                    if (!inv[qKey]) return; 
-                } else if (month) {
-                    const qKey = targetQuarter === 'الربع الاول' ? 'q1' : targetQuarter === 'الربع الثاني' ? 'q2' : targetQuarter === 'الربع الثالث' ? 'q3' : 'q4';
-                    if (!inv[qKey]) return;
-                }
-
                 totalBudget += Number(inv.totalCost || 0);
                 totalGap += calculateGap(inv);
                 
-                let achievedMonthly = 0;
-                let achievedQuarterly = 0;
-                let achievedSemiAnnual = 0;
-                let achievedAnnual = 0;
-                let actualCost = 0;
-                
-                filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY).forEach(opExec => {
-                    if (week && opExec.planType === PLAN_TYPES.WEEKLY && opExec.periodWeek !== week) return; 
-                    if (week && opExec.planType === PLAN_TYPES.MONTHLY) return; 
+                let targetAnnual = Number(inv.target || 0);
 
-                    const isCurrentMonth = opExec.periodMonth === targetMonth;
-                    const isCurrentQuarter = quarterMonths.includes(opExec.periodMonth);
-                    const isCurrentHalf = targetHalfMonths.includes(opExec.periodMonth);
+                let achievedQ1 = 0, achievedQ2 = 0, achievedQ3 = 0, achievedQ4 = 0;
+                let actualCost = 0;
+
+                filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY).forEach(opExec => {
+                    let execQuarter = Object.keys(QUARTERS_MAP).find(q => QUARTERS_MAP[q].includes(opExec.periodMonth));
 
                     opExec.activities?.filter(a => a.interventionId === inv.id).forEach(a => {
                         const val = Number(a.achieved || 0);
-                        achievedAnnual += val;
-                        if (isCurrentMonth) achievedMonthly += val;
-                        if (isCurrentQuarter) achievedQuarterly += val;
-                        if (isCurrentHalf) achievedSemiAnnual += val;
+                        if (execQuarter === 'الربع الاول') achievedQ1 += val;
+                        if (execQuarter === 'الربع الثاني') achievedQ2 += val;
+                        if (execQuarter === 'الربع الثالث') achievedQ3 += val;
+                        if (execQuarter === 'الربع الرابع') achievedQ4 += val;
                         actualCost += Number(a.actualCost || 0);
                     });
                 });
@@ -533,11 +766,11 @@ export default function PlanningView({ permissions, userStates }) {
                     name: inv.name,
                     indicator: inv.indicator,
                     target: inv.target,
+                    targetAnnual,
+                    achievedQ1, achievedQ2, achievedQ3, achievedQ4,
+                    achievedH1: achievedQ1 + achievedQ2,
+                    achievedAnnual: achievedQ1 + achievedQ2 + achievedQ3 + achievedQ4,
                     budget: inv.totalCost,
-                    achievedMonthly,
-                    achievedQuarterly,
-                    achievedSemiAnnual,
-                    achievedAnnual,
                     actualCost
                 });
             });
@@ -552,13 +785,10 @@ export default function PlanningView({ permissions, userStates }) {
             op.activities?.filter(a => a.isUnplanned).forEach(a => {
                 if (axis && a.axis !== axis) return; 
                 
-                if (!unplannedMap[a.interventionId]) {
-                    let levelLabel = (op.level || 'federal') === 'federal' 
-                        ? 'خطة اتحادية' 
-                        : op.level === 'locality' 
-                            ? `خطة محلية - ${op.locality || 'غير محدد'}` 
-                            : `خطة ولائية - ${STATE_LOCALITIES[op.state]?.ar || op.state || 'غير محدد'}`;
+                let execQuarter = Object.keys(QUARTERS_MAP).find(q => QUARTERS_MAP[q].includes(op.periodMonth));
+                if (op.planType === PLAN_TYPES.QUARTERLY) execQuarter = op.periodQuarter;
 
+                if (!unplannedMap[a.interventionId]) {
                     unplannedMap[a.interventionId] = {
                         id: a.interventionId,
                         type: 'غير مخطط',
@@ -566,67 +796,61 @@ export default function PlanningView({ permissions, userStates }) {
                         name: a.name || 'نشاط غير مخطط',
                         indicator: a.indicator || '-',
                         target: 0,
-                        budget: 0,
-                        achievedMonthly: 0,
-                        achievedQuarterly: 0,
-                        achievedSemiAnnual: 0,
-                        achievedAnnual: 0,
-                        actualCost: 0,
-                        opQuarter: op.periodQuarter,
-                        opMonth: op.periodMonth,
-                        levelInfo: levelLabel,
+                        targetAnnual: 0,
+                        achievedQ1: 0, achievedQ2: 0, achievedQ3: 0, achievedQ4: 0,
+                        achievedH1: 0, achievedAnnual: 0,
+                        budget: 0, actualCost: 0
                     };
                 }
                 
-                if (op.planType === PLAN_TYPES.MONTHLY || op.planType === PLAN_TYPES.QUARTERLY) {
-                    if (op.planType === PLAN_TYPES.MONTHLY) {
-                        unplannedMap[a.interventionId].target += Number(a.target || 0);
-                        unplannedMap[a.interventionId].budget += Number(a.totalCost || 0);
-                        totalBudget += Number(a.totalCost || 0);
-                        totalGap += calculateGap(a);
-                    }
+                const r = unplannedMap[a.interventionId];
+                const targetVal = Number(a.target || 0);
+                const budgetVal = Number(a.totalCost || 0);
+
+                if (op.planType === PLAN_TYPES.MONTHLY || op.planType === PLAN_TYPES.QUARTERLY || (op.planType === PLAN_TYPES.WEEKLY && r.target === 0)) {
+                     r.target += targetVal;
+                     r.targetAnnual += targetVal;
+                     r.budget += budgetVal;
+                     totalBudget += budgetVal;
+                     totalGap += calculateGap(a);
                 }
                 
                 if (op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY) {
-                    if (week && op.planType === PLAN_TYPES.WEEKLY && op.periodWeek !== week) return;
-                    if (week && op.planType === PLAN_TYPES.MONTHLY) return;
-
-                    const isCurrentMonth = op.periodMonth === targetMonth;
-                    const isCurrentQuarter = quarterMonths.includes(op.periodMonth);
-                    const isCurrentHalf = targetHalfMonths.includes(op.periodMonth);
-
                     const val = Number(a.achieved || 0);
-                    unplannedMap[a.interventionId].achievedAnnual += val;
-                    if (isCurrentMonth) unplannedMap[a.interventionId].achievedMonthly += val;
-                    if (isCurrentQuarter) unplannedMap[a.interventionId].achievedQuarterly += val;
-                    if (isCurrentHalf) unplannedMap[a.interventionId].achievedSemiAnnual += val;
+                    if (execQuarter === 'الربع الاول') r.achievedQ1 += val;
+                    if (execQuarter === 'الربع الثاني') r.achievedQ2 += val;
+                    if (execQuarter === 'الربع الثالث') r.achievedQ3 += val;
+                    if (execQuarter === 'الربع الرابع') r.achievedQ4 += val;
 
-                    unplannedMap[a.interventionId].actualCost += Number(a.actualCost || 0);
+                    r.achievedAnnual += val;
+                    r.actualCost += Number(a.actualCost || 0);
                     totalActualCost += Number(a.actualCost || 0);
-                    
-                    if (op.planType === PLAN_TYPES.WEEKLY && unplannedMap[a.interventionId].target === 0) {
-                        unplannedMap[a.interventionId].target += Number(a.target || 0);
-                        unplannedMap[a.interventionId].budget += Number(a.totalCost || 0);
-                        totalBudget += Number(a.totalCost || 0);
-                        totalGap += calculateGap(a);
-                    }
                 }
             });
         });
 
-        const unplannedRows = Object.values(unplannedMap).filter(r => {
-             if (quarter && r.opQuarter && r.opQuarter !== quarter && !quarterMonths.includes(r.opMonth)) return false;
-             if (month && r.opMonth && r.opMonth !== month) return false;
-             return true;
+        // Compute H1 for unplanned
+        Object.values(unplannedMap).forEach(r => {
+            r.achievedH1 = r.achievedQ1 + r.achievedQ2;
         });
+
+        const unplannedRows = Object.values(unplannedMap);
 
         if (unplannedRows.length > 0) {
             groupedData.push({
                 outcomeName: 'أنشطة مستحدثة (خارج النتيجة / غير مخططة)',
-                levelInfo: 'مختلط (الاتحادي، الولائي، المحلي)',
                 rows: unplannedRows
             });
         }
+
+        // Sort achievement higher to lower
+        groupedData.forEach(group => {
+            group.rows.sort((a, b) => {
+                const percA = a.targetAnnual > 0 ? (a.achievedAnnual / a.targetAnnual) : 0;
+                const percB = b.targetAnnual > 0 ? (b.achievedAnnual / b.targetAnnual) : 0;
+                return percB - percA; 
+            });
+        });
 
         let totalActivities = 0;
         let fullyCompleted = 0;
@@ -636,7 +860,7 @@ export default function PlanningView({ permissions, userStates }) {
         groupedData.forEach(group => {
             group.rows.forEach(row => {
                 totalActivities++;
-                const p = row.target > 0 ? (row.achievedAnnual / row.target) * 100 : 0;
+                const p = row.targetAnnual > 0 ? (row.achievedAnnual / row.targetAnnual) * 100 : 0;
                 if (p >= 100) fullyCompleted++;
                 else if (p > 0) partiallyCompleted++;
                 else notImplemented++;
@@ -654,11 +878,16 @@ export default function PlanningView({ permissions, userStates }) {
     const FormattedAchieved = ({ achieved, target }) => {
         const p = target > 0 ? Math.round((achieved / target) * 100) : 0;
         return (
-            <div className="flex items-center justify-center gap-1.5">
-                <span className="font-bold text-gray-800 text-sm">{achieved}</span>
-                <span className={`text-[10px] font-bold px-1 rounded-sm ${p >= 100 ? 'bg-green-100 text-green-700' : p > 0 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {p}%
-                </span>
+            <div className="flex flex-col items-center justify-center gap-1.5">
+                <div className="flex items-center gap-1">
+                    <span className="font-bold text-gray-800 text-sm">{achieved}</span>
+                    <span className={`text-[10px] font-bold px-1 rounded-sm ${p >= 100 ? 'bg-green-100 text-green-700' : p > 0 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {p}%
+                    </span>
+                </div>
+                <div className="w-12 bg-gray-200 rounded-full h-1 mt-0.5 opacity-60">
+                    <div className={`h-1 rounded-full ${p >= 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(p, 100)}%` }}></div>
+                </div>
             </div>
         );
     };
@@ -672,7 +901,7 @@ export default function PlanningView({ permissions, userStates }) {
         const pageWidth = doc.internal.pageSize.getWidth();
         
         doc.setFontSize(18);
-        doc.text(`تقرير التقييم: ${globalFilter.year} - ${globalFilter.level === 'federal' ? 'القومي' : globalFilter.level === 'locality' ? 'المحلي' : 'الولائي'}`, pageWidth - 14, 15, { align: 'right' });
+        doc.text(`تقرير التقييم: ${globalFilter.year} - خطة قومية`, pageWidth - 14, 15, { align: 'right' });
         
         doc.setFontSize(10);
         doc.setTextColor(100);
@@ -680,25 +909,25 @@ export default function PlanningView({ permissions, userStates }) {
         doc.text(`إجمالي الميزانية: ${evalData.totalBudget.toLocaleString()}`, pageWidth - 70, 25, { align: 'right' });
         doc.text(`المنصرف الفعلي: ${evalData.totalActualCost.toLocaleString()}`, pageWidth - 130, 25, { align: 'right' });
         
-        const head = [['المنصرف الفعلي', 'الميزانية السنوية', '% الكلي', 'الإنجاز السنوي', 'الإنجاز النصف سنوي', 'الإنجاز الربعي', 'الإنجاز الشهري', 'المستهدف السنوي', 'النوع', 'المحور', 'النشاط']];
+        const head = [['المنصرف الفعلي', 'الميزانية السنوية', 'سنوي', 'نصف سنوي', 'الربع الرابع', 'الربع الثالث', 'الربع الثاني', 'الربع الاول', 'المستهدف السنوي', 'النوع', 'المحور', 'النشاط']];
         
         const body = [];
         evalData.groupedData.forEach(group => {
-            body.push([{ content: `النتيجة المتوقعة: ${group.outcomeName} (${group.levelInfo})`, colSpan: 11, styles: { halign: 'right', fillColor: [224, 242, 254], textColor: [12, 74, 110], fontStyle: 'normal' } }]);
+            body.push([{ content: `النتيجة المتوقعة: ${group.outcomeName}`, colSpan: 12, styles: { halign: 'right', fillColor: [224, 242, 254], textColor: [12, 74, 110], fontStyle: 'bold' } }]);
             
             group.rows.forEach(row => {
-                const perc = row.target > 0 ? Math.round((row.achievedAnnual / row.target) * 100) : 0;
                 let typeText = row.type === 'غير مخطط' ? 'غير مخطط' : 'مخطط';
                 
                 body.push([
                     row.actualCost.toLocaleString(),
                     row.budget.toLocaleString(),
-                    `${perc}%`,
                     row.achievedAnnual.toString(),
-                    row.achievedSemiAnnual.toString(),
-                    row.achievedQuarterly.toString(),
-                    row.achievedMonthly.toString(),
-                    row.target.toString(),
+                    row.achievedH1.toString(),
+                    row.achievedQ4.toString(),
+                    row.achievedQ3.toString(),
+                    row.achievedQ2.toString(),
+                    row.achievedQ1.toString(),
+                    row.targetAnnual.toString(),
                     typeText,
                     row.axis,
                     row.name
@@ -712,17 +941,18 @@ export default function PlanningView({ permissions, userStates }) {
             startY: 32,
             theme: 'grid',
             styles: { font: 'Amiri', fontStyle: 'normal', halign: 'right', fontSize: 8, cellPadding: 2, textColor: [30, 41, 59] },
-            headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], halign: 'center', fontStyle: 'normal' },
+            headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
             columnStyles: {
-                10: { halign: 'right', cellWidth: 60 }, 
-                9: { halign: 'center', cellWidth: 20 },  
-                8: { halign: 'center' }, 
-                7: { halign: 'center', textColor: [67, 56, 202] }, 
+                11: { halign: 'right', cellWidth: 50 }, 
+                10: { halign: 'center', cellWidth: 15 },  
+                9: { halign: 'center' }, 
+                8: { halign: 'center', textColor: [67, 56, 202] }, 
+                7: { halign: 'center' }, 
                 6: { halign: 'center' }, 
                 5: { halign: 'center' }, 
                 4: { halign: 'center' }, 
-                3: { halign: 'center', textColor: [21, 128, 61] }, 
-                2: { halign: 'center' }, 
+                3: { halign: 'center' }, 
+                2: { halign: 'center', textColor: [21, 128, 61] }, 
                 1: { halign: 'center' }, 
                 0: { halign: 'center', textColor: [185, 28, 28] } 
             },
@@ -739,29 +969,29 @@ export default function PlanningView({ permissions, userStates }) {
         
         rows.push({
             'النتيجة المتوقعة': `تقرير تقييم الخطة الشامل (${globalFilter.year})`,
-            'النشاط': '', 'المحور': '', 'النوع': '', 'المستهدف السنوي': '', 'الإنجاز الشهري': '', 'الإنجاز الربعي': '', 'الإنجاز النصف سنوي': '', 'الإنجاز السنوي': '', 'نسبة الإنجاز الكلي (%)': '', 'الميزانية السنوية': '', 'المنصرف الفعلي': ''
+            'النشاط': '', 'المحور': '', 'النوع': '', 'المستهدف السنوي': '', 'الربع الاول': '', 'الربع الثاني': '', 'الربع الثالث': '', 'الربع الرابع': '', 'إنجاز نصف سنوي': '', 'إنجاز سنوي': '', 'الميزانية السنوية': '', 'المنصرف الفعلي': ''
         });
         rows.push({});
 
         evalData.groupedData.forEach(group => {
             rows.push({
-                'النتيجة المتوقعة': `النتيجة: ${group.outcomeName} (${group.levelInfo})`,
-                'النشاط': '', 'المحور': '', 'النوع': '', 'المستهدف السنوي': '', 'الإنجاز الشهري': '', 'الإنجاز الربعي': '', 'الإنجاز النصف سنوي': '', 'الإنجاز السنوي': '', 'نسبة الإنجاز الكلي (%)': '', 'الميزانية السنوية': '', 'المنصرف الفعلي': ''
+                'النتيجة المتوقعة': `النتيجة: ${group.outcomeName}`,
+                'النشاط': '', 'المحور': '', 'النوع': '', 'المستهدف السنوي': '', 'الربع الاول': '', 'الربع الثاني': '', 'الربع الثالث': '', 'الربع الرابع': '', 'إنجاز نصف سنوي': '', 'إنجاز سنوي': '', 'الميزانية السنوية': '', 'المنصرف الفعلي': ''
             });
 
             group.rows.forEach(row => {
-                const perc = row.target > 0 ? Math.round((row.achievedAnnual / row.target) * 100) : 0;
                 rows.push({
                     'النتيجة المتوقعة': '', 
                     'النشاط': row.name,
                     'المحور': row.axis,
                     'النوع': row.type,
-                    'المستهدف السنوي': row.target,
-                    'الإنجاز الشهري': row.achievedMonthly,
-                    'الإنجاز الربعي': row.achievedQuarterly,
-                    'الإنجاز النصف سنوي': row.achievedSemiAnnual,
-                    'الإنجاز السنوي': row.achievedAnnual,
-                    'نسبة الإنجاز الكلي (%)': perc,
+                    'المستهدف السنوي': row.targetAnnual,
+                    'الربع الاول': row.achievedQ1,
+                    'الربع الثاني': row.achievedQ2,
+                    'الربع الثالث': row.achievedQ3,
+                    'الربع الرابع': row.achievedQ4,
+                    'إنجاز نصف سنوي': row.achievedH1,
+                    'إنجاز سنوي': row.achievedAnnual,
                     'الميزانية السنوية': row.budget,
                     'المنصرف الفعلي': row.actualCost
                 });
@@ -775,7 +1005,7 @@ export default function PlanningView({ permissions, userStates }) {
 
         const ws = XLSX.utils.json_to_sheet(rows);
         ws['!views'] = [{ rightToLeft: true }];
-        ws['!cols'] = [ { wch: 40 }, { wch: 50 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 20 } ];
+        ws['!cols'] = [ { wch: 40 }, { wch: 50 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 20 } ];
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "تقرير التقييم الشامل");
@@ -793,50 +1023,27 @@ export default function PlanningView({ permissions, userStates }) {
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><Briefcase className="text-sky-600"/> إدخال مصفوفة الخطة السنوية الاستراتيجية</h2>
                         <p className="text-xs sm:text-sm text-gray-500 mt-1">يتم إدخال الجدولة وتفاصيل الدعم بالضغط على الخلايا المخصصة لفتح نوافذ الإدخال.</p>
                     </div>
-                    <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <Button type="button" variant="secondary" onClick={downloadMasterPlanTemplate} className="flex-1 sm:flex-none">
+                            <Download size={14} className="ml-1" /> تنزيل القالب
+                        </Button>
+                        <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-bold transition-colors bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 h-9 px-3 flex-1 sm:flex-none">
+                            <Upload size={14} className="ml-1" /> رفع Excel
+                            <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleMasterPlanUpload} />
+                        </label>
                         <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingMatrix(false)}><X size={16} className="ml-1"/> إغلاق</Button>
                         <Button className="flex-1 sm:flex-none" onClick={handleSaveMasterPlan}><Save size={16} className="ml-1"/> حفظ المصفوفة</Button>
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 sm:p-4 relative">
-                    <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 w-full">
+                    <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                         <FormGroup label="السنة">
                             <Select value={currentPlan.year} onChange={(e) => setCurrentPlan({...currentPlan, year: Number(e.target.value)})} className="font-bold border-sky-300 w-full">
                                 {YEAR_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="المستوى">
-                            <Select value={currentPlan.level} onChange={(e) => setCurrentPlan({...currentPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentPlan.state, locality: ''})} disabled={!isFederalManager} className="w-full">
-                                <option value="federal">اتحادي (قومي)</option>
-                                <option value="state">ولائي</option>
-                                <option value="locality">محلي</option>
-                            </Select>
-                        </FormGroup>
-                        {(currentPlan.level === 'state' || currentPlan.level === 'locality') && (
-                            <FormGroup label="الولاية">
-                                <Select value={currentPlan.state} onChange={(e) => setCurrentPlan({...currentPlan, state: e.target.value, locality: ''})} disabled={!isFederalManager && userStates.length === 1} className="w-full">
-                                    <option value="">-- اختر --</option>
-                                    {isFederalManager ? 
-                                        Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar || s}</option>) :
-                                        userStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)
-                                    }
-                                </Select>
-                            </FormGroup>
-                        )}
-                        {currentPlan.level === 'locality' && currentPlan.state && (
-                            <FormGroup label="المحلية">
-                                <Select value={currentPlan.locality} onChange={(e) => setCurrentPlan({...currentPlan, locality: e.target.value})} className="w-full">
-                                    <option value="">-- اختر المحلية --</option>
-                                    {(STATE_LOCALITIES[currentPlan.state]?.localities || []).map((loc, index) => {
-                                        const locLabel = loc?.ar || loc?.en || loc;
-                                        const locValue = loc?.en || loc?.ar || loc;
-                                        return <option key={`matrix-${index}`} value={locValue}>{locLabel}</option>;
-                                    })}
-                                </Select>
-                            </FormGroup>
-                        )}
-                        <FormGroup label="النتيجة المتوقعة (الأساس)" className="md:col-span-2">
+                        <FormGroup label="النتيجة المتوقعة (الأساس)">
                             <Select value={currentPlan.expectedOutcome} onChange={(e) => setCurrentPlan({...currentPlan, expectedOutcome: e.target.value})} className="font-bold border-sky-300 w-full">
                                 {OUTCOME_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
@@ -915,9 +1122,7 @@ export default function PlanningView({ permissions, userStates }) {
                         <Button type="button" size="sm" variant="secondary" onClick={() => setCurrentPlan({...currentPlan, interventions: [...(currentPlan.interventions||[]), DEFAULT_INTERVENTION()]})}><Plus size={16} className="ml-1"/> إضافة نشاط جديد</Button>
                     </div>
 
-                    {/* --- Matrix Pop-ups --- */}
-                    
-                    {/* Schedule Modal */}
+                    {/* Matrix Pop-ups */}
                     {scheduleModalIdx !== null && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in zoom-in-95">
                             <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border border-slate-200">
@@ -926,7 +1131,6 @@ export default function PlanningView({ permissions, userStates }) {
                                     <button type="button" onClick={() => setScheduleModalIdx(null)} className="text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-1 rounded-full transition-colors"><X size={18}/></button>
                                 </div>
                                 <div className="p-6">
-                                    <p className="text-xs text-gray-500 mb-4 text-center">حدد الفترات الزمنية لتنفيذ هذا النشاط:</p>
                                     <div className="grid grid-cols-2 gap-4">
                                         {['q1', 'q2', 'q3', 'q4'].map((q, i) => (
                                             <label key={q} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${currentPlan.interventions[scheduleModalIdx][q] ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'}`}>
@@ -946,7 +1150,6 @@ export default function PlanningView({ permissions, userStates }) {
                         </div>
                     )}
 
-                    {/* Support & Funding Modal */}
                     {supportModalIdx !== null && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in zoom-in-95">
                             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200">
@@ -955,7 +1158,6 @@ export default function PlanningView({ permissions, userStates }) {
                                     <button type="button" onClick={() => setSupportModalIdx(null)} className="text-indigo-200 hover:text-white bg-indigo-800/50 hover:bg-indigo-800 p-1 rounded-full transition-colors"><X size={18}/></button>
                                 </div>
                                 <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto bg-slate-50/50">
-                                    {/* Government Support */}
                                     <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-200 shadow-sm">
                                         <h4 className="font-bold text-blue-800 mb-3 text-sm flex items-center gap-2">الدعم الحكومي (مشاريع الدولة)</h4>
                                         <div className="grid grid-cols-5 gap-3">
@@ -969,8 +1171,6 @@ export default function PlanningView({ permissions, userStates }) {
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                    {/* External Partners Support */}
                                     <div className="space-y-3">
                                         <h4 className="font-bold text-orange-800 text-sm mb-1 px-1">دعم الشركاء والمنظمات</h4>
                                         {[1, 2, 3].map(num => (
@@ -1012,56 +1212,35 @@ export default function PlanningView({ permissions, userStates }) {
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><Calendar className="text-sky-600"/> إعداد خطة العمل التشغيلية - {currentOpPlan.planType}</h2>
                         <p className="text-xs sm:text-sm text-gray-500 mt-1">يتم إدخال مصادر التمويل والدعم لكل نشاط عبر النوافذ المنبثقة.</p>
                     </div>
-                    <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <Button type="button" variant="secondary" onClick={downloadOpPlanTemplate} className="flex-1 sm:flex-none">
+                            <Download size={14} className="ml-1" /> تنزيل القالب
+                        </Button>
+                        <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-bold transition-colors bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 h-9 px-3 flex-1 sm:flex-none">
+                            <Upload size={14} className="ml-1" /> رفع Excel
+                            <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleOpPlanUpload} />
+                        </label>
                         <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingOpPlan(false)}><X size={16} className="ml-1"/> إغلاق</Button>
                         <Button className="flex-1 sm:flex-none" onClick={handleSaveOpPlan}><Save size={16} className="ml-1"/> حفظ الخطة</Button>
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4 sm:space-y-6 relative">
-                    <div className="bg-white p-4 rounded-lg border shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    
+                    {/* TOP SECTION: YEAR & PERIOD BEFORE START OF FORM */}
+                    <div className="bg-white p-4 rounded-lg border border-sky-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         <FormGroup label="نوع الخطة">
-                            <div className="font-bold text-indigo-800 p-2 bg-indigo-100 rounded text-center border border-indigo-200">{currentOpPlan.planType}</div>
+                            <div className="font-bold text-indigo-800 p-2 bg-indigo-50 rounded text-center border border-indigo-200">{currentOpPlan.planType}</div>
                         </FormGroup>
                         <FormGroup label="السنة">
-                            <Select value={currentOpPlan.year} onChange={(e) => setCurrentOpPlan({...currentOpPlan, year: Number(e.target.value)})}>
+                            <Select value={currentOpPlan.year} onChange={(e) => handleOpPlanFieldChange('year', Number(e.target.value))} className="font-bold border-sky-300">
                                 {YEAR_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="المستوى">
-                            <Select value={currentOpPlan.level} onChange={(e) => setCurrentOpPlan({...currentOpPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentOpPlan.state, locality: ''})} disabled={!isFederalManager}>
-                                <option value="federal">اتحادي</option>
-                                <option value="state">ولائي</option>
-                                <option value="locality">محلي</option>
-                            </Select>
-                        </FormGroup>
-                        {(currentOpPlan.level === 'state' || currentOpPlan.level === 'locality') && (
-                            <FormGroup label="الولاية">
-                                <Select value={currentOpPlan.state} onChange={(e) => setCurrentOpPlan({...currentOpPlan, state: e.target.value, locality: ''})} disabled={!isFederalManager && userStates.length === 1}>
-                                    <option value="">-- اختر --</option>
-                                    {isFederalManager ? 
-                                        Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar || s}</option>) :
-                                        userStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)
-                                    }
-                                </Select>
-                            </FormGroup>
-                        )}
-                        {currentOpPlan.level === 'locality' && currentOpPlan.state && (
-                            <FormGroup label="المحلية">
-                                <Select value={currentOpPlan.locality} onChange={(e) => setCurrentOpPlan({...currentOpPlan, locality: e.target.value})} className="w-full">
-                                    <option value="">-- اختر المحلية --</option>
-                                    {(STATE_LOCALITIES[currentOpPlan.state]?.localities || []).map((loc, index) => {
-                                        const locLabel = loc?.ar || loc?.en || loc;
-                                        const locValue = loc?.en || loc?.ar || loc;
-                                        return <option key={`op-${index}`} value={locValue}>{locLabel}</option>;
-                                    })}
-                                </Select>
-                            </FormGroup>
-                        )}
 
                         {currentOpPlan.planType === PLAN_TYPES.QUARTERLY && (
                             <FormGroup label="الربع">
-                                <Select value={currentOpPlan.periodQuarter} onChange={(e) => setCurrentOpPlan({...currentOpPlan, periodQuarter: e.target.value})}>
+                                <Select value={currentOpPlan.periodQuarter} onChange={(e) => handleOpPlanFieldChange('periodQuarter', e.target.value)} className="font-bold border-sky-300">
                                     <option value="">-- اختر --</option>
                                     {QUARTERS_LIST.map(o => <option key={o} value={o}>{o}</option>)}
                                 </Select>
@@ -1069,7 +1248,7 @@ export default function PlanningView({ permissions, userStates }) {
                         )}
                         {(currentOpPlan.planType === PLAN_TYPES.MONTHLY || currentOpPlan.planType === PLAN_TYPES.WEEKLY) && (
                             <FormGroup label="الشهر">
-                                <Select value={currentOpPlan.periodMonth} onChange={(e) => setCurrentOpPlan({...currentOpPlan, periodMonth: e.target.value})}>
+                                <Select value={currentOpPlan.periodMonth} onChange={(e) => handleOpPlanFieldChange('periodMonth', e.target.value)} className="font-bold border-sky-300">
                                     <option value="">-- اختر --</option>
                                     {MONTHS_LIST.map(o => <option key={o} value={o}>{o}</option>)}
                                 </Select>
@@ -1077,7 +1256,7 @@ export default function PlanningView({ permissions, userStates }) {
                         )}
                         {currentOpPlan.planType === PLAN_TYPES.WEEKLY && (
                             <FormGroup label="الأسبوع">
-                                <Select value={currentOpPlan.periodWeek} onChange={(e) => setCurrentOpPlan({...currentOpPlan, periodWeek: e.target.value})}>
+                                <Select value={currentOpPlan.periodWeek} onChange={(e) => handleOpPlanFieldChange('periodWeek', e.target.value)} className="font-bold border-sky-300">
                                     <option value="">-- اختر --</option>
                                     {WEEKS_LIST.map(o => <option key={o} value={o}>{o}</option>)}
                                 </Select>
@@ -1119,7 +1298,7 @@ export default function PlanningView({ permissions, userStates }) {
                                         const cellClass = "p-0 border border-slate-300 relative focus-within:ring-1 focus-within:ring-sky-500 focus-within:z-10 align-top";
                                         const inputClass = "w-full h-full min-h-[32px] px-1 py-1 bg-transparent border-0 outline-none text-right whitespace-normal break-words resize-none overflow-hidden";
                                         
-                                        const availableMasterPlans = getAvailableMasterPlans(act);
+                                        const availableMasterPlans = getAvailableMasterPlans();
                                         const availableInvs = getAvailableInterventions(act);
 
                                         return (
@@ -1258,7 +1437,7 @@ export default function PlanningView({ permissions, userStates }) {
                         </div>
                     </div>
 
-                    {/* --- Operational Plan Funding Pop-up --- */}
+                    {/* Operational Plan Funding Pop-up */}
                     {opSupportModalIdx !== null && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in zoom-in-95">
                             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200">
@@ -1267,7 +1446,6 @@ export default function PlanningView({ permissions, userStates }) {
                                     <button type="button" onClick={() => setOpSupportModalIdx(null)} className="text-indigo-200 hover:text-white bg-indigo-800/50 hover:bg-indigo-800 p-1 rounded-full transition-colors"><X size={18}/></button>
                                 </div>
                                 <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto bg-slate-50/50">
-                                    
                                     <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-200 shadow-sm">
                                         <h4 className="font-bold text-blue-800 mb-3 text-sm flex items-center gap-2">الدعم الحكومي</h4>
                                         <div className="grid grid-cols-5 gap-3">
@@ -1281,7 +1459,6 @@ export default function PlanningView({ permissions, userStates }) {
                                             </div>
                                         </div>
                                     </div>
-                                    
                                     <div className="space-y-3">
                                         <h4 className="font-bold text-orange-800 text-sm mb-1 px-1">دعم الشركاء</h4>
                                         {[1, 2, 3].map(num => (
@@ -1310,7 +1487,6 @@ export default function PlanningView({ permissions, userStates }) {
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         );
@@ -1322,7 +1498,7 @@ export default function PlanningView({ permissions, userStates }) {
                 <div className="bg-white shadow px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shrink-0 border-b border-green-200 gap-3">
                     <div>
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><CheckCircle2 className="text-green-600"/> تحديث إنجاز الخطة ({currentOpPlan.planType === PLAN_TYPES.MONTHLY ? 'الشهرية' : 'الأسبوعية'})</h2>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1">{currentOpPlan.periodName} - عام {currentOpPlan.year} ({(currentOpPlan.level || 'federal') === 'federal' ? 'اتحادي' : currentOpPlan.level === 'locality' ? `محلي - ${currentOpPlan.locality}` : `ولائي - ${STATE_LOCALITIES[currentOpPlan.state]?.ar || currentOpPlan.state}`})</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">{currentOpPlan.periodName} - عام {currentOpPlan.year} (خطة قومية)</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingTracking(false)}><X size={16} className="ml-1"/> إغلاق</Button>
@@ -1389,10 +1565,10 @@ export default function PlanningView({ permissions, userStates }) {
             />
 
             {/* ==========================================
-                GLOBAL FILTER BAR (الموجه الأساسي للنظام)
+                GLOBAL FILTER BAR (YEAR ONLY)
             ========================================== */}
             <div className="bg-slate-800 p-4 rounded-lg shadow-md mb-6 flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end text-white">
-                <div className="w-full md:flex-1 md:min-w-[200px]">
+                <div className="w-full md:w-1/3">
                     <label className="block text-xs font-bold text-slate-300 mb-1">سنة الخطة (Year)</label>
                     <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
                         value={globalFilter.year}
@@ -1401,51 +1577,6 @@ export default function PlanningView({ permissions, userStates }) {
                         {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 </div>
-                <div className="w-full md:flex-1 md:min-w-[200px]">
-                    <label className="block text-xs font-bold text-slate-300 mb-1">مستوى التخطيط (Level)</label>
-                    <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
-                        value={globalFilter.level}
-                        onChange={e => setGlobalFilter({...globalFilter, level: e.target.value, state: e.target.value === 'federal' ? '' : globalFilter.state, locality: ''})}
-                        disabled={!isFederalManager}
-                    >
-                        <option value="federal">اتحادي (قومي)</option>
-                        <option value="state">ولائي</option>
-                        <option value="locality">محلي (المحليات)</option>
-                    </select>
-                </div>
-                {(globalFilter.level === 'state' || globalFilter.level === 'locality') && (
-                    <div className="w-full md:flex-1 md:min-w-[200px]">
-                        <label className="block text-xs font-bold text-slate-300 mb-1">الولاية (State)</label>
-                        <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
-                            value={globalFilter.state}
-                            onChange={e => setGlobalFilter({...globalFilter, state: e.target.value, locality: ''})}
-                            disabled={!isFederalManager && userStates.length <= 1}
-                        >
-                            <option value="">-- اختر الولاية --</option>
-                            {isFederalManager ? 
-                                Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar || s}</option>) :
-                                userStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)
-                            }
-                        </select>
-                    </div>
-                )}
-                
-                {globalFilter.level === 'locality' && globalFilter.state && (
-                    <div className="w-full md:flex-1 md:min-w-[200px]">
-                        <label className="block text-xs font-bold text-slate-300 mb-1">المحلية (Locality)</label>
-                        <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
-                            value={globalFilter.locality}
-                            onChange={e => setGlobalFilter({...globalFilter, locality: e.target.value})}
-                        >
-                            <option value="">-- عرض كل المحليات --</option>
-                            {(STATE_LOCALITIES[globalFilter.state]?.localities || []).map((loc, index) => {
-                                const locLabel = loc?.ar || loc?.en || loc;
-                                const locValue = loc?.en || loc?.ar || loc;
-                                return <option key={`filter-${index}`} value={locValue}>{locLabel}</option>;
-                            })}
-                        </select>
-                    </div>
-                )}
             </div>
 
             <div className="border-b border-gray-200">
@@ -1455,7 +1586,6 @@ export default function PlanningView({ permissions, userStates }) {
                         { id: 'quarterly', label: 'الخطط الربعية', icon: Calendar },
                         { id: 'monthly', label: 'الخطط الشهرية', icon: Calendar },
                         { id: 'weekly', label: 'التشغيلية الأسبوعية', icon: FileSpreadsheet },
-                        { id: 'tracking', label: 'المتابعة والتنفيذ', icon: CheckCircle2 },
                         { id: 'evaluation', label: 'التقييم', icon: Activity }
                     ].map(tab => (
                         <button
@@ -1473,16 +1603,17 @@ export default function PlanningView({ permissions, userStates }) {
 
             {/* --- Master Plan Tab --- */}
             {activeTab === 'master' && (
-                <div className="space-y-4 animate-in fade-in">
+                <div className="space-y-4 animate-in fade-in pt-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-lg border shadow-sm gap-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             <Target className="text-sky-600"/> 
-                            الخطة السنوية لعام {globalFilter.year}
-                            {(globalFilter.level === 'state' || globalFilter.level === 'locality') && globalFilter.state && ` (${STATE_LOCALITIES[globalFilter.state]?.ar})`}
-                            {globalFilter.level === 'locality' && globalFilter.locality && ` - محلية ${globalFilter.locality}`}
+                            الخطة السنوية (القومية) لعام {globalFilter.year}
                         </h3>
                         
                         <div className="flex gap-2 w-full sm:w-auto">
+                            <Button onClick={exportAllMasterPlansExcel} variant="secondary" className="w-full sm:w-auto justify-center">
+                                <Download size={18} className="ml-2"/> تصدير كل الخطط (Excel)
+                            </Button>
                             <Button onClick={openCreateMasterPlan} className="w-full sm:w-auto justify-center">
                                 <Plus size={18} className="ml-2"/> إضافة خطة نتيجة
                             </Button>
@@ -1490,7 +1621,7 @@ export default function PlanningView({ permissions, userStates }) {
                     </div>
 
                     {filteredPlans.length === 0 ? (
-                        <EmptyState message="لا توجد خطط سنوية مسجلة مطابقة للبحث." />
+                        <EmptyState message="لا توجد خطط سنوية استراتيجية مسجلة مطابقة للبحث." />
                     ) : (
                         <div className="space-y-4">
                             {filteredPlans.map(plan => (
@@ -1500,8 +1631,8 @@ export default function PlanningView({ permissions, userStates }) {
                                         onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <span className={`px-2 py-1 rounded text-xs font-bold ${(plan.level || 'federal') === 'federal' ? 'bg-purple-100 text-purple-800' : plan.level === 'locality' ? 'bg-teal-100 text-teal-800' : 'bg-green-100 text-green-800'}`}>
-                                                {(plan.level || 'federal') === 'federal' ? 'اتحادي' : plan.level === 'locality' ? `محلي - ${plan.locality || 'غير محدد'}` : `ولائي - ${STATE_LOCALITIES[plan.state]?.ar || plan.state || 'غير محدد'}`}
+                                            <span className="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-800">
+                                                اتحادي
                                             </span>
                                             <span className="font-bold text-base sm:text-lg text-gray-800">{plan.expectedOutcome}</span>
                                         </div>
@@ -1571,7 +1702,7 @@ export default function PlanningView({ permissions, userStates }) {
 
             {/* --- Operational Plans Tabs --- */}
             {['quarterly', 'monthly', 'weekly'].includes(activeTab) && (
-                <div className="space-y-4 animate-in fade-in">
+                <div className="space-y-4 animate-in fade-in pt-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-lg border shadow-sm gap-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             <Calendar className="text-indigo-600"/> 
@@ -1579,26 +1710,35 @@ export default function PlanningView({ permissions, userStates }) {
                             {` (${globalFilter.year})`}
                         </h3>
                         <div className="flex gap-2 w-full sm:w-auto">
+                            <Button onClick={exportAllOpPlansExcel} variant="secondary" className="w-full sm:w-auto justify-center">
+                                <Download size={18} className="ml-2"/> تصدير كل الخطط (Excel)
+                            </Button>
                             <Button onClick={() => openCreateOpPlan(PLAN_TYPES[activeTab.toUpperCase()])} className="w-full sm:w-auto justify-center">
                                 <Plus size={18} className="ml-2"/> {`إنشاء خطة ${activeTab === 'quarterly' ? 'ربعية' : activeTab === 'monthly' ? 'شهرية' : 'أسبوعية'}`}
                             </Button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredOpPlans.filter(op => op.planType === PLAN_TYPES[activeTab.toUpperCase()]).map(op => (
-                            <Card key={op.id} className="border-r-4 border-r-indigo-500">
+                            <Card key={op.id} className={`border-r-4 ${activeTab === 'quarterly' ? 'border-r-indigo-500' : activeTab === 'monthly' ? 'border-r-blue-500' : 'border-r-green-500'}`}>
                                 <CardBody className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div>
                                         <div className="flex gap-2 mb-1">
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${(op.level || 'federal') === 'federal' ? 'bg-purple-100 text-purple-800' : op.level === 'locality' ? 'bg-teal-100 text-teal-800' : 'bg-green-100 text-green-800'}`}>
-                                                {(op.level || 'federal') === 'federal' ? 'اتحادي' : op.level === 'locality' ? `محلي - ${op.locality || 'غير محدد'}` : `ولائي - ${STATE_LOCALITIES[op.state]?.ar || op.state || 'غير محدد'}`}
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800">
+                                                اتحادي
                                             </span>
                                         </div>
                                         <h4 className="text-base sm:text-lg font-bold text-gray-800">{op.periodName}</h4>
                                         <p className="text-xs text-gray-500 mt-1">الأنشطة المجدولة: {op.activities?.length || 0}</p>
                                     </div>
                                     <div className="flex gap-2 shrink-0 self-end sm:self-auto w-full sm:w-auto justify-end">
+                                        {/* INTEGRATED TRACKING BUTTON FOR MONTHLY/WEEKLY PLANS */}
+                                        {(op.planType === PLAN_TYPES.MONTHLY || op.planType === PLAN_TYPES.WEEKLY) && (
+                                            <Button variant="success" size="sm" onClick={() => { setCurrentOpPlan(op); setIsEditingTracking(true); }}>
+                                                <CheckCircle2 size={16} className="ml-1"/> إدخال التنفيذ
+                                            </Button>
+                                        )}
                                         <Button variant="secondary" size="sm" onClick={() => handleEditOpPlan(op)}><Edit size={16}/></Button>
                                         <Button variant="danger" size="sm" onClick={() => { if(confirm("حذف؟")) deleteOperationalPlan(op.id).then(()=>fetchOperationalPlans(true)); }}><Trash2 size={16}/></Button>
                                     </div>
@@ -1607,150 +1747,104 @@ export default function PlanningView({ permissions, userStates }) {
                         ))}
                     </div>
                     {filteredOpPlans.filter(op => op.planType === PLAN_TYPES[activeTab.toUpperCase()]).length === 0 && (
-                        <EmptyState message="لا توجد خطط تشغيلية مسجلة للعام والمستوى المحددين." />
-                    )}
-                </div>
-            )}
-
-            {/* --- Tracking (Monthly/Weekly) --- */}
-            {activeTab === 'tracking' && (
-                <div className="space-y-4 animate-in fade-in">
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200 flex items-start gap-3">
-                        <CheckCircle2 className="text-green-600 shrink-0 mt-1" />
-                        <p className="text-xs sm:text-sm text-green-800 font-medium leading-relaxed">
-                            <strong>شاشة المتابعة والتنفيذ:</strong> تتيح تحديث إنجازات الأنشطة (المخططة وغير المخططة) للخطط <strong>الشهرية</strong> و<strong>الأسبوعية</strong> المفعلة بناءً على الفلتر المختار أعلاه.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY).map(op => {
-                            const isMonthly = op.planType === PLAN_TYPES.MONTHLY;
-                            return (
-                                <div key={op.id} onClick={() => { setCurrentOpPlan(op); setIsEditingTracking(true); }} className="cursor-pointer">
-                                    <Card className={`hover:shadow-md transition-all border-r-4 ${isMonthly ? 'border-r-blue-500 bg-blue-50/10' : 'border-r-green-500 bg-green-50/10'}`}>
-                                        <CardBody className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                            <div>
-                                                <div className="text-[10px] font-bold mb-1 flex gap-2">
-                                                    <span className={(op.level || 'federal') === 'federal' ? 'text-purple-600' : op.level === 'locality' ? 'text-teal-600' : 'text-green-600'}>
-                                                        {(op.level || 'federal') === 'federal' ? 'اتحادي' : op.level === 'locality' ? 'محلي' : `ولائي`}
-                                                    </span>
-                                                    <span className={isMonthly ? 'text-blue-600 bg-blue-100 px-1.5 rounded' : 'text-green-600 bg-green-100 px-1.5 rounded'}>
-                                                        {isMonthly ? 'خطة شهرية' : 'خطة أسبوعية'}
-                                                    </span>
-                                                </div>
-                                                <h4 className="font-bold text-gray-800 text-sm sm:text-base">{op.periodName}</h4>
-                                            </div>
-                                            <Button size="sm" variant={isMonthly ? 'primary' : 'success'} className="self-end sm:self-auto"><Edit size={14} className="ml-1"/> إدخال التنفيذ</Button>
-                                        </CardBody>
-                                    </Card>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    {filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY).length === 0 && (
-                        <EmptyState message="لا توجد خطط (شهرية أو أسبوعية) متاحة لإدخال التنفيذ." />
+                        <EmptyState message="لا توجد خطط مسجلة للعام المحدد." />
                     )}
                 </div>
             )}
 
             {/* --- Evaluation Dashboard --- */}
             {activeTab === 'evaluation' && (
-                <div className="space-y-6 animate-in fade-in">
+                <div className="space-y-6 animate-in fade-in pt-4">
                     
-                    <div className="bg-white p-4 rounded-lg border shadow-sm mb-6">
-                        <div className="flex items-center gap-2 mb-4 text-indigo-800 font-bold border-b pb-2 text-sm sm:text-base">
-                            <ListFilter size={18}/> عوامل التصفية (للفترات والأهداف فقط)
+                    {/* Collapsible Header Toggle */}
+                    <div 
+                        className="bg-white p-4 rounded-lg border shadow-sm flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsDashboardCollapsed(!isDashboardCollapsed)}
+                    >
+                        <div className="flex items-center gap-2 text-indigo-800 font-bold text-sm sm:text-base">
+                            <ListFilter size={18}/> {isDashboardCollapsed ? 'إظهار لوحة المؤشرات والفلاتر' : 'إخفاء لوحة المؤشرات والفلاتر'}
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                            <FormGroup label="النتيجة المتوقعة">
-                                <Select value={evalFilters.outcome} onChange={(e) => setEvalFilters({...evalFilters, outcome: e.target.value})}>
-                                    <option value="">-- الكل --</option>
-                                    {OUTCOME_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="المحور">
-                                <Select value={evalFilters.axis} onChange={(e) => setEvalFilters({...evalFilters, axis: e.target.value})}>
-                                    <option value="">-- الكل --</option>
-                                    {AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="الربع">
-                                <Select value={evalFilters.quarter} onChange={(e) => setEvalFilters({...evalFilters, quarter: e.target.value})}>
-                                    <option value="">-- الكل --</option>
-                                    {QUARTERS_LIST.map(o => <option key={o} value={o}>{o}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="الشهر">
-                                <Select value={evalFilters.month} onChange={(e) => setEvalFilters({...evalFilters, month: e.target.value})}>
-                                    <option value="">-- الكل --</option>
-                                    {MONTHS_LIST.map(o => <option key={o} value={o}>{o}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="الأسبوع">
-                                <Select value={evalFilters.week} onChange={(e) => setEvalFilters({...evalFilters, week: e.target.value})}>
-                                    <option value="">-- الكل --</option>
-                                    {WEEKS_LIST.map(o => <option key={o} value={o}>{o}</option>)}
-                                </Select>
-                            </FormGroup>
-                        </div>
+                        {isDashboardCollapsed ? <ChevronDown size={20} className="text-gray-500"/> : <ChevronUp size={20} className="text-gray-500"/>}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <Card className="bg-white border-t-4 border-t-sky-500">
-                            <CardBody className="text-center p-4">
-                                <BarChart2 className="w-6 h-6 text-sky-500 mx-auto mb-2" />
-                                <div className="text-xs text-gray-500 font-bold mb-1">إجمالي الميزانية المرصودة</div>
-                                <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalBudget.toLocaleString()}</div>
-                            </CardBody>
-                        </Card>
-                        <Card className="bg-white border-t-4 border-t-green-500">
-                            <CardBody className="text-center p-4">
-                                <PieChart className="w-6 h-6 text-green-500 mx-auto mb-2" />
-                                <div className="text-xs text-gray-500 font-bold mb-1">المنصرف الفعلي (تراكمي)</div>
-                                <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalActualCost.toLocaleString()}</div>
-                            </CardBody>
-                        </Card>
-                        <Card className="bg-white border-t-4 border-t-red-500">
-                            <CardBody className="text-center p-4">
-                                <AlertTriangle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                                <div className="text-xs text-gray-500 font-bold mb-1">الفجوة التمويلية (العجز)</div>
-                                <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalGap.toLocaleString()}</div>
-                            </CardBody>
-                        </Card>
-                    </div>
+                    {/* Collapsible Section */}
+                    {!isDashboardCollapsed && (
+                        <div className="animate-in slide-in-from-top-2">
+                            <div className="bg-white p-4 rounded-lg border shadow-sm mb-6 mt-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                    <FormGroup label="النتيجة المتوقعة">
+                                        <Select value={evalFilters.outcome} onChange={(e) => setEvalFilters({...evalFilters, outcome: e.target.value})}>
+                                            <option value="">-- الكل --</option>
+                                            {OUTCOME_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                        </Select>
+                                    </FormGroup>
+                                    <FormGroup label="المحور">
+                                        <Select value={evalFilters.axis} onChange={(e) => setEvalFilters({...evalFilters, axis: e.target.value})}>
+                                            <option value="">-- الكل --</option>
+                                            {AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                        </Select>
+                                    </FormGroup>
+                                </div>
+                            </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
-                        <Card className="bg-indigo-50 border border-indigo-100 col-span-2 sm:col-span-1">
-                            <CardBody className="text-center p-3">
-                                <div className="text-[10px] text-indigo-600 font-bold mb-1">إجمالي الأنشطة المشمولة</div>
-                                <div className="text-lg sm:text-xl font-bold text-indigo-900">{evalData.totalActivities}</div>
-                            </CardBody>
-                        </Card>
-                        <Card className="bg-sky-50 border border-sky-100">
-                            <CardBody className="text-center p-3">
-                                <div className="text-[10px] text-sky-600 font-bold mb-1">متوسط الأنشطة / شهر</div>
-                                <div className="text-lg sm:text-xl font-bold text-sky-900">{evalData.meanPerMonth}</div>
-                            </CardBody>
-                        </Card>
-                        <Card className="bg-green-50 border border-green-100">
-                            <CardBody className="text-center p-3">
-                                <div className="text-[10px] text-green-600 font-bold mb-1">مكتملة كلياً</div>
-                                <div className="text-lg sm:text-xl font-bold text-green-700">{evalData.fullyCompleted}</div>
-                            </CardBody>
-                        </Card>
-                        <Card className="bg-orange-50 border border-orange-100">
-                            <CardBody className="text-center p-3">
-                                <div className="text-[10px] text-orange-600 font-bold mb-1">مكتملة جزئياً</div>
-                                <div className="text-lg sm:text-xl font-bold text-orange-700">{evalData.partiallyCompleted}</div>
-                            </CardBody>
-                        </Card>
-                        <Card className="bg-red-50 border border-red-100">
-                            <CardBody className="text-center p-3">
-                                <div className="text-[10px] text-red-600 font-bold mb-1">لم تنفذ</div>
-                                <div className="text-lg sm:text-xl font-bold text-red-700">{evalData.notImplemented}</div>
-                            </CardBody>
-                        </Card>
-                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <Card className="bg-white border-t-4 border-t-sky-500">
+                                    <CardBody className="text-center p-4">
+                                        <BarChart2 className="w-6 h-6 text-sky-500 mx-auto mb-2" />
+                                        <div className="text-xs text-gray-500 font-bold mb-1">إجمالي الميزانية المرصودة</div>
+                                        <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalBudget.toLocaleString()}</div>
+                                    </CardBody>
+                                </Card>
+                                <Card className="bg-white border-t-4 border-t-green-500">
+                                    <CardBody className="text-center p-4">
+                                        <PieChart className="w-6 h-6 text-green-500 mx-auto mb-2" />
+                                        <div className="text-xs text-gray-500 font-bold mb-1">المنصرف الفعلي (تراكمي)</div>
+                                        <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalActualCost.toLocaleString()}</div>
+                                    </CardBody>
+                                </Card>
+                                <Card className="bg-white border-t-4 border-t-red-500">
+                                    <CardBody className="text-center p-4">
+                                        <AlertTriangle className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                                        <div className="text-xs text-gray-500 font-bold mb-1">الفجوة التمويلية (العجز)</div>
+                                        <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalGap.toLocaleString()}</div>
+                                    </CardBody>
+                                </Card>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
+                                <Card className="bg-indigo-50 border border-indigo-100 col-span-2 sm:col-span-1">
+                                    <CardBody className="text-center p-3">
+                                        <div className="text-[10px] text-indigo-600 font-bold mb-1">إجمالي الأنشطة المشمولة</div>
+                                        <div className="text-lg sm:text-xl font-bold text-indigo-900">{evalData.totalActivities}</div>
+                                    </CardBody>
+                                </Card>
+                                <Card className="bg-sky-50 border border-sky-100">
+                                    <CardBody className="text-center p-3">
+                                        <div className="text-[10px] text-sky-600 font-bold mb-1">متوسط الأنشطة / شهر</div>
+                                        <div className="text-lg sm:text-xl font-bold text-sky-900">{evalData.meanPerMonth}</div>
+                                    </CardBody>
+                                </Card>
+                                <Card className="bg-green-50 border border-green-100">
+                                    <CardBody className="text-center p-3">
+                                        <div className="text-[10px] text-green-600 font-bold mb-1">مكتملة كلياً</div>
+                                        <div className="text-lg sm:text-xl font-bold text-green-700">{evalData.fullyCompleted}</div>
+                                    </CardBody>
+                                </Card>
+                                <Card className="bg-orange-50 border border-orange-100">
+                                    <CardBody className="text-center p-3">
+                                        <div className="text-[10px] text-orange-600 font-bold mb-1">مكتملة جزئياً</div>
+                                        <div className="text-lg sm:text-xl font-bold text-orange-700">{evalData.partiallyCompleted}</div>
+                                    </CardBody>
+                                </Card>
+                                <Card className="bg-red-50 border border-red-100">
+                                    <CardBody className="text-center p-3">
+                                        <div className="text-[10px] text-red-600 font-bold mb-1">لم تنفذ</div>
+                                        <div className="text-lg sm:text-xl font-bold text-red-700">{evalData.notImplemented}</div>
+                                    </CardBody>
+                                </Card>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
                         <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center flex-wrap gap-4">
@@ -1769,18 +1863,19 @@ export default function PlanningView({ permissions, userStates }) {
                         </div>
 
                         <div className="overflow-x-auto w-full pb-4">
-                            <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1200px]">
+                            <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1300px]">
                                 <thead className="bg-slate-800 text-white">
                                     <tr>
                                         <th className="p-3 border-l border-slate-700 w-[20%]">النشاط</th>
                                         <th className="p-3 border-l border-slate-700 text-center w-[8%]">المحور</th>
                                         <th className="p-3 border-l border-slate-700 text-center w-[6%]">النوع</th>
                                         <th className="p-3 border-l border-slate-700 text-center">المستهدف السنوي</th>
-                                        <th className="p-3 border-l border-slate-700 text-center">الإنجاز الشهري</th>
-                                        <th className="p-3 border-l border-slate-700 text-center">الإنجاز الربعي</th>
-                                        <th className="p-3 border-l border-slate-700 text-center">الإنجاز النصف سنوي</th>
-                                        <th className="p-3 border-l border-slate-700 text-center">الإنجاز السنوي</th>
-                                        <th className="p-3 border-l border-slate-700 text-center">% الكلي</th>
+                                        <th className="p-3 border-l border-slate-700 text-center bg-sky-900">الربع الاول</th>
+                                        <th className="p-3 border-l border-slate-700 text-center bg-sky-900">الربع الثاني</th>
+                                        <th className="p-3 border-l border-slate-700 text-center bg-sky-900">الربع الثالث</th>
+                                        <th className="p-3 border-l border-slate-700 text-center bg-sky-900">الربع الرابع</th>
+                                        <th className="p-3 border-l border-slate-700 text-center bg-teal-900">نصف سنوي</th>
+                                        <th className="p-3 border-l border-slate-700 text-center bg-green-900">سنوي</th>
                                         <th className="p-3 border-l border-slate-700 text-center">الميزانية السنوية</th>
                                         <th className="p-3 text-center">المنصرف الفعلي</th>
                                     </tr>
@@ -1788,13 +1883,20 @@ export default function PlanningView({ permissions, userStates }) {
                                 <tbody className="divide-y divide-gray-200">
                                     {evalData.groupedData.map((group, gIdx) => (
                                         <React.Fragment key={gIdx}>
-                                            <tr className="bg-sky-50 border-b-2 border-sky-100">
-                                                <td colSpan="11" className="p-3 font-bold text-sky-900">
-                                                    النتيجة المتوقعة: {group.outcomeName} <span className="text-[10px] sm:text-xs text-sky-600 bg-sky-100 px-2 py-1 rounded mr-2">{group.levelInfo}</span>
+                                            <tr 
+                                                className="bg-sky-50 border-b-2 border-sky-100 cursor-pointer hover:bg-sky-100 transition-colors"
+                                                onClick={() => toggleEvaluationGroup(gIdx)}
+                                            >
+                                                <td colSpan="12" className="p-3 font-bold text-sky-900">
+                                                    <div className="flex justify-between items-center w-full">
+                                                        <div>
+                                                            النتيجة المتوقعة: {group.outcomeName}
+                                                        </div>
+                                                        {collapsedGroups[gIdx] ? <ChevronDown size={16} className="text-sky-700" /> : <ChevronUp size={16} className="text-sky-700" />}
+                                                    </div>
                                                 </td>
                                             </tr>
-                                            {group.rows.map((row, idx) => {
-                                                const perc = row.target > 0 ? Math.round((row.achievedAnnual / row.target) * 100) : 0;
+                                            {!collapsedGroups[gIdx] && group.rows.map((row, idx) => {
                                                 return (
                                                     <tr key={`${row.id}_${idx}`} className={`hover:bg-slate-50 transition-colors ${row.type === 'غير مخطط' ? 'bg-amber-50/20' : 'bg-white'}`}>
                                                         <td className="p-3 border-l border-slate-200 font-bold text-gray-800 break-words whitespace-normal">{row.name}</td>
@@ -1805,29 +1907,28 @@ export default function PlanningView({ permissions, userStates }) {
                                                                 : <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold whitespace-nowrap">مخطط</span>
                                                             }
                                                         </td>
-                                                        <td className="p-3 border-l border-slate-200 text-center font-bold text-indigo-600 text-base sm:text-lg">{row.target}</td>
+                                                        <td className="p-3 border-l border-slate-200 text-center font-bold text-indigo-600 text-base sm:text-lg">{row.targetAnnual}</td>
                                                         
-                                                        <td className="p-2 border-l border-slate-200 bg-teal-50/30">
-                                                            <FormattedAchieved achieved={row.achievedMonthly} target={row.target} />
+                                                        <td className="p-2 border-l border-slate-200 bg-sky-50/30">
+                                                            <FormattedAchieved achieved={row.achievedQ1} target={row.targetAnnual} />
                                                         </td>
-                                                        <td className="p-2 border-l border-slate-200 bg-teal-50/50">
-                                                            <FormattedAchieved achieved={row.achievedQuarterly} target={row.target} />
+                                                        <td className="p-2 border-l border-slate-200 bg-sky-50/30">
+                                                            <FormattedAchieved achieved={row.achievedQ2} target={row.targetAnnual} />
                                                         </td>
+                                                        <td className="p-2 border-l border-slate-200 bg-sky-50/30">
+                                                            <FormattedAchieved achieved={row.achievedQ3} target={row.targetAnnual} />
+                                                        </td>
+                                                        <td className="p-2 border-l border-slate-200 bg-sky-50/30">
+                                                            <FormattedAchieved achieved={row.achievedQ4} target={row.targetAnnual} />
+                                                        </td>
+
                                                         <td className="p-2 border-l border-slate-200 bg-teal-50/70">
-                                                            <FormattedAchieved achieved={row.achievedSemiAnnual} target={row.target} />
+                                                            <FormattedAchieved achieved={row.achievedH1} target={row.targetAnnual} />
                                                         </td>
                                                         <td className="p-2 border-l border-slate-200 bg-green-50/50">
-                                                            <FormattedAchieved achieved={row.achievedAnnual} target={row.target} />
+                                                            <FormattedAchieved achieved={row.achievedAnnual} target={row.targetAnnual} />
                                                         </td>
                                                         
-                                                        <td className="p-3 border-l border-slate-200 text-center">
-                                                            <div className="flex flex-col items-center justify-center gap-1">
-                                                                <span className={`text-[10px] sm:text-xs font-bold ${perc >= 100 ? 'text-green-600' : perc > 0 ? 'text-orange-500' : 'text-gray-400'}`}>{perc}%</span>
-                                                                <div className="w-12 sm:w-16 bg-gray-200 rounded-full h-1.5">
-                                                                    <div className={`h-1.5 rounded-full ${perc >= 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(perc, 100)}%` }}></div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
                                                         <td className="p-3 border-l border-slate-200 text-center font-medium">{row.budget.toLocaleString()}</td>
                                                         <td className="p-3 text-center font-bold text-red-600">{row.actualCost.toLocaleString()}</td>
                                                     </tr>
@@ -1837,7 +1938,7 @@ export default function PlanningView({ permissions, userStates }) {
                                     ))}
                                     {evalData.groupedData.length === 0 && (
                                         <tr>
-                                            <td colSpan="11" className="text-center p-8 sm:p-12 text-gray-500 bg-white">
+                                            <td colSpan="12" className="text-center p-8 sm:p-12 text-gray-500 bg-white">
                                                 <div className="flex flex-col items-center justify-center">
                                                     <AlertTriangle className="text-amber-500 w-8 h-8 sm:w-10 sm:h-10 mb-2"/>
                                                     <span className="text-xs sm:text-sm">لا توجد بيانات متاحة لعرض التقييم بناءً على الفلاتر المحددة.</span>

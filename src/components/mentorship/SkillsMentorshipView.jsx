@@ -30,6 +30,7 @@ import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard';
 import IPCAssessmentForm from './IPCAssessmentForm';
 import HandwashingAssessmentForm from './HandwashingAssessmentForm';
+import AMSAssessmentForm from './AMSAssessmentForm'; 
 import { useTranslation } from 'react-i18next';
 import { getAuth } from "firebase/auth";
 import { db } from '../../firebase'; 
@@ -389,6 +390,15 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
             border: 'hover:border-cyan-400', 
             shadow: 'hover:shadow-cyan-100' 
         },
+        ...(activeService === 'IPC' ? [{
+            id: 'new_ams_form', 
+            label: 'استبيان الإشراف على مضادات الميكروبات (AMS)', 
+            icon: FileText, 
+            color: 'text-indigo-600', 
+            bg: 'bg-indigo-100', 
+            border: 'hover:border-indigo-400', 
+            shadow: 'hover:shadow-indigo-100' 
+        }] : []),
         { id: 'new_mother', label: 'Add New Mother Form', icon: Users, color: 'text-pink-600', bg: 'bg-pink-100', border: 'hover:border-pink-400', shadow: 'hover:shadow-pink-100' },
         { id: 'new_visit_report', label: 'Add New Visit Report', icon: ClipboardCheck, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
     ];
@@ -2048,10 +2058,10 @@ const SkillsMentorshipView = ({
     const [projectFilter, setProjectFilter] = useState('');
     const [workerTypeFilter, setWorkerTypeFilter] = useState('');
     const [dateFilter, setDateFilter] = useState('');
-    const [customStartDate, setCustomStartDate] = useState(''); // NEW
-    const [customEndDate, setCustomEndDate] = useState('');     // NEW
+    const [customStartDate, setCustomStartDate] = useState(''); 
+    const [customEndDate, setCustomEndDate] = useState('');     
     
-    const [viewingMentor, setViewingMentor] = useState(null);   // NEW
+    const [viewingMentor, setViewingMentor] = useState(null);   
 
     const canEditVisitNumber = useMemo(() => {
         if (publicSubmissionMode || publicDashboardMode) return false;
@@ -2683,8 +2693,8 @@ const SkillsMentorshipView = ({
             setProjectFilter('');
             setWorkerTypeFilter('');
             setDateFilter('');
-            setCustomStartDate(''); // NEW
-            setCustomEndDate('');   // NEW
+            setCustomStartDate(''); 
+            setCustomEndDate('');   
         }
     }, [activeTab, publicDashboardMode]);
 
@@ -3074,6 +3084,11 @@ const SkillsMentorshipView = ({
             resetSelection();
             setActiveFormType(activeService === 'IPC' ? 'ipc_facility_assessment' : 'facility_update');
             setCurrentView('form_setup');
+        } else if (action === 'new_ams_form') {
+            if (!canAddMentorshipData) return;
+            resetSelection();
+            setActiveFormType('ams_assessment');
+            setCurrentView('form_setup');
         }
     };
     
@@ -3214,7 +3229,7 @@ const SkillsMentorshipView = ({
                 setEditingSubmission(null);
                 setIsReadyToStart(true);
             }
-        } else if (activeFormType === 'mothers_form' || activeFormType === 'visit_report') {
+        } else if (activeFormType === 'mothers_form' || activeFormType === 'visit_report' || activeFormType === 'ams_assessment' || activeFormType === 'ipc_facility_assessment') {
             setEditingSubmission(null);
             setIsReadyToStart(true);
         }
@@ -3419,7 +3434,13 @@ const SkillsMentorshipView = ({
         } else if (fullSubmission.serviceType === 'EENC') {
             setActiveFormType('skills_assessment');
         } else if (fullSubmission.serviceType === 'IPC' || fullSubmission.serviceType === 'IPC_ASSESSMENT') {
-            setActiveFormType('skills_assessment');
+            if (fullSubmission.formCategory === 'AMS_Stewardship') {
+                setActiveFormType('ams_assessment');
+            } else if (fullSubmission.formType === 'handwashing') {
+                 setActiveFormType('skills_assessment');
+            } else {
+                 setActiveFormType('ipc_facility_assessment');
+            }
         } else {
             setToast({ show: true, message: 'لا يمكن تعديل هذا النوع من الجلسات.', type: 'error' });
             return;
@@ -4337,23 +4358,42 @@ const SkillsMentorshipView = ({
                 </>
             );
         }
-        // IPC: Facility Assessment Program (Does NOT Require Health Worker)
-        else if (activeService === 'IPC' && activeFormType === 'ipc_facility_assessment' && (editingSubmission || (isReadyToStart && selectedFacility))) {
-            return (
-                <>
-                    <IPCAssessmentForm
-                        facility={facilityData}
-                        onExit={handleExitForm}
-                        onSaveComplete={handleSaveSuccess}
-                        setToast={setToast}
-                        // Note: IPCAssessmentForm assigns 'N/A' to healthworker under the hood automatically
-                    />
-                    <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
-                </>
-            );
-        }
     }
     
+    // --- ADD AMS FORM RENDERING HERE ---
+    if (currentView === 'form_setup' && activeFormType === 'ams_assessment' && (editingSubmission || (isReadyToStart && selectedFacility)) && activeService === 'IPC') {
+        return (
+            <>
+                <AMSAssessmentForm
+                    facility={facilityData}
+                    onExit={handleExitForm}
+                    onSaveComplete={handleSaveSuccess}
+                    setToast={setToast}
+                    existingSessionData={editingSubmission}
+                />
+                <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
+            </>
+        );
+    }
+    // -----------------------------------
+
+    // --- IPC FACILITY ASSESSMENT (Does NOT Require Health Worker) ---
+    if (currentView === 'form_setup' && activeFormType === 'ipc_facility_assessment' && (editingSubmission || (isReadyToStart && selectedFacility)) && activeService === 'IPC') {
+        return (
+            <>
+                <IPCAssessmentForm
+                    facility={facilityData}
+                    onExit={handleExitForm}
+                    onSaveComplete={handleSaveSuccess}
+                    setToast={setToast}
+                    existingSessionData={editingSubmission}
+                />
+                <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
+            </>
+        );
+    }
+    // ---------------------------------------------------------------
+
     if (currentView === 'form_setup' && activeFormType === 'mothers_form' && (isReadyToStart && selectedFacility) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
         
         if (activeService === 'IMNCI') {
@@ -4448,6 +4488,8 @@ const SkillsMentorshipView = ({
         const isVisitReportSetup = activeFormType === 'visit_report';
         const isMothersFormSetup = activeFormType === 'mothers_form';
         const isFacilityUpdateSetup = activeFormType === 'facility_update';
+        const isAMSSetup = activeFormType === 'ams_assessment';
+        const isIPCFacilitySetup = activeFormType === 'ipc_facility_assessment';
         
         let setupTitle = '';
         if (isSkillsAssessmentSetup) {
@@ -4458,6 +4500,10 @@ const SkillsMentorshipView = ({
             setupTitle = editingSubmission ? (activeService === 'EENC' ? 'تعديل استبيان الأم (EENC)' : 'تعديل استبيان الأم') : (activeService === 'EENC' ? 'نموذج استبيان الأم (EENC)' : 'نموذج استبيان الأم (IMNCI)');
         } else if (isFacilityUpdateSetup) {
             setupTitle = 'تحديث بيانات المؤسسة الصحية';
+        } else if (isAMSSetup) {
+            setupTitle = editingSubmission ? 'تعديل استبيان الإشراف على مضادات الميكروبات (AMS)' : 'إدخال استبيان الإشراف على مضادات الميكروبات (AMS)';
+        } else if (isIPCFacilitySetup) {
+            setupTitle = editingSubmission ? 'تعديل تقييم برنامج مكافحة العدوى للمنشأة' : 'تقييم برنامج مكافحة العدوى للمنشأة';
         }
 
         const setupSubtitle = isSkillsAssessmentSetup 
@@ -4631,7 +4677,7 @@ const SkillsMentorshipView = ({
                                     {isSkillsAssessmentSetup
                                         ? (activeService === 'IPC' ? 'بدء التقييم' : 'بدء الجلسة')
                                         : (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير EENC' : 'بدء تقرير زيارة') : 
-                                           (isFacilityUpdateSetup ? 'تحديث بيانات المنشأة' : 'بدء الاستبيان'))}
+                                           (isFacilityUpdateSetup ? 'تحديث بيانات المنشأة' : (isIPCFacilitySetup ? 'بدء التقييم' : 'بدء الاستبيان')))}
                                 </Button>
                             </div>
                         </div>

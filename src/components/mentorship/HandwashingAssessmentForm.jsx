@@ -17,7 +17,6 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
     const user = auth.currentUser;
     const [isSaving, setIsSaving] = useState(false);
     
-    // البدء بفرصتين افتراضياً
     const [opportunities, setOpportunities] = useState(() => {
         if (existingSessionData?.assessmentData) return existingSessionData.assessmentData;
         return Array.from({ length: 2 }, () => ({ indications: [], action: '', gloveUse: false }));
@@ -116,7 +115,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
     };
 
     return (
-        <Card dir="rtl" className="relative pb-20 text-right w-full">
+        <Card className="relative pb-20 text-right w-full" dir="rtl">
             <div className={`fixed top-4 left-4 z-50 flex flex-col items-center justify-center p-3 w-32 h-32 rounded-full ${sessionStats.compliance >= 80 ? 'bg-green-600' : sessionStats.compliance >= 50 ? 'bg-yellow-500' : 'bg-red-600'} text-white shadow-2xl transition-all duration-300 border-4 border-white`}>
                 <div className="font-bold text-3xl leading-none drop-shadow-md">{sessionStats.compliance}%</div>
                 <div className="text-sm mt-1 text-center font-medium opacity-90">نسبة الامتثال</div>
@@ -153,7 +152,6 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                                 </h4>
                                 
                                 <div className="space-y-4">
-                                    {/* كتلة الدواعي بدون استخدام Flexbox */}
                                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm w-full text-right block">
                                         <p className="font-bold text-sm mb-3 text-slate-800 border-b border-slate-100 pb-2">الدواعي:</p>
                                         <div className="w-full space-y-1">
@@ -171,7 +169,6 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                                         </div>
                                     </div>
                                     
-                                    {/* كتلة الإجراء بدون استخدام Flexbox */}
                                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm w-full text-right block">
                                         <p className="font-bold text-sm mb-4 text-slate-800 border-b border-slate-100 pb-2">الإجراء:</p>
                                         <div className="w-full text-right">
@@ -209,12 +206,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                     </div>
 
                     <div className="text-center mb-10 w-full block">
-                        <Button 
-                            type="button" 
-                            onClick={handleAddOpportunity} 
-                            variant="outline" 
-                            className="inline-block bg-white border-sky-500 text-sky-700 hover:bg-sky-50 font-bold px-6 py-2 shadow-sm rounded-full transition-colors"
-                        >
+                        <Button className="inline-block bg-white border-sky-500 text-sky-700 hover:bg-sky-50 font-bold px-6 py-2 shadow-sm rounded-full transition-colors" onClick={handleAddOpportunity} type="button" variant="outline">
                             + إضافة فرصة جديدة
                         </Button>
                     </div>
@@ -256,10 +248,10 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                 </div>
 
                 <div className="p-4 border-t bg-gray-100 rounded-b-2xl sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] w-full text-left block" dir="ltr">
-                    <Button type="submit" disabled={isSaving} className="inline-block ml-4 px-8 py-2 text-sm font-bold bg-sky-700 hover:bg-sky-800 text-white shadow-lg">
+                    <Button className="inline-block ml-4 px-8 py-2 text-sm font-bold bg-sky-700 hover:bg-sky-800 text-white shadow-lg" disabled={isSaving} type="submit">
                         {isSaving ? 'جاري الحفظ...' : 'حفظ وإنهاء التقييم'}
                     </Button>
-                    <Button type="button" variant="secondary" onClick={onExit} className="inline-block px-6 py-2 text-sm font-bold bg-white text-gray-700 hover:bg-gray-50 border-gray-300">
+                    <Button className="inline-block px-6 py-2 text-sm font-bold bg-white text-gray-700 hover:bg-gray-50 border-gray-300" onClick={onExit} type="button" variant="secondary">
                         إلغاء الخروج
                     </Button>
                 </div>
