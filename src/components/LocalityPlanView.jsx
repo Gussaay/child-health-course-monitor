@@ -4,7 +4,7 @@ import jsPDF from "jspdf";
 import html2canvas from 'html2canvas';
 import { amiriFontBase64 } from './AmiriFont.js'; 
 import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner } from './CommonComponents';
-import { upsertMasterPlan, deleteMasterPlan, hardDeleteMasterPlan } from '../data';
+import { upsertMasterPlan, deleteMasterPlan } from '../data';
 import { useDataCache } from '../DataContext';
 import { Save, Plus, Edit, Trash2, X, ChevronDown, ChevronUp, Layers, BarChart2, PieChart, Activity, Users, Calendar, Download, FileText, Target, CheckSquare, Settings, RefreshCw, AlertTriangle } from 'lucide-react';
 import { STATE_LOCALITIES } from './constants';
@@ -545,12 +545,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
     const handlePermanentDelete = async (id) => {
         if(window.confirm("⚠️ تحذير: هذا الإجراء سيقوم بمسح الخطة بشكل نهائي من قاعدة البيانات ولن يمكن التراجع عنه! هل أنت متأكد؟")) {
             try {
-                if (hardDeleteMasterPlan) {
-                    await hardDeleteMasterPlan(id);
-                } else {
-                    alert("يرجى إضافة دالة hardDeleteMasterPlan في ملف data.js أولاً.");
-                    return;
-                }
+                await deleteMasterPlan(id);
                 fetchMasterPlans(true);
             } catch(e) {
                 alert("حدث خطأ أثناء الحذف النهائي.");
