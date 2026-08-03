@@ -1,5 +1,6 @@
 // src/components/Course.jsx
 import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
     Select, Spinner, Table, CourseIcon, Modal, CardBody, CardFooter, Toast 
@@ -34,7 +35,7 @@ import {
     Users, Share2, UserPlus, CheckCircle, 
     FileText, Edit, Trash2, ExternalLink, Link as LinkIcon, Eye, BarChart2,
     AlertTriangle, Shield, Check, X, RefreshCw, Archive, ClipboardList,
-    Award, FileSignature, Stamp, Upload, Lock, XCircle
+    Award, FileSignature, Stamp, Upload, Lock, XCircle, QrCode, Send, Copy, Download
 } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
 import { useAuth } from '../hooks/useAuth'; 
@@ -671,12 +672,107 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 });
 
 
+// --- QR Code Share Modal ---
+function QRShareModal({ isOpen, onClose, url, title }) {
+    const qrCanvasRef = useRef(null);
+
+    const handleCopyLink = async () => {
+        try { await navigator.clipboard.writeText(url); alert('Link copied to clipboard!'); }
+        catch { alert('Failed to copy link.'); }
+    };
+
+    const handleOpenLink = () => { window.open(url, '_blank'); };
+
+    const handleShareLink = async () => {
+        if (navigator.share) {
+            try { await navigator.share({ title: title || 'Shared Link', url }); }
+            catch (e) { if (e.name !== 'AbortError') handleCopyLink(); }
+        } else { handleCopyLink(); }
+    };
+
+    const handleShareQR = async () => {
+        try {
+            const canvas = qrCanvasRef.current?.querySelector('canvas');
+            if (!canvas) return;
+            // Create a new canvas with padding and title
+            const outCanvas = document.createElement('canvas');
+            const padding = 32;
+            outCanvas.width = canvas.width + padding * 2;
+            outCanvas.height = canvas.height + padding * 2 + 40;
+            const ctx = outCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+            ctx.drawImage(canvas, padding, padding);
+            ctx.fillStyle = '#374151';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            const label = title || 'Scan to open';
+            ctx.fillText(label.length > 45 ? label.slice(0, 45) + '…' : label, outCanvas.width / 2, canvas.height + padding + 28);
+
+            const dataUrl = outCanvas.toDataURL('image/png');
+            if (navigator.share && navigator.canShare) {
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: title || 'QR Code' });
+                    return;
+                }
+            }
+            // Fallback: download
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'qr-code.png';
+            a.click();
+        } catch (e) {
+            console.error('QR share error:', e);
+        }
+    };
+
+    if (!isOpen) return null;
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={title || 'Share Link'}>
+            <CardBody className="flex flex-col items-center gap-5 p-6">
+                <div ref={qrCanvasRef} className="bg-white p-5 rounded-2xl shadow-md border border-gray-100">
+                    <QRCodeCanvas value={url || ' '} size={220} level="L" includeMargin={false} />
+                </div>
+                <p className="text-xs text-gray-400 text-center break-all max-w-[280px] select-all leading-relaxed">{url}</p>
+                
+                <div className="w-full flex flex-col gap-2.5 pt-2">
+                    <button
+                        onClick={handleOpenLink}
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-[0.98]"
+                        style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}
+                    >
+                        <ExternalLink size={16} /> Open Link
+                    </button>
+                    <button
+                        onClick={handleShareLink}
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-[0.98]"
+                        style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+                    >
+                        <Send size={16} /> Share Link
+                    </button>
+                    <button
+                        onClick={handleShareQR}
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-[0.98]"
+                        style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}
+                    >
+                        <QrCode size={16} /> Share QR Code
+                    </button>
+                </div>
+            </CardBody>
+        </Modal>
+    );
+}
+
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities, onAddFinalReport, canManageFinalReport,
     onOpenAttendanceManager, isProcessing 
 }) {
     const [shareModalCourse, setShareModalCourse] = useState(null);
+    const [qrShareData, setQrShareData] = useState(null);
     const [reportModalCourse, setReportModalCourse] = useState(null);
      
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -943,6 +1039,7 @@ export function CoursesTable({
             )}
 
             {shareModalCourse && (
+                <>
                 <Modal isOpen={!!shareModalCourse} onClose={() => setShareModalCourse(null)} title="Share Public Links">
                      <CardBody className="flex flex-col gap-6 p-4">
                         <div>
@@ -955,9 +1052,8 @@ export function CoursesTable({
                                         <span className="text-sm font-semibold">Participant Registration</span>
                                         <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
                                             const link = `${getBaseUrl()}/public/register/course/${shareModalCourse.id}`;
-                                            const text = `*Participant Registration*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nPlease register using this link:\n${link}`;
-                                            shareViaWhatsApp(text, 'Registration link copied!');
-                                        }}><LinkIcon size={14} /> Share</Button>
+                                            setQrShareData({ url: link, title: `Registration: ${shareModalCourse.course_type}` });
+                                        }}><QrCode size={14} /> Share</Button>
                                     </div>
                                 </div>
                                 <div className="bg-gray-50 p-3 rounded border">
@@ -977,14 +1073,12 @@ export function CoursesTable({
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                 const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=pre`;
-                                                const text = `*Pre-Test Form*\nCourse: ${shareModalCourse.course_type}\n\nPlease complete the pre-test here:\n${link}`;
-                                                shareViaWhatsApp(text, 'Pre-Test link copied!');
+                                                setQrShareData({ url: link, title: `Pre-Test: ${shareModalCourse.course_type}` });
                                             }}><FileText size={14} /> Share Pre-Test</Button>
 
                                             <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                 const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=post`;
-                                                const text = `*Post-Test Form*\nCourse: ${shareModalCourse.course_type}\n\nPlease complete the post-test here:\n${link}`;
-                                                shareViaWhatsApp(text, 'Post-Test link copied!');
+                                                setQrShareData({ url: link, title: `Post-Test: ${shareModalCourse.course_type}` });
                                             }}><FileText size={14} /> Share Post-Test</Button>
                                         </div>
                                     </div>
@@ -1005,20 +1099,10 @@ export function CoursesTable({
                                             className="flex items-center gap-1" 
                                             onClick={() => { 
                                                 const link = `${getBaseUrl()}/attendance/course/${shareModalCourse.id}?date=${attendanceDate}`; 
-                                                
-                                                let subCourseText = '';
-                                                if (shareModalCourse.facilitatorAssignments && shareModalCourse.facilitatorAssignments.length > 0) {
-                                                    const subcourses = [...new Set(shareModalCourse.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))];
-                                                    if (subcourses.length > 0) {
-                                                        subCourseText = ` - ${subcourses.join(' / ')}`;
-                                                    }
-                                                }
-
-                                                const text = `*Attendance Form: ${shareModalCourse.course_type}${subCourseText}*\nDate: ${attendanceDate}\n\nPlease register your attendance here: \n${link}`;
-                                                shareViaWhatsApp(text, `Attendance link for ${attendanceDate} copied!`);
+                                                setQrShareData({ url: link, title: `Attendance: ${shareModalCourse.course_type} - ${attendanceDate}` });
                                             }}
                                         >
-                                            <LinkIcon size={14} /> Share
+                                            <QrCode size={14} /> Share
                                         </Button>
                                     </div>
                                 </div>
@@ -1029,6 +1113,14 @@ export function CoursesTable({
                          <Button variant="secondary" onClick={() => setShareModalCourse(null)}>Close</Button>
                     </CardFooter>
                 </Modal>
+                
+                <QRShareModal
+                    isOpen={!!qrShareData}
+                    onClose={() => setQrShareData(null)}
+                    url={qrShareData?.url || ''}
+                    title={qrShareData?.title || ''}
+                />
+                </>
             )}
 
             {reportModalCourse && (
