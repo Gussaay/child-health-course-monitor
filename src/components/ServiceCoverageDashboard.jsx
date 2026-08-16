@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 import { Card, Spinner, FormGroup, Select } from './CommonComponents';
 import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES, getLocalizedStateName, getLocalizedLocalityName } from "./constants.js";
@@ -609,6 +610,24 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         }
     }, []);
 
+    const handleDownloadScnuExcel = () => {
+        const dataForExcel = facilityNeonatalTableData.map(row => ({
+            [t('dashboard.table.state', 'State')]: row.state,
+            [t('dashboard.table.locality', 'Locality')]: row.locality,
+            [t('dashboard.table.hospital_name', 'Facility Name')]: row.facilityName,
+            [t('dashboard.table.incubators', 'Incubators')]: row.incubators,
+            [t('dashboard.table.cots', 'Cots')]: row.cots,
+            [t('dashboard.table.total_beds', 'Total Beds')]: row.totalBeds
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+        const workbook = XLSX.utils.book_new();
+        
+        XLSX.utils.book_append_sheet(workbook, worksheet, "SCNU List");
+        
+        XLSX.writeFile(workbook, "Functioning_SCNU_List.xlsx");
+    };
+
     const equipmentHeaders = [
         !!stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName,
         ...Object.values(NEONATAL_EQUIPMENT_SPEC).map(h => t(`dashboard.equip.${h}`, h))
@@ -808,7 +827,17 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                 showPlanningMap ? t('dashboard.headers.planned_neonatal_units', 'Planning Map Facilities List') :
                                 t('dashboard.headers.functioning_neonatal_units', 'Functioning Neonatal Units List')
                             }</h3>
-                            <button onClick={() => copyTableAsImage(scnuListTableRef, setTable3CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table3CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table3CopyStatus}</span> : <CopyIcon />} </button>
+                            <div className="flex gap-2">
+                                <button onClick={handleDownloadScnuExcel} className="text-gray-400 hover:text-green-600 transition-colors p-1" title={t('dashboard.actions.download_excel', 'Download Excel')}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                </button>
+                                
+                                <button onClick={() => copyTableAsImage(scnuListTableRef, setTable3CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> 
+                                    {table3CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table3CopyStatus}</span> : <CopyIcon />} 
+                                </button>
+                            </div>
                         </div>
                         <div className="overflow-x-auto w-full max-h-[500px] overflow-y-auto p-4">
                             <table ref={scnuListTableRef} className="min-w-full table-auto border-collapse text-sm border border-gray-200">

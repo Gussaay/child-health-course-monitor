@@ -3,10 +3,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
 import { upsertProject, deleteProject } from '../data';
 import { useDataCache } from '../DataContext';
+import { db } from '../firebase'; 
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { 
     Plus, Edit, Trash2, CheckCircle, Clock, PlayCircle, FolderKanban, 
     Baby, Stethoscope, Users, Activity, Package, HeartPulse, 
-    BarChart2, AlertCircle, Target, ListTodo, Search
+    BarChart2, Target, Search
 } from 'lucide-react';
 
 const PROGRAM_UNITS_DATA = [
@@ -25,12 +28,13 @@ export default function ProjectTrackerView({ permissions }) {
         projects: rawProjects, 
         fetchProjects, 
         isLoading, 
-        federalCoordinators 
+        federalCoordinators,
+        fetchFederalCoordinators // <-- ADDED: Extract the fetch function
     } = useDataCache();
     
     // --- Navigation & UI State ---
-    const [viewMode, setViewMode] = useState('dashboard');  // 'dashboard' or 'entry'
-    const [dashboardTab, setDashboardTab] = useState('overview'); // 'overview', 'active', 'completed'
+    const [viewMode, setViewMode] = useState('dashboard');
+    const [dashboardTab, setDashboardTab] = useState('overview');
     
     // --- Entry Selection State ---
     const [selectedUnit, setSelectedUnit] = useState('');
@@ -43,7 +47,9 @@ export default function ProjectTrackerView({ permissions }) {
     // --- Modal State ---
     const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
     const [currentSubtask, setCurrentSubtask] = useState(null);
+    const [isSavingTask, setIsSavingTask] = useState(false);
 
+    // Guaranteed to only pull from the federal team pool
     const allTeamMembers = useMemo(() => {
         return (federalCoordinators || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true").map(c => ({ ...c, _level: 'federal' }));
     }, [federalCoordinators]);
@@ -55,7 +61,11 @@ export default function ProjectTrackerView({ permissions }) {
     const projects = useMemo(() => {
         return allActiveProjects
             .filter(p => p.unit === selectedUnit)
-            .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            .sort((a, b) => {
+                const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
+                const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
+                return timeB - timeA;
+            });
     }, [allActiveProjects, selectedUnit]);
 
     const activeProject = useMemo(() => projects.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
@@ -102,7 +112,6 @@ export default function ProjectTrackerView({ permissions }) {
             }
         });
 
-        // Sort lists
         overdueList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         activeList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         completedList.sort((a, b) => new Date(b.completedAt || b.statusUpdatedAt || 0) - new Date(a.completedAt || a.statusUpdatedAt || 0));
@@ -117,11 +126,10 @@ export default function ProjectTrackerView({ permissions }) {
         };
     }, [allActiveProjects]);
 
-    // --- Filter Handlers ---
     const filteredActiveTasks = useMemo(() => {
         return allActiveTasks.filter(t => 
             (taskFilter.project === '' || t.projectId === taskFilter.project) &&
-            (taskFilter.responsible === '' || t.responsible === taskFilter.responsible) &&
+            (taskFilter.responsible === '' || t.responsibleId === taskFilter.responsible) &&
             (taskFilter.status === '' || t.status === taskFilter.status) &&
             (taskFilter.search === '' || t.description.toLowerCase().includes(taskFilter.search.toLowerCase()))
         );
@@ -130,38 +138,62 @@ export default function ProjectTrackerView({ permissions }) {
     const filteredCompletedTasks = useMemo(() => {
         return allCompletedTasks.filter(t => 
             (taskFilter.project === '' || t.projectId === taskFilter.project) &&
-            (taskFilter.responsible === '' || t.responsible === taskFilter.responsible) &&
+            (taskFilter.responsible === '' || t.responsibleId === taskFilter.responsible) &&
             (taskFilter.search === '' || t.description.toLowerCase().includes(taskFilter.search.toLowerCase()))
         );
     }, [allCompletedTasks, taskFilter]);
 
+    // --- ADDED: Fetch Federal Coordinators on mount ---
     useEffect(() => {
         fetchProjects();
-    }, [fetchProjects]);
+        if (fetchFederalCoordinators) {
+            fetchFederalCoordinators(); 
+        }
+    }, [fetchProjects, fetchFederalCoordinators]);
 
     const handleCreateProject = async (e) => {
         e.preventDefault();
         if (!newProjectTitle.trim() || !selectedUnit) return;
-        const payload = { title: newProjectTitle, unit: selectedUnit, subtasks: [] };
+        
+        const now = new Date().toISOString();
+        const payload = { 
+            title: newProjectTitle, 
+            unit: selectedUnit, 
+            subtasks: [],
+            createdAt: now 
+        };
+        
         const newProjectRef = await upsertProject(payload);
         await fetchProjects(true);
-        setSelectedProjectId(newProjectRef?.id || ''); 
+        
+        const newId = (newProjectRef && typeof newProjectRef === 'object') ? newProjectRef.id : newProjectRef;
+        setSelectedProjectId(newId || ''); 
         setNewProjectTitle('');
     };
 
     const handleSaveSubtask = async (e) => {
         e.preventDefault();
-        // Support saving from Dashboard (where activeProject is null) using currentSubtask.projectId
         const targetProjectId = activeProject?.id || currentSubtask?.projectId;
         if (!targetProjectId) return;
         
+        setIsSavingTask(true);
         const projectToUpdate = allActiveProjects.find(p => p.id === targetProjectId);
-        if (!projectToUpdate) return;
+        if (!projectToUpdate) {
+            setIsSavingTask(false);
+            return;
+        }
 
         let updatedSubtasks = [...(projectToUpdate.subtasks || [])];
         const now = new Date().toISOString(); 
         
+        let isNewAssignment = false;
+
         if (currentSubtask.id) {
+            const originalSubtask = updatedSubtasks.find(st => st.id === currentSubtask.id);
+            if (originalSubtask && originalSubtask.responsibleId !== currentSubtask.responsibleId) {
+                isNewAssignment = true;
+            }
+
             updatedSubtasks = updatedSubtasks.map(st => {
                 if (st.id === currentSubtask.id) {
                     const updated = { ...currentSubtask };
@@ -174,14 +206,57 @@ export default function ProjectTrackerView({ permissions }) {
                 return st;
             });
         } else {
+            isNewAssignment = true;
             updatedSubtasks.push({ 
-                ...currentSubtask, id: Date.now().toString(), createdAt: now, statusUpdatedAt: now,
+                ...currentSubtask, 
+                id: Date.now().toString(), 
+                createdAt: now, 
+                statusUpdatedAt: now,
                 ...(currentSubtask.status === 'Completed' ? { completedAt: now } : {})
             });
         }
 
         await upsertProject({ ...projectToUpdate, subtasks: updatedSubtasks });
-        fetchProjects(true);
+
+        if (isNewAssignment && currentSubtask.responsibleId) {
+            try {
+                const assignedMember = allTeamMembers.find(m => m.id === currentSubtask.responsibleId);
+                
+                if (assignedMember && assignedMember.email) {
+                    const q = query(collection(db, 'users'), where("email", "==", assignedMember.email));
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (!querySnapshot.empty) {
+                        const specificTargetUserId = querySnapshot.docs[0].id;
+                        const notifTitle = "New Task Assigned";
+                        const notifMessage = `You've been assigned: "${currentSubtask.description}" in "${projectToUpdate.title}"`;
+                        
+                        await addDoc(collection(db, 'notifications'), {
+                            title: notifTitle,
+                            message: notifMessage,
+                            targetUser: specificTargetUserId, 
+                            createdAt: serverTimestamp(),
+                            deliveredTo: [], 
+                            readBy: [],      
+                            status: 'active'
+                        });
+
+                        const functions = getFunctions(db.app); 
+                        const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                        await sendFCMNotification({
+                            targetUserId: specificTargetUserId, 
+                            title: notifTitle,
+                            body: notifMessage
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to send targeted assignment notification:", err);
+            }
+        }
+
+        await fetchProjects(true);
+        setIsSavingTask(false);
         setIsSubtaskModalOpen(false);
     };
 
@@ -209,6 +284,20 @@ export default function ProjectTrackerView({ permissions }) {
         return <Clock className="w-4 h-4 text-orange-500" />;
     };
 
+    const renderSubActivitiesProgress = (task) => {
+        if (!task.subActivities || task.subActivities.length === 0) return null;
+        const completed = task.subActivities.filter(sa => sa.completed).length;
+        const total = task.subActivities.length;
+        return (
+            <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex-1 bg-gray-200 h-1.5 rounded-full overflow-hidden max-w-[100px]">
+                    <div className="bg-sky-500 h-full" style={{ width: `${(completed / total) * 100}%` }}></div>
+                </div>
+                <span>{completed}/{total} sub-activities</span>
+            </div>
+        );
+    };
+
     if (isLoading.projects) return <Spinner />;
 
     return (
@@ -232,7 +321,6 @@ export default function ProjectTrackerView({ permissions }) {
 
             {viewMode === 'dashboard' ? (
                 <div className="space-y-6">
-                    {/* Dashboard Tabs */}
                     <div className="flex gap-4 border-b border-gray-200">
                         <button 
                             onClick={() => { setDashboardTab('overview'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
@@ -254,7 +342,6 @@ export default function ProjectTrackerView({ permissions }) {
                         </button>
                     </div>
 
-                    {/* Dashboard Tab Content: OVERVIEW */}
                     {dashboardTab === 'overview' && (
                         <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm animate-in fade-in">
                             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
@@ -281,11 +368,9 @@ export default function ProjectTrackerView({ permissions }) {
                         </div>
                     )}
 
-                    {/* Dashboard Tab Content: ACTIVE / COMPLETED TASKS */}
                     {(dashboardTab === 'active' || dashboardTab === 'completed') && (
                         <Card className="animate-in fade-in">
                             <CardBody className="p-0">
-                                {/* Filters Row */}
                                 <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-4 items-center">
                                     <div className="relative flex-1 min-w-[200px]">
                                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -301,8 +386,8 @@ export default function ProjectTrackerView({ permissions }) {
                                         {allActiveProjects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                                     </Select>
                                     <Select value={taskFilter.responsible} onChange={e => setTaskFilter({...taskFilter, responsible: e.target.value})} className="w-48">
-                                        <option value="">All Members</option>
-                                        {allTeamMembers.map(m => <option key={m.id} value={m.name}>{m.nameAr || m.name}</option>)}
+                                        <option value="">All Federal Members</option>
+                                        {allTeamMembers.map(m => <option key={m.id} value={m.id}>{m.nameAr || m.name}</option>)}
                                     </Select>
                                     {dashboardTab === 'active' && (
                                         <Select value={taskFilter.status} onChange={e => setTaskFilter({...taskFilter, status: e.target.value})} className="w-40">
@@ -313,7 +398,6 @@ export default function ProjectTrackerView({ permissions }) {
                                     )}
                                 </div>
 
-                                {/* Data Table */}
                                 <div className="overflow-x-auto">
                                     <Table headers={["Program Unit", "Project", "Task Description", "Responsible", "Due Date", "Status", "Actions"]}>
                                         {(dashboardTab === 'active' ? filteredActiveTasks : filteredCompletedTasks).map(task => {
@@ -322,7 +406,10 @@ export default function ProjectTrackerView({ permissions }) {
                                                 <tr key={`${task.projectId}-${task.id}`} className="hover:bg-gray-50 border-b">
                                                     <td className="p-3 text-xs text-gray-500 font-medium">{task.unitName}</td>
                                                     <td className="p-3 text-sm font-semibold text-gray-700">{task.projectName}</td>
-                                                    <td className="p-3 text-sm text-gray-900">{task.description}</td>
+                                                    <td className="p-3 text-sm text-gray-900">
+                                                        {task.description}
+                                                        {renderSubActivitiesProgress(task)}
+                                                    </td>
                                                     <td className="p-3 text-sm text-gray-600">{task.responsible || 'Unassigned'}</td>
                                                     <td className="p-3 text-sm">
                                                         <span className={isOverdue ? 'text-red-600 font-bold bg-red-50 p-1 rounded inline-block' : ''}>
@@ -339,12 +426,8 @@ export default function ProjectTrackerView({ permissions }) {
                                                             <Button size="sm" variant="secondary" onClick={() => { 
                                                                 setCurrentSubtask(task); 
                                                                 setIsSubtaskModalOpen(true); 
-                                                            }}>
-                                                                Edit
-                                                            </Button>
-                                                            <Button size="sm" variant="danger" onClick={() => handleDeleteSubtask(task.id, task.projectId)}>
-                                                                Delete
-                                                            </Button>
+                                                            }}>Edit</Button>
+                                                            <Button size="sm" variant="danger" onClick={() => handleDeleteSubtask(task.id, task.projectId)}>Delete</Button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -366,7 +449,6 @@ export default function ProjectTrackerView({ permissions }) {
             ) : (
                 <Card>
                     <CardBody className="p-6 space-y-6">
-                        {/* Data Entry Flow */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded border border-gray-200">
                             <FormGroup label="Select Program Unit">
                                 <Select value={selectedUnit} onChange={(e) => { setSelectedUnit(e.target.value); setSelectedProjectId(''); }}>
@@ -402,7 +484,15 @@ export default function ProjectTrackerView({ permissions }) {
                                         <FolderKanban className="text-sky-600 w-5 h-5"/> {activeProject.title} Tasks
                                     </h3>
                                     <Button size="sm" onClick={() => {
-                                        setCurrentSubtask({ description: '', responsible: '', dueDate: '', status: 'Pending', projectId: activeProject.id });
+                                        setCurrentSubtask({ 
+                                            description: '', 
+                                            responsible: '', 
+                                            responsibleId: '',
+                                            dueDate: '', 
+                                            status: 'Pending', 
+                                            projectId: activeProject.id,
+                                            subActivities: [] 
+                                        });
                                         setIsSubtaskModalOpen(true);
                                     }}>
                                         <Plus className="w-4 h-4 mr-1" /> Add Task
@@ -413,7 +503,10 @@ export default function ProjectTrackerView({ permissions }) {
                                     <Table headers={["Task Description", "Responsible", "Due Date", "Status", "Actions"]}>
                                         {activeProject.subtasks.map(task => (
                                             <tr key={task.id} className="hover:bg-gray-50">
-                                                <td className="p-3 text-sm font-medium">{task.description}</td>
+                                                <td className="p-3 text-sm font-medium">
+                                                    {task.description}
+                                                    {renderSubActivitiesProgress(task)}
+                                                </td>
                                                 <td className="p-3 text-sm text-gray-600">{task.responsible || 'Unassigned'}</td>
                                                 <td className="p-3 text-sm">{formatDate(task.dueDate)}</td>
                                                 <td className="p-3 text-sm">
@@ -446,26 +539,85 @@ export default function ProjectTrackerView({ permissions }) {
                 <form onSubmit={handleSaveSubtask}>
                     <CardBody className="space-y-4">
                         <FormGroup label="Task Description">
-                            <Input value={currentSubtask?.description || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, description: e.target.value})} required placeholder="Describe task..."/>
+                            <Input value={currentSubtask?.description || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, description: e.target.value})} required placeholder="Describe main task..."/>
                         </FormGroup>
-                        <FormGroup label="Responsible Member">
-                            <Select value={currentSubtask?.responsible || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, responsible: e.target.value})} required>
-                                <option value="">-- Select Member --</option>
-                                {allTeamMembers.map(t => <option key={t.id} value={t.name}>{t.nameAr || t.name}</option>)}
+                        <FormGroup label="Responsible Member (Federal Team)">
+                            <Select 
+                                value={currentSubtask?.responsibleId || ''} 
+                                onChange={(e) => {
+                                    const selectedMember = allTeamMembers.find(t => t.id === e.target.value);
+                                    setCurrentSubtask({
+                                        ...currentSubtask, 
+                                        responsibleId: selectedMember?.id || '',
+                                        responsible: selectedMember ? (selectedMember.nameAr || selectedMember.name) : ''
+                                    });
+                                }} 
+                                required
+                            >
+                                <option value="">-- Select Federal Team Member --</option>
+                                {allTeamMembers.map(t => <option key={t.id} value={t.id}>{t.nameAr || t.name}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="Due Date">
-                            <Input type="date" value={currentSubtask?.dueDate || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, dueDate: e.target.value})} required />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormGroup label="Due Date">
+                                <Input type="date" value={currentSubtask?.dueDate || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, dueDate: e.target.value})} required />
+                            </FormGroup>
+                            <FormGroup label="Status">
+                                <Select value={currentSubtask?.status || 'Pending'} onChange={(e) => setCurrentSubtask({...currentSubtask, status: e.target.value})}>
+                                    {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </Select>
+                            </FormGroup>
+                        </div>
+                        
+                        <hr className="my-4" />
+                        
+                        <FormGroup label="Sub-Activities (Checklist)">
+                            <div className="space-y-2 mb-2">
+                                {currentSubtask?.subActivities?.map((sa, idx) => (
+                                    <div key={idx} className="flex gap-2 items-center">
+                                        <input 
+                                            type="checkbox" 
+                                            className="w-4 h-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500"
+                                            checked={sa.completed || false} 
+                                            onChange={(e) => {
+                                                const newSA = [...(currentSubtask.subActivities || [])];
+                                                newSA[idx].completed = e.target.checked;
+                                                setCurrentSubtask({...currentSubtask, subActivities: newSA});
+                                            }} 
+                                        />
+                                        <Input 
+                                            value={sa.title || ''} 
+                                            onChange={(e) => {
+                                                const newSA = [...(currentSubtask.subActivities || [])];
+                                                newSA[idx].title = e.target.value;
+                                                setCurrentSubtask({...currentSubtask, subActivities: newSA});
+                                            }} 
+                                            placeholder="Enter sub-activity title..." 
+                                            className={`flex-1 text-sm ${sa.completed ? 'line-through text-gray-400' : ''}`}
+                                        />
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => {
+                                            const newSA = currentSubtask.subActivities.filter((_, i) => i !== idx);
+                                            setCurrentSubtask({...currentSubtask, subActivities: newSA});
+                                        }}>
+                                            <Trash2 className="w-4 h-4 text-red-500 hover:text-red-700"/>
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                            <Button type="button" size="sm" variant="secondary" onClick={() => {
+                                const current = currentSubtask?.subActivities || [];
+                                setCurrentSubtask({...currentSubtask, subActivities: [...current, { title: '', completed: false }]});
+                            }}>
+                                <Plus className="w-4 h-4 mr-1" /> Add Sub-Activity
+                            </Button>
                         </FormGroup>
-                        <FormGroup label="Status">
-                            <Select value={currentSubtask?.status || 'Pending'} onChange={(e) => setCurrentSubtask({...currentSubtask, status: e.target.value})}>
-                                {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </Select>
-                        </FormGroup>
+
                     </CardBody>
                     <div className="p-4 border-t flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                        <Button type="button" variant="secondary" onClick={() => setIsSubtaskModalOpen(false)}>Cancel</Button>
-                        <Button type="submit">Save Task</Button>
+                        <Button type="button" variant="secondary" onClick={() => setIsSubtaskModalOpen(false)} disabled={isSavingTask}>Cancel</Button>
+                        <Button type="submit" disabled={isSavingTask}>
+                            {isSavingTask ? <Spinner size="sm" /> : 'Save Task'}
+                        </Button>
                     </div>
                 </form>
             </Modal>
