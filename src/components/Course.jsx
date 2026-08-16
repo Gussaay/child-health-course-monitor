@@ -28,6 +28,7 @@ import {
 
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
+import { CourseExercisesView } from './Online-exercise'; 
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC
 } from './constants.js';
@@ -1066,6 +1067,19 @@ export function CoursesTable({
                                         }}><Eye size={14} /> Share</Button>
                                     </div>
                                 </div>
+
+                                {shareModalCourse.course_type === 'IMNCI' &&
+                                 shareModalCourse.facilitatorAssignments?.some(a => a.imci_sub_type === 'online IMCI course') && (
+                                    <div className="bg-gray-50 p-3 rounded border">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-sm font-semibold">Online Training Exercises</span>
+                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
+                                                const link = `${getBaseUrl()}/public/exercises/course/${shareModalCourse.id}`;
+                                                setQrShareData({ url: link, title: `Exercises: ${shareModalCourse.course_type}` });
+                                            }}><QrCode size={14} /> Share</Button>
+                                        </div>
+                                    </div>
+                                )}
                                 
                                 {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(shareModalCourse.course_type)) && (
                                     <div className="bg-gray-50 p-3 rounded border">
@@ -1911,6 +1925,14 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(selectedCourse.course_type)) && (
             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
         )}
+
+        {selectedCourse.course_type === 'IMNCI' && (
+            selectedCourse.director_imci_sub_type === 'online IMCI course' ||
+            selectedCourse.clinical_instructor_imci_sub_type === 'online IMCI course' ||
+            selectedCourse.facilitatorAssignments?.some(a => a.imci_sub_type === 'online IMCI course')
+        ) && (
+            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'exercises'} onClick={() => { setActiveCoursesTab('exercises'); }}>Exercises</Button>
+        )}
     </>
 )}
 
@@ -2082,6 +2104,18 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     return savedParticipant;
                 }}
             />
+        )}
+
+        {activeCoursesTab === 'exercises' && selectedCourse && (
+            <CourseExercisesView
+                course={selectedCourse}
+                participants={participants}
+                selectedParticipantId={selectedParticipantId}
+            />
+        )}
+
+        {activeCoursesTab === 'exercises' && !selectedCourse && (
+            <EmptyState message="Please select a course from the 'Courses' tab to open the exercises." />
         )}
     </>
 )}

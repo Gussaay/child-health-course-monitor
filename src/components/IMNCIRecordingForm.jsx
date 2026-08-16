@@ -629,9 +629,13 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
 };
 
 // --- Reusable Grid Row Component for IMNCI Layout ---
-const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange, children, classifyData = [], treatmentData = [] }) => {
+// `hidden`, `classifyOverride`, `treatmentOverride` and `treatmentDisabled` are used
+// only by training mode. They default to off, so every existing call site is unchanged.
+const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange, children, classifyData = [], treatmentData = [], hidden = false, classifyOverride = null, treatmentOverride = null, treatmentDisabled = false }) => {
     const { t } = useTranslation();
     const isActive = isConditional ? yesNoValue === true : true;
+
+    if (hidden) return null;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-slate-300 bg-white">
@@ -662,17 +666,26 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
             </div>
             
             {/* Classify Section */}
-            <div className="lg:col-span-2 p-4 border-r-0 lg:border-r border-slate-300 bg-slate-50 flex flex-col gap-2 justify-center items-center text-center">
-                {isActive && classifyData.map((c, i) => (
-                    <div key={i} className={`${c.color} text-white w-full px-2 py-2 rounded shadow-sm text-sm font-bold leading-tight uppercase`}>
-                        {c.label}
-                    </div>
-                ))}
+            <div className="lg:col-span-2 p-4 border-r-0 lg:border-r border-slate-300 bg-slate-50 flex flex-col gap-2 justify-center items-stretch text-center">
+                {isActive && (classifyOverride !== null
+                    ? classifyOverride
+                    : classifyData.map((c, i) => (
+                        <div key={i} className={`${c.color} text-white w-full px-2 py-2 rounded shadow-sm text-sm font-bold leading-tight uppercase`}>
+                            {c.label}
+                        </div>
+                    ))
+                )}
             </div>
 
             {/* Identify Treatment Section */}
-            <div className="lg:col-span-3 p-4 flex flex-col justify-center bg-white">
-                {isActive && treatmentData.length > 0 ? (
+            <div className={`lg:col-span-3 p-4 flex flex-col justify-center ${treatmentDisabled ? 'bg-slate-100' : 'bg-white'}`}>
+                {treatmentDisabled ? (
+                    <span className="text-xs text-slate-400 italic text-center">
+                        {t('imci.training.treatment_not_required', 'Not required in this exercise')}
+                    </span>
+                ) : isActive && treatmentOverride !== null ? (
+                    treatmentOverride
+                ) : isActive && treatmentData.length > 0 ? (
                     <ul className="space-y-3">
                         {treatmentData.map((tItem, i) => (
                             <li key={i} className="flex gap-2 text-sm text-slate-800 items-start">
@@ -692,7 +705,7 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
 // ============================================================================
 // FORM 1: SICK YOUNG INFANT (UP TO 2 MONTHS)
 // ============================================================================
-function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess }) {
+export function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess }) {
     const { t } = useTranslation();
     const [isSaving, setIsSaving] = useState(false);
     const [statusModal, setStatusModal] = useState(null);
@@ -1205,8 +1218,13 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
 // ============================================================================
 // FORM 2: SICK CHILD (2 MONTHS UP TO 5 YEARS)
 // ============================================================================
-function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess }) {
-    const { t } = useTranslation();
+// `trainingCase` switches the form into exercise mode: nothing is written to the
+// patient-records collection, the save button becomes "check my form", and the
+// learner's entries are handed to onTrainingCheck for grading. Everything else --
+// the layout, the z-score lookup, the classification engine -- is unchanged, so a
+// participant practises on exactly the form they will use in the clinic.
+export function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess, trainingCase = null, onTrainingCheck = null, trainingFeedback = null, trainingHeader = null }) {
+    const { t, i18n } = useTranslation();
     const [isSaving, setIsSaving] = useState(false);
     const [statusModal, setStatusModal] = useState(null);
 
@@ -1718,7 +1736,112 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
         return cat;
     }, [childData, assessments, zScoreResult, t]);
 
+    // ---------------------------------------------------------------- TRAINING MODE
+    // The learner CHOOSES the classification instead of being shown the computed one,
+    // so the auto-classification is hidden and replaced by checkboxes. Treatment is
+    // either inactive (classification-only exercise) or a second set of checkboxes.
+    const [trainingClassify, setTrainingClassify] = useState({});   // { section: [optionId] }
+    const [trainingTreatment, setTrainingTreatment] = useState({}); // { section: [optionId] }
+
+    const trainingSections = trainingCase?.sections || null;
+    const includeTreatment = !!trainingCase?.includeTreatment;
+
+    const toggleIn = (setter, section, id) => setter(prev => {
+        const cur = prev[section] || [];
+        return { ...prev, [section]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
+    });
+
+    const TrainingChoiceList = ({ options, selected, onToggle, tone }) => (
+        <div className="w-full flex flex-col gap-1.5" dir="ltr">
+            {options.map(o => {
+                const on = selected.includes(o.id);
+                return (
+                    <label key={o.id}
+                        className={`flex items-start gap-2 text-left px-2 py-1.5 rounded border cursor-pointer transition-colors ${on ? (tone === 'treatment' ? 'bg-sky-50 border-sky-400' : 'bg-indigo-50 border-indigo-400') : 'bg-white border-slate-300 hover:border-slate-400'}`}>
+                        <input type="checkbox" checked={on} onChange={() => onToggle(o.id)} className="rounded text-sky-600 w-4 h-4 mt-0.5 flex-shrink-0 cursor-pointer" />
+                        <span className="text-xs font-semibold leading-tight text-slate-800">{o.label}</span>
+                    </label>
+                );
+            })}
+        </div>
+    );
+
+    // Props spread onto each AssessmentRow when training. Sections not listed in the
+    // case are hidden, so the form ends where the exercise ends.
+    const trainingRow = (section) => {
+        if (!trainingCase) return {};
+        if (trainingSections && !trainingSections.includes(section)) return { hidden: true };
+
+        // ONE LANGUAGE AT A TIME. i18n keys go through t(); plain options carry
+        // `label` and optional `labelAr` and we pick whichever matches the
+        // interface language, rather than printing both separated by a slash.
+        const isAr = String(i18n.language || '').toLowerCase().startsWith('ar');
+        const optLabel = (o) => String(o.id).startsWith('imci.')
+            ? t(o.id)
+            : ((isAr && o.labelAr) ? o.labelAr : (o.label || o.id));
+
+        const classifyOptions = (trainingCase.classifyOptions?.[section] || []).map(o => ({ id: o.id, label: optLabel(o) }));
+        const treatmentOptions = (trainingCase.treatmentOptions?.[section] || []).map(o => ({ id: o.id, label: optLabel(o) }));
+
+        return {
+            classifyOverride: classifyOptions.length > 0
+                ? <TrainingChoiceList options={classifyOptions} selected={trainingClassify[section] || []} onToggle={(id) => toggleIn(setTrainingClassify, section, id)} />
+                : <span className="text-xs text-slate-400 italic">—</span>,
+            treatmentDisabled: !includeTreatment,
+            // Never fall through to treatmentData here: that is the engine's own
+            // answer, and showing it would hand the learner the treatment.
+            treatmentOverride: !includeTreatment
+                ? null
+                : treatmentOptions.length > 0
+                    ? <TrainingChoiceList options={treatmentOptions} selected={trainingTreatment[section] || []} onToggle={(id) => toggleIn(setTrainingTreatment, section, id)} tone="treatment" />
+                    : <span className="text-xs text-slate-400 italic">—</span>,
+        };
+    };
+
+    // Shared with the training path: turns the JSX treatment nodes into plain text.
+    const extractText = (node) => {
+        if (node === null || node === undefined) return '';
+        if (typeof node === 'string' || typeof node === 'number' || typeof node === 'boolean') return String(node);
+        if (Array.isArray(node)) return node.map(extractText).join('');
+        if (node.props && node.props.children) return extractText(node.props.children);
+        return '';
+    };
+
+    const buildCleanClassifications = () => {
+        const clean = {};
+        for (const [key, category] of Object.entries(results)) {
+            clean[key] = {
+                c: category.c.map(cls => ({ label: cls.label, color: cls.color })),
+                t: category.t.map(extractText).filter(text => text.trim() !== '')
+            };
+        }
+        return clean;
+    };
+
+    // TRAINING MODE: grade the learner's entries, never touch patient records.
+    const handleTrainingCheck = () => {
+        if (!onTrainingCheck) return;
+        onTrainingCheck({
+            patientData: JSON.parse(JSON.stringify(childData, (k, v) => v === undefined ? null : v)),
+            assessments: JSON.parse(JSON.stringify(assessments, (k, v) => v === undefined ? null : v)),
+            // What the ENGINE computed -- shown back to the learner for comparison.
+            classifications: buildCleanClassifications(),
+            // What the LEARNER chose -- this is what gets graded.
+            chosenClassifications: JSON.parse(JSON.stringify(trainingClassify)),
+            chosenTreatments: JSON.parse(JSON.stringify(trainingTreatment)),
+            zScore: zScoreResult
+        });
+    };
+
+    const handleTrainingReset = () => {
+        setChildData({ ...initialChildData });
+        setAssessments({ ...initialAssessments });
+        setTrainingClassify({});
+        setTrainingTreatment({});
+    };
+
     const handleSave = async () => {
+        if (trainingCase) { handleTrainingCheck(); return; }
         if (!selectedState || !selectedLocality || !selectedFacility) {
             alert(t('imci.common.please_select_facility', 'Please select a facility first.'));
             return;
@@ -1730,22 +1853,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
 
         setIsSaving(true);
         try {
-            // Helper to extract plain text from React Elements
-            const extractText = (node) => {
-                if (node === null || node === undefined) return '';
-                if (typeof node === 'string' || typeof node === 'number' || typeof node === 'boolean') return String(node);
-                if (Array.isArray(node)) return node.map(extractText).join('');
-                if (node.props && node.props.children) return extractText(node.props.children);
-                return '';
-            };
-
-            const cleanClassifications = {};
-            for (const [key, category] of Object.entries(results)) {
-                cleanClassifications[key] = {
-                    c: category.c.map(cls => ({ label: cls.label, color: cls.color })),
-                    t: category.t.map(extractText).filter(text => text.trim() !== '')
-                };
-            }
+            const cleanClassifications = buildCleanClassifications();
 
             const safeAssessments = JSON.parse(JSON.stringify(assessments, (k, v) => v === undefined ? null : v));
             const safePatientData = JSON.parse(JSON.stringify(childData, (k, v) => v === undefined ? null : v));
@@ -1786,14 +1894,19 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                 onBack={onBack} 
             />
 
-            <div className="flex justify-start">
-                <Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200">
-                    <ArrowRight size={18} /> العودة إلى القائمة الرئيسية
-                </Button>
-            </div>
+            {!trainingCase && (
+                <div className="flex justify-start">
+                    <Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200">
+                        <ArrowRight size={18} /> العودة إلى القائمة الرئيسية
+                    </Button>
+                </div>
+            )}
+
+            {trainingHeader}
+
             <Card>
-                <div className="bg-indigo-700 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide flex items-center justify-center gap-2">
-                    <User /> {t('imci.child_title')}
+                <div className={`${trainingCase ? 'bg-amber-600' : 'bg-indigo-700'} text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide flex items-center justify-center gap-2`}>
+                    <User /> {trainingCase ? t('imci.training.mode_banner', 'TRAINING MODE — no patient record is saved') : t('imci.child_title')}
                 </div>
                 <div className="p-5 space-y-5 bg-slate-50">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -1859,6 +1972,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     title={<span className="text-red-700 font-bold flex items-center gap-2"><AlertCircle size={16}/> {t('imci.child.danger_signs')}</span>}
                     isConditional={false}
                     classifyData={results.danger.c} treatmentData={results.danger.t}
+                    {...trainingRow('danger')}
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                         <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="notAbleToDrink" checked={assessments.notAbleToDrink} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4 cursor-pointer" /><span>{t('imci.child.not_able_drink')}</span></label>
@@ -1876,6 +1990,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     yesNoValue={assessments.hasCough} 
                     onYesNoChange={(val) => setAssessments(p => ({...p, hasCough: val}))}
                     classifyData={results.cough.c} treatmentData={results.cough.t}
+                    {...trainingRow('cough')}
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded">
                         <div className="flex items-center gap-2">
@@ -1907,6 +2022,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     yesNoValue={assessments.hasDiarrhea} 
                     onYesNoChange={(val) => setAssessments(p => ({...p, hasDiarrhea: val}))}
                     classifyData={results.diarrhea.c} treatmentData={results.diarrhea.t}
+                    {...trainingRow('diarrhea')}
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded">
                         <div className="space-y-3">
@@ -1945,6 +2061,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     yesNoValue={assessments.hasFever} 
                     onYesNoChange={(val) => setAssessments(p => ({...p, hasFever: val}))}
                     classifyData={results.fever.c} treatmentData={results.fever.t}
+                    {...trainingRow('fever')}
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 mb-4 bg-slate-50 p-3 rounded">
                         <div className="space-y-3">
@@ -1992,6 +2109,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     yesNoValue={assessments.hasEarProblem} 
                     onYesNoChange={(val) => setAssessments(p => ({...p, hasEarProblem: val}))}
                     classifyData={results.ear.c} treatmentData={results.ear.t}
+                    {...trainingRow('ear')}
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded">
                         <div className="space-y-3">
@@ -2014,6 +2132,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     title={t('imci.child.anemia_title')}
                     isConditional={false}
                     classifyData={results.anemia.c} treatmentData={results.anemia.t}
+                    {...trainingRow('anemia')}
                 >
                     <div className="flex flex-wrap gap-6 mt-2">
                         <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="radio" name="pallor" value="severePallor" checked={assessments.pallor==='severePallor'} onChange={handleRadioChange} className="text-sky-600 w-4 h-4" /><span>{t('imci.child.severe_pallor')}</span></label>
@@ -2027,6 +2146,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     title={t('imci.child.malnutrition_title')}
                     isConditional={false}
                     classifyData={results.malnutrition.c} treatmentData={results.malnutrition.t}
+                    {...trainingRow('malnutrition')}
                 >
                     <div className="space-y-4 mt-2">
                         <label className="flex items-center space-x-2 text-sm font-semibold text-slate-800 cursor-pointer"><input type="checkbox" name="edema" checked={assessments.edema} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.edema')}</span></label>
@@ -2066,6 +2186,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     title={<span>{t('imci.child.vaccine_title')} <span className="font-normal text-xs text-slate-500 block sm:inline sm:ml-2">{t('imci.infant.check_given')}</span></span>}
                     isConditional={false}
                     classifyData={results.vaccine.c} treatmentData={results.vaccine.t}
+                    {...trainingRow('vaccine')}
                 >
                     <div className="flex flex-col gap-4 mt-2">
                         <div className="overflow-x-auto border border-slate-300 rounded-md">
@@ -2124,6 +2245,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     yesNoValue={assessments.hasOtherProblems} 
                     onYesNoChange={(val) => setAssessments(p => ({...p, hasOtherProblems: val}))}
                     classifyData={results.other.c} treatmentData={results.other.t}
+                    {...trainingRow('other')}
                 >
                     <textarea name="otherProblemsText" value={assessments.otherProblemsText} onChange={(e) => setAssessments(prev=>({...prev, otherProblemsText: e.target.value}))} rows={2} className="block w-full rounded-md border-slate-300 shadow-sm focus:ring-sky-500 sm:text-sm mt-2 p-3" placeholder={t('imci.placeholders.other_problems')}></textarea>
                 </AssessmentRow>
@@ -2133,6 +2255,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     title={t('imci.child.feeding_title')}
                     isConditional={false}
                     classifyData={results.feeding.c} treatmentData={results.feeding.t}
+                    {...trainingRow('feeding')}
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <div className="bg-slate-50 p-4 rounded-md border border-slate-200 space-y-3">
@@ -2160,10 +2283,19 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                 </div>
             </div>
 
-            <div className="flex justify-end pb-8">
+            {trainingFeedback}
+
+            <div className="flex flex-wrap justify-end gap-3 pb-8">
+                {trainingCase && (
+                    <Button variant="secondary" onClick={handleTrainingReset} className="py-3.5 px-8 text-lg font-bold">
+                        {t('imci.training.clear_form', 'Clear form')}
+                    </Button>
+                )}
                 <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
                     <ClipboardList className="w-5 h-5 mr-2 inline-block"/> 
-                    {isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_child', 'Save Child Record')}
+                    {trainingCase
+                        ? t('imci.training.check_form', 'Check my form')
+                        : (isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_child', 'Save Child Record'))}
                 </Button>
             </div>
         </div>

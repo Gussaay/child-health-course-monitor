@@ -2289,3 +2289,176 @@ export async function updateAboutTeamImage(memberId, imageUrl) {
     await executeOfflineSafeWrite(writePromise, `Team Image`);
     return true;
 }
+
+// ============================================================================
+// --- ONLINE EXERCISES (IMNCI Online Training) ---
+// Collection: exerciseAttempts
+// Doc id:     `${courseId}__${participantId}__${exerciseId}__${attemptNo}`
+// Deterministic ids keep offline writes idempotent: a queued write replaying
+// after reconnect overwrites itself instead of duplicating the attempt.
+// ============================================================================
+
+export async function upsertExerciseAttempt(payload) {
+    const { courseId, participantId, exerciseId } = payload || {};
+    if (!courseId || !participantId || !exerciseId) {
+        throw new Error("Course ID, Participant ID and Exercise ID are required.");
+    }
+    const attemptNo = payload.attemptNo || 1;
+    const attemptId = `${courseId}__${participantId}__${exerciseId}__${attemptNo}`;
+    const attemptRef = doc(db, "exerciseAttempts", attemptId);
+
+    const record = {
+        id: attemptId,
+        courseId,
+        participantId,
+        participantName: payload.participantName || '',
+        exerciseId,
+        exerciseTitle: payload.exerciseTitle || '',
+        subCourse: payload.subCourse || '',
+        attemptNo,
+        percent: Number(payload.percent) || 0,
+        earned: Number(payload.earned) || 0,
+        possible: Number(payload.possible) || 0,
+        passed: !!payload.passed,
+        durationSeconds: Number(payload.durationSeconds) || 0,
+        // Stored as JSON strings: Firestore rejects nested arrays, and these
+        // blobs are only ever read back whole for the review screen.
+        responsesJson: JSON.stringify(payload.responses || {}),
+        resultsJson: JSON.stringify(payload.results || {}),
+        source: payload.source || 'public',
+        isDeleted: false,
+        submittedAtLocal: new Date().toISOString(),
+        lastUpdatedAt: serverTimestamp()
+    };
+
+    const writePromise = setDoc(attemptRef, record, { merge: true });
+    await executeOfflineSafeWrite(writePromise, `Exercise Attempt`);
+    return record;
+}
+
+const hydrateExerciseAttempt = (d) => {
+    const raw = d.data();
+    let responses = {}, results = {};
+    try { responses = JSON.parse(raw.responsesJson || '{}'); } catch (e) { responses = {}; }
+    try { results = JSON.parse(raw.resultsJson || '{}'); } catch (e) { results = {}; }
+    return { ...raw, id: d.id, responses, results };
+};
+
+export async function listExerciseAttemptsForCourse(courseId, sourceOptions = {}) {
+    if (!courseId) return [];
+    try {
+        const q = query(collection(db, "exerciseAttempts"), where("courseId", "==", courseId));
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs
+            .map(hydrateExerciseAttempt)
+            .filter(a => a.isDeleted !== true && a.isDeleted !== "true")
+            .sort((a, b) => (b.submittedAtLocal || '').localeCompare(a.submittedAtLocal || ''));
+    } catch (error) {
+        console.error("Error fetching exercise attempts for course:", error);
+        throw error;
+    }
+}
+
+export async function listExerciseAttemptsForParticipant(courseId, participantId, sourceOptions = {}) {
+    if (!courseId || !participantId) return [];
+    try {
+        const q = query(
+            collection(db, "exerciseAttempts"),
+            where("courseId", "==", courseId),
+            where("participantId", "==", participantId)
+        );
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs
+            .map(hydrateExerciseAttempt)
+            .filter(a => a.isDeleted !== true && a.isDeleted !== "true")
+            .sort((a, b) => (a.attemptNo || 0) - (b.attemptNo || 0));
+    } catch (error) {
+        console.error("Error fetching exercise attempts for participant:", error);
+        throw error;
+    }
+}
+
+export async function deleteExerciseAttempt(attemptId) {
+    if (!attemptId) throw new Error("Attempt ID is required.");
+    const attemptRef = doc(db, "exerciseAttempts", attemptId);
+    const writePromise = updateDoc(attemptRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    await executeOfflineSafeWrite(writePromise, `Delete Exercise Attempt`);
+    return true;
+}
+
+/** Best attempt per exercise, keyed by exerciseId. */
+export function bestByExercise(attempts = []) {
+    return attempts.reduce((acc, a) => {
+        if (!acc[a.exerciseId] || a.percent > acc[a.exerciseId].percent) acc[a.exerciseId] = a;
+        return acc;
+    }, {});
+}
+
+// ============================================================================
+// --- ONLINE EXERCISE DEFINITIONS (editable inside the app) ---
+// Collection: exerciseDefinitions
+// Exercises authored or edited in the Manage Exercises tab live here. They are
+// merged with the built-in ones in exercises.js at load time; a stored document
+// with the same id overrides the built-in of that id, which is how you edit a
+// shipped exercise without touching the source file.
+// ============================================================================
+
+export async function listExerciseDefinitions(sourceOptions = {}) {
+    try {
+        const snapshot = await getData(collection(db, "exerciseDefinitions"), sourceOptions);
+        return snapshot.docs
+            .map(d => ({ ...d.data(), id: d.id }))
+            .filter(e => e.isDeleted !== true && e.isDeleted !== "true")
+            .map(e => {
+                // `expected` is stored as a JSON string: Firestore rejects the
+                // nested arrays inside classifyOptions / treatmentOptions.
+                let expected = {};
+                try { expected = JSON.parse(e.expectedJson || '{}'); } catch (err) { expected = {}; }
+                let narrative = [];
+                try { narrative = JSON.parse(e.narrativeJson || '[]'); } catch (err) { narrative = []; }
+                let narrativeAr = [];
+                try { narrativeAr = JSON.parse(e.narrativeArJson || '[]'); } catch (err) { narrativeAr = []; }
+                return { ...e, expected, narrative, narrativeAr, isCustom: true };
+            })
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+    } catch (error) {
+        console.error("Error fetching exercise definitions:", error);
+        throw error;
+    }
+}
+
+export async function upsertExerciseDefinition(exercise) {
+    if (!exercise?.id) throw new Error("Exercise id is required.");
+    if (!exercise?.title) throw new Error("Exercise title is required.");
+
+    const ref = doc(db, "exerciseDefinitions", exercise.id);
+    const record = {
+        id: exercise.id,
+        order: Number(exercise.order) || 0,
+        title: exercise.title,
+        titleAr: exercise.titleAr || '',
+        subCourse: exercise.subCourse || '',
+        passMark: Number(exercise.passMark) || 80,
+        estimatedMinutes: Number(exercise.estimatedMinutes) || 15,
+        draft: exercise.draft !== false,
+        explain: exercise.explain || '',
+        narrativeJson: JSON.stringify(exercise.narrative || []),
+        narrativeArJson: JSON.stringify(exercise.narrativeAr || []),
+        expectedJson: JSON.stringify(exercise.expected || {}),
+        isDeleted: false,
+        lastUpdatedAt: serverTimestamp(),
+        lastUpdatedAtLocal: new Date().toISOString()
+    };
+
+    const writePromise = setDoc(ref, record, { merge: true });
+    await executeOfflineSafeWrite(writePromise, `Save Exercise: ${exercise.title}`);
+    return record;
+}
+
+export async function deleteExerciseDefinition(exerciseId) {
+    if (!exerciseId) throw new Error("Exercise id is required.");
+    const ref = doc(db, "exerciseDefinitions", exerciseId);
+    const writePromise = updateDoc(ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    await executeOfflineSafeWrite(writePromise, `Delete Exercise`);
+    return true;
+}

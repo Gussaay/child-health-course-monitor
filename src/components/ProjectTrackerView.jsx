@@ -6,10 +6,11 @@ import { useDataCache } from '../DataContext';
 import { db } from '../firebase'; 
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { QRCodeCanvas } from 'qrcode.react'; 
 import { 
     Plus, Edit, Trash2, CheckCircle, Clock, PlayCircle, FolderKanban, 
     Baby, Stethoscope, Users, Activity, Package, HeartPulse, 
-    BarChart2, Target, Search
+    BarChart2, Target, Search, Share2, Link as LinkIcon, AlertTriangle, Calendar
 } from 'lucide-react';
 
 const PROGRAM_UNITS_DATA = [
@@ -23,31 +24,93 @@ const PROGRAM_UNITS_DATA = [
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Completed'];
 
+// Reusable Share Modal Component
+function ShareLinkModal({ isOpen, onClose, title, link }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(link).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={title}>
+            <div className="p-4 bg-gray-50 text-sm text-gray-600 mb-4 rounded-b border-b">
+                Share this link to direct someone exactly to this view.
+            </div>
+            <div className="px-6 pb-6 space-y-6">
+                <FormGroup label="Shareable Link">
+                    <div className="flex gap-2">
+                        <Input type="text" value={link} readOnly className="bg-gray-50 text-gray-500" />
+                        <Button onClick={handleCopy} variant={copied ? "success" : "primary"} className="w-28 shrink-0">
+                            {copied ? 'Copied!' : 'Copy Link'}
+                        </Button>
+                    </div>
+                </FormGroup>
+
+                <FormGroup label="QR Code">
+                    <div className="flex justify-center p-6 bg-white rounded-xl border border-gray-200 shadow-sm">
+                        <QRCodeCanvas value={link} size={200} level={"Q"} />
+                    </div>
+                </FormGroup>
+            </div>
+            <div className="p-4 border-t flex justify-end gap-2 bg-gray-50 rounded-b-lg">
+                <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
+            </div>
+        </Modal>
+    );
+}
+
 export default function ProjectTrackerView({ permissions }) {
     const { 
         projects: rawProjects, 
         fetchProjects, 
         isLoading, 
         federalCoordinators,
-        fetchFederalCoordinators // <-- ADDED: Extract the fetch function
+        fetchFederalCoordinators
     } = useDataCache();
     
-    // --- Navigation & UI State ---
-    const [viewMode, setViewMode] = useState('dashboard');
-    const [dashboardTab, setDashboardTab] = useState('overview');
+    // --- Navigation & UI State (Initialized from URL if present) ---
+    const [viewMode, setViewMode] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return new URLSearchParams(window.location.search).get('view') || 'dashboard';
+        }
+        return 'dashboard';
+    });
+    const [dashboardTab, setDashboardTab] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return new URLSearchParams(window.location.search).get('tab') || 'overview';
+        }
+        return 'overview';
+    });
     
+    // --- Filtering State (Initialized from URL if present) ---
+    const [taskFilter, setTaskFilter] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                project: params.get('project') || '',
+                responsible: params.get('responsible') || '',
+                status: params.get('status') || '',
+                search: params.get('search') || ''
+            };
+        }
+        return { project: '', responsible: '', status: '', search: '' };
+    });
+
     // --- Entry Selection State ---
     const [selectedUnit, setSelectedUnit] = useState('');
     const [selectedProjectId, setSelectedProjectId] = useState('');
     const [newProjectTitle, setNewProjectTitle] = useState('');
     
-    // --- Filtering State for Dashboard Tables ---
-    const [taskFilter, setTaskFilter] = useState({ project: '', responsible: '', status: '', search: '' });
-
     // --- Modal State ---
     const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
     const [currentSubtask, setCurrentSubtask] = useState(null);
     const [isSavingTask, setIsSavingTask] = useState(false);
+    
+    const [shareModalInfo, setShareModalInfo] = useState({ isOpen: false, link: '', title: '' });
 
     // Guaranteed to only pull from the federal team pool
     const allTeamMembers = useMemo(() => {
@@ -71,40 +134,81 @@ export default function ProjectTrackerView({ permissions }) {
     const activeProject = useMemo(() => projects.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
 
     // --- Aggregated Data for Dashboard ---
-    const { kpiStats, overdueTasksList, allActiveTasks, allCompletedTasks } = useMemo(() => {
+    const { kpiStats, allActiveTasks, allCompletedTasks, userStatsList, unitStatsList } = useMemo(() => {
         let totalProjects = allActiveProjects.length;
-        let totalTasks = 0, completedTasksCount = 0, inProgressTasks = 0, pendingTasks = 0, overdueTasks = 0;
-        let overdueList = [];
+        let totalTasks = 0, completedTasksCount = 0, inProgressTasks = 0, pendingTasks = 0, overdueTasks = 0, upcomingTasks = 0;
         let activeList = [];
         let completedList = [];
+        
+        let userPerformance = {};
+        let unitPerformance = {};
+
+        // Initialize Unit Performance Trackers
+        PROGRAM_UNITS_DATA.forEach(u => {
+            unitPerformance[u.id] = { id: u.id, title: u.title, color: u.color, icon: u.icon, totalProjects: 0, totalTasks: 0, completed: 0, active: 0 };
+        });
 
         const now = new Date();
         now.setHours(0, 0, 0, 0); 
+        
+        const nextWeek = new Date(now);
+        nextWeek.setDate(nextWeek.getDate() + 7);
 
         allActiveProjects.forEach(p => {
             const unitObj = PROGRAM_UNITS_DATA.find(u => u.id === p.unit);
             const unitTitle = unitObj ? unitObj.title : p.unit;
+
+            if (unitPerformance[p.unit]) {
+                unitPerformance[p.unit].totalProjects++;
+            }
 
             if (p.subtasks && Array.isArray(p.subtasks)) {
                 totalTasks += p.subtasks.length;
                 
                 p.subtasks.forEach(task => {
                     const enrichedTask = { ...task, projectName: p.title, unitName: unitTitle, projectId: p.id };
+                    const respId = task.responsibleId || 'unassigned';
                     
+                    if (unitPerformance[p.unit]) {
+                        unitPerformance[p.unit].totalTasks++;
+                    }
+
+                    // Initialize User Performance Tracker
+                    if (!userPerformance[respId]) {
+                        userPerformance[respId] = {
+                            id: respId,
+                            name: task.responsible || 'Unassigned',
+                            total: 0, completed: 0, inProgress: 0, pending: 0, overdue: 0
+                        };
+                    }
+                    
+                    userPerformance[respId].total++;
+
                     if (task.status === 'Completed') {
                         completedTasksCount++;
                         completedList.push(enrichedTask);
+                        userPerformance[respId].completed++;
+                        if (unitPerformance[p.unit]) unitPerformance[p.unit].completed++;
                     } else {
                         activeList.push(enrichedTask);
-                        if (task.status === 'In Progress') inProgressTasks++;
-                        else pendingTasks++;
+                        if (unitPerformance[p.unit]) unitPerformance[p.unit].active++;
+
+                        if (task.status === 'In Progress') {
+                            inProgressTasks++;
+                            userPerformance[respId].inProgress++;
+                        } else {
+                            pendingTasks++;
+                            userPerformance[respId].pending++;
+                        }
 
                         if (task.dueDate) {
                             const dueDateObj = new Date(task.dueDate);
                             dueDateObj.setHours(0, 0, 0, 0);
                             if (dueDateObj < now) {
                                 overdueTasks++;
-                                overdueList.push(enrichedTask);
+                                userPerformance[respId].overdue++;
+                            } else if (dueDateObj <= nextWeek) {
+                                upcomingTasks++;
                             }
                         }
                     }
@@ -112,17 +216,26 @@ export default function ProjectTrackerView({ permissions }) {
             }
         });
 
-        overdueList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         activeList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         completedList.sort((a, b) => new Date(b.completedAt || b.statusUpdatedAt || 0) - new Date(a.completedAt || a.statusUpdatedAt || 0));
 
         const completionRate = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0;
+        
+        const sortedUserStats = Object.values(userPerformance)
+            .map(u => ({ ...u, completionRate: u.total > 0 ? Math.round((u.completed / u.total) * 100) : 0 }))
+            .sort((a, b) => b.total - a.total);
+
+        const sortedUnitStats = Object.values(unitPerformance)
+            .filter(u => u.totalProjects > 0)
+            .map(u => ({ ...u, completionRate: u.totalTasks > 0 ? Math.round((u.completed / u.totalTasks) * 100) : 0 }))
+            .sort((a, b) => b.totalTasks - a.totalTasks);
 
         return { 
-            kpiStats: { totalProjects, totalTasks, completedTasks: completedTasksCount, inProgressTasks, pendingTasks, overdueTasks, completionRate },
-            overdueTasksList: overdueList,
+            kpiStats: { totalProjects, totalTasks, completedTasks: completedTasksCount, inProgressTasks, pendingTasks, overdueTasks, upcomingTasks, completionRate },
             allActiveTasks: activeList,
-            allCompletedTasks: completedList
+            allCompletedTasks: completedList,
+            userStatsList: sortedUserStats,
+            unitStatsList: sortedUnitStats
         };
     }, [allActiveProjects]);
 
@@ -143,7 +256,6 @@ export default function ProjectTrackerView({ permissions }) {
         );
     }, [allCompletedTasks, taskFilter]);
 
-    // --- ADDED: Fetch Federal Coordinators on mount ---
     useEffect(() => {
         fetchProjects();
         if (fetchFederalCoordinators) {
@@ -272,6 +384,30 @@ export default function ProjectTrackerView({ permissions }) {
         }
     };
 
+    const handleShareFilteredView = () => {
+        const params = new URLSearchParams();
+        if (taskFilter.project) params.set('project', taskFilter.project);
+        if (taskFilter.responsible) params.set('responsible', taskFilter.responsible);
+        if (taskFilter.status) params.set('status', taskFilter.status);
+        if (taskFilter.search) params.set('search', taskFilter.search);
+        params.set('view', 'dashboard');
+        params.set('tab', dashboardTab);
+
+        const link = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+        setShareModalInfo({ isOpen: true, title: 'Share Filtered View', link });
+    };
+
+    const handleShareSpecificTask = (task) => {
+        const params = new URLSearchParams();
+        params.set('project', task.projectId);
+        params.set('search', task.description);
+        params.set('view', 'dashboard');
+        params.set('tab', task.status === 'Completed' ? 'completed' : 'active');
+
+        const link = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+        setShareModalInfo({ isOpen: true, title: 'Share Specific Task', link });
+    };
+
     const formatDate = (isoString) => {
         if (!isoString) return 'N/A';
         const date = new Date(isoString);
@@ -343,59 +479,167 @@ export default function ProjectTrackerView({ permissions }) {
                     </div>
 
                     {dashboardTab === 'overview' && (
-                        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm animate-in fade-in">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                                <Target className="text-sky-600" /> Overall Project Performance
-                            </h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                <div className="bg-gray-50 border-l-4 border-l-sky-500 p-4 rounded-r-lg">
-                                    <div className="text-gray-500 text-sm font-medium mb-1">Total Projects</div>
-                                    <div className="text-2xl font-bold text-gray-900">{kpiStats.totalProjects}</div>
+                        <div className="space-y-6">
+                            {/* General KPI Row */}
+                            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm animate-in fade-in">
+                                <div className="flex justify-between items-center mb-4 border-b pb-2">
+                                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                        <Target className="text-sky-600" /> Overall Project Performance
+                                    </h3>
+                                    <div className="flex gap-3 text-sm">
+                                        <span className="flex items-center gap-1 text-gray-500"><Clock className="w-4 h-4"/> Pending: <b>{kpiStats.pendingTasks}</b></span>
+                                        <span className="flex items-center gap-1 text-blue-500"><PlayCircle className="w-4 h-4"/> In Progress: <b>{kpiStats.inProgressTasks}</b></span>
+                                    </div>
                                 </div>
-                                <div className="bg-gray-50 border-l-4 border-l-indigo-500 p-4 rounded-r-lg">
-                                    <div className="text-gray-500 text-sm font-medium mb-1">Total Tasks</div>
-                                    <div className="text-2xl font-bold text-gray-900">{kpiStats.totalTasks}</div>
-                                </div>
-                                <div className="bg-green-50 border-l-4 border-l-green-500 p-4 rounded-r-lg">
-                                    <div className="text-green-700 text-sm font-medium mb-1">Completed Tasks</div>
-                                    <div className="text-2xl font-bold text-green-800">{kpiStats.completedTasks}</div>
-                                </div>
-                                <div className="bg-red-50 border-l-4 border-l-red-500 p-4 rounded-r-lg">
-                                    <div className="text-red-600 text-sm font-medium mb-1">Overdue Tasks</div>
-                                    <div className="text-2xl font-bold text-red-700">{kpiStats.overdueTasks}</div>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    <div className="bg-gray-50 border-l-4 border-l-sky-500 p-4 rounded-r-lg shadow-sm">
+                                        <div className="text-gray-500 text-xs font-bold uppercase mb-1">Total Projects</div>
+                                        <div className="text-2xl font-black text-gray-900">{kpiStats.totalProjects}</div>
+                                    </div>
+                                    <div className="bg-gray-50 border-l-4 border-l-indigo-500 p-4 rounded-r-lg shadow-sm">
+                                        <div className="text-gray-500 text-xs font-bold uppercase mb-1">Total Tasks</div>
+                                        <div className="text-2xl font-black text-gray-900">{kpiStats.totalTasks}</div>
+                                    </div>
+                                    <div className="bg-green-50 border-l-4 border-l-green-500 p-4 rounded-r-lg shadow-sm relative overflow-hidden">
+                                        <div className="text-green-700 text-xs font-bold uppercase mb-1">Completion Rate</div>
+                                        <div className="text-2xl font-black text-green-800">{kpiStats.completionRate}%</div>
+                                        <div className="absolute bottom-0 left-0 h-1 bg-green-500 transition-all" style={{ width: `${kpiStats.completionRate}%`}}></div>
+                                    </div>
+                                    <div className="bg-red-50 border-l-4 border-l-red-500 p-4 rounded-r-lg shadow-sm">
+                                        <div className="text-red-600 text-xs font-bold uppercase mb-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> Overdue</div>
+                                        <div className="text-2xl font-black text-red-700">{kpiStats.overdueTasks}</div>
+                                    </div>
+                                    <div className="bg-amber-50 border-l-4 border-l-amber-500 p-4 rounded-r-lg shadow-sm">
+                                        <div className="text-amber-700 text-xs font-bold uppercase mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> Due Soon (7 Days)</div>
+                                        <div className="text-2xl font-black text-amber-800">{kpiStats.upcomingTasks}</div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* Program Unit Performance Cards */}
+                            <div className="animate-in fade-in slide-in-from-bottom-4">
+                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <FolderKanban className="text-sky-600" /> Program Unit Breakdown
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {unitStatsList.map((unit) => {
+                                        const UnitIcon = unit.icon || Activity;
+                                        return (
+                                            <Card key={unit.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                                                <CardBody className="p-4">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`p-2 rounded-lg ${unit.color.replace('text-', 'bg-').replace('500', '100')}`}>
+                                                                <UnitIcon className={`w-5 h-5 ${unit.color}`} />
+                                                            </div>
+                                                            <h4 className="font-bold text-gray-800">{unit.title}</h4>
+                                                        </div>
+                                                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{unit.totalProjects} Projects</span>
+                                                    </div>
+                                                    
+                                                    <div className="flex justify-between text-sm mb-1 mt-4">
+                                                        <span className="text-gray-500">Tasks Progress</span>
+                                                        <span className="font-bold text-gray-700">{unit.completed} / {unit.totalTasks}</span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
+                                                        <div className={`h-2 rounded-full ${unit.completionRate === 100 ? 'bg-green-500' : 'bg-sky-500'}`} style={{ width: `${unit.completionRate}%` }}></div>
+                                                    </div>
+                                                    <div className="flex justify-between text-xs text-gray-400">
+                                                        <span>{unit.active} Active</span>
+                                                        <span>{unit.completionRate}% Completed</span>
+                                                    </div>
+                                                </CardBody>
+                                            </Card>
+                                        );
+                                    })}
+                                    {unitStatsList.length === 0 && (
+                                        <div className="col-span-full p-8 text-center text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
+                                            No active projects assigned to any units yet.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Detailed Team Performance KPIs */}
+                            <Card className="animate-in fade-in slide-in-from-bottom-8">
+                                <CardBody>
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                                        <Users className="text-indigo-600" /> Team Member Performance
+                                    </h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200 border">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team Member</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase border-l">Total Assigned</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Completed</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Pending/Prog</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-red-500 uppercase border-l">Overdue</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border-l">Completion Rate</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {userStatsList.map((user) => (
+                                                    <tr key={user.id} className="hover:bg-gray-50">
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-700 text-center border-l bg-gray-50/50">{user.total}</td>
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-bold text-center">{user.completed}</td>
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 font-bold text-center">{user.pending + user.inProgress}</td>
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600 font-bold text-center border-l bg-red-50/30">{user.overdue}</td>
+                                                        <td className="px-4 py-3 whitespace-nowrap border-l min-w-[150px]">
+                                                            <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                                                                <div className="flex-1 bg-gray-200 h-2.5 rounded-full overflow-hidden">
+                                                                    <div className={`h-full ${user.completionRate > 75 ? 'bg-green-500' : user.completionRate > 40 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${user.completionRate}%` }}></div>
+                                                                </div>
+                                                                <span>{user.completionRate}%</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {userStatsList.length === 0 && (
+                                                    <tr><td colSpan="6" className="p-6 text-center text-gray-500">No tasks assigned to any team member yet.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </CardBody>
+                            </Card>
                         </div>
                     )}
 
                     {(dashboardTab === 'active' || dashboardTab === 'completed') && (
                         <Card className="animate-in fade-in">
                             <CardBody className="p-0">
-                                <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-4 items-center">
-                                    <div className="relative flex-1 min-w-[200px]">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                        <Input
-                                            placeholder="Search tasks..."
-                                            value={taskFilter.search}
-                                            onChange={e => setTaskFilter({...taskFilter, search: e.target.value})}
-                                            className="pl-9 w-full"
-                                        />
-                                    </div>
-                                    <Select value={taskFilter.project} onChange={e => setTaskFilter({...taskFilter, project: e.target.value})} className="w-48">
-                                        <option value="">All Projects</option>
-                                        {allActiveProjects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                                    </Select>
-                                    <Select value={taskFilter.responsible} onChange={e => setTaskFilter({...taskFilter, responsible: e.target.value})} className="w-48">
-                                        <option value="">All Federal Members</option>
-                                        {allTeamMembers.map(m => <option key={m.id} value={m.id}>{m.nameAr || m.name}</option>)}
-                                    </Select>
-                                    {dashboardTab === 'active' && (
-                                        <Select value={taskFilter.status} onChange={e => setTaskFilter({...taskFilter, status: e.target.value})} className="w-40">
-                                            <option value="">All Statuses</option>
-                                            <option value="Pending">Pending</option>
-                                            <option value="In Progress">In Progress</option>
+                                <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-4 items-center justify-between">
+                                    <div className="flex flex-wrap gap-4 items-center flex-1">
+                                        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                            <Input
+                                                placeholder="Search tasks..."
+                                                value={taskFilter.search}
+                                                onChange={e => setTaskFilter({...taskFilter, search: e.target.value})}
+                                                className="pl-9 w-full"
+                                            />
+                                        </div>
+                                        <Select value={taskFilter.project} onChange={e => setTaskFilter({...taskFilter, project: e.target.value})} className="w-48">
+                                            <option value="">All Projects</option>
+                                            {allActiveProjects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                                         </Select>
-                                    )}
+                                        <Select value={taskFilter.responsible} onChange={e => setTaskFilter({...taskFilter, responsible: e.target.value})} className="w-48">
+                                            <option value="">All Federal Members</option>
+                                            {allTeamMembers.map(m => <option key={m.id} value={m.id}>{m.nameAr || m.name}</option>)}
+                                        </Select>
+                                        {dashboardTab === 'active' && (
+                                            <Select value={taskFilter.status} onChange={e => setTaskFilter({...taskFilter, status: e.target.value})} className="w-40">
+                                                <option value="">All Statuses</option>
+                                                <option value="Pending">Pending</option>
+                                                <option value="In Progress">In Progress</option>
+                                            </Select>
+                                        )}
+                                    </div>
+                                    <Button size="sm" variant="primary" onClick={handleShareFilteredView} className="shrink-0 shadow-sm border border-blue-600">
+                                        <Share2 className="w-4 h-4 mr-2" /> Share View
+                                    </Button>
                                 </div>
 
                                 <div className="overflow-x-auto">
@@ -423,6 +667,9 @@ export default function ProjectTrackerView({ permissions }) {
                                                     </td>
                                                     <td className="p-3 text-right">
                                                         <div className="flex justify-end gap-2">
+                                                            <Button size="sm" variant="ghost" onClick={() => handleShareSpecificTask(task)} title="Share this task link">
+                                                                <LinkIcon className="w-4 h-4 text-gray-500 hover:text-blue-600" />
+                                                            </Button>
                                                             <Button size="sm" variant="secondary" onClick={() => { 
                                                                 setCurrentSubtask(task); 
                                                                 setIsSubtaskModalOpen(true); 
@@ -516,6 +763,9 @@ export default function ProjectTrackerView({ permissions }) {
                                                 </td>
                                                 <td className="p-3 text-right">
                                                     <div className="flex justify-end gap-2">
+                                                        <Button size="sm" variant="ghost" onClick={() => handleShareSpecificTask(task)} title="Share this task link">
+                                                            <LinkIcon className="w-4 h-4 text-gray-500 hover:text-blue-600" />
+                                                        </Button>
                                                         <Button size="sm" variant="secondary" onClick={() => { 
                                                             setCurrentSubtask({...task, projectId: activeProject.id}); 
                                                             setIsSubtaskModalOpen(true); 
@@ -621,6 +871,13 @@ export default function ProjectTrackerView({ permissions }) {
                     </div>
                 </form>
             </Modal>
+
+            <ShareLinkModal
+                isOpen={shareModalInfo.isOpen}
+                onClose={() => setShareModalInfo({ isOpen: false, link: '', title: '' })}
+                title={shareModalInfo.title}
+                link={shareModalInfo.link}
+            />
         </div>
     );
 }

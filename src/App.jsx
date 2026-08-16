@@ -58,6 +58,7 @@ const PublicCourseCertificatesView = lazy(() => import('./components/Certificate
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
 const PublicParticipantRegistrationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicParticipantRegistrationView })));
+const PublicExerciseView = lazy(() => import('./components/Online-exercise').then(module => ({ default: module.PublicExerciseView })));
 const PublicCourseMonitoringView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseMonitoringView })));
 
 const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then(module => ({ default: module.CourseTestForm })));
@@ -292,7 +293,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMCI Assessment'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
         { label: 'Project Tracker', view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
-{ label: 'Meeting Tracker', view: 'meetings', icon: Users, permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: 'Meeting Tracker', view: 'meetings', icon: Users, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
         { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
@@ -449,28 +450,28 @@ export default function App() {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (!user) return;
 
-            // Listen to the user's specific document in real-time[cite: 27]
+            // Listen to the user's specific document in real-time
             const userRef = doc(db, 'users', user.uid);
             const unsubscribeDoc = onSnapshot(userRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
-                    // If the admin triggered a cache reset[cite: 27]
+                    // If the admin triggered a cache reset
                     if (data.forceCacheReset) {
                         const remoteResetTime = data.forceCacheReset.toMillis();
                         const localResetTime = parseInt(localStorage.getItem('last_forced_reset') || '0', 10);
                         
-                        // If the remote command is newer than the last time we reset locally[cite: 27]
+                        // If the remote command is newer than the last time we reset locally
                         if (remoteResetTime > localResetTime) {
                             console.warn("⚠️ Admin ordered a local storage wipe. Wiping now...");
                             
-                            // Clear all local storage EXCEPT the last reset timestamp[cite: 27]
+                            // Clear all local storage EXCEPT the last reset timestamp
                             localStorage.clear();
                             localStorage.setItem('last_forced_reset', remoteResetTime.toString());
                             
                             alert("قام مدير النظام بتحديث بيانات التطبيق وإصلاح الأخطاء. سيتم إعادة تحميل التطبيق الآن.\n\n(The administrator has refreshed your app data to fix errors. The app will now reload.)");
                             
-                            // Reload the app completely to fetch fresh data from the database[cite: 27]
+                            // Reload the app completely to fetch fresh data from the database
                             window.location.reload(true);
                         }
                     }
@@ -601,6 +602,9 @@ export default function App() {
     const [publicMeetingId, setPublicMeetingId] = useState(null);
     const [publicMeetingData, setPublicMeetingData] = useState(null);
     const [publicMeetingTargetDate, setPublicMeetingTargetDate] = useState(null); 
+    
+    // --- ADDED FOR PUBLIC PROJECT DASHBOARD SHARED LINKS ---
+    const [isPublicProjectsView, setIsPublicProjectsView] = useState(false);
 
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
     const [isMonitorVisible, setIsMonitorVisible] = useState(true);
@@ -723,6 +727,18 @@ export default function App() {
 
             setIsPublicMeetingView(false); setPublicMeetingId(null); setPublicMeetingData(null); setPublicMeetingTargetDate(null);
 
+            setIsPublicProjectsView(false);
+
+            // Check if the current URL parameters match a generated shared Project Tracker link
+            const searchParamsPath = new URLSearchParams(window.location.search);
+            const publicProjectsMatch = path.match(/^\/public\/projects\/?$/);
+            const isSharedProjectQuery = searchParamsPath.get('view') === 'dashboard' || searchParamsPath.get('tab') === 'active' || searchParamsPath.get('tab') === 'completed' || searchParamsPath.has('project');
+
+            if (publicProjectsMatch || (path === '/' && isSharedProjectQuery)) {
+                setIsPublicProjectsView(true);
+                return;
+            }
+
             const publicMeetingMatch = path.match(/^\/public\/meeting\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicMeetingMatch && publicMeetingMatch[1]) {
                 setIsPublicMeetingView(true); setPublicMeetingId(publicMeetingMatch[1]); setPublicViewLoading(true);
@@ -833,6 +849,9 @@ export default function App() {
             
             const publicRegistrationMatch = path.match(/^\/public\/register\/course\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicRegistrationMatch && publicRegistrationMatch[1]) { setIsPublicRegistrationView(true); setPublicRegistrationCourseId(publicRegistrationMatch[1]); return; }
+
+            const publicExercisesMatch = path.match(/^\/public\/exercises\/course\/([a-zA-Z0-9_-]+)\/?$/);
+            if (publicExercisesMatch && publicExercisesMatch[1]) { setPublicViewType('onlineExercises'); setPublicViewData({ courseId: publicExercisesMatch[1] }); return; }
 
             const publicTestMatch = path.match(/^\/public\/test\/course\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicTestMatch && publicTestMatch[1]) {
@@ -1600,12 +1619,19 @@ case 'meetings':
     const isCourseCertPagePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/course/certificates/');
     const isAttendancePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/attendance/course/');
 
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || isPublicRegistrationView || isPublicMeetingView;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView;
 
     let mainContent;
 
     if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
         mainContent = <SplashScreen />;
+    }
+    else if (isPublicProjectsView) {
+        mainContent = (
+             <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
+                 <ProjectTrackerView permissions={{ canUseFederalManagerAdvancedFeatures: false }} />
+             </Suspense>
+        );
     }
     else if (isPublicMentorshipDashboardView) {
         mainContent = (
@@ -1693,7 +1719,7 @@ case 'meetings':
         }
     }
 
-    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance') { 
+    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'onlineExercises') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
         }
@@ -1724,6 +1750,9 @@ case 'meetings':
                     break;
                 case 'attendance':
                     mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );
+                    break;
+                case 'onlineExercises':
+                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicExerciseView courseId={publicViewData.courseId} /></Suspense> );
                     break;
                 default:
                     mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid report type.</div></Card>;

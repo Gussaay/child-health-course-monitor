@@ -16,6 +16,7 @@ import {
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC
 } from './constants.js';
+import { ParticipantExercisesModal } from './Online-exercise';
 import {
     importParticipants,
     bulkMigrateFromMappings,
@@ -1761,6 +1762,9 @@ export function ParticipantsView({
     // --- PERMISSION STATES ---
     const [finalAdvancedPerm, setFinalAdvancedPerm] = useState(!!canUseSuperUserAdvancedFeatures);
     const [finalCertPerm, setFinalCertPerm] = useState(!!canManageCertificates);
+
+    // --- ONLINE EXERCISES ---
+    const [exerciseModalParticipant, setExerciseModalParticipant] = useState(null);
     
     useEffect(() => {
         setFinalAdvancedPerm(!!canUseSuperUserAdvancedFeatures);
@@ -2448,6 +2452,13 @@ export function ParticipantsView({
                 onShare={() => handleShareClick(certActionModal.data?.p)}
             />
 
+            <ParticipantExercisesModal
+                isOpen={!!exerciseModalParticipant}
+                onClose={() => setExerciseModalParticipant(null)}
+                course={course}
+                participant={exerciseModalParticipant}
+            />
+
             <ExcelImportModal
                 isOpen={importModalOpen}
                 onClose={() => setImportModalOpen(false)}
@@ -2704,6 +2715,12 @@ export function ParticipantsView({
                                                 Report
                                             </Button>
 
+                                            {participantSubCourse === 'online IMCI course' && (
+                                                <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>
+                                                    Exercises
+                                                </Button>
+                                            )}
+
                                             {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') && (
                                                 <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>
                                                     Test
@@ -2784,6 +2801,10 @@ export function ParticipantsView({
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                         <Button variant="primary" className="w-full justify-center" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>Monitor</Button>
                                         <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
+
+                                        {participantSubCourse === 'online IMCI course' && (
+                                            <Button variant="secondary" className="w-full justify-center" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>Exercises</Button>
+                                        )}
                                         
                                         {isCertApproved && finalCertPerm && (
                                             <Button variant="secondary" className="w-full justify-center border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => setCertActionModal({ isOpen: true, data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
