@@ -58,9 +58,20 @@ const getDayWithSuffix = (day) => {
     return `${day}<sup style="font-size: 0.6em; line-height: 0;">${suffix}</sup>`;
 };
 
-const getCertificateCourseTitle = (courseType, language = 'en') => {
+// UPDATED: Now accepts subCourse to handle the EmONC + EENC override logic
+const getCertificateCourseTitle = (courseType, language = 'en', subCourse = '') => {
     const normalizedType = courseType ? courseType.trim() : '';
+    const normalizedSub = subCourse ? subCourse.trim().toLowerCase() : '';
+    
+    // Check if it's EmONC and one of the specific EENC sub-courses
+    const isEencSub = normalizedType === 'EmONC' && 
+                     (normalizedSub === 'eenc orientation' || 
+                      normalizedSub === 'eenc tot' || 
+                      normalizedSub === 'eenc mentorship');
+
     if (language === 'ar') {
+        if (isEencSub) return 'الرعاية الضرورية المبكرة للاطفال حديثي الولادة';
+
         switch (normalizedType) {
             case 'ICCM': return 'العلاج المتكامل للأطفال أقل من 5 سنوات في المجتمع';
             case 'IMNCI': return 'العلاج المتكامل للاطفال اقل من 5 سنوات (IMNCI)';
@@ -73,6 +84,9 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
             default: return normalizedType;
         }
     }
+
+    if (isEencSub) return 'Early Essential Newborn Care';
+
     switch (normalizedType) {
         case 'IMNCI': return 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)';
         case 'ICCM': return 'Integrated Community case management for under 5 children (iCCM)';
@@ -194,12 +208,15 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 }) {
     const isArabic = language === 'ar';
     const courseType = course.course_type ? course.course_type.trim() : '';
-    const courseTitle = getCertificateCourseTitle(courseType, language);
+    
+    // UPDATED: Pass participantSubCourse so it can override EmONC titles
+    const courseTitle = getCertificateCourseTitle(courseType, language, participantSubCourse);
     
     let displaySubCourse = participantSubCourse;
     if (participantSubCourse) {
         // Check if the sub-course is a refreshment course
         const isRefreshment = participantSubCourse.toLowerCase().includes('refreshment');
+        const normalizedSub = participantSubCourse.trim().toLowerCase();
 
         if (isArabic) {
             if (courseType === 'ICCM') displaySubCourse = "تدريب العامل الصحي المجتمعي";
@@ -216,6 +233,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             }
             else if (courseType === 'Comprehensive Package For Community Midwives') {
                 displaySubCourse = "الرعاية الضرورية للاطفال حديثي الولادة + مساعدة الأطفال حديثي الولادة على التنفس";
+            }
+            // UPDATED: Custom sub-course names for EmONC/EENC in Arabic
+            else if (courseType === 'EmONC') {
+                if (normalizedSub === 'eenc orientation') displaySubCourse = "ورشة تنويرية";
+                else if (normalizedSub === 'eenc mentorship') displaySubCourse = "ورشة ارشاد سريري";
+                else if (normalizedSub === 'eenc tot') displaySubCourse = "ورشة تدريب مدربين";
             }
         } else {
             // Handle English overrides

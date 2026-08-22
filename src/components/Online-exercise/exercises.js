@@ -217,6 +217,100 @@ const withDefaults = (expected) => ({
         : {},
 });
 
+
+// ---------------------------------------------------------------------------
+// YOUNG INFANT (up to 2 months). The infant form has its own sections,
+// classifications and treatments — none of the child banks apply.
+// ---------------------------------------------------------------------------
+
+export const INFANT_SECTIONS = ['infection', 'jaundice', 'diarrhea', 'feeding', 'breast', 'vaccine', 'other'];
+
+export const INFANT_SECTION_LABELS = {
+    infection: 'Very severe disease / bacterial infection',
+    jaundice: 'Jaundice',
+    diarrhea: 'Diarrhoea',
+    feeding: 'Feeding problem or low weight',
+    breast: 'Assess breastfeeding',
+    vaccine: 'Immunisation',
+    other: 'Other problems',
+};
+
+export const INFANT_CLASSIFY_OPTIONS = {
+    infection: [
+        { id: 'imci.classifications.possible_severe_bacterial_infection' },
+        { id: 'imci.classifications.local_bacterial_infection' },
+        { id: 'no_infection', label: 'No bacterial infection', labelAr: 'لا يوجد التهاب بكتيري' },
+    ],
+    jaundice: [
+        { id: 'imci.classifications.severe_jaundice' },
+        { id: 'imci.classifications.jaundice' },
+        { id: 'no_jaundice', label: 'No jaundice', labelAr: 'لا يوجد يرقان' },
+    ],
+    diarrhea: [
+        { id: 'imci.classifications.severe_dehydration' },
+        { id: 'imci.classifications.some_dehydration' },
+        { id: 'imci.classifications.no_dehydration' },
+        { id: 'no_diarrhoea', label: 'No diarrhoea', labelAr: 'لا يوجد إسهال' },
+    ],
+    feeding: [
+        { id: 'imci.classifications.feeding_problem_low_weight' },
+        { id: 'imci.classifications.no_feeding_problem' },
+    ],
+    breast: [
+        { id: 'bf_good', label: 'No breastfeeding problem' },
+        { id: 'bf_problem', label: 'Breastfeeding problem — position, attachment or sucking' },
+    ],
+    vaccine: [
+        { id: 'imci.classifications.fully_vaccinated' },
+        { id: 'imci.classifications.partially_vaccinated' },
+        { id: 'imci.classifications.not_vaccinated' },
+    ],
+    other: [],
+};
+
+export const INFANT_TREATMENT_OPTIONS = {
+    infection: [
+        { id: 'i_local_abx',  label: 'Give an appropriate oral antibiotic' },
+        { id: 'i_teach_skin', label: 'Teach the mother to treat local infections at home' },
+        { id: 'i_followup_2', label: 'Follow up in 2 days' },
+        { id: 'i_first_dose', label: 'Give first dose of intramuscular antibiotics' },
+        { id: 'i_sugar',      label: 'Treat to prevent low blood sugar' },
+        { id: 'i_warm',       label: 'Advise the mother how to keep the infant warm on the way' },
+        { id: 'i_refer',      label: 'Refer URGENTLY to hospital' },
+    ],
+    jaundice: [
+        { id: 'j_advise_return', label: 'Advise the mother when to return immediately' },
+        { id: 'j_followup_1',    label: 'Follow up in 1 day' },
+        { id: 'j_sunlight',      label: 'Advise the mother to keep the infant warm' },
+        { id: 'j_sugar',         label: 'Treat to prevent low blood sugar' },
+        { id: 'j_refer',         label: 'Refer URGENTLY to hospital' },
+    ],
+    diarrhea: [
+        { id: 'id_planA', label: 'Plan A: treat diarrhoea at home' },
+        { id: 'id_planB', label: 'Plan B: treat some dehydration with ORS' },
+        { id: 'id_planC', label: 'Plan C: treat severe dehydration quickly' },
+        { id: 'id_refer', label: 'Refer URGENTLY to hospital' },
+        { id: 'id_none',  label: 'No treatment needed — the infant has no diarrhoea' },
+    ],
+    feeding: [
+        { id: 'f_continue_bf', label: 'Advise the mother to continue breastfeeding on demand' },
+        { id: 'f_home_care',   label: 'Advise home care for the young infant' },
+        { id: 'f_counsel',     label: 'Counsel the mother about a feeding problem' },
+        { id: 'f_thrush',      label: 'Treat thrush' },
+        { id: 'f_followup_2',  label: 'Follow up any feeding problem in 2 days' },
+    ],
+    breast: [
+        { id: 'b_teach_position', label: 'Teach correct positioning and attachment' },
+        { id: 'b_followup_2',     label: 'Follow up in 2 days' },
+        { id: 'b_none',           label: 'No action needed' },
+    ],
+    vaccine: [
+        { id: 'v_give_due',  label: 'Give the vaccines due today' },
+        { id: 'v_next_date', label: 'Tell the mother the date of the next immunisation' },
+    ],
+    other: [],
+};
+
 // ============================================================================
 // EXERCISE 1 — Musa
 //
@@ -516,6 +610,229 @@ const EXERCISE_5 = {
         'plus banana, dates, eggs or milk when available — and follow up in 7 days.',
 };
 
+
+// ============================================================================
+// EXERCISE 6 — Malnutrition and Anaemia: knowledge check
+// From the "Exercise 7 / Exercise 8" decks (the circle-the-best-answer slides).
+// kind: 'quiz' renders a question page instead of a recording form.
+// ============================================================================
+
+const EXERCISE_6 = {
+    id: 'imnci-ex6-malnutrition-quiz',
+    kind: 'quiz',
+    order: 6,
+    title: 'Exercise 6 — Malnutrition and Anaemia: Knowledge Check',
+    titleAr: 'التمرين ٦ — سوء التغذية وفقر الدم: اختبار المعرفة',
+    subCourse: ONLINE_SUB_COURSE,
+    passMark: 80,
+    estimatedMinutes: 12,
+    draft: true,
+    narrative: [
+        'Answer each question. Some ask you to choose the best answer; others ask you to type a short answer.',
+        'Check your answers when you have finished — you will see the correct answer and the reason for each one.',
+    ],
+    questions: [
+        {
+            id: 'q1', type: 'mcq',
+            question: 'When is it necessary to check a child for malnutrition and anaemia?',
+            options: [
+                'Check if the child appears low weight for age',
+                'Check every child for malnutrition and anaemia, as sometimes problems go unnoticed',
+                'Check if the caregiver tells you about a feeding problem',
+            ],
+            correct: [1],
+            explain: 'Every sick child is checked. Waiting for the child to look thin or for the mother to raise it means missing children who are already at risk.',
+        },
+        {
+            id: 'q2', type: 'mcq',
+            question: 'Sami has a MUAC measurement of 112 mm. What does this tell you?',
+            options: [
+                'Sami is healthy',
+                '112 mm is low weight, so you will advise on feeding recommendations',
+                'Sami is showing a sign of severe acute malnutrition',
+            ],
+            correct: [2],
+            explain: 'MUAC below 115 mm is a sign of severe acute malnutrition. Between 115 and 125 mm is moderate acute malnutrition.',
+        },
+        {
+            id: 'q3', type: 'mcq',
+            question: 'A child with anaemia needs:',
+            options: ['Vitamin A', 'Iron', 'Glucose'],
+            correct: [1],
+            explain: 'Iron. Add an oral antimalarial if the malaria test is positive, and mebendazole if the child is older than one year.',
+        },
+        {
+            id: 'q4', type: 'mcq',
+            question: 'Ali shows oedema in both feet. What are your actions?',
+            options: [
+                'Sit Ali down and elevate his legs, to drain the swelling',
+                "Advise his mother to cut down the salt and fat in the child's diet",
+                'Refer urgently, as this is a sign of severe malnutrition',
+            ],
+            correct: [2],
+            explain: 'Oedema of both feet is a sign of severe acute malnutrition and needs urgent referral, whatever the weight or MUAC.',
+        },
+        {
+            id: 'q5', type: 'mcq',
+            question: 'What is palmar pallor?',
+            options: ['A sign of anaemia', 'A sign of local infection', 'A sign of severe wasting'],
+            correct: [0],
+            explain: 'Palmar pallor is unusual paleness of the skin of the palms, and it is the IMNCI sign for anaemia.',
+        },
+        {
+            id: 'q6', type: 'mcq',
+            question: 'Which of the following is an important measurement of wasting?',
+            options: ['Weight-for-age', 'Percentage weight gain since the last visit', 'Weight-for-height (or length)'],
+            correct: [2],
+            explain: 'Weight-for-height (or length) measures wasting. Weight-for-age mixes wasting and stunting together and cannot separate them.',
+        },
+        {
+            id: 'q7', type: 'text',
+            question: 'SEVERE PALMAR PALLOR is treated with — what?',
+            correct: 'refer urgently',
+            accept: ['refer', 'urgent referral', 'refer urgently to hospital', 'referral'],
+            placeholder: 'Type your answer',
+            explain: 'Severe palmar pallor is classified as SEVERE ANAEMIA and needs urgent referral to hospital.',
+        },
+        {
+            id: 'q8', type: 'text',
+            question: 'A child with SEVERE UNCOMPLICATED MALNUTRITION should return for follow-up in how many days?',
+            correct: '7',
+            accept: ['7 days', 'seven', 'seven days', '7days'],
+            placeholder: 'Number of days',
+            explain: 'Follow up in 7 days, while the child continues RUTF at home.',
+        },
+        {
+            id: 'q9', type: 'tf',
+            question: 'True or false: children should be given fewer feedings during illness.',
+            correct: false,
+            explain: 'False. A sick child needs MORE frequent feeding, and extra food for two weeks after the illness to regain lost weight.',
+        },
+        {
+            id: 'q10', type: 'tf',
+            question: 'True or false: a 3-month-old child should be exclusively breastfed.',
+            correct: true,
+            explain: 'True. Exclusive breastfeeding is recommended up to 6 months — no other food or fluid, not even water.',
+        },
+        {
+            id: 'q11', type: 'tf',
+            question: 'True or false: a very thin cereal gruel is a nutritious complementary food.',
+            correct: false,
+            explain: 'False. A thin gruel is mostly water. Complementary food should be thick enough to stay on a spoon, and enriched with oil, beans, eggs or milk.',
+        },
+        {
+            id: 'q12', type: 'tf',
+            question: 'True or false: a 3-year-old needs 5 feedings each day of family foods or other nutritious foods.',
+            correct: true,
+            explain: 'True — three meals plus two nutritious snacks each day.',
+        },
+        {
+            id: 'q13', type: 'mcq',
+            question: "Which sick children need a feeding assessment?",
+            options: [
+                'Only children whose mothers report a feeding problem',
+                'Children with moderate acute malnutrition OR anaemia OR under 2 years of age',
+                'Every sick child, at every visit',
+                'Only children being referred to hospital',
+            ],
+            correct: [1],
+            explain: "This is the rule printed on the recording form: assess the child's feeding if the child has MODERATE ACUTE MALNUTRITION, or ANAEMIA, or is LESS THAN 2 YEARS OLD.",
+        },
+    ],
+    explain:
+        'Remember the two measurements: MUAC under 115 mm, or oedema of both feet, means severe acute malnutrition ' +
+        'and urgent referral. MUAC 115–125 mm is moderate acute malnutrition, treated with feeding counselling and ' +
+        'follow-up in 7 days.',
+};
+
+// ============================================================================
+// EXERCISE 7 — Mariam, sick young infant
+// Digitised from the "Exercise 8 / Exercise 9 SYI" decks.
+//
+// formType: 'infant' opens the YOUNG INFANT recording form (up to 2 months),
+// not the sick child form. Its sections are different: infection, jaundice,
+// diarrhea, feeding, breast, vaccine, other.
+// ============================================================================
+
+const EXERCISE_7 = {
+    id: 'imnci-ex7-mariam',
+    formType: 'infant',
+    order: 7,
+    title: 'Exercise 7 — Sick Young Infant: Mariam, 5 weeks',
+    titleAr: 'التمرين ٧ — الرضيع الصغير المريض: مريم، ٥ أسابيع',
+    subCourse: ONLINE_SUB_COURSE,
+    passMark: 80,
+    estimatedMinutes: 20,
+    draft: true,
+    narrative: [
+        'Mariam is 5 weeks old. She weighs 4 kg and her axillary temperature is 37 °C. Her mother brought her to the clinic because she has a skin rash.',
+        'Signs of very severe disease: her mother says there were no convulsions, she is feeding normally and moving normally.',
+        'Mariam’s breathing rate is 55 per minute. She has no chest indrawing.',
+        'There is no pus draining from her eyes and her umbilicus is normal.',
+        'The health worker examines her entire body and finds a red rash with just a few skin pustules on her buttocks.',
+        'She is awake. She has jaundice — the mother says it started on the third day of life, and it does not extend to the palms or soles.',
+        'She does not have diarrhoea.',
+        'The mother says Mariam has no difficulty feeding: she breastfeeds 9 or 10 times in 24 hours and drinks no other fluids. Her weight for age is normal, so the health worker decides there is no need to assess breastfeeding.',
+        'Her immunisation card shows BCG and OPV 0 given at birth in hospital. The mother says there are no other problems.',
+    ],
+    expected: {
+        sections: ['infection', 'jaundice', 'diarrhea', 'feeding'],
+        patientData: {
+            childName: 'Mariam',
+            ageDaysWeeks: '5 weeks',
+            weightKg: 4,
+            tempC: 37,
+            visitType: 'initial',
+        },
+        assessments: {
+            notFeedingWell: false,
+            convulsions: false,
+            convulsingNow: false,
+            movementOnlyStimulatedNoMovement: false,
+            breathRate: 55,
+            fastBreathing: false,
+            severeChestIndrawing: false,
+            fever38: false,
+            lowTemp35_5: false,
+            umbilicusRedDraining: false,
+            pusFromEyes: false,
+            skinPustules: true,
+            hasJaundice: 'yes',
+            jaundiceFirst24h: false,
+            jaundiceSolesPalms: false,
+            hasDiarrhea: 'no',
+            diffFeeding: 'no',
+            breastfed: 'yes',
+            breastfeedTimes: 9,
+            otherFoods: 'no',
+            weightForAgeLow: false,
+            thrush: false,
+        },
+        classifyOptions: INFANT_CLASSIFY_OPTIONS,
+        classifications: {
+            infection: ['imci.classifications.local_bacterial_infection'],
+            jaundice: ['imci.classifications.jaundice'],
+            diarrhea: ['no_diarrhoea'],
+            feeding: ['imci.classifications.no_feeding_problem'],
+        },
+        includeTreatment: true,
+        treatmentOptions: INFANT_TREATMENT_OPTIONS,
+        treatments: {
+            infection: ['i_local_abx', 'i_teach_skin', 'i_followup_2'],
+            jaundice: ['j_advise_return', 'j_followup_1'],
+            diarrhea: ['id_none'],
+            feeding: ['f_continue_bf', 'f_home_care'],
+        },
+    },
+    explain:
+        'A few skin pustules with no other sign of very severe disease is LOCAL BACTERIAL INFECTION — treated at ' +
+        'the clinic, not referred. Jaundice that started after 24 hours of age and does not reach the palms or ' +
+        'soles is JAUNDICE (yellow), not severe jaundice: advise when to return immediately and follow up in 1 day. ' +
+        'Breathing at 55 per minute is normal for a young infant (fast breathing is 60 or more). Breastfeeding 9 to ' +
+        '10 times in 24 hours with normal weight for age means NO FEEDING PROBLEM, so breastfeeding does not need ' +
+        'to be assessed.',
+};
+
 // ============================================================================
 //  REGISTRY — add every new exercise here.
 //  `order` controls the display position; position in this array does not.
@@ -528,6 +845,8 @@ export const EXERCISES = [
     EXERCISE_3,
     EXERCISE_4,
     EXERCISE_5,
+    EXERCISE_6,
+    EXERCISE_7,
 ];
 
 // ---------------------------------------------------------------------------

@@ -184,7 +184,69 @@ const getServiceConfig = (serviceType) => {
     const imnciConfig = { headers: baseImnciHeaders, dataKeys: baseImnciDataKeys };
     const eencConfig = { headers: ["هل تقدم الرعاية الضرورية المبكرة EENC", "عدد الكوادر الصحية المدربة", "العدد الكلي لسرير الولادة", "العدد الكلي لمحطات الانعاش", "العدد الكلي لاجهزة التدفئة", "العدد الكلي لجهاز الامبوباق", "العدد الكلي لجهاز الشفط اليدوي", "ساعة حائط", "جهاز التعقيم بالبخار", "تاريخ الزيارة لغرفة الولادة"], dataKeys: ["eenc_provides_essential_care", "eenc_trained_workers", "eenc_delivery_beds", "eenc_resuscitation_stations", "eenc_warmers", "eenc_ambu_bags", "eenc_manual_suction", "eenc_wall_clock", "eenc_steam_sterilizer", "eenc_delivery_room_visit_date"] };
     const neonatalConfig = { headers: ["Level of Care - Primary", "Level of Care - Secondary", "Level of Care - Tertiary", "وحدة رعاية الكنغر (KMC unit)", "وحدة الرضاعة الطبيعية (breastfeeding unit)", "وحدة تعقيم (sterilization unit)", "الترصد والحماية من عدوى التسمم الدموي", "إجمالي سعة الأسرة", "العدد الكلي للحضانات (incubators)", "العدد الكلي للاسرة للاطفال مكتملي النمو (cots)", "أجهزة CPAP", "جهاز تدفئة حرارية (warmer)", "مضخة تسريب (infusion pump)", "مضخات الحقن (Syringe pump)", "جهاز شفط (suction machine)", "وحدات العلاج الضوئي (Phototherapy)", "أكياس الإنعاش (Ambu Bag)", "جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor)", "جهاز أكسجين (Oxygen concentrator)", "أسطوانة الاكسجين (oxygen cylinder)", "جهاز تنفس صناعي (Mechanical ventilator)", "حاضنة محمولة (Portable Incubator)", "تاريخ زيارة وحدة حديثي الولادة"], dataKeys: ["neonatal_level_of_care_primary", "neonatal_level_of_care_secondary", "neonatal_level_of_care_tertiary", "neonatal_kmc_unit", "neonatal_breastfeeding_unit", "neonatal_sterilization_unit", "neonatal_sepsis_surveillance", "neonatal_total_beds", "neonatal_total_incubators", "neonatal_total_cots", "neonatal_cpap", "neonatal_warmer", "neonatal_infusion_pump", "neonatal_syringe_pump", "neonatal_sucker", "neonatal_phototherapy", "neonatal_ambu_bag", "neonatal_respiration_monitor", "neonatal_oxygen_machine", "neonatal_oxygen_cylinder", "neonatal_mechanical_ventilator", "neonatal_portable_incubator", "neonatal_unit_visit_date"] };
-    const criticalCareConfig = { headers: ["etat_has_service", "etat_trained_workers", "hdu_has_service", "hdu_bed_capacity", "picu_has_service", "picu_bed_capacity"], dataKeys: ["etat_has_service", "etat_trained_workers", "hdu_has_service", "hdu_bed_capacity", "picu_has_service", "picu_has_service"] };
+    
+    // Updated configuration for Critical Care export
+    const criticalCareConfig = { 
+        headers: [
+            "ETAT Service", "HDU Service", "PICU Service", "PICU Bed Capacity",
+            "ETAT: Separate Pediatric Emergency", "ETAT: Separate Emergency Notes",
+            "ETAT: 24 Hours Operation", "ETAT: 24 Hours Notes",
+            "ETAT: Triage System", "ETAT: Triage System Notes",
+            "ETAT: Cold Cases Clinic", "ETAT: Cold Cases Clinic Notes",
+            "ETAT: Specialist Clinics", "ETAT: Specialist Clinics Notes",
+            "ETAT: Short Stay Ward", "ETAT: Short Stay Ward Notes",
+            "ETAT: Emergency Pharmacy", "ETAT: Emergency Pharmacy Notes",
+            "ETAT: Free Medicines", "ETAT: Free Medicines Notes",
+            "ETAT: Central Oxygen", "ETAT: Central Oxygen Notes",
+            "ETAT: Pediatric Lab", "ETAT: Pediatric Lab Notes",
+            "ETAT: Ambu Bags", "ETAT: Oxygen Masks", "ETAT: Glucometers", 
+            "ETAT: Fluid Pumps", "ETAT: Suction Machines", "ETAT: CPAP",
+            "ETAT Staff: Pediatric Specialist (Total)", "ETAT Staff: Pediatric Specialist (Trained)",
+            "ETAT Staff: Pediatric Registrar (Total)", "ETAT Staff: Pediatric Registrar (Trained)",
+            "ETAT Staff: General Practitioner (Total)", "ETAT Staff: General Practitioner (Trained)",
+            "ETAT Staff: House Officer (Total)", "ETAT Staff: House Officer (Trained)",
+            "ETAT Staff: Nurse BSc (Total)", "ETAT Staff: Nurse BSc (Trained)",
+            "ETAT Staff: Nurse Diploma (Total)", "ETAT Staff: Nurse Diploma (Trained)",
+            "HDU Bed Capacity", "HDU Bed Capacity Notes",
+            "HDU: Glucometers", "HDU: Fluid Pumps", "HDU: Suction Machines", "HDU: CPAP",
+            "HDU Staff: Pediatric Specialist (Total)", "HDU Staff: Pediatric Specialist (Trained)",
+            "HDU Staff: Pediatric Registrar (Total)", "HDU Staff: Pediatric Registrar (Trained)",
+            "HDU Staff: General Practitioner (Total)", "HDU Staff: General Practitioner (Trained)",
+            "HDU Staff: House Officer (Total)", "HDU Staff: House Officer (Trained)",
+            "HDU Staff: Nurse BSc (Total)", "HDU Staff: Nurse BSc (Trained)",
+            "HDU Staff: Nurse Diploma (Total)", "HDU Staff: Nurse Diploma (Trained)"
+        ], 
+        dataKeys: [
+            "etat_has_service", "hdu_has_service", "picu_has_service", "picu_bed_capacity",
+            "etat_separate_pediatric_emergency", "etat_separate_pediatric_emergency_notes",
+            "etat_operation_24_hours", "etat_operation_24_hours_notes",
+            "etat_triage_system", "etat_triage_system_notes",
+            "etat_cold_cases_clinic", "etat_cold_cases_clinic_notes",
+            "etat_specialist_clinics", "etat_specialist_clinics_notes",
+            "etat_short_stay_ward", "etat_short_stay_ward_notes",
+            "etat_emergency_pharmacy", "etat_emergency_pharmacy_notes",
+            "etat_free_medicines", "etat_free_medicines_notes",
+            "etat_central_oxygen", "etat_central_oxygen_notes",
+            "etat_pediatric_lab", "etat_pediatric_lab_notes",
+            "etat_ambu_bag", "etat_oxygen_mask", "etat_glucometer", 
+            "etat_fluid_pump", "etat_suction_machine", "etat_cpap",
+            "etat_staff_pediatric_specialist_total", "etat_staff_pediatric_specialist_trained",
+            "etat_staff_pediatric_registrar_total", "etat_staff_pediatric_registrar_trained",
+            "etat_staff_general_practitioner_total", "etat_staff_general_practitioner_trained",
+            "etat_staff_house_officer_total", "etat_staff_house_officer_trained",
+            "etat_staff_nurse_bsc_total", "etat_staff_nurse_bsc_trained",
+            "etat_staff_nurse_diploma_total", "etat_staff_nurse_diploma_trained",
+            "hdu_bed_capacity", "hdu_bed_capacity_notes",
+            "hdu_glucometer", "hdu_fluid_pump", "hdu_suction_machine", "hdu_cpap",
+            "hdu_staff_pediatric_specialist_total", "hdu_staff_pediatric_specialist_trained",
+            "hdu_staff_pediatric_registrar_total", "hdu_staff_pediatric_registrar_trained",
+            "hdu_staff_general_practitioner_total", "hdu_staff_general_practitioner_trained",
+            "hdu_staff_house_officer_total", "hdu_staff_house_officer_trained",
+            "hdu_staff_nurse_bsc_total", "hdu_staff_nurse_bsc_trained",
+            "hdu_staff_nurse_diploma_total", "hdu_staff_nurse_diploma_trained"
+        ] 
+    };
+
     let finalHeaders = [...baseConfig.headers], finalDataKeys = [...baseConfig.dataKeys], fileName = 'Facility_Template.xlsx';
     switch (serviceType) {
         case TABS.IMNCI: case 'IMNCI': finalHeaders.push(...imnciConfig.headers); finalDataKeys.push(...imnciConfig.dataKeys); fileName = 'IMNCI_Template.xlsx'; break;

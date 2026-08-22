@@ -34,10 +34,17 @@ import {
     listExerciseDefinitions,
     upsertExerciseDefinition,
     deleteExerciseDefinition,
+    getCachedCourse,
+    getCachedParticipants,
+    getCachedExerciseDefinitions,
+    subscribeExerciseAttempts,
+    clearExerciseCache,
 } from '../../data.js';
 import {
     ONLINE_SUB_COURSE, EXERCISES, ALL_SECTIONS, SECTION_LABELS,
     CLASSIFY_OPTIONS, TREATMENT_OPTIONS,
+    INFANT_SECTIONS, INFANT_SECTION_LABELS,
+    INFANT_CLASSIFY_OPTIONS, INFANT_TREATMENT_OPTIONS,
     getExerciseById, getExercisesForSubCourse,
 } from './exercises';
 
@@ -115,10 +122,10 @@ const applyOptionDefaults = (expected = {}) => ({
  * A stored exercise with the same id REPLACES the built-in — that is how the
  * Manage Exercises tab edits a shipped exercise without touching the source.
  */
-export async function loadAllExercises(subCourse = ONLINE_SUB_COURSE, { includeDrafts = false } = {}) {
+export async function loadAllExercises(subCourse = ONLINE_SUB_COURSE, { includeDrafts = false, force = false } = {}) {
     let stored = [];
     try {
-        stored = await listExerciseDefinitions();
+        stored = await getCachedExerciseDefinitions({ force });
     } catch (e) {
         // Editing is optional: if the collection is unreadable the built-ins still work.
         console.warn('Could not load stored exercise definitions:', e.message);
@@ -773,6 +780,8 @@ export function ExerciseListView({
                                             <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-500">
                                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{ex.estimatedMinutes || 15} min</span>
                                                 <span>Pass {ex.passMark ?? 80}%</span>
+                                                {ex.kind === 'quiz' && <span className="text-purple-600 font-semibold">QUIZ</span>}
+                                                {ex.formType === 'infant' && <span className="text-sky-600 font-semibold">YOUNG INFANT</span>}
                                                 {ex.expected?.includeTreatment && <span className="text-sky-600">+ treatment</span>}
                                                 {ex.draft && <span className="text-amber-600 font-semibold">DRAFT</span>}
                                             </div>
@@ -813,6 +822,7 @@ export function CourseExercisesView({ course, participants = [], selectedPartici
     return (
         <div className="space-y-4">
             <div className="flex gap-2 border-b border-slate-200 pb-3 flex-wrap">
+                <Button variant="tab" isActive={tab === 'live'} onClick={() => setTab('live')}>Live Dashboard</Button>
                 <Button variant="tab" isActive={tab === 'results'} onClick={() => setTab('results')}>Exercise Results</Button>
                 <Button variant="tab" isActive={tab === 'run'} onClick={() => setTab('run')}>Open an Exercise</Button>
                 {canManageExercises && (
@@ -820,6 +830,7 @@ export function CourseExercisesView({ course, participants = [], selectedPartici
                 )}
             </div>
 
+            {tab === 'live' && <LiveExerciseDashboard course={course} participants={participants} />}
             {tab === 'manage' && canManageExercises && <ExerciseManagerView />}
 
             {tab === 'results' && <ExerciseResultsTable course={course} participants={participants} />}
@@ -852,6 +863,7 @@ export function ExerciseResultsTable({ course, participants = [] }) {
         try { setAttempts(await listExerciseAttemptsForCourse(course.id)); }
         finally { setLoading(false); }
     }, [course.id]);
+
 
     useEffect(() => { load(); }, [load]);
 
@@ -937,16 +949,14 @@ export function PublicExerciseView({ courseId }) {
         let alive = true;
         (async () => {
             try {
-                const c = await getCourseById(courseId, 'server');
+                // Cached for the session: a participant who reloads, loses signal,
+                // or reopens the link does not re-download the course and roster.
+                const c = await getCachedCourse(courseId);
                 if (!c) throw new Error('Course not found.');
-                const ps = await listAllParticipantsForCourse(courseId, { source: 'server' });
+                const ps = await getCachedParticipants(courseId);
                 if (!alive) return;
                 setCourse(c);
-                setParticipants(
-                    (ps || [])
-                        .filter(p => p.isDeleted !== true && p.isDeleted !== "true")
-                        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                );
+                setParticipants((ps || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
             } catch (e) {
                 if (alive) setError(e.message);
             } finally {
@@ -1114,8 +1124,8 @@ export function ParticipantExerciseSummary({ course, participant, subCourse = ON
 // Saving an edit to a built-in writes a stored copy under the SAME id, which
 // then overrides the built-in. "Reset to built-in" deletes the stored copy.
 //
-// Field lists per section, so the editor can offer the right signs.
-// Keys are ChildForm's own state field names.
+// Field lists per section so the editor can offer the right signs.
+// Keys are the forms' own state field names.
 
 const SECTION_FIELDS = {
     danger: [
@@ -1144,13 +1154,85 @@ const SECTION_FIELDS = {
     feeding: [['feed_ageLess2', 'bool'], ['feedingStatus', 'text']],
 };
 
+// The young infant form has entirely different fields.
+const INFANT_SECTION_FIELDS = {
+    infection: [
+        ['notFeedingWell', 'bool'], ['convulsions', 'bool'], ['convulsingNow', 'bool'],
+        ['movementOnlyStimulatedNoMovement', 'bool'], ['breathRate', 'num'], ['fastBreathing', 'bool'],
+        ['severeChestIndrawing', 'bool'], ['fever38', 'bool'], ['lowTemp35_5', 'bool'],
+        ['umbilicusRedDraining', 'bool'], ['pusFromEyes', 'bool'], ['skinPustules', 'bool'],
+    ],
+    jaundice: [
+        ['hasJaundice', 'yesno'], ['jaundiceFirst24h', 'bool'],
+        ['jaundiceSolesPalms', 'bool'], ['jaundiceLowWeight', 'bool'],
+    ],
+    diarrhea: [
+        ['hasDiarrhea', 'yesno'], ['diarrheaDays', 'num'], ['bloodInStool', 'bool'],
+        ['diarrheaMovement', 'bool'], ['diarrheaRestless', 'bool'], ['diarrheaSunkenEyes', 'bool'],
+        ['pinchVerySlow', 'bool'], ['pinchSlow', 'bool'],
+    ],
+    feeding: [
+        ['diffFeeding', 'yesno'], ['breastfed', 'yesno'], ['breastfeedTimes', 'num'],
+        ['otherFoods', 'yesno'], ['feedTool', 'text'], ['weightForAgeLow', 'bool'], ['thrush', 'bool'],
+    ],
+    breast: [['wellPositioned', 'yesno'], ['goodAttachment', 'yesno'], ['suckingEffectively', 'yesno']],
+    vaccine: [['vaccineStatus', 'text'], ['nextVaccine', 'text']],
+    other: [],
+};
+
 const PATIENT_FIELDS = [
     ['childName', 'text'], ['sex', 'text'], ['ageMonths', 'num'],
     ['weightKg', 'num'], ['lengthCm', 'num'], ['tempC', 'num'], ['visitType', 'text'],
 ];
 
-const blankExercise = () => ({
+const INFANT_PATIENT_FIELDS = [
+    ['childName', 'text'], ['ageDaysWeeks', 'text'],
+    ['weightKg', 'num'], ['tempC', 'num'], ['visitType', 'text'],
+];
+
+const INFANT_FIELD_LABELS = {
+    ageDaysWeeks: 'Age (days or weeks)',
+    notFeedingWell: 'Not feeding well', convulsions: 'Convulsions', convulsingNow: 'Convulsing now',
+    movementOnlyStimulatedNoMovement: 'Moves only when stimulated, or no movement',
+    severeChestIndrawing: 'Severe chest indrawing', fever38: 'Temperature 38 °C or more',
+    lowTemp35_5: 'Temperature below 35.5 °C', umbilicusRedDraining: 'Red umbilicus or draining pus',
+    pusFromEyes: 'Pus draining from the eyes', skinPustules: 'Skin pustules',
+    hasJaundice: 'Has jaundice', jaundiceFirst24h: 'Jaundice started in the first 24 hours',
+    jaundiceSolesPalms: 'Jaundice extends to palms or soles', jaundiceLowWeight: 'Jaundice with low weight',
+    diarrheaMovement: 'Moves only when stimulated', diarrheaRestless: 'Restless or irritable',
+    diarrheaSunkenEyes: 'Sunken eyes',
+    diffFeeding: 'Any difficulty feeding', breastfed: 'Breastfed', breastfeedTimes: 'Breastfeeds per 24 hours',
+    otherFoods: 'Takes other food or fluids', feedTool: 'What is used to feed the infant',
+    weightForAgeLow: 'Low weight for age', thrush: 'Thrush',
+    wellPositioned: 'Well positioned', goodAttachment: 'Good attachment', suckingEffectively: 'Sucking effectively',
+    vaccineStatus: 'Immunisation status', nextVaccine: 'Next immunisation due',
+};
+
+// Which registry set applies, given the exercise being edited.
+const editorRegistry = (formType) => formType === 'infant'
+    ? {
+        sections: INFANT_SECTIONS,
+        labels: INFANT_SECTION_LABELS,
+        fields: INFANT_SECTION_FIELDS,
+        patient: INFANT_PATIENT_FIELDS,
+        classify: INFANT_CLASSIFY_OPTIONS,
+        treatment: INFANT_TREATMENT_OPTIONS,
+        fieldLabel: (k) => INFANT_FIELD_LABELS[k] || FIELD_LABELS[k] || k,
+    }
+    : {
+        sections: ALL_SECTIONS,
+        labels: SECTION_LABELS,
+        fields: SECTION_FIELDS,
+        patient: PATIENT_FIELDS,
+        classify: CLASSIFY_OPTIONS,
+        treatment: TREATMENT_OPTIONS,
+        fieldLabel: (k) => FIELD_LABELS[k] || k,
+    };
+
+const blankExercise = (kind = 'case', formType = 'child') => ({
     id: '',
+    kind,
+    formType,
     order: 90,
     title: '',
     titleAr: '',
@@ -1160,14 +1242,24 @@ const blankExercise = () => ({
     draft: true,
     narrative: [''],
     explain: '',
-    expected: {
-        sections: ['danger'],
+    questions: kind === 'quiz' ? [] : undefined,
+    expected: kind === 'quiz' ? {} : {
+        sections: [formType === 'infant' ? 'infection' : 'danger'],
         patientData: {},
         assessments: {},
         classifications: {},
         includeTreatment: false,
         treatments: {},
     },
+});
+
+const blankQuestion = () => ({
+    id: `q${Date.now().toString(36)}`,
+    type: 'mcq',
+    question: '',
+    options: ['', ''],
+    correct: [],
+    explain: '',
 });
 
 function TriState({ value, onChange }) {
@@ -1192,20 +1284,158 @@ function TriState({ value, onChange }) {
     );
 }
 
+function YesNoState({ value, onChange }) {
+    const opts = [
+        { v: undefined, label: 'Not graded' },
+        { v: 'yes', label: 'Yes' },
+        { v: 'no', label: 'No' },
+    ];
+    return (
+        <div className="flex gap-1">
+            {opts.map(o => (
+                <button key={o.label} type="button" onClick={() => onChange(o.v)}
+                    className={`px-2 py-1 rounded text-[11px] border transition-colors ${
+                        value === o.v
+                            ? (o.v === undefined ? 'bg-slate-500 text-white border-slate-500' : 'bg-sky-600 text-white border-sky-600')
+                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
+                    {o.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+// --------------------------------------------------------------------------- quiz question editor
+
+function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
+    const setQ = (patch) => onChange({ ...q, ...patch });
+
+    const setType = (type) => {
+        if (type === 'mcq') setQ({ type, options: q.options?.length ? q.options : ['', ''], correct: [] });
+        else if (type === 'tf') setQ({ type, correct: true, options: undefined });
+        else setQ({ type, correct: '', accept: [], options: undefined });
+    };
+
+    const toggleCorrect = (i) => {
+        const cur = Array.isArray(q.correct) ? q.correct : [];
+        setQ({ correct: cur.includes(i) ? cur.filter(x => x !== i) : [...cur, i] });
+    };
+
+    return (
+        <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white">
+            <div className="flex items-start justify-between gap-3">
+                <span className="text-xs font-bold text-slate-400 mt-2">Q{index + 1}</span>
+                <div className="flex-1 space-y-2">
+                    <textarea rows={2} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        value={q.question} onChange={e => setQ({ question: e.target.value })}
+                        placeholder="Question text" />
+                    <div className="flex flex-wrap gap-2">
+                        {[['mcq', 'Multiple choice'], ['tf', 'True / False'], ['text', 'Short answer']].map(([v, l]) => (
+                            <button key={v} type="button" onClick={() => setType(v)}
+                                className={`px-3 py-1 rounded-md text-xs border transition-colors ${
+                                    q.type === v ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
+                                {l}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                    <button type="button" disabled={index === 0} onClick={() => onMove(index, -1)}
+                        className="text-xs px-2 py-1 border border-slate-200 rounded disabled:opacity-30">↑</button>
+                    <button type="button" disabled={index === total - 1} onClick={() => onMove(index, 1)}
+                        className="text-xs px-2 py-1 border border-slate-200 rounded disabled:opacity-30">↓</button>
+                    <button type="button" onClick={() => onRemove(index)}
+                        className="text-xs px-2 py-1 border border-rose-200 text-rose-600 rounded">✕</button>
+                </div>
+            </div>
+
+            {q.type === 'mcq' && (
+                <div className="space-y-1.5 pl-8">
+                    <p className="text-xs text-slate-500">Tick every correct option. Ticking more than one makes it multi-select for the learner.</p>
+                    {(q.options || []).map((opt, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                            <input type="checkbox" className="rounded w-4 h-4 flex-shrink-0"
+                                checked={(q.correct || []).includes(i)} onChange={() => toggleCorrect(i)} />
+                            <input className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                                value={opt}
+                                onChange={e => {
+                                    const opts = [...q.options]; opts[i] = e.target.value; setQ({ options: opts });
+                                }}
+                                placeholder={`Option ${String.fromCharCode(97 + i)}`} />
+                            <button type="button"
+                                onClick={() => setQ({
+                                    options: q.options.filter((_, j) => j !== i),
+                                    correct: (q.correct || []).filter(c => c !== i).map(c => (c > i ? c - 1 : c)),
+                                })}
+                                className="text-xs px-2 py-1 border border-slate-200 rounded text-slate-500">✕</button>
+                        </div>
+                    ))}
+                    <Button variant="secondary" onClick={() => setQ({ options: [...(q.options || []), ''] })}>Add option</Button>
+                </div>
+            )}
+
+            {q.type === 'tf' && (
+                <div className="pl-8 flex gap-2 items-center">
+                    <span className="text-xs text-slate-500">Correct answer:</span>
+                    {[{ v: true, l: 'True' }, { v: false, l: 'False' }].map(o => (
+                        <button key={o.l} type="button" onClick={() => setQ({ correct: o.v })}
+                            className={`px-3 py-1 rounded-md text-xs border ${q.correct === o.v ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-300'}`}>
+                            {o.l}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {q.type === 'text' && (
+                <div className="pl-8 grid sm:grid-cols-2 gap-2">
+                    <FormGroup label="Correct answer">
+                        <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            value={q.correct || ''} onChange={e => setQ({ correct: e.target.value })} />
+                    </FormGroup>
+                    <FormGroup label="Also accept (comma separated)">
+                        <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            value={(q.accept || []).join(', ')}
+                            onChange={e => setQ({ accept: e.target.value.split(',').map(x => x.trim()).filter(Boolean) })}
+                            placeholder="7 days, seven" />
+                    </FormGroup>
+                </div>
+            )}
+
+            <div className="pl-8">
+                <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    value={q.explain || ''} onChange={e => setQ({ explain: e.target.value })}
+                    placeholder="Explanation shown after checking (optional)" />
+            </div>
+        </div>
+    );
+}
+
+// --------------------------------------------------------------------------- main editor
+
 export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }) {
     const { t } = useTranslation();
-    const [ex, setEx] = useState(() => JSON.parse(JSON.stringify(initial || blankExercise())));
+    const [ex, setEx] = useState(() => {
+        const base = initial ? JSON.parse(JSON.stringify(initial)) : blankExercise();
+        base.kind = base.kind || 'case';
+        base.formType = base.formType || 'child';
+        if (base.kind === 'quiz') base.questions = base.questions || [];
+        else base.expected = base.expected || blankExercise().expected;
+        return base;
+    });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+
+    const reg = editorRegistry(ex.formType);
+    const isQuiz = ex.kind === 'quiz';
 
     const setField = (k, v) => setEx(p => ({ ...p, [k]: v }));
     const setExpected = (k, v) => setEx(p => ({ ...p, expected: { ...p.expected, [k]: v } }));
 
-    const sections = ex.expected.sections || [];
+    const sections = ex.expected?.sections || [];
     const toggleSection = (sec) => {
         const next = sections.includes(sec)
             ? sections.filter(s => s !== sec)
-            : ALL_SECTIONS.filter(s => sections.includes(s) || s === sec);
+            : reg.sections.filter(s => sections.includes(s) || s === sec);
         setExpected('sections', next);
     };
 
@@ -1217,12 +1447,48 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
         setExpected(bucket, { ...(ex.expected[bucket] || {}), [sec]: next });
     };
 
+    // Switching kind or form type resets the parts that no longer apply, rather
+    // than leaving orphaned child sections on an infant exercise.
+    const switchKind = (kind, formType = ex.formType) => {
+        if (kind === ex.kind && formType === ex.formType) return;
+        setEx(p => ({
+            ...blankExercise(kind, formType),
+            id: p.id, order: p.order, title: p.title, titleAr: p.titleAr,
+            passMark: p.passMark, estimatedMinutes: p.estimatedMinutes,
+            draft: p.draft, narrative: p.narrative, explain: p.explain,
+        }));
+    };
+
+    const setQuestion = (i, q) => setEx(p => ({ ...p, questions: p.questions.map((x, j) => (j === i ? q : x)) }));
+    const removeQuestion = (i) => setEx(p => ({ ...p, questions: p.questions.filter((_, j) => j !== i) }));
+    const moveQuestion = (i, d) => setEx(p => {
+        const qs = [...p.questions];
+        const [item] = qs.splice(i, 1);
+        qs.splice(i + d, 0, item);
+        return { ...p, questions: qs };
+    });
+
     const save = async () => {
         setError('');
-        if (!ex.id.trim()) return setError('An id is required. Use something stable like imnci-ex6-fatima.');
+        if (!ex.id.trim()) return setError('An id is required. Use something stable like imnci-ex8-fatima.');
         if (!/^[a-zA-Z0-9_-]+$/.test(ex.id)) return setError('The id may only contain letters, numbers, hyphens and underscores.');
         if (!ex.title.trim()) return setError('A title is required.');
-        if (sections.length === 0) return setError('Select at least one section.');
+
+        if (isQuiz) {
+            if (!ex.questions.length) return setError('Add at least one question.');
+            for (let i = 0; i < ex.questions.length; i++) {
+                const q = ex.questions[i];
+                if (!q.question.trim()) return setError(`Question ${i + 1} has no text.`);
+                if (q.type === 'mcq') {
+                    if ((q.options || []).some(o => !o.trim())) return setError(`Question ${i + 1} has an empty option.`);
+                    if (!(q.correct || []).length) return setError(`Question ${i + 1} has no correct option ticked.`);
+                }
+                if (q.type === 'text' && !String(q.correct || '').trim()) return setError(`Question ${i + 1} has no correct answer.`);
+            }
+        } else if (sections.length === 0) {
+            return setError('Select at least one section.');
+        }
+
         setSaving(true);
         try {
             await upsertExerciseDefinition({ ...ex, narrative: (ex.narrative || []).filter(l => l.trim() !== '') });
@@ -1234,6 +1500,13 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
         }
     };
 
+    const Actions = () => (
+        <div className="flex gap-2">
+            <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+            <Button onClick={save} disabled={saving}>{saving ? <Spinner size="sm" /> : 'Save exercise'}</Button>
+        </div>
+    );
+
     return (
         <div className="space-y-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1241,20 +1514,39 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                     {initial ? 'Edit exercise' : 'New exercise'}
                     {isBuiltIn && <span className="ml-2 text-xs font-normal text-amber-600">editing a built-in — saving creates an override</span>}
                 </h3>
-                <div className="flex gap-2">
-                    <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                    <Button onClick={save} disabled={saving}>{saving ? <Spinner size="sm" /> : 'Save exercise'}</Button>
-                </div>
+                <Actions />
             </div>
 
             {error && <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-3">{error}</p>}
+
+            {/* kind */}
+            <div>
+                <p className="text-sm font-semibold text-slate-700 mb-2">Exercise type</p>
+                <div className="flex flex-wrap gap-2">
+                    {[
+                        { kind: 'case', formType: 'child',  label: 'Case — sick child form (2 months–5 years)' },
+                        { kind: 'case', formType: 'infant', label: 'Case — young infant form (up to 2 months)' },
+                        { kind: 'quiz', formType: 'child',  label: 'Quiz — questions only' },
+                    ].map(o => {
+                        const on = ex.kind === o.kind && (o.kind === 'quiz' || ex.formType === o.formType);
+                        return (
+                            <button key={o.label} type="button" onClick={() => switchKind(o.kind, o.formType)}
+                                className={`px-3 py-2 rounded-md text-xs font-medium border transition-colors ${
+                                    on ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
+                                {o.label}
+                            </button>
+                        );
+                    })}
+                </div>
+                {initial && <p className="text-xs text-amber-600 mt-2">Changing the type clears the answers below — the two formats share nothing.</p>}
+            </div>
 
             {/* basics */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <FormGroup label="Id (never change once attempted)">
                     <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.id} disabled={!!initial}
-                        onChange={e => setField('id', e.target.value.trim())} placeholder="imnci-ex6-fatima" />
+                        onChange={e => setField('id', e.target.value.trim())} placeholder="imnci-ex8-fatima" />
                 </FormGroup>
                 <FormGroup label="Order">
                     <input type="number" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -1284,149 +1576,187 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                         onChange={e => setField('draft', e.target.checked)} />
                     Draft — facilitators see it, participants do not
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" className="rounded w-4 h-4" checked={!!ex.expected.includeTreatment}
-                        onChange={e => setExpected('includeTreatment', e.target.checked)} />
-                    Include the treatment column
-                </label>
+                {!isQuiz && (
+                    <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" className="rounded w-4 h-4" checked={!!ex.expected.includeTreatment}
+                            onChange={e => setExpected('includeTreatment', e.target.checked)} />
+                        Include the treatment column
+                    </label>
+                )}
             </div>
 
             {/* narrative */}
             <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Case scenario — one bullet per line</p>
+                <p className="text-sm font-semibold text-slate-700 mb-2">
+                    {isQuiz ? 'Instructions — one bullet per line' : 'Case scenario — one bullet per line'}
+                </p>
                 <textarea rows={6} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     value={(ex.narrative || []).join('\n')}
-                    onChange={e => setField('narrative', e.target.value.split('\n'))}
-                    placeholder={'Fatima is 14 months old...\nGeneral danger signs: ...'} />
+                    onChange={e => setField('narrative', e.target.value.split('\n'))} />
             </div>
 
-            {/* sections */}
-            <div>
-                <p className="text-sm font-semibold text-slate-700 mb-1">Sections shown on the form</p>
-                <p className="text-xs text-slate-500 mb-2">The form ends after the last one selected. Include "Mother card — assess feeding" only when the case needs it.</p>
-                <div className="flex flex-wrap gap-2">
-                    {ALL_SECTIONS.map(sec => (
-                        <button key={sec} type="button" onClick={() => toggleSection(sec)}
-                            className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                                sections.includes(sec) ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
-                            {SECTION_LABELS[sec] || sec}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* patient data */}
-            <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Child details (leave blank to skip grading a field)</p>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {PATIENT_FIELDS.map(([key, kind]) => (
-                        <FormGroup key={key} label={FIELD_LABELS[key] || key}>
-                            <input type={kind === 'num' ? 'number' : 'text'} step="any"
-                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                                value={ex.expected.patientData?.[key] ?? ''}
-                                onChange={e => {
-                                    const v = e.target.value;
-                                    const pd = { ...(ex.expected.patientData || {}) };
-                                    if (v === '') delete pd[key]; else pd[key] = kind === 'num' ? Number(v) : v;
-                                    setExpected('patientData', pd);
-                                }} />
-                        </FormGroup>
-                    ))}
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Sex: <code>male</code> / <code>female</code>. Visit type: <code>initial</code> / <code>followup</code>.</p>
-            </div>
-
-            {/* per-section answers */}
-            {sections.map(sec => (
-                <div key={sec} className="border border-slate-200 rounded-lg overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-2.5 font-semibold text-sm text-slate-800">
-                        {SECTION_LABELS[sec] || sec}
+            {/* ---------------- QUIZ ---------------- */}
+            {isQuiz && (
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-slate-700">Questions ({ex.questions.length})</p>
+                        <Button variant="secondary" onClick={() => setEx(p => ({ ...p, questions: [...p.questions, blankQuestion()] }))}>
+                            Add question
+                        </Button>
                     </div>
-                    <div className="p-4 space-y-4">
-                        {(SECTION_FIELDS[sec] || []).length > 0 && (
-                            <div>
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Signs</p>
-                                <div className="space-y-1.5">
-                                    {(SECTION_FIELDS[sec] || []).map(([key, kind]) => (
-                                        <div key={key} className="flex flex-wrap items-center justify-between gap-2 border border-slate-100 rounded px-3 py-2">
-                                            <span className="text-sm text-slate-700">{FIELD_LABELS[key] || key}</span>
-                                            {kind === 'bool' ? (
-                                                <TriState value={ex.expected.assessments?.[key]}
-                                                    onChange={v => {
-                                                        const a = { ...(ex.expected.assessments || {}) };
-                                                        if (v === undefined) delete a[key]; else a[key] = v;
-                                                        setExpected('assessments', a);
-                                                    }} />
-                                            ) : (
-                                                <input type={kind === 'num' ? 'number' : 'text'} step="any"
-                                                    className="w-32 rounded-md border border-slate-300 px-2 py-1 text-sm"
-                                                    value={ex.expected.assessments?.[key] ?? ''}
-                                                    onChange={e => {
-                                                        const v = e.target.value;
-                                                        const a = { ...(ex.expected.assessments || {}) };
-                                                        if (v === '') delete a[key]; else a[key] = kind === 'num' ? Number(v) : v;
-                                                        setExpected('assessments', a);
-                                                    }} />
+                    {ex.questions.length === 0 && (
+                        <p className="text-sm text-slate-500 border border-dashed border-slate-300 rounded-lg p-6 text-center">
+                            No questions yet.
+                        </p>
+                    )}
+                    {ex.questions.map((q, i) => (
+                        <QuestionEditor key={q.id} q={q} index={i} total={ex.questions.length}
+                            onChange={(nq) => setQuestion(i, nq)} onRemove={removeQuestion} onMove={moveQuestion} />
+                    ))}
+                </div>
+            )}
+
+            {/* ---------------- CASE ---------------- */}
+            {!isQuiz && (
+                <>
+                    <div>
+                        <p className="text-sm font-semibold text-slate-700 mb-1">Sections shown on the form</p>
+                        <p className="text-xs text-slate-500 mb-2">
+                            The form ends after the last one selected.
+                            {ex.formType === 'child' && ' Include "Mother card — assess feeding" only when the case needs it.'}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {reg.sections.map(sec => (
+                                <button key={sec} type="button" onClick={() => toggleSection(sec)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                                        sections.includes(sec) ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
+                                    {reg.labels[sec] || sec}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p className="text-sm font-semibold text-slate-700 mb-2">
+                            {ex.formType === 'infant' ? 'Infant details' : 'Child details'} (leave blank to skip grading a field)
+                        </p>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            {reg.patient.map(([key, kind]) => (
+                                <FormGroup key={key} label={reg.fieldLabel(key)}>
+                                    <input type={kind === 'num' ? 'number' : 'text'} step="any"
+                                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                                        value={ex.expected.patientData?.[key] ?? ''}
+                                        onChange={e => {
+                                            const v = e.target.value;
+                                            const pd = { ...(ex.expected.patientData || {}) };
+                                            if (v === '') delete pd[key]; else pd[key] = kind === 'num' ? Number(v) : v;
+                                            setExpected('patientData', pd);
+                                        }} />
+                                </FormGroup>
+                            ))}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                            {ex.formType === 'infant'
+                                ? <>Age is free text, e.g. <code>5 weeks</code>. Visit type: <code>initial</code> / <code>followup</code>.</>
+                                : <>Sex: <code>male</code> / <code>female</code>. Visit type: <code>initial</code> / <code>followup</code>.</>}
+                        </p>
+                    </div>
+
+                    {sections.map(sec => (
+                        <div key={sec} className="border border-slate-200 rounded-lg overflow-hidden">
+                            <div className="bg-slate-50 px-4 py-2.5 font-semibold text-sm text-slate-800">
+                                {reg.labels[sec] || sec}
+                            </div>
+                            <div className="p-4 space-y-4">
+                                {(reg.fields[sec] || []).length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Signs</p>
+                                        <div className="space-y-1.5">
+                                            {(reg.fields[sec] || []).map(([key, kind]) => (
+                                                <div key={key} className="flex flex-wrap items-center justify-between gap-2 border border-slate-100 rounded px-3 py-2">
+                                                    <span className="text-sm text-slate-700">{reg.fieldLabel(key)}</span>
+                                                    {kind === 'bool' ? (
+                                                        <TriState value={ex.expected.assessments?.[key]}
+                                                            onChange={v => {
+                                                                const a = { ...(ex.expected.assessments || {}) };
+                                                                if (v === undefined) delete a[key]; else a[key] = v;
+                                                                setExpected('assessments', a);
+                                                            }} />
+                                                    ) : kind === 'yesno' ? (
+                                                        <YesNoState value={ex.expected.assessments?.[key]}
+                                                            onChange={v => {
+                                                                const a = { ...(ex.expected.assessments || {}) };
+                                                                if (v === undefined) delete a[key]; else a[key] = v;
+                                                                setExpected('assessments', a);
+                                                            }} />
+                                                    ) : (
+                                                        <input type={kind === 'num' ? 'number' : 'text'} step="any"
+                                                            className="w-32 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                                                            value={ex.expected.assessments?.[key] ?? ''}
+                                                            onChange={e => {
+                                                                const v = e.target.value;
+                                                                const a = { ...(ex.expected.assessments || {}) };
+                                                                if (v === '') delete a[key]; else a[key] = kind === 'num' ? Number(v) : v;
+                                                                setExpected('assessments', a);
+                                                            }} />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Correct classification</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(reg.classify[sec] || []).map(o => {
+                                            const on = (ex.expected.classifications?.[sec] || []).includes(o.id);
+                                            return (
+                                                <button key={o.id} type="button" onClick={() => toggleAnswer('classifications', sec, o.id)}
+                                                    className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
+                                                    {optLabel(o)}
+                                                </button>
+                                            );
+                                        })}
+                                        {(reg.classify[sec] || []).length === 0 && (
+                                            <span className="text-xs text-slate-400 italic">No classification bank for this section.</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {ex.expected.includeTreatment && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Correct treatment</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(reg.treatment[sec] || []).map(o => {
+                                                const on = (ex.expected.treatments?.[sec] || []).includes(o.id);
+                                                return (
+                                                    <button key={o.id} type="button" onClick={() => toggleAnswer('treatments', sec, o.id)}
+                                                        className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${on ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
+                                                        {optLabel(o)}
+                                                    </button>
+                                                );
+                                            })}
+                                            {(reg.treatment[sec] || []).length === 0 && (
+                                                <span className="text-xs text-slate-400 italic">No treatment bank for this section.</span>
                                             )}
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Correct classification</p>
-                            <div className="flex flex-wrap gap-2">
-                                {(CLASSIFY_OPTIONS[sec] || []).map(o => {
-                                    const on = (ex.expected.classifications?.[sec] || []).includes(o.id);
-                                    return (
-                                        <button key={o.id} type="button" onClick={() => toggleAnswer('classifications', sec, o.id)}
-                                            className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
-                                            {optLabel(o)}
-                                        </button>
-                                    );
-                                })}
-                                {(CLASSIFY_OPTIONS[sec] || []).length === 0 && (
-                                    <span className="text-xs text-slate-400 italic">No classification bank for this section.</span>
+                                        <p className="text-xs text-slate-500 mt-1">Select nothing to require that the learner ticks nothing here.</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
+                    ))}
+                </>
+            )}
 
-                        {ex.expected.includeTreatment && (
-                            <div>
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Correct treatment</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {(TREATMENT_OPTIONS[sec] || []).map(o => {
-                                        const on = (ex.expected.treatments?.[sec] || []).includes(o.id);
-                                        return (
-                                            <button key={o.id} type="button" onClick={() => toggleAnswer('treatments', sec, o.id)}
-                                                className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${on ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
-                                                {optLabel(o)}
-                                            </button>
-                                        );
-                                    })}
-                                    {(TREATMENT_OPTIONS[sec] || []).length === 0 && (
-                                        <span className="text-xs text-slate-400 italic">No treatment bank for this section.</span>
-                                    )}
-                                </div>
-                                <p className="text-xs text-slate-500 mt-1">Select nothing to require that the learner ticks nothing here.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            ))}
-
-            {/* explanation */}
             <div>
                 <p className="text-sm font-semibold text-slate-700 mb-2">Explanation shown after checking</p>
                 <textarea rows={4} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     value={ex.explain || ''} onChange={e => setField('explain', e.target.value)} />
             </div>
 
-            <div className="flex justify-end gap-2 border-t pt-4">
-                <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                <Button onClick={save} disabled={saving}>{saving ? <Spinner size="sm" /> : 'Save exercise'}</Button>
-            </div>
+            <div className="flex justify-end border-t pt-4"><Actions /></div>
         </div>
     );
 }
@@ -1440,7 +1770,8 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
 
     const load = useCallback(async () => {
         setLoading(true);
-        try { setList(await loadAllExercises(subCourse, { includeDrafts: true })); }
+        clearExerciseCache();
+        try { setList(await loadAllExercises(subCourse, { includeDrafts: true, force: true })); }
         catch (e) { setToast({ show: true, message: e.message, type: 'error' }); }
         finally { setLoading(false); }
     }, [subCourse]);
@@ -1500,7 +1831,9 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
                                     <p className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
                                         <code>{ex.id}</code>
                                         <span>order {ex.order}</span>
-                                        <span>{(ex.expected?.sections || []).length} sections</span>
+                                        {ex.kind === 'quiz'
+                                            ? <span className="text-purple-600 font-semibold">QUIZ · {(ex.questions || []).length} questions</span>
+                                            : <span>{(ex.expected?.sections || []).length} sections{ex.formType === 'infant' ? ' · young infant form' : ''}</span>}
                                         {ex.expected?.includeTreatment && <span className="text-sky-600">+ treatment</span>}
                                         {ex.draft && <span className="text-amber-600 font-semibold">DRAFT</span>}
                                         {ex.isCustom
@@ -1520,6 +1853,328 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
                         ))}
                     </div>
                 )}
+        </div>
+    );
+}
+
+// ============================================================================
+// 6. LIVE DASHBOARD   (real-time results for group discussion)
+// ============================================================================
+//
+// One Firestore listener on the whole course, kept open while the tab is on
+// screen. Built for projecting during a session: the facilitator sees answers
+// land as participants submit, and can open any question to see how the group
+// split — which is the thing worth discussing.
+//
+// The listener is the one place we deliberately do NOT cache: stale numbers
+// during a live discussion are worse than no numbers.
+
+const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
+
+function StatTile({ label, value, sub, tone = 'slate' }) {
+    const tones = {
+        slate: 'text-slate-800', emerald: 'text-emerald-600',
+        amber: 'text-amber-600', sky: 'text-sky-600',
+    };
+    return (
+        <div className="border border-slate-200 rounded-lg p-4 bg-white">
+            <p className="text-xs text-slate-500 uppercase tracking-wide">{label}</p>
+            <p className={`text-3xl font-bold mt-1 ${tones[tone]}`}>{value}</p>
+            {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
+        </div>
+    );
+}
+
+function Bar({ label, count, total, tone = 'sky', highlight = false }) {
+    const p = pct(count, total);
+    const tones = { sky: 'bg-sky-500', emerald: 'bg-emerald-500', rose: 'bg-rose-500', slate: 'bg-slate-400' };
+    return (
+        <div className={`${highlight ? 'ring-1 ring-emerald-400 rounded-md p-1.5 -m-1.5' : ''}`}>
+            <div className="flex items-center justify-between gap-3 mb-1">
+                <span className="text-sm text-slate-700 flex items-center gap-1.5">
+                    {highlight && <CheckCircle className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />}
+                    {label}
+                </span>
+                <span className="text-xs text-slate-500 flex-shrink-0">{count} · {p}%</span>
+            </div>
+            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full ${tones[tone]} transition-all duration-500`} style={{ width: `${p}%` }} />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * @param {object} course
+ * @param {array}  participants  the roster, so we can show who has not started
+ */
+export function LiveExerciseDashboard({ course, participants = [], subCourse = ONLINE_SUB_COURSE }) {
+    const { t } = useTranslation();
+    const [attempts, setAttempts] = useState([]);
+    const [exercises, setExercises] = useState([]);
+    const [live, setLive] = useState(false);
+    const [error, setError] = useState('');
+    const [focusId, setFocusId] = useState('');     // exercise being discussed
+    const [lastUpdate, setLastUpdate] = useState(null);
+
+    useEffect(() => {
+        loadAllExercises(subCourse, { includeDrafts: true }).then(setExercises).catch(() => {});
+    }, [subCourse]);
+
+    useEffect(() => {
+        if (!course?.id) return;
+        const unsub = subscribeExerciseAttempts(
+            course.id,
+            (rows, meta) => {
+                setAttempts(rows);
+                setLive(!meta.fromCache);
+                setLastUpdate(new Date());
+            },
+            (e) => setError(e.message || 'Live updates unavailable.')
+        );
+        // Always detach: an open listener keeps reading in the background.
+        return () => unsub();
+    }, [course?.id]);
+
+    const focus = exercises.find(e => e.id === focusId) || null;
+
+    // ---- whole-course roll-up -------------------------------------------------
+    const overall = useMemo(() => {
+        const byParticipant = {};
+        attempts.forEach(a => {
+            const cur = byParticipant[a.participantId];
+            const key = `${a.participantId}:${a.exerciseId}`;
+            byParticipant[a.participantId] = byParticipant[a.participantId] || { name: a.participantName, best: {} };
+            const b = byParticipant[a.participantId].best;
+            if (b[a.exerciseId] == null || a.percent > b[a.exerciseId]) b[a.exerciseId] = a.percent;
+        });
+        const people = Object.values(byParticipant);
+        const scores = people.flatMap(p => Object.values(p.best));
+        const avg = scores.length ? Math.round(scores.reduce((s, x) => s + x, 0) / scores.length) : 0;
+        return {
+            started: people.length,
+            notStarted: Math.max(0, participants.length - people.length),
+            submissions: attempts.length,
+            avg,
+        };
+    }, [attempts, participants.length]);
+
+    // ---- per-exercise roll-up -------------------------------------------------
+    const perExercise = useMemo(() => exercises.map(ex => {
+        const rows = attempts.filter(a => a.exerciseId === ex.id);
+        const best = {};
+        rows.forEach(a => { if (best[a.participantId] == null || a.percent > best[a.participantId]) best[a.participantId] = a.percent; });
+        const vals = Object.values(best);
+        const passMark = ex.passMark ?? 80;
+        return {
+            ex,
+            attempts: rows.length,
+            participants: vals.length,
+            avg: vals.length ? Math.round(vals.reduce((s, x) => s + x, 0) / vals.length) : 0,
+            passed: vals.filter(v => v >= passMark).length,
+        };
+    }).filter(r => r.attempts > 0), [exercises, attempts]);
+
+    // ---- breakdown for the exercise being discussed ---------------------------
+    const breakdown = useMemo(() => {
+        if (!focus) return null;
+        const rows = attempts.filter(a => a.exerciseId === focus.id);
+        if (rows.length === 0) return { rows: [], items: [] };
+
+        if (focus.kind === 'quiz') {
+            const items = (focus.questions || []).map(q => {
+                const counts = {};
+                let answered = 0;
+                rows.forEach(a => {
+                    const given = a.responses?.submitted?.answers?.[q.id];
+                    if (given === undefined) return;
+                    answered += 1;
+                    const keys = q.type === 'mcq'
+                        ? (Array.isArray(given) ? given : [given]).map(i => String(i))
+                        : [String(given)];
+                    keys.forEach(k => { counts[k] = (counts[k] || 0) + 1; });
+                });
+                const correctCount = rows.filter(a => a.results?.result?.detail?.[q.id]?.ok).length;
+                const options = q.type === 'mcq'
+                    ? q.options.map((label, i) => ({ key: String(i), label, correct: (q.correct || []).includes(i) }))
+                    : q.type === 'tf'
+                        ? [{ key: 'true', label: 'True', correct: q.correct === true }, { key: 'false', label: 'False', correct: q.correct === false }]
+                        : Object.keys(counts).map(k => ({ key: k, label: k || '(blank)', correct: String(q.correct).toLowerCase() === k.toLowerCase() }));
+                return {
+                    id: q.id, title: q.question, explain: q.explain,
+                    answered, correctCount, options, counts,
+                };
+            });
+            return { rows, items };
+        }
+
+        // Case exercise: how did the group classify each section?
+        const sections = focus.expected?.sections || [];
+        const items = sections
+            .filter(sec => (focus.expected.classifications?.[sec] || []).length > 0)
+            .map(sec => {
+                const counts = {};
+                let answered = 0;
+                rows.forEach(a => {
+                    const chosen = a.responses?.submitted?.chosenClassifications?.[sec];
+                    if (!chosen) return;
+                    answered += 1;
+                    const key = [...chosen].sort().join(' + ') || '(nothing)';
+                    counts[key] = (counts[key] || 0) + 1;
+                });
+                const correctCount = rows.filter(a => a.results?.result?.detail?.classifications?.[sec]?.ok).length;
+                const bank = focus.expected.classifyOptions?.[sec] || [];
+                const labelOf = (combo) => combo.split(' + ').map(id => {
+                    const o = bank.find(x => x.id === id);
+                    return o ? (String(o.id).startsWith('imci.') ? t(o.id) : (o.label || o.id)) : id;
+                }).join(' + ');
+                const correctKey = [...(focus.expected.classifications[sec] || [])].sort().join(' + ');
+                const options = Object.keys(counts).map(k => ({ key: k, label: labelOf(k), correct: k === correctKey }));
+                if (!options.some(o => o.correct)) options.push({ key: correctKey, label: labelOf(correctKey), correct: true });
+                return {
+                    id: sec,
+                    title: (focus.formType === 'infant' ? INFANT_SECTION_LABELS : SECTION_LABELS)[sec] || sec,
+                    answered, correctCount, options, counts,
+                };
+            });
+
+        // Which signs did the group get wrong most often?
+        const signMisses = {};
+        rows.forEach(a => {
+            const d = a.results?.result?.detail?.assessments || {};
+            Object.entries(d).forEach(([k, v]) => { if (!v.ok) signMisses[k] = (signMisses[k] || 0) + 1; });
+        });
+        const missed = Object.entries(signMisses)
+            .sort((a, b) => b[1] - a[1]).slice(0, 6)
+            .map(([k, n]) => ({ field: k, count: n }));
+
+        return { rows, items, missed };
+    }, [focus, attempts, t]);
+
+    if (!course) return <EmptyState message="Select a course first." />;
+
+    return (
+        <div className="space-y-5">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                        Live Results
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${live ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${live ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                            {live ? 'Live' : 'Cached'}
+                        </span>
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                        Updates as participants submit — project this during the discussion.
+                        {lastUpdate && ` Last change ${lastUpdate.toLocaleTimeString()}.`}
+                    </p>
+                </div>
+            </div>
+
+            {error && <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">{error}</p>}
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatTile label="Participants started" value={overall.started}
+                    sub={participants.length ? `of ${participants.length} on the roster` : null} tone="sky" />
+                <StatTile label="Not started" value={overall.notStarted} tone="amber" />
+                <StatTile label="Submissions" value={overall.submissions} tone="slate" />
+                <StatTile label="Average score" value={`${overall.avg}%`} tone={overall.avg >= 80 ? 'emerald' : 'amber'} />
+            </div>
+
+            {/* per exercise */}
+            <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">By exercise — tap one to discuss it</p>
+                {perExercise.length === 0 ? (
+                    <EmptyState message="No submissions yet. This updates the moment someone presses Save." />
+                ) : perExercise.map(({ ex, attempts: n, participants: np, avg, passed }) => (
+                    <button key={ex.id} onClick={() => setFocusId(focusId === ex.id ? '' : ex.id)}
+                        className={`w-full text-left border rounded-lg p-3 transition-colors ${focusId === ex.id ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-400'}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-800 truncate">{ex.title}</p>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                    {np} participant{np === 1 ? '' : 's'} · {n} submission{n === 1 ? '' : 's'} · {passed} passed
+                                </p>
+                            </div>
+                            <span className={`text-lg font-bold flex-shrink-0 ${avg >= (ex.passMark ?? 80) ? 'text-emerald-600' : 'text-amber-600'}`}>{avg}%</span>
+                        </div>
+                    </button>
+                ))}
+            </div>
+
+            {/* discussion panel */}
+            {focus && breakdown && (
+                <div className="border-2 border-sky-200 rounded-xl overflow-hidden">
+                    <div className="bg-sky-700 text-white px-5 py-3">
+                        <p className="font-bold">{focus.title}</p>
+                        <p className="text-xs opacity-90">
+                            {breakdown.rows.length} submission{breakdown.rows.length === 1 ? '' : 's'} · the green bar is the correct answer
+                        </p>
+                    </div>
+
+                    <div className="p-5 space-y-6 bg-white">
+                        {breakdown.items.length === 0 && (
+                            <p className="text-sm text-slate-500">Nothing to break down for this exercise yet.</p>
+                        )}
+
+                        {breakdown.items.map(item => (
+                            <div key={item.id}>
+                                <div className="flex items-start justify-between gap-3 mb-2">
+                                    <p className="text-sm font-semibold text-slate-800 whitespace-pre-line">{item.title}</p>
+                                    <span className={`text-xs font-semibold flex-shrink-0 ${
+                                        pct(item.correctCount, breakdown.rows.length) >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                        {item.correctCount}/{breakdown.rows.length} correct
+                                    </span>
+                                </div>
+                                <div className="space-y-2">
+                                    {item.options.map(o => (
+                                        <Bar key={o.key} label={o.label} count={item.counts[o.key] || 0}
+                                            total={item.answered || breakdown.rows.length}
+                                            tone={o.correct ? 'emerald' : 'slate'} highlight={o.correct} />
+                                    ))}
+                                </div>
+                                {item.explain && (
+                                    <p className="text-xs text-slate-600 mt-2 bg-slate-50 border border-slate-200 rounded p-2 leading-relaxed">
+                                        {item.explain}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+
+                        {breakdown.missed?.length > 0 && (
+                            <div className="border-t pt-4">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                                    Signs most often recorded wrongly
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {breakdown.missed.map(m => (
+                                        <span key={m.field} className="text-xs px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                                            {FIELD_LABELS[m.field] || m.field} · {m.count}
+                                        </span>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2">
+                                    These are the assessment entries to walk through with the group.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* who has submitted */}
+                        <div className="border-t pt-4">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Submissions</p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {breakdown.rows.map(a => (
+                                    <span key={a.id}
+                                        className={`text-xs px-2.5 py-1 rounded-full border ${
+                                            a.passed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                        {a.participantName || 'Participant'} · {a.percent}%
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

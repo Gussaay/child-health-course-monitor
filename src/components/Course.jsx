@@ -59,8 +59,6 @@ const ObservationView = React.lazy(() => import('./MonitoringView').then(module 
 const MaternalEmergencyMonitoring = React.lazy(() => import('./EmONC/MaternalEmergencyMonitoring').then(module => ({ default: module.MaternalEmergencyMonitoring })));
 const NeonatalEmergencyMonitoring = React.lazy(() => import('./EmONC/NeonatalEmergencyMonitoring').then(module => ({ default: module.NeonatalEmergencyMonitoring })));
 
-
-
 // --- BULLETPROOF FACILITATOR ID & SYNC MIGRATION MODAL ---
 export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
     const [loading, setLoading] = useState(false);
@@ -2018,7 +2016,21 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 {activeCoursesTab === 'deleted-courses' && <DeletedCoursesView courses={allCourses.filter(c => c.inRecycleBin || c.deletionRequested)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />}
                 
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
-                    <CourseForm courseType={activeCourseType} initialData={courseToEdit} onCancel={handleCancelCourseForm} onSave={handleSaveCourseAndReturn} facilitatorsList={facilitatorsList} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []} stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []} userStates={userStates} userLocalities={userLocalities} />
+                    <CourseForm 
+                        courseType={activeCourseType} 
+                        initialData={courseToEdit} 
+                        onCancel={handleCancelCourseForm} 
+                        onSave={handleSaveCourseAndReturn} 
+                        facilitatorsList={facilitatorsList} 
+                        fundersList={funders || []} 
+                        federalCoordinatorsList={federalCoordinators || []} 
+                        stateCoordinatorsList={stateCoordinators || []} 
+                        localityCoordinatorsList={localityCoordinators || []} 
+                        userStates={userStates} 
+                        userLocalities={userLocalities} 
+                        canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
+                        canUseSuperUserAdvancedFeatures={canUseSuperUserAdvancedFeatures}
+                    />
                 )}
                 
                 {loadingDetails && (!globalTabs.includes(activeCoursesTab)) ? <div className="flex justify-center p-8"><Spinner /></div> : (
@@ -2275,7 +2287,7 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
 export function CourseForm({ 
     courseType, initialData, facilitatorsList, fundersList, onCancel, onSave, 
     federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = [],
-    userStates, userLocalities 
+    userStates, userLocalities, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures
 }) {
     // --- BINDING LATEST NAMES ---
     const getFacName = (id, oldName) => {
@@ -2285,6 +2297,13 @@ export function CourseForm({
         }
         return oldName || '';
     };
+    
+    // --- Helper Component for Mandatory Fields ---
+    const ReqLabel = ({ text, required = true }) => (
+        <span className="flex items-center gap-1">
+            {text} {required && <span className="text-red-500 font-bold text-lg leading-none">*</span>}
+        </span>
+    );
 
     const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar));
@@ -2409,6 +2428,9 @@ export function CourseForm({
     const [error, setError] = useState('');
 
     const directorOptions = useMemo(() => {
+        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
+            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
+        }
         return facilitatorsList
             .filter(f => {
                 const fCourses = Array.isArray(f.courses) ? f.courses : [];
@@ -2421,15 +2443,21 @@ export function CourseForm({
                 return f.directorCourse === 'Yes';
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, isCpcm, isSmallAndSick]);
+    }, [facilitatorsList, isCpcm, isSmallAndSick, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
 
     const clinicalInstructorOptions = useMemo(() => {
+        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
+            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
+        }
         return facilitatorsList
             .filter(f => f.isClinicalInstructor === 'Yes' || f.directorCourse === 'Yes')
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList]);
+    }, [facilitatorsList, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
 
     const facilitatorOptions = useMemo(() => {
+        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
+            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
+        }
         return facilitatorsList
             .filter(f => {
                 const fCourses = Array.isArray(f.courses) ? f.courses : [];
@@ -2438,11 +2466,12 @@ export function CourseForm({
                 if (isInfectionControl) return fCourses.includes('IPC');
                 if (isProgramManagement) return fCourses.includes('Program Management') || fCourses.includes('IMNCI');
                 if (isSmallAndSick) return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
+                if (isEmonc) return fCourses.includes('EmONC') || fCourses.includes('EENC');
                 
                 return fCourses.includes(courseType);
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement, isSmallAndSick]);
+    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement, isSmallAndSick, isEmonc, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -2547,24 +2576,38 @@ export function CourseForm({
             return [...acc, ...groupAssignments];
         }, []);
 
-        if (states.length === 0 || localities.length === 0 || !hall || !coordinator || !participantsCount || !supporter || !startDate || !implementedBy) {
-            setError('الرجاء إكمال جميع الحقول المطلوبة.');
-            return;
-        }
-        
-        if (!courseType) {
-            setError('تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.');
-            return;
-        }
+        // --- ENHANCED VALIDATION CHECK ---
+        const missingFields = [];
+        if (states.length === 0) missingFields.push('الولايات');
+        if (localities.length === 0) missingFields.push('المحليات');
+        if (!hall || hall.trim() === '') missingFields.push('قاعة الدورة');
+        if (!startDate) missingFields.push('تاريخ بداية الدورة');
+        if (!courseDuration || courseDuration <= 0) missingFields.push('مدة الدورة بالأيام');
+        if (!participantsCount || participantsCount <= 0) missingFields.push('عدد المشاركين');
+        if (!coordinator) missingFields.push('المنسق الاتحادي للدورة');
+        if (!supporter) missingFields.push('بتمويل من');
+        if (!implementedBy) missingFields.push('تنفيذ');
 
         if (!isInfectionControl && !director) {
-            setError('الرجاء اختيار مدير الدورة. هذا الحقل إلزامي لهذا النوع من الدورات.');
-            return;
+            missingFields.push('مدير الدورة');
         }
 
         if (!isInfectionControl && !isSmallAndSick && allFacilitatorAssignments.length === 0) {
-             setError('الرجاء تعيين ميسر واحد على الأقل.');
-             return;
+            missingFields.push('تعيين ميسر واحد على الأقل');
+        }
+
+        if (missingFields.length > 0) {
+            const errorMsg = 'الرجاء إكمال الحقول الإلزامية التالية:\n- ' + missingFields.join('\n- ');
+            alert(errorMsg); // This triggers the requested popup
+            setError('الرجاء إكمال الحقول الإلزامية التالية: ' + missingFields.join('، '));
+            return;
+        }
+
+        if (!courseType) {
+            const typeError = 'تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.';
+            alert(typeError);
+            setError(typeError);
+            return;
         }
 
         const selectedDirectorObj = directorOptions.find(d => d.name === director);
@@ -2646,7 +2689,7 @@ export function CourseForm({
                 <div className="mb-8">
                     <h3 className="text-lg font-bold bg-sky-100 text-sky-800 p-3 rounded-md mb-4 border-r-4 border-sky-500">معلومات الدورة الأساسية</h3>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormGroup label="الولايات (يمكن اختيار أكثر من ولاية)">
+                        <FormGroup label={<ReqLabel text="الولايات (يمكن اختيار أكثر من ولاية)" />}>
                             <MultiSelectDropdown 
                                 disabled={isSaving} 
                                 selectedValues={states} 
@@ -2655,7 +2698,7 @@ export function CourseForm({
                                 options={availableStates.map(s => ({ value: s, label: STATE_LOCALITIES[s].ar }))} 
                             />
                         </FormGroup>
-                        <FormGroup label="المحليات (يمكن اختيار أكثر من محلية)">
+                        <FormGroup label={<ReqLabel text="المحليات (يمكن اختيار أكثر من محلية)" />}>
                             <MultiSelectDropdown 
                                 disabled={isSaving || states.length === 0} 
                                 selectedValues={localities} 
@@ -2664,15 +2707,15 @@ export function CourseForm({
                                 options={availableLocalities.map(l => ({ value: l.en, label: l.ar }))} 
                             />
                         </FormGroup>
-                        <FormGroup label="قاعة الدورة">
+                        <FormGroup label={<ReqLabel text="قاعة الدورة" />}>
                             <Input disabled={isSaving} value={hall} onChange={(e) => setHall(e.target.value)} />
                         </FormGroup>
                         <FormGroup label="قاعة الدورة (باللغة الإنجليزية - للشهادات)">
                             <Input disabled={isSaving} value={hallEnglish} onChange={(e) => setHallEnglish(e.target.value)} dir="ltr" placeholder="Course Hall Name in English" />
                         </FormGroup>
-                        <FormGroup label="تاريخ بداية الدورة"><Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
-                        <FormGroup label="مدة الدورة بالأيام"><Input disabled={isSaving} type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label="عدد المشاركين"><Input disabled={isSaving} type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label={<ReqLabel text="تاريخ بداية الدورة" />}><Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
+                        <FormGroup label={<ReqLabel text="مدة الدورة بالأيام" />}><Input disabled={isSaving} type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label={<ReqLabel text="عدد المشاركين" />}><Input disabled={isSaving} type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
                         <FormGroup label="ميزانية الدورة بالدولار الأمريكي"><Input disabled={isSaving} type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
                     </div>
                 </div>
@@ -2680,7 +2723,7 @@ export function CourseForm({
                 <div className="mb-8">
                     <h3 className="text-lg font-bold bg-green-100 text-green-800 p-3 rounded-md mb-4 border-r-4 border-green-500">التنسيق والتمويل</h3>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormGroup label="المنسق الاتحادي للدورة">
+                        <FormGroup label={<ReqLabel text="المنسق الاتحادي للدورة" />}>
                             <SearchableSelect
                                 disabled={isSaving}
                                 value={coordinator}
@@ -2710,7 +2753,7 @@ export function CourseForm({
                                 label="منسق الدورة بالمحلية"
                             />
                         </FormGroup>
-                        <FormGroup label="بتمويل من">
+                        <FormGroup label={<ReqLabel text="بتمويل من" />}>
                             <SearchableSelect
                                 disabled={isSaving}
                                 value={supporter}
@@ -2720,7 +2763,7 @@ export function CourseForm({
                                 label="بتمويل من"
                             />
                         </FormGroup>
-                        <FormGroup label="تنفيذ">
+                        <FormGroup label={<ReqLabel text="تنفيذ" />}>
                             <SearchableSelect
                                 disabled={isSaving}
                                 value={implementedBy}
@@ -2748,7 +2791,7 @@ export function CourseForm({
                         <h3 className="text-lg font-bold bg-amber-100 text-amber-800 p-3 rounded-md mb-4 border-r-4 border-amber-500">مهام القيادة</h3>
                         <div className="flex flex-col space-y-4 p-5 border border-gray-200 shadow-sm rounded-lg bg-white">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
-                                <FormGroup label="مدير الدورة">
+                                <FormGroup label={<ReqLabel text="مدير الدورة" required={!isInfectionControl} />}>
                                     <SearchableSelect
                                         disabled={isSaving}
                                         value={director}
@@ -2800,7 +2843,7 @@ export function CourseForm({
                                 <h4 className="text-md font-bold mb-5 text-indigo-700 bg-indigo-50 inline-block px-4 py-1.5 rounded-lg border border-indigo-200">{groupName}</h4>
                                 {facilitatorGroups[groupName]?.map((assignment, index) => (
                                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4 items-end pb-4 border-b border-gray-50 last:border-0">
-                                        <FormGroup label="اسم الميسر" className={(isIccm || isCpcm) ? "lg:col-span-2" : ""}>
+                                        <FormGroup label={<ReqLabel text="اسم الميسر" required={!isInfectionControl && !isSmallAndSick} />} className={(isIccm || isCpcm) ? "lg:col-span-2" : ""}>
                                             <SearchableSelect
                                                 disabled={isSaving}
                                                 value={assignment.name}

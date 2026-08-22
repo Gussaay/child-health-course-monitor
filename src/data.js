@@ -19,7 +19,8 @@ import {
     Timestamp,
     startAfter,
     deleteField,
-    arrayUnion
+    arrayUnion,
+    onSnapshot
 } from "firebase/firestore";
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { storage } from './firebase';
@@ -2418,7 +2419,9 @@ export async function listExerciseDefinitions(sourceOptions = {}) {
                 try { narrative = JSON.parse(e.narrativeJson || '[]'); } catch (err) { narrative = []; }
                 let narrativeAr = [];
                 try { narrativeAr = JSON.parse(e.narrativeArJson || '[]'); } catch (err) { narrativeAr = []; }
-                return { ...e, expected, narrative, narrativeAr, isCustom: true };
+                let questions = [];
+                try { questions = JSON.parse(e.questionsJson || '[]'); } catch (err) { questions = []; }
+                return { ...e, expected, narrative, narrativeAr, questions, isCustom: true };
             })
             .sort((a, b) => (a.order || 0) - (b.order || 0));
     } catch (error) {
@@ -2438,6 +2441,9 @@ export async function upsertExerciseDefinition(exercise) {
         title: exercise.title,
         titleAr: exercise.titleAr || '',
         subCourse: exercise.subCourse || '',
+        // 'case' (recording form) or 'quiz'; and which form a case uses.
+        kind: exercise.kind || 'case',
+        formType: exercise.formType || 'child',
         passMark: Number(exercise.passMark) || 80,
         estimatedMinutes: Number(exercise.estimatedMinutes) || 15,
         draft: exercise.draft !== false,
@@ -2445,6 +2451,7 @@ export async function upsertExerciseDefinition(exercise) {
         narrativeJson: JSON.stringify(exercise.narrative || []),
         narrativeArJson: JSON.stringify(exercise.narrativeAr || []),
         expectedJson: JSON.stringify(exercise.expected || {}),
+        questionsJson: JSON.stringify(exercise.questions || []),
         isDeleted: false,
         lastUpdatedAt: serverTimestamp(),
         lastUpdatedAtLocal: new Date().toISOString()
@@ -2461,4 +2468,113 @@ export async function deleteExerciseDefinition(exerciseId) {
     const writePromise = updateDoc(ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     await executeOfflineSafeWrite(writePromise, `Delete Exercise`);
     return true;
+}
+
+// ============================================================================
+// --- ONLINE EXERCISES: CACHING + REAL-TIME ---
+// ============================================================================
+
+// Session cache. Exercise definitions, the course record and the roster barely
+// change during a training day, so we read them once and serve every later
+// mount from memory. sessionStorage survives a page reload, which matters on
+// the public link where participants refresh or lose signal.
+const EX_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const exMemoryCache = new Map();
+
+const exCacheRead = (key) => {
+    const hit = exMemoryCache.get(key);
+    if (hit && Date.now() - hit.at < EX_CACHE_TTL_MS) return hit.value;
+    try {
+        const raw = sessionStorage.getItem(`imnci_ex_cache:${key}`);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (Date.now() - parsed.at >= EX_CACHE_TTL_MS) return null;
+        exMemoryCache.set(key, parsed);
+        return parsed.value;
+    } catch (e) { return null; }
+};
+
+const exCacheWrite = (key, value) => {
+    const entry = { at: Date.now(), value };
+    exMemoryCache.set(key, entry);
+    try { sessionStorage.setItem(`imnci_ex_cache:${key}`, JSON.stringify(entry)); } catch (e) { /* quota or private mode */ }
+};
+
+/** Clear the exercise session cache. Called by the Refresh buttons. */
+export function clearExerciseCache() {
+    exMemoryCache.clear();
+    try {
+        Object.keys(sessionStorage)
+            .filter(k => k.startsWith('imnci_ex_cache:'))
+            .forEach(k => sessionStorage.removeItem(k));
+    } catch (e) { /* ignore */ }
+}
+
+/** Course record, cached for the session. */
+export async function getCachedCourse(courseId, { force = false } = {}) {
+    const key = `course:${courseId}`;
+    if (!force) {
+        const hit = exCacheRead(key);
+        if (hit) return hit;
+    }
+    // Offline falls back to Firestore's own cache rather than failing outright.
+    const course = await getCourseById(courseId, navigator.onLine ? 'server' : 'cache');
+    if (course) exCacheWrite(key, course);
+    return course;
+}
+
+/** Course roster, cached for the session. */
+export async function getCachedParticipants(courseId, { force = false } = {}) {
+    const key = `participants:${courseId}`;
+    if (!force) {
+        const hit = exCacheRead(key);
+        if (hit) return hit;
+    }
+    const list = await listAllParticipantsForCourse(courseId, { source: navigator.onLine ? 'server' : 'cache' });
+    const clean = (list || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+    exCacheWrite(key, clean);
+    return clean;
+}
+
+/** Exercise definitions, cached for the session. */
+export async function getCachedExerciseDefinitions({ force = false } = {}) {
+    const key = 'exerciseDefinitions';
+    if (!force) {
+        const hit = exCacheRead(key);
+        if (hit) return hit;
+    }
+    const list = await listExerciseDefinitions({ source: navigator.onLine ? 'default' : 'cache' });
+    exCacheWrite(key, list);
+    return list;
+}
+
+/**
+ * Live feed of every attempt on a course, for the group-discussion dashboard.
+ * Returns the unsubscribe function -- ALWAYS call it on unmount, or the
+ * listener keeps billing reads in the background.
+ */
+export function subscribeExerciseAttempts(courseId, onChange, onError) {
+    if (!courseId) return () => {};
+    const q = query(collection(db, "exerciseAttempts"), where("courseId", "==", courseId));
+    return onSnapshot(
+        q,
+        (snapshot) => {
+            dispatchOpEvent('read', snapshot.docChanges().length || 1);
+            const rows = snapshot.docs
+                .map(d => {
+                    const raw = d.data();
+                    let responses = {}, results = {};
+                    try { responses = JSON.parse(raw.responsesJson || '{}'); } catch (e) { responses = {}; }
+                    try { results = JSON.parse(raw.resultsJson || '{}'); } catch (e) { results = {}; }
+                    return { ...raw, id: d.id, responses, results };
+                })
+                .filter(a => a.isDeleted !== true && a.isDeleted !== "true")
+                .sort((a, b) => (b.submittedAtLocal || '').localeCompare(a.submittedAtLocal || ''));
+            onChange(rows, { fromCache: snapshot.metadata.fromCache });
+        },
+        (error) => {
+            console.error("Exercise attempts subscription failed:", error);
+            if (onError) onError(error);
+        }
+    );
 }
