@@ -14,7 +14,7 @@ import {
     Button, Card, EmptyState, PageHeader, 
     Spinner, Table, Modal, CardBody, CardFooter, FormGroup, Select, Input
 } from './CommonComponents'; 
-import { Award, FileSignature, Stamp, CheckCircle } from 'lucide-react'; 
+import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload } from 'lucide-react'; 
 
 // Data & Firebase
 import { STATE_LOCALITIES } from './constants'; 
@@ -58,12 +58,10 @@ const getDayWithSuffix = (day) => {
     return `${day}<sup style="font-size: 0.6em; line-height: 0;">${suffix}</sup>`;
 };
 
-// UPDATED: Now accepts subCourse to handle the EmONC + EENC override logic
 const getCertificateCourseTitle = (courseType, language = 'en', subCourse = '') => {
     const normalizedType = courseType ? courseType.trim() : '';
     const normalizedSub = subCourse ? subCourse.trim().toLowerCase() : '';
     
-    // Check if it's EmONC and one of the specific EENC sub-courses
     const isEencSub = normalizedType === 'EmONC' && 
                      (normalizedSub === 'eenc orientation' || 
                       normalizedSub === 'eenc tot' || 
@@ -123,9 +121,7 @@ const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fi
         try {
             const docSnap = await getDoc(doc(db, collectionName, specificId));
             if (docSnap.exists() && docSnap.data()[fieldName]) return docSnap.data()[fieldName];
-        } catch (e) {
-            console.error("Error fetching Arabic name by ID", e);
-        }
+        } catch (e) { console.error("Error fetching Arabic name by ID", e); }
     }
 
     if (!englishName) return null;
@@ -162,9 +158,7 @@ const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fi
         }
 
         if (!snapshot.empty) {
-            const data = snapshot.docs[0].data();
-            const arName = data[fieldName]; 
-            if (arName) return arName;
+            return snapshot.docs[0].data()[fieldName] || null;
         } else {
             const allDocsSnapshot = await getDocs(collection(db, collectionName));
             const match = allDocsSnapshot.docs.find(doc => {
@@ -174,9 +168,7 @@ const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fi
             });
             if (match && match.data()[fieldName]) return match.data()[fieldName];
         }
-    } catch (error) {
-        console.error(`Error fetching Arabic name from ${collectionName}:`, error);
-    }
+    } catch (error) { console.error(`Error fetching Arabic name from ${collectionName}:`, error); }
     return null;
 };
 
@@ -198,7 +190,7 @@ const imageUrlToBase64 = async (url) => {
 };
 
 // -----------------------------------------------------------------------------
-// COMPONENT: CertificateTemplate
+// COMPONENT: CertificateTemplate (UPDATED FOR CUSTOMIZATION)
 // -----------------------------------------------------------------------------
 
 const CertificateTemplate = React.memo(function CertificateTemplate({ 
@@ -209,42 +201,49 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const isArabic = language === 'ar';
     const courseType = course.course_type ? course.course_type.trim() : '';
     
-    // UPDATED: Pass participantSubCourse so it can override EmONC titles
-    const courseTitle = getCertificateCourseTitle(courseType, language, participantSubCourse);
+    // --- CUSTOMIZATION CONFIG ---
+    const customConfig = course.customCertificate || {};
+    
+    // Fallbacks to default logos if none provided in custom config
+    const logoTopRight1 = customConfig.logoTopRight1 || "/certificate/fmoh-logo.jpg";
+    const logoTopRight2 = customConfig.logoTopRight2 || "/certificate/ch-logo.png";
+    const logoTopLeft1 = customConfig.logoTopLeft1 || "/certificate/who-logo.png";
+    const logoTopLeft2 = customConfig.logoTopLeft2 || "/certificate/unicef-logo.png";
+
+    // Text overrides
+    const headerAr = customConfig.headerAr || "جمهورية السودان\nوزارة الصحة الاتحادية\nالإدارة العامة للرعاية الصحية الاساسية\nإدارة صحة الأم والطفل\nالبرنامج القومي لصحة الطفل";
+    const headerEn = customConfig.headerEn || "Republic of Sudan\nFederal Ministry of Health\nDirectorate General of PHC\nMaternal and Child Health Directorate\nNational Child Health Program";
+    const titleCert = isArabic ? (customConfig.titleAr || 'شهادة') : (customConfig.titleEn || 'CERTIFICATE');
+    const completionText = isArabic ? (customConfig.completionTextAr || 'أكمل/ت بنجاح الدورة التدريبية على : ') : (customConfig.completionTextEn || 'Has successfully completed:');
+
+    // Course Titles
+    let baseCourseTitle = getCertificateCourseTitle(courseType, language, participantSubCourse);
+    if (isArabic && customConfig.courseTitleAr) baseCourseTitle = customConfig.courseTitleAr;
+    if (!isArabic && customConfig.courseTitleEn) baseCourseTitle = customConfig.courseTitleEn;
     
     let displaySubCourse = participantSubCourse;
     if (participantSubCourse) {
-        // Check if the sub-course is a refreshment course
         const isRefreshment = participantSubCourse.toLowerCase().includes('refreshment');
         const normalizedSub = participantSubCourse.trim().toLowerCase();
 
         if (isArabic) {
-            if (courseType === 'ICCM') displaySubCourse = "تدريب العامل الصحي المجتمعي";
-            else if (courseType === 'IMNCI') {
-                // Apply specific Arabic translation based on sub-course type
-                displaySubCourse = isRefreshment 
-                    ? "ورشة تنشيطية" 
-                    : "المعالجة القياسية للاطفال اقل من 5 سنوات";
-            }
+            if (customConfig.subCourseAr) displaySubCourse = customConfig.subCourseAr;
+            else if (courseType === 'ICCM') displaySubCourse = "تدريب العامل الصحي المجتمعي";
+            else if (courseType === 'IMNCI') displaySubCourse = isRefreshment ? "ورشة تنشيطية" : "المعالجة القياسية للاطفال اقل من 5 سنوات";
             else if (courseType === 'Small & Sick Newborn') displaySubCourse = getSmallAndSickSubCourseArabic(participantSubCourse);
             else if (courseType === 'Program Management') {
                 if (participantSubCourse.includes('IMNCI implementation operational Guide')) displaySubCourse = "دورة تدريب المدريبين على الدليل التشغيلي لتطبيق العلاج المتكامل في مؤسسات الرعاية الصحية الأساسية";
                 else if (participantSubCourse.includes('planning, Monitoring and evaluation')) displaySubCourse = "التخطيط والمتابعة والتقييم";
             }
-            else if (courseType === 'Comprehensive Package For Community Midwives') {
-                displaySubCourse = "الرعاية الضرورية للاطفال حديثي الولادة + مساعدة الأطفال حديثي الولادة على التنفس";
-            }
-            // UPDATED: Custom sub-course names for EmONC/EENC in Arabic
+            else if (courseType === 'Comprehensive Package For Community Midwives') displaySubCourse = "الرعاية الضرورية للاطفال حديثي الولادة + مساعدة الأطفال حديثي الولادة على التنفس";
             else if (courseType === 'EmONC') {
                 if (normalizedSub === 'eenc orientation') displaySubCourse = "ورشة تنويرية";
                 else if (normalizedSub === 'eenc mentorship') displaySubCourse = "ورشة ارشاد سريري";
                 else if (normalizedSub === 'eenc tot') displaySubCourse = "ورشة تدريب مدربين";
             }
         } else {
-            // Handle English overrides
-            if (courseType === 'IMNCI' && isRefreshment) {
-                displaySubCourse = "IMNCI refreshment course";
-            }
+            if (customConfig.subCourseEn) displaySubCourse = customConfig.subCourseEn;
+            else if (courseType === 'IMNCI' && isRefreshment) displaySubCourse = "IMNCI refreshment course";
         }
     }
 
@@ -310,21 +309,21 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             <img src="/certificate/border.jpg" alt="Certificate Border" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }} />
             
             <div style={{ position: 'absolute', top: '25mm', [isArabic ? 'right' : 'left']: '25mm', zIndex: 1, textAlign: 'center', display: 'flex', flexDirection: 'row', gap: '15px', alignItems: 'center' }}>
-                <img src="/certificate/fmoh-logo.jpg" alt="FMOH" style={{ height: '30mm', width: 'auto' }} />
-                <img src="/certificate/ch-logo.png" alt="NCHP" style={{ height: '35mm', width: 'auto' }} />
+                {logoTopRight1 && <img src={logoTopRight1} crossOrigin="anonymous" alt="Logo 1" style={{ height: '30mm', width: 'auto' }} />}
+                {logoTopRight2 && <img src={logoTopRight2} crossOrigin="anonymous" alt="Logo 2" style={{ height: '35mm', width: 'auto' }} />}
             </div>
             
             <div style={{ position: 'absolute', top: '25mm', [isArabic ? 'left' : 'right']: '25mm', zIndex: 1, display: 'flex', flexDirection: 'row', gap: '15px', alignItems: 'center' }}>
-                 <img src="/certificate/who-logo.png" alt="WHO" style={{ height: '30mm', width: 'auto' }} />
-                 <img src="/certificate/unicef-logo.png" alt="UNICEF" style={{ height: '30mm', width: 'auto' }} />
+                 {logoTopLeft1 && <img src={logoTopLeft1} crossOrigin="anonymous" alt="Logo 3" style={{ height: '30mm', width: 'auto' }} />}
+                 {logoTopLeft2 && <img src={logoTopLeft2} crossOrigin="anonymous" alt="Logo 4" style={{ height: '30mm', width: 'auto' }} />}
             </div>
 
-            <div style={{ position: 'absolute', top: '14mm', left: '0mm', right: '0mm', textAlign: 'center', fontSize: isArabic ? '22px' : '24px', fontWeight: 'bold', lineHeight: '1.5', zIndex: 2 }}>
-                {isArabic ? (<>جمهورية السودان<br />وزارة الصحة الاتحادية<br />الإدارة العامة للرعاية الصحية الاساسية<br />إدارة صحة الأم والطفل<br />البرنامج القومي لصحة الطفل</>) : (<>Republic of Sudan<br />Federal Ministry of Health<br />Directorate General of PHC<br />Maternal and Child Health Directorate<br />National Child Health Program</>)}
+            <div style={{ position: 'absolute', top: '14mm', left: '0mm', right: '0mm', textAlign: 'center', fontSize: isArabic ? '22px' : '24px', fontWeight: 'bold', lineHeight: '1.5', zIndex: 2, whiteSpace: 'pre-line' }}>
+                {isArabic ? headerAr : headerEn}
             </div>
 
              <div style={{ position: 'absolute', top: '60mm', left: '0', right: '0', textAlign: 'center', fontSize: '60px', fontWeight: 'bold', textDecoration: 'underline', color: 'red', zIndex: 2, fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif' }}>
-                {isArabic ? 'شهادة' : 'CERTIFICATE'}
+                {titleCert}
             </div>
 
             <div style={{ position: 'absolute', top: '90mm', left: '30mm', right: '30mm', textAlign: 'center', fontSize: '35px', fontWeight: 'bold', zIndex: 2, borderBottom: '3px dotted #000', paddingBottom: '10px', minHeight: '40px' }}>
@@ -332,11 +331,11 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             </div>
 
             <div style={{ position: 'absolute', top: '108mm', left: '50mm', right: '50mm', textAlign: 'center', fontSize: '22px', fontStyle: isArabic ? 'normal' : 'italic', zIndex: 2 }}>
-                {isArabic ? 'أكمل/ت بنجاح الدورة التدريبية على : ' : 'Has successfully completed:'}
+                {completionText}
             </div>
 
             <div style={{ position: 'absolute', top: '120mm', left: '10mm', right: '10mm', textAlign: 'center', fontSize: '28px', fontWeight: 'bold', color: 'red', zIndex: 2, lineHeight: '1.3' }}>
-                {courseTitle}
+                {baseCourseTitle}
             </div>
             
             {(displaySubCourse) && (
@@ -375,14 +374,14 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                {isArabic ? (
                    <div style={{ position: 'relative' }}>
                        {programManagerSignatureUrl && ( <img src={programManagerSignatureUrl} alt="Signature" crossOrigin="anonymous" style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }} /> )}
-                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>د. {programManagerNameAr || federalProgramManagerName || '...'}</div>
-                       <div>مدير البرنامج</div>
+                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>د. {customConfig.managerTitleAr || programManagerNameAr || federalProgramManagerName || '...'}</div>
+                       <div>{customConfig.managerRoleAr || 'مدير البرنامج'}</div>
                    </div>
                ) : (
                    <div style={{ position: 'relative' }}>
                         {directorSignatureUrl && ( <img src={directorSignatureUrl} alt="Signature" crossOrigin="anonymous" style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }} /> )}
-                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>Dr. {finalDirectorName}</div>
-                       <div>Course Director</div>
+                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>Dr. {customConfig.directorTitleEn || finalDirectorName}</div>
+                       <div>{customConfig.directorRoleEn || 'Course Director'}</div>
                    </div>
                )}
             </div>
@@ -391,14 +390,14 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 {isArabic ? (
                    <div style={{ position: 'relative' }}>
                        {directorSignatureUrl && ( <img src={directorSignatureUrl} alt="Signature" crossOrigin="anonymous" style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }} /> )}
-                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>{directorNameAr ? `د. ${directorNameAr}` : `د. ${finalDirectorName || '...'}`}</div>
-                       <div>مدير الدورة</div>
+                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>{customConfig.directorTitleAr || (directorNameAr ? `د. ${directorNameAr}` : `د. ${finalDirectorName || '...'}`)}</div>
+                       <div>{customConfig.directorRoleAr || 'مدير الدورة'}</div>
                    </div>
                ) : (
                    <div style={{ position: 'relative' }}>
                        {programManagerSignatureUrl && ( <img src={programManagerSignatureUrl} alt="Signature" crossOrigin="anonymous" style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }} /> )}
-                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>Dr. {federalProgramManagerName || 'Federal Program Manager'}</div>
-                       <div>National Program Manager</div>
+                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>Dr. {customConfig.managerTitleEn || federalProgramManagerName || 'Federal Program Manager'}</div>
+                       <div>{customConfig.managerRoleEn || 'National Program Manager'}</div>
                    </div>
                )}
             </div>
@@ -410,28 +409,17 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 // GENERATION FUNCTIONS
 // -----------------------------------------------------------------------------
 
-// 🟢 NEW: Native Mobile Save Function Helper (Fixed specific for local base64 PDFs)
 export const saveAndOpenPdf = async (doc, fileName) => {
     if (Capacitor.isNativePlatform()) {
         try {
-            // Because certificates are generated locally on-the-fly via jsPDF (not downloaded via URL),
-            // we write the Base64 data directly to the device's Documents folder.
             const base64Data = doc.output('datauristring').split('base64,')[1];
             const folderPath = 'downloads';
             const filePath = `${folderPath}/${fileName}`;
 
             try {
-                // Ensure Directory exists in Documents (Visible to OS File Manager)
-                await Filesystem.mkdir({ 
-                    path: folderPath, 
-                    directory: Directory.Documents, 
-                    recursive: true 
-                });
-            } catch (e) {
-                // Ignore error if directory exists
-            }
+                await Filesystem.mkdir({ path: folderPath, directory: Directory.Documents, recursive: true });
+            } catch (e) {}
 
-            // Write File to OS Documents folder
             const writeResult = await Filesystem.writeFile({ 
                 path: filePath, 
                 data: base64Data, 
@@ -439,12 +427,8 @@ export const saveAndOpenPdf = async (doc, fileName) => {
                 recursive: true
             });
 
-            // Robust File Opener Logic (No openWithDefault flag)
             try {
-                await FileOpener.open({ 
-                    filePath: writeResult.uri, 
-                    contentType: 'application/pdf'
-                });
+                await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
             } catch (openError) {
                 console.error("FileOpener Error:", openError);
                 alert("Certificate saved to your Documents/downloads folder, but no PDF viewer was found on your device to open it automatically.");
@@ -614,8 +598,174 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
     } else { alert("Failed to generate any certificates."); }
 };
 
+
+// -----------------------------------------------------------------------------
+// NEW COMPONENT: CertificateCustomizerModal
+// -----------------------------------------------------------------------------
+export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSuccess }) {
+    const [data, setData] = useState({
+        logoTopRight1: '', logoTopRight2: '', logoTopLeft1: '', logoTopLeft2: '',
+        headerAr: '', headerEn: '', titleAr: '', titleEn: '',
+        completionTextAr: '', completionTextEn: '',
+        courseTitleAr: '', courseTitleEn: '',
+        subCourseAr: '', subCourseEn: '',
+        managerTitleAr: '', managerTitleEn: '', managerRoleAr: '', managerRoleEn: '',
+        directorTitleAr: '', directorTitleEn: '', directorRoleAr: '', directorRoleEn: ''
+    });
+    
+    const [isSaving, setIsSaving] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(null);
+    const fileRef = useRef(null);
+    const [activeUploadKey, setActiveUploadKey] = useState(null);
+
+    useEffect(() => {
+        if (isOpen && course) {
+            setData(course.customCertificate || {});
+        }
+    }, [isOpen, course]);
+
+    const handleInputChange = (field, value) => {
+        setData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleFileTrigger = (key) => {
+        setActiveUploadKey(key);
+        if (fileRef.current) fileRef.current.click();
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file || !activeUploadKey) return;
+        setUploadingLogo(activeUploadKey);
+        try {
+            const url = await uploadFile(file, `courses/${course.id}/logos/${activeUploadKey}_${Date.now()}`);
+            setData(prev => ({ ...prev, [activeUploadKey]: url }));
+        } catch (err) {
+            alert("Upload failed: " + err.message);
+        } finally {
+            setUploadingLogo(null);
+            setActiveUploadKey(null);
+            if (fileRef.current) fileRef.current.value = '';
+        }
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await updateDoc(doc(db, 'courses', course.id), {
+                customCertificate: data,
+                lastUpdatedAt: serverTimestamp()
+            });
+            if (onSaveSuccess) onSaveSuccess();
+            onClose();
+        } catch (err) {
+            alert("Failed to save template: " + err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleClear = () => {
+        if (window.confirm("Are you sure you want to revert to the default template? This will erase all custom overrides.")) {
+            setData({});
+        }
+    };
+
+    if (!isOpen) return null;
+
+    const LogoUploader = ({ label, fieldKey }) => (
+        <div className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50">
+            <span className="text-xs font-semibold text-gray-700">{label}</span>
+            {data[fieldKey] ? (
+                <div className="relative">
+                    <img src={data[fieldKey]} alt={label} className="h-12 w-auto mx-auto object-contain bg-white p-1 border rounded" />
+                    <button onClick={() => handleInputChange(fieldKey, '')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">x</button>
+                </div>
+            ) : (
+                <Button size="sm" variant="secondary" onClick={() => handleFileTrigger(fieldKey)} disabled={!!uploadingLogo} className="w-full text-xs flex justify-center">
+                    {uploadingLogo === fieldKey ? <Spinner size="sm" /> : <><Upload size={12} className="mr-1" /> Upload Logo</>}
+                </Button>
+            )}
+        </div>
+    );
+
+    return (
+        <Modal isOpen={isOpen} onClose={isSaving ? null : onClose} title="Customize Certificate Template" size="2xl">
+            <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
+            <CardBody className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
+                
+                <div className="bg-sky-50 p-4 rounded-lg text-sm text-sky-800 mb-4 border border-sky-100">
+                    <p className="font-semibold mb-1">Customize Template for: {course?.course_type}</p>
+                    <p>Leave fields blank to use the default system values (e.g., FMOH/NCHP logos, default text). Updates made here are tied only to this specific course.</p>
+                </div>
+
+                <div>
+                    <h3 className="font-bold border-b pb-2 mb-3">1. Custom Logos</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <LogoUploader label="Top Right 1 (Default: FMOH)" fieldKey="logoTopRight1" />
+                        <LogoUploader label="Top Right 2 (Default: NCHP)" fieldKey="logoTopRight2" />
+                        <LogoUploader label="Top Left 1 (Default: WHO)" fieldKey="logoTopLeft1" />
+                        <LogoUploader label="Top Left 2 (Default: UNICEF)" fieldKey="logoTopLeft2" />
+                    </div>
+                </div>
+
+                <div>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">2. Headers & Main Titles</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Header Text (English)">
+                            <textarea className="w-full border rounded p-2 text-sm h-24" value={data.headerEn || ''} onChange={e => handleInputChange('headerEn', e.target.value)} placeholder="Republic of Sudan&#10;Federal Ministry of Health..." />
+                        </FormGroup>
+                        <FormGroup label="Header Text (Arabic) - نص الرأسية">
+                            <textarea className="w-full border rounded p-2 text-sm h-24 text-right" dir="rtl" value={data.headerAr || ''} onChange={e => handleInputChange('headerAr', e.target.value)} placeholder="جمهورية السودان&#10;وزارة الصحة الاتحادية..." />
+                        </FormGroup>
+                        <FormGroup label="Certificate Label (English)"><Input value={data.titleEn || ''} onChange={e => handleInputChange('titleEn', e.target.value)} placeholder="CERTIFICATE" /></FormGroup>
+                        <FormGroup label="Certificate Label (Arabic) - عنوان الشهادة"><Input dir="rtl" value={data.titleAr || ''} onChange={e => handleInputChange('titleAr', e.target.value)} placeholder="شهادة" /></FormGroup>
+                        <FormGroup label="Completion Text (English)"><Input value={data.completionTextEn || ''} onChange={e => handleInputChange('completionTextEn', e.target.value)} placeholder="Has successfully completed:" /></FormGroup>
+                        <FormGroup label="Completion Text (Arabic) - نص الإكمال"><Input dir="rtl" value={data.completionTextAr || ''} onChange={e => handleInputChange('completionTextAr', e.target.value)} placeholder="أكمل/ت بنجاح الدورة التدريبية على : " /></FormGroup>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">3. Course Name Overrides</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Main Course Title (English)"><Input value={data.courseTitleEn || ''} onChange={e => handleInputChange('courseTitleEn', e.target.value)} placeholder="Default used if empty" /></FormGroup>
+                        <FormGroup label="Main Course Title (Arabic)"><Input dir="rtl" value={data.courseTitleAr || ''} onChange={e => handleInputChange('courseTitleAr', e.target.value)} placeholder="الافتراضي يستخدم اذا كان فارغ" /></FormGroup>
+                        <FormGroup label="Sub-course Title (English)"><Input value={data.subCourseEn || ''} onChange={e => handleInputChange('subCourseEn', e.target.value)} placeholder="Leave blank for default" /></FormGroup>
+                        <FormGroup label="Sub-course Title (Arabic)"><Input dir="rtl" value={data.subCourseAr || ''} onChange={e => handleInputChange('subCourseAr', e.target.value)} placeholder="يترك فارغاً للافتراضي" /></FormGroup>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">4. Signatory Overrides</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Manager Name Override (English)"><Input value={data.managerTitleEn || ''} onChange={e => handleInputChange('managerTitleEn', e.target.value)} placeholder="e.g. Ali Ahmed" /></FormGroup>
+                        <FormGroup label="Manager Name Override (Arabic)"><Input dir="rtl" value={data.managerTitleAr || ''} onChange={e => handleInputChange('managerTitleAr', e.target.value)} placeholder="الاسم" /></FormGroup>
+                        <FormGroup label="Manager Role Title (English)"><Input value={data.managerRoleEn || ''} onChange={e => handleInputChange('managerRoleEn', e.target.value)} placeholder="National Program Manager" /></FormGroup>
+                        <FormGroup label="Manager Role Title (Arabic)"><Input dir="rtl" value={data.managerRoleAr || ''} onChange={e => handleInputChange('managerRoleAr', e.target.value)} placeholder="مدير البرنامج" /></FormGroup>
+                        
+                        <FormGroup label="Director Name Override (English)"><Input value={data.directorTitleEn || ''} onChange={e => handleInputChange('directorTitleEn', e.target.value)} placeholder="e.g. Omer Ali" /></FormGroup>
+                        <FormGroup label="Director Name Override (Arabic)"><Input dir="rtl" value={data.directorTitleAr || ''} onChange={e => handleInputChange('directorTitleAr', e.target.value)} placeholder="الاسم" /></FormGroup>
+                        <FormGroup label="Director Role Title (English)"><Input value={data.directorRoleEn || ''} onChange={e => handleInputChange('directorRoleEn', e.target.value)} placeholder="Course Director" /></FormGroup>
+                        <FormGroup label="Director Role Title (Arabic)"><Input dir="rtl" value={data.directorRoleAr || ''} onChange={e => handleInputChange('directorRoleAr', e.target.value)} placeholder="مدير الدورة" /></FormGroup>
+                    </div>
+                </div>
+
+            </CardBody>
+            <CardFooter className="flex justify-between items-center bg-gray-50 border-t">
+                <Button variant="danger" onClick={handleClear} disabled={isSaving}>Revert to Defaults</Button>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>
+                    <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingLogo}>
+                        {isSaving ? <Spinner size="sm" /> : 'Save Template'}
+                    </Button>
+                </div>
+            </CardFooter>
+        </Modal>
+    );
+}
+
 // ============================================================================
-// PUBLIC & ADMIN CERTIFICATE VIEWS (Migrated from Course.jsx)
+// PUBLIC & ADMIN CERTIFICATE VIEWS
 // ============================================================================
 
 export function CertificateVerificationView({ participant, course }) {
@@ -784,6 +934,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     const fileInputRef = React.useRef(null);
     const [uploadContext, setUploadContext] = React.useState({ course: null, assetType: null });
     const [courseToApprove, setCourseToApprove] = React.useState(null);
+    const [courseToCustomize, setCourseToCustomize] = React.useState(null);
 
     const [filterState, setFilterState] = React.useState('All');
     const [filterLocality, setFilterLocality] = React.useState('All');
@@ -897,7 +1048,6 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         try {
             const url = await uploadFile(file, `courses/${course.id}/${assetType}_${Date.now()}`);
             
-            // ---> CRITICAL FIX: Ensure the delta fetch catches this file upload <---
             const updatePayload = { lastUpdatedAt: serverTimestamp() }; 
             
             if (assetType === 'managerSignature') { updatePayload.approvedByManagerSignatureUrl = url; updatePayload.approvedByManagerName = managerName; }
@@ -909,14 +1059,14 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 [course.id]: {
                     ...(prev[course.id] || {}),
                     ...updatePayload,
-                    lastUpdatedAt: new Date() // local representation
+                    lastUpdatedAt: new Date() 
                 }
             }));
 
             await updateDoc(doc(db, 'courses', course.id), updatePayload);
             setToast({ show: true, message: `Asset uploaded successfully!`, type: 'success' });
             
-            await fetchCourses(true); // Triggers delta fetch, and it WILL see the update now.
+            await fetchCourses(true);
         } catch (err) { setToast({ show: true, message: `Upload failed: ${err.message}`, type: 'error' }); } 
         finally { setIsProcessing(false); setUploadContext({ course: null, assetType: null }); fileInputRef.current.value = ""; }
     };
@@ -926,6 +1076,16 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     return (
         <>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
+
+            <CertificateCustomizerModal 
+                isOpen={!!courseToCustomize} 
+                course={courseToCustomize} 
+                onClose={() => setCourseToCustomize(null)} 
+                onSaveSuccess={() => {
+                    setToast({ show: true, message: "Certificate template customized successfully.", type: 'success' });
+                    fetchCourses(true);
+                }}
+            />
 
             <Modal isOpen={!!courseToApprove} onClose={() => setCourseToApprove(null)} title="Confirm Approval">
                 <CardBody className="p-6 space-y-4">
@@ -990,6 +1150,11 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                                         
                                         <td className="p-3 align-middle border-b border-slate-200 text-right">
                                             <div className="flex flex-nowrap items-center justify-end gap-1">
+                                                
+                                                <Button onClick={() => setCourseToCustomize(c)} disabled={isProcessing} variant="secondary" className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 border-gray-300">
+                                                    <Settings size={12} /> Customize
+                                                </Button>
+
                                                 {isApproved ? (
                                                     <Button onClick={() => handleUnapprove(c)} disabled={!canModify || isProcessing} variant="danger" className="px-2 py-1 text-[10px] whitespace-nowrap">Revoke</Button>
                                                 ) : (

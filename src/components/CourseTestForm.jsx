@@ -4,7 +4,8 @@ import {
     Card, PageHeader, Button, FormGroup, Select, Spinner, Input, Modal, CardBody, CardFooter, Table, EmptyState
 } from "./CommonComponents"; 
 import {
-    JOB_TITLES_ETAT, JOB_TITLES_EMONC, STATE_LOCALITIES
+    JOB_TITLES_ETAT, JOB_TITLES_EMONC, STATE_LOCALITIES,
+    isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState
 } from './constants.js';
 import {
     listHealthFacilities,
@@ -893,8 +894,23 @@ export function CourseTestForm({
     const courseStates = useMemo(() => course?.states || (course?.state ? course.state.split(',').map(s=>s.trim()) : []), [course]);
     const courseLocalities = useMemo(() => course?.localities || (course?.locality ? course.locality.split(',').map(l=>l.trim()) : []), [course]);
 
-    const [newParticipantState, setNewParticipantState] = useState(courseStates.length === 1 ? courseStates[0] : '');
-    const [newParticipantLocality, setNewParticipantLocality] = useState(courseLocalities.length === 1 ? courseLocalities[0] : '');
+    const isFederal = useMemo(() => isFederalCourse(course), [course]);
+
+    // Federal course => participants can belong to any state, not only the host state(s).
+    const selectableStates = useMemo(
+        () => (isFederal ? getAllStateOptions() : courseStates.filter(s => !isFederalValue(s))),
+        [isFederal, courseStates]
+    );
+
+    const [newParticipantState, setNewParticipantState] = useState((!isFederal && courseStates.length === 1 && !isFederalValue(courseStates[0])) ? courseStates[0] : '');
+    const [newParticipantLocality, setNewParticipantLocality] = useState((!isFederal && courseLocalities.length === 1 && !isFederalValue(courseLocalities[0])) ? courseLocalities[0] : '');
+    const selectableLocalities = useMemo(() => {
+        if (!newParticipantState) return [];
+        const all = getLocalityOptionsForState(newParticipantState);
+        if (isFederal) return all;
+        return all.filter(l => courseLocalities.includes(l.en) || courseLocalities.includes(l.ar));
+    }, [newParticipantState, isFederal, courseLocalities]);
+
     const [newParticipantCenter, setNewParticipantCenter] = useState('');
     const [newParticipantDepartment, setNewParticipantDepartment] = useState('');
     const [selectedFacilityId, setSelectedFacilityId] = useState(null);
@@ -1000,8 +1016,8 @@ export function CourseTestForm({
         setParticipantNameForDisplay(''); 
         setNewParticipantName(''); 
         setNewParticipantPhone(''); 
-        setNewParticipantState(courseStates.length === 1 ? courseStates[0] : ''); 
-        setNewParticipantLocality(courseLocalities.length === 1 ? courseLocalities[0] : ''); 
+        setNewParticipantState((!isFederal && courseStates.length === 1 && !isFederalValue(courseStates[0])) ? courseStates[0] : ''); 
+        setNewParticipantLocality((!isFederal && courseLocalities.length === 1 && !isFederalValue(courseLocalities[0])) ? courseLocalities[0] : ''); 
         setNewParticipantCenter(''); 
         setNewParticipantDepartment('');
         setSelectedFacilityId(null); 
@@ -1009,7 +1025,7 @@ export function CourseTestForm({
         setNewParticipantGroup('Group A'); 
         setNewParticipantJob(''); 
         setNewParticipantJobOther('');
-    }, [testType, isPublicView, courseStates, courseLocalities]); 
+    }, [testType, isPublicView, courseStates, courseLocalities, isFederal]); 
 
     useEffect(() => {
         const fetchFacilities = async () => {
@@ -1425,6 +1441,11 @@ export function CourseTestForm({
                  <div className="p-4 border-b" style={{ direction: 'ltr', textAlign: 'left' }}>
                      <h3 className="text-lg font-medium">New Participant Information</h3>
                      <p className="text-sm text-gray-500">Please fill out the details below.</p>
+                     {isFederal && (
+                         <p className="mt-1 text-sm text-sky-700">
+                             Federal-level course &mdash; participants can be registered from any state.
+                         </p>
+                     )}
                  </div>
                  <CardBody className="p-6 max-h-[70vh] overflow-y-auto" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1432,7 +1453,7 @@ export function CourseTestForm({
                             {!isProgramManagement && (
                                 <>
                                     <FormGroup label="State">
-                                        <Select value={newParticipantState} disabled={courseStates.length === 1} onChange={(e) => {
+                                        <Select value={newParticipantState} disabled={!isFederal && selectableStates.length === 1} onChange={(e) => {
                                             setNewParticipantState(e.target.value); 
                                             setNewParticipantLocality(''); 
                                             setNewParticipantCenter(''); 
@@ -1440,7 +1461,7 @@ export function CourseTestForm({
                                             setFacilitiesInLocality([]); 
                                         }}>
                                             <option value="">— Select State —</option>
-                                            {courseStates.map(s => <option key={s} value={s}>{s}</option>)}
+                                            {selectableStates.map(s => <option key={s} value={s}>{s}</option>)}
                                         </Select>
                                     </FormGroup>
 
@@ -1451,13 +1472,9 @@ export function CourseTestForm({
                                             setSelectedFacilityId(null); 
                                         }}>
                                             <option value="">— Select Locality —</option>
-                                            {courseLocalities
-                                                .filter(l => STATE_LOCALITIES[newParticipantState]?.localities.some(loc => loc.en === l))
-                                                .map(l => {
-                                                    const locData = STATE_LOCALITIES[newParticipantState]?.localities.find(loc => loc.en === l);
-                                                    return <option key={l} value={l}>{locData?.en || l}</option>;
-                                                })
-                                            }
+                                            {selectableLocalities.map(l => (
+                                                <option key={l.en} value={l.en}>{l.en}</option>
+                                            ))}
                                         </Select>
                                     </FormGroup>
                                     

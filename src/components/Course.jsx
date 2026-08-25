@@ -30,7 +30,8 @@ import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import { CourseExercisesView } from './Online-exercise'; 
 import {
-    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
+    COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState
 } from './constants.js';
 import { 
     Users, Share2, UserPlus, CheckCircle, 
@@ -368,6 +369,33 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     const [phone, setPhone] = useState('');
     const [jobTitle, setJobTitle] = useState('');
     const [group, setGroup] = useState('Group A');
+    const isFederal = useMemo(() => isFederalCourse(course), [course]);
+
+    const courseStates = useMemo(
+        () => course?.states || (course?.state ? String(course.state).split(',').map(s => s.trim()).filter(Boolean) : []),
+        [course]
+    );
+    const courseLocalities = useMemo(
+        () => course?.localities || (course?.locality ? String(course.locality).split(',').map(l => l.trim()).filter(Boolean) : []),
+        [course]
+    );
+
+    // Federal course => every state is selectable. Otherwise only the course's own state(s).
+    const stateOptions = useMemo(
+        () => (isFederal ? getAllStateOptions() : courseStates.filter(s => !isFederalValue(s))),
+        [isFederal, courseStates]
+    );
+
+    const [regState, setRegState] = useState((!isFederal && courseStates.length === 1 && !isFederalValue(courseStates[0])) ? courseStates[0] : '');
+    const [regLocality, setRegLocality] = useState((!isFederal && courseLocalities.length === 1 && !isFederalValue(courseLocalities[0])) ? courseLocalities[0] : '');
+
+    const localityOptions = useMemo(() => {
+        if (!regState) return [];
+        const all = getLocalityOptionsForState(regState);
+        if (isFederal) return all;
+        return all.filter(l => courseLocalities.includes(l.en) || courseLocalities.includes(l.ar));
+    }, [regState, isFederal, courseLocalities]);
+
     const [facilityId, setFacilityId] = useState('');
     const [facilityName, setFacilityName] = useState(''); 
     
@@ -388,20 +416,24 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     }, [course.course_type]);
 
     useEffect(() => {
-        if (course.state && course.locality && isOpen) {
+        if (regState && regLocality && isOpen) {
             setLoadingFacilities(true);
-            listHealthFacilities({ state: course.state, locality: course.locality }, 'server')
+            listHealthFacilities({ state: regState, locality: regLocality }, 'server')
                 .then(data => setFacilities(data))
                 .catch(err => console.error("Failed to load facilities", err))
                 .finally(() => setLoadingFacilities(false));
+        } else {
+            setFacilities([]);
         }
-    }, [course.state, course.locality, isOpen]);
+    }, [regState, regLocality, isOpen]);
 
     const handleSave = async () => {
         setError('');
         if (!name.trim()) return setError('Name is required');
         if (!phone.trim()) return setError('Phone is required');
         if (!jobTitle) return setError('Job Title is required');
+        if (!regState) return setError('State is required');
+        if (!regLocality) return setError('Locality is required');
         if (!facilityId) return setError('Please select a valid Facility from the list'); 
 
         setIsSaving(true);
@@ -411,8 +443,8 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                 phone: phone.trim(),
                 job_title: jobTitle,
                 group: group,
-                state: course.state,
-                locality: course.locality,
+                state: regState,
+                locality: regLocality,
                 center_name: facilityName, 
                 courseId: course.id,
                 facilityId: facilityId 
@@ -513,9 +545,42 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                         </Select>
                     </FormGroup>
 
+                    <FormGroup label="State">
+                        <Select
+                            disabled={isSaving || (!isFederal && stateOptions.length <= 1)}
+                            value={regState}
+                            onChange={e => {
+                                setRegState(e.target.value);
+                                setRegLocality('');
+                                setFacilityName('');
+                                setFacilityId('');
+                                setSelectedFacility(null);
+                            }}
+                        >
+                            <option value="">-- Select State --</option>
+                            {stateOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                        </Select>
+                    </FormGroup>
+
+                    <FormGroup label="Locality">
+                        <Select
+                            disabled={isSaving || !regState}
+                            value={regLocality}
+                            onChange={e => {
+                                setRegLocality(e.target.value);
+                                setFacilityName('');
+                                setFacilityId('');
+                                setSelectedFacility(null);
+                            }}
+                        >
+                            <option value="">-- Select Locality --</option>
+                            {localityOptions.map(l => <option key={l.en} value={l.en}>{l.en}</option>)}
+                        </Select>
+                    </FormGroup>
+
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Health Facility (in {course.locality})
+                            Health Facility (in {regLocality || '\u2014'})
                         </label>
                         
                         <div className="relative">
@@ -529,7 +594,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                                 }}
                                 onFocus={() => setIsFacilitySelectorOpen(true)}
                                 placeholder="Search facility name..."
-                                disabled={loadingFacilities || isSaving}
+                                disabled={loadingFacilities || isSaving || !regLocality}
                             />
                             {loadingFacilities && <div className="absolute right-3 top-2.5"><Spinner size="sm" /></div>}
                             
@@ -2306,7 +2371,7 @@ export function CourseForm({
     );
 
     const availableStates = useMemo(() => {
-        const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar));
+        const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar));
         if (!userStates || userStates.length === 0) {
             return allStates;
         }
@@ -2314,6 +2379,8 @@ export function CourseForm({
     }, [userStates]);
 
     const [isSaving, setIsSaving] = useState(false);
+
+    const [courseLevel, setCourseLevel] = useState(initialData?.course_level || (isFederalCourse(initialData) ? COURSE_LEVELS.FEDERAL : COURSE_LEVELS.STATE));
 
     const [states, setStates] = useState(initialData?.states || (initialData?.state ? initialData.state.split(',').map(s=>s.trim()) : (userStates && userStates.length === 1 ? [userStates[0]] : [])));
     
@@ -2647,6 +2714,7 @@ export function CourseForm({
             state_coordinator: stateCoordinator,
             locality_coordinator: localityCoordinator,
             course_project: courseProject,
+            course_level: courseLevel,
             
             facilitators: enrichedFacilitatorAssignments.map(f => f.name),
             facilitatorIds: enrichedFacilitatorAssignments.map(f => f.facilitatorId).filter(Boolean),
@@ -2689,6 +2757,18 @@ export function CourseForm({
                 <div className="mb-8">
                     <h3 className="text-lg font-bold bg-sky-100 text-sky-800 p-3 rounded-md mb-4 border-r-4 border-sky-500">معلومات الدورة الأساسية</h3>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <FormGroup label={<ReqLabel text="مستوى الدورة" />}>
+                            <Select disabled={isSaving} value={courseLevel} onChange={(e) => setCourseLevel(e.target.value)}>
+                                <option value={COURSE_LEVELS.FEDERAL}>اتحادية (مشاركون من كل الولايات)</option>
+                                <option value={COURSE_LEVELS.STATE}>ولائية</option>
+                                <option value={COURSE_LEVELS.LOCALITY}>محلية</option>
+                            </Select>
+                            {courseLevel === COURSE_LEVELS.FEDERAL && (
+                                <p className="mt-1 text-xs text-sky-700">
+                                    عند التسجيل، يمكن اختيار المشاركين من جميع الولايات. الولاية/المحلية أدناه هي مكان انعقاد الدورة فقط.
+                                </p>
+                            )}
+                        </FormGroup>
                         <FormGroup label={<ReqLabel text="الولايات (يمكن اختيار أكثر من ولاية)" />}>
                             <MultiSelectDropdown 
                                 disabled={isSaving} 

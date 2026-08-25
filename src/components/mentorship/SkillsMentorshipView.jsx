@@ -475,93 +475,103 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
     );
 };
 
+// --- Shared Training-Priority Calculation ---
+// Aggregates scores across the supplied sessions and returns every skill scoring
+// under 75%, sorted weakest-first so the head of the list is the training priority.
+const computeTrainingWeaknesses = (sessions, service = 'IMNCI') => {
+    if (!sessions || sessions.length === 0) return [];
+    let stats = {};
+
+    if (service === 'IMNCI') {
+        stats = {
+            skill_weight: { score: 0, max: 0, label: "وزن الطفل بصورة صحيحة" },
+            skill_temp: { score: 0, max: 0, label: "قياس درجة الطفل بصورة صحيحة" },
+            skill_height: { score: 0, max: 0, label: "قياس طول/ارتفاع الطفل بصورة صحيحة" },
+            skill_check_rr: { score: 0, max: 0, label: "قياس معدل التنفس بصورة صحيحة" },
+            skill_check_dehydration: { score: 0, max: 0, label: "تقييم فقدان السوائل بصورة صحيحة" },
+            skill_mal_muac: { score: 0, max: 0, label: "قياس المواك (MUAC) بصورة صحيحة" },
+            skill_mal_wfh: { score: 0, max: 0, label: "قياس نسبة الوزن للطول أو الارتفاع (Z-Score)" },
+            skill_edema: { score: 0, max: 0, label: "تقييم الورم (Edema)" },
+            skill_ds_drink: { score: 0, max: 0, label: "علامة خطورة: لا يستطيع ان يرضع أو يشرب" },
+            skill_ds_vomit: { score: 0, max: 0, label: "علامة خطورة: يتقيأ كل شئ" },
+            skill_ds_convulsion: { score: 0, max: 0, label: "علامة خطورة: تشنجات أثناء المرض الحالي" },
+            skill_ds_conscious: { score: 0, max: 0, label: "علامة خطورة: خامل أو فاقد للوعي" },
+        };
+
+        sessions.forEach(sub => {
+            const s = sub.scores || {};
+            const as = sub.assessmentSkills || sub.fullData?.assessment_skills || sub.fullData?.assessmentSkills || {};
+
+            const addScore = (key, scoreProp, maxProp) => {
+                if (s[maxProp] > 0) {
+                    stats[key].score += (s[scoreProp] || 0);
+                    stats[key].max += s[maxProp];
+                }
+            };
+
+            addScore('skill_weight', 'handsOnWeight_score', 'handsOnWeight_maxScore');
+            addScore('skill_temp', 'handsOnTemp_score', 'handsOnTemp_maxScore');
+            addScore('skill_height', 'handsOnHeight_score', 'handsOnHeight_maxScore');
+            addScore('skill_check_rr', 'handsOnRR_score', 'handsOnRR_maxScore');
+            if (s.respiratoryRateCalculation_maxScore > 0) {
+                stats.skill_check_rr.score += (s.respiratoryRateCalculation_score || 0);
+                stats.skill_check_rr.max += s.respiratoryRateCalculation_maxScore;
+            }
+            addScore('skill_check_dehydration', 'dehydrationAssessment_score', 'dehydrationAssessment_maxScore');
+            addScore('skill_mal_muac', 'handsOnMUAC_score', 'handsOnMUAC_maxScore');
+            addScore('skill_mal_wfh', 'handsOnWFH_score', 'handsOnWFH_maxScore');
+
+            const checkSkill = (key) => {
+                if (as[key] === 'yes') { stats[key].score++; stats[key].max++; }
+                else if (as[key] === 'no') { stats[key].max++; }
+            };
+            checkSkill('skill_ds_drink');
+            checkSkill('skill_ds_vomit');
+            checkSkill('skill_ds_convulsion');
+            checkSkill('skill_ds_conscious');
+            checkSkill('skill_edema');
+        });
+    } else if (service === 'EENC') {
+        Object.keys(EENC_SKILLS_LABELS).forEach(k => {
+            stats[k] = { score: 0, max: 0, label: EENC_SKILLS_LABELS[k] };
+        });
+        sessions.forEach(sub => {
+            const skills = sub.fullData?.skills || sub.skills || {};
+            Object.keys(EENC_SKILLS_LABELS).forEach(k => {
+                if (skills[k] === 'yes') { stats[k].score++; stats[k].max++; }
+                else if (skills[k] === 'partial') { stats[k].score += 0.5; stats[k].max++; }
+                else if (skills[k] === 'no') { stats[k].max++; }
+            });
+        });
+    }
+
+    const weakSkills = [];
+    Object.keys(stats).forEach(key => {
+        if (stats[key] && stats[key].max > 0) {
+            const pct = stats[key].score / stats[key].max;
+            if (pct < 0.75) {
+                weakSkills.push({
+                    key,
+                    label: stats[key].label,
+                    score: stats[key].score,
+                    max: stats[key].max,
+                    pct: Math.round(pct * 100)
+                });
+            }
+        }
+    });
+    return weakSkills.sort((a, b) => a.pct - b.pct);
+};
+
 // --- Training Priorities View Component ---
 const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, onBack }) => {
     const [facilityFilter, setFacilityFilter] = useState('');
     const [workerFilter, setWorkerFilter] = useState('');
     const [visitCountFilter, setVisitCountFilter] = useState('');
 
-    const computeWeaknesses = useCallback((sessions, service) => {
-        if (!sessions || sessions.length === 0) return [];
-        let stats = {};
-
-        if (service === 'IMNCI') {
-            stats = {
-                skill_weight: { score: 0, max: 0, label: "وزن الطفل بصورة صحيحة" },
-                skill_temp: { score: 0, max: 0, label: "قياس درجة الطفل بصورة صحيحة" },
-                skill_height: { score: 0, max: 0, label: "قياس طول/ارتفاع الطفل بصورة صحيحة" },
-                skill_check_rr: { score: 0, max: 0, label: "قياس معدل التنفس بصورة صحيحة" },
-                skill_check_dehydration: { score: 0, max: 0, label: "تقييم فقدان السوائل بصورة صحيحة" },
-                skill_mal_muac: { score: 0, max: 0, label: "قياس المواك (MUAC) بصورة صحيحة" },
-                skill_mal_wfh: { score: 0, max: 0, label: "قياس نسبة الوزن للطول أو الارتفاع (Z-Score)" },
-                skill_edema: { score: 0, max: 0, label: "تقييم الورم (Edema)" },
-                skill_ds_drink: { score: 0, max: 0, label: "علامة خطورة: لا يستطيع ان يرضع أو يشرب" },
-                skill_ds_vomit: { score: 0, max: 0, label: "علامة خطورة: يتقيأ كل شئ" },
-                skill_ds_convulsion: { score: 0, max: 0, label: "علامة خطورة: تشنجات أثناء المرض الحالي" },
-                skill_ds_conscious: { score: 0, max: 0, label: "علامة خطورة: خامل أو فاقد للوعي" },
-            };
-
-            sessions.forEach(sub => {
-                const s = sub.scores || {};
-                const as = sub.assessmentSkills || sub.fullData?.assessment_skills || sub.fullData?.assessmentSkills || {};
-
-                const addScore = (key, scoreProp, maxProp) => {
-                    if (s[maxProp] > 0) {
-                        stats[key].score += (s[scoreProp] || 0);
-                        stats[key].max += s[maxProp];
-                    }
-                };
-
-                addScore('skill_weight', 'handsOnWeight_score', 'handsOnWeight_maxScore');
-                addScore('skill_temp', 'handsOnTemp_score', 'handsOnTemp_maxScore');
-                addScore('skill_height', 'handsOnHeight_score', 'handsOnHeight_maxScore');
-                addScore('skill_check_rr', 'handsOnRR_score', 'handsOnRR_maxScore');
-                if (s.respiratoryRateCalculation_maxScore > 0) {
-                     stats.skill_check_rr.score += (s.respiratoryRateCalculation_score || 0);
-                     stats.skill_check_rr.max += s.respiratoryRateCalculation_maxScore;
-                }
-                addScore('skill_check_dehydration', 'dehydrationAssessment_score', 'dehydrationAssessment_maxScore');
-                addScore('skill_mal_muac', 'handsOnMUAC_score', 'handsOnMUAC_maxScore');
-                addScore('skill_mal_wfh', 'handsOnWFH_score', 'handsOnWFH_maxScore');
-
-                const checkSkill = (key) => {
-                    if (as[key] === 'yes') { stats[key].score++; stats[key].max++; }
-                    else if (as[key] === 'no') { stats[key].max++; }
-                };
-                checkSkill('skill_ds_drink');
-                checkSkill('skill_ds_vomit');
-                checkSkill('skill_ds_convulsion');
-                checkSkill('skill_ds_conscious');
-                checkSkill('skill_edema');
-            });
-        } else if (service === 'EENC') {
-            Object.keys(EENC_SKILLS_LABELS).forEach(k => {
-                stats[k] = { score: 0, max: 0, label: EENC_SKILLS_LABELS[k] };
-            });
-            sessions.forEach(sub => {
-                const skills = sub.fullData?.skills || {};
-                Object.keys(EENC_SKILLS_LABELS).forEach(k => {
-                    if (skills[k] === 'yes') { stats[k].score++; stats[k].max++; }
-                    else if (skills[k] === 'partial') { stats[k].score += 0.5; stats[k].max++; } 
-                    else if (skills[k] === 'no') { stats[k].max++; }
-                });
-            });
-        }
-
-        const weakSkills = [];
-        Object.keys(stats).forEach(key => {
-            if (stats[key] && stats[key].max > 0) {
-                const pct = stats[key].score / stats[key].max;
-                if (pct < 0.75) {
-                    weakSkills.push({
-                        label: stats[key].label,
-                        pct: Math.round(pct * 100)
-                    });
-                }
-            }
-        });
-        return weakSkills;
-    }, []);
+    // Uses the shared module-level calculator so this view, the priorities modal
+    // and the setup-popup summary can never drift apart.
+    const computeWeaknesses = useCallback((sessions, service) => computeTrainingWeaknesses(sessions, service), []);
 
     const mySessions = useMemo(() => {
         if (!submissions || !currentUserEmail) return [];
@@ -884,77 +894,10 @@ const FacilitySelectionModal = ({ isOpen, onClose, facilities, onSelect }) => {
 };
 
 // --- Training Priorities Modal (Post Save) ---
-const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData, historicalSessions, healthWorkerName }) => {
-    const computeWeaknesses = (sessions) => {
-        if (!sessions || sessions.length === 0) return [];
-        const stats = {
-            skill_weight: { score: 0, max: 0, label: "وزن الطفل بصورة صحيحة" },
-            skill_temp: { score: 0, max: 0, label: "قياس درجة الطفل بصورة صحيحة" },
-            skill_height: { score: 0, max: 0, label: "قياس طول/ارتفاع الطفل بصورة صحيحة" },
-            skill_check_rr: { score: 0, max: 0, label: "قياس معدل التنفس بصورة صحيحة" },
-            skill_check_dehydration: { score: 0, max: 0, label: "تقييم فقدان السوائل بصورة صحيحة" },
-            skill_mal_muac: { score: 0, max: 0, label: "قياس المواك (MUAC) بصورة صحيحة" },
-            skill_mal_wfh: { score: 0, max: 0, label: "قياس نسبة الوزن للطول أو الارتفاع (Z-Score)" },
-            skill_edema: { score: 0, max: 0, label: "تقييم الورم (Edema)" },
-            skill_ds_drink: { score: 0, max: 0, label: "علامة خطورة: لا يستطيع ان يرضع أو يشرب" },
-            skill_ds_vomit: { score: 0, max: 0, label: "علامة خطورة: يتقيأ كل شئ" },
-            skill_ds_convulsion: { score: 0, max: 0, label: "علامة خطورة: تشنجات أثناء المرض الحالي" },
-            skill_ds_conscious: { score: 0, max: 0, label: "علامة خطورة: خامل أو فاقد للوعي" },
-        };
+const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData, historicalSessions, healthWorkerName, activeService = 'IMNCI' }) => {
 
-        sessions.forEach(sub => {
-            const s = sub.scores || {};
-            const as = sub.assessmentSkills || sub.fullData?.assessment_skills || sub.fullData?.assessmentSkills || {};
-
-            const addScore = (key, scoreProp, maxProp) => {
-                if (s[maxProp] > 0) {
-                    stats[key].score += (s[scoreProp] || 0);
-                    stats[key].max += s[maxProp];
-                }
-            };
-
-            addScore('skill_weight', 'handsOnWeight_score', 'handsOnWeight_maxScore');
-            addScore('skill_temp', 'handsOnTemp_score', 'handsOnTemp_maxScore');
-            addScore('skill_height', 'handsOnHeight_score', 'handsOnHeight_maxScore');
-            addScore('skill_check_rr', 'handsOnRR_score', 'handsOnRR_maxScore');
-            if (s.respiratoryRateCalculation_maxScore > 0) {
-                 stats.skill_check_rr.score += (s.respiratoryRateCalculation_score || 0);
-                 stats.skill_check_rr.max += s.respiratoryRateCalculation_maxScore;
-            }
-            addScore('skill_check_dehydration', 'dehydrationAssessment_score', 'dehydrationAssessment_maxScore');
-            addScore('skill_mal_muac', 'handsOnMUAC_score', 'handsOnMUAC_maxScore');
-            addScore('skill_mal_wfh', 'handsOnWFH_score', 'handsOnWFH_maxScore');
-
-            const checkSkill = (key) => {
-                if (as[key] === 'yes') { stats[key].score++; stats[key].max++; }
-                else if (as[key] === 'no') { stats[key].max++; }
-            };
-            checkSkill('skill_ds_drink');
-            checkSkill('skill_ds_vomit');
-            checkSkill('skill_ds_convulsion');
-            checkSkill('skill_ds_conscious');
-            checkSkill('skill_edema');
-        });
-
-        const weakSkills = [];
-        Object.keys(stats).forEach(key => {
-            if (stats[key].max > 0) {
-                const pct = stats[key].score / stats[key].max;
-                if (pct < 0.75) {
-                    weakSkills.push({
-                        label: stats[key].label,
-                        score: stats[key].score,
-                        max: stats[key].max,
-                        pct: Math.round(pct * 100)
-                    });
-                }
-            }
-        });
-        return weakSkills;
-    };
-
-    const currentWeaknesses = currentSessionData ? computeWeaknesses([currentSessionData]) : [];
-    const historyWeaknesses = computeWeaknesses(historicalSessions);
+    const currentWeaknesses = currentSessionData ? computeTrainingWeaknesses([currentSessionData], activeService) : [];
+    const historyWeaknesses = computeTrainingWeaknesses(historicalSessions, activeService);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={onSelect ? "الجلسة حفظت بنجاح! - أولويات التدريب" : "أولويات التدريب للعامل الصحي"} size="lg">
@@ -973,7 +916,7 @@ const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-green-700 font-bold text-sm">أداء ممتاز! لم تُسجل نقاط ضعف (أقل من 75%) in هذه الجلسة.</p>
+                            <p className="text-green-700 font-bold text-sm">أداء ممتاز! لم تُسجل نقاط ضعف (أقل من 75%) في هذه الجلسة.</p>
                         )}
                     </div>
                 )}
@@ -1863,9 +1806,47 @@ const SkillsMentorshipView = ({
     } = useDataCache();
 
     const [localHealthFacilities, setLocalHealthFacilities] = useState(healthFacilities || []);
+    const [isFacilitiesReloading, setIsFacilitiesReloading] = useState(false);
+    const [facilitiesLoadError, setFacilitiesLoadError] = useState(false);
+    const facilitiesAutoLoadRef = useRef(false);
+    const facilitiesDataRef = useRef(localHealthFacilities);
+
+    useEffect(() => { facilitiesDataRef.current = localHealthFacilities; }, [localHealthFacilities]);
 
     // Provide a non-blocking loading state for facilities when cached data exists
-    const isFacilitiesLoading = isDataCacheLoading?.healthFacilities && (!localHealthFacilities || localHealthFacilities.length === 0);
+    const isFacilitiesLoading = (isFacilitiesReloading || isDataCacheLoading?.healthFacilities) &&
+        (!localHealthFacilities || localHealthFacilities.length === 0);
+
+    // Loads the facility list without depending on another page having warmed the cache.
+    // Strictly cache-first: if the list is already in memory we return it untouched, and
+    // otherwise we hand off to the data cache, which reads IndexedDB before ever hitting
+    // the server. Only an explicit force=true (the manual retry) bypasses both layers.
+    const loadFacilities = useCallback(async (force = false) => {
+        if (typeof fetchHealthFacilities !== 'function') return [];
+
+        const cached = facilitiesDataRef.current;
+        if (!force && Array.isArray(cached) && cached.length > 0) {
+            setFacilitiesLoadError(false);
+            return cached;
+        }
+
+        setIsFacilitiesReloading(true);
+        setFacilitiesLoadError(false);
+        try {
+            const data = await fetchHealthFacilities({}, force);
+            if (Array.isArray(data)) {
+                setLocalHealthFacilities(data);
+                if (data.length === 0) setFacilitiesLoadError(true);
+            }
+            return data || [];
+        } catch (error) {
+            console.error('Failed to load health facilities:', error);
+            setFacilitiesLoadError(true);
+            return [];
+        } finally {
+            setIsFacilitiesReloading(false);
+        }
+    }, [fetchHealthFacilities]);
 
     useEffect(() => {
         if (!publicDashboardMode) {
@@ -1926,8 +1907,25 @@ const SkillsMentorshipView = ({
     useEffect(() => {
         if (healthFacilities) {
             setLocalHealthFacilities(healthFacilities);
+            if (healthFacilities.length > 0) setFacilitiesLoadError(false);
         }
     }, [healthFacilities]);
+
+    // If the setup popup is opened while the facility list is still empty (e.g. the user
+    // landed here directly), load it here instead of waiting for whichever other page
+    // normally populates it. Not forced, so IndexedDB is used when it has the data.
+    useEffect(() => {
+        if (currentView !== 'form_setup') {
+            facilitiesAutoLoadRef.current = false;
+            return;
+        }
+        if (isFacilitiesReloading) return;
+        if (localHealthFacilities && localHealthFacilities.length > 0) return;
+        if (facilitiesAutoLoadRef.current) return;
+
+        facilitiesAutoLoadRef.current = true;
+        loadFacilities(false);
+    }, [currentView, localHealthFacilities, isFacilitiesReloading, loadFacilities]);
 
     useEffect(() => {
         if (publicDashboardMode) {
@@ -2006,9 +2004,9 @@ const SkillsMentorshipView = ({
     }, [publicDashboardMode, updateLastSyncTime]);
 
     useEffect(() => {
-        if (fetchHealthFacilities) {
-            fetchHealthFacilities({}, false);
-        }
+        // Mirror the result locally as well, so an empty/stale context state never leaves
+        // this screen without a facility list.
+        loadFacilities(false);
 
         if (!publicDashboardMode) {
             fetchSkillMentorshipSubmissions(false);
@@ -2016,7 +2014,7 @@ const SkillsMentorshipView = ({
             if (fetchEENCVisitReports) fetchEENCVisitReports(false);
             updateLastSyncTime();
         }
-    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports, publicDashboardMode, updateLastSyncTime]);
+    }, [loadFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports, publicDashboardMode, updateLastSyncTime]);
 
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [editingSubmission, setEditingSubmission] = useState(null);
@@ -2256,6 +2254,28 @@ const SkillsMentorshipView = ({
             sub.sessionDate
         );
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService]);
+
+    // Condensed view of the worker's accumulated training priorities, rendered at the
+    // bottom of the setup popup so the mentor sees them before starting the session.
+    const trainingPrioritySummary = useMemo(() => {
+        const completed = (workerHistory || []).filter(s => s.status !== 'draft');
+        const sessions = completed.length > 0 ? completed : (workerHistory || []);
+
+        if (sessions.length === 0) {
+            return { sessionsCount: 0, lastSessionDate: 'N/A', weaknesses: [], topWeaknesses: [], remainingCount: 0 };
+        }
+
+        const sorted = [...sessions].sort((a, b) => new Date(b.sessionDate) - new Date(a.sessionDate));
+        const weaknesses = computeTrainingWeaknesses(sessions, activeService);
+
+        return {
+            sessionsCount: sessions.length,
+            lastSessionDate: sorted[0]?.sessionDate || 'N/A',
+            weaknesses,
+            topWeaknesses: weaknesses.slice(0, 4),
+            remainingCount: Math.max(0, weaknesses.length - 4)
+        };
+    }, [workerHistory, activeService]);
 
     const currentUserDrafts = useMemo(() => {
         if (!user || !processedSubmissions || !activeService) return [];
@@ -4303,6 +4323,7 @@ const SkillsMentorshipView = ({
                             currentSessionData={lastSavedSessionData}
                             historicalSessions={workerHistory.filter(s => !lastSavedSessionData || s.sessionDate !== lastSavedSessionData.sessionDate)}
                             healthWorkerName={lastSavedFacilityInfo?.healthWorkerName || selectedHealthWorkerName}
+                            activeService={activeService}
                         />
                     )}
                     
@@ -4334,6 +4355,7 @@ const SkillsMentorshipView = ({
                             currentSessionData={lastSavedSessionData}
                             historicalSessions={workerHistory.filter(s => !lastSavedSessionData || s.sessionDate !== lastSavedSessionData.sessionDate)}
                             healthWorkerName={lastSavedFacilityInfo?.healthWorkerName || selectedHealthWorkerName}
+                            activeService={activeService}
                         />
                     )}
                     
@@ -4545,9 +4567,11 @@ const SkillsMentorshipView = ({
                                 </FormGroup>
                                 
                                 {isFacilitiesLoading ? (
-                                    <div className="flex justify-center items-center p-4">
-                                        <Spinner />
-                                        <span className="mr-2 text-gray-500">جاري تحميل المؤسسات...</span>
+                                    <div className="flex flex-col justify-center items-center p-4 gap-2">
+                                        <div className="flex items-center">
+                                            <Spinner />
+                                            <span className="mr-2 text-gray-500 text-sm">جاري تحميل قائمة المؤسسات...</span>
+                                        </div>
                                     </div>
                                 ) : (
                                     <FormGroup label="المؤسسة الصحية" className="text-right">
@@ -4564,7 +4588,25 @@ const SkillsMentorshipView = ({
                                             </span>
                                             <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                         </div>
-                                        {selectedState && selectedLocality && filteredFacilities.length === 0 && !isFacilitiesLoading && ( <p className="text-xs text-red-600 mt-1">لا توجد مؤسسات مسجلين.</p> )}
+                                        {selectedState && selectedLocality && filteredFacilities.length === 0 && !isFacilitiesLoading && (
+                                            <div className="mt-1 flex items-center justify-between gap-2">
+                                                <p className="text-xs text-red-600">
+                                                    {(!localHealthFacilities || localHealthFacilities.length === 0)
+                                                        ? "تعذر تحميل قائمة المؤسسات."
+                                                        : "لا توجد مؤسسات مسجلة في هذه المحلية."}
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => loadFacilities(true)} /* explicit user retry: bypass cache */
+                                                    className="text-xs font-bold text-sky-700 hover:text-sky-900 underline flex-shrink-0"
+                                                >
+                                                    إعادة تحميل المؤسسات
+                                                </button>
+                                            </div>
+                                        )}
+                                        {facilitiesLoadError && (!localHealthFacilities || localHealthFacilities.length === 0) && !isFacilitiesLoading && (
+                                            <p className="text-[11px] text-gray-500 mt-1">تأكد من اتصالك بالإنترنت ثم أعد المحاولة.</p>
+                                        )}
                                     </FormGroup>
                                 )}
                             </div>
@@ -4605,63 +4647,83 @@ const SkillsMentorshipView = ({
                                         )}
                                     </FormGroup>
                                     
-                                    {/* Worker details update form snippet */}
-                                    {selectedHealthWorkerName && selectedWorkerOriginalData && (
-                                        <div className="bg-white p-4 rounded border border-gray-200 shadow-inner space-y-4">
-                                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wide border-b pb-1.5 mb-3">تحديث بيانات الكادر الفني التابع للمؤسسة</div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <FormGroup label="الوصف الوظيفي الحالي">
-                                                    <Select value={workerJobTitle} onChange={(e) => setWorkerJobTitle(e.target.value)}>
-                                                        <option value="">-- اختر الوصف --</option>
-                                                        {getServiceConfig(activeService).titles.map(t => (
-                                                            <option key={t} value={t}>{t}</option>
-                                                        ))}
-                                                    </Select>
-                                                </FormGroup>
-                                                <FormGroup label="تاريخ آخر تدريب">
-                                                    <Input type="date" value={workerTrainingDate} onChange={(e) => setWorkerTrainingDate(e.target.value)} />
-                                                </FormGroup>
-                                                <FormGroup label="رقم الهاتف">
-                                                    <Input type="tel" value={workerPhone} onChange={(e) => setWorkerPhone(e.target.value)} placeholder="ادخل رقم الهاتف" />
-                                                </FormGroup>
-                                            </div>
-                                            {isWorkerInfoChanged && (
-                                                <div className="flex justify-end pt-2">
-                                                    <Button 
-                                                        type="button" 
-                                                        variant="warning" 
-                                                        size="sm" 
-                                                        onClick={handleUpdateHealthWorkerInfo} 
-                                                        disabled={isUpdatingWorker}
-                                                    >
-                                                        {isUpdatingWorker ? 'جاري التحديث...' : 'إرسال تعديل الكادر للموافقة'}
-                                                    </Button>
-                                                </div>
-                                            )}
+                                </div>
+                            )}
+
+                            {/* --- Training priority summary (bottom field) --- */}
+                            {isSkillsAssessmentSetup && selectedHealthWorkerName && (
+                                <div className="border rounded-lg overflow-hidden shadow-sm">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-slate-800 text-white">
+                                        <div className="flex items-center gap-2">
+                                            <Target className="h-4 w-4 text-amber-300 flex-shrink-0" />
+                                            <span className="text-sm font-bold">ملخص أولويات التدريب</span>
                                         </div>
-                                    )}
+                                        <span className="text-[11px] text-slate-300">
+                                            {trainingPrioritySummary.sessionsCount > 0
+                                                ? `${trainingPrioritySummary.sessionsCount} جلسة سابقة • آخر جلسة: ${trainingPrioritySummary.lastSessionDate}`
+                                                : "لا توجد جلسات سابقة"}
+                                        </span>
+                                    </div>
+
+                                    <div className="p-4 bg-white space-y-3">
+                                        {trainingPrioritySummary.sessionsCount === 0 ? (
+                                            <p className="text-sm text-gray-500">
+                                                لم تُسجل أي جلسة إشراف سابقة لهذا العامل الصحي. ستظهر أولويات التدريب هنا بعد أول جلسة.
+                                            </p>
+                                        ) : trainingPrioritySummary.weaknesses.length === 0 ? (
+                                            <p className="text-sm font-semibold text-emerald-700">
+                                                أداء ممتاز — لا توجد مهارات تحت 75% في الجلسات السابقة.
+                                            </p>
+                                        ) : (
+                                            <>
+                                                <p className="text-xs text-gray-500">
+                                                    المهارات الأضعف بناءً على الجلسات السابقة — ركّز عليها في جلسة اليوم:
+                                                </p>
+                                                <ul className="space-y-1.5">
+                                                    {trainingPrioritySummary.topWeaknesses.map((w, i) => (
+                                                        <li key={w.key || i} className="flex items-center justify-between gap-3 bg-gray-50 rounded px-3 py-1.5 border border-gray-100">
+                                                            <span className="flex items-center gap-2 text-sm text-gray-800 min-w-0">
+                                                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+                                                                <span className="truncate">{w.label}</span>
+                                                            </span>
+                                                            <span
+                                                                dir="ltr"
+                                                                className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${w.pct < 50 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}
+                                                            >
+                                                                {w.pct}%
+                                                            </span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                                {trainingPrioritySummary.remainingCount > 0 && (
+                                                    <p className="text-xs text-gray-500">
+                                                        + {trainingPrioritySummary.remainingCount} مهارة أخرى تحتاج إلى تدريب.
+                                                    </p>
+                                                )}
+                                            </>
+                                        )}
+
+                                        <div className="flex justify-end pt-1">
+                                            <Button
+                                                type="button"
+                                                variant="warning"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setLastSavedSessionData(null);
+                                                    setIsTrainingPrioritiesModalOpen(true);
+                                                }}
+                                                disabled={isFacilitiesLoading || trainingPrioritySummary.sessionsCount === 0}
+                                                title={trainingPrioritySummary.sessionsCount === 0 ? "لا توجد جلسات سابقة لعرض الأولويات" : "عرض أولويات التدريب للعامل بناءً على التقييمات السابقة"}
+                                            >
+                                                عرض التفاصيل الكاملة
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row justify-between items-center mt-8 pt-4 border-t gap-4">
-                            <div className="flex gap-2">
-                                {isSkillsAssessmentSetup && selectedHealthWorkerName && (
-                                    <Button 
-                                        type="button" 
-                                        variant="warning"
-                                        onClick={() => {
-                                            setLastSavedSessionData(null);
-                                            setIsTrainingPrioritiesModalOpen(true);
-                                        }}
-                                        disabled={isFacilitiesLoading || workerHistory.length === 0}
-                                        title={workerHistory.length === 0 ? "لا توجد جلسات سابقة لعرض الأولويات" : "عرض أولويات التدريب للعامل بناءً على التقييمات السابقة"}
-                                    >
-                                        أولويات التدريب
-                                    </Button>
-                                )}
-                            </div>
-
+                        <div className="flex justify-end items-center mt-8 pt-4 border-t gap-4">
                             <div className="flex gap-2 w-full sm:w-auto justify-end">
                                 <Button onClick={handleBackToMainMenu} variant="secondary" disabled={isFacilitiesLoading}>إلغاء</Button>
                                 <Button
@@ -4731,6 +4793,7 @@ const SkillsMentorshipView = ({
                         currentSessionData={lastSavedSessionData}
                         historicalSessions={workerHistory.filter(s => !lastSavedSessionData || s.sessionDate !== lastSavedSessionData.sessionDate)}
                         healthWorkerName={lastSavedFacilityInfo?.healthWorkerName || selectedHealthWorkerName}
+                        activeService={activeService}
                     />
                 )}
 
