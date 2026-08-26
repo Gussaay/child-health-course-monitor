@@ -45,7 +45,7 @@ import {
     CLASSIFY_OPTIONS, TREATMENT_OPTIONS,
     INFANT_SECTIONS, INFANT_SECTION_LABELS,
     INFANT_CLASSIFY_OPTIONS, INFANT_TREATMENT_OPTIONS,
-    getExerciseById, getExercisesForSubCourse,
+    getExerciseById, getExercisesForSubCourse, matchesSubCourse,
 } from './exercises';
 
 export {
@@ -125,18 +125,38 @@ const applyOptionDefaults = (expected = {}) => ({
 export async function loadAllExercises(subCourse = ONLINE_SUB_COURSE, { includeDrafts = false, force = false } = {}) {
     let stored = [];
     try {
-        stored = await getCachedExerciseDefinitions({ force });
+        const raw = await getCachedExerciseDefinitions({ force });
+        // Tolerate a map as well as an array — a shape change in data.js used to
+        // throw here and silently leave the learner with the built-ins only.
+        stored = Array.isArray(raw) ? raw : Object.values(raw || {});
     } catch (e) {
         // Editing is optional: if the collection is unreadable the built-ins still work.
         console.warn('Could not load stored exercise definitions:', e.message);
     }
 
     const byId = {};
-    EXERCISES.forEach(e => { byId[e.id] = e; });
-    stored.forEach(e => { byId[e.id] = { ...e, expected: applyOptionDefaults(e.expected) }; });
+    EXERCISES.forEach(e => { byId[e.id] = { ...e, isCustom: false }; });
+
+    // A stored exercise OVERLAYS the built-in of the same id — it does not
+    // replace it. Replacing was the bug: a stored copy that was missing
+    // `subCourse`, or that still carried the editor's default `draft: true`,
+    // removed a published built-in from the learner's list with nothing on
+    // screen to explain why.
+    stored.forEach(e => {
+        if (!e?.id) return;
+        const builtIn = byId[e.id];
+        byId[e.id] = {
+            ...(builtIn || {}),
+            ...e,
+            subCourse: e.subCourse || builtIn?.subCourse || ONLINE_SUB_COURSE,
+            draft: e.draft ?? builtIn?.draft ?? false,
+            expected: applyOptionDefaults(e.expected || builtIn?.expected || {}),
+            isCustom: true,
+        };
+    });
 
     return Object.values(byId)
-        .filter(e => e.subCourse === subCourse && (includeDrafts || !e.draft))
+        .filter(e => matchesSubCourse(e, subCourse) && (includeDrafts || !e.draft))
         .sort((a, b) => (a.order || 0) - (b.order || 0));
 }
 
@@ -662,6 +682,8 @@ export function ExerciseListView({
     source = 'public', includeDrafts = false, onChangeParticipant = null,
 }) {
     const [exercises, setExercises] = useState(() => getExercisesForSubCourse(subCourse, { includeDrafts }));
+    // Kept only so the empty state can say WHY the list is empty.
+    const [allForSubCourse, setAllForSubCourse] = useState(() => getExercisesForSubCourse(subCourse, { includeDrafts: true }));
     const [activeId, setActiveId] = useState(null);
     const [attempts, setAttempts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -686,8 +708,12 @@ export function ExerciseListView({
     // immediately, then the merged list replaces them.
     useEffect(() => {
         let alive = true;
-        loadAllExercises(subCourse, { includeDrafts })
-            .then(list => { if (alive) setExercises(list); })
+        loadAllExercises(subCourse, { includeDrafts: true })
+            .then(all => {
+                if (!alive) return;
+                setAllForSubCourse(all);
+                setExercises(includeDrafts ? all : all.filter(e => !e.draft));
+            })
             .catch(() => {});
         return () => { alive = false; };
     }, [subCourse, includeDrafts]);
@@ -762,7 +788,13 @@ export function ExerciseListView({
             </div>
 
             {loading ? <div className="flex justify-center p-8"><Spinner /></div>
-                : exercises.length === 0 ? <EmptyState message="No exercises are published for this sub-course yet." />
+                : exercises.length === 0 ? (
+                    <EmptyState message={
+                        allForSubCourse.length > 0
+                            ? `${allForSubCourse.length} exercise${allForSubCourse.length === 1 ? ' is' : 's are'} written for “${subCourse}”, but ${allForSubCourse.length === 1 ? 'it is' : 'they are all'} still marked DRAFT. Open Manage Exercises and turn Draft off to publish.`
+                            : `No exercises match the sub-course “${subCourse}”. Check that the course's sub-course name matches ONLINE_SUB_COURSE in exercises.js.`
+                    } />
+                )
                 : (
                     <div className="grid gap-3 sm:grid-cols-2">
                         {exercises.map(ex => {
@@ -1491,7 +1523,10 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
 
         setSaving(true);
         try {
-            await upsertExerciseDefinition({ ...ex, narrative: (ex.narrative || []).filter(l => l.trim() !== '') });
+            // `isCustom` is added at load time by loadAllExercises; it is not
+            // part of the stored document and must not be persisted.
+            const { isCustom, ...clean } = ex;
+            await upsertExerciseDefinition({ ...clean, narrative: (ex.narrative || []).filter(l => l.trim() !== '') });
             onSaved?.();
         } catch (e) {
             setError(e.message || 'Could not save.');
@@ -1767,6 +1802,7 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
     const [editing, setEditing] = useState(null);   // exercise object
     const [creating, setCreating] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
+    const [busy, setBusy] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -1778,13 +1814,56 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
 
     useEffect(() => { load(); }, [load]);
 
+    // `isCustom` is a runtime marker from loadAllExercises, not part of the
+    // document — it must never be written back to Firestore.
+    const persist = (ex, patch) => {
+        const { isCustom, ...clean } = ex;
+        return upsertExerciseDefinition({ ...clean, ...patch });
+    };
+
+    // Publishing a built-in writes a stored override carrying draft:false.
+    // That is the same mechanism as editing one, so "Reset to built-in" still
+    // undoes it.
+    const setDraft = async (ex, draft) => {
+        setBusy(true);
+        try {
+            await persist(ex, { draft });
+            setToast({ show: true, message: draft ? `“${ex.title}” is now a draft.` : `“${ex.title}” is published.`, type: 'success' });
+            await load();
+        } catch (e) {
+            setToast({ show: true, message: e.message, type: 'error' });
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const draftCount = list.filter(e => e.draft).length;
+
+    const publishAll = async () => {
+        const drafts = list.filter(e => e.draft);
+        if (!drafts.length) return;
+        setBusy(true);
+        try {
+            for (const ex of drafts) await persist(ex, { draft: false });
+            setToast({ show: true, message: `Published ${drafts.length} exercise${drafts.length === 1 ? '' : 's'}.`, type: 'success' });
+            await load();
+        } catch (e) {
+            setToast({ show: true, message: e.message, type: 'error' });
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const resetToBuiltIn = async (ex) => {
+        setBusy(true);
         try {
             await deleteExerciseDefinition(ex.id);
             setToast({ show: true, message: 'Stored copy removed.', type: 'success' });
             await load();
         } catch (e) {
             setToast({ show: true, message: e.message, type: 'error' });
+        } finally {
+            setBusy(false);
         }
     };
 
@@ -1813,10 +1892,20 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
                     <p className="text-xs text-slate-500">
                         Built-in exercises ship with the app. Editing one stores an override under the same id.
                     </p>
+                    {draftCount > 0 && (
+                        <p className="text-xs text-amber-600 font-medium mt-1">
+                            {draftCount} of {list.length} {draftCount === 1 ? 'is a draft' : 'are drafts'} — participants cannot see {draftCount === 1 ? 'it' : 'them'}.
+                        </p>
+                    )}
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="secondary" onClick={load}><RefreshCw className="w-4 h-4" /> Refresh</Button>
-                    <Button onClick={() => setCreating(true)}>New exercise</Button>
+                    <Button variant="secondary" onClick={load} disabled={busy}><RefreshCw className="w-4 h-4" /> Refresh</Button>
+                    {draftCount > 0 && (
+                        <Button variant="secondary" onClick={publishAll} disabled={busy}>
+                            Publish all ({draftCount})
+                        </Button>
+                    )}
+                    <Button onClick={() => setCreating(true)} disabled={busy}>New exercise</Button>
                 </div>
             </div>
 
@@ -1835,16 +1924,22 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
                                             ? <span className="text-purple-600 font-semibold">QUIZ · {(ex.questions || []).length} questions</span>
                                             : <span>{(ex.expected?.sections || []).length} sections{ex.formType === 'infant' ? ' · young infant form' : ''}</span>}
                                         {ex.expected?.includeTreatment && <span className="text-sky-600">+ treatment</span>}
-                                        {ex.draft && <span className="text-amber-600 font-semibold">DRAFT</span>}
+                                        {ex.draft
+                                            ? <span className="text-amber-600 font-semibold">DRAFT</span>
+                                            : <span className="text-emerald-600 font-semibold">PUBLISHED</span>}
                                         {ex.isCustom
                                             ? <span className="text-indigo-600 font-semibold">STORED</span>
                                             : <span className="text-slate-400">built-in</span>}
                                     </p>
                                 </div>
                                 <div className="flex gap-2 flex-shrink-0">
-                                    <Button variant="secondary" onClick={() => setEditing(ex)}>Edit</Button>
+                                    <Button variant={ex.draft ? undefined : 'secondary'} disabled={busy}
+                                        onClick={() => setDraft(ex, !ex.draft)}>
+                                        {ex.draft ? 'Publish' : 'Unpublish'}
+                                    </Button>
+                                    <Button variant="secondary" disabled={busy} onClick={() => setEditing(ex)}>Edit</Button>
                                     {ex.isCustom && (
-                                        <Button variant="secondary" onClick={() => resetToBuiltIn(ex)}>
+                                        <Button variant="secondary" disabled={busy} onClick={() => resetToBuiltIn(ex)}>
                                             {EXERCISES.some(b => b.id === ex.id) ? 'Reset to built-in' : 'Delete'}
                                         </Button>
                                     )}

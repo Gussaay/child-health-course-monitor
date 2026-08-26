@@ -442,3 +442,39 @@ export const getLocalizedLocalityName = (stateKey, localityKey, language) => {
     );
     return locality ? (locality[lang] || localityKey) : localityKey;
 };
+// --- COURSE LEVEL & GEO OPTION HELPERS ---
+export const COURSE_LEVELS = {
+    FEDERAL: 'federal',
+    STATE: 'state',
+    LOCALITY: 'locality',
+};
+
+const FEDERAL_VALUES = new Set(['federal', 'Federal', 'إتحادي', 'اتحادي', 'إتحادية', 'اتحادية']);
+
+export const isFederalValue = (v) =>
+    typeof v === 'string' && FEDERAL_VALUES.has(v.trim());
+
+export const isFederalCourse = (course) => {
+    if (!course) return false;
+    if (course.course_level) return course.course_level === COURSE_LEVELS.FEDERAL;
+    const states = course.states || (course.state ? String(course.state).split(',') : []);
+    return states.some(isFederalValue);
+};
+
+export const getAllStateOptions = () =>
+    Object.keys(STATE_LOCALITIES)
+        .filter(k => !isFederalValue(k))
+        .sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar));
+
+export const getLocalityOptionsForState = (stateKey) => {
+    if (!stateKey) return [];
+    let entry = STATE_LOCALITIES[stateKey];
+    if (!entry) {
+        const key = Object.keys(STATE_LOCALITIES).find(
+            k => STATE_LOCALITIES[k].en === stateKey || STATE_LOCALITIES[k].ar === stateKey
+        );
+        entry = key ? STATE_LOCALITIES[key] : null;
+    }
+    if (!entry) return [];
+    return [...(entry.localities || [])].sort((a, b) => a.ar.localeCompare(b.ar));
+};

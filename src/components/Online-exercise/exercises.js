@@ -853,9 +853,23 @@ export const EXERCISES = [
 // Helpers used by the engine — you should not need to touch these.
 // ---------------------------------------------------------------------------
 
+// Sub-course matching is deliberately forgiving. The value arrives from three
+// places (this file, constants.js, and Firestore documents saved by the
+// editor), and an exercise disappearing because one of them says
+// "Online IMCI Course" instead of "online IMCI course" is a bug the
+// facilitator has no way to diagnose from the screen.
+export const normaliseSubCourse = (s) => String(s ?? '').trim().toLowerCase();
+
+// An exercise with no subCourse at all belongs to the online course: that is
+// the only sub-course that has exercises, and a stored copy that lost the field
+// must not vanish from the list.
+export const matchesSubCourse = (exercise, subCourse) =>
+    !exercise?.subCourse ||
+    normaliseSubCourse(exercise.subCourse) === normaliseSubCourse(subCourse);
+
 export const getExercisesForSubCourse = (subCourse, { includeDrafts = false } = {}) =>
     EXERCISES
-        .filter(e => e.subCourse === subCourse && (includeDrafts || !e.draft))
+        .filter(e => matchesSubCourse(e, subCourse) && (includeDrafts || !e.draft))
         .sort((a, b) => (a.order || 0) - (b.order || 0));
 
 export const getExerciseById = (id) => EXERCISES.find(e => e.id === id) || null;
