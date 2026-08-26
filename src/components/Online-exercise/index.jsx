@@ -1198,7 +1198,7 @@ function ReportTile({ label, value, sub, tone = 'slate' }) {
     );
 }
 
-export function ExerciseCourseReport({ course, participants = [], subCourse = ONLINE_SUB_COURSE }) {
+export function ExerciseCourseReport({ course, participants = [], subCourse = ONLINE_SUB_COURSE, onData = null }) {
     const [attempts, setAttempts] = useState([]);
     const [exercises, setExercises] = useState(() => getExercisesForSubCourse(subCourse, { includeDrafts: true }));
     const [loading, setLoading] = useState(true);
@@ -1347,6 +1347,10 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
         };
     }, [attempts, exercises, participants]);
 
+    useEffect(() => {
+        if (onData) onData({ ...model, exercises, loading, hasAttempts: attempts.length > 0 });
+    }, [model, exercises, loading, attempts.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const csv = (filename, header, lines) => {
         const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -1394,7 +1398,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div id="exercise-report-kpis" className="grid grid-cols-2 md:grid-cols-5 gap-3 bg-white p-2">
                 <ReportTile label="Started" value={kpis.started} sub={`of ${model.roster.length} participants`} tone="sky" />
                 <ReportTile label="Not started" value={kpis.notStarted} tone={kpis.notStarted > 0 ? 'amber' : 'emerald'} />
                 <ReportTile label="Total attempts" value={kpis.totalAttempts} />
@@ -1444,7 +1448,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
 
             {/* ---- commonly missed ---- */}
             {model.missed.length > 0 && (
-                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                <div id="exercise-report-missed" className="border border-slate-200 rounded-xl overflow-hidden bg-white">
                     <div className="px-4 py-2.5 bg-rose-700 text-white text-sm font-bold uppercase tracking-wide">
                         Most commonly missed items
                     </div>

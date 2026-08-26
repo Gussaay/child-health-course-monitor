@@ -589,6 +589,227 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
     }
 };
 
+
+// --- PDF EXPORT: INTERACTIVE EXERCISE REPORT ---
+// Same shape as the full course report above: identical quality profiles, the
+// Amiri font (so Arabic participant names render), html2canvas for the visual
+// blocks, autoTable for the data tables, and the same native/web save path.
+const generateExerciseReportPdf = async (course, quality, onSuccess, onError, reportData) => {
+    if (!reportData || !reportData.hasAttempts) {
+        onError('There are no exercise attempts to export yet.');
+        return;
+    }
+
+    const qualityProfiles = {
+        print: { scale: 2, fileSuffix: '', imageType: 'image/jpeg', imageQuality: 0.95, imageFormat: 'JPEG', compression: 'MEDIUM' },
+        screen: { scale: 1.5, fileSuffix: '', imageType: 'image/png', imageQuality: 1.0, imageFormat: 'PNG', compression: 'FAST' }
+    };
+    const profile = qualityProfiles[quality] || qualityProfiles.print;
+
+    // Landscape: the per-participant table has one column per exercise, and in
+    // portrait those columns collapse to an unreadable width.
+    const doc = new jsPDF('landscape', 'mm', 'a4');
+    const fileName = `Exercise_Report_${course.course_type}_${course.state}.pdf`;
+
+    doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
+    doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+    doc.setFont('Amiri');
+
+    let y = 15;
+    const margin = 14;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - (margin * 2);
+
+    const checkPageBreak = (currentY, elementHeight) => {
+        if (currentY + elementHeight + margin > pageHeight) {
+            doc.addPage();
+            doc.setFont('Amiri');
+            return margin;
+        }
+        return currentY;
+    };
+
+    const addCanvasImageToPdf = async (elementId, currentY) => {
+        const element = document.getElementById(elementId);
+        if (!element) return currentY;
+        try {
+            const canvas = await html2canvas(element, {
+                scale: profile.scale,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                windowWidth: element.scrollWidth,
+                onclone: (clonedDoc) => {
+                    const cloned = clonedDoc.getElementById(elementId);
+                    if (!cloned) return;
+                    cloned.querySelectorAll('.overflow-x-auto, .overflow-hidden').forEach(c => {
+                        c.style.overflow = 'visible';
+                        c.style.width = 'max-content';
+                        c.style.maxWidth = 'none';
+                    });
+                    cloned.querySelectorAll('.print-hide').forEach(b => { b.style.display = 'none'; });
+                }
+            });
+            const imgData = canvas.toDataURL(profile.imageType, profile.imageQuality);
+            const imgWidth = contentWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            currentY = checkPageBreak(currentY, imgHeight);
+            doc.addImage(imgData, profile.imageFormat, margin, currentY, imgWidth, imgHeight, undefined, profile.compression);
+            return currentY + imgHeight + 5;
+        } catch (e) {
+            console.error(`Failed to add canvas for ${elementId}:`, e);
+            throw e;
+        }
+    };
+
+    const addTitle = (text, currentY, size = 13) => {
+        currentY = checkPageBreak(currentY, 10);
+        doc.setFontSize(size); doc.setFont('Amiri', 'normal'); doc.setTextColor(0);
+        doc.text(text, margin, currentY, { align: 'left' });
+        return currentY + 7;
+    };
+
+    const autoTableStyles = {
+        theme: 'grid',
+        styles: { font: 'Amiri', fontSize: 7, cellPadding: 1.5, overflow: 'linebreak' },
+        headStyles: { font: 'Amiri', fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8 },
+    };
+
+    try {
+        const { exercises, perExercise, perParticipant, missed, kpis, roster, scoredFirsts } = reportData;
+
+        doc.setFontSize(18); doc.setFont('Amiri', 'normal');
+        doc.text(`Interactive Exercise Report: ${course.course_type} - ${course.state}`, margin, y, { align: 'left' });
+        y += 7;
+        doc.setFontSize(9); doc.setTextColor(120);
+        doc.text(`${course.locality || ''} · started ${course.start_date || ''} · ${kpis.totalAttempts} attempts from ${kpis.started} of ${roster.length} participants`, margin, y);
+        doc.setTextColor(0);
+        y += 8;
+
+        if (document.getElementById('exercise-report-kpis')) {
+            y = await addCanvasImageToPdf('exercise-report-kpis', y);
+        }
+
+        // ---- results by exercise ----
+        y = addTitle('Results by Exercise', y);
+        autoTable(doc, {
+            ...autoTableStyles,
+            startY: y,
+            head: [['#', 'Exercise', 'Attempted by', 'Avg 1st attempt', 'Avg best', 'Pass rate', 'Avg attempts', 'Avg minutes']],
+            body: perExercise.map((e, i) => [
+                i + 1,
+                e.title,
+                `${e.attemptedBy} / ${roster.length}`,
+                e.initialAvg != null ? `${e.initialAvg}%` : '-',
+                e.bestAvg != null ? `${e.bestAvg}%` : '-',
+                e.attemptedBy === 0 ? '-' : `${e.passRate}%`,
+                e.avgAttempts,
+                e.avgMinutes != null ? e.avgMinutes : '-',
+            ]),
+            columnStyles: { 0: { halign: 'center', cellWidth: 8 }, 1: { halign: 'left' } },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index !== 1) data.cell.styles.halign = 'center';
+            }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+
+        // ---- commonly missed ----
+        if (missed.length > 0) {
+            y = addTitle('Most Commonly Missed Items', y);
+            doc.setFontSize(8); doc.setTextColor(120);
+            y = checkPageBreak(y, 6);
+            doc.text(`Counted on each learner's first attempt only (${scoredFirsts} first attempts).`, margin, y);
+            doc.setTextColor(0);
+            y += 5;
+            autoTable(doc, {
+                ...autoTableStyles,
+                startY: y,
+                head: [['#', 'Group', 'Item', 'Learners wrong', '% of first attempts']],
+                body: missed.slice(0, 25).map((m, i) => [i + 1, m.group, m.label, m.count, `${m.percent}%`]),
+                columnStyles: { 0: { halign: 'center', cellWidth: 8 }, 2: { halign: 'left' } },
+                didParseCell: (data) => {
+                    if (data.section === 'body' && data.column.index !== 2) data.cell.styles.halign = 'center';
+                    // Anything more than half the group got wrong is a teaching gap.
+                    if (data.section === 'body' && data.column.index === 4) {
+                        const pct = parseInt(String(data.cell.raw), 10);
+                        if (pct >= 50) { data.cell.styles.fillColor = [254, 226, 226]; data.cell.styles.textColor = [153, 27, 27]; }
+                    }
+                }
+            });
+            y = doc.lastAutoTable.finalY + 8;
+        }
+
+        // ---- results by participant ----
+        y = addTitle('Results by Participant', y);
+        autoTable(doc, {
+            ...autoTableStyles,
+            startY: y,
+            head: [['#', 'Participant', ...exercises.map(e => e.title.split('—')[0].trim()), 'Done', 'Passed', 'Attempts', 'Average']],
+            body: perParticipant.map((p, i) => [
+                i + 1,
+                p.name,
+                ...exercises.map(e => (p.scores[e.id] == null ? '-' : `${p.scores[e.id]}%`)),
+                p.completed,
+                p.passedCount,
+                p.attemptCount,
+                p.overall != null ? `${p.overall}%` : '-',
+            ]),
+            columnStyles: { 0: { halign: 'center', cellWidth: 8 }, 1: { halign: 'left', cellWidth: 45 } },
+            didParseCell: (data) => {
+                if (data.section !== 'body') return;
+                if (data.column.index !== 1) data.cell.styles.halign = 'center';
+                // Shade each exercise cell by pass / fail against its own mark.
+                const exIndex = data.column.index - 2;
+                if (exIndex >= 0 && exIndex < exercises.length) {
+                    const raw = String(data.cell.raw);
+                    if (raw !== '-') {
+                        const pct = parseInt(raw, 10);
+                        const passMark = exercises[exIndex].passMark ?? 80;
+                        if (pct >= passMark) { data.cell.styles.fillColor = [209, 250, 229]; data.cell.styles.textColor = [6, 95, 70]; }
+                        else { data.cell.styles.fillColor = [254, 243, 199]; data.cell.styles.textColor = [146, 64, 14]; }
+                    }
+                }
+            }
+        });
+
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFont('Amiri'); doc.setFontSize(10); doc.setTextColor(150);
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            const text = `Page ${i} of ${pageCount}`;
+            const textWidth = doc.getStringUnitWidth(text) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+            doc.text(text, (pageWidth - textWidth) / 2, pageHeight - 8);
+        }
+
+        if (Capacitor.isNativePlatform()) {
+            try {
+                const base64Data = doc.output('datauristring').split('base64,')[1];
+                const folderPath = 'downloads';
+                const filePath = `${folderPath}/${fileName}`;
+                try {
+                    await Filesystem.mkdir({ path: folderPath, directory: Directory.Data, recursive: true });
+                } catch (e) {
+                    // Ignore error if directory exists
+                }
+                const writeResult = await Filesystem.writeFile({
+                    path: filePath, data: base64Data, directory: Directory.Data, recursive: true
+                });
+                await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf', openWithDefault: true });
+                onSuccess('PDF saved to App Downloads and opened successfully.');
+            } catch (err) {
+                console.error('Native export error:', err);
+                onError(`Failed to process PDF natively: ${err.message}`);
+            }
+        } else {
+            doc.save(fileName);
+            onSuccess('PDF download initiated.');
+        }
+    } catch (e) {
+        console.error('Error generating exercise report PDF:', e);
+        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
+    }
+};
+
 // --- MAIN COMPONENT: CourseReportView ---
 export function CourseReportView({ 
     course, onBack, participants: rawParticipants, allObs: rawObs, allCases: rawCases, finalReportData, onEditFinalReport, 
@@ -596,6 +817,9 @@ export function CourseReportView({
     onSaveFinalReport
 }) {
     const [activeTab, setActiveTab] = useState('full-course-report');
+    // Computed inside ExerciseCourseReport and handed up, so the PDF uses
+    // exactly the figures on screen rather than recalculating them.
+    const [exerciseReportData, setExerciseReportData] = useState(null);
     
     // --- APPLY SOFT DELETE FILTERS ---
     const participants = useMemo(() => (rawParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true"), [rawParticipants]);
@@ -1099,6 +1323,21 @@ export function CourseReportView({
 
     const writtenTableHeaders = ['#', 'Participant Name', 'Pre-Test Result', 'Post-Test Result', '% Increase', 'Average Improvement'];
 
+    const handleExercisePdfGeneration = async (quality) => {
+        setIsPdfGenerating(true);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        try {
+            await generateExerciseReportPdf(
+                course, quality,
+                (message) => notify(message, 'success'),
+                (message) => notify(message, 'error'),
+                exerciseReportData
+            );
+        } finally {
+            setIsPdfGenerating(false);
+        }
+    };
+
     const handlePdfGeneration = async (quality) => {
         setIsPdfGenerating(true);
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1246,6 +1485,23 @@ export function CourseReportView({
                                 {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>Generating...</span></div>}
                             </div>
                         )
+                    ) : activeTab === 'exercise-report' ? (
+                        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
+                            {!isSharedView && (
+                                <Button onClick={onBack} disabled={isPdfGenerating} className="w-full text-sm justify-center">
+                                    Back to List
+                                </Button>
+                            )}
+                            <Button onClick={() => handleExercisePdfGeneration('print')} variant="secondary"
+                                disabled={isPdfGenerating || !exerciseReportData?.hasAttempts} className="w-full text-sm justify-center">
+                                <PdfIcon /> PDF (Print)
+                            </Button>
+                            <Button onClick={() => handleExercisePdfGeneration('screen')} variant="secondary"
+                                disabled={isPdfGenerating || !exerciseReportData?.hasAttempts} className="w-full text-sm justify-center">
+                                <PdfIcon /> PDF (Share)
+                            </Button>
+                            {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>Generating...</span></div>}
+                        </div>
                     ) : (
                         !isSharedView ? <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-4 sm:mt-0">Back to List</Button> : null
                     )
@@ -1276,7 +1532,7 @@ export function CourseReportView({
                             <p className="text-sm text-gray-500 mb-4">
                                 Every recorded attempt on this course, by exercise and by participant.
                             </p>
-                            <ExerciseCourseReport course={course} participants={reportParticipants} />
+                            <ExerciseCourseReport course={course} participants={reportParticipants} onData={setExerciseReportData} />
                         </div>
                     </Card>
                 </div>
