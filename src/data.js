@@ -2317,6 +2317,9 @@ export async function upsertExerciseAttempt(payload) {
         exerciseTitle: payload.exerciseTitle || '',
         subCourse: payload.subCourse || '',
         attemptNo,
+        // Which submission this was. The first is the learner's initial,
+        // unaided answer, and is the one worth comparing across a cohort.
+        isInitialAnswer: payload.isInitialAnswer ?? (attemptNo === 1),
         percent: Number(payload.percent) || 0,
         earned: Number(payload.earned) || 0,
         possible: Number(payload.possible) || 0,
@@ -2421,7 +2424,9 @@ export async function listExerciseDefinitions(sourceOptions = {}) {
                 try { narrativeAr = JSON.parse(e.narrativeArJson || '[]'); } catch (err) { narrativeAr = []; }
                 let questions = [];
                 try { questions = JSON.parse(e.questionsJson || '[]'); } catch (err) { questions = []; }
-                return { ...e, expected, narrative, narrativeAr, questions, isCustom: true };
+                let learningPoints = [];
+                try { learningPoints = JSON.parse(e.learningPointsJson || '[]'); } catch (err) { learningPoints = []; }
+                return { ...e, expected, narrative, narrativeAr, questions, learningPoints, isCustom: true };
             })
             .sort((a, b) => (a.order || 0) - (b.order || 0));
     } catch (error) {
@@ -2448,6 +2453,9 @@ export async function upsertExerciseDefinition(exercise) {
         estimatedMinutes: Number(exercise.estimatedMinutes) || 15,
         draft: exercise.draft !== false,
         explain: exercise.explain || '',
+        // Stored as a JSON string for the same reason as narrative: it is a
+        // list, and it is only ever read back whole.
+        learningPointsJson: JSON.stringify(exercise.learningPoints || []),
         narrativeJson: JSON.stringify(exercise.narrative || []),
         narrativeArJson: JSON.stringify(exercise.narrativeAr || []),
         expectedJson: JSON.stringify(exercise.expected || {}),

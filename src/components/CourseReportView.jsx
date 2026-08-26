@@ -21,6 +21,7 @@ import { useDataCache } from '../DataContext';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { ReportsView } from './ReportsView'; 
+import { ExerciseCourseReport } from './Online-exercise'; 
 import { FinalReportManager } from './FinalReportManager';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
@@ -1215,7 +1216,10 @@ export function CourseReportView({
     return (
         <div className="flex flex-col gap-6 pb-28 lg:pb-8 w-full max-w-full min-w-0">
             <PageHeader 
-                title={activeTab === 'full-course-report' ? "Full Course Report" : activeTab === 'final-report' ? "Final Course Report" : "Individual Participant Report"} 
+                title={activeTab === 'full-course-report' ? "Full Course Report"
+                    : activeTab === 'final-report' ? "Final Course Report"
+                    : activeTab === 'exercise-report' ? "Interactive Exercise Report"
+                    : "Individual Participant Report"} 
                 subtitle={`${course.course_type} - ${course.state}`} 
                 actions={
                     activeTab === 'full-course-report' ? (
@@ -1251,12 +1255,32 @@ export function CourseReportView({
             <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4 print-hide">
                 <Button variant="tab" isActive={activeTab === 'full-course-report'} onClick={() => setActiveTab('full-course-report')}>Full Course Report</Button>
                 <Button variant="tab" isActive={activeTab === 'individual-participant-report'} onClick={() => setActiveTab('individual-participant-report')}>Individual Participant Report</Button>
+
+                {/* Online exercises only exist on IMNCI courses. */}
+                {course.course_type === 'IMNCI' && (
+                    <Button variant="tab" isActive={activeTab === 'exercise-report'} onClick={() => setActiveTab('exercise-report')}>Exercise Report</Button>
+                )}
                 
                 {/* FINAL REPORT TAB - Access strictly bound to Federal Manager permissions */}
                 {isFederalManager && !isSharedView && (
                     <Button variant="tab" isActive={activeTab === 'final-report'} onClick={() => setActiveTab('final-report')}>Final Report</Button>
                 )}
             </div>
+
+            {/* TAB CONTENT: FULL EXERCISE REPORT */}
+            {activeTab === 'exercise-report' && course.course_type === 'IMNCI' && (
+                <div id="exercise-report" className="w-full max-w-full min-w-0">
+                    <Card>
+                        <div className="p-4 w-full max-w-full min-w-0">
+                            <h3 className="text-xl font-bold mb-1">Interactive Exercise Report</h3>
+                            <p className="text-sm text-gray-500 mb-4">
+                                Every recorded attempt on this course, by exercise and by participant.
+                            </p>
+                            <ExerciseCourseReport course={course} participants={reportParticipants} />
+                        </div>
+                    </Card>
+                </div>
+            )}
 
             {/* TAB CONTENT: FINAL REPORT MANAGER */}
             {activeTab === 'final-report' && isFederalManager && !isSharedView && (

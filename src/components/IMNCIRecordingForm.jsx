@@ -631,6 +631,182 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
 // --- Reusable Grid Row Component for IMNCI Layout ---
 // `hidden`, `classifyOverride`, `treatmentOverride` and `treatmentDisabled` are used
 // only by training mode. They default to off, so every existing call site is unchanged.
+
+// On the paper IMNCI recording form the health worker CIRCLES each sign that is
+// present. In training mode we reproduce that: the tick box keeps its place in
+// the layout (so the rows still line up exactly like the printed form) but it
+// renders as a small circle, and the sign itself is ringed in red ink when
+// selected. Scoped to `.imci-circle-signs`, so the real patient form is
+// untouched. `imci-keep-tick` opts an input out — the classification and
+// treatment columns are ticked on the paper form, not circled.
+const SignCircleStyles = () => (
+    <style>{`
+        .imci-circle-signs input[type="checkbox"]:not(.imci-keep-tick) {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 1rem;
+            height: 1rem;
+            flex-shrink: 0;
+            border: 1.5px solid #94a3b8;
+            border-radius: 9999px;
+            background: transparent;
+            cursor: pointer;
+            transition: border-color .15s, background-color .15s, box-shadow .15s;
+        }
+        .imci-circle-signs input[type="checkbox"]:not(.imci-keep-tick):hover {
+            border-color: #dc2626;
+        }
+        .imci-circle-signs input[type="checkbox"]:not(.imci-keep-tick):checked {
+            border-color: #dc2626;
+            background-color: #dc2626;
+            box-shadow: 0 0 0 2px #fee2e2;
+        }
+        .imci-circle-signs input[type="checkbox"]:not(.imci-keep-tick):focus-visible {
+            outline: 2px solid #dc2626;
+            outline-offset: 2px;
+        }
+        /* The pen stroke around the sign itself. */
+        .imci-circle-signs input[type="checkbox"]:not(.imci-keep-tick):checked + span {
+            display: inline-block;
+            padding: 0.1rem 0.6rem;
+            border: 2px solid #dc2626;
+            border-radius: 50% / 45%;
+            color: #b91c1c;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+    `}</style>
+);
+
+
+// Marking is applied to the fields themselves, in the exact place the learner
+// filled them in — a green ring on what was recorded correctly, a red ring plus
+// the correct value on what was not. Nothing moves and nothing is added below
+// the row, so the marked form is the same shape as the blank one.
+//
+// The rules are generated from the field NAME attribute, which every graded
+// input on both forms already carries. That is what makes this possible without
+// touching ~80 individual inputs.
+const cssString = (v) => String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+const MarkStyles = ({ marks }) => {
+    if (!marks?.fields) return null;
+
+    const GREEN = '#059669';
+    const RED = '#dc2626';
+    const rules = [];
+
+    const ring = (selector, colour) => rules.push(
+        `.imci-marked ${selector} { box-shadow: 0 0 0 2px ${colour} !important; border-color: ${colour} !important; }`
+    );
+
+    /**
+     * The correction never goes on the sign's own span — that span carries the
+     * red ellipse, so a note attached to it lands inside the circle. It goes on
+     * a wrapper instead, as its own full-width line underneath.
+     *
+     * For grouped controls (visit type, palmar pallor) the wrapper used is the
+     * one OUTSIDE the bordered box, so the note sits clear of the box rather
+     * than being squeezed inside its fixed height.
+     */
+    const note = (selector, text, colour) => rules.push(
+        `.imci-marked ${selector} { flex-wrap: wrap; overflow: visible; }
+        .imci-marked ${selector}::after {
+            content: "${text}";
+            color: ${colour};
+            font-weight: 700;
+            font-size: 0.7rem;
+            line-height: 1.3;
+            display: block;
+            flex-basis: 100%;
+            width: 100%;
+            margin-top: 0.2rem;
+        }`
+    );
+
+    Object.entries(marks.fields).forEach(([rawName, m]) => {
+        const name = cssString(rawName);
+        const colour = m.ok ? GREEN : RED;
+        const TICK = '\\2713';
+        const CROSS = '\\2717';
+
+        // A sign that is circled or not circled. The note goes under the sign's
+        // own label, which is already outside the ellipse.
+        if (m.kind === 'bool') {
+            ring(`input[name="${name}"]`, colour);
+            note(
+                `*:has(> input[name="${name}"])`,
+                m.ok ? TICK : `${CROSS} should ${m.expected ? '' : 'NOT '}be circled`,
+                colour
+            );
+            return;
+        }
+
+        // Everything else is a "value" field — but that covers three different
+        // controls: a text/number input, a <select>, and a radio group. They
+        // cannot be told apart from the grading data, so rules are emitted for
+        // all three. Only one exists in the DOM; the others match nothing.
+        //
+        // Getting this wrong is why the sex dropdown and the child's name were
+        // going unmarked: both were being treated as radio groups.
+        const genericText = m.ok
+            ? TICK
+            : (m.unanswered ? `${CROSS} must be filled in` : `${CROSS} should be ${cssString(m.expectedText)}`);
+
+        // Text and number inputs.
+        ring(`input[name="${name}"]:not([type="radio"])`, colour);
+        note(`*:has(> input[name="${name}"]:not([type="radio"]))`, genericText, colour);
+
+        // Dropdowns.
+        ring(`select[name="${name}"]`, colour);
+        note(`*:has(> select[name="${name}"])`, genericText, colour);
+
+        // Radio groups, where the mark can land on the individual option.
+        if (m.expectedValue !== null && m.expectedValue !== undefined && m.expectedValue !== '') {
+            const want = cssString(m.expectedValue);
+
+            if (m.unanswered) {
+                // Nothing was chosen: the error belongs to the whole group.
+                ring(`input[type="radio"][name="${name}"]`, RED);
+                note(`*:has(> * > input[type="radio"][name="${name}"][value="${want}"])`,
+                    `${CROSS} not answered \\2014 you must choose one`, RED);
+                return;
+            }
+
+            ring(`input[type="radio"][name="${name}"][value="${want}"]`, GREEN);
+            if (!m.ok && m.gotValue) {
+                ring(`input[type="radio"][name="${name}"][value="${cssString(m.gotValue)}"]`, RED);
+            }
+            note(`*:has(> * > input[type="radio"][name="${name}"][value="${want}"])`,
+                m.ok ? TICK : `${CROSS} you chose the wrong one \\2014 the ringed answer is correct`,
+                m.ok ? GREEN : RED);
+        }
+    });
+
+    return <style>{rules.join('\n')}</style>;
+};
+
+
+// A submitted attempt is closed. Rather than disable ~80 inputs individually,
+// pointer events are removed from the controls and their labels — clicking a
+// label is what toggles a checkbox, so the labels matter as much as the inputs.
+// Buttons are deliberately untouched, so "Try again" and "Back" still work.
+const LockStyles = () => (
+    <style>{`
+        .imci-locked input,
+        .imci-locked select,
+        .imci-locked textarea,
+        .imci-locked label {
+            pointer-events: none !important;
+        }
+        .imci-locked input:not([type="checkbox"]):not([type="radio"]),
+        .imci-locked select,
+        .imci-locked textarea {
+            background-color: #f8fafc;
+        }
+    `}</style>
+);
+
 const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange, children, classifyData = [], treatmentData = [], hidden = false, classifyOverride = null, treatmentOverride = null, treatmentDisabled = false }) => {
     const { t } = useTranslation();
     const isActive = isConditional ? yesNoValue === true : true;
@@ -706,14 +882,14 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
 // FORM 1: SICK YOUNG INFANT (UP TO 2 MONTHS)
 // ============================================================================
 // Training mode, identical in shape to ChildForm's. See the comment there.
-export function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess, trainingCase = null, onTrainingCheck = null, trainingFeedback = null, trainingHeader = null }) {
+export function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess, trainingCase = null, onTrainingCheck = null, trainingFeedback = null, trainingHeader = null, trainingMarks = null, trainingLocked = false }) {
     const { t, i18n } = useTranslation();
     const [isSaving, setIsSaving] = useState(false);
     const [statusModal, setStatusModal] = useState(null);
 
     const initialInfantData = {
-        date: new Date().toISOString().split('T')[0], childName: '', ageDaysWeeks: '', weightKg: '', tempC: '',
-        problems: '', visitType: 'initial'
+        date: trainingCase ? '' : new Date().toISOString().split('T')[0], childName: '', ageDaysWeeks: '', weightKg: '', tempC: '',
+        problems: '', visitType: trainingCase ? '' : 'initial'
     };
     const initialAssessments = {
         notFeedingWell: false, convulsions: false, convulsingNow: false, movementOnlyStimulatedNoMovement: false,
@@ -850,16 +1026,54 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
         return { ...prev, [section]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
     });
 
-    const TrainingChoiceList = ({ options, selected, onToggle, tone }) => (
+    // `correctIds` switches the list into marked mode: the learner's own ticks
+    // stay exactly where they are and each option is marked in place, so the
+    // classification column after checking is the same column as before.
+    const TrainingChoiceList = ({ options, selected, onToggle, tone, correctIds = null }) => (
         <div className="w-full flex flex-col gap-1.5" dir="ltr">
             {options.map(o => {
                 const on = selected.includes(o.id);
+                const marking = Array.isArray(correctIds);
+                const shouldBe = marking && correctIds.includes(o.id);
+
+                let cls = on
+                    ? (tone === 'treatment' ? 'bg-sky-50 border-sky-400' : 'bg-indigo-50 border-indigo-400')
+                    : 'bg-white border-slate-300 hover:border-slate-400';
+                let mark = null;
+
+                // A missed answer is an ERROR, not a neutral remark: it is
+                // marked in red with a cross, exactly like a wrong tick.
+                if (marking) {
+                    if (on && shouldBe) {
+                        cls = 'bg-emerald-50 border-emerald-500';
+                        mark = { symbol: '\u2713', text: 'correct', tone: 'text-emerald-700' };
+                    } else if (on && !shouldBe) {
+                        cls = 'bg-rose-50 border-rose-500';
+                        mark = { symbol: '\u2717', text: 'wrong \u2014 should not be ticked', tone: 'text-rose-700' };
+                    } else if (!on && shouldBe) {
+                        cls = 'bg-rose-50 border-rose-500 border-dashed';
+                        mark = { symbol: '\u2717', text: 'missed \u2014 this should be ticked', tone: 'text-rose-700' };
+                    } else {
+                        cls = 'bg-white border-slate-200 opacity-60';
+                    }
+                }
+
+                // The mark is written UNDER the option, outside its box, so it
+                // never squeezes the label or sits inside the tick box.
                 return (
-                    <label key={o.id}
-                        className={`flex items-start gap-2 text-left px-2 py-1.5 rounded border cursor-pointer transition-colors ${on ? (tone === 'treatment' ? 'bg-sky-50 border-sky-400' : 'bg-indigo-50 border-indigo-400') : 'bg-white border-slate-300 hover:border-slate-400'}`}>
-                        <input type="checkbox" checked={on} onChange={() => onToggle(o.id)} className="rounded text-sky-600 w-4 h-4 mt-0.5 flex-shrink-0 cursor-pointer" />
-                        <span className="text-xs font-semibold leading-tight text-slate-800">{o.label}</span>
-                    </label>
+                    <div key={o.id}>
+                        <label
+                            className={`flex items-start gap-2 text-left px-2 py-1.5 rounded border transition-colors ${marking ? 'cursor-default' : 'cursor-pointer'} ${cls}`}>
+                            <input type="checkbox" checked={on} disabled={marking} onChange={() => onToggle(o.id)}
+                                className="imci-keep-tick rounded text-sky-600 w-4 h-4 mt-0.5 flex-shrink-0 cursor-pointer disabled:cursor-default" />
+                            <span className="text-xs font-semibold leading-tight text-slate-800 flex-1">{o.label}</span>
+                        </label>
+                        {mark && (
+                            <p className={`text-[10px] font-bold mt-0.5 px-1 leading-tight ${mark.tone}`}>
+                                {mark.symbol} {mark.text}
+                            </p>
+                        )}
+                    </div>
                 );
             })}
         </div>
@@ -879,13 +1093,13 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
 
         return {
             classifyOverride: classifyOptions.length > 0
-                ? <TrainingChoiceList options={classifyOptions} selected={trainingClassify[section] || []} onToggle={(id) => toggleIn(setTrainingClassify, section, id)} />
+                ? <TrainingChoiceList options={classifyOptions} selected={trainingClassify[section] || []} onToggle={(id) => toggleIn(setTrainingClassify, section, id)} correctIds={trainingMarks?.classify?.[section] || null} />
                 : <span className="text-xs text-slate-400 italic">—</span>,
             treatmentDisabled: !includeTreatment,
             treatmentOverride: !includeTreatment
                 ? null
                 : treatmentOptions.length > 0
-                    ? <TrainingChoiceList options={treatmentOptions} selected={trainingTreatment[section] || []} onToggle={(id) => toggleIn(setTrainingTreatment, section, id)} tone="treatment" />
+                    ? <TrainingChoiceList options={treatmentOptions} selected={trainingTreatment[section] || []} onToggle={(id) => toggleIn(setTrainingTreatment, section, id)} tone="treatment" correctIds={trainingMarks?.treatment?.[section] || null} />
                     : <span className="text-xs text-slate-400 italic">—</span>,
         };
     };
@@ -900,15 +1114,8 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
         });
     };
 
-    const handleTrainingReset = () => {
-        setInfantData({ ...initialInfantData });
-        setAssessments({ ...initialAssessments });
-        setTrainingClassify({});
-        setTrainingTreatment({});
-    };
-
     const handleSave = async () => {
-        if (trainingCase) { handleTrainingCheck(); return; }
+        if (trainingCase) { if (!trainingLocked) handleTrainingCheck(); return; }
         if (!selectedState || !selectedLocality || !selectedFacility) {
             alert(t('imci.common.please_select_facility', 'Please select a facility first.'));
             return;
@@ -969,7 +1176,13 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-300 relative">
+        <div className={`space-y-6 animate-in fade-in duration-300 relative ${trainingCase ? 'imci-circle-signs' : ''} ${trainingMarks ? 'imci-marked' : ''} ${trainingLocked ? 'imci-locked' : ''}`}
+            onKeyDownCapture={trainingLocked
+                ? (e) => { if (e.target.tagName !== 'BUTTON' && e.key !== 'Tab') e.preventDefault(); }
+                : undefined}>
+            {trainingCase && <SignCircleStyles />}
+            {trainingMarks && <MarkStyles marks={trainingMarks} />}
+            {trainingLocked && <LockStyles />}
             <SaveStatusPopup 
                 status={statusModal} 
                 onClose={() => setStatusModal(null)} 
@@ -1291,15 +1504,12 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
             {trainingFeedback}
 
             <div className="flex flex-wrap justify-end gap-3 pb-8">
-                {trainingCase && (
-                    <Button variant="secondary" onClick={handleTrainingReset} className="py-3.5 px-8 text-lg font-bold">
-                        {t('imci.training.clear_form', 'Clear form')}
-                    </Button>
-                )}
-                <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
+                <Button variant="primary" onClick={handleSave} disabled={isSaving || trainingLocked} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
                     <ClipboardList className="w-5 h-5 mr-2 inline-block"/> 
                     {trainingCase
-                        ? t('imci.training.check_form', 'Check my form')
+                        ? (trainingLocked
+                            ? t('imci.training.submitted', 'Already submitted')
+                            : t('imci.training.submit_form', 'Submit form'))
                         : (isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_infant', 'Save Infant Record'))}
                 </Button>
             </div>
@@ -1315,14 +1525,16 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
 // learner's entries are handed to onTrainingCheck for grading. Everything else --
 // the layout, the z-score lookup, the classification engine -- is unchanged, so a
 // participant practises on exactly the form they will use in the clinic.
-export function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess, trainingCase = null, onTrainingCheck = null, trainingFeedback = null, trainingHeader = null }) {
+export function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess, trainingCase = null, onTrainingCheck = null, trainingFeedback = null, trainingHeader = null, trainingMarks = null, trainingLocked = false }) {
     const { t, i18n } = useTranslation();
     const [isSaving, setIsSaving] = useState(false);
     const [statusModal, setStatusModal] = useState(null);
 
     const initialChildData = {
-        date: new Date().toISOString().split('T')[0], childName: '', sex: 'male', ageMonths: '', weightKg: '', lengthCm: '', tempC: '',
-        problems: '', visitType: 'initial'
+        date: trainingCase ? '' : new Date().toISOString().split('T')[0], childName: '',
+        sex: trainingCase ? '' : 'male',
+        ageMonths: '', weightKg: '', lengthCm: '', tempC: '',
+        problems: '', visitType: trainingCase ? '' : 'initial'
     };
     const initialAssessments = {
         notAbleToDrink: false, vomitsEverything: false, historyOfConvulsions: false, lethargicUnconscious: false, convulsingNow: false,
@@ -1332,7 +1544,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
         hasFever: null, feverDays: '', dailyFever7Days: false, measles3Months: false, neckStiffness: false, measlesRash: false,
         malariaTest: '', mouthUlcers: false, deepExtensiveUlcers: false, pusFromEye: false, corneaClouding: false,
         hasEarProblem: null, earPain: false, earDischarge: false, earDischargeDays: '', tenderSwelling: false, pusFromEar: false,
-        pallor: 'noPallor', 
+        pallor: trainingCase ? '' : 'noPallor',
         edema: false, muacCm: '', medicalComplication: false, appetiteTest: '',
         v_opv0: false, v_bcg: false, v_opv1: false, v_rota1: false, v_pcv1: false, v_penta1: false, v_ipv1: false,
         v_opv2: false, v_rota2: false, v_pcv2: false, v_penta2: false,
@@ -1843,16 +2055,54 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
         return { ...prev, [section]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
     });
 
-    const TrainingChoiceList = ({ options, selected, onToggle, tone }) => (
+    // `correctIds` switches the list into marked mode: the learner's own ticks
+    // stay exactly where they are and each option is marked in place, so the
+    // classification column after checking is the same column as before.
+    const TrainingChoiceList = ({ options, selected, onToggle, tone, correctIds = null }) => (
         <div className="w-full flex flex-col gap-1.5" dir="ltr">
             {options.map(o => {
                 const on = selected.includes(o.id);
+                const marking = Array.isArray(correctIds);
+                const shouldBe = marking && correctIds.includes(o.id);
+
+                let cls = on
+                    ? (tone === 'treatment' ? 'bg-sky-50 border-sky-400' : 'bg-indigo-50 border-indigo-400')
+                    : 'bg-white border-slate-300 hover:border-slate-400';
+                let mark = null;
+
+                // A missed answer is an ERROR, not a neutral remark: it is
+                // marked in red with a cross, exactly like a wrong tick.
+                if (marking) {
+                    if (on && shouldBe) {
+                        cls = 'bg-emerald-50 border-emerald-500';
+                        mark = { symbol: '\u2713', text: 'correct', tone: 'text-emerald-700' };
+                    } else if (on && !shouldBe) {
+                        cls = 'bg-rose-50 border-rose-500';
+                        mark = { symbol: '\u2717', text: 'wrong \u2014 should not be ticked', tone: 'text-rose-700' };
+                    } else if (!on && shouldBe) {
+                        cls = 'bg-rose-50 border-rose-500 border-dashed';
+                        mark = { symbol: '\u2717', text: 'missed \u2014 this should be ticked', tone: 'text-rose-700' };
+                    } else {
+                        cls = 'bg-white border-slate-200 opacity-60';
+                    }
+                }
+
+                // The mark is written UNDER the option, outside its box, so it
+                // never squeezes the label or sits inside the tick box.
                 return (
-                    <label key={o.id}
-                        className={`flex items-start gap-2 text-left px-2 py-1.5 rounded border cursor-pointer transition-colors ${on ? (tone === 'treatment' ? 'bg-sky-50 border-sky-400' : 'bg-indigo-50 border-indigo-400') : 'bg-white border-slate-300 hover:border-slate-400'}`}>
-                        <input type="checkbox" checked={on} onChange={() => onToggle(o.id)} className="rounded text-sky-600 w-4 h-4 mt-0.5 flex-shrink-0 cursor-pointer" />
-                        <span className="text-xs font-semibold leading-tight text-slate-800">{o.label}</span>
-                    </label>
+                    <div key={o.id}>
+                        <label
+                            className={`flex items-start gap-2 text-left px-2 py-1.5 rounded border transition-colors ${marking ? 'cursor-default' : 'cursor-pointer'} ${cls}`}>
+                            <input type="checkbox" checked={on} disabled={marking} onChange={() => onToggle(o.id)}
+                                className="imci-keep-tick rounded text-sky-600 w-4 h-4 mt-0.5 flex-shrink-0 cursor-pointer disabled:cursor-default" />
+                            <span className="text-xs font-semibold leading-tight text-slate-800 flex-1">{o.label}</span>
+                        </label>
+                        {mark && (
+                            <p className={`text-[10px] font-bold mt-0.5 px-1 leading-tight ${mark.tone}`}>
+                                {mark.symbol} {mark.text}
+                            </p>
+                        )}
+                    </div>
                 );
             })}
         </div>
@@ -1877,7 +2127,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
 
         return {
             classifyOverride: classifyOptions.length > 0
-                ? <TrainingChoiceList options={classifyOptions} selected={trainingClassify[section] || []} onToggle={(id) => toggleIn(setTrainingClassify, section, id)} />
+                ? <TrainingChoiceList options={classifyOptions} selected={trainingClassify[section] || []} onToggle={(id) => toggleIn(setTrainingClassify, section, id)} correctIds={trainingMarks?.classify?.[section] || null} />
                 : <span className="text-xs text-slate-400 italic">—</span>,
             treatmentDisabled: !includeTreatment,
             // Never fall through to treatmentData here: that is the engine's own
@@ -1885,7 +2135,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
             treatmentOverride: !includeTreatment
                 ? null
                 : treatmentOptions.length > 0
-                    ? <TrainingChoiceList options={treatmentOptions} selected={trainingTreatment[section] || []} onToggle={(id) => toggleIn(setTrainingTreatment, section, id)} tone="treatment" />
+                    ? <TrainingChoiceList options={treatmentOptions} selected={trainingTreatment[section] || []} onToggle={(id) => toggleIn(setTrainingTreatment, section, id)} tone="treatment" correctIds={trainingMarks?.treatment?.[section] || null} />
                     : <span className="text-xs text-slate-400 italic">—</span>,
         };
     };
@@ -1925,15 +2175,8 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
         });
     };
 
-    const handleTrainingReset = () => {
-        setChildData({ ...initialChildData });
-        setAssessments({ ...initialAssessments });
-        setTrainingClassify({});
-        setTrainingTreatment({});
-    };
-
     const handleSave = async () => {
-        if (trainingCase) { handleTrainingCheck(); return; }
+        if (trainingCase) { if (!trainingLocked) handleTrainingCheck(); return; }
         if (!selectedState || !selectedLocality || !selectedFacility) {
             alert(t('imci.common.please_select_facility', 'Please select a facility first.'));
             return;
@@ -1979,7 +2222,13 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-300 relative">
+        <div className={`space-y-6 animate-in fade-in duration-300 relative ${trainingCase ? 'imci-circle-signs' : ''} ${trainingMarks ? 'imci-marked' : ''} ${trainingLocked ? 'imci-locked' : ''}`}
+            onKeyDownCapture={trainingLocked
+                ? (e) => { if (e.target.tagName !== 'BUTTON' && e.key !== 'Tab') e.preventDefault(); }
+                : undefined}>
+            {trainingCase && <SignCircleStyles />}
+            {trainingMarks && <MarkStyles marks={trainingMarks} />}
+            {trainingLocked && <LockStyles />}
             <SaveStatusPopup 
                 status={statusModal} 
                 onClose={() => setStatusModal(null)} 
@@ -2013,6 +2262,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><User size={14}/> {t('imci.common.sex')}</label>
                             <select name="sex" value={childData.sex} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white">
+                                {trainingCase && <option value="">{t('imci.common.choose', '— choose —')}</option>}
                                 <option value="male">{t('imci.common.male')}</option>
                                 <option value="female">{t('imci.common.female')}</option>
                             </select>
@@ -2378,15 +2628,12 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
             {trainingFeedback}
 
             <div className="flex flex-wrap justify-end gap-3 pb-8">
-                {trainingCase && (
-                    <Button variant="secondary" onClick={handleTrainingReset} className="py-3.5 px-8 text-lg font-bold">
-                        {t('imci.training.clear_form', 'Clear form')}
-                    </Button>
-                )}
-                <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
+                <Button variant="primary" onClick={handleSave} disabled={isSaving || trainingLocked} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
                     <ClipboardList className="w-5 h-5 mr-2 inline-block"/> 
                     {trainingCase
-                        ? t('imci.training.check_form', 'Check my form')
+                        ? (trainingLocked
+                            ? t('imci.training.submitted', 'Already submitted')
+                            : t('imci.training.submit_form', 'Submit form'))
                         : (isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_child', 'Save Child Record'))}
                 </Button>
             </div>

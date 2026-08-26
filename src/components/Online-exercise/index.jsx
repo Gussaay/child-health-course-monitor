@@ -68,6 +68,7 @@ const InfantForm = lazy(() => import('../IMNCIRecordingForm').then(m => ({ defau
 export const FIELD_LABELS = {
     childName: 'Child name', sex: 'Sex', ageMonths: 'Age (months)', weightKg: 'Weight (kg)',
     lengthCm: 'Length / height (cm)', tempC: 'Temperature (°C)', visitType: 'Visit type',
+    date: 'Date', problems: 'Presenting problem', ageDaysWeeks: 'Age (days / weeks)',
     notAbleToDrink: 'Not able to drink or breastfeed', vomitsEverything: 'Vomits everything',
     historyOfConvulsions: 'Convulsions in current illness', lethargicUnconscious: 'Lethargic or unconscious',
     convulsingNow: 'Convulsing now',
@@ -150,6 +151,9 @@ export async function loadAllExercises(subCourse = ONLINE_SUB_COURSE, { includeD
             ...e,
             subCourse: e.subCourse || builtIn?.subCourse || ONLINE_SUB_COURSE,
             draft: e.draft ?? builtIn?.draft ?? false,
+            // An empty array from an older stored document must not wipe the
+            // learning points that ship with the built-in exercise.
+            learningPoints: (e.learningPoints?.length ? e.learningPoints : builtIn?.learningPoints) || [],
             expected: applyOptionDefaults(e.expected || builtIn?.expected || {}),
             isCustom: true,
         };
@@ -174,9 +178,43 @@ export async function loadAllExercises(subCourse = ONLINE_SUB_COURSE, { includeD
  *                           computed — reported back, never graded.
  * @param {function} t       i18n translator, used to render option labels
  */
-export function gradeCase(expected, submitted, t = (k) => k) {
+/**
+ * Fields the learner must fill in on every case, whether or not the exercise
+ * specifies an expected value for them. A blank child name, date, sex, visit
+ * type or presenting problem is a recording error on the real form, so it is
+ * marked as one here.
+ */
+export const REQUIRED_PATIENT_FIELDS = {
+    child: ['childName', 'date', 'sex', 'visitType', 'problems'],
+    infant: ['childName', 'date', 'visitType', 'problems'],
+};
+
+export function gradeCase(expected, submitted, t = (k) => k, { requiredFields = [] } = {}) {
     const detail = { patientData: {}, assessments: {}, classifications: {}, treatments: {} };
+
+    // Per-category subtotals, plus the name of every item on each side of the
+    // line. A learner who scores 71% needs to see WHICH seven of ten were right,
+    // and a facilitator reviewing an attempt needs the same list.
+    const breakdown = {
+        patientData: { earned: 0, possible: 0, correct: [], wrong: [] },
+        assessments: { earned: 0, possible: 0, correct: [], wrong: [] },
+        classifications: { earned: 0, possible: 0, correct: [], wrong: [] },
+        treatments: { earned: 0, possible: 0, correct: [], wrong: [] },
+    };
+
     let earned = 0, possible = 0;
+
+    const tally = (bucket, label, ok) => {
+        breakdown[bucket].possible += 1;
+        possible += 1;
+        if (ok) {
+            breakdown[bucket].earned += 1;
+            breakdown[bucket].correct.push(label);
+            earned += 1;
+        } else {
+            breakdown[bucket].wrong.push(label);
+        }
+    };
 
     const compare = (section, expObj, gotObj) => {
         Object.entries(expObj || {}).forEach(([key, want]) => {
@@ -189,13 +227,22 @@ export function gradeCase(expected, submitted, t = (k) => k) {
             } else ok = String(got ?? '').trim().toLowerCase() === String(want).trim().toLowerCase();
 
             detail[section][key] = { ok, expected: want, got };
-            possible += 1;
-            if (ok) earned += 1;
+            tally(section, labelFor(key), ok);
         });
     };
 
     compare('patientData', expected.patientData, submitted.patientData);
     compare('assessments', expected.assessments, submitted.assessments);
+
+    // Anything required but not already graded against an expected value is
+    // scored purely on whether the learner answered it at all.
+    requiredFields.forEach(key => {
+        if (detail.patientData[key]) return;
+        const got = submitted.patientData?.[key];
+        const ok = String(got ?? '').trim() !== '';
+        detail.patientData[key] = { ok, expected: null, got, required: true };
+        tally('patientData', labelFor(key), ok);
+    });
 
     const optionLabel = (section, id, bank) => {
         const opt = (expected[bank]?.[section] || []).find(o => o.id === id);
@@ -214,8 +261,7 @@ export function gradeCase(expected, submitted, t = (k) => k) {
             // What the app's engine derived from the signs entered, for comparison.
             engine: (submitted.classifications?.[section]?.c || []).map(c => c.label),
         };
-        possible += 1;
-        if (ok) earned += 1;
+        tally('classifications', SECTION_LABELS[section] || section, ok);
     });
 
     // Treatment — only when the case includes it.
@@ -228,13 +274,12 @@ export function gradeCase(expected, submitted, t = (k) => k) {
                 expected: wantIds.map(id => optionLabel(section, id, 'treatmentOptions')),
                 chosen: gotIds.map(id => optionLabel(section, id, 'treatmentOptions')),
             };
-            possible += 1;
-            if (ok) earned += 1;
+            tally('treatments', SECTION_LABELS[section] || section, ok);
         });
     }
 
     const percent = possible > 0 ? Math.round((earned / possible) * 100) : 0;
-    return { earned, possible, percent, correct: earned === possible, detail };
+    return { earned, possible, percent, correct: earned === possible, detail, breakdown };
 }
 
 /**
@@ -310,98 +355,118 @@ function ScenarioHeader({ exercise, participant, lang, onToggleLang }) {
     );
 }
 
-function FeedbackPanel({ result, explain, includeTreatment }) {
+/** Score strip, pinned to the top of the form with the scenario. */
+/** Headline result only. Stays at the top, beside the scenario. */
+function ScoreStrip({ result, passMark, attemptNo, saveState, saveError }) {
     if (!result) return null;
-    const { detail, earned, possible, percent, correct } = result;
+    const passed = result.percent >= passMark;
+    return (
+        <div className="space-y-2">
+            <div className={`rounded-xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-white ${passed ? 'bg-emerald-600' : 'bg-amber-600'}`}>
+                <span className="font-bold flex items-center gap-2">
+                    {passed ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                    {passed ? 'Passed' : 'Below the pass mark'}
+                    <span className="font-normal opacity-90 text-sm">
+                        · attempt {attemptNo} · pass mark {passMark}%
+                    </span>
+                </span>
+                <span className="font-bold text-lg">
+                    {result.percent}% <span className="text-sm font-normal opacity-80">({result.earned}/{result.possible})</span>
+                </span>
+            </div>
 
-    const wrongFields = [
-        ...Object.entries(detail.patientData).filter(([, d]) => !d.ok),
-        ...Object.entries(detail.assessments).filter(([, d]) => !d.ok),
-    ];
+            <p className="text-xs text-slate-500">
+                {saveState === 'saving' && 'Recording this attempt…'}
+                {saveState === 'saved' && `Attempt ${attemptNo} recorded. Each field is marked where you filled it in; the full breakdown is at the foot of the form.`}
+                {saveState === 'error' && <span className="text-rose-600">Not recorded: {saveError}</span>}
+                {saveState === 'idle' && 'Each field is marked where you filled it in; the full breakdown is at the foot of the form.'}
+            </p>
+        </div>
+    );
+}
+
+/**
+ * The itemised marking and the teaching, both at the FOOT of the form.
+ *
+ * This is the order a learner works in: fill the form, read the marks against
+ * the fields as they scroll down, then arrive at the totals and the learning
+ * points at the end.
+ */
+function ResultDetail({ result, exercise }) {
+    if (!result) return null;
+
+    const rows = [
+        ['Child details', result.breakdown?.patientData],
+        ['Signs recorded', result.breakdown?.assessments],
+        ['Classification', result.breakdown?.classifications],
+        ['Treatment', result.breakdown?.treatments],
+    ].filter(([, b]) => b && b.possible > 0);
+
+    // Authored learning points if the exercise has them; otherwise the case
+    // explanation stands as the single point.
+    const points = (exercise.learningPoints || []).filter(p => String(p).trim() !== '');
+    const fallback = points.length === 0 && exercise.explain ? [exercise.explain] : [];
+    const learning = points.length > 0 ? points : fallback;
 
     return (
-        <div className="border-2 rounded-xl overflow-hidden border-slate-300 bg-white" dir="ltr">
-            <div className={`px-5 py-3 flex items-center justify-between ${correct ? 'bg-emerald-600' : 'bg-amber-600'} text-white`}>
-                <span className="font-bold flex items-center gap-2">
-                    {correct ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                    {correct ? 'Case completed correctly' : 'Some answers need correcting'}
-                </span>
-                <span className="font-bold text-lg">{percent}% <span className="text-sm font-normal opacity-80">({earned}/{possible})</span></span>
-            </div>
-
-            <div className="p-5 space-y-5">
-                {/* classifications the learner chose */}
-                {Object.keys(detail.classifications).length > 0 && (
-                    <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Your classification</p>
-                        <div className="space-y-1.5">
-                            {Object.entries(detail.classifications).map(([sec, d]) => (
-                                <div key={sec} className={`text-sm border rounded-lg px-3 py-2 ${d.ok ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        {d.ok ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <XCircle className="w-4 h-4 text-rose-600" />}
-                                        <span className="font-semibold text-slate-800">{SECTION_LABELS[sec] || sec}</span>
-                                    </div>
-                                    <p className="text-slate-700 ml-6">You ticked: <strong>{d.chosen.length ? d.chosen.join(' + ') : 'nothing'}</strong></p>
-                                    {!d.ok && <p className="text-emerald-700 ml-6">Correct: <strong>{d.expected.join(' + ')}</strong></p>}
-                                    {d.engine?.length > 0 && (
-                                        <p className="text-xs text-slate-500 ml-6 mt-1">
-                                            From the signs you entered, the form calculated: {d.engine.join(' + ')}
-                                        </p>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+        <div className="space-y-4" dir="ltr">
+            {rows.length > 0 && (
+                <div className="border border-slate-200 rounded-xl bg-white overflow-hidden">
+                    <div className="px-4 py-2.5 bg-slate-800 text-white text-sm font-bold uppercase tracking-wide">
+                        How this attempt was scored
                     </div>
-                )}
-
-                {/* treatments */}
-                {includeTreatment && Object.keys(detail.treatments).length > 0 && (
-                    <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Your treatment</p>
-                        <div className="space-y-1.5">
-                            {Object.entries(detail.treatments).map(([sec, d]) => (
-                                <div key={sec} className={`text-sm border rounded-lg px-3 py-2 ${d.ok ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        {d.ok ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <XCircle className="w-4 h-4 text-rose-600" />}
-                                        <span className="font-semibold text-slate-800">{SECTION_LABELS[sec] || sec}</span>
-                                    </div>
-                                    <p className="text-slate-700 ml-6">You ticked: <strong>{d.chosen.length ? d.chosen.join('; ') : 'nothing'}</strong></p>
-                                    {!d.ok && <p className="text-emerald-700 ml-6">Correct: <strong>{d.expected.join('; ')}</strong></p>}
-                                </div>
-                            ))}
-                        </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm min-w-[540px]">
+                            <thead>
+                                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                                    <th className="text-left p-2.5 font-semibold">Part of the form</th>
+                                    <th className="p-2.5 font-semibold w-20">Score</th>
+                                    <th className="text-left p-2.5 font-semibold">Correct</th>
+                                    <th className="text-left p-2.5 font-semibold">Wrong</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {rows.map(([label, b]) => (
+                                    <tr key={label} className="align-top">
+                                        <td className="p-2.5 font-medium text-slate-800 whitespace-nowrap">{label}</td>
+                                        <td className={`p-2.5 text-center font-bold whitespace-nowrap ${b.earned === b.possible ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {b.earned}/{b.possible}
+                                        </td>
+                                        <td className="p-2.5 text-emerald-700 text-xs">{b.correct.join(', ') || '—'}</td>
+                                        <td className="p-2.5 text-rose-700 text-xs">{b.wrong.join(', ') || '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr className="bg-slate-50 font-bold text-slate-800 border-t-2 border-slate-300">
+                                    <td className="p-2.5">Total</td>
+                                    <td className="p-2.5 text-center">{result.earned}/{result.possible}</td>
+                                    <td className="p-2.5 text-xs font-normal text-slate-500" colSpan={2}>
+                                        One mark per item. A classification or treatment row scores only when every
+                                        correct box is ticked and no extra one is.
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
-                )}
-
-                {/* assessment entries */}
-                <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                        {wrongFields.length > 0 ? `Entries to correct (${wrongFields.length})` : 'Your entries'}
-                    </p>
-                    {wrongFields.length === 0 ? (
-                        <p className="text-sm text-emerald-700 flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4" /> Every detail and sign was recorded correctly.
-                        </p>
-                    ) : (
-                        <div className="space-y-1.5">
-                            {wrongFields.map(([key, d]) => (
-                                <div key={key} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm border border-rose-200 bg-rose-50 rounded-lg px-3 py-2">
-                                    <XCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-                                    <span className="font-medium text-slate-800">{labelFor(key)}</span>
-                                    <span className="text-rose-700">you entered <strong>{pretty(d.got)}</strong></span>
-                                    <span className="text-emerald-700">should be <strong>{pretty(d.expected)}</strong></span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
                 </div>
+            )}
 
-                {explain && (
-                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
-                        <p className="text-sm text-slate-700 leading-relaxed">{explain}</p>
+            {learning.length > 0 && (
+                <div className="border-2 border-sky-200 rounded-xl bg-sky-50 overflow-hidden">
+                    <div className="px-4 py-2.5 bg-sky-600 text-white text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" /> Learning points
                     </div>
-                )}
-            </div>
+                    <ul className="p-4 space-y-2">
+                        {learning.map((p, i) => (
+                            <li key={i} className="flex gap-2.5 text-sm text-slate-700 leading-relaxed">
+                                <span className="font-bold text-sky-600 flex-shrink-0">{i + 1}.</span>
+                                <span>{p}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
@@ -415,89 +480,217 @@ function FeedbackPanel({ result, explain, includeTreatment }) {
  * @param {function} onExit
  * @param {object}   readOnlyAttempt  a saved attempt, to render in review mode
  */
-export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBest = null, readOnlyAttempt = null }) {
+export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBest = null, readOnlyAttempt = null, attemptsSoFar = 0 }) {
     const { t } = useTranslation();
     const [lang, setLang] = useState('en');
     const [result, setResult] = useState(readOnlyAttempt?.result || null);
-    const [submitted, setSubmitted] = useState(readOnlyAttempt?.submitted || null);
-    const [saving, setSaving] = useState(false);
+    const [saveState, setSaveState] = useState(readOnlyAttempt ? 'saved' : 'idle');
     const [saveError, setSaveError] = useState('');
-    const [saved, setSaved] = useState(!!readOnlyAttempt);
+    const [attemptNo, setAttemptNo] = useState(readOnlyAttempt?.attemptNo || attemptsSoFar || 1);
+    // Bumping this remounts the form, which is the only reliable way to clear
+    // every field: the form owns its own state, and a fresh attempt must start
+    // from a blank form rather than the previous answers.
+    const [formKey, setFormKey] = useState(0);
+    // The result popup, shown once on submission. Closing it leaves the form
+    // locked — the popup is a receipt, not the only copy of the marking.
+    const [showResult, setShowResult] = useState(false);
     const startedAt = useRef(Date.now());
-    const feedbackRef = useRef(null);
+    const topRef = useRef(null);
 
     const review = !!readOnlyAttempt;
     const passMark = exercise.passMark ?? 80;
+    const infant = exercise.formType === 'infant';
+    const fieldMap = infant ? INFANT_SECTION_FIELDS : SECTION_FIELDS;
 
-    const handleCheck = (payload) => {
-        const graded = gradeCase(exercise.expected, payload, t);
+    /**
+     * Pressing "Check my form" IS the submission.
+     *
+     * The first check is the learner's initial answer and is recorded as
+     * attempt 1. Every later check — after "Try again" — is recorded as its own
+     * attempt, so the initial answer is never overwritten and a facilitator can
+     * see how a learner moved from attempt 1 to attempt 3.
+     */
+    const handleCheck = async (payload) => {
+        // A submitted form is closed. Re-submitting would record a second
+        // attempt for answers the learner has already had marked for them.
+        if (result || review) return;
+
+        const graded = gradeCase(exercise.expected, payload, t, {
+            requiredFields: REQUIRED_PATIENT_FIELDS[infant ? 'infant' : 'child'],
+        });
+        const thisAttempt = attemptsSoFar + 1;
+
         setResult(graded);
-        setSubmitted(payload);
-        setSaved(false);
-        setTimeout(() => feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-    };
+        setAttemptNo(thisAttempt);
+        setShowResult(true);
+        setTimeout(() => topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 
-    const handleSave = async () => {
-        if (!onSubmit || !result) return;
-        setSaving(true); setSaveError('');
+        if (!onSubmit || review) return;
+
+        setSaveState('saving');
+        setSaveError('');
         try {
             await onSubmit({
-                result,
-                submitted,
+                result: graded,
+                submitted: payload,
+                attemptNo: thisAttempt,
+                isInitialAnswer: thisAttempt === 1,
                 durationSeconds: Math.round((Date.now() - startedAt.current) / 1000),
             });
-            setSaved(true);
+            setSaveState('saved');
         } catch (e) {
-            setSaveError(e?.message || 'Could not save your result.');
-        } finally {
-            setSaving(false);
+            setSaveState('error');
+            setSaveError(e?.message || 'Could not record this attempt.');
         }
     };
 
-    const header = (
-        <ScenarioHeader
-            exercise={exercise}
-            participant={participant}
-            lang={lang}
-            onToggleLang={() => setLang(l => (l === 'en' ? 'ar' : 'en'))}
-        />
-    );
+    const detail = result?.detail;
 
-    const feedback = (
-        <div ref={feedbackRef} className="space-y-4">
-            <FeedbackPanel result={result} explain={result ? exercise.explain : null} includeTreatment={exercise.expected?.includeTreatment} />
-            {result && (
-                <div className="flex flex-wrap items-center justify-between gap-3 border border-slate-200 rounded-xl bg-white p-4">
-                    <div className="text-sm">
-                        <span className={`font-bold ${result.percent >= passMark ? 'text-emerald-600' : 'text-amber-600'}`}>
-                            {result.percent >= passMark ? 'Passed' : 'Below pass mark'}
-                        </span>
-                        <span className="text-slate-500"> · pass mark {passMark}%{previousBest != null ? ` · previous best ${previousBest}%` : ''}</span>
-                        {saveError && <p className="text-rose-600 mt-1">{saveError}</p>}
-                        {saved && !review && <p className="text-emerald-600 mt-1">Result saved.</p>}
-                    </div>
-                    <div className="flex gap-2">
-                        {!review && onSubmit && (
-                            <Button onClick={handleSave} disabled={saving || saved}>
-                                {saving ? <Spinner size="sm" /> : saved ? 'Saved' : 'Save my result'}
-                            </Button>
-                        )}
-                        {onExit && <Button variant="secondary" onClick={onExit}>Back to exercises</Button>}
-                    </div>
-                </div>
-            )}
+    /**
+     * Everything the form needs to mark itself, keyed by the `name` attribute
+     * each graded input already carries. Nothing is rendered outside the form:
+     * a field the learner got wrong is ringed where it sits, with the correct
+     * value beside it.
+     */
+    const trainingMarks = useMemo(() => {
+        if (!detail) return null;
+
+        const fields = {};
+        const addField = (key, d, kind) => {
+            const isBool = typeof d.expected === 'boolean';
+            // Radios carry a literal `value` attribute, so a string answer can
+            // be marked on the exact option rather than the whole group.
+            const isChoice = !isBool && kind === 'text';
+            const blank = String(d.got ?? '').trim() === '';
+
+            fields[key] = {
+                kind: isBool ? 'bool' : 'value',
+                ok: d.ok,
+                expected: d.expected,
+                // A field that is only required, with no expected value, is
+                // marked on whether it was answered at all.
+                expectedText: d.required ? 'filled in' : pretty(d.expected),
+                expectedValue: isChoice && !d.required ? d.expected : null,
+                gotValue: isChoice && d.got ? d.got : null,
+                // Nothing was chosen: the whole group is the error, not one option.
+                unanswered: blank && !d.ok,
+            };
+        };
+
+        const patientFields = infant ? INFANT_PATIENT_FIELDS : PATIENT_FIELDS;
+        const kindOf = (key) => {
+            const all = [...patientFields, ...Object.values(fieldMap).flat()];
+            return (all.find(([f]) => f === key) || [])[1] || 'text';
+        };
+
+        Object.entries(detail.patientData).forEach(([k, d]) => addField(k, d, kindOf(k)));
+        Object.entries(detail.assessments).forEach(([k, d]) => addField(k, d, kindOf(k)));
+
+        // The correct option ids per section, so each column marks its own ticks.
+        const classify = {};
+        const treatment = {};
+        Object.entries(exercise.expected?.classifications || {}).forEach(([sec, ids]) => { classify[sec] = ids; });
+        if (exercise.expected?.includeTreatment) {
+            Object.entries(exercise.expected?.treatments || {}).forEach(([sec, ids]) => { treatment[sec] = ids; });
+        }
+
+        return { fields, classify, treatment };
+    }, [detail, exercise, fieldMap, infant]);
+
+    const header = (
+        <div ref={topRef} className="space-y-4">
+            <ScenarioHeader
+                exercise={exercise}
+                participant={participant}
+                lang={lang}
+                onToggleLang={() => setLang(l => (l === 'en' ? 'ar' : 'en'))}
+            />
+            <ScoreStrip
+                result={result}
+                passMark={passMark}
+                attemptNo={attemptNo}
+                saveState={saveState}
+                saveError={saveError}
+            />
         </div>
     );
 
+    const actions = result ? (
+        <div className="space-y-4">
+            <ResultDetail result={result} exercise={exercise} />
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-slate-200 rounded-xl bg-white p-4">
+            <p className="text-sm text-slate-500">
+                {previousBest != null ? `Previous best ${previousBest}%. ` : ''}
+                {!review && 'Every check is recorded as its own attempt.'}
+            </p>
+            <div className="flex gap-2">
+                {!review && (
+                    <Button variant="secondary" onClick={() => {
+                        setResult(null);
+                        setSaveState('idle');
+                        setSaveError('');
+                        setShowResult(false);
+                        setFormKey(k => k + 1);
+                        startedAt.current = Date.now();
+                        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}>
+                        Try again with a blank form
+                    </Button>
+                )}
+                {onExit && <Button variant="secondary" onClick={onExit}>Back to exercises</Button>}
+            </div>
+            </div>
+        </div>
+    ) : null;
+
     // Young infants (up to 2 months) are assessed on a different form entirely.
-    const FormComponent = exercise.formType === 'infant' ? InfantForm : ChildForm;
+    const FormComponent = infant ? InfantForm : ChildForm;
 
     return (
         <Suspense fallback={<div className="flex justify-center p-10"><Spinner /></div>}>
+            {showResult && result && (
+                <Modal isOpen={showResult} onClose={() => setShowResult(false)}
+                    title={`${exercise.title} — attempt ${attemptNo}`} size="xl">
+                    <CardBody className="p-4 sm:p-5 max-h-[80vh] overflow-y-auto space-y-4">
+                        <div className={`rounded-xl px-5 py-4 text-white ${result.percent >= passMark ? 'bg-emerald-600' : 'bg-amber-600'}`}>
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <span className="font-bold flex items-center gap-2 text-lg">
+                                    {result.percent >= passMark ? <CheckCircle className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
+                                    {result.percent >= passMark ? 'Passed' : 'Below the pass mark'}
+                                </span>
+                                <span className="font-bold text-2xl">
+                                    {result.percent}% <span className="text-sm font-normal opacity-80">({result.earned}/{result.possible})</span>
+                                </span>
+                            </div>
+                            <p className="text-sm opacity-90 mt-1">
+                                Pass mark {passMark}% · attempt {attemptNo}
+                                {saveState === 'saving' && ' · recording…'}
+                                {saveState === 'saved' && ' · recorded'}
+                                {saveState === 'error' && ` · NOT recorded: ${saveError}`}
+                            </p>
+                        </div>
+
+                        <ResultDetail result={result} exercise={exercise} />
+
+                        <p className="text-xs text-slate-500">
+                            Close this to see each answer marked on the form itself. The form is now
+                            closed for this attempt — start a blank form to try again.
+                        </p>
+
+                        <div className="flex justify-end border-t border-slate-200 pt-4">
+                            <Button onClick={() => setShowResult(false)} className="px-10">OK</Button>
+                        </div>
+                    </CardBody>
+                </Modal>
+            )}
+
             <FormComponent
+                key={formKey}
                 trainingCase={exercise.expected}
+                trainingLocked={!!result || review}
                 trainingHeader={header}
-                trainingFeedback={feedback}
+                trainingMarks={trainingMarks}
+                trainingFeedback={actions}
                 onTrainingCheck={handleCheck}
                 selectedState={null}
                 selectedLocality={null}
@@ -721,8 +914,14 @@ export function ExerciseListView({
     const best = useMemo(() => bestByExercise(attempts), [attempts]);
     const active = activeId ? exercises.find(e => e.id === activeId) : null;
 
-    const makeSubmit = (exercise) => async ({ result, submitted, durationSeconds }) => {
-        const prior = attempts.filter(a => a.exerciseId === exercise.id).length;
+    const makeSubmit = (exercise) => async ({ result, submitted, durationSeconds, attemptNo, isInitialAnswer }) => {
+        // The document id in data.js is keyed on attemptNo, so the number must
+        // never repeat: counting rows would collide if a row failed to load or
+        // was soft-deleted, and the earlier attempt would be overwritten.
+        const priorMax = attempts
+            .filter(a => a.exerciseId === exercise.id)
+            .reduce((max, a) => Math.max(max, Number(a.attemptNo) || 0), 0);
+        const n = Math.max(attemptNo ?? 0, priorMax + 1);
         await upsertExerciseAttempt({
             courseId: course.id,
             participantId: participant.id,
@@ -730,7 +929,8 @@ export function ExerciseListView({
             exerciseId: exercise.id,
             exerciseTitle: exercise.title,
             subCourse,
-            attemptNo: prior + 1,
+            attemptNo: n,
+            isInitialAnswer: isInitialAnswer ?? n === 1,
             percent: result.percent,
             earned: result.earned,
             possible: result.possible,
@@ -761,6 +961,9 @@ export function ExerciseListView({
                     <CasePlayer
                         exercise={active}
                         participant={participant}
+                        attemptsSoFar={attempts
+                            .filter(a => a.exerciseId === active.id)
+                            .reduce((max, a) => Math.max(max, Number(a.attemptNo) || 0), 0)}
                         previousBest={best[active.id]?.percent ?? null}
                         readOnlyAttempt={reviewAttempt ? { result: reviewAttempt.results?.result, submitted: reviewAttempt.responses?.submitted } : null}
                         onSubmit={makeSubmit(active)}
@@ -964,6 +1167,366 @@ export function ExerciseResultsTable({ course, participants = [] }) {
                         ))}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    );
+}
+
+// ============================================================================
+// 3b. FULL EXERCISE REPORT   (course-level, for the Course Report tabs)
+// ============================================================================
+//
+// Three questions a facilitator actually asks after a course:
+//   1. Who did the exercises, and how did they score?
+//   2. Which exercises did the group find hard?
+//   3. Which specific signs, classifications or treatments were missed most?
+//
+// (3) is only answerable because each attempt stores the graded breakdown, so
+// the wrong items can be counted across the whole cohort.
+
+const pctOf = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
+const avg = (nums) => (nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null);
+
+function ReportTile({ label, value, sub, tone = 'slate' }) {
+    const tones = { slate: 'text-slate-800', emerald: 'text-emerald-600', amber: 'text-amber-600', sky: 'text-sky-600', rose: 'text-rose-600' };
+    return (
+        <div className="border border-slate-200 rounded-lg p-4 bg-white text-center">
+            <p className="text-xs text-slate-500 uppercase tracking-wide">{label}</p>
+            <p className={`text-3xl font-bold mt-1 ${tones[tone]}`}>{value}</p>
+            {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
+        </div>
+    );
+}
+
+export function ExerciseCourseReport({ course, participants = [], subCourse = ONLINE_SUB_COURSE }) {
+    const [attempts, setAttempts] = useState([]);
+    const [exercises, setExercises] = useState(() => getExercisesForSubCourse(subCourse, { includeDrafts: true }));
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const [rows, list] = await Promise.all([
+                listExerciseAttemptsForCourse(course.id),
+                loadAllExercises(subCourse, { includeDrafts: true }),
+            ]);
+            setAttempts(rows || []);
+            setExercises(list || []);
+        } catch (e) {
+            setError(e?.message || 'Could not load exercise results.');
+        } finally {
+            setLoading(false);
+        }
+    }, [course.id, subCourse]);
+
+    useEffect(() => { load(); }, [load]);
+
+    const model = useMemo(() => {
+        // attempts grouped by participant + exercise
+        const key = (pid, eid) => `${pid}__${eid}`;
+        const byPair = {};
+        attempts.forEach(a => {
+            const k = key(a.participantId, a.exerciseId);
+            (byPair[k] = byPair[k] || []).push(a);
+        });
+        Object.values(byPair).forEach(list => list.sort((x, y) => (x.attemptNo || 0) - (y.attemptNo || 0)));
+
+        const roster = participants.length
+            ? participants
+            : Object.values(attempts.reduce((acc, a) => {
+                acc[a.participantId] = { id: a.participantId, name: a.participantName };
+                return acc;
+            }, {}));
+
+        // ---- per exercise -------------------------------------------------
+        const perExercise = exercises.map(ex => {
+            const pairs = Object.entries(byPair)
+                .filter(([k]) => k.endsWith(`__${ex.id}`))
+                .map(([, list]) => list);
+
+            const firsts = pairs.map(l => l[0]).filter(Boolean);
+            const bests = pairs.map(l => Math.max(...l.map(a => Number(a.percent) || 0)));
+            const passMark = ex.passMark ?? 80;
+
+            return {
+                id: ex.id,
+                title: ex.title,
+                draft: ex.draft,
+                passMark,
+                attemptedBy: pairs.length,
+                notStarted: Math.max(0, roster.length - pairs.length),
+                initialAvg: avg(firsts.map(a => Number(a.percent) || 0)),
+                bestAvg: avg(bests),
+                passed: bests.filter(b => b >= passMark).length,
+                passRate: pctOf(bests.filter(b => b >= passMark).length, pairs.length),
+                totalAttempts: pairs.reduce((n, l) => n + l.length, 0),
+                avgAttempts: pairs.length ? (pairs.reduce((n, l) => n + l.length, 0) / pairs.length).toFixed(1) : '—',
+                avgMinutes: avg(firsts.map(a => Math.round((Number(a.durationSeconds) || 0) / 60))),
+            };
+        });
+
+        // ---- per participant ----------------------------------------------
+        const perParticipant = roster.map(p => {
+            const scores = {};
+            const initial = {};
+            let attemptCount = 0;
+            exercises.forEach(ex => {
+                const list = byPair[key(p.id, ex.id)];
+                if (!list?.length) return;
+                attemptCount += list.length;
+                scores[ex.id] = Math.max(...list.map(a => Number(a.percent) || 0));
+                initial[ex.id] = Number(list[0].percent) || 0;
+            });
+            const done = Object.keys(scores);
+            const passedCount = done.filter(id => {
+                const ex = exercises.find(e => e.id === id);
+                return scores[id] >= (ex?.passMark ?? 80);
+            }).length;
+            return {
+                id: p.id,
+                name: p.name || '—',
+                scores,
+                initial,
+                attemptCount,
+                completed: done.length,
+                passedCount,
+                overall: avg(done.map(id => scores[id])),
+            };
+        }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        // ---- commonly missed items ----------------------------------------
+        // Counted on each learner's FIRST attempt only: later attempts are made
+        // with the marking already in front of them, so including them would
+        // flatter the group and hide the real teaching gaps.
+        const missCounts = {};
+        let scoredFirsts = 0;
+        Object.values(byPair).forEach(list => {
+            const first = list[0];
+            const bd = first?.results?.result?.breakdown;
+            if (!bd) return;
+            scoredFirsts += 1;
+            [
+                ['Child details', bd.patientData],
+                ['Sign', bd.assessments],
+                ['Classification', bd.classifications],
+                ['Treatment', bd.treatments],
+            ].forEach(([group, b]) => {
+                (b?.wrong || []).forEach(label => {
+                    const k = `${group}||${label}`;
+                    missCounts[k] = (missCounts[k] || 0) + 1;
+                });
+            });
+        });
+
+        const missed = Object.entries(missCounts)
+            .map(([k, count]) => {
+                const [group, label] = k.split('||');
+                return { group, label, count, percent: pctOf(count, scoredFirsts) };
+            })
+            .sort((a, b) => b.count - a.count);
+
+        // ---- headline -------------------------------------------------------
+        const everyone = perParticipant.filter(p => p.completed > 0);
+        const overallScores = everyone.map(p => p.overall).filter(v => v != null);
+
+        return {
+            roster,
+            perExercise,
+            perParticipant,
+            missed,
+            scoredFirsts,
+            kpis: {
+                started: everyone.length,
+                notStarted: roster.length - everyone.length,
+                totalAttempts: attempts.length,
+                avgScore: avg(overallScores),
+                fullyPassed: perParticipant.filter(p => p.completed > 0 && p.passedCount === p.completed).length,
+            },
+        };
+    }, [attempts, exercises, participants]);
+
+    const csv = (filename, header, lines) => {
+        const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+    const exportParticipants = () => csv(
+        `exercise-report-participants-${course.id}.csv`,
+        ['Participant', ...exercises.map(e => e.title), 'Exercises done', 'Passed', 'Total attempts', 'Average %'],
+        model.perParticipant.map(r => [
+            q(r.name),
+            ...exercises.map(e => r.scores[e.id] ?? ''),
+            r.completed, r.passedCount, r.attemptCount, r.overall ?? '',
+        ].join(','))
+    );
+
+    const exportMissed = () => csv(
+        `exercise-report-missed-items-${course.id}.csv`,
+        ['Group', 'Item', 'Learners who got it wrong', '% of first attempts'],
+        model.missed.map(m => [q(m.group), q(m.label), m.count, m.percent].join(','))
+    );
+
+    if (loading) return <div className="flex justify-center p-10"><Spinner /></div>;
+    if (error) return <EmptyState message={error} />;
+    if (attempts.length === 0) {
+        return <EmptyState message={`No exercise attempts have been recorded for this course yet.`} />;
+    }
+
+    const { kpis } = model;
+
+    return (
+        <div className="space-y-6" dir="ltr">
+            <div className="flex flex-wrap justify-between items-center gap-2">
+                <p className="text-sm text-slate-500">
+                    {kpis.totalAttempts} attempt{kpis.totalAttempts === 1 ? '' : 's'} from {kpis.started} of {model.roster.length} participants
+                </p>
+                <div className="flex gap-2 print-hide">
+                    <Button variant="secondary" onClick={load}><RefreshCw className="w-4 h-4" /> Refresh</Button>
+                    <Button variant="secondary" onClick={exportParticipants}>Export participants CSV</Button>
+                    {model.missed.length > 0 && <Button variant="secondary" onClick={exportMissed}>Export missed items CSV</Button>}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <ReportTile label="Started" value={kpis.started} sub={`of ${model.roster.length} participants`} tone="sky" />
+                <ReportTile label="Not started" value={kpis.notStarted} tone={kpis.notStarted > 0 ? 'amber' : 'emerald'} />
+                <ReportTile label="Total attempts" value={kpis.totalAttempts} />
+                <ReportTile label="Average score" value={kpis.avgScore != null ? `${kpis.avgScore}%` : '—'} sub="best attempt per exercise" tone="emerald" />
+                <ReportTile label="Passed everything" value={kpis.fullyPassed} sub="of those who started" tone="emerald" />
+            </div>
+
+            {/* ---- per exercise ---- */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                <div className="px-4 py-2.5 bg-slate-800 text-white text-sm font-bold uppercase tracking-wide">
+                    Results by exercise
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[820px]">
+                        <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <tr>
+                                <th className="p-3 text-left font-semibold">Exercise</th>
+                                <th className="p-3 font-semibold">Attempted by</th>
+                                <th className="p-3 font-semibold">Avg 1st attempt</th>
+                                <th className="p-3 font-semibold">Avg best</th>
+                                <th className="p-3 font-semibold">Pass rate</th>
+                                <th className="p-3 font-semibold">Avg attempts</th>
+                                <th className="p-3 font-semibold">Avg minutes</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {model.perExercise.map(e => (
+                                <tr key={e.id} className={e.attemptedBy === 0 ? 'opacity-50' : ''}>
+                                    <td className="p-3 font-medium text-slate-800">
+                                        {e.title}
+                                        {e.draft && <span className="ml-2 text-[10px] font-bold text-amber-600">DRAFT</span>}
+                                    </td>
+                                    <td className="p-3 text-center">{e.attemptedBy}<span className="text-slate-400"> / {model.roster.length}</span></td>
+                                    <td className="p-3 text-center">{e.initialAvg != null ? `${e.initialAvg}%` : '—'}</td>
+                                    <td className="p-3 text-center font-semibold">{e.bestAvg != null ? `${e.bestAvg}%` : '—'}</td>
+                                    <td className={`p-3 text-center font-bold ${e.attemptedBy === 0 ? 'text-slate-400' : e.passRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                        {e.attemptedBy === 0 ? '—' : `${e.passRate}%`}
+                                    </td>
+                                    <td className="p-3 text-center">{e.avgAttempts}</td>
+                                    <td className="p-3 text-center">{e.avgMinutes != null ? e.avgMinutes : '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* ---- commonly missed ---- */}
+            {model.missed.length > 0 && (
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                    <div className="px-4 py-2.5 bg-rose-700 text-white text-sm font-bold uppercase tracking-wide">
+                        Most commonly missed items
+                    </div>
+                    <p className="px-4 pt-3 text-xs text-slate-500">
+                        Counted on each learner&apos;s first attempt only ({model.scoredFirsts} first attempts),
+                        because later attempts are made with the marking already visible.
+                    </p>
+                    <div className="p-4 space-y-2.5">
+                        {model.missed.slice(0, 12).map(m => (
+                            <div key={`${m.group}-${m.label}`}>
+                                <div className="flex items-center justify-between gap-3 mb-1">
+                                    <span className="text-sm text-slate-700">
+                                        <span className="text-[10px] font-bold uppercase text-slate-400 mr-2">{m.group}</span>
+                                        {m.label}
+                                    </span>
+                                    <span className="text-xs text-slate-500 flex-shrink-0 whitespace-nowrap">{m.count} · {m.percent}%</span>
+                                </div>
+                                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-rose-500" style={{ width: `${m.percent}%` }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ---- per participant ---- */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                <div className="px-4 py-2.5 bg-slate-800 text-white text-sm font-bold uppercase tracking-wide">
+                    Results by participant
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[720px]">
+                        <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <tr>
+                                <th className="p-3 text-left font-semibold">Participant</th>
+                                {exercises.map(e => (
+                                    <th key={e.id} className="p-3 font-semibold whitespace-nowrap" title={e.title}>
+                                        {e.title.split('—')[0].trim()}
+                                    </th>
+                                ))}
+                                <th className="p-3 font-semibold">Done</th>
+                                <th className="p-3 font-semibold">Passed</th>
+                                <th className="p-3 font-semibold">Attempts</th>
+                                <th className="p-3 font-semibold">Average</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {model.perParticipant.map(r => (
+                                <tr key={r.id} className="hover:bg-slate-50">
+                                    <td className="p-3 font-medium text-slate-800">{r.name}</td>
+                                    {exercises.map(e => {
+                                        const best = r.scores[e.id];
+                                        const first = r.initial[e.id];
+                                        const passed = best != null && best >= (e.passMark ?? 80);
+                                        return (
+                                            <td key={e.id} className="p-3 text-center">
+                                                {best == null ? <span className="text-slate-300">—</span> : (
+                                                    <div className="flex flex-col items-center leading-tight">
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${passed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                            {best}%
+                                                        </span>
+                                                        {first !== best && (
+                                                            <span className="text-[10px] text-slate-400 mt-0.5">1st {first}%</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        );
+                                    })}
+                                    <td className="p-3 text-center text-slate-600">{r.completed}</td>
+                                    <td className="p-3 text-center text-slate-600">{r.passedCount}</td>
+                                    <td className="p-3 text-center text-slate-500">{r.attemptCount}</td>
+                                    <td className="p-3 text-center font-bold text-slate-800">{r.overall != null ? `${r.overall}%` : '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
+                    A cell shows the best score; where a learner improved, the first attempt is shown beneath it.
+                </p>
             </div>
         </div>
     );
@@ -1274,6 +1837,7 @@ const blankExercise = (kind = 'case', formType = 'child') => ({
     draft: true,
     narrative: [''],
     explain: '',
+    learningPoints: [],
     questions: kind === 'quiz' ? [] : undefined,
     expected: kind === 'quiz' ? {} : {
         sections: [formType === 'infant' ? 'infection' : 'danger'],
@@ -1488,6 +2052,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
             id: p.id, order: p.order, title: p.title, titleAr: p.titleAr,
             passMark: p.passMark, estimatedMinutes: p.estimatedMinutes,
             draft: p.draft, narrative: p.narrative, explain: p.explain,
+            learningPoints: p.learningPoints,
         }));
     };
 
@@ -1526,7 +2091,11 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
             // `isCustom` is added at load time by loadAllExercises; it is not
             // part of the stored document and must not be persisted.
             const { isCustom, ...clean } = ex;
-            await upsertExerciseDefinition({ ...clean, narrative: (ex.narrative || []).filter(l => l.trim() !== '') });
+            await upsertExerciseDefinition({
+                ...clean,
+                narrative: (ex.narrative || []).filter(l => l.trim() !== ''),
+                learningPoints: (ex.learningPoints || []).filter(l => String(l).trim() !== ''),
+            });
             onSaved?.();
         } catch (e) {
             setError(e.message || 'Could not save.');
@@ -1789,6 +2358,18 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                 <p className="text-sm font-semibold text-slate-700 mb-2">Explanation shown after checking</p>
                 <textarea rows={4} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     value={ex.explain || ''} onChange={e => setField('explain', e.target.value)} />
+            </div>
+
+            <div>
+                <p className="text-sm font-semibold text-slate-700 mb-2">Learning points</p>
+                <p className="text-xs text-slate-500 mb-2">
+                    One per line. These appear as a numbered list at the foot of the form after the
+                    learner submits. Leave empty to fall back to the explanation above.
+                </p>
+                <textarea rows={4} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    placeholder={'Blood in the stool is DYSENTERY, whatever the hydration state.\nDiarrhoea under 14 days is not persistent diarrhoea.'}
+                    value={(ex.learningPoints || []).join('\n')}
+                    onChange={e => setField('learningPoints', e.target.value.split('\n'))} />
             </div>
 
             <div className="flex justify-end border-t pt-4"><Actions /></div>

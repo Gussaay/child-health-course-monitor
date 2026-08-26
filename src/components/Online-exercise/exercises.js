@@ -24,6 +24,10 @@
 //  narrativeAr[]     optional Arabic scenario
 //  expected          everything the learner is graded on (below)
 //  explain           shown after checking
+//  learningPoints[]  numbered teaching points, shown at the FOOT of the form
+//                    after submitting. Keep each one to a single rule the
+//                    learner should carry to the next case. If omitted, the
+//                    `explain` text is shown as a single point instead.
 //
 // ---------------------------------------------------------------------------
 // THE `expected` BLOCK
@@ -475,6 +479,12 @@ const EXERCISE_3 = {
         },
         includeTreatment: false,
     }),
+    learningPoints: [
+        'Blood in the stool is DYSENTERY, whatever the state of hydration.',
+        'When none of the dehydration signs are present, classify as NO DEHYDRATION — a child can have dysentery and no dehydration at the same time.',
+        'Diarrhoea lasting less than 14 days is not persistent diarrhoea, however severe it looks.',
+        'Dysentery with no dehydration is treated at the clinic with Plan A, zinc and an oral antibiotic. It is not a referral.',
+    ],
     explain:
         'Blood in the stool = DYSENTERY (yellow). None of the dehydration signs are present, so NO DEHYDRATION ' +
         '(green). Diarrhoea for 4 days is under 14 days, so persistent diarrhoea is not classified. Samira is ' +
@@ -534,6 +544,13 @@ const EXERCISE_4 = {
             diarrhea: ['dr_ors_on_way', 'dr_refer'],
         },
     }),
+    learningPoints: [
+        'From 12 months to 5 years the fast-breathing cut-off is 40 per minute. 36 is normal.',
+        'A convulsion during this illness is a general danger sign, even if the child looks well now.',
+        'A general danger sign with cough classifies as SEVERE PNEUMONIA OR VERY SEVERE DISEASE, whatever the breathing rate.',
+        'Sunken eyes plus drinking eagerly is two signs, which is SOME DEHYDRATION.',
+        'A child referred urgently should be given frequent sips of ORS on the way to hospital.',
+    ],
     explain:
         'The teaching point: 36 breaths per minute is NOT fast breathing for a child 12 months to 5 years (the ' +
         'cut-off is 40), and there is no indrawing, wheeze or stridor — yet the convulsion during this illness ' +
