@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, PageHeader, Button } from './CommonComponents'; 
-import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle, FileText, X } from 'lucide-react';
+import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle, FileText, X, BookOpen } from 'lucide-react';
 import zScoreData from './zscore_reference_data.json'; 
 import { STATE_LOCALITIES } from './constants'; 
+import { getChartBooklet } from './chartBooklet';
 
 // --- Firebase & Context Imports ---
 import { db } from '../firebase';
@@ -807,7 +808,122 @@ const LockStyles = () => (
     `}</style>
 );
 
-const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange, children, classifyData = [], treatmentData = [], hidden = false, classifyOverride = null, treatmentOverride = null, treatmentDisabled = false }) => {
+
+// ============================================================================
+// CHART BOOKLET VIEWER
+// ============================================================================
+//
+// On a real course the health worker reaches a classification by reading the
+// chart booklet page, top row first, and taking the first row whose signs the
+// child has. Without the booklet beside the form the learner is classifying
+// from memory, which is not the method being taught. This puts the page one
+// tap away from the Classify box it belongs to.
+
+const CHART_COLOURS = {
+    pink: { band: 'bg-[#ff69b4]', cell: 'bg-[#ffd9ea]', text: 'text-slate-900' },
+    yellow: { band: 'bg-[#ffff00]', cell: 'bg-[#ffffcc]', text: 'text-slate-900' },
+    green: { band: 'bg-[#00d26a]', cell: 'bg-[#d9fbe8]', text: 'text-slate-900' },
+};
+
+const ChartBookletTable = ({ chart }) => (
+    <div className="border-2 border-slate-900" dir="ltr">
+        <div className="grid grid-cols-12 bg-slate-900 text-white text-xs font-bold uppercase tracking-wide">
+            <div className="col-span-5 p-2 border-r border-slate-700">Signs</div>
+            <div className="col-span-3 p-2 border-r border-slate-700 text-center">Classify as</div>
+            <div className="col-span-4 p-2">Identify treatment</div>
+        </div>
+
+        {chart.rows.map((row, i) => {
+            const c = CHART_COLOURS[row.colour] || CHART_COLOURS.yellow;
+            return (
+                <div key={i}>
+                    {row.group && (
+                        <div className="bg-slate-100 border-y-2 border-slate-900 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                            {row.group}
+                        </div>
+                    )}
+                    <div className={`grid grid-cols-12 border-t-2 border-slate-900 ${row.dashed && !row.group ? 'border-dashed' : ''}`}>
+                        <div className={`col-span-5 p-2 border-r-2 border-slate-900 ${c.cell} ${c.text}`}>
+                            {row.signsIntro && <p className="text-xs font-bold mb-1">{row.signsIntro}</p>}
+                            <ul className="space-y-0.5">
+                                {row.signs.map((sign, j) => (
+                                    <li key={j} className="text-xs leading-snug flex gap-1.5">
+                                        {/^(or|OR|AND|and|—)/.test(sign)
+                                            ? <span className="italic font-semibold">{sign}</span>
+                                            : <><span className="flex-shrink-0">&bull;</span><span>{sign}</span></>}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div className={`col-span-3 p-2 border-r-2 border-slate-900 ${c.band} flex items-center justify-center`}>
+                            <span className="text-xs font-bold italic uppercase text-center leading-tight text-slate-900">
+                                {row.classify}
+                            </span>
+                        </div>
+
+                        <div className={`col-span-4 p-2 ${c.cell} ${c.text}`}>
+                            <ul className="space-y-1">
+                                {row.treatments.map((tx, j) => (
+                                    <li key={j} className="text-xs leading-snug flex gap-1">
+                                        <span className="flex-shrink-0 font-bold">&#9658;</span>
+                                        <span>{tx}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            );
+        })}
+    </div>
+);
+
+const ChartBookletButton = ({ section }) => {
+    const [open, setOpen] = useState(false);
+    const chart = getChartBooklet(section);
+    if (!chart) return null;
+
+    return (
+        <>
+            <button type="button" onClick={() => setOpen(true)}
+                className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border border-sky-300 bg-white text-sky-700 text-[11px] font-bold uppercase tracking-wide hover:bg-sky-50 transition-colors print-hide">
+                <BookOpen className="w-3.5 h-3.5" /> Chart booklet
+            </button>
+
+            {open && (
+                <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 p-3 sm:p-6 overflow-y-auto"
+                    onClick={() => setOpen(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-4" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-3 p-4 border-b border-slate-200 sticky top-0 bg-white rounded-t-xl">
+                            <div>
+                                <h3 className="font-bold text-slate-900">{chart.title}</h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Read from the top down and take the FIRST row whose signs the child has.
+                                    {chart.note ? ` ${chart.note}` : ''}
+                                </p>
+                            </div>
+                            <button type="button" onClick={() => setOpen(false)}
+                                className="flex-shrink-0 text-slate-400 hover:text-slate-700 text-2xl leading-none px-2">
+                                &times;
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-x-auto">
+                            <div className="min-w-[640px]">
+                                <ChartBookletTable chart={chart} />
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-slate-200 flex justify-end">
+                            <Button onClick={() => setOpen(false)} className="px-8">Close</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+};
+
+const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange, children, classifyData = [], treatmentData = [], hidden = false, classifyOverride = null, treatmentOverride = null, treatmentDisabled = false, chartSection = null }) => {
     const { t } = useTranslation();
     const isActive = isConditional ? yesNoValue === true : true;
 
@@ -851,6 +967,10 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
                         </div>
                     ))
                 )}
+
+                {/* The booklet page for THIS classification, beside the box the
+                    learner has to fill in. */}
+                {isActive && chartSection && <ChartBookletButton section={chartSection} />}
             </div>
 
             {/* Identify Treatment Section */}
@@ -1092,6 +1212,7 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
         const treatmentOptions = (trainingCase.treatmentOptions?.[section] || []).map(o => ({ id: o.id, label: optLabel(o) }));
 
         return {
+            chartSection: section,
             classifyOverride: classifyOptions.length > 0
                 ? <TrainingChoiceList options={classifyOptions} selected={trainingClassify[section] || []} onToggle={(id) => toggleIn(setTrainingClassify, section, id)} correctIds={trainingMarks?.classify?.[section] || null} />
                 : <span className="text-xs text-slate-400 italic">—</span>,
@@ -1490,7 +1611,10 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
                     <textarea name="otherProblemsText" value={assessments.otherProblemsText} onChange={(e) => setAssessments(prev=>({...prev, otherProblemsText: e.target.value}))} rows={2} className="block w-full rounded-md border-slate-300 shadow-sm focus:ring-sky-500 sm:text-sm mt-2 p-3" placeholder={t('imci.placeholders.other_problems')}></textarea>
                 </AssessmentRow>
 
-                {/* Footer: Follow up */}
+                {/* Footer: Follow up. Deciding when a child should return is
+                    part of identifying treatment, so this row is hidden in an
+                    exercise that does not mark treatment. */}
+                {(!trainingCase || trainingCase.includeTreatment) && (
                 <div className="p-5 bg-slate-800 text-white flex flex-col sm:flex-row items-center justify-center gap-6 text-sm">
                     <span className="font-bold tracking-wide uppercase">{t('imci.common.return_follow_up')}</span>
                     <div className="flex gap-5 font-semibold">
@@ -1499,6 +1623,7 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
                         ))}
                     </div>
                 </div>
+                )}
             </div>
             
             {trainingFeedback}
@@ -2126,6 +2251,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
         const treatmentOptions = (trainingCase.treatmentOptions?.[section] || []).map(o => ({ id: o.id, label: optLabel(o) }));
 
         return {
+            chartSection: section,
             classifyOverride: classifyOptions.length > 0
                 ? <TrainingChoiceList options={classifyOptions} selected={trainingClassify[section] || []} onToggle={(id) => toggleIn(setTrainingClassify, section, id)} correctIds={trainingMarks?.classify?.[section] || null} />
                 : <span className="text-xs text-slate-400 italic">—</span>,
@@ -2614,7 +2740,10 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
                     </div>
                 </AssessmentRow>
 
-                {/* Footer: Follow up */}
+                {/* Footer: Follow up. Deciding when a child should return is
+                    part of identifying treatment, so this row is hidden in an
+                    exercise that does not mark treatment. */}
+                {(!trainingCase || trainingCase.includeTreatment) && (
                 <div className="p-5 bg-slate-800 text-white flex flex-col sm:flex-row items-center justify-center gap-6 text-sm">
                     <span className="font-bold tracking-wide uppercase">{t('imci.common.return_follow_up')}</span>
                     <div className="flex gap-5 font-semibold">
@@ -2623,6 +2752,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
                         ))}
                     </div>
                 </div>
+                )}
             </div>
 
             {trainingFeedback}

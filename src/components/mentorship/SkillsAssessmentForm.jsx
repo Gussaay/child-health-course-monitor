@@ -80,6 +80,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         existingSessionData = null,
         visitNumber = 1,
         canEditVisitNumber = false, 
+        // When the parent has an open field visit, its number governs every form in
+        // that visit and this component stops deriving its own.
+        lockedVisitNumber = false,
         lastSessionDate = null,
         onDraftCreated,
         setIsMothersFormModalOpen,
@@ -135,7 +138,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
 
     // DYNAMIC VISIT NUMBER CALCULATION 
     useEffect(() => {
-        if (existingSessionData || !facility?.id || !healthWorkerName) return;
+        if (lockedVisitNumber || existingSessionData || !facility?.id || !healthWorkerName) return;
         const currentSessionDate = formData.session_date;
         if (!currentSessionDate) return;
 
@@ -165,7 +168,16 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         } catch (error) {
             console.error("Error calculating visit number:", error);
         }
-    }, [formData.session_date, imnciHistoryStats, facility?.id, existingSessionData, healthWorkerName, currentVisitNumber]);
+    }, [formData.session_date, imnciHistoryStats, facility?.id, existingSessionData, healthWorkerName, currentVisitNumber, lockedVisitNumber]);
+
+    // Mirror the visit-wide number handed down by the parent.
+    useEffect(() => {
+        if (!lockedVisitNumber || existingSessionData) return;
+        const locked = parseInt(visitNumber, 10);
+        if (locked > 0 && Number(currentVisitNumber) !== locked) {
+            setCurrentVisitNumber(locked);
+        }
+    }, [lockedVisitNumber, visitNumber, existingSessionData, currentVisitNumber]);
     
     const [isFormFullyComplete, setIsFormFullyComplete] = useState(false);
 

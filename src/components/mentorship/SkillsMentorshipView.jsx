@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp, collection, getDocs, doc, query, where, orderBy, limit } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -364,7 +364,321 @@ const PreviewSyncModal = ({ isOpen, onClose, onConfirm, proposedUpdates, isSynci
 };
 
 // --- Action Menu Component ---
-const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage }) => {
+// ============================================================================
+// --- FIELD VISIT WINDOW ---
+// A visit is opened from the field and stays open for VISIT_WINDOW_HOURS only.
+// The window start time is captured automatically when the mentor confirms the
+// visit, so data has to be entered during the visit itself rather than later.
+// ============================================================================
+const VISIT_WINDOW_HOURS = 4;
+const VISIT_WINDOW_MS = VISIT_WINDOW_HOURS * 60 * 60 * 1000;
+const VISIT_SESSION_KEY = 'mentorshipActiveVisitSession';
+
+const VISIT_FORM_LABELS = {
+    skills_assessment: 'جلسة إشراف فني',
+    mothers_form: 'استبيان الأم',
+    visit_report: 'تقرير الزيارة',
+    ams_assessment: 'استبيان الإشراف على مضادات الميكروبات (AMS)',
+    ipc_facility_assessment: 'تقييم برنامج مكافحة العدوى',
+    facility_update: 'تحديث بيانات المنشأة',
+};
+
+
+const readVisitSession = () => {
+    try {
+        const raw = localStorage.getItem(VISIT_SESSION_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.startedAt || !parsed.expiresAt) return null;
+        return parsed;
+    } catch (e) {
+        console.warn('Unable to read the stored visit session', e);
+        return null;
+    }
+};
+
+const writeVisitSession = (session) => {
+    try {
+        if (!session) localStorage.removeItem(VISIT_SESSION_KEY);
+        else localStorage.setItem(VISIT_SESSION_KEY, JSON.stringify(session));
+    } catch (e) {
+        console.warn('Unable to persist the visit session', e);
+    }
+};
+
+const formatVisitClock = (ts) => {
+    if (!ts) return '--:--';
+    try {
+        return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+        return '--:--';
+    }
+};
+
+const formatVisitCountdown = (ms) => {
+    if (!ms || ms <= 0) return '00:00:00';
+    const total = Math.floor(ms / 1000);
+    const h = String(Math.floor(total / 3600)).padStart(2, '0');
+    const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+    const s = String(total % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+};
+
+// --- Visit start / resume confirmation popup ---
+const VisitSessionModal = ({
+    isOpen, mode, session, remainingMs, facilityName, healthWorkerName,
+    activeService, activeFormType, visitNumber, canEditVisitNumber,
+    onVisitNumberChange, onConfirm, onCancel
+}) => {
+    if (!isOpen) return null;
+
+    const now = Date.now();
+    const isResume = mode === 'resume';
+    const startedAt = isResume ? session?.startedAt : now;
+    const expiresAt = isResume ? session?.expiresAt : now + VISIT_WINDOW_MS;
+
+
+    const titles = {
+        start: 'بدء زيارة ميدانية جديدة',
+        resume: 'متابعة الزيارة الجارية',
+        switch: 'بدء زيارة لمؤسسة أخرى',
+        expired: 'انتهت مدة الزيارة السابقة',
+    };
+
+    const confirmLabels = {
+        start: 'بدء الزيارة وفتح النموذج',
+        resume: 'متابعة وفتح النموذج',
+        switch: 'إنهاء السابقة وبدء زيارة جديدة',
+        expired: 'بدء زيارة جديدة',
+    };
+
+    const Row = ({ label, value, strong }) => (
+        <div className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-100 last:border-0">
+            <span className="text-xs text-gray-500 flex-shrink-0">{label}</span>
+            <span className={`text-sm truncate ${strong ? 'font-bold text-gray-900' : 'text-gray-700'}`}>{value}</span>
+        </div>
+    );
+
+    return (
+        <Modal isOpen={isOpen} onClose={onCancel} title={titles[mode] || titles.start} size="md">
+            <div className="p-6 text-right" dir="rtl">
+                {mode === 'switch' && (
+                    <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                        لديك زيارة جارية في <span className="font-bold">{session?.facilityName || 'مؤسسة أخرى'}</span>.
+                        بدء زيارة جديدة سينهي الزيارة السابقة.
+                    </div>
+                )}
+                {mode === 'expired' && (
+                    <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                        انتهت مدة الزيارة السابقة ({VISIT_WINDOW_HOURS} ساعات). يجب بدء زيارة جديدة لإدخال بيانات جديدة.
+                    </div>
+                )}
+
+                <div className="bg-gray-50 border rounded-lg px-4 py-2 mb-4">
+                    <Row label="النموذج" value={VISIT_FORM_LABELS[activeFormType] || 'نموذج'} strong />
+                    <Row label="الخدمة" value={activeService || 'N/A'} />
+                    <Row label="المؤسسة" value={facilityName || 'N/A'} />
+                    {healthWorkerName && <Row label="العامل الصحي" value={healthWorkerName} />}
+                </div>
+
+                <div className="mb-4">
+                    <div className="flex items-center justify-between gap-3 bg-sky-50 border border-sky-200 rounded-lg px-4 py-3">
+                        <div>
+                            <div className="text-xs font-bold text-sky-800">رقم الزيارة</div>
+                            <div className="text-[11px] text-sky-700">
+                                {isResume
+                                    ? 'رقم الزيارة الحالية — يسري على كل نماذج هذه الزيارة'
+                                    : (canEditVisitNumber
+                                        ? 'محسوب تلقائياً — يمكن تعديله عند الضرورة'
+                                        : 'محسوب تلقائياً من الزيارات السابقة')}
+                            </div>
+                        </div>
+                        {(canEditVisitNumber && !isResume) ? (
+                            <input
+                                type="number"
+                                min="1"
+                                value={visitNumber}
+                                onChange={(e) => onVisitNumberChange(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                                className="w-20 p-2 border border-sky-300 rounded text-center font-bold text-sky-900"
+                                dir="ltr"
+                            />
+                        ) : (
+                            <span className="w-14 h-10 flex items-center justify-center rounded-full bg-sky-600 text-white text-lg font-bold flex-shrink-0">
+                                {visitNumber}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-slate-800 text-white rounded-lg px-4 py-3 space-y-2">
+                    <div className="flex items-center gap-2 text-amber-300">
+                        <Clock className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-xs font-bold">مدة إدخال البيانات: {VISIT_WINDOW_HOURS} ساعات من بداية الزيارة</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm" dir="ltr">
+                        <span className="text-slate-300 text-xs">بداية الزيارة</span>
+                        <span className="font-bold">{formatVisitClock(startedAt)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm" dir="ltr">
+                        <span className="text-slate-300 text-xs">يغلق الإدخال في</span>
+                        <span className="font-bold">{formatVisitClock(expiresAt)}</span>
+                    </div>
+                    {isResume && (
+                        <div className="flex items-center justify-between text-sm border-t border-slate-600 pt-2" dir="ltr">
+                            <span className="text-slate-300 text-xs">الوقت المتبقي</span>
+                            <span className={`font-bold ${remainingMs < 30 * 60 * 1000 ? 'text-red-300' : 'text-emerald-300'}`}>
+                                {formatVisitCountdown(remainingMs)}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                <p className="text-[11px] text-gray-500 mt-3">
+                    يبدأ توقيت الزيارة تلقائياً عند التأكيد، وذلك لضمان إدخال البيانات أثناء الزيارة الميدانية وليس بعد انتهائها.
+                </p>
+
+                <div className="flex justify-end gap-2 mt-5 pt-4 border-t">
+                    <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
+                    <Button variant="primary" onClick={onConfirm} className="px-6">
+                        {confirmLabels[mode] || confirmLabels.start}
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+// --- New visit vs. continue the open visit ---
+// Shown when the mentor picks "Add New Form" while a visit is still open, so every
+// form they fill next is filed under one visit and one visit number.
+const VisitChooserModal = ({ isOpen, session, onContinue, onStartNew, onCancel }) => {
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        if (!isOpen || !session) return undefined;
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, [isOpen, session]);
+
+    if (!isOpen || !session) return null;
+    const remainingMs = session.expiresAt - now;
+
+    return (
+        <Modal isOpen={isOpen} onClose={onCancel} title="زيارة جديدة أم متابعة الزيارة الحالية؟" size="md">
+            <div className="p-6 text-right space-y-3" dir="rtl">
+                <button
+                    type="button"
+                    onClick={onContinue}
+                    className="w-full text-right border-2 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 rounded-xl p-4 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                    <div className="flex items-center justify-between gap-3">
+                        <span className="font-bold text-emerald-900">متابعة الزيارة الحالية</span>
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-white px-2 py-1 rounded-full flex-shrink-0" dir="ltr">
+                            <Clock className="h-3.5 w-3.5" />
+                            {formatVisitCountdown(remainingMs)}
+                        </span>
+                    </div>
+                    <div className="mt-2 text-sm text-emerald-800 truncate">{session.facilityName || 'N/A'}</div>
+                    <div className="mt-1 text-xs text-emerald-700">
+                        زيارة رقم <span className="font-bold">{session.visitNumber}</span> — بدأت الساعة {formatVisitClock(session.startedAt)}
+                    </div>
+                    <div className="mt-2 text-[11px] text-emerald-700">
+                        كل النماذج التي ستُدخلها ستُحفظ تحت نفس رقم الزيارة.
+                    </div>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onStartNew}
+                    className="w-full text-right border-2 border-gray-200 bg-white hover:bg-gray-50 rounded-xl p-4 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                    <div className="font-bold text-gray-800">بدء زيارة جديدة</div>
+                    <div className="mt-1 text-xs text-gray-500">
+                        سيتم إنهاء الزيارة الحالية واحتساب رقم زيارة جديد تلقائياً، مع تسجيل وقت البداية.
+                    </div>
+                </button>
+
+                <div className="flex justify-end pt-3 border-t">
+                    <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+// --- Blocking screen shown once the 4-hour window closes ---
+const VisitWindowExpiredScreen = ({ session, onStartNewVisit, onExit }) => (
+    <div className="max-w-lg mx-auto mt-10 p-4" dir="rtl">
+        <div className="border border-red-200 rounded-lg overflow-hidden shadow-sm bg-white">
+            <div className="bg-red-600 text-white px-5 py-3 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                <span className="font-bold">انتهت مدة إدخال بيانات الزيارة</span>
+            </div>
+            <div className="p-5 space-y-3 text-right">
+                <p className="text-sm text-gray-700">
+                    مدة إدخال البيانات لهذه الزيارة ({VISIT_WINDOW_HOURS} ساعات) قد انتهت، ولا يمكن فتح النموذج الآن.
+                </p>
+                <div className="bg-gray-50 border rounded-lg px-4 py-3 text-sm space-y-1">
+                    <div className="flex justify-between gap-3">
+                        <span className="text-gray-500 text-xs">المؤسسة</span>
+                        <span className="font-semibold text-gray-800 truncate">{session?.facilityName || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between gap-3" dir="ltr">
+                        <span className="text-gray-500 text-xs">Visit window</span>
+                        <span className="font-semibold text-gray-800">
+                            {formatVisitClock(session?.startedAt)} – {formatVisitClock(session?.expiresAt)}
+                        </span>
+                    </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                    المسودات المحفوظة لم تُفقد، ويمكنك الوصول إليها من "مسوداتي". لمتابعة الإدخال يجب بدء زيارة جديدة يُسجَّل وقتها تلقائياً.
+                </p>
+                <div className="flex justify-end gap-2 pt-3 border-t">
+                    <Button variant="secondary" onClick={onExit}>العودة للقائمة</Button>
+                    <Button variant="primary" onClick={onStartNewVisit}>بدء زيارة جديدة</Button>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+// --- Floating countdown shown while a form is open ---
+const VisitCountdownBadge = ({ session, onEndVisit }) => {
+    // Self-ticking: keeps the per-second re-render scoped to this badge instead of
+    // re-rendering the whole view (and any open form) once a second.
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        if (!session) return undefined;
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, [session]);
+
+    if (!session) return null;
+    const remainingMs = session.expiresAt - now;
+    if (remainingMs <= 0) return null;
+    const isWarning = remainingMs < 30 * 60 * 1000;
+    return (
+        <div
+            className={`fixed top-2 left-2 z-50 flex items-center gap-2 rounded-full px-3 py-1.5 shadow-lg text-white text-xs ${isWarning ? 'bg-red-600' : 'bg-slate-800'}`}
+            dir="ltr"
+            title={`الزيارة تغلق الساعة ${formatVisitClock(session.expiresAt)}`}
+        >
+            <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="font-bold tabular-nums">{formatVisitCountdown(remainingMs)}</span>
+            <button
+                type="button"
+                onClick={onEndVisit}
+                className="text-[10px] underline opacity-80 hover:opacity-100 flex-shrink-0"
+            >
+                End visit
+            </button>
+        </div>
+    );
+};
+
+const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage, menuSection, onSelectSection, activeVisitSession }) => {
+
     const canViewSubmissions = 
         permissions?.canViewSkillsMentorship ||
         permissions?.canUseFederalManagerAdvancedFeatures ||
@@ -448,10 +762,64 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         </div>
     );
 
+    const landingItems = [
+        ...(canManage ? [{
+            id: 'add',
+            label: 'Add New Form',
+            arabic: 'إضافة نموذج جديد',
+            hint: `${addItems.length} forms available`,
+            icon: PlusCircle,
+            color: 'text-emerald-600',
+            bg: 'bg-emerald-100',
+            border: 'hover:border-emerald-400',
+            shadow: 'hover:shadow-emerald-100'
+        }] : []),
+        {
+            id: 'view',
+            label: 'Show Previous Forms',
+            arabic: 'عرض النماذج السابقة',
+            hint: `${draftCount + (reportCount || 0)} drafts & reports`,
+            icon: Archive,
+            color: 'text-blue-600',
+            bg: 'bg-blue-100',
+            border: 'hover:border-blue-400',
+            shadow: 'hover:shadow-blue-100'
+        },
+    ];
+
+    const renderLanding = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {landingItems.map(item => {
+                const Icon = item.icon;
+                return (
+                    <button
+                        key={item.id}
+                        onClick={() => onSelectSection(item.id)}
+                        className={`flex flex-col items-start p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-left focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
+                    >
+                        <div className={`p-3 rounded-lg transition-transform duration-200 group-hover:scale-110 ${item.bg}`}>
+                            <Icon className={`w-6 h-6 ${item.color}`} strokeWidth={2} />
+                        </div>
+                        <div className="mt-3 font-bold text-gray-800 group-hover:text-gray-900">{item.label}</div>
+                        <div className="text-sm text-gray-500" dir="rtl">{item.arabic}</div>
+                        <div className="text-xs text-gray-400 mt-1">{item.hint}</div>
+                    </button>
+                );
+            })}
+        </div>
+    );
+
+    const sectionTitles = { add: 'Add New Data', view: 'View Records & Dashboards' };
+
     return (
         <div className="max-w-4xl mx-auto mt-4 p-4 space-y-5" dir="ltr">
             <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-                <Button variant="secondary" onClick={onBack} size="sm" className="py-1.5 px-3 text-sm">
+                <Button
+                    variant="secondary"
+                    onClick={() => (menuSection ? onSelectSection(null) : onBack())}
+                    size="sm"
+                    className="py-1.5 px-3 text-sm"
+                >
                     <ArrowLeft className="w-4 h-4 mr-2" /> Back
                 </Button>
                 {activeService && (
@@ -461,16 +829,25 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
                 )}
             </div>
 
-            {canManage && (
+            {activeVisitSession && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2">
+                    <span className="text-xs font-bold text-emerald-800">
+                        Open visit — {activeVisitSession.facilityName || 'N/A'} (visit #{activeVisitSession.visitNumber})
+                    </span>
+                    <span className="text-[11px] text-emerald-700" dir="ltr">
+                        {formatVisitClock(activeVisitSession.startedAt)} – {formatVisitClock(activeVisitSession.expiresAt)}
+                    </span>
+                </div>
+            )}
+
+            {!menuSection ? (
+                renderLanding()
+            ) : (
                 <section>
-                    <h3 className="text-base font-bold text-gray-800 mb-3">Add New Data</h3>
-                    {renderGrid(addItems)}
+                    <h3 className="text-base font-bold text-gray-800 mb-3">{sectionTitles[menuSection]}</h3>
+                    {renderGrid(menuSection === 'add' ? addItems : viewItems)}
                 </section>
             )}
-            <section>
-                <h3 className="text-base font-bold text-gray-800 mb-3">View Records & Dashboards</h3>
-                {renderGrid(viewItems)}
-            </section>
         </div>
     );
 };
@@ -1898,6 +2275,14 @@ const SkillsMentorshipView = ({
     const [lastSavedSessionData, setLastSavedSessionData] = useState(null);
     const [isTrainingPrioritiesModalOpen, setIsTrainingPrioritiesModalOpen] = useState(false);
 
+    // --- Field visit window ---
+    const [activeVisitSession, setActiveVisitSession] = useState(() => readVisitSession());
+    const [isVisitSessionModalOpen, setIsVisitSessionModalOpen] = useState(false);
+    const [isVisitChooserOpen, setIsVisitChooserOpen] = useState(false);
+    const [menuSection, setMenuSection] = useState(null);
+    const [visitNumberOverride, setVisitNumberOverride] = useState(null);
+    const [visitClockTick, setVisitClockTick] = useState(() => Date.now());
+
 
     const [publicData, setPublicData] = useState({ submissions: null, imnci: null, eenc: null });
     const [publicLoading, setPublicLoading] = useState(publicDashboardMode);
@@ -2864,107 +3249,134 @@ const SkillsMentorshipView = ({
         }
     }, [selectedFacility, activeService]);
 
-    const visitNumber = useMemo(() => {
-        if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
-            return 1;
-        }
 
-        if (editingSubmission) {
-             return editingSubmission.visitNumber || 1; 
-        }
+    // --- Field visit window: coarse clock used to police the gate. The per-second
+    // countdown lives inside VisitCountdownBadge so typing in a form stays smooth.
+    useEffect(() => {
+        if (!activeVisitSession) return undefined;
+        const id = setInterval(() => setVisitClockTick(Date.now()), 15000);
+        return () => clearInterval(id);
+    }, [activeVisitSession]);
 
-        const workerSessions = processedSubmissions.filter(sub =>
-            sub.facilityId === selectedFacilityId &&
-            sub.staff === selectedHealthWorkerName &&
-            sub.service === activeService &&
-            sub.sessionDate
-        );
+    const visitRemainingMs = useMemo(() => {
+        if (!activeVisitSession?.expiresAt) return 0;
+        return activeVisitSession.expiresAt - visitClockTick;
+    }, [activeVisitSession, visitClockTick]);
 
-        const uniqueDateSet = new Set(workerSessions.map(s => s.sessionDate));
-        const baseVisitCount = uniqueDateSet.size;
+    const isVisitWindowExpired = !!activeVisitSession && visitRemainingMs <= 0;
 
-        if (baseVisitCount === 0) {
-            return 1;
-        }
-        
-        const sortedDates = Array.from(uniqueDateSet).sort();
-        const lastVisitDateStr = sortedDates[sortedDates.length - 1];
+    const isVisitSessionForCurrentSelection = !!activeVisitSession &&
+        activeVisitSession.facilityId === selectedFacilityId &&
+        activeVisitSession.service === activeService;
+
+    // ONE number per field visit, and the single source of truth for it.
+    // The old per-form memos (skills / mothers / visit report) each derived a number
+    // from a different history, which is why the three forms used to disagree. This
+    // derives it once at facility + service level across every record type.
+    const facilityVisitNumber = useMemo(() => {
+        if (!selectedFacilityId || !activeService) return 1;
 
         const todayStr = new Date().toISOString().split('T')[0];
+        let maxVisitNum = 0;
+        let todayVisitNum = null;
 
-        if (todayStr === lastVisitDateStr) {
-            return baseVisitCount;
-        } else {
-            return baseVisitCount + 1;
+        const consider = (rawNum, dateStr) => {
+            const num = parseInt(rawNum, 10) || 0;
+            if (num > maxVisitNum) maxVisitNum = num;
+            if (dateStr && dateStr === todayStr && num > 0 && (todayVisitNum === null || num > todayVisitNum)) {
+                todayVisitNum = num;
+            }
+        };
+
+        (processedSubmissions || []).forEach(sub => {
+            if (sub.facilityId !== selectedFacilityId) return;
+            if (sub.service !== activeService && sub.service !== `${activeService}_MOTHERS`) return;
+            consider(sub.visitNumber ?? sub.fullData?.visitNumber, sub.sessionDate);
+        });
+
+        (processedVisitReports || []).forEach(rep => {
+            if (rep.facilityId !== selectedFacilityId) return;
+            if (rep.service && rep.service !== activeService) return;
+            consider(rep.visitNumber ?? rep.fullData?.visitNumber, rep.visitDate);
+        });
+
+        // Offline safety net so numbering keeps advancing without connectivity.
+        try {
+            const offlineKey = `offline_visit_max_${selectedFacilityId}_${activeService}_VISIT`;
+            const offlineMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            if (offlineMax > maxVisitNum) maxVisitNum = offlineMax;
+        } catch (e) {
+            console.warn('Unable to read the offline visit counter', e);
         }
 
-    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
+        // A visit already recorded today is the same field visit, so reuse its number.
+        if (todayVisitNum !== null) return todayVisitNum;
+        return maxVisitNum + 1;
+    }, [processedSubmissions, processedVisitReports, selectedFacilityId, activeService]);
 
-    const motherVisitNumber = useMemo(() => {
-        if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !activeService) {
-            return 1;
+    // Only a federal manager / super user may override, via canEditVisitNumber.
+    const pendingVisitNumber = visitNumberOverride ?? facilityVisitNumber;
+
+    // Once a visit is confirmed its number is frozen for every form in that visit.
+    const effectiveVisitNumber = useMemo(() => {
+        if (editingSubmission) return editingSubmission.visitNumber || 1;
+        const stored = parseInt(activeVisitSession?.visitNumber, 10) || 0;
+        return stored > 0 ? stored : facilityVisitNumber;
+    }, [editingSubmission, activeVisitSession, facilityVisitNumber]);
+
+    // Forms stop deriving their own number while a visit is open.
+    const isVisitNumberLocked = !!activeVisitSession && !editingSubmission;
+
+    const visitSessionModalMode = useMemo(() => {
+        if (!activeVisitSession) return 'start';
+        if (isVisitWindowExpired) return 'expired';
+        if (!isVisitSessionForCurrentSelection) return 'switch';
+        return 'resume';
+    }, [activeVisitSession, isVisitWindowExpired, isVisitSessionForCurrentSelection]);
+
+    // "Add New Form" routes through the visit chooser whenever a visit is still open,
+    // so the mentor explicitly continues it (same visit number for every form) or
+    // closes it and starts a fresh one.
+    const handleSelectMenuSection = (section) => {
+        if (section !== 'add') {
+            setMenuSection(section);
+            return;
         }
-
-        if (editingSubmission && (editingSubmission.service === `${activeService}_MOTHERS`)) {
-             return editingSubmission.visitNumber || 1;
+        if (activeVisitSession && !isVisitWindowExpired) {
+            setIsVisitChooserOpen(true);
+            return;
         }
-
-        const motherServiceType = `${activeService}_MOTHERS`;
-
-        const facilityMotherSessions = processedSubmissions.filter(sub =>
-            sub.facilityId === selectedFacilityId &&
-            sub.service === motherServiceType &&
-            sub.sessionDate
-        );
-
-        const uniqueDateSet = new Set(facilityMotherSessions.map(s => s.sessionDate));
-        const baseVisitCount = uniqueDateSet.size;
-
-        if (baseVisitCount === 0) {
-            return 1;
+        if (activeVisitSession && isVisitWindowExpired) {
+            endVisitSession();
         }
-        
-        const sortedDates = Array.from(uniqueDateSet).sort();
-        const lastVisitDateStr = sortedDates[sortedDates.length - 1];
-        const todayStr = new Date().toISOString().split('T')[0];
+        setMenuSection('add');
+    };
 
-        if (todayStr === lastVisitDateStr) {
-            return baseVisitCount;
-        } else {
-            return baseVisitCount + 1;
+    // Restores the visit's facility so the next form opens pre-filled and inherits
+    // the visit number rather than recalculating one.
+    const handleContinueVisit = () => {
+        if (activeVisitSession) {
+            setSelectedState(activeVisitSession.state || '');
+            setSelectedLocality(activeVisitSession.locality || '');
+            setSelectedFacilityId(activeVisitSession.facilityId || '');
+            setSelectedHealthWorkerName(activeVisitSession.healthWorkerName || '');
         }
+        setIsVisitChooserOpen(false);
+        setMenuSection('add');
+    };
 
-    }, [processedSubmissions, selectedFacilityId, activeService, editingSubmission]);
+    const handleStartFreshVisit = () => {
+        endVisitSession();
+        resetSelection();
+        setIsVisitChooserOpen(false);
+        setMenuSection('add');
+    };
 
-    const visitReportVisitNumber = useMemo(() => {
-        if (!selectedFacilityId || !activeService) {
-            return 1;
-        }
-        
-        const relevantReports = processedVisitReports.filter(rep => rep.facilityId === selectedFacilityId);
-
-        if (editingSubmission && (editingSubmission.service === activeService)) {
-             return editingSubmission.visitNumber || 1;
-        }
-
-        const uniqueDateSet = new Set(relevantReports.map(r => r.visitDate));
-        const baseVisitCount = uniqueDateSet.size;
-
-        if (baseVisitCount === 0) {
-            return 1;
-        }
-        
-        const sortedDates = Array.from(uniqueDateSet).sort();
-        const lastVisitDateStr = sortedDates[sortedDates.length - 1];
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        if (todayStr === lastVisitDateStr) {
-            return baseVisitCount;
-        } else {
-            return baseVisitCount + 1;
-        }
-
-    }, [processedVisitReports, selectedFacilityId, activeService, editingSubmission]);
+    const endVisitSession = useCallback(() => {
+        setActiveVisitSession(null);
+        writeVisitSession(null);
+        setVisitNumberOverride(null);
+    }, []);
 
     const lastSessionDate = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
@@ -3217,7 +3629,57 @@ const SkillsMentorshipView = ({
         setCurrentView('action_menu');
     };
 
+    // Every new form is gated behind the visit popup, which stamps the visit start
+    // time and freezes the auto-calculated visit number before anything opens.
     const handleProceedToForm = () => {
+        setVisitNumberOverride(null);
+        setIsVisitSessionModalOpen(true);
+    };
+
+    const handleConfirmVisitSession = () => {
+        const now = Date.now();
+        const reuse = visitSessionModalMode === 'resume';
+
+        const session = reuse
+            ? {
+                ...activeVisitSession,
+                lastFormType: activeFormType,
+            }
+            : {
+                id: `${selectedFacilityId || 'facility'}_${now}`,
+                facilityId: selectedFacilityId,
+                facilityName: selectedFacility?.['اسم_المؤسسة'] || '',
+                state: selectedState,
+                locality: selectedLocality,
+                service: activeService,
+                healthWorkerName: selectedHealthWorkerName || null,
+                mentorEmail: user?.email || null,
+                startedAt: now,
+                expiresAt: now + VISIT_WINDOW_MS,
+                visitNumber: pendingVisitNumber,
+                lastFormType: activeFormType,
+            };
+
+        // Advance the offline counter so the next visit numbers correctly even if
+        // nothing has synced yet.
+        try {
+            const offlineKey = `offline_visit_max_${session.facilityId}_${activeService}_VISIT`;
+            const storedMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
+            if (session.visitNumber > storedMax) {
+                localStorage.setItem(offlineKey, String(session.visitNumber));
+            }
+        } catch (e) {
+            console.warn('Unable to update the offline visit counter', e);
+        }
+
+        setActiveVisitSession(session);
+        writeVisitSession(session);
+        setVisitClockTick(Date.now());
+        setIsVisitSessionModalOpen(false);
+        startFormEntry();
+    };
+
+    const startFormEntry = () => {
         if (activeFormType === 'facility_update') {
             setIsStandaloneFacilityModalOpen(true);
         }
@@ -3644,11 +4106,23 @@ const SkillsMentorshipView = ({
                     reportCount={currentUserVisitReports.length}
                     permissions={permissions}
                     canManage={canAddMentorshipData}
+                    menuSection={menuSection}
+                    onSelectSection={handleSelectMenuSection}
+                    activeVisitSession={isVisitWindowExpired ? null : activeVisitSession}
                     onBack={() => {
                         setActiveService(null);
                         setCurrentView('service_selection');
                         resetSelection();
+                        endVisitSession();
+                        setMenuSection(null);
                     }}
+                />
+                <VisitChooserModal
+                    isOpen={isVisitChooserOpen}
+                    session={activeVisitSession}
+                    onContinue={handleContinueVisit}
+                    onStartNew={handleStartFreshVisit}
+                    onCancel={() => setIsVisitChooserOpen(false)}
                 />
                 <DraftsModal
                     isOpen={isDraftsModalOpen}
@@ -4123,6 +4597,25 @@ const SkillsMentorshipView = ({
         : selectedFacility;
 
     // --- FORM RENDERING LOGIC WITH IPC SUPPORT ---
+    // The visit window is a hard gate: once it closes, no new form renders. Editing an
+    // existing submission is still allowed so corrections remain possible.
+    if (currentView === 'form_setup' && isReadyToStart && !editingSubmission && isVisitWindowExpired) {
+        return (
+            <VisitWindowExpiredScreen
+                session={activeVisitSession}
+                onStartNewVisit={() => {
+                    setIsReadyToStart(false);
+                    endVisitSession();
+                    setIsVisitSessionModalOpen(true);
+                }}
+                onExit={() => {
+                    endVisitSession();
+                    handleExitForm();
+                }}
+            />
+        );
+    }
+
     if (currentView === 'form_setup' && activeFormType === 'skills_assessment' && (editingSubmission || (isReadyToStart && selectedFacility)) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
         
         // IMNCI
@@ -4140,7 +4633,7 @@ const SkillsMentorshipView = ({
                         onSaveComplete={handleSaveSuccess}
                         setToast={setToast}
                         
-                        visitNumber={visitNumber}
+                        visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                         workerHistory={workerHistory} 
                         
                         canEditVisitNumber={canEditVisitNumber} 
@@ -4188,7 +4681,7 @@ const SkillsMentorshipView = ({
                             <div className="p-0 sm:p-4 bg-gray-100">
                                 <MothersForm
                                     facility={facilityData}
-                                    visitNumber={motherVisitNumber}
+                                    visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                                     existingSessionData={null}
                                     onCancel={() => {
                                         setIsMothersFormModalOpen(false);
@@ -4212,7 +4705,7 @@ const SkillsMentorshipView = ({
                                     {activeService === 'IMNCI' ? (
                                         <IMNCIVisitReport
                                             facility={facilityData}
-                                            visitNumber={visitReportVisitNumber}
+                                            visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                                             onCancel={() => {
                                                 setIsVisitReportModalOpen(false);
                                             }}
@@ -4229,7 +4722,7 @@ const SkillsMentorshipView = ({
                                     ) : (
                                         <EENCVisitReport
                                             facility={facilityData}
-                                            visitNumber={visitReportVisitNumber}
+                                            visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                                             onCancel={() => {
                                                 setIsVisitReportModalOpen(false);
                                             }}
@@ -4327,6 +4820,7 @@ const SkillsMentorshipView = ({
                         />
                     )}
                     
+                    <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -4342,7 +4836,7 @@ const SkillsMentorshipView = ({
                         onSaveComplete={handleSaveSuccess}
                         setToast={setToast}
                         existingSessionData={editingSubmission}
-                        visitNumber={visitNumber}
+                        visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                         workerHistory={workerHistory}
                         canEditVisitNumber={canEditVisitNumber}
                     />
@@ -4359,6 +4853,7 @@ const SkillsMentorshipView = ({
                         />
                     )}
                     
+                    <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -4376,6 +4871,7 @@ const SkillsMentorshipView = ({
                         setToast={setToast}
                         existingSessionData={editingSubmission}
                     />
+                    <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -4393,6 +4889,7 @@ const SkillsMentorshipView = ({
                     setToast={setToast}
                     existingSessionData={editingSubmission}
                 />
+                <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                 <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );
@@ -4410,6 +4907,7 @@ const SkillsMentorshipView = ({
                     setToast={setToast}
                     existingSessionData={editingSubmission}
                 />
+                <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                 <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );
@@ -4423,7 +4921,7 @@ const SkillsMentorshipView = ({
                 <>
                     <MothersForm
                         facility={facilityData}
-                        visitNumber={motherVisitNumber}
+                        visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                         existingSessionData={editingSubmission}
                         onCancel={() => handleGenericFormExit('mothers_list')}
                         setToast={setToast}
@@ -4435,6 +4933,7 @@ const SkillsMentorshipView = ({
                         onNavClick={handleMobileNavClick}
                     />
                     
+                    <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -4444,13 +4943,14 @@ const SkillsMentorshipView = ({
                 <>
                     <EENCMothersForm
                         facility={facilityData}
-                        visitNumber={motherVisitNumber}
+                        visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                         existingSessionData={editingSubmission}
                         onCancel={() => handleGenericFormExit('mothers_list')}
                         setToast={setToast}
                         canEditVisitNumber={canEditVisitNumber}
                     />
                     
+                    <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -4466,7 +4966,7 @@ const SkillsMentorshipView = ({
                 <Suspense fallback={<div className="p-8"><Spinner /></div>}>
                     <ReportComponent
                         facility={facilityData}
-                        visitNumber={visitReportVisitNumber}
+                        visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                         onCancel={() => handleGenericFormExit('visit_reports')}
                         onSaveSuccess={() => {
                             if (activeService === 'IMNCI') fetchIMNCIVisitReports(true);
@@ -4485,13 +4985,14 @@ const SkillsMentorshipView = ({
                         <div className="p-4">Visit Report is already open.</div>
                     </Modal>
                 )}
-                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100"><MothersForm facility={facilityData} visitNumber={motherVisitNumber} existingSessionData={null} onCancel={() => { setIsMothersFormModalOpen(false); }} setToast={setToast} canEditVisitNumber={canEditVisitNumber} /></div></Modal>}
+                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100"><MothersForm facility={facilityData} visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked} existingSessionData={null} onCancel={() => { setIsMothersFormModalOpen(false); }} setToast={setToast} canEditVisitNumber={canEditVisitNumber} /></div></Modal>}
                 <MobileFormNavBar
                     activeFormType={activeFormType}
                     draftCount={currentUserDrafts.length}
                     onNavClick={handleMobileNavClick}
                  />
                  
+                <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                 <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );
@@ -4746,6 +5247,22 @@ const SkillsMentorshipView = ({
                     </div>
                 </Modal>
 
+                <VisitSessionModal
+                    isOpen={isVisitSessionModalOpen}
+                    mode={visitSessionModalMode}
+                    session={activeVisitSession}
+                    remainingMs={visitRemainingMs}
+                    facilityName={selectedFacility?.['اسم_المؤسسة'] || ''}
+                    healthWorkerName={selectedHealthWorkerName}
+                    activeService={activeService}
+                    activeFormType={activeFormType}
+                    visitNumber={pendingVisitNumber}
+                    canEditVisitNumber={canEditVisitNumber}
+                    onVisitNumberChange={setVisitNumberOverride}
+                    onConfirm={handleConfirmVisitSession}
+                    onCancel={() => setIsVisitSessionModalOpen(false)}
+                />
+
                 {isAddWorkerModalOpen && (
                     <AddHealthWorkerModal
                         isOpen={isAddWorkerModalOpen}
@@ -4845,7 +5362,7 @@ const SkillsMentorshipView = ({
                         <div className="p-0 sm:p-4 bg-gray-100">
                             <MothersForm
                                 facility={selectedFacility} 
-                                visitNumber={motherVisitNumber}
+                                visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                                 existingSessionData={null} 
                                 onCancel={() => { 
                                     setIsMothersFormModalOpen(false);
@@ -4869,7 +5386,7 @@ const SkillsMentorshipView = ({
                                 {activeService === 'IMNCI' ? (
                                     <IMNCIVisitReport
                                         facility={selectedFacility}
-                                        visitNumber={visitReportVisitNumber}
+                                        visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                                         onCancel={() => {
                                             setIsVisitReportModalOpen(false);
                                         }}
@@ -4886,7 +5403,7 @@ const SkillsMentorshipView = ({
                                 ) : (
                                     <EENCVisitReport
                                         facility={selectedFacility}
-                                        visitNumber={visitReportVisitNumber}
+                                        visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
                                         onCancel={() => {
                                             setIsVisitReportModalOpen(false);
                                         }}
@@ -4972,6 +5489,7 @@ const SkillsMentorshipView = ({
                     </Modal>
                 )}
 
+                <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
                 <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );

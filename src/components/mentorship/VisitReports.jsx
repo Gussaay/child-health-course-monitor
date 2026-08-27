@@ -246,7 +246,10 @@ export const IMNCIVisitReport = ({
     existingReportData = null, 
     visitNumber = 1, 
     allVisitReports = [],
-    canEditVisitNumber = false 
+    canEditVisitNumber = false,
+    // When the parent has an open field visit, its number governs every form in
+    // that visit and this component stops deriving its own.
+    lockedVisitNumber = false
 }) => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -355,7 +358,7 @@ export const IMNCIVisitReport = ({
     }, [allVisitReports, facility?.id, existingReportData]);
 
     useEffect(() => {
-        if (existingReportData || !facility?.id) return;
+        if (lockedVisitNumber || existingReportData || !facility?.id) return;
         const currentVisitDate = formData.visit_date;
         if (!currentVisitDate) return;
 
@@ -384,7 +387,16 @@ export const IMNCIVisitReport = ({
         } catch (error) {
             console.error("Error managing visit number assignment:", error);
         }
-    }, [formData.visit_date, imnciHistoryStats, facility?.id, existingReportData, formData.visitNumber]);
+    }, [formData.visit_date, imnciHistoryStats, facility?.id, existingReportData, formData.visitNumber, lockedVisitNumber]);
+
+    // Mirror the visit-wide number handed down by the parent.
+    useEffect(() => {
+        if (!lockedVisitNumber || existingReportData) return;
+        const locked = parseInt(visitNumber, 10);
+        if (locked > 0 && formData.visitNumber !== locked) {
+            setFormData(prev => ({ ...prev, visitNumber: locked }));
+        }
+    }, [lockedVisitNumber, visitNumber, existingReportData, formData.visitNumber]);
 
     const sessionsForThisVisit = useMemo(() => {
         if (!allSubmissions || !facility || !formData.visit_date) return [];
@@ -1081,7 +1093,10 @@ export const EENCVisitReport = ({
     existingReportData = null, 
     visitNumber = 1, 
     allVisitReports = [],
-    canEditVisitNumber = false 
+    canEditVisitNumber = false,
+    // When the parent has an open field visit, its number governs every form in
+    // that visit and this component stops deriving its own.
+    lockedVisitNumber = false
 }) => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -1184,7 +1199,7 @@ export const EENCVisitReport = ({
     }, [allVisitReports, facility?.id, existingReportData]);
 
     useEffect(() => {
-        if (existingReportData || !facility?.id) return;
+        if (lockedVisitNumber || existingReportData || !facility?.id) return;
         const currentVisitDate = formData.visit_date;
         if (!currentVisitDate) return;
 
@@ -1213,7 +1228,16 @@ export const EENCVisitReport = ({
         } catch (error) {
             console.error("Error managing visit number assignment:", error);
         }
-    }, [formData.visit_date, eencHistoryStats, facility?.id, existingReportData, formData.visitNumber]);
+    }, [formData.visit_date, eencHistoryStats, facility?.id, existingReportData, formData.visitNumber, lockedVisitNumber]);
+
+    // Mirror the visit-wide number handed down by the parent.
+    useEffect(() => {
+        if (!lockedVisitNumber || existingReportData) return;
+        const locked = parseInt(visitNumber, 10);
+        if (locked > 0 && formData.visitNumber !== locked) {
+            setFormData(prev => ({ ...prev, visitNumber: locked }));
+        }
+    }, [lockedVisitNumber, visitNumber, existingReportData, formData.visitNumber]);
 
     const sessionsForThisVisit = useMemo(() => {
         if (!allSubmissions || !facility || !formData.visit_date) return [];

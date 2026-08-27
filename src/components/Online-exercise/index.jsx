@@ -650,36 +650,50 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
         <Suspense fallback={<div className="flex justify-center p-10"><Spinner /></div>}>
             {showResult && result && (
                 <Modal isOpen={showResult} onClose={() => setShowResult(false)}
-                    title={`${exercise.title} — attempt ${attemptNo}`} size="xl">
-                    <CardBody className="p-4 sm:p-5 max-h-[80vh] overflow-y-auto space-y-4">
-                        <div className={`rounded-xl px-5 py-4 text-white ${result.percent >= passMark ? 'bg-emerald-600' : 'bg-amber-600'}`}>
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <span className="font-bold flex items-center gap-2 text-lg">
-                                    {result.percent >= passMark ? <CheckCircle className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
-                                    {result.percent >= passMark ? 'Passed' : 'Below the pass mark'}
-                                </span>
-                                <span className="font-bold text-2xl">
-                                    {result.percent}% <span className="text-sm font-normal opacity-80">({result.earned}/{result.possible})</span>
-                                </span>
+                    title={`Submitted — attempt ${attemptNo}`} size="md">
+                    {/* A summary only. The itemised marking and the learning
+                        points are at the foot of the form; repeating them here
+                        makes the popup something the learner has to scroll,
+                        which defeats the point of a confirmation. */}
+                    <CardBody className="p-4 sm:p-5 space-y-3 max-w-md mx-auto w-full">
+                        <div className={`rounded-xl px-4 py-4 text-white text-center ${result.percent >= passMark ? 'bg-emerald-600' : 'bg-amber-600'}`}>
+                            <div className="flex items-center justify-center gap-2 font-bold">
+                                {result.percent >= passMark ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                                {result.percent >= passMark ? 'Passed' : 'Below the pass mark'}
                             </div>
+                            <p className="text-4xl font-bold mt-1 leading-none">{result.percent}%</p>
                             <p className="text-sm opacity-90 mt-1">
-                                Pass mark {passMark}% · attempt {attemptNo}
-                                {saveState === 'saving' && ' · recording…'}
-                                {saveState === 'saved' && ' · recorded'}
-                                {saveState === 'error' && ` · NOT recorded: ${saveError}`}
+                                {result.earned} of {result.possible} marks · pass mark {passMark}%
                             </p>
                         </div>
 
-                        <ResultDetail result={result} exercise={exercise} />
+                        {result.breakdown && (
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    ['Child details', result.breakdown.patientData],
+                                    ['Signs', result.breakdown.assessments],
+                                    ['Classification', result.breakdown.classifications],
+                                    ['Treatment', result.breakdown.treatments],
+                                ].filter(([, b]) => b && b.possible > 0).map(([label, b]) => (
+                                    <div key={label} className="border border-slate-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                                        <span className="text-xs text-slate-600 truncate">{label}</span>
+                                        <span className={`text-sm font-bold flex-shrink-0 ${b.earned === b.possible ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {b.earned}/{b.possible}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
-                        <p className="text-xs text-slate-500">
-                            Close this to see each answer marked on the form itself. The form is now
-                            closed for this attempt — start a blank form to try again.
+                        <p className="text-xs text-slate-500 text-center leading-relaxed">
+                            {saveState === 'saving' && 'Recording this attempt…'}
+                            {saveState === 'saved' && 'Attempt recorded. '}
+                            {saveState === 'error' && <span className="text-rose-600 font-semibold">Not recorded: {saveError}. </span>}
+                            Close to see every answer marked on the form, with the full breakdown and
+                            learning points at the foot of the page.
                         </p>
 
-                        <div className="flex justify-end border-t border-slate-200 pt-4">
-                            <Button onClick={() => setShowResult(false)} className="px-10">OK</Button>
-                        </div>
+                        <Button onClick={() => setShowResult(false)} className="w-full justify-center">OK</Button>
                     </CardBody>
                 </Modal>
             )}
@@ -1204,6 +1218,11 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    // Follow-up list: which participants still owe you work.
+    const [followExercise, setFollowExercise] = useState('any');
+    const [followStatus, setFollowStatus] = useState('not-started');
+    const [copied, setCopied] = useState('');
+
     const load = useCallback(async () => {
         setLoading(true);
         setError('');
@@ -1287,6 +1306,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
             return {
                 id: p.id,
                 name: p.name || '—',
+                group: p.group || '',
                 scores,
                 initial,
                 attemptCount,
@@ -1351,6 +1371,74 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
         if (onData) onData({ ...model, exercises, loading, hasAttempts: attempts.length > 0 });
     }, [model, exercises, loading, attempts.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    /**
+     * Who has not done a given exercise (or has done it but not passed).
+     *
+     * This is the list a facilitator chases between sessions, so it has to be
+     * copyable as plain text — a table on screen cannot be pasted into a
+     * WhatsApp group.
+     */
+    const followUp = useMemo(() => {
+        const rows = model.perParticipant.filter(p => {
+            if (followExercise === 'any') {
+                if (followStatus === 'not-started') return p.completed === 0;
+                // Did some work but failed part of it — distinct from having
+                // simply never opened an exercise.
+                if (followStatus === 'below-pass') return p.completed > 0 && p.passedCount < p.completed;
+                return p.passedCount < exercises.length;
+            }
+            const ex = exercises.find(e => e.id === followExercise);
+            const score = p.scores[followExercise];
+            if (followStatus === 'not-started') return score == null;
+            if (followStatus === 'below-pass') return score != null && score < (ex?.passMark ?? 80);
+            return score == null || score < (ex?.passMark ?? 80); // not-passed
+        });
+
+        const exTitle = followExercise === 'any'
+            ? 'any exercise'
+            : (exercises.find(e => e.id === followExercise)?.title || followExercise);
+        const verb = followStatus === 'not-started' ? 'have not started'
+            : followStatus === 'below-pass' ? 'scored below the pass mark on'
+            : 'have not passed';
+
+        const heading = `${course.course_type || 'Course'} — ${rows.length} participant${rows.length === 1 ? '' : 's'} ${verb} ${exTitle}`;
+        const text = [
+            heading,
+            ...rows.map((p, i) => {
+                const score = followExercise === 'any' ? null : p.scores[followExercise];
+                const bits = [`${i + 1}. ${p.name}`];
+                if (p.group) bits.push(`(${p.group})`);
+                if (score != null) bits.push(`— ${score}%`);
+                return bits.join(' ');
+            }),
+        ].join('\n');
+
+        return { rows, text, heading };
+    }, [model.perParticipant, exercises, followExercise, followStatus, course.course_type]);
+
+    const copyText = async (text, tag) => {
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                // Older mobile webviews have no async clipboard API.
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+            setCopied(tag);
+            setTimeout(() => setCopied(''), 2000);
+        } catch (e) {
+            setCopied('failed');
+            setTimeout(() => setCopied(''), 2500);
+        }
+    };
+
     const csv = (filename, header, lines) => {
         const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -1404,6 +1492,73 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                 <ReportTile label="Total attempts" value={kpis.totalAttempts} />
                 <ReportTile label="Average score" value={kpis.avgScore != null ? `${kpis.avgScore}%` : '—'} sub="best attempt per exercise" tone="emerald" />
                 <ReportTile label="Passed everything" value={kpis.fullyPassed} sub="of those who started" tone="emerald" />
+            </div>
+
+            {/* ---- follow-up list ---- */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white print-hide">
+                <div className="px-4 py-2.5 bg-sky-700 text-white text-sm font-bold uppercase tracking-wide">
+                    Follow-up list
+                </div>
+
+                <div className="p-4 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs font-semibold text-slate-600 block mb-1">Exercise</label>
+                            <Select value={followExercise} onChange={e => setFollowExercise(e.target.value)} className="w-full">
+                                <option value="any">Any exercise</option>
+                                {exercises.map(e => (
+                                    <option key={e.id} value={e.id}>{e.title}</option>
+                                ))}
+                            </Select>
+                        </div>
+                        <div>
+                            <label className="text-xs font-semibold text-slate-600 block mb-1">Show participants who</label>
+                            <Select value={followStatus} onChange={e => setFollowStatus(e.target.value)} className="w-full">
+                                <option value="not-started">Have not started it</option>
+                                <option value="below-pass">Did it but scored below the pass mark</option>
+                                <option value="not-passed">Have not passed it (either reason)</option>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-slate-700">
+                            {followUp.rows.length} participant{followUp.rows.length === 1 ? '' : 's'}
+                        </p>
+                        <div className="flex gap-2">
+                            <Button variant="secondary" disabled={followUp.rows.length === 0}
+                                onClick={() => copyText(followUp.rows.map(p => p.name).join('\n'), 'names')}>
+                                {copied === 'names' ? 'Copied' : 'Copy names only'}
+                            </Button>
+                            <Button disabled={followUp.rows.length === 0}
+                                onClick={() => copyText(followUp.text, 'full')}>
+                                {copied === 'full' ? 'Copied' : 'Copy list'}
+                            </Button>
+                        </div>
+                    </div>
+
+                    {copied === 'failed' && (
+                        <p className="text-xs text-rose-600">
+                            Could not reach the clipboard. Select the text below and copy it manually.
+                        </p>
+                    )}
+
+                    {followUp.rows.length === 0 ? (
+                        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                            Nobody matches — everyone on this filter is done.
+                        </p>
+                    ) : (
+                        // A plain, selectable block so it can always be copied by
+                        // hand if the clipboard API is unavailable.
+                        <textarea
+                            readOnly
+                            value={followUp.text}
+                            rows={Math.min(14, followUp.rows.length + 2)}
+                            onFocus={e => e.target.select()}
+                            className="w-full text-sm font-mono border border-slate-300 rounded-lg p-3 bg-slate-50 text-slate-700"
+                        />
+                    )}
+                </div>
             </div>
 
             {/* ---- per exercise ---- */}

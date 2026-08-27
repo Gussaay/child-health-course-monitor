@@ -215,7 +215,10 @@ const MothersForm = ({
     visitNumber = 1, 
     existingSessionData = null,
     canEditVisitNumber = false,
-    allSubmissions = []
+    allSubmissions = [],
+    // When the parent has an open field visit, its number governs every form in
+    // that visit and this component stops deriving its own.
+    lockedVisitNumber = false
 }) => {
     const [formData, setFormData] = useState(() => {
         if (existingSessionData) {
@@ -261,7 +264,7 @@ const MothersForm = ({
     }, [allSubmissions, facility?.id, existingSessionData]);
 
     useEffect(() => {
-        if (existingSessionData || !facility?.id) return;
+        if (lockedVisitNumber || existingSessionData || !facility?.id) return;
         const currentSessionDate = formData.session_date;
         if (!currentSessionDate) return;
 
@@ -290,7 +293,16 @@ const MothersForm = ({
         } catch (error) {
             console.error("Error managing visit number assignment:", error);
         }
-    }, [formData.session_date, imnciMothersHistoryStats, facility?.id, existingSessionData, formData.visitNumber]);
+    }, [formData.session_date, imnciMothersHistoryStats, facility?.id, existingSessionData, formData.visitNumber, lockedVisitNumber]);
+
+    // Mirror the visit-wide number handed down by the parent.
+    useEffect(() => {
+        if (!lockedVisitNumber || existingSessionData) return;
+        const locked = parseInt(visitNumber, 10);
+        if (locked > 0 && formData.visitNumber !== locked) {
+            setFormData(prev => ({ ...prev, visitNumber: locked }));
+        }
+    }, [lockedVisitNumber, visitNumber, existingSessionData, formData.visitNumber]);
     
     const scores = useMemo(() => calculateScores(formData), [formData]);
 
