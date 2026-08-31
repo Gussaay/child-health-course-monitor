@@ -1656,6 +1656,15 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     const canAccessAdminTab = canUseFederalManagerAdvancedFeatures || canManageCourse;
     const canAccessRecycleBin = canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures;
 
+    // Certificate management inside a course is restricted to super users, and to
+    // federal managers only when they ALSO hold super-user rights. Note this is
+    // deliberately stricter than `canManageCertificates` elsewhere in the app,
+    // which lets any federal manager through: approving certificates and editing
+    // the printed template is a signing authority, not a reporting convenience.
+    const canManageCourseCertificates =
+        canUseSuperUserAdvancedFeatures ||
+        (canUseFederalManagerAdvancedFeatures && currentUserRole === 'super_user');
+
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try { await fetchCourses(true); await fetchParticipants(true); } finally { setIsRefreshing(false); }
@@ -1996,6 +2005,20 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         ) && (
             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'exercises'} onClick={() => { setActiveCoursesTab('exercises'); }}>Exercises</Button>
         )}
+
+        {canManageCourseCertificates && (
+            <Button
+                disabled={isProcessing}
+                variant="tab"
+                isActive={activeCoursesTab === 'course-certificates'}
+                onClick={() => { setActiveCoursesTab('course-certificates'); onSetSelectedParticipantId(null); }}
+            >
+                Certificates
+                {selectedCourse.isCertificateApproved && (
+                    <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">Approved</span>
+                )}
+            </Button>
+        )}
     </>
 )}
 
@@ -2076,6 +2099,28 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                         currentUserRole={currentUserRole}
                         canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
                     />
+                )}
+
+                {/* Per-course certificate management. Scoped to just this course, so
+                    the same approve / customise / designer tools work without leaving
+                    the course. Guarded twice: the tab is hidden without permission and
+                    the panel itself refuses to render, so a stale activeCoursesTab
+                    value can't expose it. */}
+                {activeCoursesTab === 'course-certificates' && selectedCourse && (
+                    canManageCourseCertificates ? (
+                        <CertificateApprovalsView
+                            allCourses={[selectedCourse]}
+                            setToast={setToast}
+                            currentUserRole={currentUserRole}
+                            canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
+                            singleCourseMode
+                            title={`Certificates — ${selectedCourse.course_type}`}
+                        />
+                    ) : (
+                        <Card className="p-6 text-center text-sm text-gray-600">
+                            You do not have permission to manage certificates for this course.
+                        </Card>
+                    )
                 )}
 
                 {activeCoursesTab === 'deleted-courses' && <DeletedCoursesView courses={allCourses.filter(c => c.inRecycleBin || c.deletionRequested)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />}

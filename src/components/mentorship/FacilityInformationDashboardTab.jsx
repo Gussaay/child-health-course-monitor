@@ -2,7 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KpiCard, CopyImageButton, ScoreText } from './MentorshipDashboardShared';
 import { Line, Bar } from 'react-chartjs-2';
-import { SlidersHorizontal, Activity } from 'lucide-react';
+import { SlidersHorizontal, Activity, AlertTriangle } from 'lucide-react';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
     LineElement, BarElement, Title, Tooltip, Filler
@@ -12,16 +12,68 @@ ChartJS.register(
     CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler
 );
 
+/* ------------------------------------------------------------------
+ * Key aliases.
+ * Facility documents were written by several generations of the form,
+ * so the same concept lives under different names (English snake_case,
+ * Arabic, legacy). Every alias for a concept is tried in order.
+ * ------------------------------------------------------------------ */
+const KEY_ALIASES = {
+    // --- EENC ---
+    delivery_register: ['delivery_register', 'deliveryRegister', 'سجل_ولادات', 'وجود_سجل_ولادات', 'سجل_الولادات', 'eenc_register'],
+    resuscitation_area: ['resuscitation_area', 'resuscitationArea', 'resuscitation_table', 'طاولة_إنعاش', 'ركن_إنعاش', 'وجود_ركن_إنعاش', 'منطقة_الإنعاش'],
+    infant_warmer: ['infant_warmer', 'infantWarmer', 'warmer', 'جهاز_تدفئة', 'مدفأة', 'دفاية_أطفال'],
+    suction_machine: ['suction_machine', 'suctionMachine', 'suction', 'شفاط', 'جهاز_شفط'],
+    oxygen_supply: ['oxygen_supply', 'oxygenSupply', 'oxygen', 'أكسجين', 'مصدر_أكسجين'],
+    handwashing_sink: ['handwashing_sink', 'handwashingSink', 'handwashing', 'مغسلة', 'حوض_غسل_الأيدي'],
+    kmc_space: ['kmc_space', 'kmcSpace', 'kmc', 'رعاية_الكنغر', 'ركن_الكنغر'],
+    anc_services: ['anc_services', 'ancServices', 'anc', 'رعاية_ما_قبل_الولادة'],
+    pnc_services: ['pnc_services', 'pncServices', 'pnc', 'رعاية_ما_بعد_الولادة'],
+    infection_control: ['infection_control', 'infectionControl', 'مكافحة_العدوى'],
+
+    // --- IMNCI ---
+    chartbook: ['chartbook', 'وجود_كتيب_لوحات', 'كتيب_لوحات'],
+    recordForm: ['recordForm', 'record_form', 'وجود_سجل_علاج_متكامل', 'سجل_علاج_متكامل'],
+    weightScale: ['weightScale', 'weight_scale', 'ميزان_وزن'],
+    heightScale: ['heightScale', 'height_scale', 'ميزان_طول'],
+    thermometer: ['thermometer', 'ميزان_حرارة'],
+    timer: ['timer', 'ساعة_مؤقت'],
+    orsCorner: ['orsCorner', 'ors_corner', 'غرفة_إرواء', 'ركن_الإرواء'],
+    immunization: ['immunization', 'immunization_office_exists', 'مكتب_التطعيم'],
+    nutrition: ['nutrition', 'nutrition_center_exists', 'مركز_التغذية'],
+    growthMonitoring: ['growthMonitoring', 'growth_monitoring_service_exists', 'متابعة_النمو']
+};
+
+const TRUTHY = new Set(['yes', 'true', '1', 'نعم', 'متوفر', 'موجود', 'available', 'y']);
+
+// Reads a concept out of an object by trying every known alias.
+// Returns undefined when the object carries no information at all about it.
+const readToolValue = (obj, key) => {
+    if (!obj) return undefined;
+    const aliases = KEY_ALIASES[key] || [key];
+    for (const alias of aliases) {
+        const v = obj[alias];
+        if (v !== undefined && v !== null && v !== '') return v;
+    }
+    return undefined;
+};
+
+const isAvailable = (value) => {
+    if (value === true || value === 1) return true;
+    if (typeof value !== 'string') return false;
+    return TRUTHY.has(value.trim().toLowerCase());
+};
+
 // --- Detailed KPI Trend Card ---
-const InfoKpiTrendCard = ({ 
-    title, 
+const InfoKpiTrendCard = ({
+    title,
     avgValue, totalNumerator, totalDenominator,
     v1Value, v1Numerator, v1Denominator,
     v4Value, v4Numerator, v4Denominator,
-    lineLabels, lineData, color, isAr, t 
+    lineLabels, lineData, color, isAr, t
 }) => {
     const cardRef = useRef(null);
-    
+
     const chartData = {
         labels: lineLabels,
         datasets: [{
@@ -44,52 +96,54 @@ const InfoKpiTrendCard = ({
         responsive: true, maintainAspectRatio: false,
         animation: { duration: 1000, easing: 'easeOutQuart' },
         interaction: { mode: 'index', intersect: false },
-        plugins: { 
-            legend: { display: false }, 
-            tooltip: { 
-                backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, 
-                bodyFont: { size: 12, family: "'Inter', sans-serif" }, 
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' },
+                bodyFont: { size: 12, family: "'Inter', sans-serif" },
                 padding: 12, cornerRadius: 8, boxPadding: 6,
-                callbacks: { label: (context) => ` ${context.dataset.label}: ${context.raw}%` } 
-            } 
+                callbacks: { label: (context) => ` ${context.dataset.label}: ${context.raw}%` }
+            }
         },
-        scales: { 
-            y: { 
-                beginAtZero: true, max: 100, 
+        scales: {
+            y: {
+                beginAtZero: true, max: 100,
                 grid: { color: '#e2e8f0', drawBorder: false },
                 ticks: { stepSize: 20, callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' } }
-            }, 
-            x: { 
+            },
+            x: {
                 reverse: isAr, grid: { display: false },
                 ticks: { color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' } }
-            } 
+            }
         }
     };
+
+    const hasData = totalDenominator > 0 && lineLabels.length > 0;
 
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
             <h4 className="text-sm sm:text-base font-extrabold text-slate-800 mb-4 sm:mb-6 text-center tracking-wide pr-8 break-words">{title}</h4>
-            
+
             <div className="flex justify-between items-center gap-2 sm:gap-4 mb-6">
                 <div className="flex flex-col items-center">
                     <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 1')}</span>
                     <div className="border border-slate-300 bg-white rounded-lg px-3 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
-                        {v1Value !== null && v1Value !== undefined ? `${Math.round(v1Value)}%` : '-'}
+                        {v1Denominator > 0 && v1Value !== null && v1Value !== undefined ? `${Math.round(v1Value)}%` : '-'}
                         <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
-                            {v1Numerator !== undefined && v1Denominator !== undefined ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
+                            {v1Denominator > 0 ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
                         </span>
                     </div>
                 </div>
-                
+
                 <div className="flex flex-col items-center">
                     <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Average')}</span>
                     <div className="border border-slate-800 bg-white rounded-xl px-4 sm:px-10 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center">
                         <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
-                            {avgValue !== null && avgValue !== undefined && !isNaN(avgValue) ? `${Math.round(avgValue)}%` : '-'}
+                            {totalDenominator > 0 && avgValue !== null && avgValue !== undefined && !isNaN(avgValue) ? `${Math.round(avgValue)}%` : '-'}
                         </span>
-                        {totalNumerator !== undefined && totalDenominator !== undefined && totalDenominator > 0 && (
+                        {totalDenominator > 0 && (
                             <span className="text-xs font-bold text-slate-500 mt-0.5 whitespace-nowrap">
                                 {totalNumerator} / {totalDenominator}
                             </span>
@@ -100,16 +154,16 @@ const InfoKpiTrendCard = ({
                 <div className="flex flex-col items-center">
                     <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 4')}</span>
                     <div className="border border-slate-300 bg-white rounded-lg px-3 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
-                        {v4Value !== null && v4Value !== undefined ? `${Math.round(v4Value)}%` : '-'}
+                        {v4Denominator > 0 && v4Value !== null && v4Value !== undefined ? `${Math.round(v4Value)}%` : '-'}
                         <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
-                            {v4Numerator !== undefined && v4Denominator !== undefined ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
+                            {v4Denominator > 0 ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
                         </span>
                     </div>
                 </div>
             </div>
 
             <div className="relative flex-grow min-h-[220px]" dir="ltr">
-                {lineLabels.length > 0 ? (
+                {hasData ? (
                     <Line options={options} data={chartData} />
                 ) : (
                     <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs text-center p-4">
@@ -135,7 +189,6 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
         }]
     };
 
-    // Custom plugin to draw the percentage text above each vertical bar
     const verticalBarLabelPlugin = {
         id: 'verticalBarLabelPlugin',
         afterDatasetsDraw(chart) {
@@ -147,14 +200,12 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
             datasetMeta.data.forEach((datapoint, index) => {
                 const value = data.datasets[0].data[index];
                 if (value === null || value === undefined) return;
-                
+
                 const text = `${value.toFixed(1)}%`;
                 ctx.font = 'bold 12px "Inter", sans-serif';
-                ctx.fillStyle = '#334155'; 
+                ctx.fillStyle = '#334155';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-                
-                // Draw text slightly above the top of the bar
                 ctx.fillText(text, datapoint.x, datapoint.y - 5);
             });
             ctx.restore();
@@ -162,33 +213,29 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
     };
 
     const options = {
-        responsive: true, 
+        responsive: true,
         maintainAspectRatio: false,
-        plugins: { 
-            legend: { display: false }, 
-            tooltip: { 
+        plugins: {
+            legend: { display: false },
+            tooltip: {
                 backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                callbacks: { label: c => ` ${c.raw.toFixed(1)}%` } 
-            } 
+                callbacks: { label: c => ` ${c.raw.toFixed(1)}%` }
+            }
         },
         scales: {
-            y: { 
-                min: 0, 
-                max: 100, 
-                display: true, 
+            y: {
+                min: 0,
+                max: 100,
+                display: true,
                 grid: { color: '#e2e8f0', drawBorder: false },
                 ticks: { callback: (val) => `${val}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 10, weight: '600' } }
             },
-            x: { 
-                grid: { display: false, drawBorder: false }, 
-                ticks: { font: { size: 11, weight: 'bold' }, color: '#475569' } 
+            x: {
+                grid: { display: false, drawBorder: false },
+                ticks: { font: { size: 11, weight: 'bold' }, color: '#475569' }
             }
         },
-        layout: {
-            padding: {
-                top: 15 
-            }
-        }
+        layout: { padding: { top: 15 } }
     };
 
     return (
@@ -204,7 +251,13 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
                 {t('Percentage of supervised facilities integrating additional core services (Based on Baseline / First Visit).')}
             </p>
             <div className="relative flex-grow min-h-[220px]" dir="ltr">
-                <Bar data={data} options={options} plugins={[verticalBarLabelPlugin]} />
+                {stats.total > 0 ? (
+                    <Bar data={data} options={options} plugins={[verticalBarLabelPlugin]} />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs text-center p-4">
+                        {t('No data available.')}
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -212,6 +265,7 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
 
 // --- Main Dashboard Tab Component ---
 const FacilityInformationDashboardTab = ({
+    facilities,
     visitReports,
     activeService,
     activeState,
@@ -223,7 +277,6 @@ const FacilityInformationDashboardTab = ({
     const isAr = language === 'ar';
     const isIMNCI = activeService === 'IMNCI';
 
-    // Dynamic Lists based on Active Service
     const toolsList = useMemo(() => {
         if (isIMNCI) {
             return [
@@ -235,17 +288,16 @@ const FacilityInformationDashboardTab = ({
                 { key: 'timer', label: 'Respiratory Rate Timer', color: '#3b82f6' },
                 { key: 'orsCorner', label: 'ORS Hydration Corner', color: '#14b8a6' }
             ];
-        } else {
-            return [
-                { key: 'delivery_register', label: 'Delivery/EENC Registers', color: '#8b5cf6' },
-                { key: 'resuscitation_area', label: 'Functional Resuscitation Area', color: '#0ea5e9' },
-                { key: 'infant_warmer', label: 'Infant Warmer / Heater', color: '#10b981' },
-                { key: 'suction_machine', label: 'Functional Suction Machine', color: '#f59e0b' },
-                { key: 'oxygen_supply', label: 'Oxygen Supply', color: '#ec4899' },
-                { key: 'handwashing_sink', label: 'Handwashing Sink (Water/Soap)', color: '#3b82f6' },
-                { key: 'kmc_space', label: 'KMC Space/Unit', color: '#14b8a6' }
-            ];
         }
+        return [
+            { key: 'delivery_register', label: 'Delivery/EENC Registers', color: '#8b5cf6' },
+            { key: 'resuscitation_area', label: 'Functional Resuscitation Area', color: '#0ea5e9' },
+            { key: 'infant_warmer', label: 'Infant Warmer / Heater', color: '#10b981' },
+            { key: 'suction_machine', label: 'Functional Suction Machine', color: '#f59e0b' },
+            { key: 'oxygen_supply', label: 'Oxygen Supply', color: '#ec4899' },
+            { key: 'handwashing_sink', label: 'Handwashing Sink (Water/Soap)', color: '#3b82f6' },
+            { key: 'kmc_space', label: 'KMC Space/Unit', color: '#14b8a6' }
+        ];
     }, [isIMNCI]);
 
     const integratedKeys = useMemo(() => {
@@ -255,28 +307,36 @@ const FacilityInformationDashboardTab = ({
                 { key: 'nutrition', label: 'Nutrition' },
                 { key: 'growthMonitoring', label: 'Growth Monitoring' }
             ];
-        } else {
-            return [
-                { key: 'anc_services', label: 'Antenatal Care (ANC)' },
-                { key: 'pnc_services', label: 'Postnatal Care (PNC)' },
-                { key: 'infection_control', label: 'Infection Control' }
-            ];
         }
+        return [
+            { key: 'anc_services', label: 'Antenatal Care (ANC)' },
+            { key: 'pnc_services', label: 'Postnatal Care (PNC)' },
+            { key: 'infection_control', label: 'Infection Control' }
+        ];
     }, [isIMNCI]);
 
-    // Scoped reports strictly matched to active Service
+    // Facility lookup so reports written before essential_tools existed can
+    // still resolve against the current facility record.
+    const facilityMap = useMemo(() => {
+        const map = new Map();
+        (facilities || []).forEach(f => {
+            if (f?.id) map.set(f.id, f);
+        });
+        return map;
+    }, [facilities]);
+
     const scopedReports = useMemo(() => {
         if (!visitReports) return [];
         return visitReports.filter(r => {
             const reportService = r.service || r.fullData?.service;
             if (reportService !== activeService) return false;
-            
+
             const rState = r.state || r.fullData?.state;
             const rLocality = r.locality || r.fullData?.locality;
 
             const matchState = !activeState || rState === activeState || rState === STATE_LOCALITIES?.[activeState]?.ar;
             const matchLocality = !activeLocality || rLocality === activeLocality || rLocality === STATE_LOCALITIES?.[activeState]?.localities?.find(l => l.en === activeLocality)?.ar;
-            
+
             return matchState && matchLocality;
         });
     }, [visitReports, activeService, activeState, activeLocality, STATE_LOCALITIES]);
@@ -286,51 +346,86 @@ const FacilityInformationDashboardTab = ({
         return uniqueIds.size;
     }, [scopedReports]);
 
-    const checkToolAvailability = (toolsObj, key) => {
-        if (!toolsObj) return false;
-        let status = toolsObj[key];
+    const allKeys = useMemo(
+        () => [...toolsList.map(x => x.key), ...integratedKeys.map(x => x.key)],
+        [toolsList, integratedKeys]
+    );
 
-        // EENC Arabic Fallbacks if falling back to raw facility fields
-        if (key === 'resuscitation_area' && status === undefined) status = toolsObj['طاولة_إنعاش'] || toolsObj['resuscitation_table'];
-        if (key === 'kmc_space' && status === undefined) status = toolsObj['رعاية_الكنغر'];
-        if (key === 'delivery_register' && status === undefined) status = toolsObj['سجل_ولادات'];
+    // Returns the object that actually holds tool answers for a report, or null.
+    // Order: migrated essential_tools -> the report itself -> the facility record.
+    // Returning null (instead of blindly falling back to the report) is what
+    // keeps un-migrated reports out of the denominator.
+    const resolveToolSource = useMemo(() => {
+        const hasAnyKey = (obj) => obj && allKeys.some(k => readToolValue(obj, k) !== undefined);
 
-        return status === 'yes' || status === 'Yes' || status === true || status === 'true';
-    };
+        return (report) => {
+            const et = report.fullData?.essential_tools || report.essential_tools;
+            if (hasAnyKey(et)) return et;
 
-    // Calculate aggregated overall parameters for the tools list
-    const { toolAggOverall, toolAggByVisit } = useMemo(() => {
+            if (hasAnyKey(report.fullData)) return report.fullData;
+            if (hasAnyKey(report)) return report;
+
+            const facId = report.facilityId || report.fullData?.facilityId;
+            const fac = facId ? facilityMap.get(facId) : null;
+            if (hasAnyKey(fac)) return fac;
+
+            return null;
+        };
+    }, [allKeys, facilityMap]);
+
+    const { toolAggOverall, toolAggByVisit, coverage } = useMemo(() => {
         const aggOverall = {};
         const aggByVisit = { 1: {}, 2: {}, 3: {}, 4: {} };
 
-        toolsList.forEach(t => {
-            aggOverall[t.key] = { numerator: 0, denominator: 0 };
+        toolsList.forEach(tool => {
+            aggOverall[tool.key] = { numerator: 0, denominator: 0 };
             [1, 2, 3, 4].forEach(v => {
-                aggByVisit[v][t.key] = { numerator: 0, denominator: 0 };
+                aggByVisit[v][tool.key] = { numerator: 0, denominator: 0 };
             });
         });
 
+        let withData = 0;
+        let withoutData = 0;
+
         scopedReports.forEach(r => {
             const vNum = parseInt(r.visitNumber || r.fullData?.visitNumber) || 1;
-            const tools = r.fullData?.essential_tools || r.essential_tools || r.fullData || r;
+            const source = resolveToolSource(r);
 
-            if (tools && aggByVisit[vNum]) {
-                toolsList.forEach(tool => {
-                    const available = checkToolAvailability(tools, tool.key);
-                    aggOverall[tool.key].numerator += available ? 1 : 0;
-                    aggOverall[tool.key].denominator += 1;
+            if (!source) { withoutData++; return; }
+            withData++;
 
-                    aggByVisit[vNum][tool.key].numerator += available ? 1 : 0;
-                    aggByVisit[vNum][tool.key].denominator += 1;
-                });
-            }
+            if (!aggByVisit[vNum]) return;
+
+            toolsList.forEach(tool => {
+                const raw = readToolValue(source, tool.key);
+                if (raw === undefined) return; // this facility never answered this item
+
+                const available = isAvailable(raw);
+                aggOverall[tool.key].numerator += available ? 1 : 0;
+                aggOverall[tool.key].denominator += 1;
+
+                aggByVisit[vNum][tool.key].numerator += available ? 1 : 0;
+                aggByVisit[vNum][tool.key].denominator += 1;
+            });
         });
 
-        return { toolAggOverall: aggOverall, toolAggByVisit: aggByVisit };
-    }, [scopedReports, toolsList]);
+        if (process.env.NODE_ENV !== 'production' && withoutData > 0) {
+            const sample = scopedReports.find(r => !resolveToolSource(r));
+            console.warn(
+                `[FacilityInfo] ${withoutData}/${scopedReports.length} ${activeService} reports carry no tool data. ` +
+                `Run the facility data migration, or add the real field names to KEY_ALIASES.`,
+                { sampleReportKeys: sample ? Object.keys(sample.fullData || sample) : [] }
+            );
+        }
 
-    // Calculate specific stats for the Integrated Services (Bar Chart + Top KPI)
-    // IMPORTANT: Calculated ONLY based on Baseline / First Visit per facility
+        return {
+            toolAggOverall: aggOverall,
+            toolAggByVisit: aggByVisit,
+            coverage: { withData, withoutData, total: scopedReports.length }
+        };
+    }, [scopedReports, toolsList, resolveToolSource, activeService]);
+
+    // Integrated services — baseline / first visit per facility only.
     const integratedStats = useMemo(() => {
         let total = 0;
         let count1 = 0;
@@ -338,11 +433,9 @@ const FacilityInformationDashboardTab = ({
         let count3 = 0;
         let fullyIntegratedCount = 0;
 
-        // Group by facility and extract ONLY the earliest visit
         const firstVisitsMap = new Map();
-        
-        // Sort chronologically ascending
-        const sortedReportsAsc = [...scopedReports].sort((a, b) => 
+
+        const sortedReportsAsc = [...scopedReports].sort((a, b) =>
             new Date(a.visitDate || a.fullData?.visitDate || 0).getTime() - new Date(b.visitDate || b.fullData?.visitDate || 0).getTime()
         );
 
@@ -353,22 +446,19 @@ const FacilityInformationDashboardTab = ({
             }
         });
 
-        const firstVisitReports = Array.from(firstVisitsMap.values());
+        Array.from(firstVisitsMap.values()).forEach(r => {
+            const source = resolveToolSource(r);
+            if (!source) return;
 
-        firstVisitReports.forEach(r => {
-            const tools = r.fullData?.essential_tools || r.essential_tools || r.fullData || r;
-            if (tools) {
-                total++;
-                const has1 = checkToolAvailability(tools, integratedKeys[0].key);
-                const has2 = checkToolAvailability(tools, integratedKeys[1].key);
-                const has3 = checkToolAvailability(tools, integratedKeys[2].key);
-                
-                if (has1) count1++;
-                if (has2) count2++;
-                if (has3) count3++;
-                
-                if (has1 && has2 && has3) fullyIntegratedCount++;
-            }
+            total++;
+            const has1 = isAvailable(readToolValue(source, integratedKeys[0].key));
+            const has2 = isAvailable(readToolValue(source, integratedKeys[1].key));
+            const has3 = isAvailable(readToolValue(source, integratedKeys[2].key));
+
+            if (has1) count1++;
+            if (has2) count2++;
+            if (has3) count3++;
+            if (has1 && has2 && has3) fullyIntegratedCount++;
         });
 
         return {
@@ -379,16 +469,7 @@ const FacilityInformationDashboardTab = ({
             stat3: total > 0 ? (count3 / total) * 100 : 0,
             labels: [t(integratedKeys[0].label), t(integratedKeys[1].label), t(integratedKeys[2].label)]
         };
-    }, [scopedReports, integratedKeys, t]);
-
-    const lineLabels = useMemo(() => {
-        const labels = [];
-        const baseKey = isIMNCI ? 'chartbook' : 'delivery_register';
-        [1, 2, 3, 4].forEach(v => {
-            if (toolAggByVisit[v][baseKey]?.denominator > 0) labels.push(`${t('Visit')} ${v}`);
-        });
-        return labels;
-    }, [toolAggByVisit, t, isIMNCI]);
+    }, [scopedReports, integratedKeys, resolveToolSource, t]);
 
     const getToolPct = (vNum, toolKey) => {
         const d = toolAggByVisit[vNum]?.[toolKey];
@@ -402,21 +483,32 @@ const FacilityInformationDashboardTab = ({
 
     return (
         <div className="animate-fade-in" dir={isAr ? 'rtl' : 'ltr'}>
-            
-            {/* Top Cards Section */}
+
+            {coverage.withoutData > 0 && (
+                <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-sm font-semibold text-amber-900">
+                        {t('{{count}} of {{total}} visit reports have no facility tool data recorded and are excluded from these figures. Run the facility data migration to include them.', {
+                            count: coverage.withoutData,
+                            total: coverage.total
+                        })}
+                    </p>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <KpiCard title={t("Monitored Facilities Under Supervision")} value={uniqueVisitedFacilitiesCount} />
-                <KpiCard 
-                    title={isIMNCI ? t("IMNCI Case Recording Forms Register") : t("Delivery/EENC Registers Availability")} 
-                    scoreValue={getOverallPct(isIMNCI ? 'recordForm' : 'delivery_register')} 
+                <KpiCard
+                    title={isIMNCI ? t("IMNCI Case Recording Forms Register") : t("Delivery/EENC Registers Availability")}
+                    scoreValue={getOverallPct(isIMNCI ? 'recordForm' : 'delivery_register')}
                 />
-                <KpiCard 
-                    title={isIMNCI ? t("Clinical Chartbooklet Availability") : t("Functional Resuscitation Area Availability")} 
-                    scoreValue={getOverallPct(isIMNCI ? 'chartbook' : 'resuscitation_area')} 
+                <KpiCard
+                    title={isIMNCI ? t("Clinical Chartbooklet Availability") : t("Functional Resuscitation Area Availability")}
+                    scoreValue={getOverallPct(isIMNCI ? 'chartbook' : 'resuscitation_area')}
                 />
-                <KpiCard 
-                    title={t("Facilities with Core Services Integrated")} 
-                    value={integratedStats.fullyIntegratedCount} 
+                <KpiCard
+                    title={t("Facilities with Core Services Integrated")}
+                    value={integratedStats.fullyIntegratedCount}
                     unit={`(${integratedStats.total > 0 ? Math.round((integratedStats.fullyIntegratedCount / integratedStats.total) * 100) : 0}%)`}
                 />
             </div>
@@ -434,27 +526,31 @@ const FacilityInformationDashboardTab = ({
                         const total = cellData?.denominator || 0;
                         const pct = total > 0 ? ((count / total) * 100).toFixed(1) : null;
 
+                        // Labels and points are built together so they can never
+                        // drift out of alignment.
+                        const labels = [];
                         const lineData = [];
                         [1, 2, 3, 4].forEach(vNum => {
                             if (toolAggByVisit[vNum]?.[tool.key]?.denominator > 0) {
+                                labels.push(`${t('Visit')} ${vNum}`);
                                 lineData.push(getToolPct(vNum, tool.key));
                             }
                         });
 
                         return (
-                            <InfoKpiTrendCard 
+                            <InfoKpiTrendCard
                                 key={tool.key}
                                 title={t(tool.label)}
                                 avgValue={pct}
-                                totalNumerator={Number(count.toFixed(1))}
+                                totalNumerator={count}
                                 totalDenominator={total}
                                 v1Value={getToolPct(1, tool.key)}
-                                v1Numerator={Number((toolAggByVisit[1]?.[tool.key]?.numerator || 0).toFixed(1))}
+                                v1Numerator={toolAggByVisit[1]?.[tool.key]?.numerator || 0}
                                 v1Denominator={toolAggByVisit[1]?.[tool.key]?.denominator || 0}
                                 v4Value={getToolPct(4, tool.key)}
-                                v4Numerator={Number((toolAggByVisit[4]?.[tool.key]?.numerator || 0).toFixed(1))}
+                                v4Numerator={toolAggByVisit[4]?.[tool.key]?.numerator || 0}
                                 v4Denominator={toolAggByVisit[4]?.[tool.key]?.denominator || 0}
-                                lineLabels={lineLabels}
+                                lineLabels={labels}
                                 lineData={lineData}
                                 color={tool.color}
                                 isAr={isAr}
@@ -462,8 +558,7 @@ const FacilityInformationDashboardTab = ({
                             />
                         );
                     })}
-                    
-                    {/* Integrated Services Bar Chart rendered directly alongside the others */}
+
                     <IntegratedServicesBarKpi stats={integratedStats} t={t} />
                 </div>
             </div>

@@ -203,31 +203,75 @@ const calculateAverage = (scores) => {
 };
 
 export const CopyImageButton = ({ targetRef, title }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [isCopying, setIsCopying] = useState(false);
+    const isAr = i18n.language?.startsWith('ar');
 
     const handleCopy = async () => {
         if (!targetRef.current) return;
         setIsCopying(true);
-        try {
-            const canvas = await html2canvas(targetRef.current, { backgroundColor: '#ffffff', scale: 2, logging: false, useCORS: true });
-            canvas.toBlob(async (blob) => {
-                if (blob) {
-                    const item = new ClipboardItem({ 'image/png': blob });
-                    await navigator.clipboard.write([item]);
-                    alert(`${t("Copy as Image")}: "${t(title)}"`);
+
+        const node = targetRef.current;
+        const touched = [];
+        if (isAr) {
+            node.querySelectorAll('*').forEach((el) => {
+                const ls = window.getComputedStyle(el).letterSpacing;
+                if (ls && ls !== 'normal' && parseFloat(ls) !== 0) {
+                    touched.push([el, el.style.letterSpacing]);
+                    el.style.letterSpacing = 'normal';
                 }
-            }, 'image/png');
+            });
+        }
+
+        try {
+            let blob = null;
+            const filter = (el) => !el.classList || !el.classList.contains('exclude-from-export');
+
+            try {
+                const htmlToImage = await import('html-to-image');
+                blob = await htmlToImage.toBlob(node, {
+                    backgroundColor: '#ffffff',
+                    pixelRatio: 2,
+                    cacheBust: true,
+                    filter: filter, 
+                    // Explicitly set dimensions to prevent clipping the borders
+                    width: node.offsetWidth,
+                    height: node.offsetHeight,
+                    style: {
+                        margin: '0',
+                    }
+                });
+            } catch (e) {
+                blob = null; 
+            }
+
+            if (!blob) {
+                const canvas = await html2canvas(node, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true,
+                    ignoreElements: (el) => el.classList && el.classList.contains('exclude-from-export'), 
+                });
+                blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+            }
+
+            if (blob) {
+                const item = new ClipboardItem({ 'image/png': blob });
+                await navigator.clipboard.write([item]);
+                alert(`${t("Copy as Image")}: "${t(title)}"`);
+            }
         } catch (error) {
             console.error('Error copying image:', error);
-            alert('Failed to copy image to clipboard.');
+            alert(t('Failed to copy image to clipboard.'));
         } finally {
+            touched.forEach(([el, prev]) => { el.style.letterSpacing = prev; });
             setIsCopying(false);
         }
     };
 
     return (
-        <button onClick={handleCopy} disabled={isCopying} title={t("Copy as Image")} className="p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors border border-transparent hover:border-sky-200 focus:outline-none">
+        <button onClick={handleCopy} disabled={isCopying} title={t("Copy as Image")} className="exclude-from-export p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors border border-transparent hover:border-sky-200 focus:outline-none">
             {isCopying ? <Spinner size="xs" /> : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>}
         </button>
     );
@@ -300,8 +344,8 @@ export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full">
             <div className="flex justify-between items-start mb-4 sm:mb-5">
-                <h4 className={`text-base font-extrabold text-slate-800 ${language === 'ar' ? 'text-right' : 'text-left'} tracking-wide w-full pr-8 break-words`} title={t(title)}>{t(title)}</h4>
-                <div className="absolute top-4 right-4"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+                <h4 className={`text-base font-extrabold text-slate-800 ${language === 'ar' ? 'text-right' : 'text-start'} tracking-wide w-full pe-8 break-words`} title={t(title)}>{t(title)}</h4>
+                <div className="absolute top-4 end-4"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             </div>
             <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 flex-grow`}>
                 {kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} numerator={kpi.numerator} denominator={kpi.denominator} />))}
@@ -316,15 +360,15 @@ export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
     const cardRef = useRef(null);
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-4 sm:mb-5 pb-3 border-b border-black pr-10 gap-2">
-                <h4 className={`text-base font-extrabold text-slate-800 ${language === 'ar' ? 'text-right' : 'text-left'} tracking-wide break-words`} title={t(title)}>{t(title)}</h4>
+                <h4 className={`text-base font-extrabold text-slate-800 ${language === 'ar' ? 'text-right' : 'text-start'} tracking-wide break-words`} title={t(title)}>{t(title)}</h4>
                 {overallScore !== null && (<div className="bg-sky-50 border border-black rounded-lg px-3 py-1 shadow-sm whitespace-nowrap"><ScoreText value={overallScore} /></div>)}
             </div>
             <div className="space-y-2 sm:space-y-3 flex-grow">
                 {kpis.map(kpi => (
                     <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-black shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
-                        <h5 className={`text-xs font-bold text-slate-700 ${language === 'ar' ? 'text-right pl-2' : 'text-left pr-2'} group-hover:text-sky-800`}>{t(kpi.title)}</h5>
+                        <h5 className={`text-xs font-bold text-slate-700 ${language === 'ar' ? 'text-right pl-2' : 'text-start pr-2'} group-hover:text-sky-800`}>{t(kpi.title)}</h5>
                         <div className="bg-white px-2 sm:px-3 py-1 rounded-lg shadow-sm border border-black whitespace-nowrap flex items-center gap-2">
                             {kpi.numerator !== undefined && kpi.denominator !== undefined && (
                                 <span className="text-xs font-bold text-slate-500">{kpi.numerator}/{kpi.denominator}</span>
@@ -359,6 +403,10 @@ export const getSharedChartOptions = (language) => {
         maintainAspectRatio: false, 
         animation: { duration: 1000, easing: 'easeOutQuart' }, 
         interaction: { mode: 'index', intersect: false },
+        layout: {
+            // Further increased bottom padding to 20 to prevent chart text from bleeding into the parent container's padding
+            padding: { left: 50, right: 50, top: 10, bottom: 20 } 
+        },
         plugins: { 
             legend: { 
                 position: 'bottom', 
@@ -378,6 +426,7 @@ export const getSharedChartOptions = (language) => {
             y: { 
                 beginAtZero: true, 
                 max: 100, 
+                position: isAr ? 'right' : 'left',
                 grid: { color: '#e2e8f0', drawBorder: false }, 
                 ticks: { stepSize: 10, autoSkip: false, callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
             }, 
@@ -403,15 +452,16 @@ export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
     
     const options = {
         responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' }, interaction: { mode: 'index', intersect: false },
+        layout: { padding: { left: 50, right: 50, top: 10, bottom: 20 } },
         plugins: { legend: { display: kpiKeys.length > 1, position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, bodyFont: { size: 12, family: "'Inter', sans-serif" }, padding: 12, cornerRadius: 8, boxPadding: 6, callbacks: { label: (context) => ` ${context.dataset.label}: ${context.parsed.y}` } } },
-        scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, autoSkip: false, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } }, x: { reverse: isAr, grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } } }
+        scales: { y: { beginAtZero: true, position: isAr ? 'right' : 'left', grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, autoSkip: false, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } }, x: { reverse: isAr, grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } } }
     };
 
     const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pe-8 break-words">{t(title)}</h4>
             <div className="relative flex-grow min-h-[250px]" dir="ltr">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
         </div>
     );
@@ -420,6 +470,7 @@ export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
 export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNumerator, totalDenominator, v1Value, v1Numerator, v1Denominator, v4Value, v4Numerator, v4Denominator, filteredSubmissions }) => {
     const { t, i18n } = useTranslation();
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+    const isAr = language === 'ar';
     const cardRef = useRef(null);
     
     const colors = { 'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 'Weight': '#06b6d4', 'Temp': '#3b82f6', 'Height': '#8b5cf6', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316', 'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626', 'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c', 'DangerSigns': '#f97316', 'Malnutrition Assessment': '#0284c7', 'Measurement Skills': '#8b5cf6', 'Immunization': '#10b981', 'Vitamin Assessment': '#f59e0b', 'Malaria Coartem': '#d946ef', 'Return Immediately': '#ef4444', 'Return Followup': '#3b82f6', 'Record Signs': '#06b6d4', 'Record Classifications': '#3b82f6', 'Record Treatments': '#8b5cf6', 'Preparation': '#10b981', 'Drying': '#3b82f6', 'Breathing Mgmt': '#f59e0b', 'Resuscitation': '#ef4444', 'Hand Washing (1st)': '#0d9488', 'Hand Washing (2nd)': '#14b8a6', 'Sterile Gloves': '#2dd4bf', 'Towels Ready': '#7c3aed', 'Resus Equip Ready': '#8b5cf6', 'Ambu Check': '#a78bfa', 'Drying < 5s': '#ea580c', 'Skin-to-Skin': '#f97316', 'Dry Towel/Hat': '#fb923c', 'Hygienic Check': '#be123c', 'Delayed Clamp': '#e11d48', 'Correct Clamp': '#f43f5e', 'Early BF Advice': '#d946ef', 'Head Pos': '#b91c1c', 'Mask Seal': '#dc2626', 'Chest Rise': '#ef4444', 'Rate 30-50': '#f87171', 'Imm. Skin-to-Skin': '#f97316', '90min Skin-to-Skin': '#fdba74', 'BF 1st Hour': '#ec4899', 'Other Fluids': '#f43f5e', 'Bottle Feeding': '#be123c', 'Vitamin K': '#8b5cf6', 'Eye Ointment': '#a78bfa', 'Cord Substance': '#d946ef', 'Skin Oiling': '#eab308', 'Bathing < 6hrs': '#f59e0b', 'Polio Vaccine': '#10b981', 'BCG Vaccine': '#34d399', 'Weight Measured': '#06b6d4', 'Temp Measured': '#22d3ee', 'Civil Reg': '#3b82f6', 'Discharge Card': '#6366f1', 'M: Knows Meds': '#4f46e5', 'M: Knows ORS': '#3b82f6', 'M: Knows Tx': '#0ea5e9', 'M: Knows 4 Rules': '#06b6d4', 'M: Knows Return': '#14b8a6', 'M: Knows Fluids': '#10b981', 'M: Time Spent': '#f59e0b', 'M: Assess Method': '#f97316', 'M: Tx Given': '#ef4444', 'M: Comm Style': '#ec4899', 'M: What Learned': '#d946ef', 'M: Drug Avail': '#8b5cf6', 'M: ORS Water': '#3b82f6', 'M: ORS Stool': '#f59e0b', 'M: Overall Knowledge': '#10b981', 'M: Overall Satisfaction': '#0ea5e9', 'M: Overall Score': '#8b5cf6' };
@@ -437,9 +488,17 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                 ...getSharedChartOptions(language).plugins.tooltip,
                 callbacks: {
                     label: (context) => {
-                        const visitName = context.label;
-                        const visitNumMatch = visitName.match(/\d+/);
-                        const visitNum = visitNumMatch ? parseInt(visitNumMatch[0]) : null;
+                        const srcRow = chartData?.[context.dataIndex];
+                        let visitNum = null;
+                        if (srcRow) {
+                            if (srcRow.visitNumber !== undefined && srcRow.visitNumber !== null) {
+                                visitNum = parseInt(srcRow.visitNumber);
+                            } else if (typeof srcRow.name === 'string') {
+                                const m = srcRow.name.match(/\d+/); 
+                                if (m) visitNum = parseInt(m[0]);
+                            }
+                        }
+                        if (visitNum === null || isNaN(visitNum)) visitNum = null;
                         const datasetIndex = context.datasetIndex;
                         const kpiDef = kpiKeys[datasetIndex];
                         
@@ -457,7 +516,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                                         yes += s[kpiDef.compositeKey.score];
                                         total += s[kpiDef.compositeKey.max];
                                         if (s[kpiDef.compositeKey.score] < s[kpiDef.compositeKey.max]) {
-                                            failingStates.add(sub.state || 'Unknown');
+                                            failingStates.add(sub.state || t('Unknown'));
                                         }
                                     }
                                 } else if (kpiDef.rawKeys) {
@@ -475,7 +534,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                                              yes++; total++;
                                          } else if (val === 'no' || val === 'incorrect' || val === false || val === 'partial' || val === 'لا' || val === 'لا ') {
                                              total++;
-                                             failingStates.add(sub.state || 'Unknown');
+                                             failingStates.add(sub.state || t('Unknown'));
                                          }
                                     });
                                 }
@@ -484,7 +543,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                             if (total > 0) {
                                 lines[0] += ` (${Math.round(yes)}/${Math.round(total)})`;
                                 if (failingStates.size > 0) {
-                                    lines.push(` Needs Improvement: ${Array.from(failingStates).join(', ')}`);
+                                    lines.push(` ${t('Needs Improvement')}: ${Array.from(failingStates).join('\u060C ')}`);
                                 }
                             }
                         }
@@ -530,41 +589,41 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
     }
 
     return (
-        <div ref={cardRef} className="bg-white p-2 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-2 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className={`text-base font-extrabold text-slate-800 mt-6 sm:mt-3 mb-4 sm:mb-6 text-center break-words px-10 leading-relaxed ${isAr ? '' : 'tracking-wide'}`}>{t(title)}</h4>
             
             {chartData.length > 0 && (
-                <div className="flex justify-between items-center gap-1 sm:gap-4 mb-6 px-1 sm:px-6">
-                    <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 1')}</span>
-                        <div className="border border-slate-300 bg-white rounded-lg px-2 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
-                            {calcV1Value !== null && calcV1Value !== undefined ? `${Math.round(calcV1Value)}%` : '-'}
-                            <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
+                <div className="flex justify-between items-start gap-2 sm:gap-4 mb-6 px-1 sm:px-4">
+                    <div className="flex flex-col items-center shrink-0">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 text-center">{t('Visit 1')}</span>
+                        <div className="border border-slate-300 bg-white rounded-lg px-3 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center justify-center text-center">
+                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-center">{calcV1Value !== null && calcV1Value !== undefined ? `${Math.round(calcV1Value)}%` : '-'}</span>
+                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap text-center">
                                 {v1Numerator !== undefined && v1Denominator !== undefined ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
                             </span>
                         </div>
                     </div>
                     
-                    <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Average')}</span>
-                        <div className="border border-slate-800 bg-white rounded-xl px-3 sm:px-10 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center">
-                            <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
+                    <div className="flex flex-col items-center shrink-0">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 text-center">{t('Average')}</span>
+                        <div className="border border-slate-800 bg-white rounded-xl px-4 sm:px-8 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center text-center">
+                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className={`font-extrabold text-xl sm:text-2xl text-center ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
                                 {avgValue !== null && avgValue !== undefined ? `${Math.round(avgValue)}%` : '-'}
                             </span>
                             {totalNumerator !== undefined && totalDenominator !== undefined && totalDenominator > 0 && (
-                                <span className="text-xs font-bold text-slate-500 mt-0.5 whitespace-nowrap">
+                                <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-xs font-bold text-slate-500 mt-0.5 whitespace-nowrap text-center">
                                     {totalNumerator} / {totalDenominator}
                                 </span>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 4')}</span>
-                        <div className="border border-slate-300 bg-white rounded-lg px-2 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
-                            {calcV4Value !== null && calcV4Value !== undefined ? `${Math.round(calcV4Value)}%` : '-'}
-                            <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
+                    <div className="flex flex-col items-center shrink-0">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 text-center">{t('Visit 4')}</span>
+                        <div className="border border-slate-300 bg-white rounded-lg px-3 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center justify-center text-center">
+                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-center">{calcV4Value !== null && calcV4Value !== undefined ? `${Math.round(calcV4Value)}%` : '-'}</span>
+                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap text-center">
                                 {v4Numerator !== undefined && v4Denominator !== undefined ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
                             </span>
                         </div>
@@ -601,8 +660,8 @@ export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) 
 
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 flex flex-col h-full relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words" title={t(title)}>{t(title)}</h4>
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pe-8 break-words" title={t(title)}>{t(title)}</h4>
             
             <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 mb-4 sm:mb-6`}>
                 {kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} numerator={kpi.numerator} denominator={kpi.denominator} />))}
@@ -691,8 +750,8 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pe-8 break-words">{t(title)}</h4>
             <div className="relative" style={{ height: `${chartHeight}px` }} dir="ltr">
                 {chartData.length > 0 ? (
                     <Bar options={options} data={data} plugins={[barLabelPlugin]} />
@@ -710,7 +769,7 @@ export const CompactSkillRow = ({ label, stats }) => {
     const yes = stats?.yes || 0; const no = stats?.no || 0; const total = yes + no; const percentage = total > 0 ? (yes / total) : null;
     return (
         <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
-            <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${language === 'ar' ? 'text-right' : 'text-left'} group-hover:text-sky-800`}>{label}</td>
+            <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${language === 'ar' ? 'text-right' : 'text-start'} group-hover:text-sky-800`}>{label}</td>
             <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center" dir="ltr">{yes} / {total}</td>
             <td className="p-3 border-l border-black w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50"><ScoreText value={percentage} /></td>
         </tr>
@@ -736,7 +795,7 @@ export const CompactSkillsTable = ({ overallKpis }) => {
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-left'} tracking-wide uppercase border-l border-black`}>{t('Skill')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-start'} tracking-wide uppercase border-l border-black`}>{t('Skill')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase border-l border-black">{t('Count (Yes / Total)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase">{t('Percentage')}</th>
                     </tr>
@@ -756,7 +815,7 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                         return (
                             <React.Fragment key={group.group}>
                                 <tr className="bg-slate-800 text-white border-b border-black">
-                                    <td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-left'} tracking-wide border-l border-black`} colSpan="2">{groupName}</td>
+                                    <td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-l border-black`} colSpan="2">{groupName}</td>
                                     <td className="p-3 text-center">
                                         {groupAggregateScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={groupAggregateScore} showPercentage={true}/></div>)}
                                     </td>
@@ -776,7 +835,7 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                                             
                                             return (
                                                 <React.Fragment key={symptomKey}>
-                                                    <tr className="bg-sky-600 text-white border-b border-black"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-left'} border-l border-black`} colSpan="2">{symptomGroupName}</td><td className="p-2.5 text-center">{symptomScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={symptomScore} showPercentage={true} /></div>)}</td></tr>
+                                                    <tr className="bg-sky-600 text-white border-b border-black"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-start'} border-l border-black`} colSpan="2">{symptomGroupName}</td><td className="p-2.5 text-center">{symptomScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={symptomScore} showPercentage={true} /></div>)}</td></tr>
                                                     {skillsToRender.map(skillKey => {
                                                         const label = t(IMNCI_ENGLISH_LABELS[skillKey] || skillKey);
                                                         return <CompactSkillRow key={skillKey} label={label} stats={skillStats[skillKey]} />;
@@ -789,7 +848,7 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                                     const subgroupTitle = t(IMNCI_ENGLISH_LABELS[subgroup.subgroupTitle] || subgroup.subgroupTitle);
                                     return (
                                         <React.Fragment key={subgroup.subgroupTitle}>
-                                            <tr className="bg-sky-600 text-white border-b border-black"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-left'} border-l border-black`} colSpan="2">{subgroupTitle}</td><td className="p-2.5 text-center">{subgroupScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={subgroupScore} showPercentage={true}/></div>)}</td></tr>
+                                            <tr className="bg-sky-600 text-white border-b border-black"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-start'} border-l border-black`} colSpan="2">{subgroupTitle}</td><td className="p-2.5 text-center">{subgroupScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={subgroupScore} showPercentage={true}/></div>)}</td></tr>
                                             {subgroup.skills?.map(skill => {
                                                 const label = t(IMNCI_ENGLISH_LABELS[skill.key] || skill.label);
                                                 return <CompactSkillRow key={skill.key} label={label} stats={skillStats[skill.key]} />;
@@ -814,7 +873,7 @@ export const EENCCompactSkillRow = ({ label, stats }) => {
     const yes = stats?.yes || 0; const partial = stats?.partial || 0; const no = stats?.no || 0; const totalResponses = yes + partial + no; const score = (yes * 2) + (partial * 1); const maxScore = totalResponses * 2; const percentage = maxScore > 0 ? (score / maxScore) : null;
     return (
         <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
-            <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${isAr ? 'text-right' : 'text-left'} group-hover:text-sky-800`}>{label}</td>
+            <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${isAr ? 'text-right' : 'text-start'} group-hover:text-sky-800`}>{label}</td>
             <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center" dir="ltr">
                 <span title={t("Yes")} className="text-emerald-600">{yes}</span> / <span title={t("Partial")} className="text-amber-500">{partial}</span> / <span title={t("No")} className="text-rose-600">{no}</span>
             </td>
@@ -841,7 +900,7 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-left'} uppercase tracking-wide border-l border-black`}>{t('Skill (EENC)')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-start'} uppercase tracking-wide border-l border-black`}>{t('Skill (EENC)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide border-l border-black">{t('Count (Yes / Partial / No)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide">{t('Percentage')}</th>
                     </tr>
@@ -852,7 +911,7 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
                         if (!hasData) return null; 
                         return (
                             <React.Fragment key={section.title}>
-                                <tr className="bg-slate-800 text-white border-b border-black"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-left'} tracking-wide border-l border-black`} colSpan="2">{section.title}</td><td className="p-3 text-center">{section.score !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={section.score} showPercentage={true}/></div>)}</td></tr>
+                                <tr className="bg-slate-800 text-white border-b border-black"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-l border-black`} colSpan="2">{section.title}</td><td className="p-3 text-center">{section.score !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={section.score} showPercentage={true}/></div>)}</td></tr>
                                 {section.items.map(item => {
                                     const label = t(EENC_SKILL_KEYS_TO_ENGLISH[item.key] || item.label);
                                     return <EENCCompactSkillRow key={item.key} label={label} stats={skillStats[item.key]} />;
@@ -879,7 +938,7 @@ export const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-left'} tracking-wide uppercase border-l border-black`}>{t('Question (Mother Survey)')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-start'} tracking-wide uppercase border-l border-black`}>{t('Question (Mother Survey)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase border-l border-black">{t('Count (Yes / Total)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase">{t('Percentage')}</th>
                     </tr>
@@ -887,7 +946,7 @@ export const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
                 <tbody>
                     {items.map(group => (
                         <React.Fragment key={group.title}>
-                            <tr className="bg-slate-800 text-white border-b border-black"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-left'} tracking-wide`} colSpan="3">{t(group.title)}</td></tr>
+                            <tr className="bg-slate-800 text-white border-b border-black"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide`} colSpan="3">{t(group.title)}</td></tr>
                             {group.items.map(item => (<CompactSkillRow key={item.key} label={t(item.label)} stats={skillStats[item.key]} />))}
                         </React.Fragment>
                     ))}
@@ -930,7 +989,7 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                         <tr>
-                            <th className={`px-5 py-4 border-b border-black font-extrabold border-l border-black ${isAr ? 'text-right' : 'text-left'}`}>{t(locationLabel)}</th>
+                            <th className={`px-5 py-4 border-b border-black font-extrabold border-l border-black ${isAr ? 'text-right' : 'text-start'}`}>{t(locationLabel)}</th>
                             <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-sky-50">{t('Total Completed Visits')}</th>
                             <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-sky-50">{t('Visits per HW')}</th>
                             <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center">{t('Total HWs Visited')}</th>
@@ -944,7 +1003,7 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
                             const casesPerVisit = row.totalVisits > 0 ? (row.totalCasesObserved / row.totalVisits).toFixed(1) : '0';
                             return (
                                 <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                    <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{row.stateName}</td>
+                                    <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{row.stateName}</td>
                                     <td className="px-5 py-3 border-l border-black text-center font-bold text-sky-800 bg-sky-50/50" dir="ltr">{row.totalVisits}</td>
                                     <td className="px-5 py-3 border-l border-black text-center text-slate-600 bg-sky-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{visitsPerHw}</span>{renderTrendArrows(visitsPerHw, 'visits')}</div></td>
                                     <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">{row.totalHealthWorkers}</td>
@@ -974,7 +1033,7 @@ export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWork
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                         <tr>
-                            <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold min-w-[200px] ${isAr ? 'text-right' : 'text-left'}`}>{t('KPI Name')}</th>
+                            <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold min-w-[200px] ${isAr ? 'text-right' : 'text-start'}`}>{t('KPI Name')}</th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-100 whitespace-nowrap">{t('Overall Score')}</th>
                             {kpisByWorkerType.map(group => (<th key={group.workerType} className="px-5 py-4 border-b border-l border-black font-extrabold text-center whitespace-nowrap">{t(group.workerType)}</th>))}
                         </tr>
@@ -982,7 +1041,7 @@ export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWork
                     <tbody>
                         {kpiDefinitions.map((kpi, idx) => (
                             <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{t(kpi.label)}</td>
+                                <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{t(kpi.label)}</td>
                                 <td className="px-5 py-3 border-l border-black text-center bg-sky-50/50"><ScoreText value={kpi.getValue(overallKpis)} /></td>
                                 {kpisByWorkerType.map(group => (<td key={group.workerType} className="px-5 py-3 border-l border-black text-center"><ScoreText value={kpi.getValue(group.kpis)} /></td>))}
                             </tr>
@@ -1106,8 +1165,8 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200">
                         <tr>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Health Worker')}</th>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Health Worker')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Facility')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1127,9 +1186,9 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200">
                         <tr>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility')}</th>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Health Worker(s)')}</th>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Date')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Facility')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Health Worker(s)')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Date')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1150,9 +1209,9 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200">
                         <tr>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility')}</th>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{modalConfig.type === 'cases' ? t('Health Worker') : t('Mother Name')}</th>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Date')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Facility')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{modalConfig.type === 'cases' ? t('Health Worker') : t('Mother Name')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Date')}</th>
                             <th className={`p-2 border border-slate-300 text-center`}>{t('Action')}</th>
                         </tr>
                     </thead>
@@ -1182,9 +1241,9 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200">
                         <tr>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility')}</th>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Date')}</th>
-                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Visit #')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Facility')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Date')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-start'}`}>{t('Visit #')}</th>
                             <th className={`p-2 border border-slate-300 text-center`}>{t('Action')}</th>
                         </tr>
                     </thead>
@@ -1220,7 +1279,7 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                         <tr>
-                            <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-left'}`}>{t('Mentor Name')}</th>
+                            <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Mentor Name')}</th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-teal-50">{t('Facility Updates')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Forms Saved')}</div></th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Health Workers')}</th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-50">{t('Total Visits')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Visits per HW')}</div></th>
@@ -1232,7 +1291,7 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                     <tbody>
                         {data.map((row, idx) => (
                             <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{row.mentorName}</td>
+                                <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{row.mentorName}</td>
                                 
                                 <td className="px-5 py-3 border-l border-black text-center bg-teal-50/50" dir="ltr">
                                     <div className="font-bold text-teal-800 text-base">

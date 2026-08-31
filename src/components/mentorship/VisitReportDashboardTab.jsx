@@ -2,6 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { useTranslation } from 'react-i18next'; 
+import * as XLSX from 'xlsx';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
     LineElement, BarElement, Title, Tooltip, Legend, Filler
@@ -363,6 +364,112 @@ const VisitReportDashboardTab = ({
         });
     }
 
+    // ---------------------------------------------------------------
+    // Excel export: Facility Problems & Solutions (Combined)
+    // Exports exactly the rows currently visible (respects the status filter).
+    // ---------------------------------------------------------------
+    const getStatusLabel = (status) => {
+        if (status === 'Resolved' || status === 'Done' || status === 'Resolved/Done') return t('Resolved / Done');
+        if (status === 'In Progress') return t('In Progress');
+        if (!status) return t('Pending');
+        return t(status);
+    };
+
+    const statusFilterLabel = statusFilter === 'All'
+        ? t('All')
+        : statusFilter === 'Resolved/Done'
+            ? t('Resolved / Done')
+            : t(statusFilter);
+
+    const handleExportProblemsExcel = () => {
+        if (filteredTotalProblems === 0) return;
+
+        const headers = [
+            '#',
+            t(dynamicLocationLabel),
+            t('Facility'),
+            t('Visit Date'),
+            t('Problem / Challenge'),
+            t('Implemented Solution'),
+            t('Status'),
+            t('Responsible Person')
+        ];
+
+        const rows = [];
+        const statusCounts = {};
+        const locationCounts = [];
+        let rowNumber = 0;
+
+        Object.keys(filteredGroupedProblems).sort().forEach(locName => {
+            const problems = filteredGroupedProblems[locName];
+            locationCounts.push([locName, problems.length]);
+
+            problems.forEach(item => {
+                rowNumber += 1;
+                const statusLabel = getStatusLabel(item.status);
+                statusCounts[statusLabel] = (statusCounts[statusLabel] || 0) + 1;
+
+                rows.push([
+                    rowNumber,
+                    locName,
+                    item.facility || '',
+                    item.date || '',
+                    item.problem || '',
+                    item.solution || '',
+                    statusLabel,
+                    item.person || ''
+                ]);
+            });
+        });
+
+        // --- Sheet 1: the table itself ---
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        ws['!cols'] = [
+            { wch: 5 },   // #
+            { wch: 24 },  // location
+            { wch: 28 },  // facility
+            { wch: 14 },  // date
+            { wch: 55 },  // problem
+            { wch: 55 },  // solution
+            { wch: 18 },  // status
+            { wch: 24 }   // responsible person
+        ];
+        ws['!autofilter'] = {
+            ref: XLSX.utils.encode_range({
+                s: { r: 0, c: 0 },
+                e: { r: rows.length, c: headers.length - 1 }
+            })
+        };
+        if (isAr) ws['!views'] = [{ RTL: true }];
+
+        // --- Sheet 2: summary ---
+        const summaryRows = [
+            [t('Facility Problems & Solutions (Combined)')],
+            [],
+            [t('Service'), t(activeService)],
+            [t('Filter by Status'), statusFilterLabel],
+            [t('Generated'), new Date().toLocaleString(isAr ? 'ar-EG' : 'en-GB')],
+            [t('Total'), filteredTotalProblems],
+            [],
+            [t('Status'), t('Count')],
+            ...Object.keys(statusCounts).map(k => [k, statusCounts[k]]),
+            [],
+            [t(dynamicLocationLabel), t('Count')],
+            ...locationCounts
+        ];
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+        wsSummary['!cols'] = [{ wch: 40 }, { wch: 22 }];
+        if (isAr) wsSummary['!views'] = [{ RTL: true }];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Problems & Solutions');
+        XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+        const stamp = new Date().toISOString().slice(0, 10);
+        const statusSlug = statusFilter.replace(/[^A-Za-z]/g, '') || 'All';
+        XLSX.writeFile(wb, `Facility_Problems_Solutions_${activeService}_${statusSlug}_${stamp}.xlsx`);
+    };
+
     return (
         <div className="animate-fade-in" dir={isAr ? 'rtl' : 'ltr'}>
             {/* Common Top Level KPI row for both services */}
@@ -519,18 +626,33 @@ const VisitReportDashboardTab = ({
                             {filteredTotalProblems}
                         </span>
                     </h4>
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm font-bold text-slate-600">{t('Filter by Status')}:</label>
-                        <select 
-                            value={statusFilter} 
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-sky-500 focus:border-sky-500 shadow-sm"
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-bold text-slate-600">{t('Filter by Status')}:</label>
+                            <select 
+                                value={statusFilter} 
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-sky-500 focus:border-sky-500 shadow-sm"
+                            >
+                                <option value="All">{t('All')}</option>
+                                <option value="Pending">{t('Pending')}</option>
+                                <option value="In Progress">{t('In Progress')}</option>
+                                <option value="Resolved/Done">{t('Resolved / Done')}</option>
+                            </select>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleExportProblemsExcel}
+                            disabled={filteredTotalProblems === 0}
+                            title={filteredTotalProblems === 0 ? t('No problems match the selected filter.') : t('Download Excel')}
+                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-bold px-3 py-1.5 rounded-lg border border-black shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1"
                         >
-                            <option value="All">{t('All')}</option>
-                            <option value="Pending">{t('Pending')}</option>
-                            <option value="In Progress">{t('In Progress')}</option>
-                            <option value="Resolved/Done">{t('Resolved / Done')}</option>
-                        </select>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm6.293-3.293a1 1 0 001.414 0l4-4a1 1 0 10-1.414-1.414L11 10.586V3a1 1 0 10-2 0v7.586L6.707 8.293a1 1 0 00-1.414 1.414l4 4z" clipRule="evenodd" />
+                            </svg>
+                            {t('Download Excel')}
+                        </button>
                     </div>
                 </div>
                 <div className="overflow-x-auto">

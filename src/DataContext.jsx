@@ -43,6 +43,18 @@ const getFilterKey = (filters) => {
 // --- 1-HOUR CACHE EXPIRATION CONSTANT ---
 const CACHE_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
 
+// --- DELTA-SYNC SAFETY OVERLAP ---
+// The sync watermark is written from the CLIENT clock (Date.now()), but the
+// documents are stamped with serverTimestamp() from the SERVER clock. If the
+// device clock runs even slightly ahead of the server, a freshly written doc
+// gets a lastUpdatedAt that is BELOW the stored watermark and is therefore
+// excluded from every future "> watermark" query — the edit never reaches the
+// cache, permanently. Re-querying a small overlap window absorbs that skew and
+// also re-catches anything written while a previous sync was in flight.
+const SYNC_OVERLAP_MS = 10 * 60 * 1000; // 10 minutes
+
+const rewindWatermark = (ms) => (ms > 0 ? Math.max(0, ms - SYNC_OVERLAP_MS) : 0);
+
 // --- STRICT TIMEOUT HELPER ---
 const fetchWithTimeout = async (promise, timeoutMs = 60000) => {
     return Promise.race([
@@ -224,9 +236,14 @@ export const DataProvider = ({ children }) => {
 
                 // 3. Server Delta Fetch
                 try {
-                    let effectiveLastFetchTime = lastFetchTime;
+                    const fetchStartedAt = Date.now();
+
+                    let effectiveLastFetchTime = rewindWatermark(lastFetchTime);
                     if (!localData || localData.length === 0) {
                         effectiveLastFetchTime = 0; // First time, full load needed
+                    }
+                    if (force) {
+                        effectiveLastFetchTime = 0; // Explicit refresh = get the truth
                     }
 
                     const activeFilters = { ...filters };
@@ -254,12 +271,12 @@ export const DataProvider = ({ children }) => {
                         await setLocalData(`cache_${key}_${filterKey}`, finalMergedData);
                     }
                     
-                    // Log success time
-                    localStorage.setItem(timeKey, Date.now().toString());
+                    // Log success time (captured before the request, not after)
+                    localStorage.setItem(timeKey, fetchStartedAt.toString());
 
                     facilitiesFilterCacheRef.current[filterKey] = finalMergedData;
                     setCache(prev => ({ ...prev, healthFacilities: finalMergedData }));
-                    setLastFacilitiesFetchTime(prev => ({ ...prev, [filterKey]: Date.now() })); 
+                    setLastFacilitiesFetchTime(prev => ({ ...prev, [filterKey]: fetchStartedAt })); 
                     currentFacilitiesFilterKeyRef.current = filterKey;
                     return finalMergedData;
                 } catch (error) {
@@ -332,15 +349,25 @@ export const DataProvider = ({ children }) => {
             }
 
             try {
-                let effectiveLastFetchTime = lastFetchTime;
-                
+                // Recorded BEFORE the request. Using Date.now() after the fetch
+                // resolves would silently skip any document written while the
+                // request was in flight.
+                const fetchStartedAt = Date.now();
+
+                let effectiveLastFetchTime = rewindWatermark(lastFetchTime);
+
                 // If localDB is empty, we must do a full download to reconstruct it.
                 if ((!localData || (Array.isArray(localData) && localData.length === 0)) && !key.includes('Settings')) {
                     effectiveLastFetchTime = 0;
                 }
 
-                // -> WE DO NOT RESET effectiveLastFetchTime HERE ANYMORE. 
-                // Incremental fetch uses the actual last update timestamp.
+                // An explicit force means "I just wrote something, get the truth".
+                // Previously force still applied the incremental window, so a fresh
+                // edit that fell outside it could never be pulled in no matter how
+                // many times the caller refreshed.
+                if (force && !key.includes('Settings')) {
+                    effectiveLastFetchTime = 0;
+                }
 
                 const newOrUpdatedData = await fetchWithTimeout(fetchFn({ source: 'server' }, effectiveLastFetchTime), 60000); 
                 
@@ -362,7 +389,7 @@ export const DataProvider = ({ children }) => {
                      finalMergedData = localData;
                 }
                 
-                localStorage.setItem(timeKey, Date.now().toString());
+                localStorage.setItem(timeKey, fetchStartedAt.toString());
 
                 setCache(prev => ({ ...prev, [key]: finalMergedData })); 
                 return finalMergedData;
@@ -418,10 +445,34 @@ export const DataProvider = ({ children }) => {
         }
     }, [user]); 
 
+    // Clears every sync watermark and the IndexedDB mirror, so the next fetch is a
+    // full re-download. Recovery hatch for caches poisoned before the watermark fix.
+    const clearLocalCache = useCallback(async () => {
+        try {
+            Object.keys(localStorage)
+                .filter(k => k.startsWith('lastServerFetch_'))
+                .forEach(k => localStorage.removeItem(k));
+            const db = await initDB();
+            await new Promise((resolve, reject) => {
+                const tx = db.transaction('apiData', 'readwrite');
+                tx.objectStore('apiData').clear();
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => reject(tx.error);
+            });
+            facilitiesFilterCacheRef.current = {};
+            fetchingRef.current = {};
+            return true;
+        } catch (e) {
+            console.warn('Failed to clear local cache', e);
+            return false;
+        }
+    }, []);
+
     const value = { 
         ...cache, 
         ...fetchers, 
         isLoading,
+        clearLocalCache,
         fetchFacilitiesHistoryMultiDate, 
         listSnapshotsForFacility
     };

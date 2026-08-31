@@ -189,10 +189,10 @@ const ProviderSkillsTab = ({
 
                 <SummaryKpiTable title={`${t('KPI Summary by Job Description')} ${scopeTitle}`} kpiDefinitions={imnciSummaryDefs} overallKpis={overallKpis} kpisByWorkerType={kpisByWorkerType} />
                 
-                <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">{t('Overall Adherence by')} {t(geographicLevelName)} {scopeTitle}</h3>
+                <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-start tracking-wide">{t('Overall Adherence by')} {t(geographicLevelName)} {scopeTitle}</h3>
                 <div className="mb-10"><KpiBarChart title={`${t('Overall IMNCI Adherence by')} ${t(geographicLevelName)}`} chartData={geographicKpis} /></div>
                 
-                <h3 className="text-xl font-extrabold text-slate-800 mb-5 text-left tracking-wide">{t('Detailed Skill Performance')} {scopeTitle}</h3>
+                <h3 className="text-xl font-extrabold text-slate-800 mb-5 text-start tracking-wide">{t('Detailed Skill Performance')} {scopeTitle}</h3>
                 <div className="mb-10"><CompactSkillsTable overallKpis={overallKpis} /></div>
             </div>
         );
@@ -320,10 +320,10 @@ const ProviderSkillsTab = ({
             
             <SummaryKpiTable title={`${t('KPI Summary by Job Description')} ${scopeTitle}`} kpiDefinitions={eencSummaryDefs} overallKpis={overallKpis} kpisByWorkerType={kpisByWorkerType} />
 
-            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">{t('Overall EENC Adherence by')} {t(geographicLevelName)} {scopeTitle}</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-start tracking-wide">{t('Overall EENC Adherence by')} {t(geographicLevelName)} {scopeTitle}</h3>
             <div className="mb-10"><KpiBarChart title={`${t('Overall EENC Adherence by')} ${t(geographicLevelName)}`} chartData={geographicKpis} /></div>
             
-            <h3 className="text-xl font-bold text-slate-800 mb-5 text-left tracking-wide">{t('Detailed EENC Skill Performance')} {scopeTitle}</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-5 text-start tracking-wide">{t('Detailed EENC Skill Performance')} {scopeTitle}</h3>
             <div className="mb-10"><EENCCompactSkillsTable overallKpis={overallKpis} /></div>
         </div>
     );
