@@ -97,6 +97,43 @@ const formatCertificateDateRange = (startISO, endISO, isArabic) => {
     return `${sDay} ${sMon} ${sy} - ${eDay} ${eMon} ${ey}`;
 };
 
+/**
+ * Normalises a participant name for printing: each of the name parts (Sudanese
+ * names usually run to four) gets one leading capital and the rest lower case,
+ * so records entered as "AHMED MOHAMED ALI HASSAN" or "ahmed mohamed ali hassan"
+ * both print as "Ahmed Mohamed Ali Hassan".
+ *
+ * Compound parts joined by a hyphen or apostrophe are capitalised on both sides
+ * of the joiner, which matters for transliterated names — "abdel-rahman" becomes
+ * "Abdel-Rahman", not "Abdel-rahman". Runs of whitespace collapse to one space.
+ *
+ * Arabic script has no letter case, so this is effectively a whitespace tidy for
+ * Arabic names and safe to apply in both languages.
+ *
+ * Note this deliberately lower-cases the rest of every part, exactly as asked,
+ * so an intentional inner capital ("McDonald") would print as "Mcdonald". Tick
+ * "Keep name exactly as entered" on the Participant name element for such cases.
+ */
+export const normalizeParticipantName = (raw) => {
+    if (!raw || typeof raw !== 'string') return raw || '';
+
+    const capitalisePart = (part) =>
+        part.charAt(0).toLocaleUpperCase() + part.slice(1).toLocaleLowerCase();
+
+    return raw
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')
+        .map(word =>
+            // Keep the joiners by capturing them in the split.
+            word
+                .split(/([-'’])/)
+                .map(part => (/^[-'’]$/.test(part) || part === '' ? part : capitalisePart(part)))
+                .join('')
+        )
+        .join(' ');
+};
+
 /** Adds (duration - 1) days to an ISO date, for prefilling the end-date picker. */
 const addDaysISO = (startISO, days) => {
     if (!startISO) return '';
@@ -677,6 +714,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const thirdPartySignature = customConfig.thirdPartySignatureUrl || approvedThirdPartySignature || '';
     const showThirdParty = signatories.thirdPartyEnabled;
 
+    // Printed name. Normalised by default; `rawParticipantName` opts out for the
+    // occasional record whose capitalisation is deliberate.
+    const participantDisplayName = customConfig.rawParticipantName
+        ? (participant?.name || '')
+        : normalizeParticipantName(participant?.name);
+
     const fourthPartyName = isArabic ? signatories.fourthPartyAr : signatories.fourthPartyEn;
     const fourthPartyRole = isArabic ? signatories.fourthPartyRoleAr : signatories.fourthPartyRoleEn;
     const fourthPartySignature = customConfig.fourthPartySignatureUrl || approvedFourthPartySignature || '';
@@ -824,7 +867,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             </div>
 
             <div style={{ ...centred(nameLeft, nameWidth), top: `${nameTop}mm`, fontSize: `${nameFontSize}px`, fontWeight: 'bold', color: nameColor, zIndex: 2, borderBottom: `3px dotted ${nameRuleColor}`, paddingBottom: '10px', minHeight: '40px' }}>
-                {!isTemplate && (isArabic ? `${participant.name}` : `${participant.name}`)}
+                {!isTemplate && participantDisplayName}
             </div>
 
             <div style={{ ...centred(completionLeft, completionWidth), top: `${completionTop}mm`, fontSize: `${completionFontSize}px`, color: completionColor, fontStyle: isArabic ? 'normal' : 'italic', zIndex: 2 }}>
@@ -1374,7 +1417,8 @@ const buildEditorElements = (ctx) => {
                 { key: 'nameRuleColor', label: 'Dotted rule colour' }
             ],
             fontKey: 'nameFontSize', fontDef: CERT_DEFAULTS.nameFontSize,
-            note: 'The name itself comes from the participant record.'
+            checks: [{ key: 'rawParticipantName', label: 'Keep name exactly as entered' }],
+            note: 'The name comes from the participant record. It is printed with one capital per name part (e.g. "AHMED ALI" prints as "Ahmed Ali") unless you tick the box above.'
         },
         {
             id: 'completion', label: 'Completion line',
