@@ -419,6 +419,12 @@ export const CERT_DEFAULTS = {
     placeDateLabelColor: '#FF0000',
     signatureColor: '#000000',
     nameRuleColor: '#000000',
+    // Signature IMAGE box inside each block (mm). Shared defaults; each of the
+    // four signatures can override any of them.
+    signatureImageWidth: 30,
+    signatureImageHeight: 20,
+    signatureImageBottom: 12,
+    signatureImageOffsetX: 0,
     // Optional footer stating the printed page needs the physical seal.
     sealNoticeEn: 'This certificate is not valid without the official seal.',
     sealNoticeAr: 'هذه الشهادة غير صالحة بدون الختم الرسمي.',
@@ -620,7 +626,7 @@ const resolveCustomAssets = async (course) => {
 // COMPONENT: SignatureBlock (shared by all three signatories)
 // -----------------------------------------------------------------------------
 
-const SignatureBlock = ({ signatureUrl, name, role, positionStyle, nameFontSize = 20, roleFontSize = 20, nameColor = '#000000', roleColor = null }) => (
+const SignatureBlock = ({ signatureUrl, name, role, positionStyle, nameFontSize = 20, roleFontSize = 20, nameColor = '#000000', roleColor = null, imgWidth = 30, imgHeight = 20, imgBottom = 12, imgOffsetX = 0 }) => (
     <div style={{ position: 'absolute', textAlign: 'center', fontWeight: 'bold', zIndex: 2, ...positionStyle }}>
         <div style={{ position: 'relative' }}>
             {signatureUrl && (
@@ -628,7 +634,14 @@ const SignatureBlock = ({ signatureUrl, name, role, positionStyle, nameFontSize 
                     src={signatureUrl}
                     alt="Signature"
                     crossOrigin="anonymous"
-                    style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }}
+                    style={{
+                        display: 'block', margin: '0 auto', position: 'absolute', zIndex: 1,
+                        maxWidth: `${imgWidth}mm`,
+                        maxHeight: `${imgHeight}mm`,
+                        bottom: `${imgBottom}mm`,
+                        left: '50%',
+                        transform: `translateX(calc(-50% + ${imgOffsetX}mm))`
+                    }}
                 />
             )}
             <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2, fontSize: `${nameFontSize}px`, lineHeight: 1.25, color: nameColor }}>{name}</div>
@@ -910,6 +923,20 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const sigNameColor = (block) => customConfig[`${block}SignatureColor`] || signatureColor;
     const sigRoleColor = (block) => customConfig[`${block}SignatureRoleColor`] || customConfig.signatureRoleColor || sigNameColor(block);
 
+    // Signature IMAGE geometry: this block's own value → the shared value → the
+    // built-in default. Lets one signature be scanned larger than the rest
+    // without forcing every block to match.
+    const sigImg = (block, prop) => numOr(
+        customConfig[`${block}SignatureImage${prop}`],
+        numOr(customConfig[`signatureImage${prop}`], CERT_DEFAULTS[`signatureImage${prop}`])
+    );
+    const sigImgProps = (block) => ({
+        imgWidth: sigImg(block, 'Width'),
+        imgHeight: sigImg(block, 'Height'),
+        imgBottom: sigImg(block, 'Bottom'),
+        imgOffsetX: sigImg(block, 'OffsetX')
+    });
+
     // Centre-anchored positioning: an element sits at `left`% of the page and is
     // pulled back by half its own width, so changing `left` slides it sideways
     // without disturbing its internal centring.
@@ -1030,6 +1057,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     roleFontSize={signatureRoleFontSize}
                     nameColor={sigNameColor(rightSignatory.block)}
                     roleColor={sigRoleColor(rightSignatory.block)}
+                    {...sigImgProps(rightSignatory.block)}
                     positionStyle={{ top: `${signatureTop}mm`, left: `${sigRightLeft}%`, width: `${sideSignatureWidth}mm`, transform: 'translateX(-50%)' }}
                 />
             )}
@@ -1043,6 +1071,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     roleFontSize={signatureRoleFontSize}
                     nameColor={sigNameColor(leftSignatory.block)}
                     roleColor={sigRoleColor(leftSignatory.block)}
+                    {...sigImgProps(leftSignatory.block)}
                     positionStyle={{ top: `${signatureTop}mm`, left: `${sigLeftLeft}%`, width: `${sideSignatureWidth}mm`, transform: 'translateX(-50%)' }}
                 />
             )}
@@ -1056,6 +1085,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     roleFontSize={signatureRoleFontSize}
                     nameColor={sigNameColor('third')}
                     roleColor={sigRoleColor('third')}
+                    {...sigImgProps('third')}
                     positionStyle={{ top: `${signatureTop}mm`, left: `${sigThirdLeft}%`, width: `${thirdSignatureWidth}mm`, transform: 'translateX(-50%)' }}
                 />
             )}
@@ -1069,6 +1099,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     roleFontSize={signatureRoleFontSize}
                     nameColor={sigNameColor('fourth')}
                     roleColor={sigRoleColor('fourth')}
+                    {...sigImgProps('fourth')}
                     positionStyle={{ top: `${signatureTop}mm`, left: `${sigFourthLeft}%`, width: `${thirdSignatureWidth}mm`, transform: 'translateX(-50%)' }}
                 />
             )}
@@ -1473,7 +1504,7 @@ const readColor = (data, key) => data?.[key] || CERT_DEFAULTS[key] || '#000000';
  * adding one entry here rather than touching the UI.
  */
 const buildEditorElements = (ctx) => {
-    const { isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager, hideDirector, showSealNotice } = ctx;
+    const { isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager, hideDirector, showSealNotice, signatureImages = [] } = ctx;
 
     return [
         {
@@ -1668,7 +1699,7 @@ const buildEditorElements = (ctx) => {
                 { key: 'thirdSignatureRoleColor', label: 'This title colour' }
             ],
             numbers: [
-                { key: 'thirdSignatureWidth', label: 'Block width (mm)', def: CERT_DEFAULTS.thirdSignatureWidth, min: 30, max: 140 }
+                { key: 'thirdSignatureWidth', label: 'Block width (mm)', def: CERT_DEFAULTS.thirdSignatureWidth, min: 30, max: 140 },
             ],
             note: 'Prints as soon as a name or signature image is added.'
         },
@@ -1691,6 +1722,29 @@ const buildEditorElements = (ctx) => {
             ],
             note: 'Prints as soon as a name or signature image is added. Adding it re-spaces all four signatures automatically.'
         },
+        // --- Draggable signature IMAGES -------------------------------------
+        // Only listed when that signatory actually has an image, since there is
+        // nothing to position otherwise. These drag on their own axes: both in
+        // millimetres relative to their block, with the vertical value measured
+        // UPWARD from the name, so `yInvert` flips the drag direction.
+        ...signatureImages.map(({ block, label, blockLeftKey, blockLeftDef }) => ({
+            id: `${block}Image`,
+            label: `${label} — image`,
+            imageOf: block,
+            blockLeftKey,
+            blockLeftDef,
+            axes: {
+                xKey: `${block}SignatureImageOffsetX`, xDef: CERT_DEFAULTS.signatureImageOffsetX, xMin: -80, xMax: 80,
+                yKey: `${block}SignatureImageBottom`, yDef: CERT_DEFAULTS.signatureImageBottom, yMin: -30, yMax: 70, yInvert: true
+            },
+            numbers: [
+                { key: `${block}SignatureImageWidth`, label: 'Max width (mm)', def: CERT_DEFAULTS.signatureImageWidth, min: 5, max: 120 },
+                { key: `${block}SignatureImageHeight`, label: 'Max height (mm)', def: CERT_DEFAULTS.signatureImageHeight, min: 5, max: 80 },
+                { key: `${block}SignatureImageBottom`, label: 'Height above name (mm)', def: CERT_DEFAULTS.signatureImageBottom, min: -30, max: 70 },
+                { key: `${block}SignatureImageOffsetX`, label: 'Nudge left/right (mm)', def: CERT_DEFAULTS.signatureImageOffsetX, min: -80, max: 80 }
+            ],
+            note: 'Drag the image itself on the canvas, or use the boxes here. Width and height are limits — the scan keeps its own aspect ratio.'
+        })),
         {
             id: 'sealNotice', label: 'Seal-required notice',
             topKey: 'sealNoticeTop', topDef: CERT_DEFAULTS.sealNoticeTop,
@@ -1846,12 +1900,19 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     }, []);
 
     const isArabic = language === 'ar';
-    const hasStamp = !!course?.approvedProgramStampUrl;
+    // Course-level signature images (manager, director, stamp) are not part of
+    // `data`, so removing one has to be written to Firestore immediately. This
+    // shadow layer lets the canvas reflect the removal without waiting for the
+    // parent to hand down a refreshed course.
+    const [courseOverrides, setCourseOverrides] = useState({});
+    const liveCourse = useMemo(() => ({ ...(course || {}), ...courseOverrides }), [course, courseOverrides]);
+
+    const hasStamp = !!liveCourse.approvedProgramStampUrl;
     // Resolved from the UNSAVED edits, not just the stored doc, so typing a name
     // makes the third/fourth signature appear on the canvas immediately.
     const sigInfo = useMemo(
-        () => resolveCertificateSignatories({ ...(course || {}), customCertificate: data || {} }),
-        [course, data]
+        () => resolveCertificateSignatories({ ...liveCourse, customCertificate: data || {} }),
+        [liveCourse, data]
     );
     const hasThirdParty = sigInfo.thirdPartyEnabled;
     const hasFourthParty = sigInfo.fourthPartyEnabled;
@@ -1868,14 +1929,35 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
         [sideCentrePct, sigCount]
     );
 
+    // Which signatories actually have an image to position. The manager/director
+    // images live on the course document; the third/fourth may also be sitting in
+    // the unsaved form state.
+    const managerImg = !!liveCourse.approvedByManagerSignatureUrl;
+    const directorImg = !!liveCourse.approvedDirectorSignatureUrl;
+    const thirdImg = !!(data.thirdPartySignatureUrl || liveCourse.approvedThirdPartySignatureUrl);
+    const fourthImg = !!(data.fourthPartySignatureUrl || liveCourse.approvedFourthPartySignatureUrl);
+
+    const signatureImages = useMemo(() => {
+        const mgrLeftKey = isArabic ? 'sigRightLeft' : 'sigLeftLeft';
+        const dirLeftKey = isArabic ? 'sigLeftLeft' : 'sigRightLeft';
+        const mgrLeftDef = slotFor(isArabic ? sigCount - 1 : 0);
+        const dirLeftDef = slotFor(isArabic ? 0 : sigCount - 1);
+        return [
+            managerImg && { block: 'manager', label: 'Program Manager', blockLeftKey: mgrLeftKey, blockLeftDef: mgrLeftDef },
+            directorImg && { block: 'director', label: 'Course Director', blockLeftKey: dirLeftKey, blockLeftDef: dirLeftDef },
+            thirdImg && hasThirdParty && { block: 'third', label: 'Third signature', blockLeftKey: 'sigThirdLeft', blockLeftDef: slotFor(1) },
+            fourthImg && hasFourthParty && { block: 'fourth', label: 'Fourth signature', blockLeftKey: 'sigFourthLeft', blockLeftDef: slotFor(hasFourthParty ? 2 : 1) }
+        ].filter(Boolean);
+    }, [isArabic, slotFor, sigCount, managerImg, directorImg, thirdImg, fourthImg, hasThirdParty, hasFourthParty]);
+
     const elements = useMemo(
-        () => buildEditorElements({ isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager: !!data.hideManager, hideDirector: !!data.hideDirector, showSealNotice: !!data.showSealNotice }),
-        [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, data.hideManager, data.hideDirector, data.showSealNotice]
+        () => buildEditorElements({ isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager: !!data.hideManager, hideDirector: !!data.hideDirector, showSealNotice: !!data.showSealNotice, signatureImages }),
+        [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, data.hideManager, data.hideDirector, data.showSealNotice, signatureImages]
     );
 
     const selected = elements.find(e => e.id === selectedId) || elements[0];
 
-    const previewCourse = useMemo(() => ({ ...course, customCertificate: data || {} }), [course, data]);
+    const previewCourse = useMemo(() => ({ ...liveCourse, customCertificate: data || {} }), [liveCourse, data]);
 
     // --- dragging ---
     const onMove = useCallback((e) => {
@@ -1883,10 +1965,23 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
         if (!d) return;
         const s = scaleRef.current;
         const dyMm = (e.clientY - d.startY) / (MM_TO_PX * s);
+        const dxMm = (e.clientX - d.startX) / (MM_TO_PX * s);
+        const clamp = (v, lo, hi) => Math.round(Math.min(hi, Math.max(lo, v)));
+
+        // Signature images use a different frame from the layout blocks: both axes
+        // are in millimetres relative to their own block, and the vertical value is
+        // a distance UP from the baseline, so dragging down has to decrease it.
+        if (d.axes) {
+            const a = d.axes;
+            if (a.xKey) set(a.xKey, String(clamp(d.startX2 + dxMm, a.xMin, a.xMax)));
+            if (a.yKey) set(a.yKey, String(clamp(d.startY2 + (a.yInvert ? -dyMm : dyMm), a.yMin, a.yMax)));
+            return;
+        }
+
         const dxPct = ((e.clientX - d.startX) / (PAGE_W_PX * s)) * 100;
-        set(d.topKey, String(Math.round(Math.min(205, Math.max(0, d.startTop + dyMm)))));
+        set(d.topKey, String(clamp(d.startTop + dyMm, 0, 205)));
         if (d.leftKey) {
-            set(d.leftKey, String(Math.round(Math.min(100, Math.max(0, d.startLeft + dxPct)))));
+            set(d.leftKey, String(clamp(d.startLeft + dxPct, 0, 100)));
         }
     }, [set]);
 
@@ -1900,14 +1995,22 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
         e.preventDefault();
         e.stopPropagation();
         setSelectedId(el.id);
-        dragRef.current = {
-            topKey: el.topKey,
-            leftKey: el.leftKey || null,
-            startY: e.clientY,
-            startX: e.clientX,
-            startTop: readNum(data, el.topKey, el.topDef),
-            startLeft: el.leftKey ? readNum(data, el.leftKey, el.leftDef) : null
-        };
+        dragRef.current = el.axes
+            ? {
+                axes: el.axes,
+                startY: e.clientY,
+                startX: e.clientX,
+                startX2: readNum(data, el.axes.xKey, el.axes.xDef),
+                startY2: readNum(data, el.axes.yKey, el.axes.yDef)
+            }
+            : {
+                topKey: el.topKey,
+                leftKey: el.leftKey || null,
+                startY: e.clientY,
+                startX: e.clientX,
+                startTop: readNum(data, el.topKey, el.topDef),
+                startLeft: el.leftKey ? readNum(data, el.leftKey, el.leftDef) : null
+            };
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);
     };
@@ -1924,6 +2027,24 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
             const tag = (e.target.tagName || '').toLowerCase();
             if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
             const step = e.shiftKey ? 5 : 1;
+
+            // Image elements move on their own mm axes, with the vertical value
+            // measured upward, so Up must increase it.
+            if (selected.axes) {
+                const a = selected.axes;
+                const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const cur = readNum(data, a.yKey, a.yDef);
+                    set(a.yKey, String(clamp(cur + (e.key === 'ArrowUp' ? step : -step), a.yMin, a.yMax)));
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    const cur = readNum(data, a.xKey, a.xDef);
+                    set(a.xKey, String(clamp(cur + (e.key === 'ArrowRight' ? step : -step), a.xMin, a.xMax)));
+                }
+                return;
+            }
+
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 const cur = readNum(data, selected.topKey, selected.topDef);
@@ -2000,6 +2121,46 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     const handleBack = () => {
         if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return;
         onBack?.();
+    };
+
+    // Which stored fields hold each signatory's image. Manager/director/stamp are
+    // course-level only; third/fourth are mirrored in customCertificate as well.
+    const IMAGE_FIELDS = {
+        manager: { courseKey: 'approvedByManagerSignatureUrl' },
+        director: { courseKey: 'approvedDirectorSignatureUrl' },
+        stamp: { courseKey: 'approvedProgramStampUrl' },
+        third: { courseKey: 'approvedThirdPartySignatureUrl', customKey: 'thirdPartySignatureUrl' },
+        fourth: { courseKey: 'approvedFourthPartySignatureUrl', customKey: 'fourthPartySignatureUrl' }
+    };
+
+    const [removingImage, setRemovingImage] = useState(null);
+
+    /**
+     * Deletes a signature or stamp image. This writes to Firestore straight away
+     * rather than waiting for Save, because the course-level fields are not part
+     * of the template `data` that Save persists — deferring would silently lose
+     * the removal. The name and title are left alone; only the image goes.
+     */
+    const removeSignatureImage = async (block) => {
+        const field = IMAGE_FIELDS[block];
+        if (!field || !course?.id) return;
+        if (!window.confirm('Remove this signature image? The stored image is deleted immediately and will have to be uploaded again.')) return;
+
+        setRemovingImage(block);
+        try {
+            const payload = { lastUpdatedAt: serverTimestamp(), [field.courseKey]: null };
+            if (field.customKey) payload[`customCertificate.${field.customKey}`] = deleteField();
+            await updateDoc(doc(db, 'courses', course.id), payload);
+
+            setCourseOverrides(prev => ({ ...prev, [field.courseKey]: null }));
+            if (field.customKey) setData(prev => ({ ...prev, [field.customKey]: '' }));
+            if (onSaveSuccess) onSaveSuccess();
+        } catch (err) {
+            console.error(err);
+            alert('Could not remove the image. Please try again.');
+        } finally {
+            setRemovingImage(null);
+        }
     };
 
     // What colour this field would actually print if left blank. Mirrors the
@@ -2150,15 +2311,15 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                             <CertificateTemplate
                                 course={previewCourse}
                                 participant={{ name: isArabic ? 'اسم المشارك' : 'Participant Name', id: 'preview' }}
-                                federalProgramManagerName={course?.approvedByManagerName || ''}
+                                federalProgramManagerName={liveCourse.approvedByManagerName || ''}
                                 participantSubCourse={course?.director_imci_sub_type || null}
                                 language={language}
-                                programManagerSignatureUrl={course?.approvedByManagerSignatureUrl || null}
-                                directorName={course?.approvedDirectorName || course?.director || ''}
-                                directorSignatureUrl={course?.approvedDirectorSignatureUrl || null}
-                                programStampUrl={course?.approvedProgramStampUrl || null}
-                                thirdPartySignatureUrl={course?.approvedThirdPartySignatureUrl || null}
-                                fourthPartySignatureUrl={course?.approvedFourthPartySignatureUrl || null}
+                                programManagerSignatureUrl={liveCourse.approvedByManagerSignatureUrl || null}
+                                directorName={liveCourse.approvedDirectorName || liveCourse.director || ''}
+                                directorSignatureUrl={liveCourse.approvedDirectorSignatureUrl || null}
+                                programStampUrl={liveCourse.approvedProgramStampUrl || null}
+                                thirdPartySignatureUrl={liveCourse.approvedThirdPartySignatureUrl || null}
+                                fourthPartySignatureUrl={liveCourse.approvedFourthPartySignatureUrl || null}
                             />
                         </div>
 
@@ -2167,12 +2328,41 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                         )}
 
                         {elements.filter(el => !el.inactive).map(el => {
-                            const topMm = readNum(data, el.topKey, el.topDef);
-                            const leftPct = el.leftKey ? readNum(data, el.leftKey, el.leftDef) : 50;
                             const isSel = selectedId === el.id;
-                            const boxW = el.box.widthMm
-                                ? el.box.widthMm * MM_TO_PX * scale
-                                : (el.box.widthPct / 100) * PAGE_W_PX * scale;
+
+                            let topMm, leftPct, boxW, boxH;
+
+                            if (el.imageOf) {
+                                // Reconstruct where the <img> lands: it is anchored to the
+                                // BOTTOM of its block's text, which is the name line plus the
+                                // role line, then lifted by `...ImageBottom` millimetres.
+                                const b = el.imageOf;
+                                const px = (k, sharedK) => readNum(data, `${b}${k}`, readNum(data, sharedK, CERT_DEFAULTS[sharedK]));
+                                const imgW = px('SignatureImageWidth', 'signatureImageWidth');
+                                const imgH = px('SignatureImageHeight', 'signatureImageHeight');
+                                const imgBottom = px('SignatureImageBottom', 'signatureImageBottom');
+                                const imgOffsetX = px('SignatureImageOffsetX', 'signatureImageOffsetX');
+
+                                const nameFs = readNum(data, 'signatureNameFontSize', CERT_DEFAULTS.signatureNameFontSize);
+                                const roleFs = readNum(data, 'signatureRoleFontSize', CERT_DEFAULTS.signatureRoleFontSize);
+                                const textMm = ((nameFs + roleFs) * 1.25) / MM_TO_PX + 1;
+
+                                const blockTop = readNum(data, 'signatureTop', CERT_DEFAULTS.signatureTop);
+                                const blockLeft = readNum(data, el.blockLeftKey, el.blockLeftDef);
+
+                                topMm = blockTop + textMm - imgBottom - imgH;
+                                leftPct = blockLeft + (imgOffsetX / 297) * 100;
+                                boxW = imgW * MM_TO_PX * scale;
+                                boxH = imgH * MM_TO_PX * scale;
+                            } else {
+                                topMm = readNum(data, el.topKey, el.topDef);
+                                leftPct = el.leftKey ? readNum(data, el.leftKey, el.leftDef) : 50;
+                                boxW = el.box.widthMm
+                                    ? el.box.widthMm * MM_TO_PX * scale
+                                    : (el.box.widthPct / 100) * PAGE_W_PX * scale;
+                                boxH = Math.max(16, el.box.heightMm * MM_TO_PX * scale);
+                            }
+
                             return (
                                 <div
                                     key={el.id}
@@ -2183,11 +2373,11 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                         top: topMm * MM_TO_PX * scale,
                                         left: `calc(${leftPct}% - ${boxW / 2}px)`,
                                         width: boxW,
-                                        height: Math.max(16, el.box.heightMm * MM_TO_PX * scale),
+                                        height: Math.max(12, boxH),
                                         cursor: 'move',
-                                        zIndex: isSel ? 40 : 30,
-                                        border: `1px ${isSel ? 'solid' : 'dashed'} ${isSel ? '#0284c7' : 'rgba(2,132,199,0.4)'}`,
-                                        background: isSel ? 'rgba(2,132,199,0.16)' : 'rgba(2,132,199,0.04)',
+                                        zIndex: isSel ? 45 : (el.imageOf ? 35 : 30),
+                                        border: `1px ${isSel ? 'solid' : 'dashed'} ${isSel ? '#0284c7' : el.imageOf ? 'rgba(217,119,6,0.65)' : 'rgba(2,132,199,0.4)'}`,
+                                        background: isSel ? 'rgba(2,132,199,0.16)' : (el.imageOf ? 'rgba(217,119,6,0.10)' : 'rgba(2,132,199,0.04)'),
                                         borderRadius: 3
                                     }}
                                 >
@@ -2198,7 +2388,9 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                             background: '#0284c7', color: 'white',
                                             borderRadius: '3px 3px 0 0', whiteSpace: 'nowrap'
                                         }}>
-                                            {el.label} · {topMm}mm{el.leftKey ? ` · ${leftPct}%` : ''}
+                                            {el.imageOf
+                                                ? `${el.label} · ${readNum(data, el.axes.yKey, el.axes.yDef)}mm up · ${readNum(data, el.axes.xKey, el.axes.xDef)}mm across`
+                                                : `${el.label} · ${Math.round(topMm)}mm${el.leftKey ? ` · ${Math.round(leftPct)}%` : ''}`}
                                         </span>
                                     )}
                                 </div>
@@ -2358,19 +2550,58 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                 </div>
                             )}
 
-                            {selected.signatureKey && (
-                                <PropRow label="Signature image">
-                                    <div className="flex items-center gap-2">
-                                        {data[selected.signatureKey] && <img src={data[selected.signatureKey]} alt="" className="h-8 border rounded bg-white" />}
-                                        <Button size="sm" variant="secondary" className="text-xs" onClick={() => triggerUpload(selected.signatureKey)} disabled={!!uploadingAsset}>
-                                            {uploadingAsset === selected.signatureKey ? <Spinner size="sm" /> : 'Upload'}
+                            {(selected.imageOf || selected.id === 'stamp') && (
+                                <PropRow label="Stored image">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {(() => {
+                                            const blk = selected.imageOf || 'stamp';
+                                            const f = IMAGE_FIELDS[blk];
+                                            const src = (f.customKey && data[f.customKey]) || liveCourse[f.courseKey] || null;
+                                            return src
+                                                ? <img src={src} alt="" className="h-10 border rounded bg-white px-1" />
+                                                : <span className="text-xs text-gray-400">None</span>;
+                                        })()}
+                                        <Button
+                                            size="sm"
+                                            variant="danger"
+                                            className="text-xs"
+                                            disabled={!!removingImage}
+                                            onClick={() => removeSignatureImage(selected.imageOf || 'stamp')}
+                                        >
+                                            {removingImage === (selected.imageOf || 'stamp') ? <Spinner size="sm" /> : 'Remove image'}
                                         </Button>
-                                        {data[selected.signatureKey] && (
-                                            <button type="button" onClick={() => set(selected.signatureKey, '')} className="text-[11px] text-red-600 underline">Remove</button>
-                                        )}
                                     </div>
+                                    <p className="text-[11px] text-gray-500 mt-1">
+                                        Deletes the stored image straight away — it is not part of Save. The name and title stay.
+                                    </p>
                                 </PropRow>
                             )}
+
+                            {selected.signatureKey && (() => {
+                                const blk = selected.signatureKey === 'fourthPartySignatureUrl' ? 'fourth' : 'third';
+                                const courseKey = IMAGE_FIELDS[blk].courseKey;
+                                const src = data[selected.signatureKey] || liveCourse[courseKey] || null;
+                                return (
+                                    <PropRow label="Signature image">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {src
+                                                ? <img src={src} alt="" className="h-8 border rounded bg-white px-1" />
+                                                : <span className="text-xs text-gray-400">None</span>}
+                                            <Button size="sm" variant="secondary" className="text-xs" onClick={() => triggerUpload(selected.signatureKey)} disabled={!!uploadingAsset || !!removingImage}>
+                                                {uploadingAsset === selected.signatureKey ? <Spinner size="sm" /> : (src ? 'Replace' : 'Upload')}
+                                            </Button>
+                                            {src && (
+                                                // Clears BOTH copies. Clearing only the customCertificate
+                                                // key would leave the approved* fallback in place and the
+                                                // signature would keep printing.
+                                                <Button size="sm" variant="danger" className="text-xs" disabled={!!removingImage} onClick={() => removeSignatureImage(blk)}>
+                                                    {removingImage === blk ? <Spinner size="sm" /> : 'Remove'}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </PropRow>
+                                );
+                            })()}
 
                             {(selected.id === 'logos1' || selected.id === 'logos2') && (
                                 <div className="border-t pt-3 mt-3">
@@ -3194,6 +3425,33 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         if (fileInputRef.current) fileInputRef.current.click();
     };
 
+    // Delete a stored signature/stamp image. Clears the course-level field and,
+    // for the third/fourth signatures, the mirrored customCertificate copy too —
+    // leaving either one behind would keep the image printing.
+    const removeAsset = async (course, assetType) => {
+        const map = {
+            managerSignature: { courseKey: 'approvedByManagerSignatureUrl' },
+            directorSignature: { courseKey: 'approvedDirectorSignatureUrl' },
+            stamp: { courseKey: 'approvedProgramStampUrl' },
+            thirdSignature: { courseKey: 'approvedThirdPartySignatureUrl', customKey: 'thirdPartySignatureUrl' },
+            fourthSignature: { courseKey: 'approvedFourthPartySignatureUrl', customKey: 'fourthPartySignatureUrl' }
+        };
+        const field = map[assetType];
+        if (!field) return;
+        if (!window.confirm('Remove this stored image? It will have to be uploaded again.')) return;
+
+        setIsProcessing(true);
+        try {
+            const payload = { lastUpdatedAt: serverTimestamp(), [field.courseKey]: null };
+            if (field.customKey) payload[`customCertificate.${field.customKey}`] = deleteField();
+            await updateDoc(doc(db, 'courses', course.id), payload);
+            setToast({ show: true, message: "Image removed.", type: 'info' });
+            await fetchCourses(true);
+        } catch (err) {
+            setToast({ show: true, message: err.message, type: 'error' });
+        } finally { setIsProcessing(false); }
+    };
+
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file || !uploadContext.course) return;
@@ -3209,6 +3467,18 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             if (assetType === 'managerSignature') { updatePayload.approvedByManagerSignatureUrl = url; updatePayload.approvedByManagerName = sig.managerEn || managerName; }
             else if (assetType === 'directorSignature') { updatePayload.approvedDirectorSignatureUrl = url; updatePayload.approvedDirectorName = sig.directorEn || course.director || ''; }
             else if (assetType === 'stamp') { updatePayload.approvedProgramStampUrl = url; }
+            else if (assetType === 'thirdSignature') {
+                updatePayload.approvedThirdPartySignatureUrl = url;
+                updatePayload['customCertificate.thirdPartySignatureUrl'] = url;
+                if (sig.thirdPartyEn) updatePayload.approvedThirdPartyName = sig.thirdPartyEn;
+                if (sig.thirdPartyRoleEn) updatePayload.approvedThirdPartyRole = sig.thirdPartyRoleEn;
+            }
+            else if (assetType === 'fourthSignature') {
+                updatePayload.approvedFourthPartySignatureUrl = url;
+                updatePayload['customCertificate.fourthPartySignatureUrl'] = url;
+                if (sig.fourthPartyEn) updatePayload.approvedFourthPartyName = sig.fourthPartyEn;
+                if (sig.fourthPartyRoleEn) updatePayload.approvedFourthPartyRole = sig.fourthPartyRoleEn;
+            }
             
             setLocalCourseUpdates(prev => ({
                 ...prev,
@@ -3357,6 +3627,10 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                                 const isApproved = c.isCertificateApproved === true;
                                 const canModify = isApproved && (!c.approvedByManagerName || c.approvedByManagerName === managerName || isFederalProgramManager);
                                 const hasCustomTemplate = !!(c.customCertificate && Object.keys(c.customCertificate).length > 0);
+                                const isCustomized = hasCustomTemplate;
+                                // Resolve the row's signatories so the 3rd/4th upload
+                                // buttons appear only for courses that actually use them.
+                                const rowSig = resolveCertificateSignatories(c, managerName);
                                 
                                 return (
                                     <tr key={c.id} className={`transition-colors hover:bg-gray-50 group ${isApproved ? "bg-green-50/20" : ""}`}>
@@ -3396,14 +3670,47 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                                                 <Button onClick={() => triggerUpload(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} variant={c.approvedByManagerSignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedByManagerSignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
                                                     {c.approvedByManagerSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} PM Signature
                                                 </Button>
+                                                {c.approvedByManagerSignatureUrl && (
+                                                    <button type="button" title="Remove PM signature image" onClick={() => removeAsset(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
+                                                )}
 
                                                 <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={c.approvedDirectorSignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedDirectorSignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
                                                     {c.approvedDirectorSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} Dir Signature
                                                 </Button>
+                                                {c.approvedDirectorSignatureUrl && (
+                                                    <button type="button" title="Remove director signature image" onClick={() => removeAsset(c, 'directorSignature')} disabled={isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
+                                                )}
 
-                                                <Button onClick={() => triggerUpload(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} variant={c.approvedProgramStampUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedProgramStampUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
-                                                    {c.approvedProgramStampUrl ? <CheckCircle size={12} /> : <Stamp size={12} />} Stamp
-                                                </Button>
+                                                {rowSig.thirdPartyEnabled && (
+                                                    <Button onClick={() => triggerUpload(c, 'thirdSignature')} disabled={isProcessing} variant={rowSig.thirdPartySignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${rowSig.thirdPartySignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
+                                                        {rowSig.thirdPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} 3rd Signature
+                                                    </Button>
+                                                )}
+                                                {rowSig.thirdPartyEnabled && rowSig.thirdPartySignatureUrl && (
+                                                    <button type="button" title="Remove third signature image" onClick={() => removeAsset(c, 'thirdSignature')} disabled={isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
+                                                )}
+
+                                                {rowSig.fourthPartyEnabled && (
+                                                    <Button onClick={() => triggerUpload(c, 'fourthSignature')} disabled={isProcessing} variant={rowSig.fourthPartySignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${rowSig.fourthPartySignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
+                                                        {rowSig.fourthPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} 4th Signature
+                                                    </Button>
+                                                )}
+                                                {rowSig.fourthPartyEnabled && rowSig.fourthPartySignatureUrl && (
+                                                    <button type="button" title="Remove fourth signature image" onClick={() => removeAsset(c, 'fourthSignature')} disabled={isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
+                                                )}
+
+                                                {/* The stamp action disappears once the certificate has been
+                                                    customised: those courses are sealed by hand after printing,
+                                                    so a digital stamp is both unnecessary and one more sensitive
+                                                    image stored for no reason. */}
+                                                {!isCustomized && (
+                                                    <Button onClick={() => triggerUpload(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} variant={c.approvedProgramStampUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedProgramStampUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
+                                                        {c.approvedProgramStampUrl ? <CheckCircle size={12} /> : <Stamp size={12} />} Stamp
+                                                    </Button>
+                                                )}
+                                                {c.approvedProgramStampUrl && (
+                                                    <button type="button" title="Remove stamp image" onClick={() => removeAsset(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
