@@ -19,7 +19,7 @@ import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft }
 // Data & Firebase
 import { STATE_LOCALITIES } from './constants'; 
 import { db } from '../firebase'; 
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, serverTimestamp, deleteField } from 'firebase/firestore'; 
 import { useDataCache } from '../DataContext';
 import { 
     getParticipantById, 
@@ -260,6 +260,8 @@ const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fi
 
 const imageUrlToBase64 = async (url) => {
     if (!url) return null;
+    // Already inline (a signature encoded client-side) — nothing to fetch.
+    if (/^data:/i.test(url)) return url;
     try {
         const response = await fetch(url);
         const blob = await response.blob();
@@ -273,6 +275,89 @@ const imageUrlToBase64 = async (url) => {
         console.error("Error converting image to base64:", error);
         return null; 
     }
+};
+
+// -----------------------------------------------------------------------------
+// SIGNATURE / STAMP HANDLING — NO FIREBASE STORAGE
+//
+// Signatures and stamps are never uploaded to Firebase Storage. A Storage object
+// gets a permanent, unauthenticated download URL: anyone who ever sees that link
+// keeps a working copy of an official signature even after the certificate is
+// revoked, and it cannot be protected by Firestore rules. Instead the image is
+// downscaled and encoded in the browser and the resulting data URL is written
+// into the course document, so it is covered by the same Firestore rules as the
+// rest of the course, is delivered only to users who can already read that
+// course, and disappears the instant the field is cleared on revoke.
+//
+// The cost is the 1 MiB Firestore document ceiling, so images are aggressively
+// shrunk and each one is size-checked before it can be stored.
+// -----------------------------------------------------------------------------
+
+// Keep well under the 1 MiB document limit: several signatures, a stamp and the
+// rest of the course data all share one document.
+const MAX_SIGNATURE_BYTES = 90 * 1024;
+const SIGNATURE_MAX_DIM = 600;
+// Firestore hard-limits a document to 1 MiB; stop well short of it.
+const MAX_CUSTOM_CERT_BYTES = 700 * 1024;
+
+/**
+ * Reads an image file and returns a downscaled PNG data URL. PNG (not JPEG) so
+ * that a signature scanned on a transparent background stays transparent and
+ * does not print as a white box over the certificate border.
+ */
+export const fileToSignatureDataUrl = (file, maxDim = SIGNATURE_MAX_DIM) => new Promise((resolve, reject) => {
+    if (!file) return reject(new Error('No file provided.'));
+    if (!/^image\//i.test(file.type)) return reject(new Error('Please choose an image file (PNG or JPEG).'));
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('That file is not a readable image.'));
+        img.onload = () => {
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+
+            let dataUrl;
+            try {
+                dataUrl = canvas.toDataURL('image/png');
+            } catch (err) {
+                return reject(new Error('Could not process that image.'));
+            }
+
+            // Approximate decoded size of the base64 payload.
+            const bytes = Math.ceil((dataUrl.length - (dataUrl.indexOf(',') + 1)) * 0.75);
+            if (bytes > MAX_SIGNATURE_BYTES) {
+                return reject(new Error(
+                    `That image is too large to store securely (${Math.round(bytes / 1024)} KB after compression, limit ${Math.round(MAX_SIGNATURE_BYTES / 1024)} KB). ` +
+                    `Please crop it tightly around the signature and remove any background before uploading.`
+                ));
+            }
+            resolve(dataUrl);
+        };
+        img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+/** Every field that can hold a signature or stamp image, across both storage shapes. */
+export const SIGNATURE_FIELDS = {
+    courseLevel: [
+        'approvedByManagerSignatureUrl',
+        'approvedDirectorSignatureUrl',
+        'approvedProgramStampUrl',
+        'approvedThirdPartySignatureUrl',
+        'approvedFourthPartySignatureUrl'
+    ],
+    customLevel: ['thirdPartySignatureUrl', 'fourthPartySignatureUrl']
 };
 
 // -----------------------------------------------------------------------------
@@ -334,6 +419,14 @@ export const CERT_DEFAULTS = {
     placeDateLabelColor: '#FF0000',
     signatureColor: '#000000',
     nameRuleColor: '#000000',
+    // Optional footer stating the printed page needs the physical seal.
+    sealNoticeEn: 'This certificate is not valid without the official seal.',
+    sealNoticeAr: 'هذه الشهادة غير صالحة بدون الختم الرسمي.',
+    sealNoticeTop: 200,
+    sealNoticeLeft: 50,
+    sealNoticeWidth: 80,
+    sealNoticeFontSize: 12,
+    sealNoticeColor: '#555555',
     // Font sizes (px) for the editable titles on the certificate.
     headerFontSizeEn: 24,
     headerFontSizeAr: 22,
@@ -778,6 +871,17 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const qrLeft = numOr(customConfig.qrLeft, isArabic ? 100 - CERT_DEFAULTS.qrLeft : CERT_DEFAULTS.qrLeft);
     const qrSize = numOr(customConfig.qrSize, CERT_DEFAULTS.qrSize);
 
+    // Optional "seal required" footer. Off unless explicitly enabled, so existing
+    // certificates are unchanged.
+    const showSealNotice = !!customConfig.showSealNotice;
+    const sealNoticeText = isArabic
+        ? (customConfig.sealNoticeAr || CERT_DEFAULTS.sealNoticeAr)
+        : (customConfig.sealNoticeEn || CERT_DEFAULTS.sealNoticeEn);
+    const sealNoticeTop = numOr(customConfig.sealNoticeTop, CERT_DEFAULTS.sealNoticeTop);
+    const sealNoticeLeft = numOr(customConfig.sealNoticeLeft, CERT_DEFAULTS.sealNoticeLeft);
+    const sealNoticeWidth = numOr(customConfig.sealNoticeWidth, CERT_DEFAULTS.sealNoticeWidth);
+    const sealNoticeFontSize = numOr(customConfig.sealNoticeFontSize, CERT_DEFAULTS.sealNoticeFontSize);
+
     // --- LOGOS ---
     const logoGroup1Left = numOr(customConfig.logoGroup1Left, isArabic ? 100 - CERT_DEFAULTS.logoGroup1Left : CERT_DEFAULTS.logoGroup1Left);
     const logoGroup2Left = numOr(customConfig.logoGroup2Left, isArabic ? 100 - CERT_DEFAULTS.logoGroup2Left : CERT_DEFAULTS.logoGroup2Left);
@@ -967,6 +1071,19 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     roleColor={sigRoleColor('fourth')}
                     positionStyle={{ top: `${signatureTop}mm`, left: `${sigFourthLeft}%`, width: `${thirdSignatureWidth}mm`, transform: 'translateX(-50%)' }}
                 />
+            )}
+
+            {showSealNotice && (
+                <div style={{
+                    ...centred(sealNoticeLeft, sealNoticeWidth),
+                    top: `${sealNoticeTop}mm`,
+                    fontSize: `${sealNoticeFontSize}px`,
+                    fontStyle: 'italic',
+                    color: col('sealNoticeColor'),
+                    zIndex: 2
+                }}>
+                    {sealNoticeText}
+                </div>
             )}
         </div>
     );
@@ -1356,7 +1473,7 @@ const readColor = (data, key) => data?.[key] || CERT_DEFAULTS[key] || '#000000';
  * adding one entry here rather than touching the UI.
  */
 const buildEditorElements = (ctx) => {
-    const { isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager, hideDirector } = ctx;
+    const { isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager, hideDirector, showSealNotice } = ctx;
 
     return [
         {
@@ -1575,6 +1692,23 @@ const buildEditorElements = (ctx) => {
             note: 'Prints as soon as a name or signature image is added. Adding it re-spaces all four signatures automatically.'
         },
         {
+            id: 'sealNotice', label: 'Seal-required notice',
+            topKey: 'sealNoticeTop', topDef: CERT_DEFAULTS.sealNoticeTop,
+            leftKey: 'sealNoticeLeft', leftDef: CERT_DEFAULTS.sealNoticeLeft,
+            widthKey: 'sealNoticeWidth', widthDef: CERT_DEFAULTS.sealNoticeWidth,
+            box: { widthPct: 60, heightMm: 8 },
+            inactive: !showSealNotice,
+            inactiveNote: 'Not printing. Tick “Print this notice” below to add it.',
+            checks: [{ key: 'showSealNotice', label: 'Print this notice' }],
+            texts: [
+                { key: 'sealNoticeEn', label: 'Text (English)', placeholder: CERT_DEFAULTS.sealNoticeEn },
+                { key: 'sealNoticeAr', label: 'Text (Arabic)', rtl: true, placeholder: CERT_DEFAULTS.sealNoticeAr }
+            ],
+            colors: [{ key: 'sealNoticeColor', label: 'Text colour' }],
+            fontKey: 'sealNoticeFontSize', fontDef: CERT_DEFAULTS.sealNoticeFontSize,
+            note: 'For workflows where the paper is sealed by hand: states on the page that an unsealed printout is not valid.'
+        },
+        {
             id: 'qr', label: 'QR code',
             topKey: 'qrTop', topDef: CERT_DEFAULTS.qrTop,
             leftKey: 'qrLeft', leftDef: isArabic ? 100 - CERT_DEFAULTS.qrLeft : CERT_DEFAULTS.qrLeft,
@@ -1735,8 +1869,8 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     );
 
     const elements = useMemo(
-        () => buildEditorElements({ isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager: !!data.hideManager, hideDirector: !!data.hideDirector }),
-        [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, data.hideManager, data.hideDirector]
+        () => buildEditorElements({ isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager: !!data.hideManager, hideDirector: !!data.hideDirector, showSealNotice: !!data.showSealNotice }),
+        [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, data.hideManager, data.hideDirector, data.showSealNotice]
     );
 
     const selected = elements.find(e => e.id === selectedId) || elements[0];
@@ -1811,7 +1945,12 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
         if (!file || !activeUploadKey) return;
         setUploadingAsset(activeUploadKey);
         try {
-            const url = await uploadFile(file, `courses/${course.id}/certificate_assets/${activeUploadKey}_${Date.now()}`);
+            // Signature images stay inline (never uploaded to Storage); decorative
+            // logos are not sensitive and keep using Storage to save document space.
+            const isSignature = /Signature/i.test(activeUploadKey);
+            const url = isSignature
+                ? await fileToSignatureDataUrl(file)
+                : await uploadFile(file, `courses/${course.id}/certificate_assets/${activeUploadKey}_${Date.now()}`);
             set(activeUploadKey, url);
         } catch (err) {
             console.error(err);
@@ -1829,6 +1968,20 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
             const cleaned = Object.fromEntries(
                 Object.entries(data).filter(([, v]) => !(v === '' || v === undefined || v === null))
             );
+
+            // Inline signatures live in this document, so guard the 1 MiB ceiling
+            // with a readable message rather than letting Firestore reject it.
+            const approxBytes = new Blob([JSON.stringify(cleaned)]).size;
+            if (approxBytes > MAX_CUSTOM_CERT_BYTES) {
+                alert(
+                    `This template is too large to save (${Math.round(approxBytes / 1024)} KB, limit ${Math.round(MAX_CUSTOM_CERT_BYTES / 1024)} KB). ` +
+                    `Signature images are stored inside the course record for security. ` +
+                    `Remove or re-crop one of the signature images and try again.`
+                );
+                setIsSaving(false);
+                return;
+            }
+
             await updateDoc(doc(db, 'courses', course.id), {
                 customCertificate: cleaned,
                 lastUpdatedAt: serverTimestamp()
@@ -2287,8 +2440,10 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
         const key = activeUploadKey;
         setUploadingAsset(key);
         try {
-            const folder = key === 'thirdPartySignatureUrl' ? 'signatures' : 'logos';
-            const url = await uploadFile(file, `courses/${course.id}/${folder}/${key}_${Date.now()}`);
+            const isSignature = /Signature/i.test(key);
+            const url = isSignature
+                ? await fileToSignatureDataUrl(file)
+                : await uploadFile(file, `courses/${course.id}/logos/${key}_${Date.now()}`);
             setData(prev => ({ ...prev, [key]: url }));
         } catch (err) {
             alert("Upload failed: " + err.message);
@@ -3001,19 +3156,33 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     };
 
     const handleUnapprove = async (course) => {
-        if (window.confirm(`Revoke approval for ${course.course_type}?`)) {
+        if (window.confirm(
+            `Revoke approval for ${course.course_type}?\n\n` +
+            `This also ERASES every stored signature and stamp image for this course. ` +
+            `They will have to be uploaded again before certificates can be re-approved.`
+        )) {
             setIsProcessing(true);
             try {
+                const cleared = { isCertificateApproved: false };
+                SIGNATURE_FIELDS.courseLevel.forEach(f => { cleared[f] = null; });
+
                 setLocalCourseUpdates(prev => ({
                     ...prev,
-                    [course.id]: {
-                        ...(prev[course.id] || {}),
-                        isCertificateApproved: false
-                    }
+                    [course.id]: { ...(prev[course.id] || {}), ...cleared }
                 }));
 
                 await unapproveCourseCertificates(course.id);
-                setToast({ show: true, message: "Approval Revoked.", type: 'info' });
+
+                // "Destamped" has to mean the images are gone, not merely unused.
+                // unapproveCourseCertificates only clears the manager signature, so
+                // wipe the remaining signature/stamp fields — including the two held
+                // inside customCertificate — in the same operation.
+                const purge = { lastUpdatedAt: serverTimestamp() };
+                SIGNATURE_FIELDS.courseLevel.forEach(f => { purge[f] = null; });
+                SIGNATURE_FIELDS.customLevel.forEach(f => { purge[`customCertificate.${f}`] = deleteField(); });
+                await updateDoc(doc(db, 'courses', course.id), purge);
+
+                setToast({ show: true, message: "Approval revoked and signatures erased.", type: 'info' });
                 await fetchCourses(true); 
             } catch (err) { setToast({ show: true, message: err.message, type: 'error' }); } 
             finally { setIsProcessing(false); }
@@ -3031,7 +3200,8 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         const { course, assetType } = uploadContext;
         setIsProcessing(true);
         try {
-            const url = await uploadFile(file, `courses/${course.id}/${assetType}_${Date.now()}`);
+            // Encoded in the browser — deliberately NOT uploaded to Storage.
+            const url = await fileToSignatureDataUrl(file);
             
             const updatePayload = { lastUpdatedAt: serverTimestamp() }; 
             const sig = resolveCertificateSignatories(course, managerName);

@@ -55,6 +55,58 @@ const SYNC_OVERLAP_MS = 10 * 60 * 1000; // 10 minutes
 
 const rewindWatermark = (ms) => (ms > 0 ? Math.max(0, ms - SYNC_OVERLAP_MS) : 0);
 
+// --- SIGNATURE STRIPPING BEFORE DISK CACHE ---
+// Signature and stamp images are stored inline (base64) on the course document
+// so they are covered by Firestore rules instead of living behind a permanent
+// public Storage URL. The side effect is that a naive cache would write those
+// images to IndexedDB on EVERY device that merely loads the course list — a
+// durable copy of an official signature sitting on disk on machines that have
+// no business holding one.
+//
+// So they are stripped before anything is persisted locally. The in-memory copy
+// keeps them, so the UI still works for the current session, and the certificate
+// generator re-reads the course from Firestore before rendering anyway, so a
+// stripped cache can never produce an unsigned PDF.
+const SIGNATURE_CACHE_KEYS = [
+    'approvedByManagerSignatureUrl',
+    'approvedDirectorSignatureUrl',
+    'approvedProgramStampUrl',
+    'approvedThirdPartySignatureUrl',
+    'approvedFourthPartySignatureUrl'
+];
+const CUSTOM_SIGNATURE_CACHE_KEYS = ['thirdPartySignatureUrl', 'fourthPartySignatureUrl'];
+
+const stripSignaturesForDisk = (data) => {
+    if (!Array.isArray(data)) return data;
+    return data.map(item => {
+        if (!item || typeof item !== 'object') return item;
+
+        let changed = false;
+        const copy = { ...item };
+
+        SIGNATURE_CACHE_KEYS.forEach(k => {
+            if (copy[k]) {
+                // Keep a boolean so any "signature uploaded?" UI still reads true
+                // without the bytes being on disk.
+                copy[`${k}__present`] = true;
+                copy[k] = null;
+                changed = true;
+            }
+        });
+
+        if (copy.customCertificate && typeof copy.customCertificate === 'object') {
+            const cc = { ...copy.customCertificate };
+            let ccChanged = false;
+            CUSTOM_SIGNATURE_CACHE_KEYS.forEach(k => {
+                if (cc[k]) { cc[`${k}__present`] = true; cc[k] = null; ccChanged = true; }
+            });
+            if (ccChanged) { copy.customCertificate = cc; changed = true; }
+        }
+
+        return changed ? copy : item;
+    });
+};
+
 // --- STRICT TIMEOUT HELPER ---
 const fetchWithTimeout = async (promise, timeoutMs = 60000) => {
     return Promise.race([
@@ -268,7 +320,7 @@ export const DataProvider = ({ children }) => {
                         finalMergedData = Array.from(dataMap.values());
                         
                         // Save merged data securely back to IndexedDB
-                        await setLocalData(`cache_${key}_${filterKey}`, finalMergedData);
+                        await setLocalData(`cache_${key}_${filterKey}`, stripSignaturesForDisk(finalMergedData));
                     }
                     
                     // Log success time (captured before the request, not after)
@@ -381,10 +433,10 @@ export const DataProvider = ({ children }) => {
                         }
                     });
                     finalMergedData = Array.from(dataMap.values());
-                    await setLocalData(`cache_${key}`, finalMergedData);
+                    await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
                 } else if (!Array.isArray(newOrUpdatedData)) {
                     finalMergedData = newOrUpdatedData;
-                    await setLocalData(`cache_${key}`, finalMergedData);
+                    await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
                 } else if (newOrUpdatedData && newOrUpdatedData.length === 0) {
                      finalMergedData = localData;
                 }
