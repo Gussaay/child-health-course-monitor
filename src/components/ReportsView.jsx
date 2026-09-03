@@ -17,8 +17,10 @@ import {
     pctBgClass, fmtPct, calcPct, formatAsPercentageAndCount, formatAsPercentageAndScore,
     SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL,
     SKILLS_EMONC_NEONATAL, EMONC_DOMAIN_LABEL_NEONATAL,
-    SKILLS_EMONC_MATERNAL, EMONC_DOMAIN_LABEL_MATERNAL
+    SKILLS_EMONC_MATERNAL, EMONC_DOMAIN_LABEL_MATERNAL,
+    hasMentorshipForm, getCourseMentorshipService, getMentorshipSubType
 } from './constants.js';
+import { getMentorshipSkillMaps } from './MonitoringView';
 
 
 import {
@@ -170,7 +172,10 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
 
     if (loading) { return <Card><Spinner /></Card>; }
 
-    const StandardReportComponent = { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports, 'EmONC': EencReports, 'ICCM': IccmReports, 'Comprehensive Package For Community Midwives': IccmReports }[course.course_type];
+    // A mentorship sub-course reports on its own skill set, not the course type's.
+    const StandardReportComponent = hasMentorshipForm(course)
+        ? MentorshipReports
+        : { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports, 'EmONC': EencReports, 'ICCM': IccmReports, 'Comprehensive Package For Community Midwives': IccmReports }[course.course_type];
     const hasTestReports = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC');
 
     return (
@@ -1411,6 +1416,229 @@ function EencReports({ course, participants, allObs, allCases }) {
                     {(course.course_type === 'EmONC' && (scenarioFilter === 'All' || scenarioFilter === 'maternal_emergency')) && <EencDetailedMatrix group={g} scenario="maternal_emergency" />}
                 </div>
             ))}
+        </div>
+    );
+}
+
+
+// ============================================================================
+// BLOCK C — append to the END of ReportsView.jsx
+// ============================================================================
+//
+// A local function, exactly like ImnciReports / EtatReports / EencReports /
+// IccmReports already are in this file. It receives the allObs / allCases that
+// ReportsView already fetches, so no new data call is added.
+//
+// Scores are summed against each observation's own item_max rather than counted
+// as right/wrong, because EENC scores 2 / 1 / 0 (yes / partial / no) while IMNCI
+// is binary. Counting rows would silently mark every EENC 'partial' as a failure.
+
+// --- ADD THESE IMPORTS to the top of ReportsView.jsx ------------------------
+
+
+function MentorshipReports({ course, participants, allObs, allCases }) {
+    const [tab, setTab] = useState('matrix');
+    const [groupFilter, setGroupFilter] = useState('All');
+    const [dayFilter, setDayFilter] = useState('All');
+
+    const subCourse = getMentorshipSubType(course);
+    const courseService = getCourseMentorshipService(course);
+
+    // Only records written by the mentorship form belong in this report. A course
+    // that also ran ordinary grid observations keeps those out of the matrix.
+    const mentorshipObs = useMemo(
+        () => (allObs || []).filter(o => o.setting === 'MENTORSHIP'),
+        [allObs]
+    );
+
+    const mentorshipCases = useMemo(
+        () => (allCases || []).filter(c => c.setting === 'MENTORSHIP'),
+        [allCases]
+    );
+
+    // Trust the records over the course document: a course whose sub-course was
+    // changed after sessions were recorded should still report what was saved.
+    const service = useMemo(
+        () => mentorshipObs[0]?.mentorship_service || courseService || 'IMNCI',
+        [mentorshipObs, courseService]
+    );
+
+    const { skills: skillMap, domains, labels } = useMemo(
+        () => getMentorshipSkillMaps(service),
+        [service]
+    );
+
+    const filteredParticipants = useMemo(
+        () => participants.filter(p => groupFilter === 'All' || p.group === groupFilter),
+        [participants, groupFilter]
+    );
+
+    const filteredObs = useMemo(() => {
+        const ids = new Set(filteredParticipants.map(p => p.id));
+        return mentorshipObs.filter(o =>
+            ids.has(o.participant_id) &&
+            (dayFilter === 'All' || o.day_of_course === Number(dayFilter))
+        );
+    }, [mentorshipObs, filteredParticipants, dayFilter]);
+
+    const groupsToRender = useMemo(() => {
+        const groups = [...new Set(filteredParticipants.map(p => p.group))].filter(Boolean).sort();
+        return groups.length ? groups : ['Group A'];
+    }, [filteredParticipants]);
+
+    const availableDays = useMemo(
+        () => [...new Set(mentorshipCases.map(c => c.day_of_course))].filter(Boolean).sort((a, b) => a - b),
+        [mentorshipCases]
+    );
+
+    if (mentorshipObs.length === 0) {
+        return (
+            <EmptyState
+                title="No mentorship sessions recorded"
+                message="Sessions saved from the Mentorship Practice tab appear here."
+            />
+        );
+    }
+
+    const scoreOf = (obs) => {
+        const earned = obs.reduce((sum, o) => sum + (o.item_correct || 0), 0);
+        const possible = obs.reduce((sum, o) => sum + (o.item_max || 1), 0);
+        return { earned, possible, pct: calcPct(earned, possible) };
+    };
+
+    return (
+        <div className="grid gap-4 printable-area">
+            <div className="report-header">
+                <h3>{subCourse || `${service} Mentorship`}</h3>
+                <h4>{course.state} / {course.locality}</h4>
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-end print-hide">
+                <Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>
+                    Skills matrix
+                </Button>
+                <Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>
+                    Participant summary
+                </Button>
+
+                <FormGroup label="Group">
+                    <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
+                        <option value="All">All groups</option>
+                        {[...new Set(participants.map(p => p.group))].filter(Boolean).sort().map(g => (
+                            <option key={g} value={g}>{g}</option>
+                        ))}
+                    </Select>
+                </FormGroup>
+
+                <FormGroup label="Course day">
+                    <Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}>
+                        <option value="All">All days</option>
+                        {availableDays.map(d => <option key={d} value={d}>Day {d}</option>)}
+                    </Select>
+                </FormGroup>
+            </div>
+
+            {tab === 'summary' && (
+                <div className="no-scroll-wrapper">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="text-left border-b bg-gray-50">
+                                <th className="py-2 pr-4">Participant</th>
+                                <th className="py-2 pr-4">Group</th>
+                                <th className="py-2 pr-4">Sessions</th>
+                                <th className="py-2 pr-4">Skills observed</th>
+                                <th className="py-2 pr-4">Points</th>
+                                <th className="py-2 pr-4">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredParticipants
+                                .slice()
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map(p => {
+                                    const obs = filteredObs.filter(o => o.participant_id === p.id);
+                                    const sessions = new Set(obs.map(o => o.case_serial)).size;
+                                    const { earned, possible, pct } = scoreOf(obs);
+                                    return (
+                                        <tr key={p.id} className="border-b">
+                                            <td className="py-2 pr-4">{p.name}</td>
+                                            <td className="py-2 pr-4">{p.group}</td>
+                                            <td className="py-2 pr-4">{sessions}</td>
+                                            <td className="py-2 pr-4">{obs.length}</td>
+                                            <td className="py-2 pr-4">{earned}/{possible}</td>
+                                            <td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td>
+                                        </tr>
+                                    );
+                                })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {tab === 'matrix' && groupsToRender.map(g => {
+                const parts = filteredParticipants
+                    .filter(p => p.group === g)
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                if (parts.length === 0) return null;
+
+                return (
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper">
+                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <div className="no-scroll-wrapper">
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="text-left border-b bg-gray-50 sticky top-0">
+                                        <th className="py-2 pr-4">Skill</th>
+                                        {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {domains.map(domain => {
+                                        const domainSkills = skillMap[domain] || [];
+                                        // A domain nobody was observed on is dropped rather than
+                                        // rendered as a wall of N/A. For EENC this matters: a
+                                        // breathing delivery never touches the resuscitation
+                                        // section, and vice versa.
+                                        const hasData = domainSkills.some(skill =>
+                                            filteredObs.some(o => o.item_recorded === skill)
+                                        );
+                                        if (!hasData) return null;
+
+                                        return (
+                                            <React.Fragment key={domain}>
+                                                <tr className="border-b">
+                                                    <td colSpan={parts.length + 1} className="py-2 px-2 font-semibold bg-gray-100">
+                                                        {labels[domain] || domain}
+                                                    </td>
+                                                </tr>
+                                                {domainSkills.map(skill => (
+                                                    <tr key={skill} className="border-b">
+                                                        <td className="py-2 pl-4" dir="rtl">{skill}</td>
+                                                        {parts.map(p => {
+                                                            const obs = filteredObs.filter(
+                                                                o => o.participant_id === p.id && o.item_recorded === skill
+                                                            );
+                                                            if (obs.length === 0) {
+                                                                return <td key={p.id} className="py-2 pr-4 text-center">N/A</td>;
+                                                            }
+                                                            const { earned, possible, pct } = scoreOf(obs);
+                                                            return (
+                                                                <td key={p.id} className={`py-2 pr-4 text-center ${pctBgClass(pct)}`}>
+                                                                    {`${earned}/${possible} (${fmtPct(pct)})`}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            })}
         </div>
     );
 }

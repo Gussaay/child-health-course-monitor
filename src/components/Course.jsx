@@ -31,7 +31,8 @@ import { CourseTestForm } from './CourseTestForm';
 import { CourseExercisesView } from './Online-exercise'; 
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
-    COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState
+    COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState,
+    hasMentorshipForm
 } from './constants.js';
 import { 
     Users, Share2, UserPlus, CheckCircle, 
@@ -55,6 +56,7 @@ import {
 
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
 const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
+const MentorshipMonitoringView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.MentorshipMonitoringView })));
 
 // --- NEW EmONC FOLDER SUITE LAZY IMPORTS ---
 const MaternalEmergencyMonitoring = React.lazy(() => import('./EmONC/MaternalEmergencyMonitoring').then(module => ({ default: module.MaternalEmergencyMonitoring })));
@@ -830,6 +832,12 @@ function QRShareModal({ isOpen, onClose, url, title }) {
     );
 }
 
+const formatLocation = (locationStr) => {
+    if (!locationStr) return 'N/A';
+    const parts = String(locationStr).split(',').map(s => s.trim()).filter(Boolean);
+    return parts.length > 1 ? `${parts[0]}, etc.` : parts[0] || 'N/A';
+};
+
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities, onAddFinalReport, canManageFinalReport,
@@ -942,7 +950,7 @@ export function CoursesTable({
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">
-                                                    {c.state} - {c.locality}
+                                                    {formatLocation(c.state)} - {formatLocation(c.locality)}
                                                 </span>
                                                 {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold whitespace-nowrap">(Deleting)</span>}
                                             </div>
@@ -1017,7 +1025,7 @@ export function CoursesTable({
                             >
                                 <div>
                                     <h4 className="font-bold text-lg text-gray-800">
-                                        {c.state} - {c.locality}
+                                        {formatLocation(c.state)} - {formatLocation(c.locality)}
                                     </h4>
                                     <p className="text-sm text-gray-600 line-clamp-1">{subcourses}</p>
                                     <div className="mt-2 flex gap-2 items-center flex-wrap">
@@ -1315,7 +1323,9 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
                                     </td>
                                     
                                     <td className="p-3 align-middle border-b border-slate-200">
-                                        <div className="font-semibold text-gray-800 whitespace-nowrap">{c.state} - {c.locality}</div>
+                                        <div className="font-semibold text-gray-800 whitespace-nowrap">
+                                            {formatLocation(c.state)} - {formatLocation(c.locality)}
+                                        </div>
                                         <div className="text-[11px] text-gray-500 whitespace-nowrap">Started: {c.start_date}</div>
                                     </td>
                                     
@@ -1391,7 +1401,9 @@ function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProce
                                     </td>
                                     
                                     <td className="p-3 align-middle border-b border-slate-200">
-                                        <div className="font-semibold text-gray-800 whitespace-nowrap">{c.state} - {c.locality}</div>
+                                        <div className="font-semibold text-gray-800 whitespace-nowrap">
+                                            {formatLocation(c.state)} - {formatLocation(c.locality)}
+                                        </div>
                                         <div className="text-[11px] text-gray-500 whitespace-nowrap">Started: {c.start_date}</div>
                                     </td>
                                     
@@ -1990,7 +2002,9 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'neonatal-monitoring'} onClick={() => setActiveCoursesTab('neonatal-monitoring')}>Neonatal Monitor</Button>
             </>
         ) : (
-            <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>Monitoring</Button>
+            <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>
+                {hasMentorshipForm(selectedCourse, currentParticipant) ? 'Mentorship Practice' : 'Monitoring'}
+            </Button>
         )}
         
         <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Individual Participant Report</Button>
@@ -2197,6 +2211,13 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     switchModule={(mod) => setEmoncModule(mod)} 
                 />
             )
+        ) : hasMentorshipForm(selectedCourse, currentParticipant) ? (
+            <MentorshipMonitoringView
+                course={selectedCourse}
+                participant={currentParticipant}
+                participants={participants}
+                onChangeParticipant={(id) => onSetSelectedParticipantId(id)}
+            />
         ) : (
             <ObservationView 
                 course={selectedCourse} 
@@ -3096,6 +3117,14 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                                       isPublicView={true}
                                   />
                              )
+                        ) : hasMentorshipForm(course, currentParticipant) ? (
+                            <MentorshipMonitoringView
+                                course={course}
+                                participant={currentParticipant}
+                                participants={allParticipants}
+                                onChangeParticipant={setSelectedParticipantId}
+                                isPublicView={true}
+                            />
                         ) : (
                             <ObservationView 
                                 course={course} 

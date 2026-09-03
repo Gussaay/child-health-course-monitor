@@ -55,6 +55,7 @@ const getCertificateName = (key) => {
         directorCourseCert: 'IMNCI Course Director Certificate',
         followUpCourseCert: 'IMNCI Follow-up Course Certificate',
         teamLeaderCourseCert: 'IMNCI Team Leader Certificate',
+        mentorCourseCert: 'IMNCI Mentor Training Certificate',
     };
     return names[key] || key;
 };
@@ -151,6 +152,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
         { key: 'followUpCourseDate', label: 'Follow-up Course Date' },
         { key: 'teamLeaderCourse', label: 'IMNCI Team Leader Course' },
         { key: 'teamLeaderCourseDate', label: 'Team Leader Course Date' },
+        { key: 'mentorCourse', label: 'IMNCI Mentor Training' },
+        { key: 'mentorCourseDate', label: 'Mentor Training Date' },
         { key: 'isClinicalInstructor', label: 'Clinical Instructor' },
         { key: 'comments', label: 'Comments' },
     ];
@@ -306,7 +309,9 @@ function SubmissionDetails({ submission }) {
         name: "Name", arabicName: "Arabic Name", phone: "Phone", email: "Email", currentState: "State",
         currentLocality: "Locality", courses: "Courses Taught", totDates: "ToT Dates", directorCourse: "Attended Director Course",
         directorCourseDate: "Director Course Date", followUpCourse: "Attended Follow-up Course", followUpCourseDate: "Follow-up Course Date",
-        teamLeaderCourse: "Attended Team Leader Course", teamLeaderCourseDate: "Team Leader Course Date", isClinicalInstructor: "Is Clinical Instructor", comments: "Comments",
+        teamLeaderCourse: "Attended Team Leader Course", teamLeaderCourseDate: "Team Leader Course Date",
+        mentorCourse: "Attended Mentor Training", mentorCourseDate: "Mentor Training Date",
+        isClinicalInstructor: "Is Clinical Instructor", comments: "Comments",
     };
 
     return (
@@ -332,7 +337,7 @@ function SubmissionDetails({ submission }) {
 }
 
 export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = false }) {
-    const { name, arabicName, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
+    const { name, arabicName, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, mentorCourse, mentorCourseDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
 
     const handleFieldChange = (field, value) => onDataChange({ ...data, [field]: value });
     const handleTotDateChange = (course, date) => onDataChange({ ...data, totDates: { ...totDates, [course]: date } });
@@ -474,6 +479,18 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                                  <FormGroup label="Certificate">
                                      {!isPublicForm && certificateUrls['teamLeaderCourseCert'] && ( <a href={certificateUrls['teamLeaderCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
                                     <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('teamLeaderCourseCert', e.target.files[0])} />
+                                </FormGroup>
+                            </>}
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-4 items-end">
+                            <FormGroup label="Attended IMNCI Mentor Training?">
+                                <Select value={mentorCourse} onChange={e => handleFieldChange('mentorCourse', e.target.value)}><option>No</option><option>Yes</option></Select>
+                            </FormGroup>
+                            {mentorCourse === 'Yes' && <>
+                                <FormGroup label="Date of Training"><Input type="date" value={mentorCourseDate} onChange={e => handleFieldChange('mentorCourseDate', e.target.value)} /></FormGroup>
+                                <FormGroup label="Certificate">
+                                    {!isPublicForm && certificateUrls['mentorCourseCert'] && ( <a href={certificateUrls['mentorCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
+                                    <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('mentorCourseCert', e.target.files[0])} />
                                 </FormGroup>
                             </>}
                         </div>
@@ -701,6 +718,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
             directors: filteredFacilitators.filter(f => f.directorCourse === 'Yes').length,
             clinicalInstructors: filteredFacilitators.filter(f => f.isClinicalInstructor === 'Yes').length,
             teamLeaders: filteredFacilitators.filter(f => f.teamLeaderCourse === 'Yes').length,
+            mentors: filteredFacilitators.filter(f => f.mentorCourse === 'Yes').length,
             followUpSupervisors: filteredFacilitators.filter(f => f.followUpCourse === 'Yes').length,
         };
     }, [filteredFacilitators]);
@@ -813,12 +831,13 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                         {activeTab === 'dashboard' && (
                             <div className="mt-4">
                                 <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 text-center mb-6">
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center mb-6">
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Facilitators</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.totalFacilitators}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Course Directors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.directors}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Clinical Instructors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.clinicalInstructors}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Team Leaders</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.teamLeaders}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Follow-up Supervisors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.followUpSupervisors}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Trained Mentors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentors}</div></div>
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-6 mb-6">
                                     <Card className="p-0 border-0 shadow-none">
@@ -912,7 +931,8 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
     const [formData, setFormData] = useState({
         name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
-        followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '', isClinicalInstructor: 'No', comments: '',
+        followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '',
+        mentorCourse: 'No', mentorCourseDate: '', isClinicalInstructor: 'No', comments: '',
         backgroundQualification: '', backgroundQualificationOther: '',
         ...(initialData || {})
     });
@@ -1045,7 +1065,8 @@ export function FacilitatorApplicationForm() {
     const [formData, setFormData] = useState({
         name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
-        followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '', isClinicalInstructor: 'No', comments: '',
+        followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '',
+        mentorCourse: 'No', mentorCourseDate: '', isClinicalInstructor: 'No', comments: '',
         backgroundQualification: '', backgroundQualificationOther: '',
         isUserEmail: false,
     });

@@ -478,3 +478,100 @@ export const getLocalityOptionsForState = (stateKey) => {
     if (!entry) return [];
     return [...(entry.localities || [])].sort((a, b) => a.ar.localeCompare(b.ar));
 };
+// ============================================================================
+// BLOCK A — append to the END of constants.js
+// ============================================================================
+//
+// Pure functions with no imports, so constants.js gains no new dependencies and
+// stays safe to load eagerly. Course.jsx, ReportsView.jsx and MonitoringView.jsx
+// all already import from this file, which is why the detection lives here
+// rather than being duplicated in each one.
+
+// --- Mentorship sub-course detection ---------------------------------------
+
+export const isMentorshipSubCourse = (subCourseName) =>
+    typeof subCourseName === 'string' &&
+    subCourseName.toLowerCase().includes('mentorship');
+
+// Which mentorship form a sub-course opens. 'ETAT Mentorship' has no assessment
+// form yet — ETAT is the one service still disabled in the mentorship service
+// picker — so it resolves to null and falls back to the ordinary grid.
+export const getMentorshipService = (subCourseName) => {
+    if (!isMentorshipSubCourse(subCourseName)) return null;
+    const name = subCourseName.toUpperCase();
+    if (name.includes('EENC')) return 'EENC';
+    if (name.includes('IMNCI') || name.includes('IMCI')) return 'IMNCI';
+    return null;
+};
+
+// Mirrors the detection already used for 'online IMCI course' in Course.jsx: the
+// sub-course lives on the facilitator assignments and on the two coordinator
+// fields, never on the course document itself.
+//
+// Note the coordinator fields are only written for IMNCI / ICCM / CPCM courses
+// (see the CourseForm payload), so for an EmONC or ETAT course the facilitator
+// assignments are the only place a mentorship sub-course can appear.
+export const getMentorshipSubType = (course, participant = null) => {
+    if (!course) return null;
+
+    const courseSubTypes = [
+        course.imci_sub_type,
+        course.director_imci_sub_type,
+        course.clinical_instructor_imci_sub_type,
+        ...(course.facilitatorAssignments || []).map(a => a?.imci_sub_type),
+    ].filter(Boolean);
+
+    // A participant assigned to a mentorship group wins, because a single course
+    // can run a mentorship group alongside a standard one.
+    if (participant?.imci_sub_type && isMentorshipSubCourse(participant.imci_sub_type)) {
+        return participant.imci_sub_type;
+    }
+
+    // A participant explicitly assigned to a different sub-course *that this
+    // course actually runs* is not in the mentorship group. The membership test
+    // matters: participant records often carry a stale or defaulted
+    // imci_sub_type left over from an IMNCI-shaped form, and treating that as a
+    // deliberate assignment would hide the mentorship tab on every participant.
+    if (participant?.imci_sub_type && courseSubTypes.includes(participant.imci_sub_type)) {
+        return null;
+    }
+
+    return courseSubTypes.find(isMentorshipSubCourse) || null;
+};
+
+export const isMentorshipCourse = (course, participant = null) =>
+    Boolean(getMentorshipSubType(course, participant));
+
+export const getCourseMentorshipService = (course, participant = null) =>
+    getMentorshipService(getMentorshipSubType(course, participant));
+
+// Course.jsx and ReportsView.jsx branch on this rather than isMentorshipCourse:
+// a mentorship sub-course with no form behind it keeps the ordinary observation
+// grid instead of opening an empty screen.
+export const hasMentorshipForm = (course, participant = null) =>
+    Boolean(getCourseMentorshipService(course, participant));
+
+// Temporary diagnostic. Call from the browser console to see exactly why a
+// course does or does not resolve to a mentorship sub-course. Safe to delete
+// once the tab is appearing correctly.
+export const debugMentorshipDetection = (course, participant = null) => {
+    const courseSubTypes = [
+        course?.imci_sub_type,
+        course?.director_imci_sub_type,
+        course?.clinical_instructor_imci_sub_type,
+        ...((course?.facilitatorAssignments || []).map(a => a?.imci_sub_type)),
+    ].filter(Boolean);
+
+    const result = {
+        courseId: course?.id,
+        course_type: course?.course_type,
+        facilitatorAssignmentCount: (course?.facilitatorAssignments || []).length,
+        subCoursesFoundOnCourse: courseSubTypes,
+        participantSubType: participant?.imci_sub_type ?? '(none)',
+        resolvedSubCourse: getMentorshipSubType(course, participant),
+        resolvedService: getCourseMentorshipService(course, participant),
+        willShowMentorshipTab: hasMentorshipForm(course, participant),
+    };
+    console.table(result);
+    return result;
+};

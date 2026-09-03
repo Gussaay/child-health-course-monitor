@@ -103,7 +103,7 @@ export const RESUSCITATION_ITEMS = [
 
 const allItems = [ ...PREPARATION_ITEMS, ...DRYING_STIMULATION_ITEMS, ...NORMAL_BREATHING_ITEMS, ...RESUSCITATION_ITEMS ];
 
-const getInitialFormData = () => {
+export const getInitialFormData = () => {
     const skills = {};
     allItems.forEach(item => { skills[item.key] = 'na'; });
     return {
@@ -133,7 +133,7 @@ const rehydrateDraftData = (draftData) => {
     };
 };
 
-const calculateScores = (formData) => {
+export const calculateScores = (formData) => {
     const { eenc_breathing_status, skills, delivery_type } = formData;
     let overallScore = 0; let overallMax = 0;
     const sectionScores = { preparation: { score: 0, maxScore: 0 }, drying: { score: 0, maxScore: 0 }, normal_breathing: { score: 0, maxScore: 0 }, resuscitation: { score: 0, maxScore: 0 } };
@@ -467,6 +467,152 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
         </div>
     );
 };
+
+// EENC_EXPORTS_PATCH.jsx
+//
+// Paste the contents of this file into EENCSkillsAssessmentForm.jsx, immediately
+// ABOVE the line:
+//
+//     const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
+//
+// Then change two existing lines in that file from `const` to `export const`:
+//
+//     const getInitialFormData = () => {        ->  export const getInitialFormData = () => {
+//     const calculateScores = (formData) => {   ->  export const calculateScores = (formData) => {
+//
+// Nothing else in EENCSkillsAssessmentForm.jsx changes, and its own behaviour is
+// untouched — this only exposes what is already there.
+//
+// Why this is needed: the course mentorship view must not autosave into the
+// mentorship sessions collection, so it cannot mount EENCSkillsAssessmentForm
+// itself. IMNCSkillsAssessmentForm.jsx already exports IMNCIFormRenderer for
+// exactly this kind of reuse; this makes EENC match that pattern rather than
+// duplicating the section logic somewhere else, where it would drift.
+
+
+// --- Exported renderer ----------------------------------------------------
+
+
+export const EENCFormRenderer = ({ formData, setFormData, scores, handleFormChange, handleSkillChange }) => {
+    const isCesarean = formData.delivery_type === 'cesarean';
+
+    const activePrepItems = isCesarean ? [] : PREPARATION_ITEMS;
+
+    const activeDryingItems = DRYING_STIMULATION_ITEMS.map(item => {
+        if (isCesarean) {
+            if (item.key === 'dry_skin_to_skin') return { ...item, label: 'وضع الطفل ملتصقا جلدا بجلد أمه (منطقة الفخذ) ، قثىشةث تغطية الطفل بقطعة جافة' };
+            if (item.key === 'dry_cover_baby') return { ...item, label: 'تغطية الطفل بقطعة جافة' };
+        }
+        return item;
+    });
+
+    const activeNormalItems = isCesarean
+        ? NORMAL_BREATHING_ITEMS.filter(i => !['normal_check_second_baby', 'normal_oxytocin', 'normal_remove_outer_glove'].includes(i.key))
+        : NORMAL_BREATHING_ITEMS;
+
+    const getFirstUnansweredIndex = (items) => items.findIndex(item => formData.skills[item.key] === 'na' || formData.skills[item.key] === '');
+
+    const prepUnanswered = isCesarean ? -1 : getFirstUnansweredIndex(activePrepItems);
+    const prepVisibleIndex = prepUnanswered !== -1 ? prepUnanswered : -1;
+    const isPrepComplete = prepUnanswered === -1;
+
+    const dryingUnanswered = getFirstUnansweredIndex(activeDryingItems);
+    const dryingVisibleIndex = isPrepComplete ? (dryingUnanswered !== -1 ? dryingUnanswered : -1) : -2;
+    const isDryingComplete = isPrepComplete && dryingUnanswered === -1;
+
+    const isBreathingStatusAnswered = formData.eenc_breathing_status !== 'na';
+    const normalUnanswered = getFirstUnansweredIndex(activeNormalItems);
+    const normalVisibleIndex = isBreathingStatusAnswered ? (normalUnanswered !== -1 ? normalUnanswered : -1) : -2;
+
+    const isFormComplete = checkFormCompletion(formData);
+
+    return (
+        <div dir="rtl">
+            <Modal isOpen={!formData.delivery_type} onClose={() => {}} title="اختيار نوع التقييم">
+                <div className="p-6 text-center space-y-6" dir="rtl">
+                    <h3 className="text-lg font-bold text-sky-800 mb-4">الرجاء تحديد نوع الولادة أو المحاكاة لبدء التقييم</h3>
+                    <div className="flex flex-col gap-4 max-w-sm mx-auto">
+                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'normal' }))} className="w-full justify-center text-lg py-3" variant="outline">NORMAL VAGINAL DELIVERY</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'cesarean' }))} className="w-full justify-center text-lg py-3" variant="outline">Caesarean section</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'manikin' }))} className="w-full justify-center text-lg py-3" variant="outline">manikin simulation</Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <div className="p-2">
+                <div className="p-2 border rounded-lg bg-gray-50 text-right mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 items-end" dir="rtl">
+                        <div className="text-sm flex items-center">
+                            <span className="font-medium text-gray-500 ml-2">تاريخ الجلسة:</span>
+                            <Input type="date" name="session_date" value={formData.session_date} onChange={handleFormChange} className="p-1 text-sm mr-2 w-auto" />
+                        </div>
+                        <div className="text-sm flex items-center">
+                            <span className="font-medium text-gray-500 ml-2">نوع التقييم:</span>
+                            <select
+                                className="p-1 border rounded bg-white text-sm font-bold text-sky-700 border-sky-300 focus:ring-sky-500 outline-none"
+                                value={formData.delivery_type}
+                                onChange={(e) => setFormData(prev => ({ ...prev, delivery_type: e.target.value }))}
+                            >
+                                <option value="" disabled>اختر النوع</option>
+                                <option value="normal">NORMAL VAGINAL DELIVERY</option>
+                                <option value="cesarean">Caesarean section</option>
+                                <option value="manikin">manikin simulation</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {!isCesarean && (
+                    <SectionRenderer title="1. تحضيرات ما قبل الولادة" items={activePrepItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.preparation?.score} maxScore={scores.preparation?.maxScore} visibleItemIndex={prepVisibleIndex} />
+                )}
+
+                <SectionRenderer title="2. التجفيف، التحفيز، التدفئة والشفط" items={activeDryingItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.drying?.score} maxScore={scores.drying?.maxScore} visibleItemIndex={dryingVisibleIndex} />
+
+                {isDryingComplete && (
+                    <div className={`mt-6 p-4 border rounded-xl bg-sky-50 shadow-sm animate-fade-in transition-all duration-500 mb-6 ${formData.eenc_breathing_status === 'na' ? 'row-unanswered' : 'row-answered'}`}>
+                        <h3 className="text-lg font-bold mb-3 text-right text-sky-900">3. تحديد حالة الوليد</h3>
+                        <FormGroup label="الرجاء تحديد حالة الوليد لبدء التقييم التالي:" className="text-right">
+                            <div className="flex gap-4 justify-start mt-2" dir="rtl">
+                                <ActionToggle
+                                    options={[
+                                        ['طفل يتنفس طبيعياً', 'yes', 'bg-green-600 border-green-600'],
+                                        ['طفل لا يتنفس طبيعياً (يحتاج إنعاش)', 'no', 'bg-red-600 border-red-600']
+                                    ]}
+                                    currentValue={formData.eenc_breathing_status}
+                                    name="eenc_breathing_status"
+                                    onClick={(name, value) => {
+                                        const wasAnswered = formData.eenc_breathing_status !== 'na';
+                                        handleFormChange({ target: { name, value } });
+                                        if (!wasAnswered) handleAutoScroll();
+                                    }}
+                                />
+                            </div>
+                        </FormGroup>
+                    </div>
+                )}
+
+                {isDryingComplete && formData.eenc_breathing_status === 'yes' && (
+                    <SectionRenderer title="4. متابعة طفل يتنفس طبيعياً" items={activeNormalItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.normal_breathing?.score} maxScore={scores.normal_breathing?.maxScore} visibleItemIndex={normalVisibleIndex} />
+                )}
+
+                {isDryingComplete && formData.eenc_breathing_status === 'no' && (
+                    <ResuscitationSectionRenderer formData={formData} handleFormChange={handleFormChange} handleSkillChange={handleSkillChange} score={scores.resuscitation?.score} maxScore={scores.resuscitation?.maxScore} />
+                )}
+
+                {isFormComplete && (
+                    <FormGroup label="ملاحظات عامة" className="text-right mt-6 animate-fade-in">
+                        <Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={4} placeholder="أضف أي ملاحظات إضافية..." className="text-right placeholder:text-right" />
+                    </FormGroup>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// Exported so the course mentorship view can enable its Save button on exactly
+// the same condition the facility form uses.
+export const isEENCFormComplete = checkFormCompletion;
+
 
 const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const {
