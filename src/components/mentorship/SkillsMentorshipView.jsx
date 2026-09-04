@@ -743,7 +743,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
                     <button
                         key={item.id}
                         onClick={() => onAction(item.id)}
-                        className={`flex flex-row items-center p-3 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-left focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
+                        className={`flex flex-row items-center p-3 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-start focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
                     >
                         <div className={`p-2.5 rounded-md transition-transform duration-200 group-hover:scale-110 flex-shrink-0 ${item.bg}`}>
                             <Icon className={`w-5 h-5 ${item.color}`} strokeWidth={2} />
@@ -795,7 +795,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
                     <button
                         key={item.id}
                         onClick={() => onSelectSection(item.id)}
-                        className={`flex flex-col items-start p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-left focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
+                        className={`flex flex-col items-start p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-start focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
                     >
                         <div className={`p-3 rounded-lg transition-transform duration-200 group-hover:scale-110 ${item.bg}`}>
                             <Icon className={`w-6 h-6 ${item.color}`} strokeWidth={2} />
@@ -1409,13 +1409,13 @@ const VisitReportsTable = ({
                                     />
                                 </th>
                             )}
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">State</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Locality</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit Date</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit #</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Facility')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('State')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Locality')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Visit Date')}</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Visit #')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Supervisor')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Action')}</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -1436,20 +1436,20 @@ const VisitReportsTable = ({
                                             />
                                         </td>
                                     )}
-                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{rep.facilityName}</td>
-                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.ar || rep.state}</td>
-                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.visitDate}</td>
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-start border border-gray-300">{rep.facilityName}</td>
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-start border border-gray-300">{STATE_LOCALITIES[rep.state]?.ar || rep.state}</td>
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-start border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-start border border-gray-300">{rep.visitDate}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center font-bold border border-gray-300">{rep.visitNumber || '-'}</td>
-                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-start border border-gray-300">
                                         <button 
-                                            className="text-sky-600 hover:text-sky-800 font-semibold underline decoration-sky-300 underline-offset-2 transition-colors cursor-pointer text-left"
+                                            className="text-sky-600 hover:text-sky-800 font-semibold underline decoration-sky-300 underline-offset-2 transition-colors cursor-pointer text-start"
                                             onClick={() => onMentorClick && onMentorClick(rep.mentorEmail, rep.mentorDisplay)}
                                         >
                                             {rep.mentorDisplay}
                                         </button>
                                     </td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-start border border-gray-300">
                                         <div className="flex gap-2">
                                             <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
                                             {(canManage || isAuthor) && <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>}
@@ -1612,17 +1612,17 @@ const MentorshipTableColumns = ({ allSelected, someSelected, onSelectAll, canMan
                  />
             </th>
         )}
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">#</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Project / Partner</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Health Worker/Service</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Job Title</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Date</th>
-        <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit #</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Status</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Score</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">#</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Facility')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Project / Partner')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Health Worker/Service')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Job Title')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Supervisor')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Date')}</th>
+        <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Visit #')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Status')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Score')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Action')}</th>
     </>
 );
 
@@ -1957,11 +1957,11 @@ const MentorshipSubmissionsTable = ({
                                                 </td>
                                             )}
 
-                                            <td className="px-2 py-2 text-sm font-medium text-gray-900 text-left border border-gray-300">{index + 1}</td>
+                                            <td className="px-2 py-2 text-sm font-medium text-gray-900 text-start border border-gray-300">{index + 1}</td>
                                             
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.facility}</td>
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-start border border-gray-300 break-words whitespace-normal">{sub.facility}</td>
                                             
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-start border border-gray-300 break-words whitespace-normal">
                                                 {sub.project && sub.project !== 'N/A' ? (
                                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-50 text-purple-800">
                                                         {sub.project}
@@ -1969,26 +1969,26 @@ const MentorshipSubmissionsTable = ({
                                                 ) : '-'}
                                             </td>
                                             
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left font-semibold border border-gray-300 break-words whitespace-normal">{workerDisplay}</td>
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-start font-semibold border border-gray-300 break-words whitespace-normal">{workerDisplay}</td>
                                             
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.workerType || '-'}</td>
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-start border border-gray-300 break-words whitespace-normal">{sub.workerType || '-'}</td>
                                             
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-start border border-gray-300 break-words whitespace-normal">
                                                 <button 
-                                                    className="text-sky-600 hover:text-sky-800 font-semibold underline decoration-sky-300 underline-offset-2 transition-colors cursor-pointer text-left"
+                                                    className="text-sky-600 hover:text-sky-800 font-semibold underline decoration-sky-300 underline-offset-2 transition-colors cursor-pointer text-start"
                                                     onClick={() => onMentorClick && onMentorClick(sub.supervisorEmail, sub.supervisorDisplay)}
                                                 >
                                                     {sub.supervisorDisplay}
                                                 </button>
                                             </td> 
                                             
-                                            <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500 text-left border border-gray-300">{sub.date}</td>
+                                            <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500 text-start border border-gray-300">{sub.date}</td>
                                             
                                             <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-900 text-center font-bold border border-gray-300">
                                                 {sub.visitNumber || '-'}
                                             </td>
 
-                                            <td className="px-2 py-2 whitespace-nowrap text-xs text-left border border-gray-300">
+                                            <td className="px-2 py-2 whitespace-nowrap text-xs text-start border border-gray-300">
                                                 {isMotherSurvey ? (
                                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                                         {serviceStatus}
@@ -2004,11 +2004,11 @@ const MentorshipSubmissionsTable = ({
                                                 )}
                                             </td>
 
-                                            <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-gray-800 text-left border border-gray-300">
+                                            <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-gray-800 text-start border border-gray-300">
                                                 {isMotherSurvey ? 'N/A' : (percentage !== null ? `${percentage}%` : 'N/A')}
                                             </td>
 
-                                            <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-left border border-gray-300">
+                                            <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-start border border-gray-300">
                                                 <div className="flex flex-col xl:flex-row gap-1">
                                                     <Button size="sm" variant="info" onClick={() => handleAction('view', sub)} className="text-xs px-2 py-1">View</Button>
                                                     {canEditRow && (sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS' || sub.service === 'EENC_MOTHERS') && 
@@ -2040,7 +2040,7 @@ const ServiceSelector = ({ onSelectService }) => {
 
     return (
         <Card className="p-6" dir="ltr">
-            <div className="text-left flex justify-between items-start">
+            <div className="text-start flex justify-between items-start">
                 <PageHeader
                     title="Choose Service for Mentorship"
                     subtitle="Select a program to begin skills mentorship."
@@ -2051,14 +2051,14 @@ const ServiceSelector = ({ onSelectService }) => {
                     <button
                         key={service.key}
                         disabled={!service.enabled}
-                        className={`border rounded-lg p-6 text-left transition-all duration-200 ${service.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`}
+                        className={`border rounded-lg p-6 text-start transition-all duration-200 ${service.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`}
                         onClick={() => service.enabled && onSelectService(service.key)}
                     >
                         <div className="flex items-center gap-4">
                             <CourseIcon course={service.key} />
                             <div>
-                                <div className="font-semibold text-gray-800 text-left">{service.title}</div>
-                                <div className="text-xs text-gray-500 mt-1 text-left">
+                                <div className="font-semibold text-gray-800 text-start">{service.title}</div>
+                                <div className="text-xs text-gray-500 mt-1 text-start">
                                     {service.enabled ? 'Click to start session' : 'Coming Soon'}
                                 </div>
                             </div>
@@ -4235,15 +4235,15 @@ const SkillsMentorshipView = ({
                             <>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                                     
-                                    <FormGroup label="Start Date" className="text-left" dir="ltr">
+                                    <FormGroup label="Start Date" className="text-start" dir="ltr">
                                         <Input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="w-full" />
                                     </FormGroup>
                                     
-                                    <FormGroup label="End Date" className="text-left" dir="ltr">
+                                    <FormGroup label="End Date" className="text-start" dir="ltr">
                                         <Input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="w-full" />
                                     </FormGroup>
 
-                                    <FormGroup label="Date Range" className="text-left" dir="ltr">
+                                    <FormGroup label="Date Range" className="text-start" dir="ltr">
                                         <Select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
                                             <option value="">All Time</option>
                                             <option value="today">Today</option>
@@ -4257,47 +4257,47 @@ const SkillsMentorshipView = ({
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="State" className="text-left" dir="ltr">
+                                    <FormGroup label="State" className="text-start" dir="ltr">
                                         <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); setWorkerTypeFilter(''); }}>
                                             {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Locality" className="text-left" dir="ltr">
+                                    <FormGroup label="Locality" className="text-start" dir="ltr">
                                         <Select value={localityFilter} onChange={(e) => { setLocalityFilter(e.target.value); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); setWorkerTypeFilter(''); }} disabled={!stateFilter}>
                                              {availableLocalities.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Facility" className="text-left" dir="ltr">
+                                    <FormGroup label="Facility" className="text-start" dir="ltr">
                                         <Select value={facilityFilter} onChange={(e) => { setFacilityFilter(e.target.value); setWorkerFilter(''); setWorkerTypeFilter(''); }}>
                                             <option value="">All Facilities</option>
                                             {uniqueFacilitiesList.map(f => <option key={f} value={f}>{f}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Health Worker" className="text-left" dir="ltr">
+                                    <FormGroup label="Health Worker" className="text-start" dir="ltr">
                                         <Select value={workerFilter} onChange={(e) => setWorkerFilter(e.target.value)}>
                                             <option value="">All Workers</option>
                                             {uniqueWorkersList.map(w => <option key={w} value={w}>{w}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Job Title" className="text-left" dir="ltr">
+                                    <FormGroup label="Job Title" className="text-start" dir="ltr">
                                         <Select value={workerTypeFilter} onChange={(e) => setWorkerTypeFilter(e.target.value)}>
                                             <option value="">All Job Titles</option>
                                             {uniqueWorkerTypesList.map(w => <option key={w} value={w}>{w}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Project / Partner" className="text-left" dir="ltr">
+                                    <FormGroup label="Project / Partner" className="text-start" dir="ltr">
                                         <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
                                             <option value="">All Projects</option>
                                             {uniqueProjectsList.map(p => <option key={p} value={p}>{p}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Supervisor" className="text-left" dir="ltr">
+                                    <FormGroup label="Supervisor" className="text-start" dir="ltr">
                                         <Select
                                             value={supervisorFilter}
                                             onChange={(e) => setSupervisorFilter(e.target.value)}
@@ -4309,7 +4309,7 @@ const SkillsMentorshipView = ({
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Status" className="text-left" dir="ltr">
+                                    <FormGroup label="Status" className="text-start" dir="ltr">
                                         <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                                             <option value="">All Statuses</option>
                                             <option value="complete">Complete</option>
@@ -4317,7 +4317,7 @@ const SkillsMentorshipView = ({
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Visit Number" className="text-left" dir="ltr">
+                                    <FormGroup label="Visit Number" className="text-start" dir="ltr">
                                         <Select value={visitNumberFilter} onChange={(e) => setVisitNumberFilter(e.target.value)}>
                                             <option value="">All Visits</option>
                                             {uniqueVisitNumbers.map(num => (

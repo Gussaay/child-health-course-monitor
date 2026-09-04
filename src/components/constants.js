@@ -575,3 +575,209 @@ export const debugMentorshipDetection = (course, participant = null) => {
     console.table(result);
     return result;
 };
+// ============================================================================
+// BLOCK G — append to the END of constants.js
+// ============================================================================
+//
+// Standardised IMNCI case scenarios for mentorship training.
+//
+// What this scores: in a mentorship training course the participant IS the
+// trainee mentor. When they practise on a paper case whose correct answers are
+// already known, we can check the classification decisions THEY made in the
+// 'supervisor_correct_*' fields against the expected ones, and report how many
+// of the scenario's decisions they got right.
+//
+// It does not score the simulated health worker. The 'worker_*_classification'
+// fields record what the (role-played) worker said; the 'supervisor_correct_*'
+// fields record the trainee mentor's own judgement, and those are what get
+// marked.
+
+// Every case carries the score a correctly-conducted mentoring visit should
+// produce on the mentorship form: `standardScore` out of `standardMaxScore`.
+// The mentor's own total is compared against it, which is what this monitoring
+// measures — whether the mentor applies the mentoring standard consistently, not
+// whether the health worker performed well.
+//
+// standardScore / standardMaxScore below are derived from each vignette: the
+// number of form items that apply to that case, all answered correctly. The
+// derivation for each is spelled out in standardBreakdown so it can be checked
+// and changed.
+//
+// These are a starting point, not an authority. A standard recorded in the app
+// by a master mentor always overrides them — see compareMentorToStandard. If a
+// number here disagrees with what your master mentors actually score, record the
+// case in the app and the recorded value wins from then on.
+export const IMNCI_CASE_SCENARIOS = [
+    {
+        id: 'K1',
+        childName: 'Laila',
+        ageBand: 'CHILD',
+        visitType: 'INITIAL',
+        supported: true,
+        standardScore: 27,
+        standardMaxScore: 27,
+        standardBreakdown: '22 base (vitals 3, danger signs 4, ask all 4 symptoms, malnutrition 3, anemia 2, immunization 2, other problems 1, recording 3) + cough follow-up 2 (RR, classify) + fever follow-up 2 (RDT, classify) + referral antibiotic 1. No follow-up-visit items: the child is referred urgently.',
+        ageMonths: 15,
+        weightKg: 8.5,
+        heightCm: 80,
+        tempC: 38.5,
+        vignette: '15 months, 8.5 kg, 80 cm, 38.5 °C. Mother: cough for 4 days and not eating well. On request: will not breastfeed, and when offered water is too weak to lift her head and cannot drink from a cup. No vomiting. No convulsions. Not lethargic or unconscious.',
+        dangerSign: true,
+        dangerSignNote: 'General danger sign present — not able to drink.',
+        expected: {
+            cough: 'التهاب رئوي شديد أو مرض شديد جدا',
+        },
+        expectedManagement: 'First dose of an appropriate antibiotic at the facility. Refer urgently. Referral note and counseling on the way.',
+    },
+    {
+        id: 'K9',
+        childName: 'Tariq',
+        ageBand: 'CHILD',
+        visitType: 'INITIAL',
+        supported: true,
+        standardScore: 30,
+        standardMaxScore: 30,
+        standardBreakdown: '22 base + cough follow-up 2 + fever follow-up 2 + antimalarial 2 (drug, dose) + follow-up visit 2. Vitamin A for measles is covered by the immunization item already in the base.',
+        ageMonths: 10,
+        weightKg: 8.2,
+        heightCm: 60,
+        tempC: 37.5,
+        vignette: '10 months, 8.2 kg, 60 cm, 37.5 °C. Mother: rash and cough. On request: able to drink, is vomiting, no convulsions, not lethargic. Cough for 5 days, respiratory rate 43, no chest indrawing, no stridor or wheeze when calm. No diarrhea. I felt hot for 2 days. Malaria test positive. No stiff neck. Rash covering the whole body. No mouth ulcers, no pus draining from the eye, no clouding of the cornea.',
+        dangerSign: false,
+        expected: {
+            cough: 'كحة أو نزلة برد',
+            fever: ['ملاريا', 'حصبة'],
+        },
+        expectedManagement: 'Antimalarial with first dose at the facility. Vitamin A per the measles protocol. Home care. Follow-up.',
+    },
+    {
+        id: 'K11',
+        childName: 'Amel',
+        ageBand: 'CHILD',
+        visitType: 'INITIAL',
+        supported: true,
+        standardScore: 30,
+        standardMaxScore: 30,
+        standardBreakdown: '22 base + cough follow-up 2 + pneumonia treatment 2 (antibiotic, dose) + nutrition 2 (assess feeding, counsel) + follow-up visit 2. No OTP referral item: this is moderate, not severe, malnutrition.',
+        ageMonths: 6,
+        weightKg: 4,
+        heightCm: 55,
+        tempC: 37,
+        vignette: '6 months, 4 kg, 55 cm, 37 \u00b0C. Mother: cough, and she looks thin. On request: no danger signs. Cough 4 days, respiratory rate 52, no chest indrawing, no stridor or wheeze when calm. No diarrhea. No fever. No ear problem. No edema of both feet. MUAC 12.4 cm. No palmar pallor. Has had BCG and OPV 0; received OPV 1, Penta 1, PCV 1 and Rota 1 four weeks ago. Has not had vitamin A.',
+        dangerSign: false,
+        expected: {
+            cough: '\u0627\u0644\u062a\u0647\u0627\u0628 \u0631\u0626\u0648\u064a',
+            malnutrition: '\u0633\u0648\u0621 \u062a\u063a\u0630\u064a\u0629 \u062d\u0627\u062f \u0645\u062a\u0648\u0633\u0637',
+        },
+        // Immunization due and vitamin A due are real expected findings but the
+        // form records immunization as supervision skills, not as a supervisor
+        // classification, so they are not scored decisions.
+        alsoExpected: 'Immunization due \u00b7 vitamin A due',
+        expectedManagement: 'Oral amoxicillin with the first dose given. Assess and counsel on feeding. Refer to EPI for OPV 2, Penta 2, PCV 2, Rota 2. Give vitamin A.',
+    },
+    {
+        id: 'K12',
+        childName: 'Nadia',
+        ageBand: 'CHILD',
+        visitType: 'INITIAL',
+        supported: true,
+        standardScore: 29,
+        standardMaxScore: 29,
+        standardBreakdown: '22 base + fever follow-up 2 (the malaria test is still a required step even though it was not done) + nutrition 3 (OTP referral, assess feeding, counsel) + follow-up visit 2.',
+        ageMonths: 18,
+        weightKg: 8,
+        heightCm: 96,
+        tempC: 38.5,
+        vignette: '18 months, 8 kg, 96 cm, 38.5 \u00b0C. Mother: felt hot and had a rash. The health worker notices she looks like skin and bones. On request: no danger signs. No cough. No diarrhea. Fever 5 days, high malaria risk. Generalized rash and red eyes. No stiff neck. No mouth ulcers, no eye pus, no corneal clouding. No ear problem. No edema of both feet. MUAC 11 cm. No medical complication; appetite test passed. No palmar pallor. Malaria test: not done.',
+        dangerSign: false,
+        expected: {
+            fever: ['\u062d\u0635\u0628\u0629'],
+            malnutrition: '\u0633\u0648\u0621 \u062a\u063a\u0630\u064a\u0629 \u0634\u062f\u064a\u062f \u063a\u064a\u0631 \u0645\u0635\u062d\u0648\u0628 \u0628\u0645\u0636\u0627\u0639\u0641\u0627\u062a',
+        },
+        alsoExpected: 'The mentee should recognise that a malaria test is required and request it.',
+        expectedManagement: 'Refer to the outpatient therapeutic program. Vitamin A per the measles protocol. Assess and counsel on feeding.',
+    },
+    {
+        id: 'K13',
+        childName: 'Idris',
+        ageBand: 'CHILD',
+        visitType: 'INITIAL',
+        supported: true,
+        standardScore: 26,
+        standardMaxScore: 26,
+        standardBreakdown: '22 base + cough follow-up 2 + referral antibiotic 1 + nutrition referral 1. No oral iron items: severe anemia is referred, not treated orally. No follow-up-visit items: the child is referred urgently.',
+        ageMonths: 11,
+        weightKg: 8,
+        tempC: 37,
+        vignette: '11 months, 8 kg, 37 \u00b0C. Mother: a dry cough for the last 3 weeks. On request: no general danger signs. Cough present 21 days, respiratory rate 41, no chest indrawing, no stridor, no wheeze. No diarrhea. No fever during this illness. No ear problem. No edema of both feet. MUAC 11 cm. Appetite test: could not finish even a third of the RUTF offered. The palms are very pale, almost white.',
+        dangerSign: false,
+        expected: {
+            malnutrition: '\u0633\u0648\u0621 \u062a\u063a\u0630\u064a\u0629 \u0634\u062f\u064a\u062f \u0645\u0635\u062d\u0648\u0628 \u0628\u0645\u0636\u0627\u0639\u0641\u0627\u062a',
+            anemia: '\u0641\u0642\u0631 \u062f\u0645 \u0634\u062f\u064a\u062f',
+        },
+        alsoExpected: 'Cough for more than 14 days \u2014 refer for assessment of the chronic cough.',
+        expectedManagement: 'Refer urgently to the hospital, with the pre-referral treatment indicated. Refer also for assessment of the chronic cough.',
+    },
+];
+
+export const getScenarioById = (id) => IMNCI_CASE_SCENARIOS.find(s => s.id === id) || null;
+
+export const getSupportedScenarios = () => IMNCI_CASE_SCENARIOS.filter(s => s.supported);
+
+// --- Comparing the mentor against the stored standard ---------------------
+
+// How far the mentor's total may sit from the case standard and still count as
+// applying the standard correctly. Expressed in points, because a one-item
+// disagreement should read the same on a short case as on a long one.
+export const MENTOR_SCORE_TOLERANCE = 1;
+
+/**
+ * Compares the total the mentor produced on the mentorship form against the
+ * score the system holds for that case.
+ *
+ * This does not mark the health worker. It asks whether the mentor, applying the
+ * mentoring standard to a case whose correct score is already known, arrived at
+ * that same score.
+ *
+ * @param {object} scores    the form's own calculateScores output
+ * @param {object} scenario  the selected case
+ * @returns {{mentorScore:number, mentorMax:number, standardScore:number,
+ *            standardMax:number, difference:number, withinTolerance:boolean,
+ *            agreementPct:number}|null}
+ */
+export const compareMentorToStandard = (scores, scenario, storedStandard = null) => {
+    if (!scenario) return null;
+
+    // The standard recorded in the app wins over any hard-coded fallback: it was
+    // set by a master mentor working the same case on the same form, so it is
+    // the score this course actually holds as correct.
+    const standardScore = storedStandard?.standard_score ?? scenario.standardScore;
+    const standardMax = storedStandard?.standard_max ?? scenario.standardMaxScore;
+    if (standardScore == null || standardMax == null) return null;
+
+    const overall = scores?.overallScore || scores?.overall;
+    if (!overall || typeof overall.score !== 'number') return null;
+
+    const mentorScore = overall.score;
+    const mentorMax = overall.maxScore ?? 0;
+    const difference = mentorScore - standardScore;
+
+    // Agreement is measured on the standard's own scale, so scoring 2 points
+    // away on a 40-point case is treated as closer than 2 points away on a
+    // 5-point case.
+    const agreementPct = standardMax
+        ? Math.max(0, Math.round((1 - Math.abs(difference) / standardMax) * 100))
+        : 0;
+
+    return {
+        mentorScore,
+        mentorMax,
+        standardScore,
+        standardMax,
+        difference,
+        withinTolerance: Math.abs(difference) <= MENTOR_SCORE_TOLERANCE,
+        agreementPct,
+        source: storedStandard ? 'recorded' : 'configured',
+        setBy: storedStandard?.standard_set_by || null,
+    };
+};

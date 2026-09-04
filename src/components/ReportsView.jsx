@@ -20,7 +20,7 @@ import {
     SKILLS_EMONC_MATERNAL, EMONC_DOMAIN_LABEL_MATERNAL,
     hasMentorshipForm, getCourseMentorshipService, getMentorshipSubType
 } from './constants.js';
-import { getMentorshipSkillMaps } from './MonitoringView';
+import { getMentorshipSkillMaps, getMothersSkillMaps } from './MonitoringView';
 
 
 import {
@@ -1440,20 +1440,33 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
     const [tab, setTab] = useState('matrix');
     const [groupFilter, setGroupFilter] = useState('All');
     const [dayFilter, setDayFilter] = useState('All');
+    // Skills assessments and mothers interviews score different things about
+    // different people, so they are never mixed into one matrix.
+    const [recordType, setRecordType] = useState('SKILLS');
 
     const subCourse = getMentorshipSubType(course);
     const courseService = getCourseMentorshipService(course);
 
     // Only records written by the mentorship form belong in this report. A course
     // that also ran ordinary grid observations keeps those out of the matrix.
-    const mentorshipObs = useMemo(
+    const allMentorshipObs = useMemo(
         () => (allObs || []).filter(o => o.setting === 'MENTORSHIP'),
         [allObs]
     );
 
+    const mentorshipObs = useMemo(
+        () => allMentorshipObs.filter(o => (o.record_type || 'SKILLS') === recordType),
+        [allMentorshipObs, recordType]
+    );
+
     const mentorshipCases = useMemo(
-        () => (allCases || []).filter(c => c.setting === 'MENTORSHIP'),
-        [allCases]
+        () => (allCases || []).filter(c => c.setting === 'MENTORSHIP' && (c.record_type || 'SKILLS') === recordType),
+        [allCases, recordType]
+    );
+
+    const hasMothersRecords = useMemo(
+        () => allMentorshipObs.some(o => o.record_type === 'MOTHERS'),
+        [allMentorshipObs]
     );
 
     // Trust the records over the course document: a course whose sub-course was
@@ -1463,10 +1476,26 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
         [mentorshipObs, courseService]
     );
 
-    const { skills: skillMap, domains, labels } = useMemo(
-        () => getMentorshipSkillMaps(service),
-        [service]
-    );
+    const { skills: skillMap, domains, labels } = useMemo(() => {
+        const base = recordType === 'MOTHERS' ? getMothersSkillMaps(service) : getMentorshipSkillMaps(service);
+        if (recordType === 'MOTHERS') return base;
+
+        // Scenario decisions are built from the records themselves rather than a
+        // fixed map, because which cases a course used varies by course.
+        const scenarioItems = [...new Set(
+            (allObs || [])
+                .filter(o => o.domain === 'scenario_accuracy')
+                .map(o => o.item_recorded)
+        )].sort();
+
+        if (!scenarioItems.length) return base;
+
+        return {
+            skills: { ...base.skills, scenario_accuracy: scenarioItems },
+            domains: ['scenario_accuracy', ...base.domains],
+            labels: { ...base.labels, scenario_accuracy: 'دقة تقييم المُيسّر للحالات القياسية' },
+        };
+    }, [service, recordType, allObs]);
 
     const filteredParticipants = useMemo(
         () => participants.filter(p => groupFilter === 'All' || p.group === groupFilter),
@@ -1491,7 +1520,7 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
         [mentorshipCases]
     );
 
-    if (mentorshipObs.length === 0) {
+    if (allMentorshipObs.length === 0) {
         return (
             <EmptyState
                 title="No mentorship sessions recorded"
@@ -1520,6 +1549,15 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
                 <Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>
                     Participant summary
                 </Button>
+
+                {hasMothersRecords && (
+                    <FormGroup label="Record type">
+                        <Select value={recordType} onChange={(e) => setRecordType(e.target.value)}>
+                            <option value="SKILLS">Skills assessments</option>
+                            <option value="MOTHERS">Mothers interviews</option>
+                        </Select>
+                    </FormGroup>
+                )}
 
                 <FormGroup label="Group">
                     <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
@@ -1575,6 +1613,13 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
                 </div>
             )}
 
+            {mentorshipObs.length === 0 && (
+                <EmptyState
+                    title={`No ${recordType === 'MOTHERS' ? 'mothers interviews' : 'skills assessments'} recorded`}
+                    message="Switch record type to see what has been saved."
+                />
+            )}
+
             {tab === 'matrix' && groupsToRender.map(g => {
                 const parts = filteredParticipants
                     .filter(p => p.group === g)
@@ -1588,7 +1633,7 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
                             <table className="w-full text-xs">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
-                                        <th className="py-2 pr-4">Skill</th>
+                                        <th className="py-2 pr-4">{recordType === 'MOTHERS' ? 'Question' : 'Skill'}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>
                                 </thead>

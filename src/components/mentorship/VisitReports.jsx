@@ -238,6 +238,11 @@ const ALL_EENC_MATRIX_SKILLS = { ...EENC_GENERAL_SKILLS, ...EENC_PREPARATION_SKI
 
 // --- 1: IMNCI Visit Report Component ---
 export const IMNCIVisitReport = ({ 
+    // When supplied, the report is saved through this instead of
+    // saveIMNCIVisitReport. Used by the course mentorship tab so a training
+    // visit report is stored as a course record and never reaches the
+    // mentorship visit-report collection.
+    onSaveOverride = null,
     facility, 
     onCancel, 
     onSaveSuccess,
@@ -626,7 +631,7 @@ export const IMNCIVisitReport = ({
                 payload.createdAt = Timestamp.now();
             }
 
-            await saveIMNCIVisitReport(payload, existingReportData?.id || null);
+            await (onSaveOverride || saveIMNCIVisitReport)(payload, existingReportData?.id || null);
 
             // --- SAVE MAX VISIT NUMBER TO OFFLINE CACHE ONLY ON SUCCESSFUL SUBMIT ---
             const offlineKey = `offline_visit_max_${facility.id}_IMNCI_REPORT`;
@@ -1085,6 +1090,8 @@ export const IMNCIVisitReport = ({
 
 // --- 2: EENC Visit Report Component ---
 export const EENCVisitReport = ({ 
+    // See IMNCIVisitReport — same override, same reason.
+    onSaveOverride = null,
     facility, 
     onCancel, 
     onSaveSuccess,
@@ -1413,7 +1420,7 @@ export const EENCVisitReport = ({
             delete payload.imageUrl;
             if (existingReportData) { payload.mentorEmail = existingReportData.mentorEmail; payload.mentorName = existingReportData.mentorName; payload.edited_by_email = user.email; payload.edited_by_name = user.displayName || user.email; payload.lastUpdatedAt = Timestamp.now(); } else { payload.mentorEmail = user.email; payload.mentorName = user.displayName || user.email; payload.createdAt = Timestamp.now(); }
 
-            await saveEENCVisitReport(payload, existingReportData?.id || null);
+            await (onSaveOverride || saveEENCVisitReport)(payload, existingReportData?.id || null);
 
             // --- SAVE MAX VISIT NUMBER TO OFFLINE CACHE ONLY ON SUCCESSFUL SUBMIT ---
             const offlineKey = `offline_visit_max_${facility.id}_EENC_REPORT`;

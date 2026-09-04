@@ -44,6 +44,35 @@ const shareViaWhatsApp = (textToShare, successMessage) => {
     });
 };
 
+export const MENTOR_DECLARATION_TITLE = 'Annex C: Mentor Code of Conduct and Safeguarding Declaration';
+export const MENTOR_DECLARATION_SUBTITLE = 'Signed by every mentor on certification and renewed annually with re-certification. A copy is held in the national mentor registry.';
+export const MENTOR_DECLARATION_CLAUSES = [
+    'I will treat every health worker with dignity and respect, and will acknowledge the conditions in which they work.',
+    'I will be supportive rather than inspectorial. My role is to help health workers improve, not to catch them making mistakes.',
+    'I will give feedback privately, specifically and constructively, and never in front of caregivers, patients or other staff.',
+    'I will not use assessment scores for disciplinary purposes, performance appraisal, promotion decisions or redeployment, and I will say so to every mentee at the first visit.',
+    "I will explain to caregivers who I am and why I am present, will seek their agreement before observing a consultation, and will accept a refusal without any consequence for the child's care.",
+    'I will not record patient names or other patient identifiers on any mentorship tool, and will not transmit patient information over messaging platforms.',
+    'I will keep mentee assessment results confidential to the mentee, myself and the program.',
+    'I will never examine a child or remain alone with a child. A caregiver and the mentee will be present at all times.',
+    'I will not photograph patients or caregivers. Photographs are of the facility only.',
+    'I will intervene immediately if I observe care that places a child at risk of serious harm, notwithstanding the rule that I observe silently, and will record the intervention in the visit report.',
+    'I will comply with the Federal Ministry of Health code of conduct and with the standards on the prevention of sexual exploitation, abuse and harassment (PSEAH) of the Ministry and of any supporting partner.',
+    'I will report any safeguarding concern through the designated reporting channel and will not attempt to resolve it informally at facility level.',
+    'I will not solicit or accept any payment, gift or favor from a facility, a health worker or a caregiver in connection with my role.',
+    'I will record findings accurately, including findings that reflect poorly on the program, and will not enter data I have not personally observed.',
+    'I will follow the security and access provisions in Chapter 5, and will not conduct a visit that diverts staff or transport from urgent clinical need.',
+];
+
+// Declaration is valid for one year from the date signed.
+export const getDeclarationRenewalDate = (signedDate) => {
+    if (!signedDate) return '';
+    const d = new Date(signedDate);
+    if (isNaN(d.getTime())) return '';
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().split('T')[0];
+};
+
 const getCertificateName = (key) => {
     const names = {
         IMNCI: 'IMNCI ToT Certificate',
@@ -56,6 +85,7 @@ const getCertificateName = (key) => {
         followUpCourseCert: 'IMNCI Follow-up Course Certificate',
         teamLeaderCourseCert: 'IMNCI Team Leader Certificate',
         mentorCourseCert: 'IMNCI Mentor Training Certificate',
+        mentorDeclarationCert: 'Signed Mentor Code of Conduct Declaration (Annex C)',
     };
     return names[key] || key;
 };
@@ -154,6 +184,9 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
         { key: 'teamLeaderCourseDate', label: 'Team Leader Course Date' },
         { key: 'mentorCourse', label: 'IMNCI Mentor Training' },
         { key: 'mentorCourseDate', label: 'Mentor Training Date' },
+        { key: 'mentorDeclarationSigned', label: 'Mentor Declaration Signed' },
+        { key: 'mentorDeclarationName', label: 'Mentor Declaration Signatory' },
+        { key: 'mentorDeclarationDate', label: 'Mentor Declaration Date Signed' },
         { key: 'isClinicalInstructor', label: 'Clinical Instructor' },
         { key: 'comments', label: 'Comments' },
     ];
@@ -311,6 +344,7 @@ function SubmissionDetails({ submission }) {
         directorCourseDate: "Director Course Date", followUpCourse: "Attended Follow-up Course", followUpCourseDate: "Follow-up Course Date",
         teamLeaderCourse: "Attended Team Leader Course", teamLeaderCourseDate: "Team Leader Course Date",
         mentorCourse: "Attended Mentor Training", mentorCourseDate: "Mentor Training Date",
+        mentorDeclarationSigned: "Mentor Declaration (Annex C) Signed", mentorDeclarationName: "Declaration Signatory", mentorDeclarationDate: "Declaration Date Signed",
         isClinicalInstructor: "Is Clinical Instructor", comments: "Comments",
     };
 
@@ -337,7 +371,10 @@ function SubmissionDetails({ submission }) {
 }
 
 export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = false }) {
-    const { name, arabicName, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, mentorCourse, mentorCourseDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
+    const { name, arabicName, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, mentorCourse, mentorCourseDate, mentorDeclarationSigned, mentorDeclarationName, mentorDeclarationDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
+
+    const mentorDeclarationRenewalDate = getDeclarationRenewalDate(mentorDeclarationDate);
+    const mentorDeclarationExpired = Boolean(mentorDeclarationRenewalDate) && mentorDeclarationRenewalDate < new Date().toISOString().split('T')[0];
 
     const handleFieldChange = (field, value) => onDataChange({ ...data, [field]: value });
     const handleTotDateChange = (course, date) => onDataChange({ ...data, totDates: { ...totDates, [course]: date } });
@@ -494,6 +531,52 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                                 </FormGroup>
                             </>}
                         </div>
+                        {mentorCourse === 'Yes' && (
+                            <div className="p-4 border border-amber-300 bg-amber-50 rounded-lg space-y-3">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <h4 className="font-semibold text-gray-800">{MENTOR_DECLARATION_TITLE}</h4>
+                                        <p className="text-xs text-gray-600 mt-1">{MENTOR_DECLARATION_SUBTITLE}</p>
+                                    </div>
+                                    {mentorDeclarationSigned === 'Yes' && mentorDeclarationRenewalDate && (
+                                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${mentorDeclarationExpired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                            {mentorDeclarationExpired ? `Renewal overdue since ${mentorDeclarationRenewalDate}` : `Valid until ${mentorDeclarationRenewalDate}`}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="max-h-64 overflow-y-auto bg-white border border-amber-200 rounded-md p-3 text-sm text-gray-700">
+                                    <p className="mb-2">
+                                        I, <span className="font-semibold underline underline-offset-2">{mentorDeclarationName || name || '______________________'}</span>, acting as an IMNCI clinical mentor for the National Child Health Program, undertake that:
+                                    </p>
+                                    <ul className="list-disc pl-5 space-y-1.5">
+                                        {MENTOR_DECLARATION_CLAUSES.map((clause, i) => <li key={i}>{clause}</li>)}
+                                    </ul>
+                                </div>
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={mentorDeclarationSigned === 'Yes'}
+                                        onChange={e => onDataChange({ ...data, mentorDeclarationSigned: e.target.checked ? 'Yes' : 'No', mentorDeclarationName: e.target.checked ? (mentorDeclarationName || name || '') : mentorDeclarationName, mentorDeclarationDate: e.target.checked ? (mentorDeclarationDate || new Date().toISOString().split('T')[0]) : mentorDeclarationDate })}
+                                        className="mt-0.5 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm text-gray-800">I have read the declaration above, I accept it in full, and I understand that it must be renewed annually with re-certification.</span>
+                                </label>
+                                {mentorDeclarationSigned === 'Yes' && (
+                                    <div className="grid md:grid-cols-3 gap-4 items-end">
+                                        <FormGroup label="Full Name (as signed)">
+                                            <Input value={mentorDeclarationName || ''} onChange={e => handleFieldChange('mentorDeclarationName', e.target.value)} placeholder="Full name of mentor" />
+                                        </FormGroup>
+                                        <FormGroup label="Date Signed">
+                                            <Input type="date" value={mentorDeclarationDate || ''} onChange={e => handleFieldChange('mentorDeclarationDate', e.target.value)} />
+                                        </FormGroup>
+                                        <FormGroup label="Signed Copy (Optional)">
+                                            {!isPublicForm && certificateUrls['mentorDeclarationCert'] && ( <a href={certificateUrls['mentorDeclarationCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
+                                            <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('mentorDeclarationCert', e.target.files[0])} />
+                                        </FormGroup>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                  </CardBody>
             </Card>
@@ -719,6 +802,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
             clinicalInstructors: filteredFacilitators.filter(f => f.isClinicalInstructor === 'Yes').length,
             teamLeaders: filteredFacilitators.filter(f => f.teamLeaderCourse === 'Yes').length,
             mentors: filteredFacilitators.filter(f => f.mentorCourse === 'Yes').length,
+            mentorsDeclarationCurrent: filteredFacilitators.filter(f => f.mentorCourse === 'Yes' && f.mentorDeclarationSigned === 'Yes' && getDeclarationRenewalDate(f.mentorDeclarationDate) >= new Date().toISOString().split('T')[0]).length,
             followUpSupervisors: filteredFacilitators.filter(f => f.followUpCourse === 'Yes').length,
         };
     }, [filteredFacilitators]);
@@ -831,13 +915,14 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                         {activeTab === 'dashboard' && (
                             <div className="mt-4">
                                 <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center mb-6">
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center mb-6">
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Facilitators</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.totalFacilitators}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Course Directors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.directors}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Clinical Instructors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.clinicalInstructors}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Team Leaders</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.teamLeaders}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Follow-up Supervisors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.followUpSupervisors}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Trained Mentors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentors}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Mentors: Declaration Current</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentorsDeclarationCurrent}</div><div className="text-[11px] text-gray-500 mt-1">of {dashboardKpis.mentors} trained</div></div>
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-6 mb-6">
                                     <Card className="p-0 border-0 shadow-none">
@@ -932,7 +1017,8 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
         name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
         followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '',
-        mentorCourse: 'No', mentorCourseDate: '', isClinicalInstructor: 'No', comments: '',
+        mentorCourse: 'No', mentorCourseDate: '', mentorDeclarationSigned: 'No', mentorDeclarationName: '', mentorDeclarationDate: '',
+        isClinicalInstructor: 'No', comments: '',
         backgroundQualification: '', backgroundQualificationOther: '',
         ...(initialData || {})
     });
@@ -956,6 +1042,16 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
         const missingDates = formData.courses.filter(course => !formData.totDates[course]);
         if (missingDates.length > 0) {
             setError(`Please provide a ToT date for the following selected course(s): ${missingDates.join(', ')}.`);
+            return;
+        }
+
+        if (formData.mentorCourse === 'Yes' && formData.mentorDeclarationSigned !== 'Yes') {
+            setError('Mentors must read and accept the Mentor Code of Conduct and Safeguarding Declaration (Annex C).');
+            return;
+        }
+
+        if (formData.mentorCourse === 'Yes' && (!formData.mentorDeclarationName || !formData.mentorDeclarationDate)) {
+            setError('Please provide the signatory name and the date signed for the Mentor Code of Conduct Declaration.');
             return;
         }
         
@@ -1066,7 +1162,8 @@ export function FacilitatorApplicationForm() {
         name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
         followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '',
-        mentorCourse: 'No', mentorCourseDate: '', isClinicalInstructor: 'No', comments: '',
+        mentorCourse: 'No', mentorCourseDate: '', mentorDeclarationSigned: 'No', mentorDeclarationName: '', mentorDeclarationDate: '',
+        isClinicalInstructor: 'No', comments: '',
         backgroundQualification: '', backgroundQualificationOther: '',
         isUserEmail: false,
     });
@@ -1131,6 +1228,16 @@ export function FacilitatorApplicationForm() {
         const missingDates = formData.courses.filter(course => !formData.totDates[course]);
         if (missingDates.length > 0) {
             setError(`Please provide a ToT date for the following selected course(s): ${missingDates.join(', ')}.`);
+            return;
+        }
+
+        if (formData.mentorCourse === 'Yes' && formData.mentorDeclarationSigned !== 'Yes') {
+            setError('Mentors must read and accept the Mentor Code of Conduct and Safeguarding Declaration (Annex C).');
+            return;
+        }
+
+        if (formData.mentorCourse === 'Yes' && (!formData.mentorDeclarationName || !formData.mentorDeclarationDate)) {
+            setError('Please provide the signatory name and the date signed for the Mentor Code of Conduct Declaration.');
             return;
         }
 

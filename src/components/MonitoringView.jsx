@@ -12,13 +12,15 @@ import {
     SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL,
     SKILLS_EMONC_NEONATAL, EMONC_DOMAINS_NEONATAL, EMONC_DOMAIN_LABEL_NEONATAL,
     SKILLS_EMONC_MATERNAL, EMONC_DOMAINS_MATERNAL, EMONC_DOMAIN_LABEL_MATERNAL,
-    getMentorshipSubType, getCourseMentorshipService
+    getMentorshipSubType, getCourseMentorshipService,
+    IMNCI_CASE_SCENARIOS, getScenarioById, compareMentorToStandard,
 } from './constants.js';
 import {
     listObservationsForParticipant,
     listCasesForParticipant,
     upsertCaseAndObservations,
     deleteCaseAndObservations,
+    listAllDataForCourse,
 } from "../data.js";
 
 // --- Mentorship form pieces, reused for the mentorship sub-course monitoring tab ---
@@ -38,6 +40,10 @@ import {
     PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS,
     NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS,
 } from './mentorship/EENCSkillsAssessmentForm.jsx';
+
+// Visit report, reused for mentor training. The onSaveOverride prop keeps the
+// training copy inside course records instead of the mentorship collection.
+import { IMNCIVisitReport, EENCVisitReport } from './mentorship/VisitReports.jsx';
 
 // --- HELPERS for Performance Optimization ---
 const generateHash = (buffer) => {
@@ -1163,13 +1169,17 @@ function MentorshipRunningScore({ scores }) {
 }
 
 function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
+    // EmptyState renders a <tr>, so it is only valid inside a table body. Using
+    // it inside a Card produced a DOM nesting warning; plain markup instead.
     if (!cases.length) {
         return (
             <Card>
-                <EmptyState
-                    title="No mentorship sessions yet"
-                    message="Completed sessions are recorded here and feed the participant's course report."
-                />
+                <div className="p-8 text-center">
+                    <h3 className="text-base font-semibold text-slate-700">No mentorship sessions yet</h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                        Completed sessions are recorded here and feed the participant's course report.
+                    </p>
+                </div>
             </Card>
         );
     }
@@ -1188,6 +1198,7 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
                             <th className="p-2">Day</th>
                             <th className="p-2">Skills scored</th>
                             <th className="p-2">Score</th>
+                            <th className="p-2">Case</th>
                             <th className="p-2 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -1206,6 +1217,16 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
                                     <td className="p-2">{c.day_of_course}</td>
                                     <td className="p-2">{obs.length}</td>
                                     <td className={`p-2 font-semibold ${tone}`}>{earned}/{possible} ({pct}%)</td>
+                                    <td className="p-2 whitespace-nowrap">
+                                        {c.scenario_id
+                                            ? (c.standard_agreement_pct != null
+                                                ? <span className={`px-2 py-0.5 rounded text-xs font-semibold text-white ${
+                                                    c.standard_within_tolerance ? 'bg-green-600'
+                                                        : c.standard_agreement_pct >= 80 ? 'bg-yellow-500' : 'bg-red-600'
+                                                  }`}>{c.scenario_id} · {c.standard_agreement_pct}%</span>
+                                                : <span className="px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-700">{c.scenario_id}</span>)
+                                            : <span className="text-slate-400 text-xs">—</span>}
+                                    </td>
                                     <td className="p-2 text-right whitespace-nowrap">
                                         <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>Edit</Button>
                                         <Button variant="danger" size="sm" className="ml-2" onClick={() => onDelete(c)}>Delete</Button>
@@ -1227,8 +1248,40 @@ export function MentorshipMonitoringView({
     const service = useMemo(() => getCourseMentorshipService(course, participant), [course, participant]);
     const isEenc = service === 'EENC';
 
-    const getInitialFormData = isEenc ? getEencInitialFormData : getImnciInitialFormData;
-    const calculateScores = isEenc ? calculateEencScores : calculateImnciScores;
+    // Declared before isMothers below, which reads recordType. Keeping these two
+    // with the rest of the state further down would put them in the temporal
+    // dead zone and throw on first render.
+    //
+    // Which mentorship form this session uses: the provider skills assessment or
+    // the mothers interview. Chosen in the setup modal before the form opens.
+    const [recordType, setRecordType] = useState('SKILLS');
+    // Optional standardised case. When set, the trainee mentor's classification
+    // decisions are marked against the scenario's known-correct answers.
+    // A standard case is always used: this monitoring measures how the mentor
+    // applies the mentoring standard, which only means something against a case
+    // whose correct score the system already holds.
+    const [scenarioId, setScenarioId] = useState(IMNCI_CASE_SCENARIOS[0]?.id || '');
+    // Standards are course-wide: whichever participant records one, every other
+    // participant on the course is compared against it.
+    const [courseStandards, setCourseStandards] = useState({});
+    const [markAsStandard, setMarkAsStandard] = useState(false);
+
+    const isMothers = recordType === 'MOTHERS';
+    const isVisit = recordType === 'VISIT';
+
+    const getInitialFormData = useCallback(
+        () => (isMothers || isVisit
+            ? getMothersInitialFormData(service)
+            : (isEenc ? getEencInitialFormData() : getImnciInitialFormData())),
+        [isMothers, isEenc, service]
+    );
+
+    const calculateScores = useCallback(
+        (data) => (isMothers || isVisit
+            ? calculateMothersScores(data, service)
+            : (isEenc ? calculateEencScores(data) : calculateImnciScores(data))),
+        [isMothers, isEenc, service]
+    );
 
     const [formData, setFormData] = useState(getInitialFormData);
     const [visibleStep, setVisibleStep] = useState(1);
@@ -1244,10 +1297,37 @@ export function MentorshipMonitoringView({
     const [showForm, setShowForm] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
+    // The mentor-vs-standard comparison is deliberately withheld while the form
+    // is being filled — seeing the stored total would let a mentor tune their
+    // answers towards it instead of scoring the case as they read it. It is
+    // snapshotted on save and revealed in the confirmation modal, because
+    // saving resets formData and the live comparison disappears with it.
+    const [savedComparison, setSavedComparison] = useState(null);
+
     const scores = useMemo(() => calculateScores(formData), [formData, calculateScores]);
+
+    const scenario = useMemo(() => getScenarioById(scenarioId), [scenarioId]);
+
+    // The mentor's own total on the form, measured against the score the system
+    // stores for this case.
+    const storedStandard = scenarioId ? courseStandards[scenarioId] : null;
+
+    const standardComparison = useMemo(
+        () => (scenario && !isMothers && !isVisit
+            ? compareMentorToStandard(scores, scenario, storedStandard)
+            : null),
+        [scores, scenario, isMothers, isVisit, storedStandard]
+    );
+    // Skills sessions and mothers interviews are numbered independently, so a
+    // participant's third skills case is not renumbered by an interview.
+    const visibleCases = useMemo(
+        () => cases.filter(c => (c.record_type || 'SKILLS') === recordType),
+        [cases, recordType]
+    );
+
     const nextSerial = useMemo(
-        () => cases.reduce((max, c) => Math.max(max, c.case_serial || 0), 0) + 1,
-        [cases]
+        () => visibleCases.reduce((max, c) => Math.max(max, c.case_serial || 0), 0) + 1,
+        [visibleCases]
     );
 
     useEffect(() => {
@@ -1264,9 +1344,27 @@ export function MentorshipMonitoringView({
                 ]);
                 if (cancelled) return;
                 setObservations(obsData || []);
+
+                // Standards live on the course, not the participant, so they need
+                // the course-wide fetch. A failure here must not block the tab —
+                // the comparison just stays unavailable.
+                try {
+                    const courseData = await listAllDataForCourse(course.id);
+                    if (!cancelled) {
+                        const byScenario = {};
+                        (courseData?.allCases || [])
+                            .filter(c => c.record_type === 'STANDARD' && c.scenario_id)
+                            .forEach(c => { byScenario[c.scenario_id] = c; });
+                        setCourseStandards(byScenario);
+                    }
+                } catch (stdErr) {
+                    console.warn('Could not load case standards for this course:', stdErr);
+                }
                 // Only mentorship-recorded cases belong on this tab; a course that
                 // switched sub-course mid-way can still hold ordinary grid cases.
                 setCases((casesData || []).filter(c => c.setting === 'MENTORSHIP'));
+                // Both record types are kept in state; the list below filters by
+                // the type currently selected so serials stay independent.
             } catch (err) {
                 if (cancelled) return;
                 console.error('Failed to load mentorship monitoring data:', err);
@@ -1287,7 +1385,8 @@ export function MentorshipMonitoringView({
         setEditingCase(null);
         setShowForm(false);
         setVisibleStep(1);
-    }, [participant?.id, service]);
+        setScenarioId(IMNCI_CASE_SCENARIOS[0]?.id || '');
+    }, [participant?.id, service, recordType]);
 
     const handleFormChange = useCallback((e) => {
         const { name, value } = e.target;
@@ -1324,6 +1423,14 @@ export function MentorshipMonitoringView({
         }));
     }, [isEenc]);
 
+    const handleMothersFieldChange = useCallback((field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    }, []);
+
+    const handleMothersAnswerChange = useCallback((key, value) => {
+        setFormData(prev => ({ ...prev, answers: { ...prev.answers, [key]: value } }));
+    }, []);
+
     const handleMultiClassificationChange = useCallback((stateKey, classificationName, isChecked) => {
         setFormData(prev => ({
             ...prev,
@@ -1336,7 +1443,10 @@ export function MentorshipMonitoringView({
 
     // IMNCI step reveal. EENC handles its own reveal inside its renderer.
     useEffect(() => {
-        if (isEenc) return;
+        // The mothers interview has no assessment_skills at all — running the
+        // IMNCI completeness helpers against that shape threw on
+        // formData.assessment_skills.skill_weight.
+        if (isEenc || isMothers || isVisit) return;
         let step = 1;
         if (isVitalSignsComplete(formData)) step = 2;
         if (step === 2 && isDangerSignsComplete(formData)) step = 3;
@@ -1361,9 +1471,14 @@ export function MentorshipMonitoringView({
 
     const handleEditCase = (caseToEdit) => {
         const caseObs = observations.filter(o => o.caseId === caseToEdit.id);
-        setFormData(rebuildMentorshipFormData(caseToEdit, caseObs, getInitialFormData, service));
+        const type = caseToEdit.record_type || 'SKILLS';
+        setRecordType(type);
+        setFormData(type === 'MOTHERS'
+            ? rebuildMothersFormData(caseToEdit, caseObs, service)
+            : rebuildMentorshipFormData(caseToEdit, caseObs, getInitialFormData, service));
         setEditingCase(caseToEdit);
         setDayOfCourse(caseToEdit.day_of_course || 1);
+        setScenarioId(caseToEdit.scenario_id || '');
         setCaseAgeMonths(caseToEdit.case_age_months ?? '');
         setVisibleStep(10);
         setShowForm(true);
@@ -1375,16 +1490,39 @@ export function MentorshipMonitoringView({
         setIsSaving(true);
 
         try {
-            const { caseData, observations: newObservations } = buildMentorshipCourseRecord(formData, {
+            const ctx = {
                 course, participant, service, dayOfCourse,
                 caseSerial: editingCase ? editingCase.case_serial : nextSerial,
                 caseAgeMonths, subCourse,
-            });
+            };
+            const { caseData, observations: newObservations } = isMothers
+                ? buildMothersCourseRecord(formData, ctx)
+                : buildMentorshipCourseRecord(formData, ctx);
 
-            if (!newObservations.length) {
-                alert('Answer at least one skill before saving this session.');
-                setIsSaving(false);
-                return;
+            // Case identity and the mentor-vs-standard comparison ride on the same
+            // course record. No extra observations are written: the comparison is
+            // one number about the mentor, not findings about the health worker.
+            if (scenario && !isMothers) {
+                caseData.scenario_id = scenario.id;
+                caseData.scenario_child = scenario.childName;
+
+                if (markAsStandard) {
+                    // This session becomes the reference the course scores every
+                    // other mentor against for this case.
+                    caseData.record_type = 'STANDARD';
+                    caseData.standard_score = scores?.overallScore?.score ?? 0;
+                    caseData.standard_max = scores?.overallScore?.maxScore ?? 0;
+                    caseData.standard_set_by = participant?.name || '';
+                    caseData.standard_set_on = new Date().toISOString().slice(0, 10);
+                } else if (standardComparison) {
+                    caseData.mentor_score = standardComparison.mentorScore;
+                    caseData.mentor_max = standardComparison.mentorMax;
+                    caseData.standard_score = standardComparison.standardScore;
+                    caseData.standard_max = standardComparison.standardMax;
+                    caseData.standard_difference = standardComparison.difference;
+                    caseData.standard_agreement_pct = standardComparison.agreementPct;
+                    caseData.standard_within_tolerance = standardComparison.withinTolerance;
+                }
             }
 
             const { savedCase, savedObservations } = await upsertCaseAndObservations(
@@ -1399,7 +1537,28 @@ export function MentorshipMonitoringView({
                 setObservations(prev => [...prev, ...savedObservations]);
             }
 
+            // Keep the newly-set standard in view immediately rather than waiting
+            // for a reload.
+            if (markAsStandard && scenario) {
+                setCourseStandards(prev => ({ ...prev, [scenario.id]: savedCase }));
+            }
+
+            // Snapshot before the resets below wipe formData/scenarioId. The
+            // scenario id and breakdown are copied in because `scenario` is
+            // about to point at a different case.
+            setSavedComparison(
+                !isMothers && !markAsStandard && scenario && standardComparison
+                    ? {
+                        ...standardComparison,
+                        scenarioId: scenario.id,
+                        standardBreakdown: scenario.standardBreakdown,
+                    }
+                    : null
+            );
+
             setShowSuccess(true);
+            setMarkAsStandard(false);
+            setScenarioId(IMNCI_CASE_SCENARIOS[0]?.id || '');
             setFormData(getInitialFormData());
             setEditingCase(null);
             setCaseAgeMonths('');
@@ -1411,6 +1570,49 @@ export function MentorshipMonitoringView({
             setIsSaving(false);
         }
     };
+
+    // The visit report is a training artefact, not a facility visit, so it is
+    // given a course-scoped pseudo-facility and stored as a course case.
+    const trainingFacility = useMemo(() => ({
+        id: `course-${course?.id}-${participant?.id}`,
+        name: `${course?.course_type || 'Course'} training — ${participant?.name || ''}`,
+        state: course?.state,
+        locality: course?.locality,
+        nutrition_center_exists: false,
+        immunization_office_exists: false,
+        growth_monitoring_service_exists: false,
+    }), [course?.id, course?.course_type, course?.state, course?.locality, participant?.id, participant?.name]);
+
+    const saveVisitAsCourseRecord = useCallback(async (payload) => {
+        const caseData = {
+            courseId: course.id,
+            participant_id: participant.id,
+            encounter_date: new Date().toISOString().slice(0, 10),
+            setting: 'MENTORSHIP',
+            record_type: 'VISIT',
+            mentorship_service: service,
+            age_group: 'MENTORSHIP_VISIT',
+            case_serial: editingCase ? editingCase.case_serial : nextSerial,
+            day_of_course: dayOfCourse,
+            sub_course: subCourse || null,
+            allCorrect: false,
+            contentHash: `visit-${Date.now()}`,
+            visit_report: payload,
+        };
+        const { savedCase } = await upsertCaseAndObservations(caseData, [], editingCase?.id);
+        setCases(prev => (editingCase
+            ? prev.map(c => (c.id === editingCase.id ? savedCase : c))
+            : [...prev, savedCase]));
+        return savedCase;
+    }, [course, participant, service, dayOfCourse, subCourse, editingCase, nextSerial]);
+
+    const handleVisitSaved = useCallback(() => {
+        // Visit reports are not scored against a case standard.
+        setSavedComparison(null);
+        setShowSuccess(true);
+        setShowForm(false);
+        setEditingCase(null);
+    }, []);
 
     const handleDeleteSession = async (caseToDelete) => {
         if (!window.confirm('Delete this mentorship session and everything recorded in it? This cannot be undone.')) return;
@@ -1453,13 +1655,76 @@ export function MentorshipMonitoringView({
                 <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div></Card>
             )}
 
-            <Modal isOpen={showSuccess} onClose={() => setShowSuccess(false)} title="Session recorded">
-                <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Mentorship session saved</h3>
-                    <p className="text-gray-600 mb-6">
-                        It is now part of {participant?.name}'s course record and will appear in the course report.
-                    </p>
-                    <Button onClick={() => { setShowSuccess(false); setShowForm(false); }} className="w-full bg-green-600 hover:bg-green-700 border-green-600">
+            <Modal isOpen={showSuccess} onClose={() => { setShowSuccess(false); setSavedComparison(null); }} title="Session recorded">
+                <div className="p-6">
+                    <div className="text-center">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Mentorship session saved</h3>
+                        <p className="text-gray-600">
+                            It is now part of {participant?.name}'s course record and will appear in the course report.
+                        </p>
+                    </div>
+
+                    {savedComparison && (
+                        <div className="mt-5 p-3 border rounded-lg bg-slate-50 text-left">
+                            <div className="flex justify-between items-center mb-2 gap-3">
+                                <h4 className="font-bold text-slate-800">
+                                    Mentor vs stored standard — case {savedComparison.scenarioId}
+                                    {savedComparison.setBy && (
+                                        <span className="block text-xs font-normal text-slate-500">
+                                            Standard set by {savedComparison.setBy}
+                                        </span>
+                                    )}
+                                </h4>
+                                <span className={`shrink-0 px-3 py-1 rounded-md text-white font-semibold ${
+                                    savedComparison.withinTolerance ? 'bg-green-600'
+                                        : savedComparison.agreementPct >= 80 ? 'bg-yellow-500' : 'bg-red-600'
+                                }`}>
+                                    {savedComparison.agreementPct}% agreement
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3 text-sm">
+                                <div>
+                                    <div className="text-slate-500 text-xs">Mentor scored</div>
+                                    <div className="font-semibold">{savedComparison.mentorScore}/{savedComparison.mentorMax}</div>
+                                </div>
+                                <div>
+                                    <div className="text-slate-500 text-xs">System standard</div>
+                                    <div className="font-semibold">{savedComparison.standardScore}/{savedComparison.standardMax}</div>
+                                </div>
+                                <div>
+                                    <div className="text-slate-500 text-xs">Difference</div>
+                                    <div className={`font-semibold ${savedComparison.withinTolerance ? 'text-green-700' : 'text-red-700'}`}>
+                                        {savedComparison.difference > 0 ? '+' : ''}{savedComparison.difference}
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-2">
+                                {savedComparison.withinTolerance
+                                    ? 'The mentor applied the mentoring standard consistently for this case.'
+                                    : savedComparison.difference > 0
+                                        ? 'The mentor scored this case higher than the standard.'
+                                        : 'The mentor scored this case lower than the standard.'}
+                            </p>
+                            {savedComparison.source === 'configured' && savedComparison.standardBreakdown && (
+                                <details className="mt-2">
+                                    <summary className="text-xs text-slate-500 cursor-pointer">
+                                        How this standard was derived
+                                    </summary>
+                                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                                        {savedComparison.standardBreakdown}
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Recording this case with a master mentor will replace it.
+                                    </p>
+                                </details>
+                            )}
+                        </div>
+                    )}
+
+                    <Button
+                        onClick={() => { setShowSuccess(false); setSavedComparison(null); setShowForm(false); }}
+                        className="w-full mt-6 bg-green-600 hover:bg-green-700 border-green-600"
+                    >
                         Done
                     </Button>
                 </div>
@@ -1467,6 +1732,36 @@ export function MentorshipMonitoringView({
 
             <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Session setup" size="lg">
                 <div className="p-4">
+                    <FormGroup label="Which form?" className="mb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {[
+                                { key: 'SKILLS', title: 'Skills assessment', desc: `Observe the participant managing a ${isEenc ? 'delivery' : 'case'}.` },
+                                { key: 'MOTHERS', title: 'Mothers interview', desc: 'Interview a mother about the care received.' },
+                                { key: 'VISIT', title: 'Visit report', desc: 'Practise completing the visit report.' },
+                            ].map(opt => (
+                                <button
+                                    key={opt.key}
+                                    type="button"
+                                    disabled={opt.disabled}
+                                    title={opt.disabled ? 'A visit report summarises a whole facility visit, so it has no course participant equivalent.' : undefined}
+                                    onClick={() => !opt.disabled && setRecordType(opt.key)}
+                                    className={`text-left p-3 rounded-lg border transition-colors ${
+                                        opt.disabled
+                                            ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed'
+                                            : recordType === opt.key
+                                                ? 'bg-sky-600 border-sky-600 text-white'
+                                                : 'bg-white border-slate-300 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    <div className="font-semibold text-sm">{opt.title}</div>
+                                    <div className={`text-xs mt-1 ${recordType === opt.key && !opt.disabled ? 'text-sky-100' : 'text-slate-500'}`}>
+                                        {opt.desc}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </FormGroup>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {!isPublicView && (
                             <FormGroup label="Select participant" className="sm:col-span-2">
@@ -1479,12 +1774,51 @@ export function MentorshipMonitoringView({
                             <Input type="date" value={formData.session_date}
                                 onChange={(e) => handleFormChange({ target: { name: 'session_date', value: e.target.value } })} />
                         </FormGroup>
+                        {!isMothers && !isVisit && !isEenc && (
+                            <FormGroup label="Standard case" className="sm:col-span-2">
+                                <Select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
+                                    {IMNCI_CASE_SCENARIOS.map(sc => (
+                                        <option key={sc.id} value={sc.id}>
+                                            {sc.id} · {sc.childName}
+                                            {courseStandards[sc.id]
+                                                ? ' — standard recorded'
+                                                : sc.standardScore != null
+                                                    ? ` — standard ${sc.standardScore}`
+                                                    : ' — no standard set'}
+                                        </option>
+                                    ))}
+                                </Select>
+
+                                <label className="flex items-start gap-2 mt-2 p-2 rounded border border-amber-300 bg-amber-50 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={markAsStandard}
+                                        onChange={(e) => setMarkAsStandard(e.target.checked)}
+                                        className="mt-0.5"
+                                    />
+                                    <span className="text-xs text-amber-900">
+                                        <span className="font-semibold">Record this as the standard answer for {scenarioId}.</span>
+                                        {' '}Tick this only when a master mentor is completing the case. The score
+                                        from this session becomes the reference every other mentor on the course is
+                                        compared against.
+                                        {courseStandards[scenarioId] && (
+                                            <span className="block mt-1">
+                                                A standard already exists for {scenarioId}
+                                                {courseStandards[scenarioId].standard_set_by
+                                                    ? ` (set by ${courseStandards[scenarioId].standard_set_by})`
+                                                    : ''} — saving will replace it.
+                                            </span>
+                                        )}
+                                    </span>
+                                </label>
+                            </FormGroup>
+                        )}
                         <FormGroup label="Course day">
                             <Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>
                                 {[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}
                             </Select>
                         </FormGroup>
-                        {!isEenc && (
+                        {!isEenc && !isMothers && (
                             <FormGroup label="Child age (months)">
                                 <Input type="number" value={caseAgeMonths}
                                     onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))}
@@ -1504,7 +1838,7 @@ export function MentorshipMonitoringView({
                     <div>
                         <h3 className="text-lg font-bold text-slate-800">Start a mentorship session</h3>
                         <p className="text-sm text-slate-500">
-                            Observe {participant?.name} with a {isEenc ? 'delivery' : 'case'} and record it against the course.
+                            Record a skills assessment or a mothers interview for {participant?.name} against the course.
                         </p>
                     </div>
                     <Button onClick={startNewSession}>+ New session</Button>
@@ -1516,7 +1850,9 @@ export function MentorshipMonitoringView({
                     <div className="flex justify-between items-start mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
                         <div>
                             <h3 className="text-lg font-semibold">
-                                {editingCase ? `Editing session #${editingCase.case_serial}` : `New session #${nextSerial}`}
+                                {editingCase
+                                    ? `Editing ${isMothers ? 'interview' : 'session'} #${editingCase.case_serial}`
+                                    : `New ${isMothers ? 'interview' : 'session'} #${nextSerial}`}
                             </h3>
                             <p className="text-sm text-slate-600 mt-1">
                                 <span className="font-semibold">Day:</span> {dayOfCourse}
@@ -1527,7 +1863,42 @@ export function MentorshipMonitoringView({
                         <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>Edit setup</Button>
                     </div>
 
-                    {isEenc ? (
+                    {isVisit ? (
+                        // A training visit report. The facility is synthesised from
+                        // the course because the trainee is practising the form, not
+                        // reporting on a real facility visit.
+                        service === 'EENC' ? (
+                            <EENCVisitReport
+                                facility={trainingFacility}
+                                allSubmissions={[]}
+                                allVisitReports={[]}
+                                visitNumber={1}
+                                onCancel={() => setShowForm(false)}
+                                onSaveSuccess={handleVisitSaved}
+                                setToast={() => {}}
+                                onSaveOverride={saveVisitAsCourseRecord}
+                            />
+                        ) : (
+                            <IMNCIVisitReport
+                                facility={trainingFacility}
+                                allSubmissions={[]}
+                                allVisitReports={[]}
+                                visitNumber={1}
+                                onCancel={() => setShowForm(false)}
+                                onSaveSuccess={handleVisitSaved}
+                                setToast={() => {}}
+                                onSaveOverride={saveVisitAsCourseRecord}
+                            />
+                        )
+                    ) : isMothers ? (
+                        <MothersFormRenderer
+                            formData={formData}
+                            service={service}
+                            scores={scores}
+                            onFieldChange={handleMothersFieldChange}
+                            onAnswerChange={handleMothersAnswerChange}
+                        />
+                    ) : isEenc ? (
                         <EENCFormRenderer
                             formData={formData}
                             setFormData={setFormData}
@@ -1549,6 +1920,34 @@ export function MentorshipMonitoringView({
                         </div>
                     )}
 
+                    {!isMothers && !isVisit && scenario && (
+                        <div className="mt-4 p-3 border rounded-lg bg-slate-50">
+                            {markAsStandard ? (
+                                <p className="text-sm text-amber-900">
+                                    This session will be saved as the <span className="font-semibold">standard answer</span> for
+                                    case {scenario.id} — {scores?.overallScore?.score ?? 0}/{scores?.overallScore?.maxScore ?? 0}.
+                                    Every other mentor on this course will be compared against it.
+                                </p>
+                            ) : standardComparison ? (
+                                // The stored total is withheld on purpose. Showing it here
+                                // would let the mentor score towards the standard rather
+                                // than towards the case in front of them.
+                                <p className="text-sm text-slate-600">
+                                    A standard answer exists for case {scenario.id}. Your total will be compared
+                                    against it and the result shown once you save this session.
+                                </p>
+                            ) : (
+                                <p className="text-sm text-amber-800">
+                                    No standard has been set for case {scenario.id} yet, so this mentor's total cannot
+                                    be compared. Have a master mentor complete this case with
+                                    <span className="font-semibold"> “Record this as the standard answer” </span>
+                                    ticked in the session setup, and every session after that will be scored against it.
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {!isVisit && (
                     <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 border-t pt-4">
                         <Button onClick={handleSaveSession} className="w-full sm:w-auto" disabled={isSaving}>
                             {isSaving ? 'Saving…' : editingCase ? 'Update session' : 'Save session'}
@@ -1564,12 +1963,355 @@ export function MentorshipMonitoringView({
                             {editingCase ? 'Cancel edit' : 'Discard session'}
                         </Button>
                     </div>
+                    )}
                 </Card>
             )}
 
             {loading
                 ? <Card><Spinner /></Card>
-                : <MentorshipSavedSessions cases={cases} observations={observations} onEdit={handleEditCase} onDelete={handleDeleteSession} />}
+                : <MentorshipSavedSessions cases={visibleCases} observations={observations} onEdit={handleEditCase} onDelete={handleDeleteSession} />}
+        </div>
+    );
+}
+// ============================================================================
+// BLOCK F — mothers interview support for the mentorship monitoring tab
+// Append to the END of MonitoringView.jsx (after Block B).
+// ============================================================================
+//
+// The question sets are declared here rather than imported from
+// IMNCIMothersForm.jsx / EENCMothersForm.jsx because in those files they are
+// module-local and the components autosave into the mentorship sessions
+// collection. Both forms are flat question lists with no conditional logic, so
+// re-rendering them faithfully is low risk — unlike the EENC skills form, whose
+// C-section branching genuinely had to be reused rather than copied.
+//
+// If you later export the question arrays from those two files, swap these
+// constants for imports and delete nothing else.
+
+// --- IMNCI mothers interview ------------------------------------------------
+
+// Values: 'نعم' / 'لا' / 'لا ينطبق'. Scored 1 / 0, with 'لا ينطبق' dropped.
+const MOTHERS_IMNCI_SECTIONS = [
+    {
+        domain: 'mother_knowledge',
+        label: 'معرفة الأم',
+        stateKey: 'knowledge',
+        questions: [
+            { key: 'knows_med_details', label: '1. الأم التي طفلها أعطى مضاد حيوي أو دواء ملاريا تعرف كل الأسئلة . إجاباتها صحيحة على : الجرعة، كم مرة في اليوم، عدد الأيام )' },
+            { key: 'knows_diarrhea_4rules', label: '2. الأم تعرف القواعد الاربعة للعلاج الاسهال بالمنزل ( السوائل ، التغذية ، الزنك ومتى تعود فوراً )' },
+            { key: 'knows_home_fluids', label: '3. الأم تعرف ما هي السوائل التي تعطيها لطفلها بالمنزل' },
+            { key: 'knows_ors_water_qty', label: '4. الأم تعرف ما هي كمية الماء التي تحضر بها ملح الإرواء' },
+            { key: 'knows_ors_after_stool', label: '5. الأم تعرف ما هي كمية المحلول التي تعطيها بعد كل جلسة تبرز' },
+            { key: 'knows_return_date', label: '6. الأم تعرف متى تعود للمتابعة.' },
+        ],
+    },
+    {
+        domain: 'mother_satisfaction',
+        label: 'رضا الأم',
+        stateKey: 'satisfaction',
+        questions: [
+            { key: 'time_spent', label: '1. الزمن الذي قضاه الكادر الصحي مع الطفل' },
+            { key: 'assessment_method', label: '2. الطريقة التي كشف بها الكادر الصحي على الطفل' },
+            { key: 'treatment_given', label: '3. العلاج الذي أعطى' },
+            { key: 'communication_style', label: '4. الطريقة التي تحدث بها الكادر الصحي مع الأم' },
+            { key: 'what_learned', label: '5. ما تعلمته من الكادر الصحي' },
+            { key: 'drug_availability', label: '6. توفر الدواء بالوحدة الصحية' },
+        ],
+    },
+];
+
+// --- EENC mothers interview -------------------------------------------------
+
+// Values: 'yes' / 'no'. Three fields are scored inverted — the ideal answer is
+// 'no', matching calculateScores in EENCMothersForm.jsx. Getting this wrong
+// would silently invert three of the sixteen scores, so it is declared per
+// question rather than inferred.
+const MOTHERS_EENC_SECTIONS = [
+    {
+        domain: 'mother_skin', label: '1. وضع الطفل جلد بجلد',
+        questions: [
+            { key: 'skin_to_skin_immediate', label: 'هل تم وضع الطفل جلد بجلد مباشرة بعد الولادة؟' },
+            { key: 'skin_to_skin_90min', label: 'هل الطفل الان موضوع جلد بجلد أو تم وضعه جلد بجلد بصورة غير منقطعة مدة 90 دقيقة؟' },
+        ],
+    },
+    {
+        domain: 'mother_breastfeeding', label: '2. بدء الرضاعة الطبيعية',
+        questions: [
+            { key: 'breastfed_first_hour', label: 'هل أكمل الطفل رضعة كاملة خلال الساعة الأولى من الولادة؟' },
+            { key: 'given_other_fluids', label: 'هل تم إعطاء أي سوائل اخرى غير حليب الأم؟ (الإجابة المثالية: لا)', idealNo: true },
+            { key: 'given_other_fluids_bottle', label: 'هل تم إعطاء الطفل أي سائل اخر عن طريق البزة؟ (الإجابة المثالية: لا)', idealNo: true },
+        ],
+    },
+    {
+        domain: 'mother_care', label: '3. رعاية الجلد والعين والسرة',
+        questions: [
+            { key: 'given_vitamin_k', label: 'هل تم إعطاء الطفل فيتامين ك ؟' },
+            { key: 'given_tetracycline', label: 'هل تم إعطاء الطفل جرعة تتراسيكلين للعين ؟' },
+            { key: 'anything_on_cord', label: 'هل تم وضع أي مادة على السرة ؟' },
+            { key: 'rubbed_with_oil', label: 'هل تم مسح الطفل باي نوع من الزيوت ؟' },
+            { key: 'baby_bathed', label: 'هل تم استحمام الطفل ؟' },
+        ],
+    },
+    {
+        domain: 'mother_vaccination', label: '4. تطعيمات الطفل',
+        questions: [
+            { key: 'polio_zero_dose', label: 'هل تم تطعيم الطفل الجرعة الصفرية للشلل الفموي ؟' },
+            { key: 'bcg_dose', label: 'هل تم تطعيم الطفل جرعة الدرن ؟' },
+        ],
+    },
+    {
+        domain: 'mother_measurements', label: '5. قياسات الطفل',
+        questions: [
+            { key: 'baby_weighed', label: 'هل تم وزن الطفل ؟' },
+            { key: 'baby_temp_measured', label: 'هل تم قياس درجة حرارة الطفل ؟' },
+        ],
+    },
+    {
+        domain: 'mother_registration', label: '6. تسجيلات الطفل',
+        questions: [
+            { key: 'baby_registered', label: 'هل تم تسجيل الطفل في السجل المدني؟' },
+            { key: 'given_discharge_card', label: 'هل تم إعطاء الطفل كرت الخروج؟' },
+        ],
+    },
+];
+
+export const getMothersSections = (service) =>
+    service === 'EENC' ? MOTHERS_EENC_SECTIONS : MOTHERS_IMNCI_SECTIONS;
+
+// Exported for ReportsView.jsx, same shape as getMentorshipSkillMaps.
+export const getMothersSkillMaps = (service) => {
+    const sections = getMothersSections(service);
+    const skills = {};
+    const labels = {};
+    sections.forEach(s => {
+        labels[s.domain] = s.label;
+        skills[s.domain] = s.questions.map(q => q.label);
+    });
+    return { skills, domains: sections.map(s => s.domain), labels };
+};
+
+export const getMothersInitialFormData = (service) => {
+    const base = {
+        session_date: new Date().toISOString().split('T')[0],
+        mother_name: '',
+        child_age: '',
+        child_sex: '',
+        answers: {},
+        notes: '',
+    };
+    getMothersSections(service).forEach(s => {
+        s.questions.forEach(q => { base.answers[q.key] = ''; });
+    });
+    return base;
+};
+
+export const calculateMothersScores = (formData, service) => {
+    const isEenc = service === 'EENC';
+    const scores = {};
+    let total = 0;
+    let totalMax = 0;
+
+    getMothersSections(service).forEach(s => {
+        let score = 0;
+        let maxScore = 0;
+        s.questions.forEach(q => {
+            const v = formData.answers?.[q.key];
+            const answered = isEenc ? (v === 'yes' || v === 'no') : (v === 'نعم' || v === 'لا');
+            if (!answered) return;
+            maxScore += 1;
+            const ideal = isEenc ? (q.idealNo ? 'no' : 'yes') : 'نعم';
+            if (v === ideal) score += 1;
+        });
+        scores[s.domain] = { score, maxScore };
+        total += score;
+        totalMax += maxScore;
+    });
+
+    scores.overallScore = { score: total, maxScore: totalMax };
+    return scores;
+};
+
+// --- Mothers form to course record -----------------------------------------
+
+export const buildMothersCourseRecord = (formData, context) => {
+    const {
+        course, participant, service = 'IMNCI',
+        dayOfCourse = 1, caseSerial = 1, subCourse = null,
+    } = context;
+
+    const isEenc = service === 'EENC';
+    const encounterDate = formData.session_date || new Date().toISOString().slice(0, 10);
+    const observations = [];
+
+    getMothersSections(service).forEach(s => {
+        s.questions.forEach(q => {
+            const v = formData.answers?.[q.key];
+            const answered = isEenc ? (v === 'yes' || v === 'no') : (v === 'نعم' || v === 'لا');
+            // 'لا ينطبق' / unanswered are dropped rather than scored zero, the
+            // same rule the skills forms use.
+            if (!answered) return;
+
+            const ideal = isEenc ? (q.idealNo ? 'no' : 'yes') : 'نعم';
+
+            observations.push({
+                courseId: course.id,
+                course_type: course.course_type,
+                participant_id: participant.id,
+                encounter_date: encounterDate,
+                day_of_course: dayOfCourse,
+                setting: 'MENTORSHIP',
+                record_type: 'MOTHERS',
+                mentorship_service: service,
+                domain: s.domain,
+                section: s.stateKey || s.domain,
+                item_recorded: q.label,
+                item_correct: v === ideal ? 1 : 0,
+                item_max: 1,
+                case_serial: caseSerial,
+                age_group: 'MENTORSHIP_MOTHERS',
+                sub_course: subCourse || null,
+            });
+        });
+    });
+
+    const caseData = {
+        courseId: course.id,
+        participant_id: participant.id,
+        encounter_date: encounterDate,
+        setting: 'MENTORSHIP',
+        record_type: 'MOTHERS',
+        mentorship_service: service,
+        age_group: 'MENTORSHIP_MOTHERS',
+        case_serial: caseSerial,
+        day_of_course: dayOfCourse,
+        allCorrect: observations.length > 0 && observations.every(o => o.item_correct === 1),
+        contentHash: observations
+            .map(o => `${o.domain}|${o.item_recorded}:${o.item_correct}`)
+            .sort()
+            .join('|'),
+        sub_course: subCourse || null,
+        mother_name: formData.mother_name || '',
+        child_age: formData.child_age || '',
+        child_sex: formData.child_sex || '',
+        notes: formData.notes || '',
+    };
+
+    return { caseData, observations };
+};
+
+export const rebuildMothersFormData = (caseDoc, caseObservations, service = 'IMNCI') => {
+    const isEenc = service === 'EENC';
+    const formData = getMothersInitialFormData(service);
+
+    formData.session_date = caseDoc?.encounter_date || formData.session_date;
+    formData.mother_name = caseDoc?.mother_name || '';
+    formData.child_age = caseDoc?.child_age || '';
+    formData.child_sex = caseDoc?.child_sex || '';
+    formData.notes = caseDoc?.notes || '';
+
+    const labelToQuestion = {};
+    getMothersSections(service).forEach(s => {
+        s.questions.forEach(q => { labelToQuestion[q.label] = q; });
+    });
+
+    (caseObservations || []).forEach(o => {
+        const q = labelToQuestion[o.item_recorded];
+        if (!q) return;
+        const ideal = isEenc ? (q.idealNo ? 'no' : 'yes') : 'نعم';
+        const other = isEenc ? (ideal === 'yes' ? 'no' : 'yes') : 'لا';
+        formData.answers[q.key] = o.item_correct === 1 ? ideal : other;
+    });
+
+    return formData;
+};
+
+// --- Mothers renderer -------------------------------------------------------
+
+function MothersFormRow({ label, value, options, onChange }) {
+    const answered = value !== '' && value != null;
+    return (
+        <div dir="rtl" className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:px-5 hover:bg-sky-50 transition-colors ${answered ? 'row-answered' : 'row-unanswered'}`}>
+            <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex-grow mr-4 w-full sm:w-auto">{label}</span>
+            <div className="flex gap-2 flex-shrink-0 mt-1 sm:mt-0">
+                {options.map(([text, val, cls]) => (
+                    <button
+                        key={val}
+                        type="button"
+                        onClick={() => onChange(val)}
+                        className={`px-3 py-1 text-sm rounded-md border transition-colors ${value === val ? `${cls} text-white` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                    >
+                        {text}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+export function MothersFormRenderer({ formData, service, scores, onFieldChange, onAnswerChange }) {
+    const isEenc = service === 'EENC';
+    const options = isEenc
+        ? [['نعم', 'yes', 'bg-green-600 border-green-600'], ['لا', 'no', 'bg-red-600 border-red-600']]
+        : [
+            ['نعم', 'نعم', 'bg-green-600 border-green-600'],
+            ['لا', 'لا', 'bg-red-600 border-red-600'],
+            ['لا ينطبق', 'لا ينطبق', 'bg-slate-400 border-slate-400'],
+        ];
+
+    return (
+        <div dir="rtl">
+            <div className="p-3 border rounded-lg bg-gray-50 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <FormGroup label="اسم الأم">
+                        <Input value={formData.mother_name} onChange={(e) => onFieldChange('mother_name', e.target.value)} className="text-right" />
+                    </FormGroup>
+                    <FormGroup label="عمر الطفل">
+                        <Input value={formData.child_age} onChange={(e) => onFieldChange('child_age', e.target.value)} placeholder="مثال: يومان" className="text-right" />
+                    </FormGroup>
+                    <FormGroup label="جنس الطفل">
+                        <Select value={formData.child_sex} onChange={(e) => onFieldChange('child_sex', e.target.value)}>
+                            <option value="">— اختر —</option>
+                            <option value="ذكر">ذكر</option>
+                            <option value="أنثى">أنثى</option>
+                        </Select>
+                    </FormGroup>
+                </div>
+            </div>
+
+            {getMothersSections(service).map(section => {
+                const s = scores?.[section.domain];
+                return (
+                    <div key={section.domain} className="mb-4 border rounded-lg overflow-hidden">
+                        <div className="flex justify-between items-center bg-sky-100 px-4 py-2">
+                            <h4 className="font-bold text-sky-900">{section.label}</h4>
+                            {s && s.maxScore > 0 && (
+                                <span className="text-sm font-semibold text-sky-800">{s.score}/{s.maxScore}</span>
+                            )}
+                        </div>
+                        <div className="divide-y divide-slate-100 bg-white">
+                            {section.questions.map(q => (
+                                <MothersFormRow
+                                    key={q.key}
+                                    label={q.label}
+                                    value={formData.answers?.[q.key] ?? ''}
+                                    options={options}
+                                    onChange={(val) => onAnswerChange(q.key, val)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+
+            <FormGroup label="ملاحظات عامة" className="text-right mt-4">
+                <textarea
+                    value={formData.notes}
+                    onChange={(e) => onFieldChange('notes', e.target.value)}
+                    rows={3}
+                    className="w-full p-2 border rounded text-right"
+                    placeholder="أضف أي ملاحظات إضافية..."
+                />
+            </FormGroup>
         </div>
     );
 }
