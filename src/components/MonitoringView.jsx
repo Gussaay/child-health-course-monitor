@@ -56,10 +56,10 @@ const generateHash = (buffer) => {
 // --- REUSABLE COMPONENT for the Segmented Control UI ---
 function ActionToggle({ options, currentValue, onClick }) {
     return (
-        <div className="relative z-0 inline-flex shadow-sm rounded-md flex-shrink-0">
+        <div className="relative z-0 flex w-full sm:inline-flex sm:w-auto shadow-sm rounded-md sm:flex-shrink-0">
             {options.map(([label, value, activeClass], idx) => {
                 const isSelected = currentValue === value;
-                const baseClass = "relative inline-flex items-center justify-center px-3 py-1 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
+                const baseClass = "relative inline-flex flex-1 sm:flex-none items-center justify-center px-3 py-2.5 sm:py-1 min-h-[44px] sm:min-h-0 text-sm font-medium leading-tight whitespace-nowrap touch-manipulation focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
                 const activeState = isSelected ? `${activeClass} text-white` : "bg-white text-gray-700 hover:bg-gray-50";
                 
                 let roundedClass = "";
@@ -361,42 +361,45 @@ export function ObservationView({ course, participant, participants, onChangePar
                         </FormGroup>
                     </div>
                 </div>
-                <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                    <Button variant="secondary" onClick={() => { setShowSetupModal(false); setShowGrid(false); }}>Close</Button>
-                    <Button onClick={() => { setShowSetupModal(false); setShowGrid(true); }}>Confirm & Start</Button>
+                <div className="p-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-gray-50 rounded-b-lg">
+                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowGrid(false); }}>Close</Button>
+                    <Button className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowGrid(true); }}>Confirm & Start</Button>
                 </div>
             </Modal>
 
             {/* Main Action Bar */}
             {!showGrid && !loading && (
-                <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
-                    <div>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
+                    <div className="min-w-0">
                         <h3 className="text-lg font-bold text-slate-800">Ready to monitor?</h3>
                         <p className="text-sm text-slate-500">Start a new observation case for {participant.name}.</p>
                     </div>
-                    <Button onClick={() => { setBuffer({}); setEditingCase(null); setShowSetupModal(true); }}>
+                    <Button className="w-full sm:w-auto flex-shrink-0" onClick={() => { setBuffer({}); setEditingCase(null); setShowSetupModal(true); }}>
                         + Start New Case
                     </Button>
                 </div>
             )}
 
             {showGrid && (
-                <Card className="p-4 mb-4">
-                    <div className="flex justify-between items-start mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
-                        <div>
-                            <h3 className="text-lg font-semibold">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
-                            <p className="text-sm text-slate-600 mt-1">
-                                <span className="font-semibold">Day:</span> {dayOfCourse} &bull; 
-                                <span className="font-semibold ml-2">Date:</span> {encounterDate}
-                                {isImnci && <>&bull; <span className="font-semibold ml-2">Setting:</span> {setting} &bull; <span className="font-semibold ml-2">Age:</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</>}
-                                {isEenc && <>&bull; <span className="font-semibold ml-2">Scenario:</span> {
-                                    eencScenario === 'breathing' ? 'ENC (Breathing)' : 
+                <Card className="p-3 sm:p-4 mb-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
+                        <div className="min-w-0">
+                            <h3 className="text-base sm:text-lg font-semibold break-words">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600 mt-1">
+                                <span><span className="font-semibold">Day:</span> {dayOfCourse}</span>
+                                <span><span className="font-semibold">Date:</span> {encounterDate}</span>
+                                {isImnci && <>
+                                    <span><span className="font-semibold">Setting:</span> {setting}</span>
+                                    <span><span className="font-semibold">Age:</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</span>
+                                </>}
+                                {isEenc && <span><span className="font-semibold">Scenario:</span> {
+                                    eencScenario === 'breathing' ? 'ENC (Breathing)' :
                                     eencScenario === 'not_breathing' ? 'ENC (Not Breathing)' :
                                     eencScenario === 'neonatal_emergency' ? 'Neonatal Emergency' : 'Maternal Emergency'
-                                }</>}
-                            </p>
+                                }</span>}
+                            </div>
                         </div>
-                        <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>
+                        <Button variant="secondary" size="sm" className="w-full sm:w-auto flex-shrink-0" onClick={() => setShowSetupModal(true)}>
                             Edit Setup
                         </Button>
                     </div>
@@ -451,9 +454,9 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
         <div className="space-y-4">
             <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
                 <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
-                <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
                 </div>
             </div>
 
@@ -468,9 +471,9 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
                             <button 
                                 type="button"
                                 onClick={() => toggleDomain(d)} 
-                                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                className={`w-full flex items-center justify-between gap-3 p-4 text-left transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
                             >
-                                <h4 className="text-base font-bold text-slate-800 text-left">{title}</h4>
+                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-left break-words">{title}</h4>
                                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             
@@ -481,7 +484,7 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
                                         const mark = buffer[k];
                                         return (
                                             <div key={`${d}-${i}`} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
-                                                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
+                                                <span className="min-w-0 flex-1 font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
                                                 <ActionToggle
                                                     options={toggleOptions}
                                                     currentValue={mark}
@@ -522,9 +525,9 @@ function EtatMonitoringGrid({ buffer, toggle }) {
         <div className="space-y-4">
             <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
                 <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
-                <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
                 </div>
             </div>
 
@@ -539,9 +542,9 @@ function EtatMonitoringGrid({ buffer, toggle }) {
                             <button 
                                 type="button"
                                 onClick={() => toggleDomain(d)} 
-                                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                className={`w-full flex items-center justify-between gap-3 p-4 text-left transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
                             >
-                                <h4 className="text-base font-bold text-slate-800 text-left">{title}</h4>
+                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-left break-words">{title}</h4>
                                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             
@@ -552,7 +555,7 @@ function EtatMonitoringGrid({ buffer, toggle }) {
                                         const mark = buffer[k];
                                         return (
                                             <div key={`${d}-${i}`} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
-                                                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
+                                                <span className="min-w-0 flex-1 font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
                                                 <ActionToggle
                                                     options={toggleOptions}
                                                     currentValue={mark}
@@ -618,9 +621,9 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
         <div className="space-y-4">
             <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
                 <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
-                <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
                 </div>
             </div>
 
@@ -635,9 +638,9 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                             <button 
                                 type="button"
                                 onClick={() => toggleDomain(d)} 
-                                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                className={`w-full flex items-center justify-between gap-3 p-4 text-left transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
                             >
-                                <h4 className="text-base font-bold text-slate-800 text-left">{title}</h4>
+                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-left break-words">{title}</h4>
                                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             
@@ -648,7 +651,7 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                                         const mark = buffer[k];
                                         return (
                                             <div key={`${d}-${i}`} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
-                                                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">{item.text}</span>
+                                                <span className="min-w-0 flex-1 font-medium text-slate-700 break-words group-hover:text-slate-900">{item.text}</span>
                                                 <ActionToggle
                                                     options={toggleOptions}
                                                     currentValue={mark}
@@ -689,9 +692,9 @@ function IccmMonitoringGrid({ buffer, toggle }) {
         <div className="space-y-4">
             <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
                 <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
-                <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
                 </div>
             </div>
 
@@ -706,9 +709,9 @@ function IccmMonitoringGrid({ buffer, toggle }) {
                             <button 
                                 type="button"
                                 onClick={() => toggleDomain(d)} 
-                                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                className={`w-full flex items-center justify-between gap-3 p-4 text-left transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
                             >
-                                <h4 className="text-base font-bold text-slate-800 text-left">{title}</h4>
+                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-left break-words">{title}</h4>
                                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             
@@ -719,7 +722,7 @@ function IccmMonitoringGrid({ buffer, toggle }) {
                                         const mark = buffer[k];
                                         return (
                                             <div key={`${d}-${i}`} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
-                                                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
+                                                <span className="min-w-0 flex-1 font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
                                                 <ActionToggle
                                                     options={toggleOptions}
                                                     currentValue={mark}
@@ -793,7 +796,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
     return (
         <Card>
             <PageHeader title={`Submitted Cases for ${participant.name}`} />
-            <div className="flex flex-wrap gap-4 p-4 border-b border-slate-300 bg-slate-50 items-center">
+            <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3 sm:gap-4 p-4 border-b border-slate-300 bg-slate-50 sm:items-center">
                 <FormGroup label="Filter by Day" className="!mb-0">
                     <Select value={dayFilter} onChange={e => setDayFilter(e.target.value)}>
                         <option value="all">All</option>
@@ -824,14 +827,14 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                     <div className="space-y-3 p-3">
                         {caseRows.map((c) => (
                             <div key={c.id} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm space-y-2">
-                                <div className="flex justify-between items-start">
-                                    <div>
+                                <div className="flex justify-between items-start gap-3">
+                                    <div className="min-w-0">
                                         <span className="font-bold text-slate-700">{c.date}</span>
                                         <span className="text-sm text-slate-500"> (Day {c.day})</span>
                                     </div>
-                                    <span className={`text-sm font-mono p-1 rounded ${pctBgClass(c.percentage)}`}>{fmtPct(c.percentage)}</span>
+                                    <span className={`text-sm font-mono p-1 rounded flex-shrink-0 ${pctBgClass(c.percentage)}`}>{fmtPct(c.percentage)}</span>
                                 </div>
-                                <div className="text-sm text-slate-600 grid grid-cols-2 gap-x-2">
+                                <div className="text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1">
                                     {isImnci && <span><span className="font-semibold">Setting:</span> {c.setting}</span>}
                                     <span><span className="font-semibold">Scenario:</span> {getAgeLabel(c.age)}</span>
                                     {isEenc ? 
@@ -1160,10 +1163,14 @@ function MentorshipRunningScore({ scores }) {
     const bg = pct >= 80 ? 'bg-green-600' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-600';
 
     return (
-        <div className={`fixed top-4 left-4 z-50 flex flex-col items-center justify-center p-3 w-20 h-20 rounded-lg ${bg} text-white shadow-2xl`} dir="rtl">
-            <div className="font-bold text-lg leading-none">{pct}%</div>
-            <div className="text-xs mt-1 text-center leading-tight">الدرجة الكلية</div>
-            <div className="text-xs mt-0 leading-tight">({overall.score}/{overall.maxScore})</div>
+        <div
+            className={`fixed left-3 bottom-3 sm:left-4 sm:top-4 sm:bottom-auto z-40 flex flex-col items-center justify-center p-2 sm:p-3 w-16 h-16 sm:w-20 sm:h-20 rounded-lg ${bg} text-white shadow-2xl`}
+            style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            dir="rtl"
+        >
+            <div className="font-bold text-base sm:text-lg leading-none">{pct}%</div>
+            <div className="text-[10px] sm:text-xs mt-1 text-center leading-tight">الدرجة الكلية</div>
+            <div className="text-[10px] sm:text-xs leading-tight">({overall.score}/{overall.maxScore})</div>
         </div>
     );
 }
@@ -1186,10 +1193,66 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
 
     const sorted = [...cases].sort((a, b) => (b.case_serial || 0) - (a.case_serial || 0));
 
+    // Score maths is shared by the phone card list and the desktop table so the
+    // two views can never drift apart.
+    const rows = sorted.map(c => {
+        const obs = observations.filter(o => o.caseId === c.id);
+        const earned = obs.reduce((sum, o) => sum + (o.item_correct || 0), 0);
+        const possible = obs.reduce((sum, o) => sum + (o.item_max || 1), 0);
+        const pct = possible ? Math.round((earned / possible) * 100) : 0;
+        return {
+            c,
+            skills: obs.length,
+            earned,
+            possible,
+            pct,
+            tone: pct >= 80 ? 'text-green-700' : pct >= 50 ? 'text-yellow-700' : 'text-red-700',
+        };
+    });
+
+    const caseBadge = (c) => {
+        if (!c.scenario_id) return <span className="text-slate-400 text-xs">—</span>;
+        if (c.standard_agreement_pct == null) {
+            return <span className="px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-700">{c.scenario_id}</span>;
+        }
+        return (
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold text-white ${
+                c.standard_within_tolerance ? 'bg-green-600'
+                    : c.standard_agreement_pct >= 80 ? 'bg-yellow-500' : 'bg-red-600'
+            }`}>
+                {c.scenario_id} · {c.standard_agreement_pct}%
+            </span>
+        );
+    };
+
     return (
-        <Card className="p-4">
+        <Card className="p-3 sm:p-4">
             <h3 className="text-lg font-semibold mb-3">Recorded mentorship sessions</h3>
-            <div className="overflow-x-auto">
+
+            {/* Phone view. A seven-column table cannot be read at 360px, so each
+                session becomes a card and nothing has to scroll sideways. */}
+            <div className="md:hidden space-y-3">
+                {rows.map(({ c, skills, earned, possible, pct, tone }) => (
+                    <div key={c.id} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+                        <div className="flex justify-between items-start gap-3">
+                            <div className="min-w-0">
+                                <span className="font-bold text-slate-700">#{c.case_serial}</span>
+                                <span className="text-sm text-slate-500"> · {c.encounter_date}</span>
+                                <div className="text-sm text-slate-500">Day {c.day_of_course} · {skills} skills scored</div>
+                            </div>
+                            <span className={`font-semibold text-sm flex-shrink-0 ${tone}`}>{earned}/{possible} ({pct}%)</span>
+                        </div>
+                        <div className="mt-2">{caseBadge(c)}</div>
+                        <div className="flex gap-2 justify-end pt-2 mt-2 border-t border-slate-200">
+                            <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>Edit</Button>
+                            <Button variant="danger" size="sm" onClick={() => onDelete(c)}>Delete</Button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Tablet and desktop view. */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full text-sm">
                     <thead>
                         <tr className="bg-slate-100 text-left">
@@ -1203,37 +1266,20 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {sorted.map(c => {
-                            const obs = observations.filter(o => o.caseId === c.id);
-                            const earned = obs.reduce((sum, o) => sum + (o.item_correct || 0), 0);
-                            const possible = obs.reduce((sum, o) => sum + (o.item_max || 1), 0);
-                            const pct = possible ? Math.round((earned / possible) * 100) : 0;
-                            const tone = pct >= 80 ? 'text-green-700' : pct >= 50 ? 'text-yellow-700' : 'text-red-700';
-
-                            return (
-                                <tr key={c.id} className="border-b border-slate-200">
-                                    <td className="p-2 font-medium">{c.case_serial}</td>
-                                    <td className="p-2">{c.encounter_date}</td>
-                                    <td className="p-2">{c.day_of_course}</td>
-                                    <td className="p-2">{obs.length}</td>
-                                    <td className={`p-2 font-semibold ${tone}`}>{earned}/{possible} ({pct}%)</td>
-                                    <td className="p-2 whitespace-nowrap">
-                                        {c.scenario_id
-                                            ? (c.standard_agreement_pct != null
-                                                ? <span className={`px-2 py-0.5 rounded text-xs font-semibold text-white ${
-                                                    c.standard_within_tolerance ? 'bg-green-600'
-                                                        : c.standard_agreement_pct >= 80 ? 'bg-yellow-500' : 'bg-red-600'
-                                                  }`}>{c.scenario_id} · {c.standard_agreement_pct}%</span>
-                                                : <span className="px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-700">{c.scenario_id}</span>)
-                                            : <span className="text-slate-400 text-xs">—</span>}
-                                    </td>
-                                    <td className="p-2 text-right whitespace-nowrap">
-                                        <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>Edit</Button>
-                                        <Button variant="danger" size="sm" className="ml-2" onClick={() => onDelete(c)}>Delete</Button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                        {rows.map(({ c, skills, earned, possible, pct, tone }) => (
+                            <tr key={c.id} className="border-b border-slate-200">
+                                <td className="p-2 font-medium">{c.case_serial}</td>
+                                <td className="p-2">{c.encounter_date}</td>
+                                <td className="p-2">{c.day_of_course}</td>
+                                <td className="p-2">{skills}</td>
+                                <td className={`p-2 font-semibold ${tone}`}>{earned}/{possible} ({pct}%)</td>
+                                <td className="p-2 whitespace-nowrap">{caseBadge(c)}</td>
+                                <td className="p-2 text-right whitespace-nowrap">
+                                    <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>Edit</Button>
+                                    <Button variant="danger" size="sm" className="ml-2" onClick={() => onDelete(c)}>Delete</Button>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
@@ -1264,7 +1310,6 @@ export function MentorshipMonitoringView({
     // Standards are course-wide: whichever participant records one, every other
     // participant on the course is compared against it.
     const [courseStandards, setCourseStandards] = useState({});
-    const [markAsStandard, setMarkAsStandard] = useState(false);
 
     const isMothers = recordType === 'MOTHERS';
     const isVisit = recordType === 'VISIT';
@@ -1506,15 +1551,7 @@ export function MentorshipMonitoringView({
                 caseData.scenario_id = scenario.id;
                 caseData.scenario_child = scenario.childName;
 
-                if (markAsStandard) {
-                    // This session becomes the reference the course scores every
-                    // other mentor against for this case.
-                    caseData.record_type = 'STANDARD';
-                    caseData.standard_score = scores?.overallScore?.score ?? 0;
-                    caseData.standard_max = scores?.overallScore?.maxScore ?? 0;
-                    caseData.standard_set_by = participant?.name || '';
-                    caseData.standard_set_on = new Date().toISOString().slice(0, 10);
-                } else if (standardComparison) {
+                if (standardComparison) {
                     caseData.mentor_score = standardComparison.mentorScore;
                     caseData.mentor_max = standardComparison.mentorMax;
                     caseData.standard_score = standardComparison.standardScore;
@@ -1537,17 +1574,11 @@ export function MentorshipMonitoringView({
                 setObservations(prev => [...prev, ...savedObservations]);
             }
 
-            // Keep the newly-set standard in view immediately rather than waiting
-            // for a reload.
-            if (markAsStandard && scenario) {
-                setCourseStandards(prev => ({ ...prev, [scenario.id]: savedCase }));
-            }
-
             // Snapshot before the resets below wipe formData/scenarioId. The
             // scenario id and breakdown are copied in because `scenario` is
             // about to point at a different case.
             setSavedComparison(
-                !isMothers && !markAsStandard && scenario && standardComparison
+                !isMothers && scenario && standardComparison
                     ? {
                         ...standardComparison,
                         scenarioId: scenario.id,
@@ -1557,7 +1588,6 @@ export function MentorshipMonitoringView({
             );
 
             setShowSuccess(true);
-            setMarkAsStandard(false);
             setScenarioId(IMNCI_CASE_SCENARIOS[0]?.id || '');
             setFormData(getInitialFormData());
             setEditingCase(null);
@@ -1666,8 +1696,8 @@ export function MentorshipMonitoringView({
 
                     {savedComparison && (
                         <div className="mt-5 p-3 border rounded-lg bg-slate-50 text-left">
-                            <div className="flex justify-between items-center mb-2 gap-3">
-                                <h4 className="font-bold text-slate-800">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2 sm:gap-3">
+                                <h4 className="min-w-0 font-bold text-slate-800 break-words">
                                     Mentor vs stored standard — case {savedComparison.scenarioId}
                                     {savedComparison.setBy && (
                                         <span className="block text-xs font-normal text-slate-500">
@@ -1675,14 +1705,14 @@ export function MentorshipMonitoringView({
                                         </span>
                                     )}
                                 </h4>
-                                <span className={`shrink-0 px-3 py-1 rounded-md text-white font-semibold ${
+                                <span className={`self-start shrink-0 px-3 py-1 rounded-md text-white font-semibold ${
                                     savedComparison.withinTolerance ? 'bg-green-600'
                                         : savedComparison.agreementPct >= 80 ? 'bg-yellow-500' : 'bg-red-600'
                                 }`}>
                                     {savedComparison.agreementPct}% agreement
                                 </span>
                             </div>
-                            <div className="grid grid-cols-3 gap-3 text-sm">
+                            <div className="grid grid-cols-3 gap-2 sm:gap-3 text-sm">
                                 <div>
                                     <div className="text-slate-500 text-xs">Mentor scored</div>
                                     <div className="font-semibold">{savedComparison.mentorScore}/{savedComparison.mentorMax}</div>
@@ -1780,37 +1810,9 @@ export function MentorshipMonitoringView({
                                     {IMNCI_CASE_SCENARIOS.map(sc => (
                                         <option key={sc.id} value={sc.id}>
                                             {sc.id} · {sc.childName}
-                                            {courseStandards[sc.id]
-                                                ? ' — standard recorded'
-                                                : sc.standardScore != null
-                                                    ? ` — standard ${sc.standardScore}`
-                                                    : ' — no standard set'}
                                         </option>
                                     ))}
                                 </Select>
-
-                                <label className="flex items-start gap-2 mt-2 p-2 rounded border border-amber-300 bg-amber-50 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={markAsStandard}
-                                        onChange={(e) => setMarkAsStandard(e.target.checked)}
-                                        className="mt-0.5"
-                                    />
-                                    <span className="text-xs text-amber-900">
-                                        <span className="font-semibold">Record this as the standard answer for {scenarioId}.</span>
-                                        {' '}Tick this only when a master mentor is completing the case. The score
-                                        from this session becomes the reference every other mentor on the course is
-                                        compared against.
-                                        {courseStandards[scenarioId] && (
-                                            <span className="block mt-1">
-                                                A standard already exists for {scenarioId}
-                                                {courseStandards[scenarioId].standard_set_by
-                                                    ? ` (set by ${courseStandards[scenarioId].standard_set_by})`
-                                                    : ''} — saving will replace it.
-                                            </span>
-                                        )}
-                                    </span>
-                                </label>
                             </FormGroup>
                         )}
                         <FormGroup label="Course day">
@@ -1827,40 +1829,40 @@ export function MentorshipMonitoringView({
                         )}
                     </div>
                 </div>
-                <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                    <Button variant="secondary" onClick={() => { setShowSetupModal(false); setShowForm(false); }}>Close</Button>
-                    <Button onClick={() => { setShowSetupModal(false); setShowForm(true); }}>Start session</Button>
+                <div className="p-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-gray-50 rounded-b-lg">
+                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowForm(false); }}>Close</Button>
+                    <Button className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowForm(true); }}>Start session</Button>
                 </div>
             </Modal>
 
             {!showForm && !loading && (
-                <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
-                    <div>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
+                    <div className="min-w-0">
                         <h3 className="text-lg font-bold text-slate-800">Start a mentorship session</h3>
                         <p className="text-sm text-slate-500">
                             Record a skills assessment or a mothers interview for {participant?.name} against the course.
                         </p>
                     </div>
-                    <Button onClick={startNewSession}>+ New session</Button>
+                    <Button className="w-full sm:w-auto flex-shrink-0" onClick={startNewSession}>+ New session</Button>
                 </div>
             )}
 
             {showForm && (
-                <Card className="p-4 mb-4">
-                    <div className="flex justify-between items-start mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
-                        <div>
-                            <h3 className="text-lg font-semibold">
+                <Card className="p-3 sm:p-4 mb-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
+                        <div className="min-w-0">
+                            <h3 className="text-base sm:text-lg font-semibold break-words">
                                 {editingCase
                                     ? `Editing ${isMothers ? 'interview' : 'session'} #${editingCase.case_serial}`
                                     : `New ${isMothers ? 'interview' : 'session'} #${nextSerial}`}
                             </h3>
-                            <p className="text-sm text-slate-600 mt-1">
-                                <span className="font-semibold">Day:</span> {dayOfCourse}
-                                <span className="font-semibold ml-2">Date:</span> {formData.session_date}
-                                <span className="font-semibold ml-2">Sub-course:</span> {subCourse || '—'}
-                            </p>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600 mt-1">
+                                <span><span className="font-semibold">Day:</span> {dayOfCourse}</span>
+                                <span><span className="font-semibold">Date:</span> {formData.session_date}</span>
+                                <span><span className="font-semibold">Sub-course:</span> {subCourse || '—'}</span>
+                            </div>
                         </div>
-                        <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>Edit setup</Button>
+                        <Button variant="secondary" size="sm" className="w-full sm:w-auto flex-shrink-0" onClick={() => setShowSetupModal(true)}>Edit setup</Button>
                     </div>
 
                     {isVisit ? (
@@ -1922,13 +1924,7 @@ export function MentorshipMonitoringView({
 
                     {!isMothers && !isVisit && scenario && (
                         <div className="mt-4 p-3 border rounded-lg bg-slate-50">
-                            {markAsStandard ? (
-                                <p className="text-sm text-amber-900">
-                                    This session will be saved as the <span className="font-semibold">standard answer</span> for
-                                    case {scenario.id} — {scores?.overallScore?.score ?? 0}/{scores?.overallScore?.maxScore ?? 0}.
-                                    Every other mentor on this course will be compared against it.
-                                </p>
-                            ) : standardComparison ? (
+                            {standardComparison ? (
                                 // The stored total is withheld on purpose. Showing it here
                                 // would let the mentor score towards the standard rather
                                 // than towards the case in front of them.
@@ -1937,11 +1933,9 @@ export function MentorshipMonitoringView({
                                     against it and the result shown once you save this session.
                                 </p>
                             ) : (
-                                <p className="text-sm text-amber-800">
-                                    No standard has been set for case {scenario.id} yet, so this mentor's total cannot
-                                    be compared. Have a master mentor complete this case with
-                                    <span className="font-semibold"> “Record this as the standard answer” </span>
-                                    ticked in the session setup, and every session after that will be scored against it.
+                                <p className="text-sm text-slate-600">
+                                    No standard answer is configured for case {scenario.id}, so this session will be
+                                    recorded without a comparison.
                                 </p>
                             )}
                         </div>
@@ -2231,14 +2225,14 @@ function MothersFormRow({ label, value, options, onChange }) {
     const answered = value !== '' && value != null;
     return (
         <div dir="rtl" className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:px-5 hover:bg-sky-50 transition-colors ${answered ? 'row-answered' : 'row-unanswered'}`}>
-            <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex-grow mr-4 w-full sm:w-auto">{label}</span>
-            <div className="flex gap-2 flex-shrink-0 mt-1 sm:mt-0">
+            <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right min-w-0 flex-grow sm:mr-4 w-full sm:w-auto break-words">{label}</span>
+            <div className="flex gap-2 w-full sm:w-auto sm:flex-shrink-0 mt-1 sm:mt-0">
                 {options.map(([text, val, cls]) => (
                     <button
                         key={val}
                         type="button"
                         onClick={() => onChange(val)}
-                        className={`px-3 py-1 text-sm rounded-md border transition-colors ${value === val ? `${cls} text-white` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                        className={`flex-1 sm:flex-none px-3 py-2.5 sm:py-1 min-h-[44px] sm:min-h-0 text-sm rounded-md border whitespace-nowrap touch-manipulation transition-colors ${value === val ? `${cls} text-white` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                     >
                         {text}
                     </button>
@@ -2282,8 +2276,8 @@ export function MothersFormRenderer({ formData, service, scores, onFieldChange, 
                 const s = scores?.[section.domain];
                 return (
                     <div key={section.domain} className="mb-4 border rounded-lg overflow-hidden">
-                        <div className="flex justify-between items-center bg-sky-100 px-4 py-2">
-                            <h4 className="font-bold text-sky-900">{section.label}</h4>
+                        <div className="flex justify-between items-center gap-3 bg-sky-100 px-3 sm:px-4 py-2">
+                            <h4 className="min-w-0 font-bold text-sky-900 break-words">{section.label}</h4>
                             {s && s.maxScore > 0 && (
                                 <span className="text-sm font-semibold text-sky-800">{s.score}/{s.maxScore}</span>
                             )}
