@@ -347,7 +347,31 @@ export const DataProvider = ({ children }) => {
         }
         
         // General Data Fetchers
-        return async (force = false) => {
+        //
+        // --- THREE FETCH MODES ---
+        // The old signature was a single boolean, and it did two unrelated jobs at
+        // once: it skipped the TTL check AND reset the delta watermark to 0. Every
+        // caller that just wanted "make sure I see my own write" passed `true` and
+        // silently paid for a full re-download of the entire collection, on every
+        // mount and every tab switch. That is what made `courses` and
+        // `participants` re-read from scratch forever.
+        //
+        //   fetch()          -> cache-first. Memory, then IndexedDB, then a delta
+        //                       query only if the TTL has expired.
+        //   fetch(true)      -> "sync". Skips the TTL and goes to the server NOW,
+        //   fetch('sync')       but still asks only for docs newer than the
+        //                       watermark. This is what a save should call.
+        //   fetch('full')    -> full re-download. Watermark reset to 0. Only for an
+        //                       explicit user-initiated rebuild.
+        //
+        // A delta query is safe for a just-written doc: rewindWatermark() re-asks
+        // for a 10-minute overlap window, and a doc written seconds ago sits well
+        // inside it. Soft deletes also bump lastUpdatedAt, so they arrive in the
+        // delta too. Only a poisoned watermark needs 'full' (or clearLocalCache).
+        return async (mode = false) => {
+            const force = mode === true || mode === 'sync' || mode === 'full';
+            const fullReload = mode === 'full';
+
             const currentCache = cacheRef.current[key];
             const hasData = currentCache !== null;
             const isDefaultSettings = (key.includes('Settings') && currentCache?.openCount === 0);
@@ -362,8 +386,13 @@ export const DataProvider = ({ children }) => {
                 return currentCache;
             }
 
-            if (fetchingRef.current[key]) return currentCache;
-            fetchingRef.current[key] = true;
+            // In-flight de-duplication now shares the PROMISE instead of returning
+            // a stale snapshot. Two effects mounting in the same tick used to fire
+            // two identical requests, or the second caller got last render's data
+            // and rendered an empty list.
+            if (fetchingRef.current[key]) return fetchingRef.current[key];
+
+            const run = (async () => {
             
             if (!hasData) {
                 setIsLoading(prev => ({ ...prev, [key]: true }));
@@ -383,7 +412,6 @@ export const DataProvider = ({ children }) => {
                         }
                         
                         if (!shouldForceServer && navigator.onLine) {
-                            fetchingRef.current[key] = false;
                             return localData;
                         }
                     }
@@ -396,7 +424,6 @@ export const DataProvider = ({ children }) => {
             
             if (!navigator.onLine) {
                 setIsLoading(prev => ({ ...prev, [key]: false }));
-                fetchingRef.current[key] = false;
                 return localData;
             }
 
@@ -413,11 +440,10 @@ export const DataProvider = ({ children }) => {
                     effectiveLastFetchTime = 0;
                 }
 
-                // An explicit force means "I just wrote something, get the truth".
-                // Previously force still applied the incremental window, so a fresh
-                // edit that fell outside it could never be pulled in no matter how
-                // many times the caller refreshed.
-                if (force && !key.includes('Settings')) {
+                // ONLY an explicit 'full' rebuild resets the watermark. A plain
+                // force ('sync') still goes to the server immediately but asks for
+                // the delta window, which already covers a doc written moments ago.
+                if (fullReload && !key.includes('Settings')) {
                     effectiveLastFetchTime = 0;
                 }
 
@@ -450,7 +476,14 @@ export const DataProvider = ({ children }) => {
                 return localData || (key.includes('Settings') ? { isActive: false, openCount: 0 } : []);
             } finally {
                 setIsLoading(prev => ({ ...prev, [key]: false }));
-                fetchingRef.current[key] = false;
+            }
+            })();
+
+            fetchingRef.current[key] = run;
+            try {
+                return await run;
+            } finally {
+                fetchingRef.current[key] = null;
             }
         };
     }, []); 

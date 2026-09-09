@@ -404,8 +404,13 @@ export const CERT_DEFAULTS = {
     placeDateLeft: 50, placeDateWidth: 100,
     qrLeft: 87.4,
     qrSize: 87,
-    // Logo group centres (%) and per-image heights (mm).
+    // Logo group centres (%) and per-image heights (mm). Each of the four logos
+    // can also be placed on its own with logo1Top / logo1Left ... logo4Top /
+    // logo4Left. When those are blank the logo falls back to the shared logoTop
+    // and to its group centre, so templates saved before per-logo positioning
+    // keep exactly the layout they had.
     logoGroup1Left: 16, logoGroup2Left: 84,
+    logoSpread: 5.5,
     logoHeight1: 30, logoHeight2: 35,
     logoHeight3: 30, logoHeight4: 30,
     // Colours.
@@ -423,7 +428,10 @@ export const CERT_DEFAULTS = {
     // four signatures can override any of them.
     signatureImageWidth: 30,
     signatureImageHeight: 20,
-    signatureImageBottom: 12,
+    // Distance the image is lifted above the block baseline. 9mm parks the scan
+    // right on top of the signatory's name instead of floating above it. Each
+    // block can override it with e.g. managerSignatureImageBottom.
+    signatureImageBottom: 9,
     signatureImageOffsetX: 0,
     // Optional footer stating the printed page needs the physical seal.
     sealNoticeEn: 'This certificate is not valid without the official seal.',
@@ -444,9 +452,45 @@ export const CERT_DEFAULTS = {
     placeDateFontSize: 24,
     signatureNameFontSize: 20,
     signatureRoleFontSize: 20,
-    // Width (mm) of each signature block.
+    // Width (mm) of each signature block. Any single block can override the
+    // shared value with managerSignatureWidth / directorSignatureWidth /
+    // thirdSignatureWidth / fourthSignatureWidth, its own row height with
+    // <block>SignatureTop, and its own text sizes with
+    // <block>SignatureNameFontSize / <block>SignatureRoleFontSize.
     signatureWidth: 90,
     thirdSignatureWidth: 80
+};
+
+// -----------------------------------------------------------------------------
+// LOGO SLOTS
+// The certificate carries four logos. Each is positioned independently; a blank
+// per-logo value falls back to the group centre it belongs to, which is what
+// every previously saved template relies on.
+// -----------------------------------------------------------------------------
+
+export const LOGO_SLOTS = [
+    { n: 1, imageKey: 'logoTopRight1', label: 'Logo 1', heightKey: 'logoHeight1', groupKey: 'logoGroup1Left', side: -1, defaultName: 'FMOH' },
+    { n: 2, imageKey: 'logoTopRight2', label: 'Logo 2', heightKey: 'logoHeight2', groupKey: 'logoGroup1Left', side: 1, defaultName: 'NCHP' },
+    { n: 3, imageKey: 'logoTopLeft1', label: 'Logo 3', heightKey: 'logoHeight3', groupKey: 'logoGroup2Left', side: -1, defaultName: 'WHO' },
+    { n: 4, imageKey: 'logoTopLeft2', label: 'Logo 4', heightKey: 'logoHeight4', groupKey: 'logoGroup2Left', side: 1, defaultName: 'UNICEF' }
+];
+
+// Shared numeric reader: an explicit 0 is honoured, blank/garbage falls back.
+const cfgNum = (raw, fallback) => {
+    if (raw === undefined || raw === null || raw === '') return fallback;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : fallback;
+};
+
+/** Vertical position a logo uses when it has no value of its own. */
+export const defaultLogoTop = (cfg = {}) => cfgNum(cfg.logoTop, CERT_DEFAULTS.logoTop);
+
+/** Horizontal centre (% of page width) a logo uses when it has none of its own. */
+export const defaultLogoLeft = (cfg = {}, slot, isArabic = false) => {
+    const groupFallback = isArabic ? 100 - CERT_DEFAULTS[slot.groupKey] : CERT_DEFAULTS[slot.groupKey];
+    const groupLeft = cfgNum(cfg[slot.groupKey], groupFallback);
+    const spread = cfgNum(cfg.logoSpread, CERT_DEFAULTS.logoSpread);
+    return Math.min(100, Math.max(0, groupLeft + slot.side * spread));
 };
 
 // Assets stored on the custom template that must be inlined before html2canvas runs.
@@ -707,10 +751,13 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             if (customConfig.subCourseEn) displaySubCourse = customConfig.subCourseEn;
             else if (courseType === 'IMNCI' && isRefreshment) displaySubCourse = "IMNCI refreshment course";
         }
-    } else if (isArabic && customConfig.subCourseAr) {
-        displaySubCourse = customConfig.subCourseAr;
-    } else if (!isArabic && customConfig.subCourseEn) {
-        displaySubCourse = customConfig.subCourseEn;
+    } else {
+        // No sub-course on the participant record. A line typed in the customizer
+        // still prints, and falls back to the other language so one entry is
+        // enough when the wording is the same in both.
+        displaySubCourse = isArabic
+            ? (customConfig.subCourseAr || customConfig.subCourseEn || '')
+            : (customConfig.subCourseEn || customConfig.subCourseAr || '');
     }
 
     let stateDisplay = course.state || '';
@@ -896,12 +943,19 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const sealNoticeFontSize = numOr(customConfig.sealNoticeFontSize, CERT_DEFAULTS.sealNoticeFontSize);
 
     // --- LOGOS ---
-    const logoGroup1Left = numOr(customConfig.logoGroup1Left, isArabic ? 100 - CERT_DEFAULTS.logoGroup1Left : CERT_DEFAULTS.logoGroup1Left);
-    const logoGroup2Left = numOr(customConfig.logoGroup2Left, isArabic ? 100 - CERT_DEFAULTS.logoGroup2Left : CERT_DEFAULTS.logoGroup2Left);
-    const logoHeight1 = numOr(customConfig.logoHeight1, CERT_DEFAULTS.logoHeight1);
-    const logoHeight2 = numOr(customConfig.logoHeight2, CERT_DEFAULTS.logoHeight2);
-    const logoHeight3 = numOr(customConfig.logoHeight3, CERT_DEFAULTS.logoHeight3);
-    const logoHeight4 = numOr(customConfig.logoHeight4, CERT_DEFAULTS.logoHeight4);
+    // Every logo carries its own top, left and height. Blank values fall back to
+    // the shared logo row and to the logo's group centre, so an old template is
+    // rendered exactly as before until one of the logos is actually moved.
+    const logoSources = {
+        logoTopRight1, logoTopRight2, logoTopLeft1, logoTopLeft2
+    };
+    const logoBoxes = LOGO_SLOTS.map(slot => ({
+        slot,
+        src: logoSources[slot.imageKey],
+        top: numOr(customConfig[`logo${slot.n}Top`], logoTop),
+        left: numOr(customConfig[`logo${slot.n}Left`], defaultLogoLeft(customConfig, slot, isArabic)),
+        height: numOr(customConfig[slot.heightKey], CERT_DEFAULTS[slot.heightKey])
+    }));
 
     // --- COLOURS ---
     const col = (key) => customConfig[key] || CERT_DEFAULTS[key];
@@ -937,6 +991,13 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         imgOffsetX: sigImg(block, 'OffsetX')
     });
 
+    // Each signature block can sit at its own height and print at its own text
+    // size. Blank falls back to the shared row value, so a template that never
+    // touches these is laid out exactly as before.
+    const sigTopOf = (block) => numOr(customConfig[`${block}SignatureTop`], signatureTop);
+    const sigNameFsOf = (block) => numOr(customConfig[`${block}SignatureNameFontSize`], signatureNameFontSize);
+    const sigRoleFsOf = (block) => numOr(customConfig[`${block}SignatureRoleFontSize`], signatureRoleFontSize);
+
     // Centre-anchored positioning: an element sits at `left`% of the page and is
     // pulled back by half its own width, so changing `left` slides it sideways
     // without disturbing its internal centring.
@@ -961,6 +1022,13 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const span = 100 - 2 * sideCentrePct;
     const slot = (i) => sideCentrePct + (span * i) / (signatureCount - 1);
 
+    // Per-block width. `thirdSignatureWidth` is the long-standing key and keeps
+    // working, because for block 'third' the generated name is the same key.
+    const sigWidthOf = (block) => numOr(
+        customConfig[`${block}SignatureWidth`],
+        (block === 'third' || block === 'fourth') ? thirdSignatureWidth : sideSignatureWidth
+    );
+
     const sigLeftLeft = numOr(customConfig.sigLeftLeft, slot(0));
     const sigRightLeft = numOr(customConfig.sigRightLeft, slot(signatureCount - 1));
     const sigThirdLeft = numOr(customConfig.sigThirdLeft, signatureCount >= 3 ? slot(1) : 50);
@@ -979,15 +1047,23 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         <div id="certificate-template" style={containerStyle}>
             <img src="/certificate/border.jpg" alt="Certificate Border" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }} />
             
-            <div style={{ position: 'absolute', top: `${logoTop}mm`, left: `${logoGroup1Left}%`, transform: 'translateX(-50%)', zIndex: 1, textAlign: 'center', display: 'flex', flexDirection: 'row', gap: '15px', alignItems: 'center' }}>
-                {logoTopRight1 && <img src={logoTopRight1} crossOrigin="anonymous" alt="Logo 1" style={{ height: `${logoHeight1}mm`, width: 'auto' }} />}
-                {logoTopRight2 && <img src={logoTopRight2} crossOrigin="anonymous" alt="Logo 2" style={{ height: `${logoHeight2}mm`, width: 'auto' }} />}
-            </div>
-            
-            <div style={{ position: 'absolute', top: `${logoTop}mm`, left: `${logoGroup2Left}%`, transform: 'translateX(-50%)', zIndex: 1, display: 'flex', flexDirection: 'row', gap: '15px', alignItems: 'center' }}>
-                 {logoTopLeft1 && <img src={logoTopLeft1} crossOrigin="anonymous" alt="Logo 3" style={{ height: `${logoHeight3}mm`, width: 'auto' }} />}
-                 {logoTopLeft2 && <img src={logoTopLeft2} crossOrigin="anonymous" alt="Logo 4" style={{ height: `${logoHeight4}mm`, width: 'auto' }} />}
-            </div>
+            {logoBoxes.map(({ slot, src, top, left, height }) => src ? (
+                <img
+                    key={slot.imageKey}
+                    src={src}
+                    crossOrigin="anonymous"
+                    alt={slot.label}
+                    style={{
+                        position: 'absolute',
+                        top: `${top}mm`,
+                        left: `${left}%`,
+                        transform: 'translateX(-50%)',
+                        zIndex: 1,
+                        height: `${height}mm`,
+                        width: 'auto'
+                    }}
+                />
+            ) : null)}
 
             <div style={{ ...centred(headerLeft, headerWidth), top: `${headerTop}mm`, fontSize: `${headerFontSize}px`, fontWeight: 'bold', color: headerColor, lineHeight: '1.5', zIndex: 2, whiteSpace: 'pre-line' }}>
                 {isArabic ? headerAr : headerEn}
@@ -1053,12 +1129,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     signatureUrl={rightSignatory.url}
                     name={rightSignatory.name}
                     role={rightSignatory.role}
-                    nameFontSize={signatureNameFontSize}
-                    roleFontSize={signatureRoleFontSize}
+                    nameFontSize={sigNameFsOf(rightSignatory.block)}
+                    roleFontSize={sigRoleFsOf(rightSignatory.block)}
                     nameColor={sigNameColor(rightSignatory.block)}
                     roleColor={sigRoleColor(rightSignatory.block)}
                     {...sigImgProps(rightSignatory.block)}
-                    positionStyle={{ top: `${signatureTop}mm`, left: `${sigRightLeft}%`, width: `${sideSignatureWidth}mm`, transform: 'translateX(-50%)' }}
+                    positionStyle={{ top: `${sigTopOf(rightSignatory.block)}mm`, left: `${sigRightLeft}%`, width: `${sigWidthOf(rightSignatory.block)}mm`, transform: 'translateX(-50%)' }}
                 />
             )}
 
@@ -1067,12 +1143,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     signatureUrl={leftSignatory.url}
                     name={leftSignatory.name}
                     role={leftSignatory.role}
-                    nameFontSize={signatureNameFontSize}
-                    roleFontSize={signatureRoleFontSize}
+                    nameFontSize={sigNameFsOf(leftSignatory.block)}
+                    roleFontSize={sigRoleFsOf(leftSignatory.block)}
                     nameColor={sigNameColor(leftSignatory.block)}
                     roleColor={sigRoleColor(leftSignatory.block)}
                     {...sigImgProps(leftSignatory.block)}
-                    positionStyle={{ top: `${signatureTop}mm`, left: `${sigLeftLeft}%`, width: `${sideSignatureWidth}mm`, transform: 'translateX(-50%)' }}
+                    positionStyle={{ top: `${sigTopOf(leftSignatory.block)}mm`, left: `${sigLeftLeft}%`, width: `${sigWidthOf(leftSignatory.block)}mm`, transform: 'translateX(-50%)' }}
                 />
             )}
 
@@ -1081,12 +1157,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     signatureUrl={thirdPartySignature}
                     name={thirdPartyName}
                     role={thirdPartyRole}
-                    nameFontSize={signatureNameFontSize}
-                    roleFontSize={signatureRoleFontSize}
+                    nameFontSize={sigNameFsOf('third')}
+                    roleFontSize={sigRoleFsOf('third')}
                     nameColor={sigNameColor('third')}
                     roleColor={sigRoleColor('third')}
                     {...sigImgProps('third')}
-                    positionStyle={{ top: `${signatureTop}mm`, left: `${sigThirdLeft}%`, width: `${thirdSignatureWidth}mm`, transform: 'translateX(-50%)' }}
+                    positionStyle={{ top: `${sigTopOf('third')}mm`, left: `${sigThirdLeft}%`, width: `${sigWidthOf('third')}mm`, transform: 'translateX(-50%)' }}
                 />
             )}
 
@@ -1095,12 +1171,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     signatureUrl={fourthPartySignature}
                     name={fourthPartyName}
                     role={fourthPartyRole}
-                    nameFontSize={signatureNameFontSize}
-                    roleFontSize={signatureRoleFontSize}
+                    nameFontSize={sigNameFsOf('fourth')}
+                    roleFontSize={sigRoleFsOf('fourth')}
                     nameColor={sigNameColor('fourth')}
                     roleColor={sigRoleColor('fourth')}
                     {...sigImgProps('fourth')}
-                    positionStyle={{ top: `${signatureTop}mm`, left: `${sigFourthLeft}%`, width: `${thirdSignatureWidth}mm`, transform: 'translateX(-50%)' }}
+                    positionStyle={{ top: `${sigTopOf('fourth')}mm`, left: `${sigFourthLeft}%`, width: `${sigWidthOf('fourth')}mm`, transform: 'translateX(-50%)' }}
                 />
             )}
 
@@ -1504,30 +1580,44 @@ const readColor = (data, key) => data?.[key] || CERT_DEFAULTS[key] || '#000000';
  * adding one entry here rather than touching the UI.
  */
 const buildEditorElements = (ctx) => {
-    const { isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager, hideDirector, showSealNotice, signatureImages = [] } = ctx;
+    const {
+        isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
+        hideManager, hideDirector, showSealNotice, signatureImages = [],
+        logoTopDef, logoLeftFor, sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef
+    } = ctx;
+
+    // Per-signature controls, generated so every block gets the same set.
+    const sigNumbers = (block, widthDef, widthLabel = 'This block width (mm)') => [
+        { key: `${block}SignatureNameFontSize`, label: 'This name size (px)', def: sharedNameFs, min: 6, max: 60 },
+        { key: `${block}SignatureRoleFontSize`, label: 'This title size (px)', def: sharedRoleFs, min: 6, max: 60 },
+        { key: `${block}SignatureWidth`, label: widthLabel, def: widthDef, min: 30, max: 140 }
+    ];
 
     return [
         {
-            id: 'logos1', label: 'Logo group 1',
+            id: 'logoRow', label: 'Logo row (all four)',
             topKey: 'logoTop', topDef: CERT_DEFAULTS.logoTop,
-            leftKey: 'logoGroup1Left', leftDef: isArabic ? 100 - CERT_DEFAULTS.logoGroup1Left : CERT_DEFAULTS.logoGroup1Left,
-            box: { widthPct: 22, heightMm: 36 },
+            box: { widthPct: 96, heightMm: 8 },
             numbers: [
-                { key: 'logoHeight1', label: 'Logo 1 height (mm)', def: CERT_DEFAULTS.logoHeight1, min: 5, max: 80 },
-                { key: 'logoHeight2', label: 'Logo 2 height (mm)', def: CERT_DEFAULTS.logoHeight2, min: 5, max: 80 }
-            ]
-        },
-        {
-            id: 'logos2', label: 'Logo group 2',
-            topKey: 'logoTop', topDef: CERT_DEFAULTS.logoTop,
-            leftKey: 'logoGroup2Left', leftDef: isArabic ? 100 - CERT_DEFAULTS.logoGroup2Left : CERT_DEFAULTS.logoGroup2Left,
-            box: { widthPct: 22, heightMm: 36 },
-            numbers: [
-                { key: 'logoHeight3', label: 'Logo 3 height (mm)', def: CERT_DEFAULTS.logoHeight3, min: 5, max: 80 },
-                { key: 'logoHeight4', label: 'Logo 4 height (mm)', def: CERT_DEFAULTS.logoHeight4, min: 5, max: 80 }
+                { key: 'logoGroup1Left', label: 'Left pair centre (%)', def: isArabic ? 100 - CERT_DEFAULTS.logoGroup1Left : CERT_DEFAULTS.logoGroup1Left, min: 0, max: 100 },
+                { key: 'logoGroup2Left', label: 'Right pair centre (%)', def: isArabic ? 100 - CERT_DEFAULTS.logoGroup2Left : CERT_DEFAULTS.logoGroup2Left, min: 0, max: 100 },
+                { key: 'logoSpread', label: 'Gap from pair centre (%)', def: CERT_DEFAULTS.logoSpread, min: 0, max: 25, step: 0.5 }
             ],
-            note: 'Both logo groups share one vertical position.'
+            note: 'The baseline every logo follows until it is given a position of its own. A logo that has been moved individually ignores this.'
         },
+        // One entry per logo: each drags, resizes and uploads on its own.
+        ...LOGO_SLOTS.map(slot => ({
+            id: `logo${slot.n}`,
+            label: `${slot.label} (default: ${slot.defaultName})`,
+            logoKey: slot.imageKey,
+            topKey: `logo${slot.n}Top`, topDef: logoTopDef,
+            leftKey: `logo${slot.n}Left`, leftDef: logoLeftFor(slot),
+            box: { widthPct: 11, heightMm: 34 },
+            numbers: [
+                { key: slot.heightKey, label: 'Height (mm)', def: CERT_DEFAULTS[slot.heightKey], min: 5, max: 80 }
+            ],
+            note: 'This logo moves and resizes on its own. Reset it to follow the shared logo row again.'
+        })),
         {
             id: 'header', label: 'Header text',
             topKey: 'headerTop', topDef: CERT_DEFAULTS.headerTop,
@@ -1594,15 +1684,22 @@ const buildEditorElements = (ctx) => {
             colors: [{ key: 'courseTitleColor', label: 'Text colour' }],
             fontKey: 'courseTitleFontSize', fontDef: CERT_DEFAULTS.courseTitleFontSize
         },
-        ...(hasSubCourse ? [{
+        {
             id: 'subCourse', label: 'Sub-course line',
             topKey: 'subCourseTop', topDef: CERT_DEFAULTS.subCourseTop,
             leftKey: 'subCourseLeft', leftDef: CERT_DEFAULTS.subCourseLeft,
             widthKey: 'subCourseWidth', widthDef: CERT_DEFAULTS.subCourseWidth,
             box: { widthPct: 56, heightMm: 8 },
+            inactive: !hasSubCourse,
+            inactiveNote: 'Nothing on this line yet. Type the wording below and it appears on the certificate.',
+            texts: [
+                { key: 'subCourseEn', label: 'Text (English)', placeholder: 'Blank = the course sub-type' },
+                { key: 'subCourseAr', label: 'Text (Arabic)', rtl: true, placeholder: 'فارغ = النوع الفرعي للدورة' }
+            ],
             colors: [{ key: 'subCourseColor', label: 'Text colour' }],
-            fontKey: 'subCourseFontSize', fontDef: CERT_DEFAULTS.subCourseFontSize
-        }] : []),
+            fontKey: 'subCourseFontSize', fontDef: CERT_DEFAULTS.subCourseFontSize,
+            note: 'Prints in brackets under the course title. Filling only one language makes that text print in both.'
+        },
         {
             id: 'placeDate', label: 'Place & date',
             topKey: 'placeDateTop', topDef: CERT_DEFAULTS.placeDateTop,
@@ -1628,8 +1725,24 @@ const buildEditorElements = (ctx) => {
         // entries are keyed by ROLE and pick up whichever side key applies. That
         // keeps the name/title fields unambiguous in both languages.
         {
-            id: 'sigManager', label: 'Program Manager signature',
+            id: 'sigRow', label: 'Signature row (all)',
             topKey: 'signatureTop', topDef: CERT_DEFAULTS.signatureTop,
+            box: { widthPct: 96, heightMm: 8 },
+            numbers: [
+                { key: 'signatureNameFontSize', label: 'Name size (px)', def: CERT_DEFAULTS.signatureNameFontSize, min: 6, max: 60 },
+                { key: 'signatureRoleFontSize', label: 'Title size (px)', def: CERT_DEFAULTS.signatureRoleFontSize, min: 6, max: 60 },
+                { key: 'signatureWidth', label: 'Side block width (mm)', def: sideWidthDef, min: 30, max: 140 },
+                { key: 'thirdSignatureWidth', label: 'Middle block width (mm)', def: thirdWidthDef, min: 30, max: 140 }
+            ],
+            colors: [
+                { key: 'signatureColor', label: 'ALL signatures — name colour' },
+                { key: 'signatureRoleColor', label: 'ALL signatures — title colour' }
+            ],
+            note: 'The baseline for every signature. A block that has been given its own height, width or text size ignores this row.'
+        },
+        {
+            id: 'sigManager', label: 'Program Manager signature',
+            topKey: 'managerSignatureTop', topDef: sharedSigTop,
             leftKey: isArabic ? 'sigRightLeft' : 'sigLeftLeft',
             leftDef: slotFor(isArabic ? sigCount - 1 : 0),
             box: { widthPct: 26, heightMm: 22 },
@@ -1644,20 +1757,14 @@ const buildEditorElements = (ctx) => {
             checks: [{ key: 'hideManager', label: 'Hide this signature' }],
             colors: [
                 { key: 'managerSignatureColor', label: 'This name colour' },
-                { key: 'managerSignatureRoleColor', label: 'This title colour' },
-                { key: 'signatureColor', label: 'ALL signatures — name colour' },
-                { key: 'signatureRoleColor', label: 'ALL signatures — title colour' }
+                { key: 'managerSignatureRoleColor', label: 'This title colour' }
             ],
-            numbers: [
-                { key: 'signatureNameFontSize', label: 'Name size (px)', def: CERT_DEFAULTS.signatureNameFontSize, min: 6, max: 60 },
-                { key: 'signatureRoleFontSize', label: 'Title size (px)', def: CERT_DEFAULTS.signatureRoleFontSize, min: 6, max: 60 },
-                { key: 'signatureWidth', label: 'Side block width (mm)', def: CERT_DEFAULTS.signatureWidth, min: 30, max: 140 }
-            ],
-            note: 'All signatures share one vertical position, colour and font size. The signature IMAGE is uploaded from the certificate list, not here.'
+            numbers: sigNumbers('manager', sideWidthDef),
+            note: 'Every box here affects this signature only. Leave one blank to follow "Signature row (all)". The signature IMAGE is uploaded from the certificate list, not here.'
         },
         {
             id: 'sigDirector', label: 'Course Director signature',
-            topKey: 'signatureTop', topDef: CERT_DEFAULTS.signatureTop,
+            topKey: 'directorSignatureTop', topDef: sharedSigTop,
             leftKey: isArabic ? 'sigLeftLeft' : 'sigRightLeft',
             leftDef: slotFor(isArabic ? 0 : sigCount - 1),
             box: { widthPct: 26, heightMm: 22 },
@@ -1679,11 +1786,12 @@ const buildEditorElements = (ctx) => {
                 { key: 'directorSignatureColor', label: 'This name colour' },
                 { key: 'directorSignatureRoleColor', label: 'This title colour' }
             ],
-            note: 'Honorific settings apply to the director and manager names together. Leave a colour blank to inherit the shared signature colour.'
+            numbers: sigNumbers('director', sideWidthDef),
+            note: 'Honorific settings apply to the director and manager names together. Every other box here affects this signature only; leave one blank to follow the shared signature row.'
         },
         {
             id: 'sigThird', label: 'Signature (third party)',
-            topKey: 'signatureTop', topDef: CERT_DEFAULTS.signatureTop,
+            topKey: 'thirdSignatureTop', topDef: sharedSigTop,
             leftKey: 'sigThirdLeft', leftDef: slotFor(1),
             box: { widthPct: 24, heightMm: 22 },
             inactive: !hasThirdParty,
@@ -1698,14 +1806,12 @@ const buildEditorElements = (ctx) => {
                 { key: 'thirdSignatureColor', label: 'This name colour' },
                 { key: 'thirdSignatureRoleColor', label: 'This title colour' }
             ],
-            numbers: [
-                { key: 'thirdSignatureWidth', label: 'Block width (mm)', def: CERT_DEFAULTS.thirdSignatureWidth, min: 30, max: 140 },
-            ],
-            note: 'Prints as soon as a name or signature image is added.'
+            numbers: sigNumbers('third', thirdWidthDef, 'Block width (mm)'),
+            note: 'Prints as soon as a name or signature image is added. Height, width and text size here apply to this signature only.'
         },
         {
             id: 'sigFourth', label: 'Signature (fourth party)',
-            topKey: 'signatureTop', topDef: CERT_DEFAULTS.signatureTop,
+            topKey: 'fourthSignatureTop', topDef: sharedSigTop,
             leftKey: 'sigFourthLeft', leftDef: slotFor(hasFourthParty ? 2 : 1),
             box: { widthPct: 24, heightMm: 22 },
             inactive: !hasFourthParty,
@@ -1720,6 +1826,7 @@ const buildEditorElements = (ctx) => {
                 { key: 'fourthSignatureColor', label: 'This name colour' },
                 { key: 'fourthSignatureRoleColor', label: 'This title colour' }
             ],
+            numbers: sigNumbers('fourth', thirdWidthDef, 'Block width (mm)'),
             note: 'Prints as soon as a name or signature image is added. Adding it re-spaces all four signatures automatically.'
         },
         // --- Draggable signature IMAGES -------------------------------------
@@ -1916,7 +2023,15 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     );
     const hasThirdParty = sigInfo.thirdPartyEnabled;
     const hasFourthParty = sigInfo.fourthPartyEnabled;
-    const hasSubCourse = !!(course?.director_imci_sub_type || course?.course_type === 'IMNCI');
+    // A sub-course line prints when the participant record has one OR when the
+    // designer has been given wording of its own, so the element is editable on
+    // any course, not only IMNCI.
+    const hasSubCourse = !!(
+        course?.director_imci_sub_type ||
+        course?.course_type === 'IMNCI' ||
+        data.subCourseEn ||
+        data.subCourseAr
+    );
 
     // Mirrors the template's own signature geometry so the drag handles sit on
     // top of where the blocks actually render.
@@ -1950,9 +2065,28 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
         ].filter(Boolean);
     }, [isArabic, slotFor, sigCount, managerImg, directorImg, thirdImg, fourthImg, hasThirdParty, hasFourthParty]);
 
+    // Values a per-element override falls back to. They are read from the live
+    // edits, so the placeholder in each box always shows what the certificate
+    // would actually print if that box were left blank.
+    const sharedSigTop = readNum(data, 'signatureTop', CERT_DEFAULTS.signatureTop);
+    const sharedNameFs = readNum(data, 'signatureNameFontSize', CERT_DEFAULTS.signatureNameFontSize);
+    const sharedRoleFs = readNum(data, 'signatureRoleFontSize', CERT_DEFAULTS.signatureRoleFontSize);
+    const thirdWidthDef = readNum(data, 'thirdSignatureWidth', defaultSideWidth);
+    const logoTopDef = defaultLogoTop(data);
+    const logoLeftFor = useCallback((slot) => defaultLogoLeft(data, slot, isArabic), [data, isArabic]);
+
     const elements = useMemo(
-        () => buildEditorElements({ isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, hideManager: !!data.hideManager, hideDirector: !!data.hideDirector, showSealNotice: !!data.showSealNotice, signatureImages }),
-        [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, data.hideManager, data.hideDirector, data.showSealNotice, signatureImages]
+        () => buildEditorElements({
+            isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
+            hideManager: !!data.hideManager, hideDirector: !!data.hideDirector,
+            showSealNotice: !!data.showSealNotice, signatureImages,
+            logoTopDef, logoLeftFor,
+            sharedSigTop, sharedNameFs, sharedRoleFs,
+            sideWidthDef: defaultSideWidth, thirdWidthDef
+        }),
+        [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
+         data.hideManager, data.hideDirector, data.showSealNotice, signatureImages,
+         logoTopDef, logoLeftFor, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef]
     );
 
     const selected = elements.find(e => e.id === selectedId) || elements[0];
@@ -2343,11 +2477,13 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                 const imgBottom = px('SignatureImageBottom', 'signatureImageBottom');
                                 const imgOffsetX = px('SignatureImageOffsetX', 'signatureImageOffsetX');
 
-                                const nameFs = readNum(data, 'signatureNameFontSize', CERT_DEFAULTS.signatureNameFontSize);
-                                const roleFs = readNum(data, 'signatureRoleFontSize', CERT_DEFAULTS.signatureRoleFontSize);
+                                // Text sizes and the row height are read per block, since each
+                                // signature can now carry its own.
+                                const nameFs = readNum(data, `${b}SignatureNameFontSize`, readNum(data, 'signatureNameFontSize', CERT_DEFAULTS.signatureNameFontSize));
+                                const roleFs = readNum(data, `${b}SignatureRoleFontSize`, readNum(data, 'signatureRoleFontSize', CERT_DEFAULTS.signatureRoleFontSize));
                                 const textMm = ((nameFs + roleFs) * 1.25) / MM_TO_PX + 1;
 
-                                const blockTop = readNum(data, 'signatureTop', CERT_DEFAULTS.signatureTop);
+                                const blockTop = readNum(data, `${b}SignatureTop`, readNum(data, 'signatureTop', CERT_DEFAULTS.signatureTop));
                                 const blockLeft = readNum(data, el.blockLeftKey, el.blockLeftDef);
 
                                 topMm = blockTop + textMm - imgBottom - imgH;
@@ -2603,24 +2739,19 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                 );
                             })()}
 
-                            {(selected.id === 'logos1' || selected.id === 'logos2') && (
+                            {selected.logoKey && (
                                 <div className="border-t pt-3 mt-3">
-                                    {(selected.id === 'logos1'
-                                        ? [['logoTopRight1', 'Logo 1'], ['logoTopRight2', 'Logo 2']]
-                                        : [['logoTopLeft1', 'Logo 3'], ['logoTopLeft2', 'Logo 4']]
-                                    ).map(([key, label]) => (
-                                        <PropRow key={key} label={label}>
-                                            <div className="flex items-center gap-2">
-                                                {data[key] && <img src={data[key]} alt="" className="h-8 border rounded bg-white" />}
-                                                <Button size="sm" variant="secondary" className="text-xs" onClick={() => triggerUpload(key)} disabled={!!uploadingAsset}>
-                                                    {uploadingAsset === key ? <Spinner size="sm" /> : 'Upload'}
-                                                </Button>
-                                                {data[key] && (
-                                                    <button type="button" onClick={() => set(key, '')} className="text-[11px] text-red-600 underline">Remove</button>
-                                                )}
-                                            </div>
-                                        </PropRow>
-                                    ))}
+                                    <PropRow label="Image" hint="Blank uses the built-in default logo.">
+                                        <div className="flex items-center gap-2">
+                                            {data[selected.logoKey] && <img src={data[selected.logoKey]} alt="" className="h-8 border rounded bg-white" />}
+                                            <Button size="sm" variant="secondary" className="text-xs" onClick={() => triggerUpload(selected.logoKey)} disabled={!!uploadingAsset}>
+                                                {uploadingAsset === selected.logoKey ? <Spinner size="sm" /> : (data[selected.logoKey] ? 'Replace' : 'Upload')}
+                                            </Button>
+                                            {data[selected.logoKey] && (
+                                                <button type="button" onClick={() => set(selected.logoKey, '')} className="text-[11px] text-red-600 underline">Remove</button>
+                                            )}
+                                        </div>
+                                    </PropRow>
                                 </div>
                             )}
                         </>
@@ -2780,11 +2911,49 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 
                 <div>
                     <h3 className="font-bold border-b pb-2 mb-3">1. Custom Logos</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <AssetUploader label="Top Right 1 (Default: FMOH)" fieldKey="logoTopRight1" value={data.logoTopRight1} uploading={uploadingAsset === 'logoTopRight1'} onPick={handleFileTrigger} onClear={k => handleInputChange(k, '')} />
-                        <AssetUploader label="Top Right 2 (Default: NCHP)" fieldKey="logoTopRight2" value={data.logoTopRight2} uploading={uploadingAsset === 'logoTopRight2'} onPick={handleFileTrigger} onClear={k => handleInputChange(k, '')} />
-                        <AssetUploader label="Top Left 1 (Default: WHO)" fieldKey="logoTopLeft1" value={data.logoTopLeft1} uploading={uploadingAsset === 'logoTopLeft1'} onPick={handleFileTrigger} onClear={k => handleInputChange(k, '')} />
-                        <AssetUploader label="Top Left 2 (Default: UNICEF)" fieldKey="logoTopLeft2" value={data.logoTopLeft2} uploading={uploadingAsset === 'logoTopLeft2'} onPick={handleFileTrigger} onClear={k => handleInputChange(k, '')} />
+                    <p className="text-xs text-gray-500 mb-3">
+                        Every logo is uploaded, moved and sized on its own. Leave a position box blank and that logo
+                        follows the shared logo row (section 8) and the centre of its side of the page.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                        {LOGO_SLOTS.map(slot => (
+                            <div key={slot.imageKey} className="space-y-2">
+                                <AssetUploader
+                                    label={`${slot.label} (Default: ${slot.defaultName})`}
+                                    fieldKey={slot.imageKey}
+                                    value={data[slot.imageKey]}
+                                    uploading={uploadingAsset === slot.imageKey}
+                                    onPick={handleFileTrigger}
+                                    onClear={k => handleInputChange(k, '')}
+                                />
+                                <div className="grid grid-cols-3 gap-2">
+                                    <FormGroup label="Top mm">
+                                        <Input
+                                            type="number"
+                                            value={data[`logo${slot.n}Top`] ?? ''}
+                                            onChange={e => handleInputChange(`logo${slot.n}Top`, e.target.value)}
+                                            placeholder={String(defaultLogoTop(data))}
+                                        />
+                                    </FormGroup>
+                                    <FormGroup label="Left %">
+                                        <Input
+                                            type="number"
+                                            value={data[`logo${slot.n}Left`] ?? ''}
+                                            onChange={e => handleInputChange(`logo${slot.n}Left`, e.target.value)}
+                                            placeholder={String(Math.round(defaultLogoLeft(data, slot, previewLang === 'ar')))}
+                                        />
+                                    </FormGroup>
+                                    <FormGroup label="Height mm">
+                                        <Input
+                                            type="number"
+                                            value={data[slot.heightKey] ?? ''}
+                                            onChange={e => handleInputChange(slot.heightKey, e.target.value)}
+                                            placeholder={String(CERT_DEFAULTS[slot.heightKey])}
+                                        />
+                                    </FormGroup>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -2806,6 +2975,10 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 
                 <div>
                     <h3 className="font-bold border-b pb-2 mb-3 mt-6">3. Course Name Overrides</h3>
+                    <p className="text-xs text-gray-500 mb-3">
+                        The sub-course line prints in brackets under the course title. It works on any course, not only
+                        the ones that carry a sub-type, and filling in one language alone makes that wording print in both.
+                    </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormGroup label="Main Course Title (English)"><Input value={data.courseTitleEn || ''} onChange={e => handleInputChange('courseTitleEn', e.target.value)} placeholder="Default used if empty" /></FormGroup>
                         <FormGroup label="Main Course Title (Arabic)"><Input dir="rtl" value={data.courseTitleAr || ''} onChange={e => handleInputChange('courseTitleAr', e.target.value)} placeholder="الافتراضي يستخدم اذا كان فارغ" /></FormGroup>
@@ -3029,8 +3202,14 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                             variant="secondary"
                             onClick={() => setData(prev => {
                                 const next = { ...prev };
-                                ['logoTop','headerTop','titleTop','nameTop','completionTop','courseTitleTop','subCourseTop','placeDateTop','qrTop','signatureTop']
-                                    .forEach(k => { next[k] = ''; });
+                                [
+                                    'logoTop','headerTop','titleTop','nameTop','completionTop','courseTitleTop',
+                                    'subCourseTop','placeDateTop','qrTop','signatureTop',
+                                    // per-logo and per-signature overrides go back to following the row
+                                    'logo1Top','logo2Top','logo3Top','logo4Top',
+                                    'logo1Left','logo2Left','logo3Left','logo4Left',
+                                    'managerSignatureTop','directorSignatureTop','thirdSignatureTop','fourthSignatureTop'
+                                ].forEach(k => { next[k] = ''; });
                                 return next;
                             })}
                             className="text-xs"
@@ -3057,7 +3236,60 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 
                 <div>
                     <h3 className="font-bold border-b pb-2 mb-3 mt-6">9. Signature & Stamp Layout (millimetres)</h3>
-                    <p className="text-xs text-gray-500 mb-3">Fine-tune widths if the third signature and the stamp overlap. The page is 297 × 210 mm.</p>
+
+                    <p className="text-xs text-gray-500 mb-2">
+                        Each signature can sit at its own height, width and text size. Blank boxes follow the shared
+                        signature row above, so you only fill in the ones you want to move.
+                    </p>
+                    <div className="overflow-x-auto mb-5">
+                        <table className="w-full text-xs border border-gray-200 rounded">
+                            <thead className="bg-gray-50 text-gray-600">
+                                <tr>
+                                    <th className="text-left font-semibold px-2 py-1.5">Signature</th>
+                                    <th className="font-semibold px-2 py-1.5">Top (mm)</th>
+                                    <th className="font-semibold px-2 py-1.5">Width (mm)</th>
+                                    <th className="font-semibold px-2 py-1.5">Name (px)</th>
+                                    <th className="font-semibold px-2 py-1.5">Title (px)</th>
+                                    <th className="font-semibold px-2 py-1.5">Image lift (mm)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[
+                                    { block: 'manager', label: 'Program Manager' },
+                                    { block: 'director', label: 'Course Director' },
+                                    { block: 'third', label: 'Third signature' },
+                                    { block: 'fourth', label: 'Fourth signature' }
+                                ].map(({ block, label }) => (
+                                    <tr key={block} className="border-t border-gray-100">
+                                        <td className="px-2 py-1.5 font-medium text-gray-700 whitespace-nowrap">{label}</td>
+                                        {[
+                                            { key: `${block}SignatureTop`, ph: data.signatureTop || CERT_DEFAULTS.signatureTop },
+                                            { key: `${block}SignatureWidth`, ph: (block === 'third' || block === 'fourth') ? (data.thirdSignatureWidth || CERT_DEFAULTS.thirdSignatureWidth) : (data.signatureWidth || CERT_DEFAULTS.signatureWidth) },
+                                            { key: `${block}SignatureNameFontSize`, ph: data.signatureNameFontSize || CERT_DEFAULTS.signatureNameFontSize },
+                                            { key: `${block}SignatureRoleFontSize`, ph: data.signatureRoleFontSize || CERT_DEFAULTS.signatureRoleFontSize },
+                                            { key: `${block}SignatureImageBottom`, ph: data.signatureImageBottom || CERT_DEFAULTS.signatureImageBottom }
+                                        ].map(({ key, ph }) => (
+                                            <td key={key} className="px-1 py-1">
+                                                <input
+                                                    type="number"
+                                                    value={data[key] ?? ''}
+                                                    onChange={e => handleInputChange(key, e.target.value)}
+                                                    placeholder={String(ph)}
+                                                    className="w-full text-center border rounded px-1 py-0.5 text-xs"
+                                                />
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <p className="text-[11px] text-gray-500 mt-1">
+                            “Image lift” is how far the scanned signature is raised above its name — smaller sits closer
+                            to the name, larger floats it higher.
+                        </p>
+                    </div>
+
+                    <p className="text-xs text-gray-500 mb-3">Fine-tune the shared widths if the third signature and the stamp overlap. The page is 297 × 210 mm.</p>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         <FormGroup label="Side signature width"><Input type="number" value={data.signatureWidth ?? ''} onChange={e => handleInputChange('signatureWidth', e.target.value)} placeholder={thirdPartyWillPrint ? '80' : String(CERT_DEFAULTS.signatureWidth)} /></FormGroup>
                         <FormGroup label="Third signature width"><Input type="number" value={data.thirdSignatureWidth ?? ''} onChange={e => handleInputChange('thirdSignatureWidth', e.target.value)} placeholder={String(CERT_DEFAULTS.thirdSignatureWidth)} /></FormGroup>

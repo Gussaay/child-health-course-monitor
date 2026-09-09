@@ -43,6 +43,7 @@ import MothersForm from './IMNCIMothersForm';
 
 // --- EENC Forms ---
 import EENCSkillsAssessmentForm from './EENCSkillsAssessmentForm';
+import ETATSkillsAssessmentForm from './ETATSkillsAssessmentForm';
 import EENCMothersForm from './EENCMothersForm';
 
 // --- Lazy load Visit Reports ---
@@ -1369,6 +1370,7 @@ const MentorInfoModal = ({ mentor, onClose }) => {
 const VisitReportsTable = ({ 
     reports, onEdit, onDelete, onView, onMentorClick, selectedIds, onSelectionChange, isReportsLoading, canManage, currentUserEmail
 }) => {
+    const { t } = useTranslation();
     const isAllSelected = reports.length > 0 && reports.every(r => selectedIds.includes(r.id));
     const isSomeSelected = reports.length > 0 && reports.some(r => selectedIds.includes(r.id));
 
@@ -1599,7 +1601,9 @@ const ViewVisitReportModal = ({ report, onClose }) => {
 };
 
 // --- Mentorship Table Column Component ---
-const MentorshipTableColumns = ({ allSelected, someSelected, onSelectAll, canManage }) => (
+const MentorshipTableColumns = ({ allSelected, someSelected, onSelectAll, canManage }) => {
+    const { t } = useTranslation();
+    return (
     <>
         {canManage && (
             <th className="px-3 py-3 text-center w-10 border border-gray-300">
@@ -1624,7 +1628,8 @@ const MentorshipTableColumns = ({ allSelected, someSelected, onSelectAll, canMan
         <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Score')}</th>
         <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Action')}</th>
     </>
-);
+    );
+};
 
 // --- Friendly Service Titles ---
 const SERVICE_TITLES = {
@@ -2034,7 +2039,7 @@ const ServiceSelector = ({ onSelectService }) => {
     const services = [
         { key: 'IMNCI', title: 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
         { key: 'EENC', title: 'Mentorship on Early Essential Newborn Care (EENC)', enabled: true },
-        { key: 'ETAT', title: 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)', enabled: false },
+        { key: 'ETAT', title: 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)', enabled: true },
         { key: 'IPC', title: 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)', enabled: true }
     ];
 
@@ -2287,7 +2292,8 @@ const SkillsMentorshipView = ({
     const [publicData, setPublicData] = useState({ submissions: null, imnci: null, eenc: null });
     const [publicLoading, setPublicLoading] = useState(publicDashboardMode);
 
-    const { language } = useTranslation();
+    const { i18n } = useTranslation();
+    const language = i18n.language;
 
     useEffect(() => {
         if (healthFacilities) {
@@ -4858,13 +4864,39 @@ const SkillsMentorshipView = ({
                 </>
             );
         }
+        // ETAT
+        else if (activeService === 'ETAT' && (editingSubmission || (isReadyToStart && selectedHealthWorkerName && selectedFacility))) {
+            return (
+                <>
+                    <ETATSkillsAssessmentForm
+                        facility={facilityData}
+                        healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
+                        healthWorkerJobTitle={editingSubmission ? editingSubmission.workerType : workerJobTitle}
+                        healthWorkerTrainingDate={workerTrainingDate}
+                        healthWorkerPhone={workerPhone}
+                        onExit={handleExitForm}
+                        onSaveComplete={handleSaveSuccess}
+                        setToast={setToast}
+                        existingSessionData={editingSubmission}
+                        visitNumber={effectiveVisitNumber}
+                        canEditVisitNumber={canEditVisitNumber}
+                        lastSessionDate={lastSessionDate}
+                        setIsVisitReportModalOpen={setIsVisitReportModalOpen}
+                        setIsDashboardModalOpen={setIsDashboardModalOpen}
+                    />
+
+                    <VisitCountdownBadge session={activeVisitSession} onEndVisit={endVisitSession} />
+                    <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
+                </>
+            );
+        }
         // IPC
-        else if (activeService === 'IPC' && activeFormType === 'skills_assessment' && (editingSubmission || (isReadyToStart && selectedHealthWorkerName && selectedFacility))) {
+        else if (activeService === 'IPC' && activeFormType === 'skills_assessment' && (editingSubmission || (isReadyToStart && selectedFacility))) {
             return (
                 <>
                     <HandwashingAssessmentForm
                         facility={facilityData}
-                        healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
+                        healthWorkerName={editingSubmission ? (editingSubmission.healthWorkerName || null) : (selectedHealthWorkerName || null)}
                         healthWorkerJobTitle={editingSubmission ? editingSubmission.workerType : workerJobTitle}
                         onExit={handleExitForm}
                         onSaveComplete={handleSaveSuccess}
@@ -5029,7 +5061,7 @@ const SkillsMentorshipView = ({
             setupTitle = editingSubmission ? 'تعديل تقييم برنامج مكافحة العدوى للمنشأة' : 'تقييم برنامج مكافحة العدوى للمنشأة';
         }
 
-        const setupSubtitle = isSkillsAssessmentSetup 
+        const setupSubtitle = (isSkillsAssessmentSetup && activeService !== 'IPC')
             ? "الرجاء اختيار الولاية والمحلية والمنشأة والعامل الصحي للمتابعة." 
             : "الرجاء اختيار الولاية والمحلية والمنشأة للمتابعة.";
 
@@ -5112,7 +5144,7 @@ const SkillsMentorshipView = ({
                                 )}
                             </div>
 
-                            {isSkillsAssessmentSetup && selectedFacilityId && (
+                            {isSkillsAssessmentSetup && activeService !== 'IPC' && selectedFacilityId && (
                                 <div className="border p-4 rounded-lg bg-gray-50 space-y-4">
                                     <FormGroup label="العامل الصحي" className="text-right">
                                         <Select
@@ -5231,7 +5263,7 @@ const SkillsMentorshipView = ({
                                     onClick={handleProceedToForm}
                                     disabled={
                                         !selectedFacilityId ||
-                                        (isSkillsAssessmentSetup && !selectedHealthWorkerName) ||
+                                        (isSkillsAssessmentSetup && activeService !== 'IPC' && !selectedHealthWorkerName) ||
                                         isFacilitiesLoading
                                     }
                                     variant="primary"

@@ -8,7 +8,7 @@ import {
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
-import { doc, updateDoc, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'; 
+import { doc, updateDoc, deleteDoc, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { getFunctions, httpsCallable } from 'firebase/functions'; 
 
 import { 
@@ -32,7 +32,9 @@ import { CourseExercisesView } from './Online-exercise';
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
     COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState,
-    hasMentorshipForm
+    hasMentorshipForm,
+    COURSE_SUB_TYPES_COLLECTION, ICCM_SUBCOURSE_TYPES, CPCM_SUBCOURSE_TYPES,
+    mergeSubCourseTypes, isBuiltinSubCourse, getCourseSubTypes
 } from './constants.js';
 import { 
     Users, Share2, UserPlus, CheckCircle, 
@@ -1474,6 +1476,84 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     // State for the new Migration Modal
     const [showMigrationModal, setShowMigrationModal] = useState(false);
 
+    // Advanced actions: runtime sub-course catalogue + course-to-course copy.
+    const [showCopyCourseModal, setShowCopyCourseModal] = useState(false);
+    const [showSubCourseManager, setShowSubCourseManager] = useState(false);
+    const {
+        customSubCourses,
+        fetchCustomSubCourses,
+        addCustomSubCourse,
+        deleteCustomSubCourse,
+    } = useCustomSubCourses();
+
+    const canManageSubCourses = canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures;
+    const canCopyCourseData = canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures;
+
+    // Copies the ticked field groups from one course onto each target, then
+    // refreshes so the table reflects the new values.
+    const handleCopyCourseData = async ({ source, targetIds, groups }) => {
+        setIsProcessing(true);
+        let succeeded = 0;
+        const failures = [];
+
+        try {
+            for (const targetId of targetIds) {
+                const target = allCourses.find(c => c.id === targetId);
+                if (!target) { failures.push(targetId); continue; }
+
+                // Start from the target so anything not ticked survives intact.
+                const payload = { ...target };
+                let baselineInvalidated = false;
+
+                groups.forEach(group => {
+                    group.fields.forEach(field => {
+                        // `undefined` is not writable in Firestore, and a missing
+                        // field on the source should clear the target rather than
+                        // throw, so it is normalised to null.
+                        const value = source[field];
+                        payload[field] = value === undefined ? null : value;
+                    });
+                    if (group.invalidatesBaseline) baselineInvalidated = true;
+                });
+
+                if (baselineInvalidated) {
+                    payload.coverageSnapshot = null;
+                    payload.baselineLockedAt = null;
+                }
+
+                // Never carried across, whatever is ticked.
+                payload.id = target.id;
+                payload.course_type = target.course_type;
+                payload.approvalStatus = target.approvalStatus;
+                payload.lastCopiedFrom = source.id;
+                payload.lastCopiedAt = new Date().toISOString();
+                payload.lastCopiedBy = currentUserIdentifier;
+
+                try {
+                    await upsertCourse(payload);
+                    succeeded++;
+                } catch (e) {
+                    console.error(`Copy to course ${targetId} failed:`, e);
+                    failures.push(target.hall || targetId);
+                }
+            }
+
+            await fetchCourses(true);
+
+            if (failures.length === 0) {
+                setToast({ show: true, message: `تم نسخ البيانات إلى ${succeeded} دورة.`, type: 'success' });
+            } else {
+                setToast({
+                    show: true,
+                    message: `تم النسخ إلى ${succeeded} دورة، وفشل ${failures.length}: ${failures.join('، ')}`,
+                    type: 'warning',
+                });
+            }
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     useEffect(() => {
         fetchFederalCoordinators();
         fetchStateCoordinators();
@@ -1533,12 +1613,13 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         return ['All', ...Array.from(localities).sort()];
     }, [coursesForActiveType, filterState, userLocalities]);
 
+    // Reads every field a sub-course can live on, not just the facilitator
+    // assignments — an ETAT course now also records one against the director and
+    // clinical instructor, and those were previously invisible to this filter.
     const filterSubCourseOptions = useMemo(() => {
         const subCourses = new Set();
         coursesForActiveType.forEach(c => {
-            if (c.facilitatorAssignments && c.facilitatorAssignments.length > 0) {
-                c.facilitatorAssignments.forEach(a => subCourses.add(a.imci_sub_type));
-            }
+            getCourseSubTypes(c).forEach(t => subCourses.add(t));
         });
         return ['All', ...Array.from(subCourses).sort()];
     }, [coursesForActiveType]);
@@ -1577,8 +1658,8 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
             const stateMatch = filterState === 'All' || c.state === filterState;
             const localityMatch = filterLocality === 'All' || c.locality === filterLocality;
-            const subCourseMatch = filterSubCourse === 'All' || 
-                (c.facilitatorAssignments && c.facilitatorAssignments.some(a => a.imci_sub_type === filterSubCourse));
+            const subCourseMatch = filterSubCourse === 'All' ||
+                getCourseSubTypes(c).includes(filterSubCourse);
             const projectMatch = filterProject === 'All' || c.course_project === filterProject;
 
             return stateMatch && localityMatch && subCourseMatch && projectMatch;
@@ -2057,6 +2138,19 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                                 Total Sync Tool
                                             </Button>
                                         )}
+
+                                        {/* ADVANCED ACTIONS — federal managers and super users */}
+                                        {canCopyCourseData && (
+                                            <Button variant="secondary" disabled={isProcessing} onClick={() => setShowCopyCourseModal(true)}>
+                                                <Copy size={14} className="mr-1" /> Copy Course Data
+                                            </Button>
+                                        )}
+
+                                        {canManageSubCourses && (
+                                            <Button variant="secondary" disabled={isProcessing} onClick={() => setShowSubCourseManager(true)}>
+                                                <ClipboardList size={14} className="mr-1" /> Manage Sub-courses
+                                            </Button>
+                                        )}
                                     </div>
                                     <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>Change Course Package</Button>
                                 </div>
@@ -2154,6 +2248,44 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                         userLocalities={userLocalities} 
                         canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
                         canUseSuperUserAdvancedFeatures={canUseSuperUserAdvancedFeatures}
+                        customSubCourses={customSubCourses}
+                        onAddSubCourse={canManageSubCourses ? addCustomSubCourse : undefined}
+                        onDeleteSubCourse={canManageSubCourses ? deleteCustomSubCourse : undefined}
+                        currentUserIdentifier={currentUserIdentifier}
+                        currentUserRole={currentUserRole}
+                    />
+                )}
+
+                {/* Copy data between two courses of the same package. */}
+                {canCopyCourseData && (
+                    <CopyCourseDataModal
+                        isOpen={showCopyCourseModal}
+                        onClose={() => setShowCopyCourseModal(false)}
+                        allCourses={allCourses}
+                        courseType={activeCourseType}
+                        onCopy={handleCopyCourseData}
+                        isProcessing={isProcessing}
+                        currentUserIdentifier={currentUserIdentifier}
+                    />
+                )}
+
+                {/* Standalone sub-course catalogue, reachable without opening a
+                    course form. Same modal the '+' buttons inside the form open. */}
+                {canManageSubCourses && (
+                    <ManageSubCoursesModal
+                        isOpen={showSubCourseManager}
+                        onClose={() => { setShowSubCourseManager(false); fetchCustomSubCourses(); }}
+                        courseType={activeCourseType}
+                        customSubCourses={customSubCourses}
+                        onAdd={(name) => addCustomSubCourse({
+                            courseType: activeCourseType,
+                            name,
+                            createdBy: currentUserIdentifier,
+                            createdByRole: currentUserRole,
+                        })}
+                        onDelete={deleteCustomSubCourse}
+                        currentUserIdentifier={currentUserIdentifier}
+                        currentUserRole={currentUserRole}
                     />
                 )}
                 
@@ -2415,10 +2547,493 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
     );
 };
 
+// ============================================================================
+// COPY COURSE DATA — advanced action for federal managers and super users
+// ============================================================================
+//
+// Copies selected field groups from one course onto one or more others. Built
+// for the case where a batch of courses is set up with the same leadership,
+// funding and logistics and only the dates and location differ.
+//
+// Two rules keep this from being destructive:
+//   • Identity is never copied — id, course_type, approvalStatus, certificate
+//     state and coverage baselines all stay on the target.
+//   • Groups are opt-in. An unticked group is left exactly as it was on the
+//     target rather than being blanked.
+
+export const COPYABLE_FIELD_GROUPS = [
+    {
+        key: 'leadership',
+        label: 'القيادة (مدير الدورة والمدرب السريري)',
+        labelEn: 'Leadership (director & clinical instructor)',
+        fields: [
+            'director', 'directorId', 'director_imci_sub_type',
+            'clinical_instructor', 'clinical_instructorId', 'clinical_instructor_imci_sub_type',
+        ],
+    },
+    {
+        key: 'facilitators',
+        label: 'الميسرون والورش الفرعية',
+        labelEn: 'Facilitators & sub-courses',
+        fields: ['facilitators', 'facilitatorIds', 'facilitatorAssignments'],
+    },
+    {
+        key: 'coordinators',
+        label: 'المنسقون',
+        labelEn: 'Coordinators',
+        fields: ['coordinator', 'state_coordinator', 'locality_coordinator'],
+    },
+    {
+        key: 'funding',
+        label: 'التمويل والمشروع والتنفيذ',
+        labelEn: 'Funding, project & implementer',
+        fields: ['funded_by', 'course_budget', 'course_project', 'implemented_by'],
+    },
+    {
+        key: 'logistics',
+        label: 'القاعة والمدة وعدد المشاركين',
+        labelEn: 'Hall, duration & participant count',
+        fields: ['hall', 'hall_english', 'course_duration', 'participants_count'],
+    },
+    {
+        key: 'location',
+        label: 'الموقع (الولايات والمحليات والمستوى)',
+        labelEn: 'Location (states, localities, level)',
+        // Copying location invalidates the IMNCI coverage baseline, which is
+        // derived from the states and localities. handleCopy nulls the snapshot
+        // so it is recalculated on the next save rather than left stale.
+        fields: ['state', 'locality', 'states', 'localities', 'course_level'],
+        invalidatesBaseline: true,
+    },
+    {
+        key: 'dates',
+        label: 'تاريخ البداية',
+        labelEn: 'Start date',
+        fields: ['start_date'],
+        // Off by default: two courses sharing a start date is usually a mistake.
+        defaultOff: true,
+    },
+];
+
+export function CopyCourseDataModal({
+    isOpen, onClose, allCourses = [], courseType, onCopy, isProcessing, currentUserIdentifier
+}) {
+    const [sourceId, setSourceId] = useState('');
+    const [targetIds, setTargetIds] = useState([]);
+    const [selectedGroups, setSelectedGroups] = useState(
+        () => COPYABLE_FIELD_GROUPS.filter(g => !g.defaultOff).map(g => g.key)
+    );
+    const [search, setSearch] = useState('');
+    const [confirming, setConfirming] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (isOpen) {
+            setSourceId(''); setTargetIds([]); setSearch('');
+            setConfirming(false); setError('');
+            setSelectedGroups(COPYABLE_FIELD_GROUPS.filter(g => !g.defaultOff).map(g => g.key));
+        }
+    }, [isOpen]);
+
+    // Same package only. Copying a facilitator's 'EENC Mentorship' assignment
+    // onto an ETAT course would write a sub-course that ETAT's picker can't
+    // show and that mentorship detection would then act on.
+    const eligible = useMemo(() => (allCourses || []).filter(
+        c => c.course_type === courseType && !c.inRecycleBin && !c.deletionRequested
+    ), [allCourses, courseType]);
+
+    const describe = (c) => {
+        const where = [c.state, c.locality].filter(Boolean).join(' — ');
+        const when = c.start_date || 'بدون تاريخ';
+        return `${c.hall || 'بدون قاعة'} | ${where || 'بدون موقع'} | ${when}`;
+    };
+
+    const source = eligible.find(c => c.id === sourceId) || null;
+
+    const targets = useMemo(() => {
+        const term = search.trim().toLowerCase();
+        return eligible
+            .filter(c => c.id !== sourceId)
+            .filter(c => !term || describe(c).toLowerCase().includes(term));
+    }, [eligible, sourceId, search]);
+
+    if (!isOpen) return null;
+
+    const toggleGroup = (key) => {
+        setSelectedGroups(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    };
+
+    const toggleTarget = (id) => {
+        setTargetIds(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+    };
+
+    const groupsToApply = COPYABLE_FIELD_GROUPS.filter(g => selectedGroups.includes(g.key));
+
+    const fieldPreview = groupsToApply.flatMap(g => g.fields);
+
+    const handleConfirm = async () => {
+        setError('');
+        if (!source) { setError('اختر الدورة المصدر.'); return; }
+        if (targetIds.length === 0) { setError('اختر دورة هدف واحدة على الأقل.'); return; }
+        if (groupsToApply.length === 0) { setError('اختر مجموعة حقول واحدة على الأقل للنسخ.'); return; }
+        try {
+            await onCopy({ source, targetIds, groups: groupsToApply });
+            onClose();
+        } catch (e) {
+            setError(e.message || 'تعذر نسخ البيانات.');
+            setConfirming(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={isProcessing ? () => {} : onClose} title={`نسخ بيانات دورة — ${courseType}`}>
+            <div dir="rtl" style={{ textAlign: 'right' }}>
+                <CardBody>
+                    {error && (
+                        <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>
+                    )}
+
+                    {eligible.length < 2 ? (
+                        <EmptyState message="تحتاج إلى دورتين على الأقل من نفس الحزمة لاستخدام أداة النسخ." />
+                    ) : (
+                        <>
+                            <FormGroup label="١. الدورة المصدر (يُنسخ منها)">
+                                <Select value={sourceId} disabled={isProcessing} onChange={(e) => { setSourceId(e.target.value); setTargetIds([]); }}>
+                                    <option value="">— اختر الدورة المصدر —</option>
+                                    {eligible.map(c => <option key={c.id} value={c.id}>{describe(c)}</option>)}
+                                </Select>
+                            </FormGroup>
+
+                            <div className="mt-5">
+                                <h4 className="text-sm font-bold text-gray-700 mb-2">٢. البيانات المراد نسخها</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {COPYABLE_FIELD_GROUPS.map(g => (
+                                        <label key={g.key} className="flex items-start gap-2 p-2 border border-gray-200 rounded-md cursor-pointer hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                className="mt-1"
+                                                disabled={isProcessing}
+                                                checked={selectedGroups.includes(g.key)}
+                                                onChange={() => toggleGroup(g.key)}
+                                            />
+                                            <span className="text-sm text-gray-800">
+                                                {g.label}
+                                                {g.invalidatesBaseline && selectedGroups.includes(g.key) && (
+                                                    <span className="block text-xs text-amber-700 mt-0.5">
+                                                        سيُعاد احتساب خط الأساس للتغطية عند الحفظ.
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    لا يُنسخ نوع الدورة أو حالة الاعتماد أو الشهادات أو المشاركون. المجموعات غير المحددة تبقى كما هي في الدورة الهدف.
+                                </p>
+                            </div>
+
+                            <div className="mt-5">
+                                <h4 className="text-sm font-bold text-gray-700 mb-2">
+                                    ٣. الدورات الهدف ({targetIds.length} محددة)
+                                </h4>
+                                <Input
+                                    value={search}
+                                    disabled={isProcessing || !sourceId}
+                                    placeholder="ابحث بالقاعة أو الولاية أو التاريخ..."
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="mb-2"
+                                />
+                                <div className="max-h-56 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-100">
+                                    {!sourceId ? (
+                                        <div className="p-3 text-sm text-gray-500">اختر الدورة المصدر أولاً.</div>
+                                    ) : targets.length === 0 ? (
+                                        <div className="p-3 text-sm text-gray-500">لا توجد دورات مطابقة.</div>
+                                    ) : targets.map(c => (
+                                        <label key={c.id} className="flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                disabled={isProcessing}
+                                                checked={targetIds.includes(c.id)}
+                                                onChange={() => toggleTarget(c.id)}
+                                            />
+                                            <span className="text-sm text-gray-800">{describe(c)}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {confirming && (
+                                <div className="mt-5 p-3 rounded-md bg-amber-50 border border-amber-300 text-amber-900 text-sm">
+                                    <div className="flex items-start gap-2">
+                                        <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                                        <div>
+                                            سيتم استبدال {fieldPreview.length} حقلاً في {targetIds.length} دورة.
+                                            لا يمكن التراجع عن هذا الإجراء.
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </CardBody>
+                <CardFooter>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="secondary" onClick={onClose} disabled={isProcessing}>إلغاء</Button>
+                        {eligible.length >= 2 && (
+                            confirming ? (
+                                <Button variant="danger" onClick={handleConfirm} disabled={isProcessing}>
+                                    {isProcessing ? <Spinner size="sm" /> : 'تأكيد النسخ'}
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() => {
+                                        setError('');
+                                        if (!sourceId) { setError('اختر الدورة المصدر.'); return; }
+                                        if (targetIds.length === 0) { setError('اختر دورة هدف واحدة على الأقل.'); return; }
+                                        if (groupsToApply.length === 0) { setError('اختر مجموعة حقول واحدة على الأقل للنسخ.'); return; }
+                                        setConfirming(true);
+                                    }}
+                                    disabled={isProcessing}
+                                >
+                                    <Copy size={14} className="ml-1" /> مراجعة ونسخ
+                                </Button>
+                            )
+                        )}
+                    </div>
+                </CardFooter>
+            </div>
+        </Modal>
+    );
+}
+
+// ============================================================================
+// CUSTOM SUB-COURSES — runtime catalogue stored in Firestore
+// ============================================================================
+//
+// Federal managers and super users can add a sub-course without a code release.
+// Entries live in the `course_sub_types` collection as:
+//     { course_type: 'ETAT', name: 'ETAT TOT', createdBy, createdByRole, createdAt }
+//
+// Built-in sub-courses are NOT stored here — they ship in constants.js and can't
+// be deleted. mergeSubCourseTypes puts the two lists together for the picker.
+
+export function useCustomSubCourses() {
+    const [customSubCourses, setCustomSubCourses] = useState([]);
+    const [loadingSubCourses, setLoadingSubCourses] = useState(false);
+    const [subCourseError, setSubCourseError] = useState('');
+
+    const fetchCustomSubCourses = React.useCallback(async () => {
+        setLoadingSubCourses(true);
+        setSubCourseError('');
+        try {
+            const snap = await getDocs(collection(db, COURSE_SUB_TYPES_COLLECTION));
+            const rows = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(r => r.name && r.course_type)
+                // createdAt can be null for a moment right after addDoc, because
+                // serverTimestamp resolves on the server. Treat null as newest.
+                .sort((a, b) => (a.createdAt?.seconds || Infinity) - (b.createdAt?.seconds || Infinity));
+            setCustomSubCourses(rows);
+        } catch (e) {
+            console.error('Failed to load custom sub-courses:', e);
+            setSubCourseError(e.message || 'Could not load custom sub-courses.');
+            // Deliberately leave whatever was loaded before in place: a failed
+            // refresh should not empty a picker the user is mid-way through.
+        } finally {
+            setLoadingSubCourses(false);
+        }
+    }, []);
+
+    useEffect(() => { fetchCustomSubCourses(); }, [fetchCustomSubCourses]);
+
+    const addCustomSubCourse = React.useCallback(async ({ courseType, name, createdBy, createdByRole }) => {
+        const clean = String(name || '').trim();
+        if (!clean) throw new Error('اسم الورشة الفرعية مطلوب.');
+        if (clean.length > 120) throw new Error('اسم الورشة الفرعية طويل جداً.');
+        if (!courseType) throw new Error('نوع الدورة غير محدد.');
+
+        const key = clean.toLowerCase();
+        if (isBuiltinSubCourse(courseType, clean)) {
+            throw new Error(`«${clean}» موجودة بالفعل ضمن القائمة الأساسية.`);
+        }
+        const duplicate = customSubCourses.some(
+            r => r.course_type === courseType && r.name.trim().toLowerCase() === key
+        );
+        if (duplicate) throw new Error(`«${clean}» مضافة بالفعل لهذه الحزمة.`);
+
+        const ref = await addDoc(collection(db, COURSE_SUB_TYPES_COLLECTION), {
+            course_type: courseType,
+            name: clean,
+            createdBy: createdBy || 'Unknown',
+            createdByRole: createdByRole || null,
+            createdAt: serverTimestamp(),
+        });
+
+        // Optimistic append so the new option is selectable immediately rather
+        // than after a round trip.
+        const row = { id: ref.id, course_type: courseType, name: clean, createdBy, createdByRole, createdAt: null };
+        setCustomSubCourses(prev => [...prev, row]);
+        return row;
+    }, [customSubCourses]);
+
+    const deleteCustomSubCourse = React.useCallback(async (id) => {
+        await deleteDoc(doc(db, COURSE_SUB_TYPES_COLLECTION, id));
+        setCustomSubCourses(prev => prev.filter(r => r.id !== id));
+    }, []);
+
+    return {
+        customSubCourses,
+        loadingSubCourses,
+        subCourseError,
+        fetchCustomSubCourses,
+        addCustomSubCourse,
+        deleteCustomSubCourse,
+    };
+}
+
+// Add / remove custom sub-courses for one course package.
+//
+// Deleting only removes the option from future pickers. Courses already saved
+// with that sub-course keep it — the value is a plain string on the course
+// document — which is why the confirm text says so rather than warning about
+// data loss.
+export function ManageSubCoursesModal({
+    isOpen, onClose, courseType, customSubCourses, onAdd, onDelete,
+    currentUserIdentifier, currentUserRole, initialName = ''
+}) {
+    const [name, setName] = useState(initialName);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+    useEffect(() => {
+        if (isOpen) { setName(initialName); setError(''); setConfirmDeleteId(null); }
+    }, [isOpen, initialName]);
+
+    if (!isOpen) return null;
+
+    const builtinList = mergeSubCourseTypes(courseType, []);
+    const customForType = (customSubCourses || []).filter(r => r.course_type === courseType);
+
+    const handleAdd = async () => {
+        setBusy(true);
+        setError('');
+        try {
+            const created = await onAdd(name);
+            if (created) { setName(''); }
+        } catch (e) {
+            setError(e.message || 'تعذر إضافة الورشة الفرعية.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        setBusy(true);
+        setError('');
+        try {
+            await onDelete(id);
+            setConfirmDeleteId(null);
+        } catch (e) {
+            setError(e.message || 'تعذر حذف الورشة الفرعية.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={busy ? () => {} : onClose} title={`الورش الفرعية — ${courseType}`}>
+            <div dir="rtl" style={{ textAlign: 'right' }}>
+                <CardBody>
+                    {error && (
+                        <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">
+                            {error}
+                        </div>
+                    )}
+
+                    <FormGroup label="إضافة ورشة فرعية جديدة">
+                        <div className="flex gap-2">
+                            <Input
+                                value={name}
+                                disabled={busy}
+                                placeholder="مثال: ETAT TOT"
+                                onChange={(e) => setName(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) handleAdd(); }}
+                                className="flex-1"
+                            />
+                            <Button onClick={handleAdd} disabled={busy || !name.trim()}>
+                                {busy ? <Spinner size="sm" /> : 'إضافة'}
+                            </Button>
+                        </div>
+                    </FormGroup>
+                    <p className="text-xs text-gray-500 mt-1 mb-5">
+                        تصبح الورشة الفرعية متاحة فوراً لكل مستخدمي هذه الحزمة.
+                    </p>
+
+                    <div className="mb-5">
+                        <h4 className="text-sm font-bold text-gray-700 mb-2">الورش الأساسية (غير قابلة للحذف)</h4>
+                        <div className="flex flex-wrap gap-2">
+                            {builtinList.length === 0
+                                ? <span className="text-sm text-gray-500">لا توجد ورش أساسية لهذه الحزمة.</span>
+                                : builtinList.map(t => (
+                                    <span key={t} className="text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-1 rounded">
+                                        {t}
+                                    </span>
+                                ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="text-sm font-bold text-gray-700 mb-2">
+                            الورش المضافة من النظام ({customForType.length})
+                        </h4>
+                        {customForType.length === 0 ? (
+                            <p className="text-sm text-gray-500">لم تُضف أي ورشة فرعية لهذه الحزمة بعد.</p>
+                        ) : (
+                            <ul className="divide-y divide-gray-100 border border-gray-200 rounded-md">
+                                {customForType.map(row => (
+                                    <li key={row.id} className="flex items-center justify-between gap-3 p-3">
+                                        <div className="min-w-0">
+                                            <div className="text-sm font-medium text-gray-800 truncate">{row.name}</div>
+                                            <div className="text-xs text-gray-500 truncate">
+                                                أضافها: {row.createdBy || 'غير معروف'}
+                                            </div>
+                                        </div>
+                                        {confirmDeleteId === row.id ? (
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className="text-xs text-gray-600">
+                                                    تُحذف من القائمة فقط، والدورات المحفوظة لا تتأثر.
+                                                </span>
+                                                <Button variant="danger" disabled={busy} onClick={() => handleDelete(row.id)}>تأكيد</Button>
+                                                <Button variant="secondary" disabled={busy} onClick={() => setConfirmDeleteId(null)}>تراجع</Button>
+                                            </div>
+                                        ) : (
+                                            <Button variant="secondary" disabled={busy} onClick={() => setConfirmDeleteId(row.id)} className="shrink-0">
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </CardBody>
+                <CardFooter>
+                    <div className="flex justify-end">
+                        <Button variant="secondary" onClick={onClose} disabled={busy}>إغلاق</Button>
+                    </div>
+                </CardFooter>
+            </div>
+        </Modal>
+    );
+}
+
 export function CourseForm({ 
     courseType, initialData, facilitatorsList, fundersList, onCancel, onSave, 
     federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = [],
-    userStates, userLocalities, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures
+    userStates, userLocalities, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures,
+    customSubCourses = [], onAddSubCourse, onDeleteSubCourse,
+    currentUserIdentifier, currentUserRole
 }) {
     // --- BINDING LATEST NAMES ---
     const getFacName = (id, oldName) => {
@@ -2484,38 +3099,54 @@ export function CourseForm({
     const [director, setDirector] = useState(() => getFacName(initialData?.directorId, initialData?.director));
     const [clinical, setClinical] = useState(() => getFacName(initialData?.clinical_instructorId, initialData?.clinical_instructor));
 
-    const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
-    const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
+    // IMNCI keeps its historical behaviour of pre-selecting the first option;
+    // every other package starts blank so an unset sub-course stays unset rather
+    // than silently defaulting to 'ETAT Standard' on save.
+    const defaultLeadershipSubType = courseType === 'IMNCI' ? IMNCI_SUBCOURSE_TYPES[0] : '';
+    const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || defaultLeadershipSubType);
+    const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || defaultLeadershipSubType);
 
-    const INFECTION_CONTROL_SUBCOURSE_TYPES = [
-        'IPC in Delivery room',
-        'IPC in Neonatal unit',
-        'Neonatal Sepsis Surveillance',
-    ];
+    // The sub-course lists moved to constants.js (BLOCK S) so the filters, the
+    // copy tool and the reports view read the same catalogue this form does.
+    // `subCourseOptions` is built-ins for this package plus anything a federal
+    // manager or super user has added at runtime.
+    const subCourseOptions = useMemo(
+        () => mergeSubCourseTypes(courseType, customSubCourses),
+        [courseType, customSubCourses]
+    );
 
-    const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
-    const CPCM_SUBCOURSE_TYPES = ['CPCM Community Module'];
-    const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'Sepsis surveillance and management', 'CPAP training', 'Kangaroo mother Care'];
+    const canManageSubCourses =
+        Boolean(onAddSubCourse) &&
+        (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures);
 
-    const EMONC_SUBCOURSE_TYPES = [
-        'Emergency Newborn Care', 
-        'Emergency Maternal Care', 
-        'EENC Orientation', 
-        'EENC TOT', 
-        'EENC Mentorship'
-    ];
+    const [subCourseModalOpen, setSubCourseModalOpen] = useState(false);
+    // Where a newly added sub-course should be written back to, so the user
+    // lands on it selected instead of having to find it in the list again.
+    const [subCourseTarget, setSubCourseTarget] = useState(null);
 
-    const ETAT_SUBCOURSE_TYPES = [
-        'ETAT Standard', 
-        'ETAT Orientation', 
-        'ETAT Plus', 
-        'ETAT Mentorship'
-    ];
+    const openSubCourseManager = (target) => {
+        setSubCourseTarget(target);
+        setSubCourseModalOpen(true);
+    };
 
-    const PROGRAM_MANAGEMENT_SUBCOURSE_TYPES = [
-        'IMNCI implementation operational Guide (الدليل التشغيلي لتطبيق العلاج المتكامل)',
-        'planning, Monitoring and evaluation (التخطيط والمتابعة والتقييم)'
-    ];
+    const handleAddSubCourse = async (name) => {
+        const created = await onAddSubCourse({
+            courseType,
+            name,
+            createdBy: currentUserIdentifier,
+            createdByRole: currentUserRole,
+        });
+
+        // Auto-select into whichever field opened the manager.
+        if (created?.name && subCourseTarget) {
+            if (subCourseTarget.kind === 'director') setDirectorImciSubType(created.name);
+            else if (subCourseTarget.kind === 'clinical') setClinicalImciSubType(created.name);
+            else if (subCourseTarget.kind === 'facilitator') {
+                updateFacilitatorAssignment(subCourseTarget.group, subCourseTarget.index, 'imci_sub_type', created.name);
+            }
+        }
+        return created;
+    };
 
     const COURSE_GROUPS = ['Group A', 'Group B', 'Group C', 'Group D'];
 
@@ -2527,6 +3158,13 @@ export function CourseForm({
     const isEmonc = courseType === 'EmONC';
     const isEtat = courseType === 'ETAT';
     const isProgramManagement = courseType === 'Program Management';
+
+    // Which packages record a sub-course against the course director and
+    // clinical instructor, not just against each facilitator. ETAT joins IMNCI
+    // here: without a course-level field, 'ETAT Mentorship' could only ever be
+    // read off the facilitator assignments, so a course with no facilitator rows
+    // yet would not resolve as a mentorship course at all.
+    const showLeadershipSubCourse = isImnci || isEtat;
 
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments?.length > 0 ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A', 'Group B']);
 
@@ -2798,7 +3436,7 @@ export function CourseForm({
             payload.baselineLockedAt = null;
         }
 
-        if (isImnci || isIccm || isCpcm) {
+        if (isImnci || isIccm || isCpcm || isEtat) {
             payload.clinical_instructor = clinical;
             payload.clinical_instructorId = clinicalId;
             payload.director_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : directorImciSubType;
@@ -2947,16 +3585,31 @@ export function CourseForm({
                                         label="مدير الدورة"
                                     />
                                 </FormGroup>
-                                {isImnci && (
+                                {showLeadershipSubCourse && (
                                     <FormGroup label="اسم الورشة الفرعية">
-                                        <Select disabled={isSaving} value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
-                                            {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                        </Select>
+                                        <div className="flex gap-2">
+                                            <Select disabled={isSaving} value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full flex-1">
+                                                <option value="">— اختر الورشة الفرعية —</option>
+                                                {subCourseOptions.map(type => <option key={type} value={type}>{type}</option>)}
+                                            </Select>
+                                            {canManageSubCourses && (
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    disabled={isSaving}
+                                                    title="إضافة ورشة فرعية جديدة"
+                                                    onClick={() => openSubCourseManager({ kind: 'director' })}
+                                                    className="shrink-0"
+                                                >
+                                                    +
+                                                </Button>
+                                            )}
+                                        </div>
                                     </FormGroup>
                                 )}
                             </div>
 
-                            {(isImnci || isIccm || isCpcm) && (
+                            {(isImnci || isIccm || isCpcm || isEtat) && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end pt-5 border-t border-gray-100">
                                     <FormGroup label="المدرب السريري - اختياري">
                                         <SearchableSelect
@@ -2968,11 +3621,26 @@ export function CourseForm({
                                             label="المدرب السريري - اختياري"
                                         />
                                     </FormGroup>
-                                    {isImnci && (
+                                    {showLeadershipSubCourse && (
                                         <FormGroup label="اسم الورشة الفرعية">
-                                            <Select disabled={isSaving} value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
-                                                {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                            </Select>
+                                            <div className="flex gap-2">
+                                                <Select disabled={isSaving} value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full flex-1">
+                                                    <option value="">— اختر الورشة الفرعية —</option>
+                                                    {subCourseOptions.map(type => <option key={type} value={type}>{type}</option>)}
+                                                </Select>
+                                                {canManageSubCourses && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        disabled={isSaving}
+                                                        title="إضافة ورشة فرعية جديدة"
+                                                        onClick={() => openSubCourseManager({ kind: 'clinical' })}
+                                                        className="shrink-0"
+                                                    >
+                                                        +
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </FormGroup>
                                     )}
                                 </div>
@@ -3001,24 +3669,31 @@ export function CourseForm({
                                         </FormGroup>
                                       {!(isIccm || isCpcm) && (
                                             <FormGroup label="اسم الورشة الفرعية">
-                                                <Select
-                                                    disabled={isSaving}
-                                                    value={assignment.imci_sub_type || ''}
-                                                    onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
-                                                    className="w-full"
-                                                >
-                                                    <option value="">— اختر الورشة الفرعية —</option>
-                                                    {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
-                                                      isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
-                                                      isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
-                                                      isEmonc ? EMONC_SUBCOURSE_TYPES :
-                                                      isEtat ? ETAT_SUBCOURSE_TYPES :
-                                                      isProgramManagement ? PROGRAM_MANAGEMENT_SUBCOURSE_TYPES :
-                                                      []
-                                                    ).map(type => (
-                                                        <option key={type} value={type}>{type}</option>
-                                                    ))}
-                                                </Select>
+                                                <div className="flex gap-2">
+                                                    <Select
+                                                        disabled={isSaving}
+                                                        value={assignment.imci_sub_type || ''}
+                                                        onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
+                                                        className="w-full flex-1"
+                                                    >
+                                                        <option value="">— اختر الورشة الفرعية —</option>
+                                                        {subCourseOptions.map(type => (
+                                                            <option key={type} value={type}>{type}</option>
+                                                        ))}
+                                                    </Select>
+                                                    {canManageSubCourses && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="secondary"
+                                                            disabled={isSaving}
+                                                            title="إضافة ورشة فرعية جديدة"
+                                                            onClick={() => openSubCourseManager({ kind: 'facilitator', group: groupName, index })}
+                                                            className="shrink-0"
+                                                        >
+                                                            +
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </FormGroup>
                                         )}
 
@@ -3049,6 +3724,19 @@ export function CourseForm({
                     </Button>
                 </div>
             </div>
+
+            {canManageSubCourses && (
+                <ManageSubCoursesModal
+                    isOpen={subCourseModalOpen}
+                    onClose={() => { setSubCourseModalOpen(false); setSubCourseTarget(null); }}
+                    courseType={courseType}
+                    customSubCourses={customSubCourses}
+                    onAdd={handleAddSubCourse}
+                    onDelete={onDeleteSubCourse}
+                    currentUserIdentifier={currentUserIdentifier}
+                    currentUserRole={currentUserRole}
+                />
+            )}
         </Card>
     );
 }

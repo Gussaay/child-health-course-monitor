@@ -93,29 +93,32 @@ const localVersion = localStorage.getItem('app_version');
 
 if (localVersion !== APP_VERSION) {
   console.log(`🔄 New version detected! Upgrading from ${localVersion || 'unknown'} to ${APP_VERSION}.`);
+
+  // The version is recorded BEFORE the wipe, not inside the innermost .then().
+  // The old order meant that if a single caches.delete() rejected — which happens
+  // routinely when a service worker is mid-update — app_version was never written,
+  // so the next boot saw a "new version" again and reloaded. That is the loop
+  // users experienced as the app restarting itself over and over.
+  localStorage.setItem('app_version', APP_VERSION);
+
   if (navigator.onLine) {
       console.log("Clearing cache to fetch fresh files...");
-      if ('caches' in window) {
-        caches.keys().then((names) => {
-          Promise.all(names.map(name => caches.delete(name)))
-            .then(() => {
-              console.log("✅ All caches successfully deleted.");
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                  for(let registration of registrations) { registration.unregister(); }
-                });
-              }
-              localStorage.setItem('app_version', APP_VERSION);
-              window.location.reload();
-            });
-        });
-      } else {
-        localStorage.setItem('app_version', APP_VERSION);
-        window.location.reload();
-      }
+      const wipe = async () => {
+        if ('caches' in window) {
+          const names = await caches.keys();
+          await Promise.allSettled(names.map(name => caches.delete(name)));
+        }
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.allSettled(registrations.map(r => r.unregister()));
+        }
+      };
+
+      wipe()
+        .catch((e) => console.warn("Cache wipe partially failed, continuing anyway:", e))
+        .finally(() => window.location.reload());
   } else {
       console.log("📱 Offline mode. Skipping cache wipe until network is restored to prevent crash.");
-      localStorage.setItem('app_version', APP_VERSION);
   }
 }
 // =========================================================================

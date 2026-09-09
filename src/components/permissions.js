@@ -26,7 +26,13 @@ export const ALL_PERMISSIONS = {
 
 export const ALL_PERMISSION_KEYS = Object.keys(ALL_PERMISSIONS);
 
-export const applyDerivedPermissions = (basePermissions) => {
+// Returns a NEW object. The previous version mutated its argument and returned
+// the same reference, so calling it on a shared constant — e.g.
+// applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user) in App.jsx — rewrote the
+// module-level blueprint in place for the rest of the session, letting one role's
+// derived flags leak into another's.
+export const applyDerivedPermissions = (permissions) => {
+    const basePermissions = { ...permissions };
     if (basePermissions.manageScope !== 'none' || basePermissions.canViewCourse) {
         basePermissions.canViewDashboard = true;
     }
@@ -65,7 +71,17 @@ export const mergeRolePermissions = (rolesArray, globalPermissionsMap) => {
         : rolesArray;
 
     effectiveRoles.forEach(role => {
-        const perms = globalPermissionsMap[role] || DEFAULT_ROLE_PERMISSIONS[role] || {};
+        // `globalPermissionsMap[role] || DEFAULT_ROLE_PERMISSIONS[role]` looked
+        // right but an empty object is truthy. If the meta/roles blueprint was
+        // ever saved with a partial or empty entry for a role, every user holding
+        // that role fell through with {} and lost all permissions — which reads on
+        // screen as being demoted to a standard user. Fall back to the built-in
+        // defaults whenever the stored blueprint has nothing usable in it, and
+        // layer the stored values on top rather than replacing them wholesale.
+        const stored = globalPermissionsMap?.[role];
+        const fallback = DEFAULT_ROLE_PERMISSIONS[role] || {};
+        const hasStored = stored && typeof stored === 'object' && Object.keys(stored).length > 0;
+        const perms = hasStored ? { ...fallback, ...stored } : fallback;
         
         Object.keys(perms).forEach(key => {
             if (typeof perms[key] === 'boolean') {

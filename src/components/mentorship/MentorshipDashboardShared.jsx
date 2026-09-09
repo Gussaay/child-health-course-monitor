@@ -925,6 +925,328 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
     );
 };
 
+/* ============================================================================
+   ETAT (Emergency Triage, Assessment and Treatment)
+   Checklist structure, KPI helper and detailed skills table.
+   Labels are English i18n keys resolved through t(), matching the ETAT form.
+   ========================================================================== */
+
+// Mirrors ETAT_CHECKLISTS in ETATSkillsAssessmentForm.jsx. Kept here so the
+// dashboard bundle does not have to import the whole assessment form.
+export const ETAT_CHECKLIST_STRUCTURE = [
+    {
+        key: 'TRIAGE', title: 'Triage', color: '#0284c7',
+        sections: [
+            { id: 'A', title: 'A. Organisation of triage', items: [
+                { key: 'triage_1', critical: true, label: 'Meets the child at the point of entry and begins triage before registration, payment or queuing' },
+                { key: 'triage_2', critical: false, label: 'Greets the caregiver and asks the presenting problem and the child age' }
+            ]},
+            { id: 'B', title: 'B. Emergency signs, assessed in ABCD sequence', items: [
+                { key: 'triage_3', critical: true, label: 'AIRWAY AND BREATHING: looks for obstructed or absent breathing, central cyanosis and severe respiratory distress' },
+                { key: 'triage_4', critical: true, label: 'CIRCULATION: checks whether the hands are cold and, if so, checks capillary refill over 3 seconds and a weak fast pulse' },
+                { key: 'triage_5', critical: true, label: 'COMA / CONVULSION: assesses consciousness using AVPU and looks for a convulsion occurring now' },
+                { key: 'triage_6', critical: true, label: 'SEVERE DEHYDRATION, child with diarrhoea only: checks lethargy, sunken eyes and a very slow skin pinch' },
+                { key: 'triage_7', critical: true, label: 'Completes the full ABCD sequence without omitting a component' },
+                { key: 'triage_8', critical: true, label: 'Does not move the neck where cervical spine injury is possible, and stabilises the neck' }
+            ]},
+            { id: 'C', title: 'C. Action on a positive emergency sign — in the emergency room', items: [
+                { key: 'triage_9', critical: true, label: 'Starts emergency treatment immediately in the emergency room' },
+                { key: 'triage_10', critical: true, label: 'Calls for help without leaving the child unattended' },
+                { key: 'triage_11', critical: false, label: 'Gives oxygen' },
+                { key: 'triage_12', critical: false, label: 'Keeps the baby warm' },
+                { key: 'triage_13', critical: false, label: 'Inserts an IV line and draws blood for glucose, malaria test and haemoglobin while treatment is being given' }
+            ]},
+            { id: 'D', title: 'D. Priority and non-urgent children', items: [
+                { key: 'triage_14', critical: true, label: 'Identifies priority signs correctly' },
+                { key: 'triage_15', critical: false, label: 'Moves priority children to the front of the queue' },
+                { key: 'triage_16', critical: false, label: 'Checks respiratory rate, pulse rate, temperature, weight and SpO2' },
+                { key: 'triage_17', critical: true, label: 'Re-triages children waiting in the queue' }
+            ]},
+            { id: 'E', title: 'E. Registering', items: [
+                { key: 'triage_18', critical: false, label: 'Assigns and records the correct category' }
+            ]}
+        ]
+    },
+    {
+        key: 'AIRWAY_BREATHING', title: 'Airway and Breathing', color: '#0891b2',
+        sections: [
+            { id: 'A', title: 'A. Opening and clearing the airway', items: [
+                { key: 'ab_1', critical: true, label: 'Positions the child correctly for age: neutral for an infant, sniffing for an older child' },
+                { key: 'ab_2', critical: true, label: 'Uses jaw thrust without head tilt and stabilises the neck where trauma is suspected' },
+                { key: 'ab_3', critical: false, label: 'Inspects the mouth, removes a visible foreign body only, and clears secretions' },
+                { key: 'ab_4', critical: true, label: 'Manages the choking infant correctly: 5 back blows, then 5 chest thrusts' },
+                { key: 'ab_5', critical: true, label: 'Manages the choking older child correctly: 5 back blows, then 5 abdominal thrusts' },
+                { key: 'ab_6', critical: false, label: 'Selects and inserts a correctly sized Guedel airway by the technique appropriate to age' }
+            ]},
+            { id: 'B', title: 'B. Ventilation and oxygen', items: [
+                { key: 'ab_7', critical: false, label: 'Checks the self-inflating bag and valve before use' },
+                { key: 'ab_8', critical: true, label: 'Selects a mask covering mouth and nose without overlapping eyes or chin, and holds a seal' },
+                { key: 'ab_9', critical: true, label: 'Ventilates at an appropriate rate and confirms visible chest rise' },
+                { key: 'ab_10', critical: true, label: 'Gives oxygen by prongs, or by 8 FG catheter measured nostril to inner eyebrow and inserted to that depth' },
+                { key: 'ab_11', critical: true, label: 'Secures the device and starts the flow at 0.5-1 litre per minute for an infant under 1 year, or 1-2 litres per minute for a child of 1 year or more, and checks that the source is working' },
+                { key: 'ab_12', critical: false, label: 'Keeps the child warm and allows a conscious child the position of maximum comfort' },
+                { key: 'ab_13', critical: true, label: 'Reassesses breathing after every airway or oxygen intervention' }
+            ]}
+        ]
+    },
+    {
+        key: 'CIRCULATION_SHOCK', title: 'Circulation and Shock', color: '#e11d48',
+        sections: [
+            { id: 'A', title: 'A. Recognition and access', items: [
+                { key: 'cs_1', critical: true, label: 'Diagnoses shock where the adequate signs are present: cold hands plus delayed capillary refill or a rapid weak pulse' },
+                { key: 'cs_2', critical: true, label: 'Determines nutritional status and states which fluid chart applies before starting' },
+                { key: 'cs_3', critical: true, label: 'Inserts an IV line promptly and draws blood at the same time' },
+                { key: 'cs_4', critical: true, label: 'Escalates to intraosseous or external jugular access without delay where peripheral access fails' },
+                { key: 'cs_5', critical: false, label: 'Stops any bleeding and keeps the child warm' }
+            ]},
+            { id: 'B', title: 'B. Manage the child WITHOUT severe malnutrition', items: [
+                { key: 'cs_6', critical: true, label: 'Gives Ringer lactate or normal saline 20 ml/kg as rapidly as possible, at the correct volume for weight' },
+                { key: 'cs_7', critical: true, label: 'Reassesses after the bolus and repeats 20 ml/kg where there is no improvement' },
+                { key: 'cs_8', critical: false, label: 'Moves to blood 20 ml/kg over 30 minutes after a third bolus without improvement' }
+            ]},
+            { id: 'C', title: 'C. Manage the child WITH severe malnutrition', items: [
+                { key: 'cs_9', critical: true, label: 'Gives IV fluid only where the child is shocked and lethargic or unconscious' },
+                { key: 'cs_10', critical: true, label: 'Gives 15 ml/kg over one hour using a glucose-containing solution: Ringer lactate with D5%, half-normal saline with D5%, or half-strength Darrow with D5%' },
+                { key: 'cs_11', critical: true, label: 'Measures pulse and respiratory rate at the start and every 5-10 minutes' },
+                { key: 'cs_12', critical: true, label: 'Stops the infusion on deterioration: respiratory rate up by 5 per minute or pulse by 15 per minute' },
+                { key: 'cs_13', critical: false, label: 'Switches to ReSoMal 10 ml/kg/hour on improvement and starts F-75' }
+            ]},
+            { id: 'D', title: 'D. Recording', items: [
+                { key: 'cs_14', critical: true, label: 'Records fluid type, volume, start time and each reassessment' }
+            ]}
+        ]
+    },
+    {
+        key: 'COMA_CONVULSIONS', title: 'Coma and Convulsions', color: '#7c3aed',
+        sections: [
+            { id: 'A', title: 'A. Assessment and airway management', items: [
+                { key: 'cc_1', critical: true, label: 'Assesses consciousness using AVPU and identifies coma correctly' },
+                { key: 'cc_2', critical: true, label: 'Recognises a convulsion occurring now, including subtle convulsion in a young infant' },
+                { key: 'cc_3', critical: true, label: 'Stabilises the neck and keeps the child supine where trauma is suspected' },
+                { key: 'cc_4', critical: true, label: 'Manages the airway and positions the unconscious child on the side in the recovery position' }
+            ]},
+            { id: 'B', title: 'B. Check and give glucose', items: [
+                { key: 'cc_5', critical: true, label: 'Checks blood glucose, or treats presumptively where testing is unavailable' },
+                { key: 'cc_6', critical: true, label: 'Gives 10% glucose 5 ml/kg IV at the correct volume for weight where blood glucose is below 2.6 mmol/l in a malnourished child, or below 3 mmol/l in a well-nourished child' },
+                { key: 'cc_7', critical: true, label: 'Prepares 10% glucose correctly from a 50% solution where that is all that is available: 1 part D50% to 4 parts distilled water, or 1 part D50% to 9 parts D5%' },
+                { key: 'cc_8', critical: false, label: 'Rechecks glucose after 30 minutes, repeats treatment if needed, and feeds the child when it is safe' }
+            ]},
+            { id: 'C', title: 'C. Anticonvulsant', items: [
+                { key: 'cc_9', critical: true, label: 'Gives IV diazepam 0.05 ml/kg where a line is running, or rectal diazepam 0.1 ml/kg with the needle removed, inserted 4-5 cm, holding the buttocks together' },
+                { key: 'cc_10', critical: true, label: 'Repeats after 10 minutes where the convulsion continues and escalates correctly' },
+                { key: 'cc_11', critical: true, label: 'Uses phenobarbital 20 mg/kg for an infant under two weeks of age' },
+                { key: 'cc_12', critical: false, label: 'Gives paraldehyde where the convulsion continues after the second dose of diazepam' },
+                { key: 'cc_13', critical: true, label: 'Gives no oral medication while the child is convulsing' },
+                { key: 'cc_14', critical: false, label: 'Sponges with room-temperature water for high fever' }
+            ]}
+        ]
+    },
+    {
+        key: 'SEVERE_DEHYDRATION', title: 'Severe Dehydration', color: '#d97706',
+        sections: [
+            { id: 'A', title: 'A. Recognition and plan', items: [
+                { key: 'sd_1', critical: true, label: 'Confirms diarrhoea plus at least two of the three signs: sunken eyes, skin pinch returning in two seconds or more, lethargy' },
+                { key: 'sd_2', critical: true, label: 'Treats shock first where present, then switches to this plan' },
+                { key: 'sd_3', critical: true, label: 'Withholds IV fluid in a severely malnourished child without shock and uses ReSoMal' }
+            ]},
+            { id: 'B', title: 'B. Rehydration', items: [
+                { key: 'sd_4', critical: true, label: 'Gives 70 ml/kg over 5 hours in a child under 12 months, or over 2.5 hours in a child of 12 months or more' },
+                { key: 'sd_5', critical: true, label: 'States the correct total volume and hourly rate for the weight' },
+                { key: 'sd_6', critical: false, label: 'Uses a nasogastric tube for ORS where IV access is not possible, checking position first' },
+                { key: 'sd_7', critical: false, label: 'Starts ORS about 5 ml/kg/hour as soon as the child can drink' },
+                { key: 'sd_8', critical: true, label: 'Reassesses every 1-2 hours and speeds the infusion where there is no improvement' },
+                { key: 'sd_9', critical: true, label: 'Reclassifies at 6 hours in an infant or 3 hours in a child and moves to the right plan' }
+            ]}
+        ]
+    }
+];
+
+export const ETAT_ALL_ITEMS = ETAT_CHECKLIST_STRUCTURE.flatMap(cl =>
+    cl.sections.flatMap(sec => sec.items.map(i => ({ ...i, checklistKey: cl.key, sectionId: sec.id })))
+);
+
+// Skills are stored per checklist: { TRIAGE: { triage_1: 'yes' }, ... }
+export const getETATSkills = (sub) => sub?.checklistSkills || sub?.fullData?.checklistSkills || {};
+
+export const etatKpiHelper = (submissions) => {
+    const subs = submissions || [];
+    const uniqueVisits = new Set(subs.map(s => `${s.facilityId || 'unk'}_${s.date || 'unk'}`));
+    const uniqueWorkers = new Set(subs.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
+
+    const skillStats = {};
+    ETAT_ALL_ITEMS.forEach(item => { skillStats[item.key] = { yes: 0, no: 0, na: 0 }; });
+
+    const ratios = { overall: [], critical: [] };
+    const checklistCounts = {};
+    ETAT_CHECKLIST_STRUCTURE.forEach(cl => { ratios[cl.key] = []; checklistCounts[cl.key] = 0; });
+
+    subs.forEach(sub => {
+        const s = sub.scores || {};
+        if (s.overallScore_maxScore > 0) ratios.overall.push(s.overallScore_score / s.overallScore_maxScore);
+        if (s.criticalSteps_maxScore > 0) ratios.critical.push(s.criticalSteps_score / s.criticalSteps_maxScore);
+
+        ETAT_CHECKLIST_STRUCTURE.forEach(cl => {
+            const max = s[`${cl.key}_maxScore`];
+            if (max > 0) {
+                ratios[cl.key].push(s[`${cl.key}_score`] / max);
+                checklistCounts[cl.key] += 1;
+            }
+        });
+
+        const perChecklist = getETATSkills(sub);
+        ETAT_ALL_ITEMS.forEach(item => {
+            const value = perChecklist?.[item.checklistKey]?.[item.key];
+            if (value === 'yes') skillStats[item.key].yes++;
+            else if (value === 'no') skillStats[item.key].no++;
+            else if (value === 'na') skillStats[item.key].na++;
+        });
+    });
+
+    const avg = (arr) => calculateAverage(arr);
+    const result = {
+        totalVisits: uniqueVisits.size,
+        totalCasesObserved: subs.length,
+        totalHealthWorkers: uniqueWorkers.size,
+        skillStats,
+        checklistCounts,
+        avgOverall: avg(ratios.overall),
+        avgCritical: avg(ratios.critical)
+    };
+    ETAT_CHECKLIST_STRUCTURE.forEach(cl => { result[`avg_${cl.key}`] = avg(ratios[cl.key]); });
+    return result;
+};
+
+export const ETATCompactSkillRow = ({ label, critical, stats }) => {
+    const { t, i18n } = useTranslation();
+    const isAr = i18n.language?.startsWith('ar');
+    const yes = stats?.yes || 0;
+    const no = stats?.no || 0;
+    const na = stats?.na || 0;
+    const assessed = yes + no;
+    const percentage = assessed > 0 ? (yes / assessed) : null;
+
+    return (
+        <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
+            <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${isAr ? 'text-right' : 'text-start'} group-hover:text-sky-800`}>
+                {critical && <span className="text-amber-500 mx-1" title={t('Critical step')}>★</span>}
+                {label}
+            </td>
+            <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center" dir="ltr">
+                <span title={t('Done correctly')} className="text-emerald-600">{yes}</span> / <span title={t('Not done')} className="text-rose-600">{no}</span> / <span title={t('Not applicable')} className="text-slate-400">{na}</span>
+            </td>
+            <td className="p-3 border-l border-black w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50">
+                <ScoreText value={percentage} />
+            </td>
+        </tr>
+    );
+};
+
+export const ETATCompactSkillsTable = ({ overallKpis }) => {
+    const { t, i18n } = useTranslation();
+    const isAr = i18n.language?.startsWith('ar');
+    const skillStats = overallKpis?.skillStats;
+
+    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) {
+        return (
+            <div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">
+                {t('No detailed ETAT skill data available.')}
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
+            <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
+                    <tr className="bg-slate-200">
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-start'} uppercase tracking-wide border-l border-black`}>{t('Skill (ETAT)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide border-l border-black">{t('Count (Done / Not done / N.A.)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide">{t('Percentage')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {ETAT_CHECKLIST_STRUCTURE.map(checklist => {
+                        const items = checklist.sections.flatMap(s => s.items);
+                        const hasData = items.some(i => skillStats[i.key] && (skillStats[i.key].yes > 0 || skillStats[i.key].no > 0 || skillStats[i.key].na > 0));
+                        if (!hasData) return null;
+
+                        return (
+                            <React.Fragment key={checklist.key}>
+                                <tr className="bg-slate-800 text-white border-b border-black">
+                                    <td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-l border-black`} colSpan="2">
+                                        {t(checklist.title)}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                        {overallKpis[`avg_${checklist.key}`] != null && (
+                                            <div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner">
+                                                <ScoreText value={overallKpis[`avg_${checklist.key}`]} showPercentage={true} />
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                                {checklist.sections.map(section => (
+                                    <React.Fragment key={`${checklist.key}_${section.id}`}>
+                                        <tr className="bg-slate-100 border-b border-black">
+                                            <td className={`p-2 text-xs font-extrabold text-slate-700 ${isAr ? 'text-right' : 'text-start'} border-l border-black`} colSpan="3">
+                                                {t(section.title)}
+                                            </td>
+                                        </tr>
+                                        {section.items.map(item => (
+                                            <ETATCompactSkillRow
+                                                key={item.key}
+                                                label={t(item.label)}
+                                                critical={item.critical}
+                                                stats={skillStats[item.key]}
+                                            />
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                            </React.Fragment>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+// Checklist coverage: how many assessed sessions included each checklist
+export const ETATChecklistCoverageTable = ({ title, overallKpis }) => {
+    const { t, i18n } = useTranslation();
+    const isAr = i18n.language?.startsWith('ar');
+    const counts = overallKpis?.checklistCounts || {};
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+    if (!total) return null;
+
+    return (
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
+            {title && <div className="p-4 border-b border-black bg-slate-100"><h4 className={`text-sm font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{title}</h4></div>}
+            <table className="w-full border-collapse">
+                <thead>
+                    <tr className="bg-slate-200 border-b border-black">
+                        <th className={`p-3 text-xs font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-start'} uppercase tracking-wide border-l border-black`}>{t('Checklist')}</th>
+                        <th className="p-3 text-xs font-extrabold text-slate-800 text-center uppercase tracking-wide border-l border-black">{t('Sessions Assessed')}</th>
+                        <th className="p-3 text-xs font-extrabold text-slate-800 text-center uppercase tracking-wide">{t('Average Score')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {ETAT_CHECKLIST_STRUCTURE.map(cl => (
+                        <tr key={cl.key} className="bg-white hover:bg-sky-50 border-b border-black">
+                            <td className={`p-3 text-xs font-bold text-slate-700 ${isAr ? 'text-right' : 'text-start'} border-l border-black`}>
+                                <span className="inline-block w-2.5 h-2.5 rounded-full mx-2" style={{ backgroundColor: cl.color }} />
+                                {t(cl.title)}
+                            </td>
+                            <td className="p-3 text-xs font-bold text-slate-600 text-center border-l border-black" dir="ltr">{counts[cl.key] || 0}</td>
+                            <td className="p-3 text-center bg-slate-50/50"><ScoreText value={overallKpis[`avg_${cl.key}`]} /></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
 export const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
     const { t, i18n } = useTranslation();
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';

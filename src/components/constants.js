@@ -501,6 +501,10 @@ export const getMentorshipService = (subCourseName) => {
     const name = subCourseName.toUpperCase();
     if (name.includes('EENC')) return 'EENC';
     if (name.includes('IMNCI') || name.includes('IMCI')) return 'IMNCI';
+    // ETAT_MENTORSHIP_FORM_ENABLED is defined in BLOCK S at the end of this
+    // file. It is read at call time, not at module-evaluation time, so the
+    // later declaration is fine.
+    if (name.includes('ETAT') && ETAT_MENTORSHIP_FORM_ENABLED) return 'ETAT';
     return null;
 };
 
@@ -781,3 +785,131 @@ export const compareMentorToStandard = (scores, scenario, storedStandard = null)
         setBy: storedStandard?.standard_set_by || null,
     };
 };
+
+// ============================================================================
+// BLOCK S — Sub-course registry (built-in catalogue + custom, user-added)
+// ============================================================================
+//
+// Sub-course lists used to live as local `const` arrays inside CourseForm in
+// Course.jsx, which meant nothing outside that one component could read them —
+// the filter dropdown, the copy tool and the reports view each had to guess.
+// They live here now so every view reads one catalogue.
+//
+// Two sources feed the picker:
+//   1. BUILTIN_SUBCOURSE_TYPES  — shipped with the app, cannot be removed.
+//   2. Firestore `course_sub_types` — added at runtime by a federal manager or
+//      super user. Fetched by Course.jsx and merged in via mergeSubCourseTypes.
+
+export const COURSE_SUB_TYPES_COLLECTION = 'course_sub_types';
+
+export const INFECTION_CONTROL_SUBCOURSE_TYPES = [
+    'IPC in Delivery room',
+    'IPC in Neonatal unit',
+    'Neonatal Sepsis Surveillance',
+];
+
+export const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
+export const CPCM_SUBCOURSE_TYPES = ['CPCM Community Module'];
+
+export const SMALL_AND_SICK_SUBCOURSE_TYPES = [
+    'Portable warmer training',
+    'Sepsis surveillance and management',
+    'CPAP training',
+    'Kangaroo mother Care',
+];
+
+export const EMONC_SUBCOURSE_TYPES = [
+    'Emergency Newborn Care',
+    'Emergency Maternal Care',
+    'EENC Orientation',
+    'EENC TOT',
+    'EENC Mentorship',
+];
+
+// 'ETAT TOT' and 'ETAT Mentorship' are the two additions. TOT sits next to
+// Orientation as a delivery format; Mentorship is detected by the mentorship
+// helpers above and opens the mentorship tab rather than the observation grid.
+export const ETAT_SUBCOURSE_TYPES = [
+    'ETAT Standard',
+    'ETAT Orientation',
+    'ETAT Plus',
+    'ETAT TOT',
+    'ETAT Mentorship',
+];
+
+export const PROGRAM_MANAGEMENT_SUBCOURSE_TYPES = [
+    'IMNCI implementation operational Guide (الدليل التشغيلي لتطبيق العلاج المتكامل)',
+    'planning, Monitoring and evaluation (التخطيط والمتابعة والتقييم)',
+];
+
+// Keyed by the exact `course_type` string stored on the course document.
+export const BUILTIN_SUBCOURSE_TYPES = {
+    'IMNCI': IMNCI_SUBCOURSE_TYPES,
+    'IPC': INFECTION_CONTROL_SUBCOURSE_TYPES,
+    'ICCM': ICCM_SUBCOURSE_TYPES,
+    'Comprehensive Package For Community Midwives': CPCM_SUBCOURSE_TYPES,
+    'Small & Sick Newborn': SMALL_AND_SICK_SUBCOURSE_TYPES,
+    'EmONC': EMONC_SUBCOURSE_TYPES,
+    'ETAT': ETAT_SUBCOURSE_TYPES,
+    'Program Management': PROGRAM_MANAGEMENT_SUBCOURSE_TYPES,
+};
+
+export const getBuiltinSubCourseTypes = (courseType) =>
+    BUILTIN_SUBCOURSE_TYPES[courseType] || [];
+
+// Built-ins first, then custom entries in the order they were added. Comparison
+// is trimmed and case-insensitive so 'ETAT TOT' typed as 'etat tot' does not
+// produce a duplicate row in the dropdown.
+export const mergeSubCourseTypes = (courseType, customSubCourses = []) => {
+    const builtin = getBuiltinSubCourseTypes(courseType);
+    const seen = new Set(builtin.map(t => t.trim().toLowerCase()));
+    const custom = [];
+
+    (customSubCourses || []).forEach(entry => {
+        const name = typeof entry === 'string' ? entry : entry?.name;
+        const owner = typeof entry === 'string' ? courseType : entry?.course_type;
+        if (!name || owner !== courseType) return;
+        const key = name.trim().toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        custom.push(name.trim());
+    });
+
+    return [...builtin, ...custom];
+};
+
+export const isBuiltinSubCourse = (courseType, name) =>
+    getBuiltinSubCourseTypes(courseType)
+        .some(t => t.trim().toLowerCase() === String(name || '').trim().toLowerCase());
+
+// --- TOT detection ----------------------------------------------------------
+// Sits alongside isMentorshipSubCourse. A TOT course trains future facilitators,
+// so reports that break participants down by role need to tell it apart from a
+// standard course. The word-boundary check keeps 'TOTAL' or 'Protocol' from
+// matching.
+export const isTotSubCourse = (subCourseName) =>
+    typeof subCourseName === 'string' && /\bTOT\b/i.test(subCourseName);
+
+export const getSubCourseKind = (subCourseName) => {
+    if (isMentorshipSubCourse(subCourseName)) return 'mentorship';
+    if (isTotSubCourse(subCourseName)) return 'tot';
+    return 'standard';
+};
+
+// Reads the sub-course off a course the same way getMentorshipSubType does, but
+// without filtering for mentorship. Used by the copy tool and the filters.
+export const getCourseSubTypes = (course) => {
+    if (!course) return [];
+    return [...new Set([
+        course.imci_sub_type,
+        course.director_imci_sub_type,
+        course.clinical_instructor_imci_sub_type,
+        ...((course.facilitatorAssignments || []).map(a => a?.imci_sub_type)),
+    ].filter(Boolean))];
+};
+
+// ETAT Mentorship is selectable, but there is still no ETAT mentorship
+// assessment form behind it, so getMentorshipService returns null for it and the
+// course keeps the ordinary observation grid. Flip this to true once
+// MonitoringView gains an ETAT mentorship form — getMentorshipService reads it.
+export const ETAT_MENTORSHIP_FORM_ENABLED = false;

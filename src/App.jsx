@@ -107,7 +107,7 @@ import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
 
-import { doc, getDoc, setDoc, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, setDoc, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
 
 import { signOut, updateProfile, onAuthStateChanged } from 'firebase/auth'; 
 import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; 
@@ -447,41 +447,75 @@ export default function App() {
     // --- REMOTE CACHE WIPE LISTENER (Triggered by Admin Dashboard) ---
     // =========================================================================
     useEffect(() => {
+        // The inner onSnapshot used to be torn down by returning a function from
+        // the onAuthStateChanged callback. Firebase ignores that return value, so
+        // every auth event (including silent hourly token refreshes) stacked
+        // another listener on users/{uid}. Several listeners then raced the
+        // forceCacheReset check below, and each one that read the old
+        // last_forced_reset fired its own wipe + reload.
+        let unsubscribeDoc = null;
+
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (unsubscribeDoc) { unsubscribeDoc(); unsubscribeDoc = null; }
             if (!user) return;
 
-            // Listen to the user's specific document in real-time
             const userRef = doc(db, 'users', user.uid);
-            const unsubscribeDoc = onSnapshot(userRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    // If the admin triggered a cache reset
-                    if (data.forceCacheReset) {
-                        const remoteResetTime = data.forceCacheReset.toMillis();
-                        const localResetTime = parseInt(localStorage.getItem('last_forced_reset') || '0', 10);
-                        
-                        // If the remote command is newer than the last time we reset locally
-                        if (remoteResetTime > localResetTime) {
-                            console.warn("⚠️ Admin ordered a local storage wipe. Wiping now...");
-                            
-                            // Clear all local storage EXCEPT the last reset timestamp
-                            localStorage.clear();
-                            localStorage.setItem('last_forced_reset', remoteResetTime.toString());
-                            
-                            alert("قام مدير النظام بتحديث بيانات التطبيق وإصلاح الأخطاء. سيتم إعادة تحميل التطبيق الآن.\n\n(The administrator has refreshed your app data to fix errors. The app will now reload.)");
-                            
-                            // Reload the app completely to fetch fresh data from the database
-                            window.location.reload(true);
-                        }
-                    }
-                }
-            });
+            unsubscribeDoc = onSnapshot(userRef, (docSnap) => {
+                if (!docSnap.exists()) return;
+                const data = docSnap.data();
+                if (!data.forceCacheReset) return;
 
-            return () => unsubscribeDoc();
+                const remoteResetTime = data.forceCacheReset.toMillis();
+                const localResetTime = parseInt(localStorage.getItem('last_forced_reset') || '0', 10);
+                if (remoteResetTime <= localResetTime) return;
+
+                console.warn("⚠️ Admin ordered a local data wipe. Wiping now...");
+
+                // Claim the reset BEFORE doing any work, so a duplicate listener
+                // or a second tab cannot run the same wipe again.
+                localStorage.setItem('last_forced_reset', remoteResetTime.toString());
+
+                // --- SELECTIVE WIPE ---
+                // localStorage.clear() was the cause of the random sign-outs. When
+                // IndexedDB is unavailable (Capacitor's Android WebView, WKWebView
+                // under storage partitioning, private browsing) the Firebase Auth
+                // SDK falls back to browserLocalPersistence and keeps the session
+                // under a "firebase:authUser:*" key in localStorage. Clearing
+                // everything deleted that key, and the reload two lines later
+                // dropped the user on the sign-in screen.
+                //
+                // It also deleted app_version, which made main.jsx believe a new
+                // build had shipped on the very next boot and run a second full
+                // cache wipe + reload, and it deleted the backup_role_* entries
+                // that protect a user's role when the profile read fails.
+                const PRESERVE_EXACT = ['last_forced_reset', 'app_version'];
+                const PRESERVE_PREFIXES = [
+                    'firebase:authUser',      // Auth session (localStorage fallback)
+                    'firebase:persistence',
+                    'firebase:redirectEvent',
+                    'backup_role_',
+                    'backup_roles_',
+                    'backup_perms_',
+                    'backup_states_',
+                    'backup_localities_'
+                ];
+
+                Object.keys(localStorage).forEach((k) => {
+                    if (PRESERVE_EXACT.includes(k)) return;
+                    if (PRESERVE_PREFIXES.some(p => k.startsWith(p))) return;
+                    localStorage.removeItem(k);
+                });
+
+                alert("قام مدير النظام بتحديث بيانات التطبيق وإصلاح الأخطاء. سيتم إعادة تحميل التطبيق الآن.\n\n(The administrator has refreshed your app data to fix errors. The app will now reload.)");
+
+                window.location.reload();
+            });
         });
 
-        return () => unsubscribeAuth();
+        return () => {
+            if (unsubscribeDoc) unsubscribeDoc();
+            unsubscribeAuth();
+        };
     }, []);
 
     const {
@@ -546,6 +580,7 @@ export default function App() {
     const [userRoles, setUserRoles] = useState([]); 
     const [userPermissions, setUserPermissions] = useState({});
     const [permissionsLoading, setPermissionsLoading] = useState(true);
+    const [permissionsError, setPermissionsError] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
@@ -969,6 +1004,7 @@ export default function App() {
             }
 
             setPermissionsLoading(true);
+            setPermissionsError(false);
 
             // 1. Instantly load from local backups to prevent UI flicker
             const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
@@ -992,17 +1028,36 @@ export default function App() {
 
                 const userRef = doc(db, "users", user.uid);
                 let userSnap;
-                
-                // Retry loop to handle any lingering network/bridge delays
+                let readFromServer = false;
+
+                // Retry loop to handle any lingering network/bridge delays.
+                //
+                // getDocFromServer is used first, on purpose. A plain getDoc()
+                // against a persistentLocalCache silently falls back to the cache,
+                // and a profile this device has never synced comes back as a
+                // perfectly valid snapshot with exists() === false. Downstream that
+                // was read as "this user has no profile", which triggered the
+                // default-profile write and permanently demoted real accounts.
                 let retries = 3;
                 while (retries > 0) {
                     try {
-                        userSnap = await getDoc(userRef);
-                        break; 
+                        userSnap = await getDocFromServer(userRef);
+                        readFromServer = true;
+                        break;
                     } catch (e) {
                         retries -= 1;
-                        if (retries === 0) throw e; 
-                        await new Promise(resolve => setTimeout(resolve, 600)); 
+                        if (retries === 0) break;
+                        await new Promise(resolve => setTimeout(resolve, 600));
+                    }
+                }
+
+                // Offline or the server is unreachable: read the cache, but mark it
+                // so nothing below is allowed to write.
+                if (!readFromServer) {
+                    try {
+                        userSnap = await getDoc(userRef);
+                    } catch (e) {
+                        throw e;
                     }
                 }
 
@@ -1036,6 +1091,18 @@ export default function App() {
                     setUserStates(newStates);
                     setUserLocalities(newLocalities);
                 } else if (userSnap && !userSnap.exists()) {
+                    // --- GUARD AGAINST SILENT DEMOTION ---
+                    // A "missing" profile is only believable if the server said so.
+                    // Network.getStatus() reports the OS radio, not whether the
+                    // Firestore stream is up, so it was never sufficient evidence:
+                    // a super_user on a flaky connection got role: 'user' written
+                    // over their real profile with { merge: true }, which destroys
+                    // role, roles and permissions server-side for every device.
+                    if (!readFromServer || userSnap.metadata?.fromCache) {
+                        console.warn("Profile read was not server-confirmed. Keeping existing role, not creating a default profile.");
+                        return;
+                    }
+
                     // Create default profile for brand new Google Sign-Ins
                     const status = await Network.getStatus();
                     if (status.connected) {
@@ -1058,14 +1125,19 @@ export default function App() {
                 }
             } catch (error) {
                 console.warn("Role fetch completely failed after retries:", error);
-                if (isMounted) {
-                    if (!backupRole) {
-                        setUserRole('user'); 
-                        setUserRoles(['user']); 
-                        setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
-                        setUserStates([]); 
-                        setUserLocalities([]);
-                    }
+                if (isMounted && !backupRole) {
+                    // Previously this granted the 'user' role, so a failed read
+                    // looked identical to a real demotion and the person saw their
+                    // level silently drop. A failed read is not evidence of a role.
+                    // Leave the role unresolved so the UI can say "couldn't load
+                    // your permissions, retry" instead of quietly showing a
+                    // standard-user view to a manager.
+                    setUserRole(null);
+                    setUserRoles([]);
+                    setUserPermissions({});
+                    setUserStates([]);
+                    setUserLocalities([]);
+                    setPermissionsError(true);
                 }
             } finally {
                 if (isMounted) setPermissionsLoading(false);
