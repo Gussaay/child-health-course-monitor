@@ -185,6 +185,7 @@ const REQUIRED_CLINICAL_FIELDS = [
 ];
 
 const EENCMothersForm = ({ 
+    onSaveOverride = null,
     facility, 
     onCancel,
     onSaveComplete,
@@ -379,7 +380,7 @@ const EENCMothersForm = ({
         }
 
         try {
-            await saveMentorshipSession(payload, sessionId);
+            await (onSaveOverride || saveMentorshipSession)(payload, sessionId);
             setToast({ show: true, message: 'تم حفظ استبيان الأم بنجاح!', type: 'success' });
             
             if (onSaveComplete) {

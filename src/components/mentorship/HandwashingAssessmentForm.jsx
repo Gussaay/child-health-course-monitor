@@ -86,7 +86,7 @@ const dominantWorkerType = (opps) => {
     return entries[0][0];
 };
 
-const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJobTitle, onExit, onSaveComplete, setToast, existingSessionData }) => {
+const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJobTitle, onExit, onSaveComplete, setToast, existingSessionData, onSaveOverride = null }) => {
     const auth = getAuth();
     const user = auth.currentUser;
     const [isSaving, setIsSaving] = useState(false);
@@ -178,7 +178,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
 
         try {
             const payload = buildPayload(opps);
-            const savedId = await saveMentorshipSession(payload, savedIdRef.current);
+            const savedId = await (onSaveOverride || saveMentorshipSession)(payload, savedIdRef.current);
             savedIdRef.current = savedId || savedIdRef.current;
             payload.id = savedIdRef.current;
             if (silent) {
@@ -200,7 +200,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
             isPersistingRef.current = false;
             if (!silent) setIsSaving(false);
         }
-    }, [buildPayload, setToast]);
+    }, [buildPayload, setToast, onSaveOverride]);
 
     // إضافة فرصة جديدة = حفظ فوري بدون الضغط على زر الحفظ
     const handleAddOpportunity = async () => {

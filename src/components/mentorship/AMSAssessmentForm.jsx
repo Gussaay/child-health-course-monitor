@@ -308,7 +308,7 @@ const StickyOverallScore = ({ totalScore, maxScore = 210 }) => {
     );
 };
 
-const AMSAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToast, existingSessionData }, ref) => {
+const AMSAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToast, existingSessionData, onSaveOverride = null }, ref) => {
     
     const [formData, setFormData] = useState({});
     const [scores, setScores] = useState({ total: 0, sections: {} });
@@ -404,7 +404,7 @@ const AMSAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToa
                 project: facility?.project_name || facility?.['المشروع'] || 'N/A'
             };
 
-            const savedId = await saveMentorshipSession(payload, existingSessionData?.id);
+            const savedId = await (onSaveOverride || saveMentorshipSession)(payload, existingSessionData?.id);
             payload.id = savedId;
 
             if (setToast) setToast({ show: true, message: "تم حفظ استبيان الإشراف على مضادات الميكروبات بنجاح!", type: 'success' });

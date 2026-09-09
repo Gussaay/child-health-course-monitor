@@ -69,6 +69,7 @@ const StickyOverallScore = ({ score, maxScore }) => {
 // --- Form Component Start ---
 const SkillsAssessmentForm = forwardRef((props, ref) => {
     const {
+        onSaveOverride = null,
         facility,
         healthWorkerName,
         healthWorkerJobTitle,
@@ -471,7 +472,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
-            const savedDraftId = await saveMentorshipSession(payload, sessionId);
+            const savedDraftId = await (onSaveOverride || saveMentorshipSession)(payload, sessionId);
             
             if (!sessionId && savedDraftId && onDraftCreated) {
                 onDraftCreated({ ...payload, id: savedDraftId });
@@ -636,7 +637,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 localStorage.setItem(offlineKey, payload.visitNumber.toString());
             }
 
-            const savedSessionId = await saveMentorshipSession(payload, sessionId);
+            const savedSessionId = await (onSaveOverride || saveMentorshipSession)(payload, sessionId);
             payload.id = savedSessionId;
             
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
@@ -717,7 +718,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 localStorage.setItem(offlineKey, payload.visitNumber.toString());
             }
 
-             const savedDraftId = await saveMentorshipSession(payload, sessionId);
+             const savedDraftId = await (onSaveOverride || saveMentorshipSession)(payload, sessionId);
 
              if (!sessionId && savedDraftId && onDraftCreated) {
                  payload.id = savedDraftId;

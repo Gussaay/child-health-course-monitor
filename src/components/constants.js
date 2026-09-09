@@ -501,10 +501,11 @@ export const getMentorshipService = (subCourseName) => {
     const name = subCourseName.toUpperCase();
     if (name.includes('EENC')) return 'EENC';
     if (name.includes('IMNCI') || name.includes('IMCI')) return 'IMNCI';
-    // ETAT_MENTORSHIP_FORM_ENABLED is defined in BLOCK S at the end of this
-    // file. It is read at call time, not at module-evaluation time, so the
-    // later declaration is fine.
-    if (name.includes('ETAT') && ETAT_MENTORSHIP_FORM_ENABLED) return 'ETAT';
+    // ETAT and IPC both have practice forms now — the course practice tab opens
+    // ETATSkillsAssessmentForm, and hand hygiene / IPC facility / AMS for IPC —
+    // so neither falls back to the observation grid any more.
+    if (name.includes('ETAT')) return 'ETAT';
+    if (name.includes('IPC') || name.includes('AMS')) return 'IPC';
     return null;
 };
 
@@ -806,6 +807,7 @@ export const INFECTION_CONTROL_SUBCOURSE_TYPES = [
     'IPC in Delivery room',
     'IPC in Neonatal unit',
     'Neonatal Sepsis Surveillance',
+    'IPC Mentorship',
 ];
 
 export const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
@@ -908,8 +910,7 @@ export const getCourseSubTypes = (course) => {
     ].filter(Boolean))];
 };
 
-// ETAT Mentorship is selectable, but there is still no ETAT mentorship
-// assessment form behind it, so getMentorshipService returns null for it and the
-// course keeps the ordinary observation grid. Flip this to true once
-// MonitoringView gains an ETAT mentorship form — getMentorshipService reads it.
-export const ETAT_MENTORSHIP_FORM_ENABLED = false;
+// Kept only so any older import of it still resolves. ETAT mentorship now opens
+// ETATSkillsAssessmentForm through the course practice tab, so
+// getMentorshipService no longer gates on this and the flag has no effect.
+export const ETAT_MENTORSHIP_FORM_ENABLED = true;

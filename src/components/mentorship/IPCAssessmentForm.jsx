@@ -383,7 +383,7 @@ const StickyOverallScore = ({ totalScore, maxScore = 800 }) => {
     );
 };
 
-const IPCAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToast }, ref) => {
+const IPCAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToast, onSaveOverride = null }, ref) => {
     
     const [formData, setFormData] = useState({});
     const [scores, setScores] = useState({ total: 0, sections: {} });
@@ -467,7 +467,7 @@ const IPCAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToa
                 project: facility?.project_name || facility?.['المشروع'] || 'N/A'
             };
 
-            const savedId = await saveMentorshipSession(payload);
+            const savedId = await (onSaveOverride || saveMentorshipSession)(payload, null);
             payload.id = savedId;
 
             // Option 1 Implementation: Show toast immediately, then defer unmounting

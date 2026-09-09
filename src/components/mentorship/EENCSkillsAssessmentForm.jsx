@@ -616,6 +616,7 @@ export const isEENCFormComplete = checkFormCompletion;
 
 const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const {
+        onSaveOverride = null,
         facility, healthWorkerName, healthWorkerJobTitle, healthWorkerTrainingDate, healthWorkerPhone, 
         onExit, onSaveComplete, setToast, existingSessionData = null, visitNumber = 1, canEditVisitNumber = false,
         lastSessionDate = null, onDraftCreated, setIsMothersFormModalOpen, setIsDashboardModalOpen,
@@ -774,8 +775,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             const offlineKey = `offline_visit_max_${facility.id}_${healthWorkerName.trim()}`;
             const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
             if (payload.visitNumber > currentStoredMax) localStorage.setItem(offlineKey, payload.visitNumber.toString());
-            const savedDraft = await saveMentorshipSession(payload, sessionId);
-            if (!sessionId && savedDraft && onDraftCreated) { onDraftCreated(savedDraft); editingIdRef.current = savedDraft.id; }
+            const savedDraftId = await (onSaveOverride || saveMentorshipSession)(payload, sessionId);
+            if (!sessionId && savedDraftId) { editingIdRef.current = savedDraftId; if (onDraftCreated) onDraftCreated({ ...payload, id: savedDraftId }); }
         } catch (error) { console.error("Autosave failed:", error); }
     }, [currentVisitNumber]);
 
@@ -808,8 +809,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             const offlineKey = `offline_visit_max_${facility.id}_${healthWorkerName.trim()}`;
             const currentStoredMax = parseInt(localStorage.getItem(offlineKey), 10) || 0;
             if (payload.visitNumber > currentStoredMax) localStorage.setItem(offlineKey, payload.visitNumber.toString());
-            const savedSession = await saveMentorshipSession(payload, sessionId);
-            if (!sessionId && savedSession && onDraftCreated) { onDraftCreated(savedSession); editingIdRef.current = savedSession.id; }
+            const savedSessionId = await (onSaveOverride || saveMentorshipSession)(payload, sessionId);
+            if (!sessionId && savedSessionId) { editingIdRef.current = savedSessionId; if (onDraftCreated) onDraftCreated({ ...payload, id: savedSessionId }); }
             setToast({ show: true, message: `Saved ${status} successfully!`, type: 'success' });
             if (onSaveComplete) onSaveComplete(status, payload);
         } catch (error) { setToast({ show: true, message: `Error: ${error.message}`, type: 'error' }); } 

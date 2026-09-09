@@ -208,6 +208,7 @@ const MotherFormRow = ({ name, label, value, onChange, options = ['نعم', 'ل�
 };
 
 const MothersForm = ({ 
+    onSaveOverride = null,
     facility, 
     onCancel,
     onSaveComplete,
@@ -391,7 +392,7 @@ const MothersForm = ({
                 localStorage.setItem(offlineKey, payload.visitNumber.toString());
             }
 
-            await saveMentorshipSession(payload, sessionId);
+            await (onSaveOverride || saveMentorshipSession)(payload, sessionId);
 
             setToast({ show: true, message: 'تم حفظ استبيان الأم بنجاح!', type: 'success' });
             

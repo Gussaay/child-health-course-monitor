@@ -3138,16 +3138,26 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
         setIsSaving(true);
         try {
-            let finalImciSubType = initialData?.imci_sub_type || 'Standard 7 days course'; 
-            if (isImnci && course?.facilitatorAssignments) {
-                const assignment = course.facilitatorAssignments.find(a => a.group === group);
-                if (assignment?.imci_sub_type) {
-                    finalImciSubType = assignment.imci_sub_type;
-                }
-            } else if (isIccm) {
+            // A participant inherits the sub-course of the facilitator group they
+            // sit in. This used to run for IMNCI only, so an ETAT participant in
+            // a group taught as 'ETAT Mentorship' never picked it up and was
+            // written to the database as 'Standard 7 days course' — an IMNCI
+            // sub-course name on an ETAT record. The lookup now runs for every
+            // package that records a sub-course per group.
+            let finalImciSubType = initialData?.imci_sub_type || '';
+            const groupAssignment = course?.facilitatorAssignments?.find(a => a.group === group);
+
+            if (isIccm) {
                 finalImciSubType = 'ICCM Community Module';
             } else if (isCpcm) {
                 finalImciSubType = 'CPCM Community Module';
+            } else if (groupAssignment?.imci_sub_type) {
+                finalImciSubType = groupAssignment.imci_sub_type;
+            } else if (isImnci && !finalImciSubType) {
+                // The IMNCI default is kept, because IMNCI records have always
+                // carried it and the reports read it. Other packages stay blank
+                // rather than inheriting a name from a package they are not in.
+                finalImciSubType = 'Standard 7 days course';
             }
 
             const currentFacilityType = selectedFacility?.['نوع_المؤسسةالصحية'] || initialData?.facility_type || 'no data';

@@ -45,6 +45,12 @@ import {
 // training copy inside course records instead of the mentorship collection.
 import { IMNCIVisitReport, EENCVisitReport } from './mentorship/VisitReports.jsx';
 
+// The mentorship practice tab now opens the same forms the facility mentorship
+// view opens, for every training rather than only IMNCI and EENC, and saves the
+// result as a course report. Re-exported here so Course.jsx keeps importing
+// `MentorshipMonitoringView` from this module and needs no change.
+export { MentorshipMonitoringView } from './CourseMentorshipMonitoringView.jsx';
+
 // --- HELPERS for Performance Optimization ---
 const generateHash = (buffer) => {
     return Object.keys(buffer)
@@ -987,8 +993,18 @@ const IMNCI_MENTORSHIP_MAPS = buildImnciMentorshipMaps();
 const EENC_MENTORSHIP_MAPS = buildEencMentorshipMaps();
 
 // Exported for ReportsView.jsx.
+//
+// Only IMNCI and EENC have a hard-coded skill map here. Anything else — ETAT and
+// IPC, which the course practice tab now records against — returns an empty map
+// rather than falling through to IMNCI, because IMNCI labels on an ETAT record
+// are worse than no labels: they read as real skill names and nothing marks them
+// as wrong. Those records carry their own domain names on `item_recorded`, so a
+// caller that finds no map should render straight off the observations.
 export const getMentorshipSkillMaps = (service) => {
-    const maps = service === 'EENC' ? EENC_MENTORSHIP_MAPS : IMNCI_MENTORSHIP_MAPS;
+    const maps = service === 'EENC' ? EENC_MENTORSHIP_MAPS
+        : service === 'IMNCI' ? IMNCI_MENTORSHIP_MAPS
+            : null;
+    if (!maps) return { skills: {}, domains: [], labels: {} };
     return { skills: maps.skills, domains: Object.keys(maps.skills), labels: maps.labels };
 };
 
@@ -1287,7 +1303,10 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
     );
 }
 
-export function MentorshipMonitoringView({
+// Superseded by CourseMentorshipMonitoringView, which opens the real field forms
+// for every training rather than a rebuilt IMNCI/EENC subset. Kept exported under
+// its own name so the old behaviour is one import away if a course needs it.
+export function LegacyMentorshipMonitoringView({
     course, participant, participants = [], onChangeParticipant, isPublicView = false,
 }) {
     const subCourse = useMemo(() => getMentorshipSubType(course, participant), [course, participant]);

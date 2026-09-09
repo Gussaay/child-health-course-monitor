@@ -26,8 +26,9 @@ import { ActionToggle, ScoreCircle, handleAutoScroll } from './IMNCSkillsAssessm
 export const ETAT_CHECKLISTS = [
     {
         key: 'TRIAGE',
+        order: 1,
         title: 'Triage',
-        subtitle: 'Checklist 1 — Triage of all sick children (ABCD)',
+        subtitle: 'Checklist 1 — Triaging',
         icon: '1',
         color: 'sky',
         sections: [
@@ -48,41 +49,34 @@ export const ETAT_CHECKLISTS = [
                     { key: 'triage_5', critical: true, label: 'COMA / CONVULSION: assesses consciousness using AVPU and looks for a convulsion occurring now' },
                     { key: 'triage_6', critical: true, label: 'SEVERE DEHYDRATION, child with diarrhoea only: checks lethargy, sunken eyes and a very slow skin pinch' },
                     { key: 'triage_7', critical: true, label: 'Completes the full ABCD sequence without omitting a component' },
-                    { key: 'triage_8', critical: true, label: 'Does not move the neck where cervical spine injury is possible, and stabilises the neck' }
+                    { key: 'triage_8', critical: true, label: 'Checks for visible severe wasting and oedema of both feet before deciding on any fluid treatment' }
                 ]
             },
             {
                 id: 'C',
-                title: 'C. Action on a positive emergency sign — in the emergency room',
+                title: 'C. Action on a positive emergency sign',
                 items: [
-                    { key: 'triage_9', critical: true, label: 'Starts emergency treatment immediately in the emergency room' },
+                    { key: 'triage_9', critical: true, label: 'Starts emergency treatment immediately at the triage point' },
                     { key: 'triage_10', critical: true, label: 'Calls for help without leaving the child unattended' },
-                    { key: 'triage_11', critical: false, label: 'Gives oxygen' },
-                    { key: 'triage_12', critical: false, label: 'Keeps the baby warm' },
-                    { key: 'triage_13', critical: false, label: 'Inserts an IV line and draws blood for glucose, malaria test and haemoglobin while treatment is being given' }
+                    { key: 'triage_11', critical: false, label: 'Draws blood for glucose, malaria test and haemoglobin while treatment is being given' },
+                    { key: 'triage_12', critical: true, label: 'Does not move the neck where cervical spine injury is possible' }
                 ]
             },
             {
                 id: 'D',
                 title: 'D. Priority and non-urgent children',
                 items: [
-                    { key: 'triage_14', critical: true, label: 'Identifies priority signs correctly' },
-                    { key: 'triage_15', critical: false, label: 'Moves priority children to the front of the queue' },
-                    { key: 'triage_16', critical: false, label: 'Checks respiratory rate, pulse rate, temperature, weight and SpO2' },
-                    { key: 'triage_17', critical: true, label: 'Re-triages children waiting in the queue' }
-                ]
-            },
-            {
-                id: 'E',
-                title: 'E. Registering',
-                items: [
-                    { key: 'triage_18', critical: false, label: 'Assigns and records the correct category' }
+                    { key: 'triage_13', critical: true, label: 'Identifies priority signs correctly' },
+                    { key: 'triage_14', critical: false, label: 'Moves priority children to the front of the queue' },
+                    { key: 'triage_15', critical: true, label: 'Assigns and records the correct category' },
+                    { key: 'triage_16', critical: false, label: 'Re-triages children waiting in the queue' }
                 ]
             }
         ]
     },
     {
         key: 'AIRWAY_BREATHING',
+        order: 2,
         title: 'Airway and Breathing',
         subtitle: 'Checklist 2 — Airway and breathing',
         icon: '2',
@@ -108,7 +102,7 @@ export const ETAT_CHECKLISTS = [
                     { key: 'ab_8', critical: true, label: 'Selects a mask covering mouth and nose without overlapping eyes or chin, and holds a seal' },
                     { key: 'ab_9', critical: true, label: 'Ventilates at an appropriate rate and confirms visible chest rise' },
                     { key: 'ab_10', critical: true, label: 'Gives oxygen by prongs, or by 8 FG catheter measured nostril to inner eyebrow and inserted to that depth' },
-                    { key: 'ab_11', critical: true, label: 'Secures the device and starts the flow at 0.5-1 litre per minute for an infant under 1 year, or 1-2 litres per minute for a child of 1 year or more, and checks that the source is working' },
+                    { key: 'ab_11', critical: true, label: 'Secures the device, starts flow at 1-2 litres per minute and checks the source is working' },
                     { key: 'ab_12', critical: false, label: 'Keeps the child warm and allows a conscious child the position of maximum comfort' },
                     { key: 'ab_13', critical: true, label: 'Reassesses breathing after every airway or oxygen intervention' }
                 ]
@@ -117,6 +111,7 @@ export const ETAT_CHECKLISTS = [
     },
     {
         key: 'CIRCULATION_SHOCK',
+        order: 3,
         title: 'Circulation and Shock',
         subtitle: 'Checklist 3 — Circulation and shock',
         icon: '3',
@@ -126,7 +121,7 @@ export const ETAT_CHECKLISTS = [
                 id: 'A',
                 title: 'A. Recognition and access',
                 items: [
-                    { key: 'cs_1', critical: true, label: 'Diagnoses shock where the adequate signs are present: cold hands plus delayed capillary refill or a rapid weak pulse' },
+                    { key: 'cs_1', critical: true, label: 'Diagnoses shock only where all three signs are present' },
                     { key: 'cs_2', critical: true, label: 'Determines nutritional status and states which fluid chart applies before starting' },
                     { key: 'cs_3', critical: true, label: 'Inserts an IV line promptly and draws blood at the same time' },
                     { key: 'cs_4', critical: true, label: 'Escalates to intraosseous or external jugular access without delay where peripheral access fails' },
@@ -135,7 +130,7 @@ export const ETAT_CHECKLISTS = [
             },
             {
                 id: 'B',
-                title: 'B. Manage the child WITHOUT severe malnutrition',
+                title: 'B. Child WITHOUT severe malnutrition',
                 items: [
                     { key: 'cs_6', critical: true, label: 'Gives Ringer lactate or normal saline 20 ml/kg as rapidly as possible, at the correct volume for weight' },
                     { key: 'cs_7', critical: true, label: 'Reassesses after the bolus and repeats 20 ml/kg where there is no improvement' },
@@ -144,10 +139,10 @@ export const ETAT_CHECKLISTS = [
             },
             {
                 id: 'C',
-                title: 'C. Manage the child WITH severe malnutrition',
+                title: 'C. Child WITH severe malnutrition',
                 items: [
                     { key: 'cs_9', critical: true, label: 'Gives IV fluid only where the child is shocked and lethargic or unconscious' },
-                    { key: 'cs_10', critical: true, label: 'Gives 15 ml/kg over one hour using a glucose-containing solution: Ringer lactate with D5%, half-normal saline with D5%, or half-strength Darrow with D5%' },
+                    { key: 'cs_10', critical: true, label: 'Gives 15 ml/kg over one hour using a glucose-containing solution' },
                     { key: 'cs_11', critical: true, label: 'Measures pulse and respiratory rate at the start and every 5-10 minutes' },
                     { key: 'cs_12', critical: true, label: 'Stops the infusion on deterioration: respiratory rate up by 5 per minute or pulse by 15 per minute' },
                     { key: 'cs_13', critical: false, label: 'Switches to ReSoMal 10 ml/kg/hour on improvement and starts F-75' }
@@ -164,6 +159,7 @@ export const ETAT_CHECKLISTS = [
     },
     {
         key: 'COMA_CONVULSIONS',
+        order: 4,
         title: 'Coma and Convulsions',
         subtitle: 'Checklist 4 — Coma and convulsions',
         icon: '4',
@@ -171,40 +167,40 @@ export const ETAT_CHECKLISTS = [
         sections: [
             {
                 id: 'A',
-                title: 'A. Assessment and airway management',
+                title: 'A. Assessment and airway',
                 items: [
                     { key: 'cc_1', critical: true, label: 'Assesses consciousness using AVPU and identifies coma correctly' },
                     { key: 'cc_2', critical: true, label: 'Recognises a convulsion occurring now, including subtle convulsion in a young infant' },
-                    { key: 'cc_3', critical: true, label: 'Stabilises the neck and keeps the child supine where trauma is suspected' },
-                    { key: 'cc_4', critical: true, label: 'Manages the airway and positions the unconscious child on the side in the recovery position' }
+                    { key: 'cc_3', critical: true, label: 'Manages the airway and positions the unconscious child on the side' },
+                    { key: 'cc_4', critical: true, label: 'Stabilises the neck and keeps the child supine where trauma is suspected' }
                 ]
             },
             {
                 id: 'B',
-                title: 'B. Check and give glucose',
+                title: 'B. Glucose',
                 items: [
                     { key: 'cc_5', critical: true, label: 'Checks blood glucose, or treats presumptively where testing is unavailable' },
-                    { key: 'cc_6', critical: true, label: 'Gives 10% glucose 5 ml/kg IV at the correct volume for weight where blood glucose is below 2.6 mmol/l in a malnourished child, or below 3 mmol/l in a well-nourished child' },
-                    { key: 'cc_7', critical: true, label: 'Prepares 10% glucose correctly from a 50% solution where that is all that is available: 1 part D50% to 4 parts distilled water, or 1 part D50% to 9 parts D5%' },
-                    { key: 'cc_8', critical: false, label: 'Rechecks glucose after 30 minutes, repeats treatment if needed, and feeds the child when it is safe' }
+                    { key: 'cc_6', critical: true, label: 'Gives 10% glucose 5 ml/kg IV at the correct volume for weight' },
+                    { key: 'cc_7', critical: true, label: 'Prepares 10% glucose correctly from a 50% solution where that is all that is available' },
+                    { key: 'cc_8', critical: false, label: 'Rechecks glucose after 30 minutes and feeds the child when it is safe' }
                 ]
             },
             {
                 id: 'C',
                 title: 'C. Anticonvulsant',
                 items: [
-                    { key: 'cc_9', critical: true, label: 'Gives IV diazepam 0.05 ml/kg where a line is running, or rectal diazepam 0.1 ml/kg with the needle removed, inserted 4-5 cm, holding the buttocks together' },
+                    { key: 'cc_9', critical: true, label: 'Gives rectal diazepam 0.1 ml/kg with the needle removed, inserted 4-5 cm, holding the buttocks together' },
                     { key: 'cc_10', critical: true, label: 'Repeats after 10 minutes where the convulsion continues and escalates correctly' },
                     { key: 'cc_11', critical: true, label: 'Uses phenobarbital 20 mg/kg for an infant under two weeks of age' },
-                    { key: 'cc_12', critical: false, label: 'Gives paraldehyde where the convulsion continues after the second dose of diazepam' },
-                    { key: 'cc_13', critical: true, label: 'Gives no oral medication while the child is convulsing' },
-                    { key: 'cc_14', critical: false, label: 'Sponges with room-temperature water for high fever' }
+                    { key: 'cc_12', critical: true, label: 'Gives no oral medication while the child is convulsing' },
+                    { key: 'cc_13', critical: false, label: 'Sponges with room-temperature water for high fever' }
                 ]
             }
         ]
     },
     {
         key: 'SEVERE_DEHYDRATION',
+        order: 5,
         title: 'Severe Dehydration',
         subtitle: 'Checklist 5 — Severe dehydration',
         icon: '5',
@@ -214,7 +210,7 @@ export const ETAT_CHECKLISTS = [
                 id: 'A',
                 title: 'A. Recognition and plan',
                 items: [
-                    { key: 'sd_1', critical: true, label: 'Confirms diarrhoea plus at least two of the three signs: sunken eyes, skin pinch returning in two seconds or more, lethargy' },
+                    { key: 'sd_1', critical: true, label: 'Confirms diarrhoea plus at least two of the three signs' },
                     { key: 'sd_2', critical: true, label: 'Treats shock first where present, then switches to this plan' },
                     { key: 'sd_3', critical: true, label: 'Withholds IV fluid in a severely malnourished child without shock and uses ReSoMal' }
                 ]
@@ -223,7 +219,7 @@ export const ETAT_CHECKLISTS = [
                 id: 'B',
                 title: 'B. Rehydration',
                 items: [
-                    { key: 'sd_4', critical: true, label: 'Gives 70 ml/kg over 5 hours in a child under 12 months, or over 2.5 hours in a child of 12 months or more' },
+                    { key: 'sd_4', critical: true, label: 'Gives 70 ml/kg over 5 hours under 12 months, or 2.5 hours from 12 months to 5 years' },
                     { key: 'sd_5', critical: true, label: 'States the correct total volume and hourly rate for the weight' },
                     { key: 'sd_6', critical: false, label: 'Uses a nasogastric tube for ORS where IV access is not possible, checking position first' },
                     { key: 'sd_7', critical: false, label: 'Starts ORS about 5 ml/kg/hour as soon as the child can drink' },
@@ -268,7 +264,7 @@ export const calculateETATScores = (formData) => {
         const checklist = getChecklistByKey(key);
         if (!checklist) return;
 
-        let clScore = 0, clMax = 0, clCritical = 0, clCriticalMax = 0;
+        let clScore = 0, clMax = 0;
 
         checklist.sections.forEach(section => {
             let sScore = 0, sMax = 0;
@@ -278,8 +274,8 @@ export const calculateETATScores = (formData) => {
                 else if (value === 'no') { sMax += 1; }
 
                 if (item.critical) {
-                    if (value === 'yes') { clCritical += 1; clCriticalMax += 1; }
-                    else if (value === 'no') { clCriticalMax += 1; }
+                    if (value === 'yes') { critical += 1; criticalMax += 1; }
+                    else if (value === 'no') { criticalMax += 1; }
                 }
             });
             scores[`${key}_${section.id}`] = { score: sScore, maxScore: sMax };
@@ -288,31 +284,13 @@ export const calculateETATScores = (formData) => {
         });
 
         scores[key] = { score: clScore, maxScore: clMax };
-        scores[`${key}_critical`] = { score: clCritical, maxScore: clCriticalMax };
         overall += clScore;
         overallMax += clMax;
-        critical += clCritical;
-        criticalMax += clCriticalMax;
     });
 
     scores.criticalSteps = { score: critical, maxScore: criticalMax };
     scores.overallScore = { score: overall, maxScore: overallMax };
     return scores;
-};
-
-// Version 1, 2026 rule: competent = 80% or above of applicable steps AND every
-// applicable critical step done correctly.
-export const getChecklistCompetency = (scores, key) => {
-    const total = scores?.[key];
-    const crit = scores?.[`${key}_critical`];
-    if (!total || !total.maxScore) return null;
-    const percent = (total.score / total.maxScore) * 100;
-    const criticalMissed = crit ? (crit.maxScore - crit.score) : 0;
-    return {
-        percent: Math.round(percent),
-        criticalMissed,
-        competent: percent >= 80 && criticalMissed === 0
-    };
 };
 
 export const isChecklistComplete = (formData, key) => {
@@ -486,7 +464,6 @@ const ChecklistBlock = ({ checklist, formData, scores, onSkillChange, defaultOpe
             return v === 'yes' || v === 'no' || v === 'na';
         }).length, 0);
     const complete = answered === total;
-    const competency = complete ? getChecklistCompetency(scores, checklist.key) : null;
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-5" dir={isAr ? 'rtl' : 'ltr'}>
@@ -504,15 +481,8 @@ const ChecklistBlock = ({ checklist, formData, scores, onSkillChange, defaultOpe
                         <div className="text-base font-bold text-slate-800">{t(checklist.title)}</div>
                         <div className="text-xs text-slate-500 font-semibold">{t(checklist.subtitle)}</div>
                     </div>
-                    {complete && competency
-                        ? (
-                            <span
-                                className={`${isAr ? 'mr-3' : 'ml-3'} text-xs px-2 py-0.5 rounded-full font-bold ${competency.competent ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'}`}
-                                title={competency.criticalMissed > 0 ? `${t('Critical steps missed')}: ${competency.criticalMissed}` : t('80% or above of applicable steps, and every applicable critical step done correctly')}
-                            >
-                                {competency.competent ? t('Competent') : t('Not yet competent')}
-                            </span>
-                        )
+                    {complete
+                        ? <span className={`${isAr ? 'mr-3' : 'ml-3'} text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold`}>{t('Complete')}</span>
                         : <span className={`${isAr ? 'mr-3' : 'ml-3'} text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold`} dir="ltr">{answered}/{total}</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -578,6 +548,7 @@ const StickyOverallScore = ({ score, maxScore, criticalScore, criticalMax }) => 
    ========================================================================== */
 
 const ETATSkillsAssessmentForm = ({
+    onSaveOverride = null,
     facility,
     healthWorkerName,
     healthWorkerJobTitle,
@@ -715,7 +686,7 @@ const ETATSkillsAssessmentForm = ({
             }
         }
 
-        const savedId = await saveMentorshipSession(payload, editingIdRef.current);
+        const savedId = await (onSaveOverride || saveMentorshipSession)(payload, editingIdRef.current);
         if (savedId) editingIdRef.current = savedId;
         return { ...payload, id: savedId };
     };
@@ -900,22 +871,14 @@ const ETATSkillsAssessmentForm = ({
                         <div className="bg-white border border-slate-300 rounded-xl p-4 mb-4">
                             <h4 className={`font-extrabold text-slate-800 mb-3 ${isAr ? 'text-right' : 'text-left'}`}>{t('Score Summary')}</h4>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                {selectedChecklists.map(cl => {
-                                    const comp = getChecklistCompetency(scores, cl.key);
-                                    return (
-                                        <div key={cl.key} className="p-3 border border-slate-200 rounded-lg bg-slate-50 text-center">
-                                            <div className="text-xs font-bold text-slate-600 mb-1">{t(cl.title)}</div>
-                                            <div className="text-lg font-extrabold text-slate-800" dir="ltr">
-                                                {scores[cl.key]?.score ?? 0}/{scores[cl.key]?.maxScore ?? 0}
-                                            </div>
-                                            {comp && (
-                                                <div className={`text-[10px] font-bold mt-1 ${comp.competent ? 'text-green-700' : 'text-rose-700'}`}>
-                                                    {comp.percent}% · {comp.competent ? t('Competent') : t('Not yet competent')}
-                                                </div>
-                                            )}
+                                {selectedChecklists.map(cl => (
+                                    <div key={cl.key} className="p-3 border border-slate-200 rounded-lg bg-slate-50 text-center">
+                                        <div className="text-xs font-bold text-slate-600 mb-1">{t(cl.title)}</div>
+                                        <div className="text-lg font-extrabold text-slate-800" dir="ltr">
+                                            {scores[cl.key]?.score ?? 0}/{scores[cl.key]?.maxScore ?? 0}
                                         </div>
-                                    );
-                                })}
+                                    </div>
+                                ))}
                                 <div className="p-3 border border-amber-300 rounded-lg bg-amber-50 text-center">
                                     <div className="text-xs font-bold text-amber-700 mb-1">{t('Critical Steps')} ★</div>
                                     <div className="text-lg font-extrabold text-amber-800" dir="ltr">
@@ -931,10 +894,6 @@ const ETATSkillsAssessmentForm = ({
                             </div>
                         </div>
                     )}
-
-                    <p className={`text-xs text-slate-500 mb-4 ${isAr ? 'text-right' : 'text-left'}`}>
-                        {t('Leave a step as Not applicable where it did not apply to this case or could not be observed; such steps are excluded from the score.')}
-                    </p>
 
                     <FormGroup label={t('General Notes')} className={isAr ? 'text-right' : 'text-left'}>
                         <Textarea

@@ -32,7 +32,8 @@ import { CourseExercisesView } from './Online-exercise';
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
     COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState,
-    hasMentorshipForm,
+    hasMentorshipForm, isMentorshipSubCourse, getMentorshipSubType,
+    getCourseMentorshipService,
     COURSE_SUB_TYPES_COLLECTION, ICCM_SUBCOURSE_TYPES, CPCM_SUBCOURSE_TYPES,
     mergeSubCourseTypes, isBuiltinSubCourse, getCourseSubTypes
 } from './constants.js';
@@ -834,6 +835,51 @@ function QRShareModal({ isOpen, onClose, url, title }) {
     );
 }
 
+// --- Why the mentorship tab did not open -----------------------------------
+//
+// A course that runs a mentorship sub-course but falls through to the ordinary
+// observation grid used to do so silently, and the only way to find out why was
+// debugMentorshipDetection in the browser console. There are exactly two places
+// the chain can break, and this says which one it was.
+//
+// Renders nothing on a course with no mentorship sub-course at all, which is the
+// normal case.
+function MentorshipDetectionNotice({ course, participant }) {
+    const courseSubTypes = getCourseSubTypes(course);
+    const mentorshipOnCourse = courseSubTypes.find(isMentorshipSubCourse);
+    if (!mentorshipOnCourse) return null;
+
+    const resolvedForParticipant = getMentorshipSubType(course, participant);
+    const service = getCourseMentorshipService(course, participant);
+    if (service) return null;
+
+    // Break 1: the course runs it, but this participant is assigned elsewhere.
+    // getMentorshipSubType returns null when the participant carries a
+    // sub-course this course actually runs, which it reads as a deliberate
+    // assignment to a non-mentorship group.
+    const reason = !resolvedForParticipant
+        ? `This course runs "${mentorshipOnCourse}", but ${participant?.name || 'this participant'} is recorded under "${participant?.imci_sub_type}", which is one of the sub-courses this course also runs. That is read as a deliberate assignment to the non-mentorship group. Change the participant's sub-course to "${mentorshipOnCourse}" to open the mentorship form.`
+        // Break 2: it resolved, but the service has no form behind it.
+        : `"${resolvedForParticipant}" resolved, but no mentorship form is enabled for it. For ETAT this is the ETAT_MENTORSHIP_FORM_ENABLED flag at the end of constants.js.`;
+
+    return (
+        <Card className="mb-3">
+            <div className="p-4 bg-amber-50 border-l-4 border-amber-400 rounded">
+                <div className="flex items-start gap-3">
+                    <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                        <h4 className="font-semibold text-amber-900">Showing the standard monitoring grid</h4>
+                        <p className="text-sm text-amber-800 mt-1 leading-relaxed">{reason}</p>
+                        <p className="text-xs text-amber-700 mt-2">
+                            Sub-courses recorded on this course: {courseSubTypes.join(', ') || 'none'}.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    );
+}
+
 const formatLocation = (locationStr) => {
     if (!locationStr) return 'N/A';
     const parts = String(locationStr).split(',').map(s => s.trim()).filter(Boolean);
@@ -1114,7 +1160,10 @@ export function CoursesTable({
 
             {shareModalCourse && (
                 <>
-                <Modal isOpen={!!shareModalCourse} onClose={() => setShareModalCourse(null)} title="Share Public Links">
+                {/* The link popup replaces this list rather than stacking on top of
+                    it: two modals deep, the QR sat over a scrollable sheet of
+                    other links and the phone had no clear way back. */}
+                <Modal isOpen={!qrShareData} onClose={() => setShareModalCourse(null)} title="Share Public Links">
                      <CardBody className="flex flex-col gap-6 p-4">
                         <div>
                             <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
@@ -1135,8 +1184,7 @@ export function CoursesTable({
                                         <span className="text-sm font-semibold">Course Monitoring</span>
                                         <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
                                             const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}`;
-                                            const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
-                                            shareViaWhatsApp(text, 'Monitoring link copied!');
+                                            setQrShareData({ url: link, title: `Monitoring: ${shareModalCourse.course_type}` });
                                         }}><Eye size={14} /> Share</Button>
                                     </div>
                                 </div>
@@ -2351,12 +2399,15 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 onChangeParticipant={(id) => onSetSelectedParticipantId(id)}
             />
         ) : (
-            <ObservationView 
-                course={selectedCourse} 
-                participant={currentParticipant} 
-                participants={participants} 
-                onChangeParticipant={(id) => onSetSelectedParticipantId(id)} 
-            />
+            <>
+                <MentorshipDetectionNotice course={selectedCourse} participant={currentParticipant} />
+                <ObservationView 
+                    course={selectedCourse} 
+                    participant={currentParticipant} 
+                    participants={participants} 
+                    onChangeParticipant={(id) => onSetSelectedParticipantId(id)} 
+                />
+            </>
         )}
     </Suspense>
 )}
@@ -3814,13 +3865,16 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                                 isPublicView={true}
                             />
                         ) : (
-                            <ObservationView 
-                                course={course} 
-                                participant={currentParticipant} 
-                                participants={allParticipants}
-                                onChangeParticipant={setSelectedParticipantId}
-                                isPublicView={true}
-                            />
+                            <>
+                                <MentorshipDetectionNotice course={course} participant={currentParticipant} />
+                                <ObservationView 
+                                    course={course} 
+                                    participant={currentParticipant} 
+                                    participants={allParticipants}
+                                    onChangeParticipant={setSelectedParticipantId}
+                                    isPublicView={true}
+                                />
+                            </>
                         )
                     ) : (
                          <div className="flex justify-center p-10"><Spinner /></div>
