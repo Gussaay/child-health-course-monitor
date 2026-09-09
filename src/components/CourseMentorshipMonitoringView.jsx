@@ -25,7 +25,11 @@ import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, EmptyState, Spinner, Modal,
 } from './CommonComponents';
-import { getMentorshipSubType, getCourseMentorshipService } from './constants.js';
+import {
+    getMentorshipSubType, getCourseMentorshipService,
+    getScenariosForService, getServiceScenarioById, checkEtatScenario,
+    compareMentorToStandard,
+} from './constants.js';
 import {
     listObservationsForParticipant,
     listCasesForParticipant,
@@ -339,6 +343,71 @@ export const buildCoursePracticeRecord = (payload, context) => {
 };
 
 // ---------------------------------------------------------------------------
+// Automatic check against the standard case
+// ---------------------------------------------------------------------------
+
+// IMNCI and ETAT are marked differently — an absolute total against a fixed
+// maximum for IMNCI, checklist selection plus a percentage for ETAT — because
+// their forms score differently, not by preference. This picks the right one and
+// returns a single shape: what to store on the case, and what to show the
+// mentor afterwards.
+const runScenarioCheck = (payload, scenario, service) => {
+    if (!scenario) return null;
+
+    if (service === 'ETAT') {
+        const result = checkEtatScenario(payload, scenario);
+        if (!result) return null;
+        return {
+            kind: 'ETAT',
+            result,
+            caseFields: {
+                scenario_checklists_expected: result.expected,
+                scenario_checklists_selected: result.selected,
+                scenario_checklists_missing: result.missing,
+                scenario_checklists_extra: result.extra,
+                scenario_checklists_correct: result.checklistsCorrect,
+                mentor_pct: result.mentorPct,
+                standard_pct: result.standardPct,
+                standard_difference: result.pctDifference,
+                standard_within_tolerance: result.withinTolerance,
+            },
+        };
+    }
+
+    if (service === 'IMNCI') {
+        // compareMentorToStandard expects the form's own calculateScores output,
+        // which is keyed `<domain>: {score, maxScore}`. The payload flattens that
+        // into `<domain>_score` / `<domain>_maxScore`, so it is rebuilt here.
+        const flat = payload?.scores || {};
+        const nested = {};
+        Object.keys(flat).forEach(key => {
+            if (!key.endsWith('_score')) return;
+            const domain = key.slice(0, -'_score'.length);
+            if (!(`${domain}_maxScore` in flat)) return;
+            nested[domain] = { score: flat[key], maxScore: flat[`${domain}_maxScore`] };
+        });
+
+        const result = compareMentorToStandard(nested, scenario, null);
+        if (!result) return null;
+        return {
+            kind: 'IMNCI',
+            result,
+            caseFields: {
+                mentor_score: result.mentorScore,
+                mentor_max: result.mentorMax,
+                standard_score: result.standardScore,
+                standard_max: result.standardMax,
+                standard_difference: result.difference,
+                standard_agreement_pct: result.agreementPct,
+                standard_within_tolerance: result.withinTolerance,
+            },
+        };
+    }
+
+    return null;
+};
+
+// ---------------------------------------------------------------------------
 // Saved sessions list
 // ---------------------------------------------------------------------------
 
@@ -467,6 +536,107 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
 }
 
 // ---------------------------------------------------------------------------
+// The result of the automatic check
+// ---------------------------------------------------------------------------
+
+function ScenarioCheckPanel({ check }) {
+    const { kind, result, scenario } = check;
+    const isEtat = kind === 'ETAT';
+    const ok = isEtat
+        ? result.checklistsCorrect && result.withinTolerance !== false
+        : result.withinTolerance;
+
+    return (
+        <div className="mt-5 text-left">
+            <div className={`p-3 rounded-lg border ${
+                ok ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-300'
+            }`}>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <h4 className="font-bold text-slate-800 min-w-0 break-words">
+                        Case {scenario.id} — {scenario.title || scenario.childName}
+                    </h4>
+                    <span className={`self-start shrink-0 px-3 py-1 rounded-md text-white font-semibold text-sm ${
+                        ok ? 'bg-green-600' : 'bg-amber-600'
+                    }`}>
+                        {isEtat
+                            ? (result.mentorPct === null ? 'Recorded' : `${result.mentorPct}%`)
+                            : `${result.agreementPct}% agreement`}
+                    </span>
+                </div>
+
+                {isEtat ? (
+                    <div className="mt-3 text-sm">
+                        <div className="font-semibold text-slate-700">Checklists</div>
+                        {result.checklistsCorrect ? (
+                            <p className="text-green-800">
+                                Correct — this case calls for {result.expected.join(' and ')}, and that is what you opened.
+                            </p>
+                        ) : (
+                            <ul className="list-disc ml-5 text-amber-900">
+                                {result.missing.length > 0 && (
+                                    <li>Missed: {result.missing.join(', ')} — the case needed this and it was not opened.</li>
+                                )}
+                                {result.extra.length > 0 && (
+                                    <li>Not needed: {result.extra.join(', ')} — this case does not call for it.</li>
+                                )}
+                            </ul>
+                        )}
+                        {result.mentorPct !== null && (
+                            <p className="text-slate-600 mt-2">
+                                You marked {result.score} of {result.max} applicable items done
+                                ({result.mentorPct}%). The standard for this case is {result.standardPct}%.
+                            </p>
+                        )}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-3 gap-3 text-sm mt-3">
+                        <div>
+                            <div className="text-slate-500 text-xs">You scored</div>
+                            <div className="font-semibold">{result.mentorScore}/{result.mentorMax}</div>
+                        </div>
+                        <div>
+                            <div className="text-slate-500 text-xs">Standard</div>
+                            <div className="font-semibold">{result.standardScore}/{result.standardMax}</div>
+                        </div>
+                        <div>
+                            <div className="text-slate-500 text-xs">Difference</div>
+                            <div className={`font-semibold ${result.withinTolerance ? 'text-green-700' : 'text-amber-700'}`}>
+                                {result.difference > 0 ? '+' : ''}{result.difference}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Released only now, so the session was worked without them. */}
+            {(scenario.expectedRecognition || scenario.expectedManagement) && (
+                <div className="mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm">
+                    {scenario.expectedRecognition && (
+                        <p className="mb-2">
+                            <span className="font-semibold text-slate-700">Expected recognition: </span>
+                            <span className="text-slate-700">{scenario.expectedRecognition}</span>
+                        </p>
+                    )}
+                    {Array.isArray(scenario.expectedManagement) ? (
+                        <>
+                            <div className="font-semibold text-slate-700">Expected management</div>
+                            <ul className="list-disc ml-5 text-slate-700 mt-1 space-y-1">
+                                {scenario.expectedManagement.map((line, i) => <li key={i}>{line}</li>)}
+                            </ul>
+                        </>
+                    ) : scenario.expectedManagement ? (
+                        <p>
+                            <span className="font-semibold text-slate-700">Expected management: </span>
+                            <span className="text-slate-700">{scenario.expectedManagement}</span>
+                        </p>
+                    ) : null}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
 // The tab
 // ---------------------------------------------------------------------------
 
@@ -495,6 +665,19 @@ export function MentorshipMonitoringView({
     );
 
     const [service, setService] = useState(() => courseService || 'IMNCI');
+
+    // The standard case being worked. Only the skills assessment is marked
+    // against one: a mothers interview and a visit report have no single correct
+    // answer to compare with.
+    const scenarios = useMemo(() => getScenariosForService(service), [service]);
+    const [scenarioId, setScenarioId] = useState('');
+    const scenario = useMemo(
+        () => (scenarioId ? getServiceScenarioById(service, scenarioId) : null),
+        [service, scenarioId]
+    );
+    // Held after a save so the result, and the expected answers withheld until
+    // now, can be shown in the confirmation.
+    const [savedCheck, setSavedCheck] = useState(null);
     const [formKey, setFormKey] = useState('skills_assessment');
 
     const [cases, setCases] = useState([]);
@@ -586,6 +769,11 @@ export function MentorshipMonitoringView({
         setCompanionForm(null);
     }, [participant?.id]);
 
+    // Default to the first case of whatever training is selected.
+    useEffect(() => {
+        setScenarioId(prev => (scenarios.some(s => s.id === prev) ? prev : (scenarios[0]?.id || '')));
+    }, [scenarios]);
+
     // A training that does not own the selected form falls back to its first.
     useEffect(() => {
         if (!availableForms.some(f => f.key === formKey)) {
@@ -604,6 +792,7 @@ export function MentorshipMonitoringView({
     const saveContextRef = React.useRef(null);
     saveContextRef.current = {
         course, participant, cases, dayOfCourse, caseAgeMonths, subCourse, editingCase, nextSerial,
+        scenario,
     };
 
     // Handed to every form as `onSaveOverride`. It has the same contract as
@@ -627,9 +816,29 @@ export function MentorshipMonitoringView({
             subCourse: ctx.subCourse,
         });
 
+        // The case identity and its automatic check ride on the same course
+        // record. No extra observations are written: the check is a statement
+        // about the mentor's own judgement, not a finding about the health
+        // worker, and mixing the two would distort the course report totals.
+        const check = ctx.scenario && targetFormKey === 'skills_assessment'
+            ? runScenarioCheck(payload, ctx.scenario, targetService)
+            : null;
+
+        if (ctx.scenario && targetFormKey === 'skills_assessment') {
+            caseData.scenario_id = ctx.scenario.id;
+            caseData.scenario_title = ctx.scenario.title || ctx.scenario.childName || null;
+        }
+        if (check) Object.assign(caseData, check.caseFields);
+
         const { savedCase, savedObservations } = await upsertCaseAndObservations(
             caseData, newObservations, targetId
         );
+
+        // Snapshot for the confirmation panel: `scenario` is about to point at
+        // the next case once the form resets.
+        if (check && payload?.status !== 'draft') {
+            lastCheckRef.current = { ...check, scenario: ctx.scenario };
+        }
 
         activeCaseIdsRef.current[slot] = savedCase.id;
 
@@ -648,6 +857,7 @@ export function MentorshipMonitoringView({
 
     // The forms hold on to whichever override function they were first handed,
     // so one is built per form and reused rather than rebuilt each render.
+    const lastCheckRef = React.useRef(null);
     const overrideCacheRef = React.useRef({});
     const getSaveOverride = useCallback((key, svc) => {
         const slot = `${svc}:${key}`;
@@ -665,6 +875,8 @@ export function MentorshipMonitoringView({
 
     const handleSaveComplete = useCallback((status) => {
         if (status === 'draft') return;
+        setSavedCheck(lastCheckRef.current);
+        lastCheckRef.current = null;
         activeCaseIdsRef.current = {};
         setShowForm(false);
         setEditingCase(null);
@@ -889,15 +1101,25 @@ export function MentorshipMonitoringView({
                 <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div></Card>
             )}
 
-            <Modal isOpen={showSuccess} onClose={() => setShowSuccess(false)} title="Session recorded">
-                <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Saved to the course report</h3>
-                    <p className="text-gray-600">
-                        This is now part of {participant?.name}'s course record. It stays inside the
-                        course and is not added to the facility mentorship records.
-                    </p>
+            <Modal
+                isOpen={showSuccess}
+                onClose={() => { setShowSuccess(false); setSavedCheck(null); }}
+                title="Session recorded"
+                size={savedCheck ? 'lg' : undefined}
+            >
+                <div className="p-6">
+                    <div className="text-center">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Saved to the course report</h3>
+                        <p className="text-gray-600">
+                            This is now part of {participant?.name}'s course record. It stays inside the
+                            course and is not added to the facility mentorship records.
+                        </p>
+                    </div>
+
+                    {savedCheck && <ScenarioCheckPanel check={savedCheck} />}
+
                     <Button
-                        onClick={() => setShowSuccess(false)}
+                        onClick={() => { setShowSuccess(false); setSavedCheck(null); }}
                         className="w-full mt-6 bg-green-600 hover:bg-green-700 border-green-600"
                     >
                         Done
@@ -977,11 +1199,23 @@ export function MentorshipMonitoringView({
                     )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {!isPublicView && (
+                        {participants.length > 0 && (
                             <FormGroup label="Select participant" className="sm:col-span-2">
                                 <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
                                     {participants.map(p => (
                                         <option key={p.id} value={p.id}>{p.name} — {p.group}</option>
+                                    ))}
+                                </Select>
+                            </FormGroup>
+                        )}
+                        {scenarios.length > 0 && formKey === 'skills_assessment' && (
+                            <FormGroup label="Standard case" className="sm:col-span-2">
+                                <Select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
+                                    <option value="">No standard case — free practice</option>
+                                    {scenarios.map(sc => (
+                                        <option key={sc.id} value={sc.id}>
+                                            {sc.id} · {sc.title || sc.childName}
+                                        </option>
                                     ))}
                                 </Select>
                             </FormGroup>
@@ -1071,6 +1305,31 @@ export function MentorshipMonitoringView({
                             Edit setup
                         </Button>
                     </div>
+
+                    {/* The case being role-played, shown while the session runs.
+                        The expected recognition and management are deliberately
+                        withheld until the session is saved — a mentor who can see
+                        the answer marks towards the answer, not towards the child
+                        in front of them. */}
+                    {scenario && formKey === 'skills_assessment' && (
+                        <div className="mb-4 p-3 rounded-lg border border-sky-200 bg-sky-50">
+                            <div className="flex flex-wrap items-baseline gap-2">
+                                <span className="px-2 py-0.5 rounded bg-sky-600 text-white text-xs font-semibold">
+                                    Case {scenario.id}
+                                </span>
+                                <span className="font-semibold text-slate-800">
+                                    {scenario.title || scenario.childName}
+                                </span>
+                            </div>
+                            <p className="text-sm text-slate-700 mt-2">
+                                {scenario.presentation || scenario.vignette}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-2">
+                                Work the case as you would in the field. Your session is checked against the
+                                standard answer once you save, and the answer is shown to you then.
+                            </p>
+                        </div>
+                    )}
 
                     <Suspense fallback={<div className="p-8"><Spinner /></div>}>
                         {renderForm(formKey, service)}

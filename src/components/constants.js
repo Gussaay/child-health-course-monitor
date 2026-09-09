@@ -914,3 +914,224 @@ export const getCourseSubTypes = (course) => {
 // ETATSkillsAssessmentForm through the course practice tab, so
 // getMentorshipService no longer gates on this and the flag has no effect.
 export const ETAT_MENTORSHIP_FORM_ENABLED = true;
+
+// ============================================================================
+// BLOCK H — ETAT case scenarios for mentorship training
+// ============================================================================
+//
+// The ETAT equivalent of IMNCI_CASE_SCENARIOS above. A trainee mentor works a
+// paper case whose correct handling is already known, and the session is checked
+// against it.
+//
+// What differs from IMNCI. An IMNCI case has a fixed number of applicable form
+// items, so a standard total out of a standard maximum is meaningful. ETAT does
+// not: calculateETATScores counts only the checklists the mentor selected and
+// drops every item marked 'na', so the denominator moves with the mentor's own
+// choices. An absolute standardScore would therefore compare two different
+// things.
+//
+// So ETAT is checked on two axes instead:
+//
+//   1. Checklist selection — objective and fully automatic. Each case states
+//      which ETAT checklists a correct response requires. Recognising shock in a
+//      malnourished child and reaching for Checklist 3 is the decision being
+//      trained, and picking the wrong checklist is the error worth catching.
+//
+//   2. Percentage against the standard — the share of applicable items marked
+//      done, compared with `standardPct`. A percentage survives the moving
+//      denominator where an absolute score does not.
+//
+// The presentation is shown to the mentor during the session, because it is the
+// case being role-played. `expectedRecognition` and `expectedManagement` are
+// withheld until the session is saved, for the same reason the IMNCI standard
+// total is withheld: a mentor who can see the answer scores towards the answer.
+export const ETAT_CASE_SCENARIOS = [
+    {
+        id: 'E1',
+        title: 'Severe respiratory distress',
+        supported: true,
+        ageMonths: 14,
+        weightKg: null,
+        presentation: 'A boy of 14 months is carried in by his mother. He has had cough for four days. '
+            + 'He is breathing fast, will not feed, and his tongue looks blue. He is awake and irritable.',
+        expectedRecognition: 'Central cyanosis; severe respiratory distress. Emergency.',
+        isEmergency: true,
+        expectedChecklists: ['TRIAGE', 'AIRWAY_BREATHING'],
+        expectedManagement: [
+            'Recognise the emergency sign at triage and move the child to the resuscitation area before registration',
+            'Position for maximum comfort, clear secretions, do not force the child to lie flat',
+            'Give oxygen by prongs or catheter at 1–2 litres per minute and confirm gas is flowing',
+            'Call for help; draw blood for glucose, malaria test and haemoglobin',
+            'Keep the child warm, reassess breathing and colour after oxygen',
+            'Complete the triage form with the time of arrival and the time oxygen was started',
+        ],
+        standardPct: 100,
+    },
+    {
+        id: 'E2',
+        title: 'Shock in a child without malnutrition',
+        supported: true,
+        ageMonths: 36,
+        weightKg: 13,
+        presentation: 'A girl of 3 years, weight 13 kg, is brought after two days of vomiting and diarrhoea. '
+            + 'Her hands are cold, capillary refill is 5 seconds, and her pulse is weak and fast. '
+            + 'She is drowsy but rousable. There is no visible wasting and no oedema.',
+        expectedRecognition: 'Shock, with diarrhoea. Emergency.',
+        isEmergency: true,
+        expectedChecklists: ['TRIAGE', 'CIRCULATION_SHOCK'],
+        expectedManagement: [
+            'Confirm cold hands with delayed capillary refill or a weak fast pulse, and check for severe malnutrition before choosing the plan',
+            'Insert an IV line and draw blood at the same time; escalate to intraosseous if two attempts fail',
+            'Give Ringer’s lactate 20 ml/kg — 260 ml — as rapidly as possible',
+            'Reassess; repeat 20 ml/kg if there is no improvement',
+            'On improvement, switch to the severe dehydration plan and start ORS when she can drink',
+            'Record fluid, volume, times and each reassessment',
+        ],
+        standardPct: 100,
+    },
+    {
+        id: 'E3',
+        title: 'Shock in a severely malnourished child',
+        supported: true,
+        ageMonths: 24,
+        weightKg: 7,
+        presentation: 'A boy of 2 years, weight 7 kg, has visible severe wasting. He has had diarrhoea for five days. '
+            + 'His hands are cold, capillary refill is 4 seconds, the pulse is weak and fast, and he responds only to pain.',
+        expectedRecognition: 'Shock with severe acute malnutrition; lethargic. Emergency.',
+        isEmergency: true,
+        expectedChecklists: ['TRIAGE', 'CIRCULATION_SHOCK'],
+        expectedManagement: [
+            'Identify severe wasting before any fluid decision',
+            'Give IV fluid because he is both shocked and lethargic: 15 ml/kg — 105 ml — over one hour, '
+                + 'using Ringer’s lactate with D5%, half-normal saline with D5% or half-strength Darrow’s with D5%',
+            'Give IV glucose and check blood sugar',
+            'Measure pulse and respiratory rate at the start and every 5–10 minutes',
+            'Stop the infusion if the respiratory rate rises by 5 per minute or the pulse by 15 per minute',
+            'On improvement, move to ReSoMal 10 ml/kg/hour and then F-75',
+        ],
+        // The paired case for E2. The same presenting signs take a different
+        // fluid plan because of the wasting, which is the discrimination this
+        // case exists to test — so it shares E2's checklists deliberately.
+        standardPct: 100,
+    },
+    {
+        id: 'E4',
+        title: 'Convulsion and hypoglycaemia',
+        supported: true,
+        ageMonths: 18,
+        weightKg: 10,
+        presentation: 'A girl of 18 months, weight 10 kg, is carried in convulsing. She has been febrile for three days '
+            + 'and has not eaten since yesterday. No glucometer strips are available in the facility today.',
+        expectedRecognition: 'Convulsing now. Emergency.',
+        isEmergency: true,
+        expectedChecklists: ['TRIAGE', 'COMA_CONVULSIONS'],
+        expectedManagement: [
+            'Manage the airway first and position her on her side',
+            'Give diazepam: IV 0.05 ml/kg where a line is running, otherwise rectal 1.0 ml of the 10 mg/2 ml solution, '
+                + 'needle removed, inserted 4–5 cm, buttocks held together',
+            'Treat presumptively for hypoglycaemia: 10% glucose 5 ml/kg — 50 ml — by rapid IV injection; '
+                + 'the treatment threshold is below 3 mmol/l in a well-nourished child and below 2.6 mmol/l in a malnourished child',
+            'If only 50% glucose is available, dilute 1 part D50% to 4 parts distilled water, or 1 part D50% to 9 parts D5%',
+            'Repeat diazepam after 10 minutes if the convulsion continues; give paraldehyde or phenobarbital thereafter',
+            'Sponge with room-temperature water; give no oral medicine until the convulsion has stopped',
+        ],
+        standardPct: 100,
+    },
+    {
+        id: 'E5',
+        title: 'Severe dehydration',
+        supported: true,
+        ageMonths: 8,
+        weightKg: 8,
+        presentation: 'An infant of 8 months, weight 8 kg, has had watery diarrhoea for one day. He is lethargic, '
+            + 'his eyes are sunken and the skin pinch returns very slowly. His hands are warm and the pulse is strong.',
+        expectedRecognition: 'Severe dehydration without shock. Emergency.',
+        isEmergency: true,
+        expectedChecklists: ['TRIAGE', 'SEVERE_DEHYDRATION'],
+        expectedManagement: [
+            'Confirm two of the three signs in a child with diarrhoea',
+            'Check for severe malnutrition before starting IV fluid',
+            'Give Ringer’s lactate 70 ml/kg — 550 ml — over 5 hours because he is under 12 months, at about 110 ml per hour; '
+                + 'a child of 12 months or more receives the same volume over 2.5 hours',
+            'Start ORS about 5 ml/kg/hour as soon as he can drink',
+            'Reassess every 1–2 hours; reclassify at 6 hours',
+            'Observe the caregiver preparing and giving ORS before discharge',
+        ],
+        // Warm hands and a strong pulse rule shock out. A mentor who reaches for
+        // Checklist 3 here has made exactly the error this case tests for.
+        standardPct: 100,
+    },
+];
+
+// --- Generic scenario access ------------------------------------------------
+//
+// IMNCI and ETAT keep separate lists because their cases carry different fields.
+// These two let a caller ask for scenarios by service without knowing which list
+// it will get, so a service with no scenarios returns an empty list rather than
+// needing a special case at every call site.
+export const SERVICE_CASE_SCENARIOS = {
+    IMNCI: IMNCI_CASE_SCENARIOS,
+    ETAT: ETAT_CASE_SCENARIOS,
+};
+
+export const getScenariosForService = (service) =>
+    (SERVICE_CASE_SCENARIOS[service] || []).filter(s => s.supported !== false);
+
+export const getServiceScenarioById = (service, id) =>
+    (SERVICE_CASE_SCENARIOS[service] || []).find(s => s.id === id) || null;
+
+/**
+ * Automatic check of an ETAT practice session against its case.
+ *
+ * Marks two things and neither of them is the role-played health worker:
+ *
+ *   checklists — did the mentor open the checklists this case calls for? Missing
+ *     one is a recognition failure; adding one is over-assessment. Both are
+ *     reported, because they are different mistakes.
+ *
+ *   percentage — the share of applicable items marked done, against the case
+ *     standard. Absolute totals are not comparable across ETAT sessions: the
+ *     denominator depends on which checklists were opened and how many items
+ *     were marked 'na'.
+ *
+ * @param {object} payload   the ETAT form payload (selectedChecklists + scores)
+ * @param {object} scenario  the selected case
+ * @returns {{expected:string[], selected:string[], missing:string[], extra:string[],
+ *            checklistsCorrect:boolean, mentorPct:number|null, standardPct:number,
+ *            pctDifference:number|null, withinTolerance:boolean|null,
+ *            score:number, max:number}|null}
+ */
+export const checkEtatScenario = (payload, scenario) => {
+    if (!scenario) return null;
+
+    const expected = scenario.expectedChecklists || [];
+    const selected = payload?.selectedChecklists || [];
+    const missing = expected.filter(k => !selected.includes(k));
+    const extra = selected.filter(k => !expected.includes(k));
+
+    const score = Number(payload?.scores?.overallScore_score);
+    const max = Number(payload?.scores?.overallScore_maxScore);
+    const hasScore = Number.isFinite(score) && Number.isFinite(max) && max > 0;
+    const mentorPct = hasScore ? Math.round((score / max) * 100) : null;
+    const standardPct = scenario.standardPct ?? 100;
+
+    return {
+        expected,
+        selected,
+        missing,
+        extra,
+        checklistsCorrect: missing.length === 0 && extra.length === 0,
+        mentorPct,
+        standardPct,
+        pctDifference: mentorPct === null ? null : mentorPct - standardPct,
+        // Percentage points, so a short checklist and a long one read the same.
+        withinTolerance: mentorPct === null ? null : Math.abs(mentorPct - standardPct) <= ETAT_PCT_TOLERANCE,
+        score: hasScore ? score : 0,
+        max: hasScore ? max : 0,
+    };
+};
+
+// How far below the case standard a session may sit and still count as applying
+// the standard. Wider than MENTOR_SCORE_TOLERANCE because it is measured in
+// percentage points on a denominator that moves between sessions.
+export const ETAT_PCT_TOLERANCE = 10;
