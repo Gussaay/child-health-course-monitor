@@ -1155,6 +1155,27 @@ export function CoursesTable({
                                 {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(shareModalCourse.course_type)) && (
                                     <div className="bg-gray-50 p-3 rounded border">
                                         <span className="text-sm font-semibold block mb-2">Testing</span>
+                                        {(shareModalCourse.course_type === 'EmONC' || shareModalCourse.course_type === 'EENC') ? (
+                                            // EmONC has two separate tests: one link per module so participants land on the right part.
+                                            <div className="space-y-2">
+                                                {[
+                                                    { module: 'Emergency Newborn Care', label: 'Newborn' },
+                                                    { module: 'Emergency Maternal Care', label: 'Maternal (Obstetric)' }
+                                                ].map(({ module, label }) => (
+                                                    <div key={module} className="grid grid-cols-2 gap-2">
+                                                        <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
+                                                            const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=pre&module=${encodeURIComponent(module)}`;
+                                                            setQrShareData({ url: link, title: `Pre-Test (${label}): ${shareModalCourse.course_type}` });
+                                                        }}><FileText size={14} /> Pre-Test - {label}</Button>
+
+                                                        <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
+                                                            const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=post&module=${encodeURIComponent(module)}`;
+                                                            setQrShareData({ url: link, title: `Post-Test (${label}): ${shareModalCourse.course_type}` });
+                                                        }}><FileText size={14} /> Post-Test - {label}</Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                 const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=pre`;
@@ -1166,6 +1187,7 @@ export function CoursesTable({
                                                 setQrShareData({ url: link, title: `Post-Test: ${shareModalCourse.course_type}` });
                                             }}><FileText size={14} /> Share Post-Test</Button>
                                         </div>
+                                        )}
                                     </div>
                                 )}
 

@@ -415,9 +415,235 @@ const getQueryParam = (param) => {
     return null;
 };
 
+// --- EmONC multi-module tests ------------------------------------------------
+// EmONC has TWO different tests that share questions 1-12:
+//   * Emergency Newborn Care  -> EENC + neonatal questions
+//   * Emergency Maternal Care -> EENC + maternal (obstetric) questions
+// A participant sits both, so results must be stored and looked up PER MODULE.
+// Before this, results were keyed only by participantId + testType, so once the
+// Newborn pre-test existed, the Maternal part was treated as "already solved".
+export const EMONC_TEST_MODULES = ['Emergency Newborn Care', 'Emergency Maternal Care'];
+const EMONC_DEFAULT_MODULE = EMONC_TEST_MODULES[0];
+const SSNB_TEST_MODULES = ['Portable warmer training', 'CPAP training', 'Kangaroo mother Care', 'Sepsis surveillance and management'];
+
+const MODULE_SHORT_LABELS = {
+    'Emergency Newborn Care': 'Newborn',
+    'Emergency Maternal Care': 'Maternal / Obstetric',
+};
+
+const isEmoncCourseType = (courseType) => courseType === 'EmONC' || courseType === 'EENC';
+const isSsnbCourseType = (courseType) => courseType === 'Small & Sick Newborn' || courseType === 'SSNC';
+
+const getSelectableModules = (courseType) => {
+    if (isEmoncCourseType(courseType)) return EMONC_TEST_MODULES;
+    if (isSsnbCourseType(courseType)) return SSNB_TEST_MODULES;
+    return [];
+};
+
+// Modules whose results are stored separately (one pre + one post per module).
+const getSeparatelyStoredModules = (courseType) => (isEmoncCourseType(courseType) ? EMONC_TEST_MODULES : []);
+
+// Newborn keeps the plain 'pre-test' / 'post-test' type so existing records stay valid.
+const MODULE_TEST_TYPE_SUFFIX = { 'Emergency Maternal Care': 'maternal' };
+
+export const getStoredTestType = (baseType, module) => {
+    const suffix = module ? MODULE_TEST_TYPE_SUFFIX[module] : null;
+    return suffix ? `${baseType}-${suffix}` : baseType;
+};
+
+export const getBaseTestType = (storedType = '') => {
+    if (typeof storedType !== 'string') return storedType;
+    if (storedType.startsWith('pre-test')) return 'pre-test';
+    if (storedType.startsWith('post-test')) return 'post-test';
+    return storedType;
+};
+
+export const getTestRecordModule = (test, courseType) => {
+    if (!test || !isEmoncCourseType(courseType)) return null;
+    if (test.module && EMONC_TEST_MODULES.includes(test.module)) return test.module;
+    if (typeof test.testType === 'string' && test.testType.endsWith('-maternal')) return 'Emergency Maternal Care';
+    // Older records have no module field: infer it from the question set that was answered.
+    const answeredIds = Object.keys(test.answers || {});
+    if (answeredIds.some(id => id.startsWith('mat_'))) return 'Emergency Maternal Care';
+    return EMONC_DEFAULT_MODULE;
+};
+
+export const findParticipantTest = (tests, participantId, baseType, module, courseType) => {
+    if (!participantId || !Array.isArray(tests)) return null;
+    return tests.find(t =>
+        t.participantId === participantId &&
+        getBaseTestType(t.testType) === baseType &&
+        (!module || getTestRecordModule(t, courseType) === module)
+    ) || null;
+};
+
+const formatTestLabel = (storedOrBaseType, module) => {
+    const base = getBaseTestType(storedOrBaseType);
+    const typeLabel = base === 'pre-test' ? 'Pre-Test' : base === 'post-test' ? 'Post-Test' : (base || '');
+    return module ? `${typeLabel} - ${MODULE_SHORT_LABELS[module] || module}` : typeLabel;
+};
+
+// --- EmONC test parts --------------------------------------------------------
+// Both EmONC modules = Part 1 (EENC, shared) + Part 2 (module-specific).
+// Full class strings are kept here (not built dynamically) so Tailwind keeps them.
+const SECTION_THEMES = {
+    eenc: {
+        wrapper: 'border-emerald-400', header: 'bg-emerald-600', body: 'bg-emerald-50/40',
+        chip: 'bg-emerald-50 border-emerald-300 text-emerald-800', divider: 'border-emerald-300 text-emerald-700'
+    },
+    newborn: {
+        wrapper: 'border-sky-400', header: 'bg-sky-600', body: 'bg-sky-50/40',
+        chip: 'bg-sky-50 border-sky-300 text-sky-800', divider: 'border-sky-300 text-sky-700'
+    },
+    maternal: {
+        wrapper: 'border-rose-400', header: 'bg-rose-600', body: 'bg-rose-50/40',
+        chip: 'bg-rose-50 border-rose-300 text-rose-800', divider: 'border-rose-300 text-rose-700'
+    },
+    default: {
+        wrapper: 'border-gray-300', header: 'bg-gray-600', body: 'bg-gray-50',
+        chip: 'bg-gray-50 border-gray-300 text-gray-800', divider: 'border-gray-300 text-gray-600'
+    }
+};
+
+const getSectionTheme = (key) => SECTION_THEMES[key] || SECTION_THEMES.default;
+
+export const getTestSections = (courseType, emoncSubCourse) => {
+    if (!isEmoncCourseType(courseType)) return null;
+    const isMaternal = emoncSubCourse === 'Emergency Maternal Care';
+    const part2Questions = isMaternal ? EMONC_MATERNAL_QUESTIONS : EMONC_NEONATAL_QUESTIONS;
+    const eencCount = EENC_TEST_QUESTIONS.length;
+    return [
+        {
+            key: 'eenc',
+            part: 1,
+            title: 'Early Essential Newborn Care (EENC)',
+            shortTitle: 'EENC',
+            questions: EENC_TEST_QUESTIONS,
+            from: 1,
+            to: eencCount
+        },
+        {
+            key: isMaternal ? 'maternal' : 'newborn',
+            part: 2,
+            title: isMaternal ? 'Emergency Maternal Care (Obstetric)' : 'Emergency Newborn Care',
+            shortTitle: isMaternal ? 'Maternal / Obstetric' : 'Newborn',
+            questions: part2Questions,
+            from: eencCount + 1,
+            to: eencCount + part2Questions.length
+        }
+    ];
+};
+
+export const computeSectionScores = (sections, answers = {}, manualScores = {}) => {
+    if (!Array.isArray(sections)) return null;
+    return sections.map(section => {
+        let score = 0;
+        let total = 0;
+        section.questions.forEach(q => {
+            if (q.type === 'mc') {
+                total += 1;
+                if (answers?.[q.id] === q.correctAnswer) score += 1;
+            } else if (q.type === 'open') {
+                total += q.lines || 0;
+                const lineScores = manualScores?.[q.id];
+                if (Array.isArray(lineScores)) score += lineScores.reduce((acc, cur) => acc + (parseFloat(cur) || 0), 0);
+            }
+        });
+        return {
+            key: section.key,
+            part: section.part,
+            title: section.title,
+            shortTitle: section.shortTitle,
+            score,
+            total,
+            percentage: total > 0 ? (score / total) * 100 : 0
+        };
+    });
+};
+
+// Per-part score cards (Part 1 EENC / Part 2 Newborn or Maternal).
+const SectionScoreBreakdown = ({ sectionScores, compact = false }) => {
+    if (!Array.isArray(sectionScores) || sectionScores.length === 0) return null;
+
+    if (compact) {
+        return (
+            <div className="flex flex-col gap-0.5">
+                {sectionScores.map(sec => (
+                    <span key={sec.key} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${getSectionTheme(sec.key).chip}`}>
+                        P{sec.part} {sec.shortTitle}: {sec.score}/{sec.total}
+                    </span>
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4 text-left">
+            {sectionScores.map(sec => (
+                <div key={sec.key} className={`border-2 rounded-lg p-3 ${getSectionTheme(sec.key).chip}`}>
+                    <div className="text-xs font-bold uppercase tracking-wider opacity-80">Part {sec.part}</div>
+                    <div className="font-semibold">{sec.title}</div>
+                    <div className="text-2xl font-bold mt-1">{Number(sec.percentage || 0).toFixed(1)}%</div>
+                    <div className="text-xs opacity-80">{sec.score} / {sec.total} points</div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const resolveTestConfig = (courseType, emoncSubCourse, ssnbSubCourse) => {
+    let titles = [];
+
+    if (courseType === 'ETAT') {
+        titles = JOB_TITLES_ETAT;
+        return { testQuestions: ETAT_TEST_QUESTIONS, testTitle: 'ETAT Pre/Post Test Entry', jobTitleOptions: titles, isIccm: false };
+    }
+
+    if (courseType === 'Comprehensive Package For Community Midwives') {
+        titles = ["Community Midwife", "Health Visitor", "Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
+        return { testQuestions: CPCM_TEST_QUESTIONS, testTitle: 'Comprehensive Package For Community Midwives Test', jobTitleOptions: titles, isIccm: true };
+    }
+
+    if (courseType === 'Program Management') {
+        titles = ["Manager", "Coordinator", "Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
+        return { testQuestions: PROGRAM_MANAGEMENT_TEST_QUESTIONS, testTitle: 'Program Management (Operational Guide) Test', jobTitleOptions: titles, isIccm: false };
+    }
+
+    if (courseType === 'ICCM') {
+        titles = ["Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
+        return { testQuestions: ICCM_TEST_QUESTIONS, testTitle: 'ICCM Pre/Post Test Entry', jobTitleOptions: titles, isIccm: true };
+    }
+
+    if (isEmoncCourseType(courseType)) {
+        const extraQuestions = emoncSubCourse === 'Emergency Maternal Care'
+            ? EMONC_MATERNAL_QUESTIONS
+            : EMONC_NEONATAL_QUESTIONS;
+        return {
+            testQuestions: [...EENC_TEST_QUESTIONS, ...extraQuestions],
+            testTitle: `EmONC Pre/Post Test - ${emoncSubCourse}`,
+            jobTitleOptions: JOB_TITLES_EMONC,
+            isIccm: false,
+            testSections: getTestSections(courseType, emoncSubCourse)
+        };
+    }
+
+    if (isSsnbCourseType(courseType)) {
+        const questionsToUse = ssnbSubCourse === 'Sepsis surveillance and management'
+            ? SSNB_SEPSIS_TEST_QUESTIONS
+            : SSNB_WARMER_TEST_QUESTIONS;
+        return { testQuestions: questionsToUse, testTitle: `SSNB Test - ${ssnbSubCourse}`, jobTitleOptions: JOB_TITLES_EMONC, isIccm: false };
+    }
+
+    if (courseType === 'IMNCI') {
+        return { testQuestions: IMNCI_TEST_QUESTIONS, testTitle: 'IMNCI Pre/Post Test Entry', jobTitleOptions: JOB_TITLES_EMONC, isIccm: false };
+    }
+
+    return { testQuestions: [], testTitle: 'Test Entry', jobTitleOptions: [], isIccm: false };
+};
+
 const TestResultScreen = ({ 
     participantName, testType, score, total, percentage, onBack, 
-    canManageTests, onEdit, onDelete, isExistingResult, resultData
+    canManageTests, onEdit, onDelete, isExistingResult, resultData, sectionScores
 }) => {
     const showMcqOnly = resultData?.hasOpenQuestions && !resultData?.isGraded;
     const displayPercent = showMcqOnly ? (resultData.mcqPercentage || 0) : percentage;
@@ -440,6 +666,11 @@ const TestResultScreen = ({
                     <div className={`text-6xl font-bold ${scoreClass}`}>{percent}%</div>
                     {!resultData?.isLegacy && (
                         <div className="text-xl text-gray-700 mt-2">({displayScore} / {displayTotal} Total Points)</div>
+                    )}
+                    {!resultData?.isLegacy && sectionScores && (
+                        <div className="max-w-xl mx-auto mt-4">
+                            <SectionScoreBreakdown sectionScores={sectionScores} />
+                        </div>
                     )}
                     
                     {showMcqOnly ? (
@@ -468,6 +699,8 @@ const TestResultScreen = ({
 
 const TestScoresDashboard = ({ 
     courseId,
+    courseType,
+    modules = [null],
     participants, 
     participantTests = [], 
     onOpenEntry,
@@ -475,10 +708,14 @@ const TestScoresDashboard = ({
     onDelete,
     canManageTests
 }) => {
-    
-    const getTest = (participant, type) => {
-        const detailedTest = participantTests.find(t => t.participantId === participant.id && t.testType === type);
+    const defaultModule = modules[0];
+
+    const getTest = (participant, type, module) => {
+        const detailedTest = findParticipantTest(participantTests, participant.id, type, module, courseType);
         if (detailedTest) return detailedTest;
+
+        // Old manually-typed scores are not module-specific; show them under the first module only.
+        if (module && module !== defaultModule) return null;
 
         const legacyScore = type === 'pre-test' ? participant.pre_test_score : participant.post_test_score;
         if (legacyScore !== undefined && legacyScore !== null && legacyScore !== '') {
@@ -498,6 +735,91 @@ const TestScoresDashboard = ({
         if (percentage >= 60) return "text-yellow-700 font-bold bg-yellow-50 px-2 py-1 rounded";
         return "text-red-700 font-bold bg-red-50 px-2 py-1 rounded";
     };
+
+    // One column per test type, and (for EmONC) per module: Newborn + Maternal/Obstetric.
+    const columns = [];
+    ['pre-test', 'post-test'].forEach(type => {
+        modules.forEach(module => columns.push({ type, module }));
+    });
+
+    const renderScoreCell = (p, { type, module }) => {
+        const test = getTest(p, type, module);
+        if (!test) {
+            return canManageTests ? (
+                <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    onClick={() => onOpenEntry(type, p.id, false, module)}
+                    className="text-xs"
+                >
+                    + Add Score
+                </Button>
+            ) : <span className="text-gray-400">-</span>;
+        }
+
+        const pct = Number(test.percentage || 0);
+        const sectionScores = !test.isLegacy && module
+            ? (test.sectionScores || (test.answers ? computeSectionScores(getTestSections(courseType, module), test.answers, test.manualScores) : null))
+            : null;
+        return (
+            <>
+                <div className="flex flex-col items-start gap-1">
+                    <span className={getScoreStyle(pct)}>
+                        {pct.toFixed(1)}%
+                    </span>
+                    <SectionScoreBreakdown sectionScores={sectionScores} compact />
+                    {test.isLegacy && (
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" title="Score recorded using older version">
+                            Legacy Record
+                        </span>
+                    )}
+                    {test.hasOpenQuestions && !test.isGraded && (
+                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                            Pending Grade
+                        </span>
+                    )}
+                </div>
+                <div className="flex gap-1">
+                    {!test.isLegacy ? (
+                        <>
+                            <Button 
+                                variant="icon" 
+                                onClick={() => onEdit(p.id, type, module)}
+                                title="View/Edit Test"
+                                className="text-gray-500 hover:text-blue-600"
+                            >
+                                <Eye size={18} />
+                            </Button>
+                            {canManageTests && (
+                                <Button 
+                                    variant="icon" 
+                                    onClick={() => onDelete(p.id, type, module)}
+                                    title="Delete Test"
+                                    className="text-gray-500 hover:text-red-600"
+                                >
+                                    <Trash2 size={18} />
+                                </Button>
+                            )}
+                        </>
+                    ) : (
+                        canManageTests && (
+                            <Button 
+                                size="sm" 
+                                variant="secondary" 
+                                onClick={() => onOpenEntry(type, p.id, false, module)}
+                                className="text-xs"
+                                title="Override legacy score with new detailed test"
+                            >
+                                Override
+                            </Button>
+                        )
+                    )}
+                </div>
+            </>
+        );
+    };
+
+    const headers = ["Name", "Group", ...columns.map(c => `${formatTestLabel(c.type, c.module)} Result`)];
 
     return (
         <div className="space-y-4" style={{ direction: 'ltr', textAlign: 'left' }}>
@@ -527,163 +849,23 @@ const TestScoresDashboard = ({
                  </div>
              </div>
 
-             <Table headers={["Name", "Group", "Pre-Test Result", "Post-Test Result"]}>
+             <Table headers={headers}>
                 {participants.length === 0 ? (
-                    <tr><td colSpan="4" className="text-center p-4">No participants found.</td></tr>
+                    <tr><td colSpan={headers.length} className="text-center p-4">No participants found.</td></tr>
                 ) : (
-                    participants.map(p => {
-                        const preTest = getTest(p, 'pre-test');
-                        const postTest = getTest(p, 'post-test');
-
-                        return (
-                            <tr key={p.id} className="hover:bg-gray-50">
-                                <td className="p-4 border font-medium">{p.name}</td>
-                                <td className="p-4 border">{p.group || '-'}</td>
-                                
-                                <td className="p-4 border">
+                    participants.map(p => (
+                        <tr key={p.id} className="hover:bg-gray-50">
+                            <td className="p-4 border font-medium">{p.name}</td>
+                            <td className="p-4 border">{p.group || '-'}</td>
+                            {columns.map(col => (
+                                <td key={`${col.type}-${col.module || 'default'}`} className="p-4 border">
                                     <div className="flex items-center gap-4">
-                                        {preTest ? (
-                                            <>
-                                                <div className="flex flex-col items-start gap-1">
-                                                    <span className={getScoreStyle(preTest.percentage)}>
-                                                        {preTest.percentage.toFixed(1)}%
-                                                    </span>
-                                                    {preTest.isLegacy && (
-                                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" title="Score recorded using older version">
-                                                            Legacy Record
-                                                        </span>
-                                                    )}
-                                                    {preTest.hasOpenQuestions && !preTest.isGraded && (
-                                                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                                                            Pending Grade
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-1">
-                                                    {!preTest.isLegacy ? (
-                                                        <>
-                                                            <Button 
-                                                                variant="icon" 
-                                                                onClick={() => onEdit(p.id, 'pre-test')}
-                                                                title="View/Edit Test"
-                                                                className="text-gray-500 hover:text-blue-600"
-                                                            >
-                                                                <Eye size={18} />
-                                                            </Button>
-                                                            {canManageTests && (
-                                                                <Button 
-                                                                    variant="icon" 
-                                                                    onClick={() => onDelete(p.id, 'pre-test')}
-                                                                    title="Delete Test"
-                                                                    className="text-gray-500 hover:text-red-600"
-                                                                >
-                                                                    <Trash2 size={18} />
-                                                                </Button>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        canManageTests && (
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="secondary" 
-                                                                onClick={() => onOpenEntry('pre-test', p.id)}
-                                                                className="text-xs"
-                                                                title="Override legacy score with new detailed test"
-                                                            >
-                                                                Override
-                                                            </Button>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            canManageTests ? (
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="secondary" 
-                                                    onClick={() => onOpenEntry('pre-test', p.id)}
-                                                    className="text-xs"
-                                                >
-                                                    + Add Score
-                                                </Button>
-                                            ) : <span className="text-gray-400">-</span>
-                                        )}
+                                        {renderScoreCell(p, col)}
                                     </div>
                                 </td>
-
-                                <td className="p-4 border">
-                                    <div className="flex items-center gap-4">
-                                        {postTest ? (
-                                            <>
-                                                <div className="flex flex-col items-start gap-1">
-                                                    <span className={getScoreStyle(postTest.percentage)}>
-                                                        {postTest.percentage.toFixed(1)}%
-                                                    </span>
-                                                    {postTest.isLegacy && (
-                                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" title="Score recorded using older version">
-                                                            Legacy Record
-                                                        </span>
-                                                    )}
-                                                    {postTest.hasOpenQuestions && !postTest.isGraded && (
-                                                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                                                            Pending Grade
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-1">
-                                                    {!postTest.isLegacy ? (
-                                                        <>
-                                                            <Button 
-                                                                variant="icon" 
-                                                                onClick={() => onEdit(p.id, 'post-test')}
-                                                                title="View/Edit Test"
-                                                                className="text-gray-500 hover:text-blue-600"
-                                                            >
-                                                                <Eye size={18} />
-                                                            </Button>
-                                                            {canManageTests && (
-                                                                <Button 
-                                                                    variant="icon" 
-                                                                    onClick={() => onDelete(p.id, 'post-test')}
-                                                                    title="Delete Test"
-                                                                    className="text-gray-500 hover:text-red-600"
-                                                                >
-                                                                    <Trash2 size={18} />
-                                                                </Button>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        canManageTests && (
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="secondary" 
-                                                                onClick={() => onOpenEntry('post-test', p.id)}
-                                                                className="text-xs"
-                                                                title="Override legacy score with new detailed test"
-                                                            >
-                                                                Override
-                                                            </Button>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            canManageTests ? (
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="secondary" 
-                                                    onClick={() => onOpenEntry('post-test', p.id)}
-                                                    className="text-xs"
-                                                >
-                                                    + Add Score
-                                                </Button>
-                                            ) : <span className="text-gray-400">-</span>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        );
-                    })
+                            ))}
+                        </tr>
+                    ))
                 )}
              </Table>
         </div>
@@ -765,112 +947,61 @@ export function CourseTestForm({
         return type;
     };
 
-    const lockedModule = getQueryParam('module');
+    const courseType = course?.course_type;
+    const selectableModules = getSelectableModules(courseType);
+    const separatelyStoredModules = getSeparatelyStoredModules(courseType);
+
+    const rawLockedModule = getQueryParam('module');
+    // Ignore a ?module= value that does not belong to this course type.
+    const lockedModule = rawLockedModule && (selectableModules.length === 0 || selectableModules.includes(rawLockedModule)) ? rawLockedModule : null;
     const lockedType = getQueryParam('type');
 
     // --- Auto-assign sub-course from course facilitator assignments for shared (public) links ---
+    // Only lock automatically when the course teaches exactly ONE testable module.
+    // (Previously the FIRST facilitator's module was always locked, so a course with both
+    //  Newborn and Maternal facilitators could never open the Maternal/Obstetric part.)
     const autoSubCourse = useMemo(() => {
         if (!isPublicView || !course?.facilitatorAssignments?.length) return null;
         const subTypes = [...new Set(course.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))];
-        return subTypes.length > 0 ? subTypes[0] : null;
-    }, [isPublicView, course]);
+        const candidates = selectableModules.length ? subTypes.filter(st => selectableModules.includes(st)) : subTypes;
+        return candidates.length === 1 ? candidates[0] : null;
+    }, [isPublicView, course, selectableModules]);
 
     const effectiveLockedModule = lockedModule || (isPublicView ? autoSubCourse : null);
 
     const [viewMode, setViewMode] = useState(isPublicView ? 'entry' : 'dashboard'); 
     
     const [emoncSubCourse, setEmoncSubCourse] = useState(() => {
-        if ((course?.course_type === 'EmONC' || course?.course_type === 'EENC') && effectiveLockedModule) return effectiveLockedModule;
-        return 'Emergency Newborn Care';
+        if (isEmoncCourseType(courseType) && EMONC_TEST_MODULES.includes(effectiveLockedModule)) return effectiveLockedModule;
+        return EMONC_DEFAULT_MODULE;
     });
 
     const [ssnbSubCourse, setSsnbSubCourse] = useState(() => {
-        if ((course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && effectiveLockedModule) return effectiveLockedModule;
+        if (isSsnbCourseType(courseType) && SSNB_TEST_MODULES.includes(effectiveLockedModule)) return effectiveLockedModule;
         return 'Portable warmer training'; 
     });
+
+    // Module used to store/look up results (EmONC only; null for single-test courses).
+    const currentModule = separatelyStoredModules.length ? emoncSubCourse : null;
 
     const isProgramManagement = course?.course_type === 'Program Management';
 
     // Sync sub-course state when auto-detected from course facilitator assignments (shared public links)
     useEffect(() => {
-        if (!isPublicView || !autoSubCourse) return;
-        if (course?.course_type === 'EmONC' || course?.course_type === 'EENC') {
+        if (!isPublicView || !autoSubCourse || lockedModule) return;
+        if (isEmoncCourseType(courseType) && EMONC_TEST_MODULES.includes(autoSubCourse)) {
             setEmoncSubCourse(autoSubCourse);
         }
-        if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
+        if (isSsnbCourseType(courseType) && SSNB_TEST_MODULES.includes(autoSubCourse)) {
             setSsnbSubCourse(autoSubCourse);
         }
-    }, [autoSubCourse, isPublicView, course?.course_type]);
+    }, [autoSubCourse, isPublicView, courseType, lockedModule]);
 
     // Enforce left-to-right alignment across all test views and course types
-    const { testQuestions, testTitle, jobTitleOptions, isIccm } = useMemo(() => {
-        let titles = [];
-        let isIccmFlag = false;
-        
-        if (course?.course_type === 'ETAT') {
-             titles = JOB_TITLES_ETAT;
-             return { 
-                 testQuestions: ETAT_TEST_QUESTIONS, 
-                 testTitle: 'ETAT Pre/Post Test Entry', 
-                 jobTitleOptions: titles, 
-                 isIccm: false 
-             };
-        }
-        
-        if (course?.course_type === 'Comprehensive Package For Community Midwives') {
-            titles = ["Community Midwife", "Health Visitor", "Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
-            return { 
-                testQuestions: CPCM_TEST_QUESTIONS, 
-                testTitle: 'Comprehensive Package For Community Midwives Test', 
-                jobTitleOptions: titles, 
-                isIccm: true 
-            };
-        }
-
-        if (course?.course_type === 'Program Management') {
-            titles = ["Manager", "Coordinator", "Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
-            return { 
-                testQuestions: PROGRAM_MANAGEMENT_TEST_QUESTIONS, 
-                testTitle: 'Program Management (Operational Guide) Test', 
-                jobTitleOptions: titles, 
-                isIccm: false 
-            };
-        }
-
-        if (course?.course_type === 'ICCM') {
-            titles = ["Doctor", "Medical Assistant", "Nursing Officer", "Health Assistant", "Support Staff"];
-            isIccmFlag = true;
-            return { testQuestions: ICCM_TEST_QUESTIONS, testTitle: 'ICCM Pre/Post Test Entry', jobTitleOptions: titles, isIccm: isIccmFlag };
-        }
-        
-       if (course?.course_type === 'EmONC' || course?.course_type === 'EENC') {
-            titles = JOB_TITLES_EMONC; 
-            const extraQuestions = emoncSubCourse === 'Emergency Newborn Care' 
-                ? EMONC_NEONATAL_QUESTIONS 
-                : EMONC_MATERNAL_QUESTIONS;
-            return { 
-                testQuestions: [...EENC_TEST_QUESTIONS, ...extraQuestions], 
-                testTitle: `EmONC Pre/Post Test - ${emoncSubCourse}`, 
-                jobTitleOptions: titles, 
-                isIccm: isIccmFlag 
-            };
-        }
-        
-        if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
-            titles = JOB_TITLES_EMONC; 
-            let questionsToUse = SSNB_WARMER_TEST_QUESTIONS;
-            if (ssnbSubCourse === 'Sepsis surveillance and management') {
-                questionsToUse = SSNB_SEPSIS_TEST_QUESTIONS;
-            }
-            return { testQuestions: questionsToUse, testTitle: `SSNB Test - ${ssnbSubCourse}`, jobTitleOptions: titles, isIccm: false };
-        }
-        if (course?.course_type === 'IMNCI') {
-             titles = JOB_TITLES_EMONC; 
-             return { testQuestions: IMNCI_TEST_QUESTIONS, testTitle: 'IMNCI Pre/Post Test Entry', jobTitleOptions: titles, isIccm: false };
-    
-        }
-        return { testQuestions: [], testTitle: 'Test Entry', jobTitleOptions: [], isIccm: false }; 
-    }, [course?.course_type, emoncSubCourse, ssnbSubCourse]); 
+    const { testQuestions, testTitle, jobTitleOptions, isIccm, testSections = null } = useMemo(
+        () => resolveTestConfig(courseType, emoncSubCourse, ssnbSubCourse),
+        [courseType, emoncSubCourse, ssnbSubCourse]
+    );
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
     const [testType, setTestType] = useState(() => normalizeTestType(lockedType || initialTestType) || 'pre-test'); 
@@ -949,33 +1080,40 @@ export function CourseTestForm({
         return filtered;
     }, [sortedParticipants, selectedSetupGroup]);
     
+    // Results for the selected participant, for the CURRENT module only (EmONC: Newborn vs Maternal).
     const existingResults = useMemo(() => {
         const results = { 'pre-test': null, 'post-test': null };
         if (!selectedParticipantId || !participantTests) return results;
-        for (const test of participantTests) {
-            if (test.participantId === selectedParticipantId) {
-                if (test.testType === 'pre-test') results['pre-test'] = test; 
-                if (test.testType === 'post-test') results['post-test'] = test; 
-            }
-        }
+        results['pre-test'] = findParticipantTest(participantTests, selectedParticipantId, 'pre-test', currentModule, courseType);
+        results['post-test'] = findParticipantTest(participantTests, selectedParticipantId, 'post-test', currentModule, courseType);
         return results;
-    }, [selectedParticipantId, participantTests]);
+    }, [selectedParticipantId, participantTests, currentModule, courseType]);
 
-    const handleDashboardEdit = (pId, type) => {
+    const getQuestionsForModule = (module) => (
+        module && isEmoncCourseType(courseType)
+            ? resolveTestConfig(courseType, module, ssnbSubCourse).testQuestions
+            : testQuestions
+    );
+
+    const handleDashboardEdit = (pId, type, module = null) => {
+        if (module && isEmoncCourseType(courseType)) setEmoncSubCourse(module);
+        const questionsForEntry = getQuestionsForModule(module);
         setSelectedParticipantId(pId);
         setTestType(type);
         setViewMode('entry');
         
-        const result = (participantTests || []).find(t => t.participantId === pId && t.testType === type);
+        const result = findParticipantTest(participantTests, pId, type, module, courseType);
         if (result) {
-            setAnswers(result.answers || initializeAnswers(testQuestions));
-            setManualScores(initializeManualScores(testQuestions, result.manualScores));
+            setAnswers(result.answers || initializeAnswers(questionsForEntry));
+            setManualScores(initializeManualScores(questionsForEntry, result.manualScores));
             setIsEditing(true);
             setIsSetupModalOpen(false); 
         }
     };
 
-    const handleDashboardAdd = (type, pId = null, isNewUser = false) => {
+    const handleDashboardAdd = (type, pId = null, isNewUser = false, module = null) => {
+        if (module && isEmoncCourseType(courseType)) setEmoncSubCourse(module);
+        const questionsForEntry = getQuestionsForModule(module);
         setTestType(type);
         if (isNewUser) {
              setIsNewParticipantModalOpen(true);
@@ -987,15 +1125,16 @@ export function CourseTestForm({
         setIsEditing(false);
         setIsSetupModalOpen(isNewUser ? false : true);
         if(pId && !isNewUser) setIsSetupModalOpen(false); 
-        setAnswers(initializeAnswers(testQuestions));
-        setManualScores(initializeManualScores(testQuestions)); 
+        setAnswers(initializeAnswers(questionsForEntry));
+        setManualScores(initializeManualScores(questionsForEntry)); 
         setSubmissionResult(null);
     };
 
-    const handleDashboardDelete = async (pId, type) => {
-        if (!window.confirm(`Are you sure you want to delete the ${type} result?`)) return;
+    const handleDashboardDelete = async (pId, type, module = null) => {
+        if (!window.confirm(`Are you sure you want to delete the ${formatTestLabel(type, module)} result?`)) return;
         try {
-            await deleteParticipantTest(course.id, pId, type);
+            const record = findParticipantTest(participantTests, pId, type, module, courseType);
+            await deleteParticipantTest(course.id, pId, record?.testType || getStoredTestType(type, module));
             const refreshPayload = { participantId: pId, deleted: true };
             if (onSaveTest) await onSaveTest(refreshPayload); else onSave(refreshPayload);
         } catch (err) {
@@ -1209,7 +1348,8 @@ export function CourseTestForm({
         if (!window.confirm("Are you sure you want to delete this test record?")) return;
         setIsSaving(true);
         try {
-            await deleteParticipantTest(course.id, selectedParticipantId, testType);
+            const storedType = existingResults[testType]?.testType || getStoredTestType(testType, currentModule);
+            await deleteParticipantTest(course.id, selectedParticipantId, storedType);
             const refreshPayload = { participantId: selectedParticipantId, deleted: true };
             if (onSaveTest) await onSaveTest(refreshPayload); else onSave(refreshPayload);
             
@@ -1257,12 +1397,35 @@ export function CourseTestForm({
             const existingResult = existingResults[testType];
             const isGradedStatus = (isEditing && canManageTests) || (existingResult && existingResult.isGraded) ? true : false;
 
+            // EmONC: each module is saved in its own slot ('pre-test' = Newborn, 'pre-test-maternal' = Maternal).
+            // When editing, keep writing to the record's original slot.
+            const storedTestType = existingResult?.testType || getStoredTestType(testType, currentModule);
+
+            // Older records were all saved as plain 'pre-test'/'post-test'. If that slot is still
+            // occupied by the OTHER module's answers, move that record to its own slot first so
+            // this submission does not overwrite it.
+            if (!existingResult && currentModule && onSaveTest) {
+                const occupying = (participantTests || []).find(t => t.participantId === selectedParticipantId && t.testType === storedTestType);
+                const occupyingModule = getTestRecordModule(occupying, courseType);
+                if (occupying && occupyingModule && occupyingModule !== currentModule) {
+                    const { id: _ignoredId, ...occupyingData } = occupying;
+                    await onSaveTest({
+                        ...occupyingData,
+                        testType: getStoredTestType(testType, occupyingModule),
+                        baseTestType: testType,
+                        module: occupyingModule
+                    });
+                }
+            }
+
             const payload = {
                 participantId: selectedParticipantId, 
                 participantName: participantNameForDisplay, 
                 courseId: course.id,
                 courseType: course.course_type,
-                testType: testType,
+                testType: storedTestType,
+                baseTestType: testType,
+                ...(currentModule ? { module: currentModule } : {}),
                 answers: answers, 
                 manualScores: manualScores,
                 score: finalScore,
@@ -1273,6 +1436,7 @@ export function CourseTestForm({
                 mcqPercentage: mcqPercentage,
                 hasOpenQuestions: openQuestionsTotalLines > 0,
                 isGraded: isGradedStatus,
+                ...(testSections ? { sectionScores: computeSectionScores(testSections, answers, manualScores) } : {}),
                 submittedAt: new Date().toISOString()
             };
 
@@ -1302,6 +1466,8 @@ export function CourseTestForm({
                 <div className="p-6">
                     <TestScoresDashboard 
                         courseId={course.id}
+                        courseType={courseType}
+                        modules={separatelyStoredModules.length ? separatelyStoredModules : [null]}
                         participants={sortedParticipants}
                         participantTests={participantTests}
                         canManageTests={canManageTests}
@@ -1321,7 +1487,8 @@ export function CourseTestForm({
         return (
             <TestResultScreen
                 participantName={submissionResult.participantName}
-                testType={submissionResult.testType}
+                testType={formatTestLabel(submissionResult.testType, submissionResult.module || null)}
+                sectionScores={submissionResult.sectionScores || null}
                 score={submissionResult.score}
                 total={submissionResult.total}
                 percentage={submissionResult.percentage}
@@ -1340,7 +1507,8 @@ export function CourseTestForm({
         return (
             <TestResultScreen
                 participantName={participantName}
-                testType={existingTestResult.testType}
+                testType={formatTestLabel(existingTestResult.testType, currentModule)}
+                sectionScores={existingTestResult.sectionScores || (testSections && existingTestResult.answers ? computeSectionScores(testSections, existingTestResult.answers, existingTestResult.manualScores) : null)}
                 score={existingTestResult.score}
                 total={existingTestResult.total}
                 percentage={existingTestResult.percentage}
@@ -1353,6 +1521,71 @@ export function CourseTestForm({
             />
         );
     }
+
+    const renderQuestion = (q) => (
+            <div key={q.id} className={`p-4 border rounded-md shadow-sm ${isEditing && canManageTests && q.type === 'open' ? 'bg-blue-50/30 border-blue-200' : 'bg-white'}`}>
+                
+                <div className="flex justify-between items-start mb-3">
+                    <label className="block text-base font-semibold text-gray-800 w-3/4">{q.text}</label>
+                    
+                    {canManageTests && isEditing && q.type === 'mc' && (
+                        <div className={`px-2 py-1 rounded text-xs font-bold border ${answers[q.id] === q.correctAnswer ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                            {answers[q.id] === q.correctAnswer ? 'Correct (+1)' : 'Incorrect (0)'}
+                        </div>
+                    )}
+                </div>
+
+                {q.imageSrc && <div className="my-3"><img src={q.imageSrc} alt="Visual" className="max-w-full h-auto rounded-lg border border-gray-200" /></div>}
+                
+                {q.type === 'mc' && (<div className="flex flex-col gap-2 mt-2">{q.options.map(opt => (<label key={opt.id} className="flex items-center gap-3 p-2 rounded hover:bg-sky-50 cursor-pointer"><input type="radio" name={q.id} value={opt.id} checked={answers[q.id] === opt.id} onChange={() => handleRadioChange(q.id, opt.id)} className="w-4 h-4" /><span className="text-sm text-gray-700">{opt.text}</span></label>))}</div>)}
+                
+                {q.type === 'open' && (
+                    <div className="flex flex-col gap-3 mt-2">
+                        {Array.from({ length: q.lines }).map((_, index) => {
+                            const isGradingMode = canManageTests && isEditing;
+                            const currentScore = manualScores[q.id]?.[index] || 0; 
+
+                            return (
+                                <div key={index} className="flex items-center gap-2 w-full">
+                                    <div className="flex-1 relative">
+                                        <Input 
+                                            type="text" 
+                                            placeholder={`Answer line ${index + 1}...`} 
+                                            value={answers[q.id]?.[index] || ''} 
+                                            onChange={(e) => handleTextChange(q.id, index, e.target.value)} 
+                                            className={`w-full transition-colors ${isGradingMode ? (currentScore === 1 ? 'border-green-400 bg-green-50/10' : 'border-red-300 bg-red-50/10') : ''}`}
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+
+                                    {isGradingMode && (
+                                        <div className="flex gap-1 shrink-0 ml-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleLineScoreChange(q.id, index, 1)}
+                                                className={`p-1.5 rounded-full border transition-all ${currentScore === 1 ? 'bg-green-100 border-green-500 text-green-600 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-300 hover:border-green-300 hover:text-green-400'}`}
+                                                title="Mark Correct (+1)"
+                                            >
+                                                <Check size={16} strokeWidth={3} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleLineScoreChange(q.id, index, 0)}
+                                                className={`p-1.5 rounded-full border transition-all ${currentScore === 0 ? 'bg-red-100 border-red-500 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-300 hover:border-red-300 hover:text-red-400'}`}
+                                                title="Mark Incorrect (0)"
+                                            >
+                                                <X size={16} strokeWidth={3} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+                {q.type === 'unsupported' && (<div className="p-3 text-sm text-gray-500 bg-gray-100 rounded-md">Unsupported question type.</div>)}
+            </div>
+    );
 
     if (testQuestions.length === 0) return <Card><div className="p-6">No questions</div></Card>;
     const centerNameLabel = isIccm ? "Village Name" : "Facility Name";
@@ -1372,7 +1605,7 @@ export function CourseTestForm({
                                     onChange={(e) => setEmoncSubCourse(e.target.value)}
                                 >
                                     <option value="Emergency Newborn Care">Emergency Newborn Care</option>
-                                    <option value="Emergency Maternal Care">Emergency Maternal Care</option>
+                                    <option value="Emergency Maternal Care">Emergency Maternal Care (Obstetric)</option>
                                 </Select>
                             </FormGroup>
                         )}
@@ -1551,7 +1784,8 @@ export function CourseTestForm({
                         className="w-full justify-center" 
                         onClick={() => {
                             setShowParticipantSuccessModal(false);
-                            setIsSetupModalOpen(false); 
+                            // EmONC from the dashboard: re-open setup so the module (Newborn / Maternal) can be chosen.
+                            setIsSetupModalOpen(separatelyStoredModules.length > 0 && !isPublicView); 
                         }}
                     >
                         Start Pre-Test
@@ -1589,6 +1823,7 @@ export function CourseTestForm({
                                                     * Auto-graded MCQs only. Open questions pending review.
                                                 </p>
                                             )}
+                                            <SectionScoreBreakdown sectionScores={lastSubmissionStats.sectionScores} />
                                         </>
                                     );
                                 })()}
@@ -1647,7 +1882,25 @@ export function CourseTestForm({
                         </div>
                     </div>
 
-                    {(course?.course_type === 'EmONC' || course?.course_type === 'EENC' || course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && (
+                    {testSections && (
+                        <div className="mt-6 mb-2 p-5 bg-white border-2 border-gray-200 rounded-xl shadow-sm">
+                            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800 uppercase tracking-wide text-center">
+                                {emoncSubCourse === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : emoncSubCourse} Module
+                            </h2>
+                            <p className="text-gray-600 font-medium mt-1 text-center">This test has {testSections.length} separate parts. Please answer all questions in both parts.</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                                {testSections.map(section => (
+                                    <div key={section.key} className={`border-2 rounded-lg px-4 py-3 ${getSectionTheme(section.key).chip}`}>
+                                        <div className="text-xs font-bold uppercase tracking-wider opacity-80">Part {section.part}</div>
+                                        <div className="font-semibold">{section.title}</div>
+                                        <div className="text-xs opacity-80">Questions {section.from} &ndash; {section.to} ({section.questions.length} questions)</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && (
                         <div className="mt-6 mb-2 text-center p-5 bg-sky-50 border-2 border-sky-300 rounded-xl shadow-sm">
                             <h2 className="text-3xl md:text-4xl font-extrabold text-sky-800 uppercase tracking-wide">
                                 {course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC' ? ssnbSubCourse : emoncSubCourse} Part
@@ -1676,72 +1929,52 @@ export function CourseTestForm({
                         <legend className="text-xl font-semibold mb-4 text-gray-800">Test Questions</legend>
                         {isEditing && !canManageTests && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 mb-4 rounded-md font-semibold">Editing existing {testType} submission.</div>}
                         
-                        <div className="space-y-6">
-                            {testQuestions.map((q) => (
-                                <div key={q.id} className={`p-4 border rounded-md shadow-sm ${isEditing && canManageTests && q.type === 'open' ? 'bg-blue-50/30 border-blue-200' : 'bg-white'}`}>
-                                    
-                                    <div className="flex justify-between items-start mb-3">
-                                        <label className="block text-base font-semibold text-gray-800 w-3/4">{q.text}</label>
-                                        
-                                        {canManageTests && isEditing && q.type === 'mc' && (
-                                            <div className={`px-2 py-1 rounded text-xs font-bold border ${answers[q.id] === q.correctAnswer ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-                                                {answers[q.id] === q.correctAnswer ? 'Correct (+1)' : 'Incorrect (0)'}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {q.imageSrc && <div className="my-3"><img src={q.imageSrc} alt="Visual" className="max-w-full h-auto rounded-lg border border-gray-200" /></div>}
-                                    
-                                    {q.type === 'mc' && (<div className="flex flex-col gap-2 mt-2">{q.options.map(opt => (<label key={opt.id} className="flex items-center gap-3 p-2 rounded hover:bg-sky-50 cursor-pointer"><input type="radio" name={q.id} value={opt.id} checked={answers[q.id] === opt.id} onChange={() => handleRadioChange(q.id, opt.id)} className="w-4 h-4" /><span className="text-sm text-gray-700">{opt.text}</span></label>))}</div>)}
-                                    
-                                    {q.type === 'open' && (
-                                        <div className="flex flex-col gap-3 mt-2">
-                                            {Array.from({ length: q.lines }).map((_, index) => {
-                                                const isGradingMode = canManageTests && isEditing;
-                                                const currentScore = manualScores[q.id]?.[index] || 0; 
-
-                                                return (
-                                                    <div key={index} className="flex items-center gap-2 w-full">
-                                                        <div className="flex-1 relative">
-                                                            <Input 
-                                                                type="text" 
-                                                                placeholder={`Answer line ${index + 1}...`} 
-                                                                value={answers[q.id]?.[index] || ''} 
-                                                                onChange={(e) => handleTextChange(q.id, index, e.target.value)} 
-                                                                className={`w-full transition-colors ${isGradingMode ? (currentScore === 1 ? 'border-green-400 bg-green-50/10' : 'border-red-300 bg-red-50/10') : ''}`}
-                                                                style={{ width: '100%' }}
-                                                            />
+                        {testSections ? (
+                            <div>
+                                {testSections.map((section, idx) => {
+                                    const theme = getSectionTheme(section.key);
+                                    const answeredCount = section.questions.filter(q => q.type !== 'mc' || answers[q.id]).length;
+                                    const liveScore = canManageTests && isEditing ? computeSectionScores([section], answers, manualScores)[0] : null;
+                                    return (
+                                        <React.Fragment key={section.key}>
+                                            {idx > 0 && (
+                                                <div className="flex items-center gap-3 my-10" aria-hidden="true">
+                                                    <div className={`flex-1 border-t-4 border-dashed ${getSectionTheme(testSections[idx - 1].key).divider}`} />
+                                                    <span className="text-xs font-bold uppercase tracking-widest text-gray-500 whitespace-nowrap">
+                                                        End of Part {testSections[idx - 1].part} &middot; Start of Part {section.part}
+                                                    </span>
+                                                    <div className={`flex-1 border-t-4 border-dashed ${theme.divider}`} />
+                                                </div>
+                                            )}
+                                            <section className={`rounded-xl border-2 ${theme.wrapper} overflow-hidden shadow-sm`}>
+                                                <div className={`${theme.header} text-white px-5 py-4 flex flex-wrap justify-between items-center gap-3`}>
+                                                    <div>
+                                                        <div className="text-xs font-bold uppercase tracking-widest opacity-90">
+                                                            Part {section.part} of {testSections.length}
                                                         </div>
-
-                                                        {isGradingMode && (
-                                                            <div className="flex gap-1 shrink-0 ml-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleLineScoreChange(q.id, index, 1)}
-                                                                    className={`p-1.5 rounded-full border transition-all ${currentScore === 1 ? 'bg-green-100 border-green-500 text-green-600 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-300 hover:border-green-300 hover:text-green-400'}`}
-                                                                    title="Mark Correct (+1)"
-                                                                >
-                                                                    <Check size={16} strokeWidth={3} />
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleLineScoreChange(q.id, index, 0)}
-                                                                    className={`p-1.5 rounded-full border transition-all ${currentScore === 0 ? 'bg-red-100 border-red-500 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-300 hover:border-red-300 hover:text-red-400'}`}
-                                                                    title="Mark Incorrect (0)"
-                                                                >
-                                                                    <X size={16} strokeWidth={3} />
-                                                                </button>
-                                                            </div>
+                                                        <h3 className="text-xl md:text-2xl font-extrabold leading-tight">{section.title}</h3>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-sm font-semibold">Questions {section.from} &ndash; {section.to}</div>
+                                                        <div className="text-xs opacity-90">{answeredCount} / {section.questions.length} answered</div>
+                                                        {liveScore && (
+                                                            <div className="text-xs font-bold mt-1">Part score: {liveScore.score} / {liveScore.total}</div>
                                                         )}
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                    {q.type === 'unsupported' && (<div className="p-3 text-sm text-gray-500 bg-gray-100 rounded-md">Unsupported question type.</div>)}
-                                </div>
-                            ))}
-                        </div>
+                                                </div>
+                                                <div className={`${theme.body} p-4 space-y-6`}>
+                                                    {section.questions.map(renderQuestion)}
+                                                </div>
+                                            </section>
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {testQuestions.map(renderQuestion)}
+                            </div>
+                        )}
                     </fieldset>
 
                     <div className="flex gap-2 justify-end mt-8 border-t pt-6">
