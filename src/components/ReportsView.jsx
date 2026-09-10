@@ -27,7 +27,28 @@ import {
     listAllDataForCourse,
     listParticipantTestsForCourse 
 } from "../data.js";
-import { ICCM_TEST_QUESTIONS, EENC_TEST_QUESTIONS } from './CourseTestForm'; 
+import {
+    ICCM_TEST_QUESTIONS,
+    EMONC_TEST_MODULES, MODULE_SHORT_LABELS,
+    getTestSections, computeSectionScores, findParticipantTest
+} from './CourseTestForm'; 
+
+// EmONC test parts: colours used in the report (Part 1 EENC / Part 2 Newborn or Maternal)
+const REPORT_SECTION_STYLES = {
+    eenc: { row: 'bg-emerald-600 text-white', chip: 'bg-emerald-50 border-emerald-300 text-emerald-800', subtotal: 'bg-emerald-50' },
+    newborn: { row: 'bg-sky-600 text-white', chip: 'bg-sky-50 border-sky-300 text-sky-800', subtotal: 'bg-sky-50' },
+    maternal: { row: 'bg-rose-600 text-white', chip: 'bg-rose-50 border-rose-300 text-rose-800', subtotal: 'bg-rose-50' }
+};
+const getReportSectionStyle = (key) => REPORT_SECTION_STYLES[key] || { row: 'bg-gray-600 text-white', chip: 'bg-gray-50 border-gray-300 text-gray-800', subtotal: 'bg-gray-50' };
+const getEmoncModuleLabel = (module) => module === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : module;
+
+// Part scores of a stored test: use the saved breakdown, otherwise rebuild it from the answers.
+const getTestPartScores = (test, sections) => {
+    if (!test || !sections) return null;
+    if (Array.isArray(test.sectionScores) && test.sectionScores.length === sections.length) return test.sectionScores;
+    if (!test.answers) return null;
+    return computeSectionScores(sections, test.answers, test.manualScores);
+};
 
 const PrintIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -236,9 +257,22 @@ function CourseTestReports({ course, participants, allTests }) {
     const [testTypeFilter, setTestTypeFilter] = useState('pre-test'); 
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
+    // EmONC has two separate tests (Newborn / Maternal), each = Part 1 EENC + Part 2 module questions.
+    const isEmonc = course.course_type === 'EENC' || course.course_type === 'EmONC';
+    const [moduleFilter, setModuleFilter] = useState(EMONC_TEST_MODULES[0]);
+    const activeModule = isEmonc ? moduleFilter : null;
+
+    const sections = useMemo(
+        () => (isEmonc ? getTestSections(course.course_type, moduleFilter) : null),
+        [isEmonc, course.course_type, moduleFilter]
+    );
+
     const questions = useMemo(() => {
-        return (course.course_type === 'EENC' || course.course_type === 'EmONC') ? EENC_TEST_QUESTIONS : ICCM_TEST_QUESTIONS;
-    }, [course.course_type]);
+        return sections ? sections.flatMap(section => section.questions) : ICCM_TEST_QUESTIONS;
+    }, [sections]);
+
+    // Module-aware lookup ('pre-test' vs 'pre-test-maternal', plus older records without a module).
+    const getTest = (participantId, type) => findParticipantTest(allTests, participantId, type, activeModule, course.course_type);
 
     const filteredParticipants = useMemo(() => 
         participants.filter(p => groupFilter === 'All' || p.group === groupFilter), 
@@ -254,10 +288,9 @@ function CourseTestReports({ course, participants, allTests }) {
         
         questions.forEach(q => questionCounts[q.id] = 0);
 
-        const relevantParticipantIds = new Set(filteredParticipants.map(p => p.id));
-        const relevantTests = allTests.filter(t => 
-            t.testType === testTypeFilter && relevantParticipantIds.has(t.participantId)
-        );
+        const relevantTests = filteredParticipants
+            .map(p => findParticipantTest(allTests, p.id, testTypeFilter, activeModule, course.course_type))
+            .filter(Boolean);
 
         if (relevantTests.length === 0) return null;
 
@@ -286,13 +319,27 @@ function CourseTestReports({ course, participants, allTests }) {
             if (count < minCount) { minCount = count; worstQ = q; }
         });
 
+        // Correctness per part (EmONC only)
+        const partStats = sections ? sections.map(section => {
+            let correct = 0;
+            let possible = 0;
+            relevantTests.forEach(test => {
+                section.questions.forEach(q => {
+                    if (test.answers && test.answers[q.id] === q.correctAnswer) correct++;
+                    possible++;
+                });
+            });
+            return { key: section.key, part: section.part, title: section.title, pct: possible > 0 ? (correct / possible) * 100 : null };
+        }) : null;
+
         return {
             overall: overallPct,
             best: bestQ ? { text: bestQ.text, count: maxCount, pct: (maxCount / relevantTests.length) * 100 } : null,
             worst: worstQ ? { text: worstQ.text, count: minCount, pct: (minCount / relevantTests.length) * 100 } : null,
-            testCount: relevantTests.length
+            testCount: relevantTests.length,
+            partStats
         };
-    }, [allTests, questions, filteredParticipants, testTypeFilter]);
+    }, [allTests, questions, sections, filteredParticipants, testTypeFilter, activeModule, course.course_type]);
 
 
     const summaryData = useMemo(() => {
@@ -300,8 +347,8 @@ function CourseTestReports({ course, participants, allTests }) {
         filteredParticipants.forEach(p => {
             if (!data[p.group]) data[p.group] = [];
             
-            const preTest = allTests.find(t => t.participantId === p.id && t.testType === 'pre-test');
-            const postTest = allTests.find(t => t.participantId === p.id && t.testType === 'post-test');
+            const preTest = findParticipantTest(allTests, p.id, 'pre-test', activeModule, course.course_type);
+            const postTest = findParticipantTest(allTests, p.id, 'post-test', activeModule, course.course_type);
             
             data[p.group].push({
                 id: p.id,
@@ -312,11 +359,13 @@ function CourseTestReports({ course, participants, allTests }) {
                 postScore: postTest ? postTest.score : null,
                 postTotal: postTest ? postTest.total : 0,
                 postPct: postTest ? postTest.percentage : null,
-                improvement: (postTest && preTest) ? (postTest.percentage - preTest.percentage) : null
+                improvement: (postTest && preTest) ? (postTest.percentage - preTest.percentage) : null,
+                preParts: getTestPartScores(preTest, sections),
+                postParts: getTestPartScores(postTest, sections)
             });
         });
         return data;
-    }, [filteredParticipants, allTests]);
+    }, [filteredParticipants, allTests, activeModule, sections, course.course_type]);
 
     const handleExportPdf = async (quality = 'print') => {
         setIsPdfGenerating(true);
@@ -386,6 +435,7 @@ function CourseTestReports({ course, participants, allTests }) {
                 <h2 className="text-2xl font-bold">Individual Participant Report (Test Scores)</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
                 <h4 className="text-md text-gray-600">Report Type: {tab === 'summary' ? 'Score Summary' : `Detailed Matrix (${testTypeFilter === 'pre-test' ? 'Pre-Test' : 'Post-Test'})`}</h4>
+                {isEmonc && <h4 className="text-md font-semibold text-gray-700">Module: {getEmoncModuleLabel(moduleFilter)}</h4>}
             </div>
 
             <div className="flex flex-wrap gap-3 mb-4 print-hide">
@@ -395,6 +445,13 @@ function CourseTestReports({ course, participants, allTests }) {
 
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex gap-4 items-center">
+                    {isEmonc && (
+                        <FormGroup label="EmONC Module">
+                            <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
+                                {EMONC_TEST_MODULES.map(m => <option key={m} value={m}>{getEmoncModuleLabel(m)}</option>)}
+                            </Select>
+                        </FormGroup>
+                    )}
                     {tab === 'matrix' && (
                         <FormGroup label="Test Type">
                             <Select value={testTypeFilter} onChange={(e) => setTestTypeFilter(e.target.value)}>
@@ -424,7 +481,7 @@ function CourseTestReports({ course, participants, allTests }) {
                 if (!groupData || groupData.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`test-group-summary-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">{g}</h3>
+                        <h3 className="text-xl font-semibold">{g}{isEmonc ? ` - ${getEmoncModuleLabel(moduleFilter)}` : ''}</h3>
                         <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm text-left">
                                 <thead className="bg-gray-50 border-b">
@@ -435,6 +492,12 @@ function CourseTestReports({ course, participants, allTests }) {
                                         <th className="py-2 px-3 border text-center">Post-Test Score</th>
                                         <th className="py-2 px-3 border text-center">Post-Test %</th>
                                         <th className="py-2 px-3 border text-center">Improvement</th>
+                                        {sections && sections.map(section => (
+                                            <th key={section.key} className={`py-2 px-3 border text-center ${getReportSectionStyle(section.key).chip}`}>
+                                                <div className="text-[10px] font-bold uppercase tracking-wider">Part {section.part}</div>
+                                                <div>{section.shortTitle} (Pre &rarr; Post)</div>
+                                            </th>
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -448,6 +511,17 @@ function CourseTestReports({ course, participants, allTests }) {
                                             <td className={`py-2 px-3 border text-center font-semibold ${p.improvement > 0 ? 'text-green-600' : p.improvement < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                                                 {p.improvement !== null ? `${p.improvement > 0 ? '+' : ''}${fmtPct(p.improvement)}` : '-'}
                                             </td>
+                                            {sections && sections.map((section, idx) => {
+                                                const pre = p.preParts?.[idx];
+                                                const post = p.postParts?.[idx];
+                                                return (
+                                                    <td key={section.key} className="py-2 px-3 border text-center whitespace-nowrap">
+                                                        <span className={pre ? `px-1 rounded ${pctBgClass(pre.percentage)}` : 'text-gray-400'}>{pre ? `${pre.score}/${pre.total}` : '-'}</span>
+                                                        <span className="mx-1 text-gray-400">&rarr;</span>
+                                                        <span className={post ? `px-1 rounded ${pctBgClass(post.percentage)}` : 'text-gray-400'}>{post ? `${post.score}/${post.total}` : '-'}</span>
+                                                    </td>
+                                                );
+                                            })}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -488,6 +562,13 @@ function CourseTestReports({ course, participants, allTests }) {
                                     {kpiStats.worst ? `${kpiStats.worst.count} correct (${fmtPct(kpiStats.worst.pct)})` : ''}
                                 </div>
                             </div>
+                            {kpiStats.partStats && kpiStats.partStats.map(part => (
+                                <div key={part.key} className={`p-4 rounded-lg border-2 shadow-sm md:col-span-1 ${getReportSectionStyle(part.key).chip}`}>
+                                    <div className="text-xs font-bold uppercase tracking-wider opacity-80">Part {part.part} Correctness</div>
+                                    <div className="font-semibold">{part.title}</div>
+                                    <div className="text-2xl font-bold mt-1">{fmtPct(part.pct)}</div>
+                                </div>
+                            ))}
                         </div>
                     )}
 
@@ -497,7 +578,7 @@ function CourseTestReports({ course, participants, allTests }) {
 
                         return (
                             <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`test-group-matrix-${g.replace(/\s+/g, '-')}`}>
-                                <h3 className="text-xl font-semibold">{g} - {testTypeFilter === 'pre-test' ? 'Pre-Test' : 'Post-Test'} Detail</h3>
+                                <h3 className="text-xl font-semibold">{g} - {testTypeFilter === 'pre-test' ? 'Pre-Test' : 'Post-Test'} Detail{isEmonc ? ` (${getEmoncModuleLabel(moduleFilter)})` : ''}</h3>
                                 <div className="overflow-x-auto no-scroll-wrapper">
                                     <table className="w-full text-xs border-collapse border">
                                         <thead>
@@ -512,40 +593,69 @@ function CourseTestReports({ course, participants, allTests }) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {questions.map((q, idx) => {
-                                                let correctCountForQ = 0;
-                                                const rowCells = parts.map(p => {
-                                                    const test = allTests.find(t => t.participantId === p.id && t.testType === testTypeFilter);
-                                                    const isCorrect = test?.answers?.[q.id] === q.correctAnswer;
-                                                    if (isCorrect) correctCountForQ++;
-                                                    
-                                                    const cellClass = isCorrect ? 'bg-green-100 text-green-800' : (test ? 'bg-red-50 text-red-800' : 'bg-gray-50 text-gray-400');
-                                                    const cellContent = test ? (isCorrect ? '✔' : '✘') : '-';
-                                                    
+                                            {(sections || [{ key: 'all', questions }]).map(section => {
+                                                const style = sections ? getReportSectionStyle(section.key) : null;
+                                                const renderQuestionRow = (q) => {
+                                                    let correctCountForQ = 0;
+                                                    const rowCells = parts.map(p => {
+                                                        const test = getTest(p.id, testTypeFilter);
+                                                        const isCorrect = test?.answers?.[q.id] === q.correctAnswer;
+                                                        if (isCorrect) correctCountForQ++;
+                                                        
+                                                        const cellClass = isCorrect ? 'bg-green-100 text-green-800' : (test ? 'bg-red-50 text-red-800' : 'bg-gray-50 text-gray-400');
+                                                        const cellContent = test ? (isCorrect ? '✔' : '✘') : '-';
+                                                        
+                                                        return (
+                                                            <td key={p.id} className={`py-1 px-1 border text-center ${cellClass}`}>
+                                                                {cellContent}
+                                                            </td>
+                                                        );
+                                                    });
+
                                                     return (
-                                                        <td key={p.id} className={`py-1 px-1 border text-center ${cellClass}`}>
-                                                            {cellContent}
-                                                        </td>
+                                                        <tr key={q.id} className="border-b hover:bg-gray-50">
+                                                            <td className="py-2 px-2 border">
+                                                                {sections ? q.text : q.text.replace(/^\d+\.\s*/, '')}
+                                                            </td>
+                                                            {rowCells}
+                                                            <td className="py-2 px-2 border text-center font-semibold">
+                                                                {correctCountForQ}/{parts.length}
+                                                            </td>
+                                                        </tr>
                                                     );
-                                                });
+                                                };
+
+                                                if (!sections) return <React.Fragment key={section.key}>{section.questions.map(renderQuestionRow)}</React.Fragment>;
 
                                                 return (
-                                                    <tr key={q.id} className="border-b hover:bg-gray-50">
-                                                        <td className="py-2 px-2 border">
-                                                            {q.text.replace(/^\d+\.\s*/, '')}
-                                                        </td>
-                                                        {rowCells}
-                                                        <td className="py-2 px-2 border text-center font-semibold">
-                                                            {correctCountForQ}/{parts.length}
-                                                        </td>
-                                                    </tr>
+                                                    <React.Fragment key={section.key}>
+                                                        <tr className={style.row}>
+                                                            <td colSpan={parts.length + 2} className="py-2 px-3 border font-bold text-sm">
+                                                                PART {section.part} &middot; {section.title} &middot; Questions {section.from}&ndash;{section.to}
+                                                            </td>
+                                                        </tr>
+                                                        {section.questions.map(renderQuestionRow)}
+                                                        <tr className={`${style.subtotal} border-b-2 border-gray-300`}>
+                                                            <td className="py-2 px-2 border font-semibold text-right">Part {section.part} Subtotal ({section.shortTitle})</td>
+                                                            {parts.map(p => {
+                                                                const test = getTest(p.id, testTypeFilter);
+                                                                const sec = getTestPartScores(test, sections)?.[section.part - 1];
+                                                                return (
+                                                                    <td key={p.id} className={`py-2 px-1 border text-center font-semibold ${sec ? pctBgClass(sec.percentage) : ''}`}>
+                                                                        {sec ? `${sec.score}/${sec.total}` : '-'}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                            <td className="border"></td>
+                                                        </tr>
+                                                    </React.Fragment>
                                                 );
                                             })}
                                             
                                             <tr className="bg-gray-100 border-t-2 border-gray-300">
                                                 <td className="py-2 px-2 border font-bold text-right">Total Correct (Per Participant)</td>
                                                 {parts.map(p => {
-                                                    const test = allTests.find(t => t.participantId === p.id && t.testType === testTypeFilter);
+                                                    const test = getTest(p.id, testTypeFilter);
                                                     const score = test ? test.score : '-';
                                                     const pct = test ? test.percentage : null;
                                                     return (

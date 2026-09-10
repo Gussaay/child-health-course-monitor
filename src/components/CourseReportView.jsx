@@ -15,7 +15,8 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
-import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport } from '../data.js';
+import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport, listParticipantTestsForCourse } from '../data.js';
+import { EMONC_TEST_MODULES, getTestSections, computeSectionScores, findParticipantTest } from './CourseTestForm';
 import { useAuth } from '../hooks/useAuth';
 import { useDataCache } from '../DataContext';
 import { db } from '../firebase';
@@ -343,9 +344,78 @@ const getPdfImprovementStyles = (preScore, postScore) => {
     return styles;
 };
 
+// --- EmONC written tests: separated by module (Newborn / Maternal) and by part (EENC / module) ---
+const EMONC_MODULE_REPORT_STYLES = {
+    'Emergency Newborn Care': { header: 'bg-sky-600 text-white', border: 'border-sky-300', light: 'bg-sky-50' },
+    'Emergency Maternal Care': { header: 'bg-rose-600 text-white', border: 'border-rose-300', light: 'bg-rose-50' }
+};
+const EMONC_PART_CHIP_STYLES = {
+    eenc: 'bg-emerald-50 border-emerald-300 text-emerald-800',
+    newborn: 'bg-sky-50 border-sky-300 text-sky-800',
+    maternal: 'bg-rose-50 border-rose-300 text-rose-800'
+};
+const getEmoncModuleReportLabel = (module) => module === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : module;
+
+const getStoredPartScores = (test, sections) => {
+    if (!test || !sections) return null;
+    if (Array.isArray(test.sectionScores) && test.sectionScores.length === sections.length) return test.sectionScores;
+    if (!test.answers) return null;
+    return computeSectionScores(sections, test.answers, test.manualScores);
+};
+
+const averageOf = (values) => {
+    const valid = values.filter(v => v !== null && v !== undefined && !isNaN(v));
+    return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+};
+
+const fmtPartScore = (part) => (part ? `${part.score}/${part.total}` : '-');
+
+const buildEmoncModuleTestSummary = (courseType, participantsList, tests) => {
+    if (!Array.isArray(tests) || tests.length === 0) return null;
+    const modules = EMONC_TEST_MODULES.map(module => {
+        const sections = getTestSections(courseType, module);
+        const rows = participantsList.map(p => {
+            const pre = findParticipantTest(tests, p.id, 'pre-test', module, courseType);
+            const post = findParticipantTest(tests, p.id, 'post-test', module, courseType);
+            if (!pre && !post) return null;
+            const prePct = pre ? Number(pre.percentage) : null;
+            const postPct = post ? Number(post.percentage) : null;
+            const increase = (prePct > 0 && postPct > 0) ? ((postPct - prePct) / prePct) * 100 : null;
+            return {
+                id: p.id, name: p.name, group: p.group,
+                prePct, postPct, increase,
+                category: getAvgImprovementCategory(prePct, postPct),
+                preParts: getStoredPartScores(pre, sections),
+                postParts: getStoredPartScores(post, sections)
+            };
+        }).filter(Boolean).sort((a, b) => (b.increase ?? -1000) - (a.increase ?? -1000));
+
+        const preAvg = averageOf(rows.map(r => r.prePct));
+        const postAvg = averageOf(rows.map(r => r.postPct));
+        return {
+            module,
+            label: getEmoncModuleReportLabel(module),
+            sections,
+            rows,
+            stats: {
+                preAvg, postAvg,
+                preCount: rows.filter(r => r.prePct !== null).length,
+                postCount: rows.filter(r => r.postPct !== null).length,
+                improvement: (preAvg > 0 && postAvg !== null) ? ((postAvg - preAvg) / preAvg) * 100 : null
+            },
+            parts: sections.map((section, idx) => ({
+                key: section.key, part: section.part, title: section.title, shortTitle: section.shortTitle,
+                preAvg: averageOf(rows.map(r => r.preParts?.[idx]?.percentage ?? null)),
+                postAvg: averageOf(rows.map(r => r.postParts?.[idx]?.percentage ?? null))
+            }))
+        };
+    }).filter(m => m.rows.length > 0);
+    return modules.length ? { modules } : null;
+};
+
 // --- PDF EXPORT HELPER ---
 const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, tableData) => {
-    const { filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView } = tableData;
+    const { filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView, emoncTestSummary } = tableData;
     const qualityProfiles = {
         print: { scale: 2, fileSuffix: '', imageType: 'image/jpeg', imageQuality: 0.95, imageFormat: 'JPEG', compression: 'MEDIUM' },
         screen: { scale: 1.5, fileSuffix: '', imageType: 'image/png', imageQuality: 1.0, imageFormat: 'PNG', compression: 'FAST' }
@@ -434,6 +504,10 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
         y = await addCanvasImageToPdf('course-info-card', y);
         if (document.getElementById('kpi-card')) y = await addCanvasImageToPdf('kpi-card', y);
         if (document.getElementById('test-scores-card')) y = await addCanvasImageToPdf('test-scores-card', y);
+        if (document.getElementById('emonc-module-test-kpis')) {
+            y = addTitle('Written Test Results by EmONC Module', y);
+            y = await addCanvasImageToPdf('emonc-module-test-kpis', y);
+        }
         if (document.getElementById('investment-card')) y = await addCanvasImageToPdf('investment-card', y);
         if (document.getElementById('coverage-card')) y = await addCanvasImageToPdf('coverage-card', y);
         if (document.getElementById('new-imci-facilities-card')) y = await addCanvasImageToPdf('new-imci-facilities-card', y);
@@ -531,6 +605,36 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
                 }
             });
             y = doc.lastAutoTable.finalY + 10;
+        }
+
+        if (emoncTestSummary && emoncTestSummary.modules.length > 0) {
+            for (const mod of emoncTestSummary.modules) {
+                y = addTitle(`Detailed Written Test Results - ${mod.label}`, y);
+                const head = [['#', 'Participant Name', 'Group', 'Pre-Test', 'Post-Test', '% Increase', 'Average Improvement',
+                    ...mod.sections.map(sec => `Part ${sec.part} ${sec.shortTitle} (Pre > Post)`)]];
+                const body = mod.rows.map((r, index) => [
+                    index + 1, r.name, r.group || '-', fmtPct(r.prePct), fmtPct(r.postPct),
+                    r.increase === null ? 'N/A' : `${r.increase.toFixed(1)}%`, r.category.name,
+                    ...mod.sections.map((sec, idx) => `${fmtPartScore(r.preParts?.[idx])} > ${fmtPartScore(r.postParts?.[idx])}`)
+                ]);
+                doc.setFont('Amiri');
+                autoTable(doc, {
+                    ...autoTableStyles, head, body, startY: y,
+                    didDrawPage: (data) => { y = data.cursor.y; doc.setFont('Amiri'); },
+                    didParseCell: (data) => {
+                        data.cell.styles.font = 'Amiri';
+                        if (data.section === 'head') { data.cell.styles.halign = 'center'; data.cell.styles.fontStyle = 'bold'; return; }
+                        const colKey = head[0][data.column.index];
+                        const row = mod.rows[data.row.index];
+                        if (row && colKey === 'Average Improvement') {
+                            const styles = getPdfImprovementStyles(row.prePct, row.postPct);
+                            data.cell.styles.fillColor = styles.fillColor; data.cell.styles.textColor = styles.textColor;
+                        }
+                        data.cell.styles.halign = colKey === 'Participant Name' ? 'right' : 'center';
+                    }
+                });
+                y = doc.lastAutoTable.finalY + 10;
+            }
         }
 
         const pageCount = doc.internal.getNumberOfPages();
@@ -847,6 +951,32 @@ export function CourseReportView({
             return subType === subTypeFilter;
         });
     }, [participants, subTypeFilter, course]);
+
+    // --- EmONC: detailed test records, reported per module (Newborn / Maternal) and per part ---
+    const isEmoncCourse = course?.course_type === 'EmONC' || course?.course_type === 'EENC';
+    const [emoncTests, setEmoncTests] = useState([]);
+
+    useEffect(() => {
+        if (!isEmoncCourse || !course?.id) { setEmoncTests([]); return; }
+        let cancelled = false;
+        (async () => {
+            let tests = [];
+            try {
+                tests = await listParticipantTestsForCourse(course.id, { source: 'server' });
+            } catch (e) {
+                try { tests = await listParticipantTestsForCourse(course.id, { source: 'cache' }); } catch (e2) { tests = []; }
+            }
+            if (!cancelled) setEmoncTests((tests || []).filter(t => t.isDeleted !== true && t.isDeleted !== 'true'));
+        })();
+        return () => { cancelled = true; };
+    }, [isEmoncCourse, course?.id]);
+
+    const emoncTestSummary = useMemo(
+        () => (isEmoncCourse ? buildEmoncModuleTestSummary(course.course_type, reportParticipants, emoncTests) : null),
+        [isEmoncCourse, course?.course_type, reportParticipants, emoncTests]
+    );
+    // When module-level results exist, they replace the single (module-less) pre/post score blocks.
+    const useEmoncModuleTests = !!emoncTestSummary;
 
     const overallChartRef = useRef(null);
     const dailyChartRef = useRef(null);
@@ -1310,7 +1440,7 @@ export function CourseReportView({
         return ps;
     }, [participantsWithStats, scoreFilter]);
 
-    const showTestScoreColumns = hasTestScores;
+    const showTestScoreColumns = hasTestScores && !useEmoncModuleTests;
     const showCaseColumns = hasCases;
     
     const practicalTableHeaders = ['#', 'Participant Name', 'Total Cases'];
@@ -1343,6 +1473,7 @@ export function CourseReportView({
         await new Promise(resolve => setTimeout(resolve, 100));
         const pdfTableData = {
             filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView, dailyCaseTableData, dailySkillTableData,
+            emoncTestSummary,
             groupsWithData, groupCaseTotals, grandTotalCasesCorrect, grandTotalCasesTotal, groupSkillTotals, grandTotalSkillsCorrect, grandTotalSkillsTotal
         };
         try {
@@ -1627,7 +1758,94 @@ export function CourseReportView({
                     </Card>
                 )}
 
-                {showTestScoresOnScreen && hasTestScoreDataForKpis && (
+                {showTestScoresOnScreen && useEmoncModuleTests && (
+                    <Card>
+                        <div id="emonc-module-test-card" className="relative p-2 w-full max-w-full min-w-0">
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('emonc-module-test-kpis')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors z-10" title="Copy as Image"><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-1">Participant Test Scores by EmONC Module</h3>
+                            <p className="text-sm text-gray-500 mb-4">Each module is a separate test: Part 1 (EENC, shared) + Part 2 (module-specific).</p>
+
+                            <div id="emonc-module-test-kpis" className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 bg-white">
+                                {emoncTestSummary.modules.map(mod => {
+                                    const style = EMONC_MODULE_REPORT_STYLES[mod.module] || EMONC_MODULE_REPORT_STYLES['Emergency Newborn Care'];
+                                    return (
+                                        <div key={mod.module} className={`rounded-xl border-2 ${style.border} overflow-hidden`}>
+                                            <div className={`${style.header} px-4 py-3`}>
+                                                <div className="text-lg font-extrabold">{mod.label}</div>
+                                                <div className="text-xs opacity-90">Pre-test: {mod.stats.preCount} participants &middot; Post-test: {mod.stats.postCount} participants</div>
+                                            </div>
+                                            <div className={`${style.light} p-4`}>
+                                                <div className="grid grid-cols-3 gap-3 text-center mb-4">
+                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">Avg. Pre-Test</div><div className="text-xl font-bold">{fmtPct(mod.stats.preAvg)}</div></div>
+                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">Avg. Post-Test</div><div className="text-xl font-bold">{fmtPct(mod.stats.postAvg)}</div></div>
+                                                    <div className={`p-3 rounded-lg ${getScoreColorClass(mod.stats.improvement, 'improvement')}`}><div className="text-xs font-semibold">Avg. Improvement</div><div className="text-xl font-bold">{fmtPct(mod.stats.improvement)}</div></div>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    {mod.parts.map(part => (
+                                                        <div key={part.key} className={`border-2 rounded-lg px-3 py-2 ${EMONC_PART_CHIP_STYLES[part.key] || 'bg-gray-50 border-gray-300 text-gray-800'}`}>
+                                                            <div className="text-[11px] font-bold uppercase tracking-wider opacity-80">Part {part.part}</div>
+                                                            <div className="font-semibold text-sm">{part.title}</div>
+                                                            <div className="text-sm mt-1">
+                                                                Pre <span className="font-bold">{fmtPct(part.preAvg)}</span>
+                                                                <span className="mx-1">&rarr;</span>
+                                                                Post <span className="font-bold">{fmtPct(part.postAvg)}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {emoncTestSummary.modules.map(mod => {
+                                const style = EMONC_MODULE_REPORT_STYLES[mod.module] || EMONC_MODULE_REPORT_STYLES['Emergency Newborn Care'];
+                                return (
+                                    <div key={`table-${mod.module}`} className="mb-8">
+                                        <h4 className={`text-base font-bold px-3 py-2 rounded-t-lg ${style.header}`}>{mod.label} &mdash; Participant Results</h4>
+                                        <div className={`w-full max-w-full overflow-x-auto touch-pan-x border-2 border-t-0 ${style.border} rounded-b-lg`}>
+                                            <table className="w-full text-left border-collapse bg-white text-sm">
+                                                <thead className="bg-gray-50 border-b border-gray-200">
+                                                    <tr>
+                                                        {['#', 'Participant Name', 'Group', 'Pre-Test', 'Post-Test', '% Increase', 'Average Improvement'].map(h => (
+                                                            <th key={h} className="p-3 font-semibold text-gray-700 text-center whitespace-nowrap">{h}</th>
+                                                        ))}
+                                                        {mod.sections.map(sec => (
+                                                            <th key={sec.key} className={`p-3 font-semibold text-center whitespace-nowrap border-l ${EMONC_PART_CHIP_STYLES[sec.key] || ''}`}>
+                                                                Part {sec.part}: {sec.shortTitle}<div className="text-[11px] font-normal">Pre &rarr; Post</div>
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {mod.rows.map((r, index) => (
+                                                        <tr key={`${mod.module}-${r.id}`} className={`transition-colors duration-150 ${!isSharedView ? 'cursor-pointer hover:bg-indigo-50' : ''}`} onClick={!isSharedView && onViewParticipantReport ? () => onViewParticipantReport(r.id) : undefined}>
+                                                            <td className="p-3 text-center text-gray-600">{index + 1}</td>
+                                                            <td className="p-3 font-semibold text-gray-800 min-w-[180px] whitespace-normal break-words">{r.name}</td>
+                                                            <td className="p-3 text-center text-gray-600">{r.group || '-'}</td>
+                                                            <td className="p-3 text-center text-gray-700">{fmtPct(r.prePct)}</td>
+                                                            <td className="p-3 text-center text-gray-700">{fmtPct(r.postPct)}</td>
+                                                            <td className="p-3 text-center font-medium text-gray-800">{r.increase === null ? 'N/A' : `${r.increase.toFixed(1)}%`}</td>
+                                                            <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${r.category.className}`}>{r.category.name}</span></td>
+                                                            {mod.sections.map((sec, idx) => (
+                                                                <td key={sec.key} className="p-3 text-center whitespace-nowrap border-l">
+                                                                    {fmtPartScore(r.preParts?.[idx])} <span className="text-gray-400">&rarr;</span> {fmtPartScore(r.postParts?.[idx])}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                )}
+
+                {showTestScoresOnScreen && hasTestScoreDataForKpis && !useEmoncModuleTests && (
                     <Card>
                         <div id="test-scores-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('test-scores-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}

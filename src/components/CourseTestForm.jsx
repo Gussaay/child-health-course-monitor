@@ -408,11 +408,28 @@ const initializeManualScores = (questions, existingScores = {}) => {
 };
 
 const getQueryParam = (param) => {
-    if (typeof window !== 'undefined' && window.location && window.location.search) {
-        const params = new URLSearchParams(window.location.search);
-        return params.get(param);
+    if (typeof window === 'undefined' || !window.location) return null;
+    const { search, hash } = window.location;
+    if (search) {
+        const value = new URLSearchParams(search).get(param);
+        if (value) return value;
+    }
+    // Hash-based routes keep the query string inside the hash: /#/public/test/course/ID?type=pre
+    const hashQueryIndex = hash ? hash.indexOf('?') : -1;
+    if (hashQueryIndex > -1) {
+        const value = new URLSearchParams(hash.slice(hashQueryIndex + 1)).get(param);
+        if (value) return value;
     }
     return null;
+};
+
+// Accepts 'pre', 'Pre', 'pre-test', 'PRE_TEST', 'post', ... and returns 'pre-test' / 'post-test' (or '' if unknown).
+const normalizeTestTypeValue = (type) => {
+    if (!type || typeof type !== 'string') return '';
+    const value = type.trim().toLowerCase();
+    if (value.startsWith('pre')) return 'pre-test';
+    if (value.startsWith('post')) return 'post-test';
+    return '';
 };
 
 // --- EmONC multi-module tests ------------------------------------------------
@@ -426,7 +443,7 @@ export const EMONC_TEST_MODULES = ['Emergency Newborn Care', 'Emergency Maternal
 const EMONC_DEFAULT_MODULE = EMONC_TEST_MODULES[0];
 const SSNB_TEST_MODULES = ['Portable warmer training', 'CPAP training', 'Kangaroo mother Care', 'Sepsis surveillance and management'];
 
-const MODULE_SHORT_LABELS = {
+export const MODULE_SHORT_LABELS = {
     'Emergency Newborn Care': 'Newborn',
     'Emergency Maternal Care': 'Maternal / Obstetric',
 };
@@ -826,20 +843,32 @@ const TestScoresDashboard = ({
              <div className="flex justify-between items-center">
                  <h2 className="text-xl font-bold text-gray-800">Test Scores Overview</h2>
                  <div className="flex gap-2">
-                     <Button 
-                        variant="secondary" 
-                        className="inline-flex items-center gap-2"
-                        onClick={() => { 
-                            const link = `${window.location.origin}/public/test/course/${courseId}`; 
-                            navigator.clipboard.writeText(link)
-                                .then(() => alert('Public test link copied to clipboard!'))
-                                .catch(() => alert('Failed to copy link.')); 
-                        }} 
-                        title="Copy public link for test entry"
-                     >
-                        <Share2 size={16} />
-                        Share Test Form
-                     </Button>
+                     {/* Every shared link defines the test type (and module for EmONC), so participants cannot change it */}
+                     <div className="inline-flex items-center gap-2">
+                        <Share2 size={16} className="text-gray-500" />
+                        <Select
+                            value=""
+                            onChange={(e) => {
+                                const [type, module] = e.target.value.split('|');
+                                if (!type) return;
+                                const params = new URLSearchParams();
+                                params.set('type', type === 'pre-test' ? 'pre' : 'post');
+                                if (module) params.set('module', module);
+                                const link = `${window.location.origin}/public/test/course/${courseId}?${params.toString()}`;
+                                navigator.clipboard.writeText(link)
+                                    .then(() => alert(`${formatTestLabel(type, module || null)} link copied to clipboard!`))
+                                    .catch(() => alert('Failed to copy link.'));
+                            }}
+                            title="Copy public link for test entry"
+                        >
+                            <option value="">Share Test Form...</option>
+                            {['pre-test', 'post-test'].flatMap(type => modules.map(module => (
+                                <option key={`${type}-${module || 'default'}`} value={`${type}|${module || ''}`}>
+                                    Copy {formatTestLabel(type, module)} link
+                                </option>
+                            )))}
+                        </Select>
+                     </div>
                      {canManageTests && (
                          <Button onClick={() => onOpenEntry('pre-test', null, true)}>
                              <PlusCircle size={16} className="mr-2" />
@@ -941,11 +970,7 @@ export function CourseTestForm({
     canManageTests = false,
     testType: initialTestType
 }) {
-    const normalizeTestType = (type) => {
-        if (type === 'pre') return 'pre-test';
-        if (type === 'post') return 'post-test';
-        return type;
-    };
+    const normalizeTestType = normalizeTestTypeValue;
 
     const courseType = course?.course_type;
     const selectableModules = getSelectableModules(courseType);
@@ -954,7 +979,9 @@ export function CourseTestForm({
     const rawLockedModule = getQueryParam('module');
     // Ignore a ?module= value that does not belong to this course type.
     const lockedModule = rawLockedModule && (selectableModules.length === 0 || selectableModules.includes(rawLockedModule)) ? rawLockedModule : null;
-    const lockedType = getQueryParam('type');
+    // Test type fixed by the shared link (?type=pre / ?type=post) or by the page that opened the form.
+    const lockedType = normalizeTestTypeValue(getQueryParam('type')) || null;
+    const presetTestType = lockedType || normalizeTestTypeValue(initialTestType) || null;
 
     // --- Auto-assign sub-course from course facilitator assignments for shared (public) links ---
     // Only lock automatically when the course teaches exactly ONE testable module.
@@ -1004,7 +1031,10 @@ export function CourseTestForm({
     );
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
-    const [testType, setTestType] = useState(() => normalizeTestType(lockedType || initialTestType) || 'pre-test'); 
+    const [testType, setTestType] = useState(() => presetTestType || 'pre-test'); 
+    // True when the test type was decided before the setup screen (shared link, prop, or dashboard column).
+    const [isTestTypePresetByFlow, setIsTestTypePresetByFlow] = useState(false);
+    const isTestTypeLocked = !!presetTestType || isTestTypePresetByFlow;
     
     const [answers, setAnswers] = useState(() => initializeAnswers(testQuestions));
     const [manualScores, setManualScores] = useState({});
@@ -1056,7 +1086,9 @@ export function CourseTestForm({
     const [participantNameForDisplay, setParticipantNameForDisplay] = useState('');
 
     useEffect(() => {
-        if (initialTestType) {
+        if (lockedType) {
+            setTestType(lockedType);
+        } else if (initialTestType) {
             setTestType(normalizeTestType(initialTestType));
         }
     }, [initialTestType]);
@@ -1100,6 +1132,7 @@ export function CourseTestForm({
         const questionsForEntry = getQuestionsForModule(module);
         setSelectedParticipantId(pId);
         setTestType(type);
+        setIsTestTypePresetByFlow(true);
         setViewMode('entry');
         
         const result = findParticipantTest(participantTests, pId, type, module, courseType);
@@ -1115,6 +1148,7 @@ export function CourseTestForm({
         if (module && isEmoncCourseType(courseType)) setEmoncSubCourse(module);
         const questionsForEntry = getQuestionsForModule(module);
         setTestType(type);
+        setIsTestTypePresetByFlow(true);
         if (isNewUser) {
              setIsNewParticipantModalOpen(true);
              setSelectedParticipantId('');
@@ -1450,10 +1484,11 @@ export function CourseTestForm({
     const handleBackToDashboard = () => {
         if(isPublicView) {
             setIsSetupModalOpen(true);
-            setTestType(normalizeTestType(lockedType || initialTestType) || ''); 
+            setTestType(presetTestType || ''); 
             setSelectedParticipantId('');
         } else {
             setViewMode('dashboard');
+            setIsTestTypePresetByFlow(false);
             setIsEditing(false);
             setSubmissionResult(null);
             setSelectedParticipantId('');
@@ -1598,6 +1633,28 @@ export function CourseTestForm({
                 <CardBody className="p-6" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="grid gap-6">
                         
+                        {/* Values already defined by the shared link are shown read-only, not as dropdowns */}
+                        {((isPublicView && effectiveLockedModule && (isEmoncCourseType(courseType) || isSsnbCourseType(courseType))) || isTestTypeLocked) && (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                {isPublicView && effectiveLockedModule && (isEmoncCourseType(courseType) || isSsnbCourseType(courseType)) && (
+                                    <div className="border-2 border-sky-200 bg-sky-50 rounded-lg px-4 py-3">
+                                        <div className="text-xs font-bold uppercase tracking-wider text-sky-700">Module</div>
+                                        <div className="font-semibold text-gray-800">
+                                            {isEmoncCourseType(courseType)
+                                                ? (emoncSubCourse === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : emoncSubCourse)
+                                                : ssnbSubCourse}
+                                        </div>
+                                    </div>
+                                )}
+                                {isTestTypeLocked && (
+                                    <div className="border-2 border-indigo-200 bg-indigo-50 rounded-lg px-4 py-3">
+                                        <div className="text-xs font-bold uppercase tracking-wider text-indigo-700">Test Type</div>
+                                        <div className="font-semibold text-gray-800">{testType === 'post-test' ? 'Post-Test' : 'Pre-Test'}</div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && !(isPublicView && effectiveLockedModule) && (
                             <FormGroup label="Select EmONC Module">
                                 <Select 
@@ -1624,12 +1681,11 @@ export function CourseTestForm({
                             </FormGroup>
                         )}
                         
-                        {!(isPublicView && lockedType) && (
+                        {!isTestTypeLocked && (
                             <FormGroup label="Select Test Type">
                                 <Select 
                                     value={testType} 
                                     onChange={(e) => setTestType(e.target.value)}
-                                    disabled={!!initialTestType} 
                                 >
                                     <option value="">-- Select Test Type --</option>
                                     <option value="pre-test">Pre-Test</option>
