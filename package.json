@@ -1,6 +1,6 @@
 {
   "name": "nchp-monitoring-app",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "main": "electron.js",
   "homepage": "./",
@@ -89,10 +89,11 @@
     "preview": "vite preview",
     "electron:start": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build:electron && electron-builder",
-    "mobile:sync": "npm run build && npx cap sync",
+    "mobile:sync": "npm run build && npx cap sync android",
     "mobile:android": "npx cap run android",
-    "mobile:build:apk": "npm run mobile:sync && cd android && gradlew.bat clean assembleDebug && cd ..",
-    "mobile:deploy": "npm run build && npx ionic deploy"
+    "mobile:build:apk": "npm run mobile:sync && cd android && gradlew.bat clean assembleRelease && cd ..",
+    "mobile:deploy": "npm run build && npx ionic deploy",
+    "verify:plugins": "npx cap sync android && npx cap ls android"
   },
   "build": {
     "appId": "com.nchp.monitoring.desktop",
@@ -100,6 +101,7 @@
     "files": [
       "dist/**/*",
       "electron.js",
+      "preload.js",
       "package.json"
     ],
     "directories": {

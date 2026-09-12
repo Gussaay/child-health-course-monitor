@@ -1,5 +1,5 @@
 // src/components/ReportsView.jsx
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; 
 import html2canvas from 'html2canvas';
@@ -30,7 +30,7 @@ import {
 import {
     ICCM_TEST_QUESTIONS,
     EMONC_TEST_MODULES, MODULE_SHORT_LABELS,
-    getTestSections, computeSectionScores, findParticipantTest
+    getTestSections, computeSectionScores, findParticipantTest, alignSectionScores
 } from './CourseTestForm'; 
 
 // EmONC test parts: colours used in the report (Part 1 EENC / Part 2 Newborn or Maternal)
@@ -45,7 +45,9 @@ const getEmoncModuleLabel = (module) => module === 'Emergency Maternal Care' ? '
 // Part scores of a stored test: use the saved breakdown, otherwise rebuild it from the answers.
 const getTestPartScores = (test, sections) => {
     if (!test || !sections) return null;
-    if (Array.isArray(test.sectionScores) && test.sectionScores.length === sections.length) return test.sectionScores;
+    // Stored results may list the parts in the old order (EENC first), so match them by key.
+    const aligned = alignSectionScores(sections, test.sectionScores);
+    if (aligned) return aligned;
     if (!test.answers) return null;
     return computeSectionScores(sections, test.answers, test.manualScores);
 };
@@ -259,7 +261,31 @@ function CourseTestReports({ course, participants, allTests }) {
 
     // EmONC has two separate tests (Newborn / Maternal), each = Part 1 EENC + Part 2 module questions.
     const isEmonc = course.course_type === 'EENC' || course.course_type === 'EmONC';
+
+    // A participant belongs to a module's report only if they have a result for that module's test.
+    const hasResultInModule = (participant, module) => (
+        !!(findParticipantTest(allTests, participant.id, 'pre-test', module, course.course_type)
+            || findParticipantTest(allTests, participant.id, 'post-test', module, course.course_type))
+    );
+
+    const moduleCounts = useMemo(() => {
+        const counts = {};
+        EMONC_TEST_MODULES.forEach(m => { counts[m] = isEmonc ? participants.filter(p => hasResultInModule(p, m)).length : 0; });
+        return counts;
+    }, [isEmonc, participants, allTests, course.course_type]);
+
     const [moduleFilter, setModuleFilter] = useState(EMONC_TEST_MODULES[0]);
+
+    // Open on the module with the most results (once the tests have loaded).
+    const moduleAutoPicked = useRef(false);
+    useEffect(() => {
+        if (!isEmonc || moduleAutoPicked.current) return;
+        const best = [...EMONC_TEST_MODULES].sort((a, b) => (moduleCounts[b] || 0) - (moduleCounts[a] || 0))[0];
+        if ((moduleCounts[best] || 0) > 0) {
+            moduleAutoPicked.current = true;
+            if (best !== moduleFilter) setModuleFilter(best);
+        }
+    }, [isEmonc, moduleCounts]); // eslint-disable-line react-hooks/exhaustive-deps
     const activeModule = isEmonc ? moduleFilter : null;
 
     const sections = useMemo(
@@ -275,8 +301,11 @@ function CourseTestReports({ course, participants, allTests }) {
     const getTest = (participantId, type) => findParticipantTest(allTests, participantId, type, activeModule, course.course_type);
 
     const filteredParticipants = useMemo(() => 
-        participants.filter(p => groupFilter === 'All' || p.group === groupFilter), 
-    [participants, groupFilter]);
+        participants
+            .filter(p => groupFilter === 'All' || p.group === groupFilter)
+            // EmONC: only participants who sat the selected module's test
+            .filter(p => !isEmonc || hasResultInModule(p, moduleFilter)), 
+    [participants, groupFilter, isEmonc, allTests, moduleFilter, course.course_type]);
 
     // --- KPI Calculation ---
     const kpiStats = useMemo(() => {
@@ -448,7 +477,7 @@ function CourseTestReports({ course, participants, allTests }) {
                     {isEmonc && (
                         <FormGroup label="EmONC Module">
                             <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
-                                {EMONC_TEST_MODULES.map(m => <option key={m} value={m}>{getEmoncModuleLabel(m)}</option>)}
+                                {EMONC_TEST_MODULES.map(m => <option key={m} value={m}>{getEmoncModuleLabel(m)} ({moduleCounts[m] || 0} with results)</option>)}
                             </Select>
                         </FormGroup>
                     )}

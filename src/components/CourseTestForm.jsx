@@ -10,7 +10,8 @@ import {
 import {
     listHealthFacilities,
     upsertParticipantTest, 
-    deleteParticipantTest
+    deleteParticipantTest,
+    repairParticipantScoreFields
 } from '../data.js';
 import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X } from 'lucide-react'; 
 
@@ -488,10 +489,40 @@ export const getTestRecordModule = (test, courseType) => {
 export const findParticipantTest = (tests, participantId, baseType, module, courseType) => {
     if (!participantId || !Array.isArray(tests)) return null;
     return tests.find(t =>
+        t.isDeleted !== true && t.isDeleted !== 'true' &&
         t.participantId === participantId &&
         getBaseTestType(t.testType) === baseType &&
         (!module || getTestRecordModule(t, courseType) === module)
     ) || null;
+};
+
+// Each EmONC participant is in ONE module: the sub-course of their group
+// (Emergency Newborn Care or Emergency Maternal Care). Both modules have Part 1 EENC + Part 2.
+export const getParticipantAssignedModule = (participant, course) => {
+    if (!participant) return null;
+    // 1. The participant's own sub-course always wins.
+    if (EMONC_TEST_MODULES.includes(participant.imci_sub_type)) return participant.imci_sub_type;
+    // 2. Their group, but ONLY if the whole group teaches one module. A group whose facilitators
+    //    cover both Newborn and Maternal says nothing about which test this participant takes,
+    //    so it must not be used (that is what put everyone in the Newborn table).
+    const groupModules = [...new Set((course?.facilitatorAssignments || [])
+        .filter(a => a.group === participant.group)
+        .map(a => a.imci_sub_type)
+        .filter(m => EMONC_TEST_MODULES.includes(m)))];
+    return groupModules.length === 1 ? groupModules[0] : null;
+};
+
+// Module used for this participant's tests: their group's module, otherwise the module of
+// the test they already took. null = not known yet.
+export const getParticipantTestModule = (participant, course, tests) => {
+    const assigned = getParticipantAssignedModule(participant, course);
+    if (assigned) return assigned;
+    if (!participant || !Array.isArray(tests)) return null;
+    const taken = [...new Set(tests
+        .filter(t => t.participantId === participant.id && t.isDeleted !== true && t.isDeleted !== 'true')
+        .map(t => getTestRecordModule(t, course?.course_type))
+        .filter(Boolean))];
+    return taken.length === 1 ? taken[0] : null;
 };
 
 const formatTestLabel = (storedOrBaseType, module) => {
@@ -524,31 +555,53 @@ const SECTION_THEMES = {
 
 const getSectionTheme = (key) => SECTION_THEMES[key] || SECTION_THEMES.default;
 
+// Question numbers come from the question text ("13. ..."), so they stay the same
+// whichever order the parts are shown in.
+const getQuestionNumberRange = (questions, fallbackFrom) => {
+    const numbers = questions
+        .map(q => parseInt(String(q.text || '').trim(), 10))
+        .filter(n => !isNaN(n));
+    if (numbers.length === 0) return { from: fallbackFrom, to: fallbackFrom + questions.length - 1 };
+    return { from: Math.min(...numbers), to: Math.max(...numbers) };
+};
+
+// Part 1 is the module's own subject (Obstetric or Newborn emergency care);
+// Part 2 is EENC, which both modules share and which is answered last.
 export const getTestSections = (courseType, emoncSubCourse) => {
     if (!isEmoncCourseType(courseType)) return null;
     const isMaternal = emoncSubCourse === 'Emergency Maternal Care';
-    const part2Questions = isMaternal ? EMONC_MATERNAL_QUESTIONS : EMONC_NEONATAL_QUESTIONS;
+    const moduleQuestions = isMaternal ? EMONC_MATERNAL_QUESTIONS : EMONC_NEONATAL_QUESTIONS;
     const eencCount = EENC_TEST_QUESTIONS.length;
     return [
         {
-            key: 'eenc',
+            key: isMaternal ? 'maternal' : 'newborn',
             part: 1,
+            title: isMaternal ? 'Emergency Maternal Care (Obstetric)' : 'Emergency Newborn Care',
+            shortTitle: isMaternal ? 'Maternal / Obstetric' : 'Newborn',
+            questions: moduleQuestions,
+            ...getQuestionNumberRange(moduleQuestions, eencCount + 1)
+        },
+        {
+            key: 'eenc',
+            part: 2,
             title: 'Early Essential Newborn Care (EENC)',
             shortTitle: 'EENC',
             questions: EENC_TEST_QUESTIONS,
-            from: 1,
-            to: eencCount
-        },
-        {
-            key: isMaternal ? 'maternal' : 'newborn',
-            part: 2,
-            title: isMaternal ? 'Emergency Maternal Care (Obstetric)' : 'Emergency Newborn Care',
-            shortTitle: isMaternal ? 'Maternal / Obstetric' : 'Newborn',
-            questions: part2Questions,
-            from: eencCount + 1,
-            to: eencCount + part2Questions.length
+            ...getQuestionNumberRange(EENC_TEST_QUESTIONS, 1)
         }
     ];
+};
+
+// Stored results keep their own part order, so line them up with the sections by key
+// instead of by position (older records have EENC first).
+export const alignSectionScores = (sections, storedSectionScores) => {
+    if (!Array.isArray(sections) || !Array.isArray(storedSectionScores)) return null;
+    const byKey = new Map(storedSectionScores.map(sec => [sec.key, sec]));
+    const aligned = sections.map(section => {
+        const stored = byKey.get(section.key);
+        return stored ? { ...stored, part: section.part, title: section.title, shortTitle: section.shortTitle } : null;
+    });
+    return aligned.every(Boolean) ? aligned : null;
 };
 
 export const computeSectionScores = (sections, answers = {}, manualScores = {}) => {
@@ -714,25 +767,128 @@ const TestResultScreen = ({
     );
 };
 
+// --- Repair participant score fields written by the old data.js rule -------------------
+// The participant profile has two boxes: pre_test_score and post_test_score. They should hold
+// the participant's own module test (Newborn OR Maternal). The old rule sent every test that
+// was not exactly 'pre-test' to post_test_score, so a Maternal PRE-test landed in the POST box.
+// Here the boxes are rebuilt from the real test records of the participant's module.
+const sameScore = (a, b) => {
+    const hasA = a !== null && a !== undefined && a !== '';
+    const hasB = b !== null && b !== undefined && b !== '';
+    if (!hasA || !hasB) return hasA === hasB;
+    return Math.abs(Number(a) - Number(b)) < 0.01;
+};
+
+const findEmoncScoreFieldFixes = (participants, tests, course) => {
+    const courseType = course?.course_type;
+    if (!isEmoncCourseType(courseType) || !Array.isArray(participants)) return [];
+    const hasValue = (v) => v !== undefined && v !== null && v !== '';
+    const isLive = (t) => t && t.isDeleted !== true && t.isDeleted !== 'true';
+    const fixes = [];
+    participants.forEach(p => {
+        // The real test records decide, whichever module they belong to. (Using the participant's
+        // assigned module instead meant that someone marked "Newborn" who actually sat the
+        // Maternal test had their score removed rather than moved to the Pre-Test box.)
+        const ownTests = (tests || []).filter(t => isLive(t) && t.participantId === p.id);
+        if (ownTests.length === 0) return; // nothing to compare against; leave the profile alone
+        const pre = ownTests.find(t => getBaseTestType(t.testType) === 'pre-test');
+        const post = ownTests.find(t => getBaseTestType(t.testType) === 'post-test');
+        const module = getTestRecordModule(pre || post, courseType);
+
+        const fields = {};
+        const changes = [];
+        const change = (field, to) => { fields[field] = to; changes.push({ field, from: p[field], to }); };
+
+        // Pre-Test box = their pre-test result; Post-Test box = their post-test result.
+        if (pre) {
+            if (!sameScore(p.pre_test_score, pre.percentage)) change('pre_test_score', pre.percentage);
+        }
+        if (post) {
+            if (!sameScore(p.post_test_score, post.percentage)) change('post_test_score', post.percentage);
+        } else if (hasValue(p.post_test_score) && pre && sameScore(p.post_test_score, pre.percentage)) {
+            // No post-test, and the Post-Test box holds the pre-test score: the old rule put it there.
+            change('post_test_score', null);
+        }
+        // Extra boxes written by an earlier version of this fix are not used any more.
+        if (hasValue(p.pre_test_score_maternal)) change('pre_test_score_maternal', null);
+        if (hasValue(p.post_test_score_maternal)) change('post_test_score_maternal', null);
+
+        if (changes.length > 0) fixes.push({ participantId: p.id, name: p.name, group: p.group, module, fields, changes });
+    });
+    return fixes;
+};
+
 const TestScoresDashboard = ({ 
     courseId,
     courseType,
+    course,
     modules = [null],
     participants, 
     participantTests = [], 
     onOpenEntry,
     onEdit,
     onDelete,
+    onAssignModule,
+    onScoreFieldsRepaired,
     canManageTests
 }) => {
-    const defaultModule = modules[0];
+    const isModuleSeparated = modules.some(Boolean);
+
+    const scoreFieldFixes = useMemo(
+        () => (isModuleSeparated && canManageTests ? findEmoncScoreFieldFixes(participants, participantTests, course) : []),
+        [isModuleSeparated, canManageTests, participants, participantTests, course]
+    );
+
+    // EmONC: every participant is listed only under their own module.
+    // A module table lists ONLY participants who actually sat that module's test
+    // (a pre-test or a post-test result). Everyone else goes to the "no test yet" table.
+    const participantsByModule = useMemo(() => {
+        const map = { unassigned: [] };
+        modules.forEach(m => { if (m) map[m] = []; });
+        if (!isModuleSeparated) return map;
+        participants.forEach(p => {
+            let listed = false;
+            modules.forEach(m => {
+                if (!m) return;
+                const hasResult = findParticipantTest(participantTests, p.id, 'pre-test', m, courseType)
+                    || findParticipantTest(participantTests, p.id, 'post-test', m, courseType);
+                if (hasResult) { map[m].push(p); listed = true; }
+            });
+            if (!listed) map.unassigned.push(p);
+        });
+        return map;
+    }, [isModuleSeparated, participants, participantTests, courseType, modules]);
+    const [repairState, setRepairState] = useState('idle'); // idle | working | done | error
+    const [assigningId, setAssigningId] = useState(null);
+    const [showRepairDetails, setShowRepairDetails] = useState(false);
+    const SCORE_FIELD_LABELS = {
+        pre_test_score: 'Pre-Test box',
+        post_test_score: 'Post-Test box',
+        pre_test_score_maternal: 'Extra "Maternal Pre-Test" box (not used)',
+        post_test_score_maternal: 'Extra "Maternal Post-Test" box (not used)'
+    };
+    const fmtFieldValue = (v) => (v === null || v === undefined || v === '') ? 'empty' : `${Number(v).toFixed(1)}%`;
+
+    const handleRepairScoreFields = async () => {
+        setRepairState('working');
+        try {
+            await repairParticipantScoreFields(scoreFieldFixes);
+            if (onScoreFieldsRepaired) onScoreFieldsRepaired(scoreFieldFixes);
+            setRepairState('done');
+        } catch (e) {
+            console.error(e);
+            setRepairState('error');
+        }
+    };
 
     const getTest = (participant, type, module) => {
         const detailedTest = findParticipantTest(participantTests, participant.id, type, module, courseType);
         if (detailedTest) return detailedTest;
 
-        // Old manually-typed scores are not module-specific; show them under the first module only.
-        if (module && module !== defaultModule) return null;
+        // EmONC: the participant's pre_test_score / post_test_score fields cannot be linked to a module
+        // (and the data layer may have written a Maternal pre-test into post_test_score), so only
+        // real test records are shown. Other courses keep the legacy manual-score fallback.
+        if (isModuleSeparated) return null;
 
         const legacyScore = type === 'pre-test' ? participant.pre_test_score : participant.post_test_score;
         if (legacyScore !== undefined && legacyScore !== null && legacyScore !== '') {
@@ -775,8 +931,10 @@ const TestScoresDashboard = ({
         }
 
         const pct = Number(test.percentage || 0);
-        const sectionScores = !test.isLegacy && module
-            ? (test.sectionScores || (test.answers ? computeSectionScores(getTestSections(courseType, module), test.answers, test.manualScores) : null))
+        const sections = !test.isLegacy && module ? getTestSections(courseType, module) : null;
+        const sectionScores = sections
+            ? (alignSectionScores(sections, test.sectionScores)
+                || (test.answers ? computeSectionScores(sections, test.answers, test.manualScores) : null))
             : null;
         return (
             <>
@@ -878,6 +1036,175 @@ const TestScoresDashboard = ({
                  </div>
              </div>
 
+             {isModuleSeparated && scoreFieldFixes.length > 0 && repairState !== 'done' && (
+                 <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 flex flex-wrap items-center justify-between gap-3">
+                     <div className="text-sm">
+                         <div className="font-bold">{scoreFieldFixes.length} participant(s) show a wrong Pre/Post-Test score in the Participants list.</div>
+                         <div>
+                             Their test results below are correct. Only the copy on the participant profile is wrong: an older version
+                             put the Maternal pre-test score in the <b>Post-Test</b> box instead of the <b>Pre-Test</b> box.
+                             "Fix now" copies each participant's own module result into the right box.
+                         </div>
+                         {repairState === 'error' && <div className="text-red-700 font-semibold mt-1">Repair failed. Please try again.</div>}
+                     </div>
+                     <div className="flex gap-2">
+                         <Button variant="secondary" onClick={() => setShowRepairDetails(v => !v)}>
+                             {showRepairDetails ? 'Hide changes' : 'Show what will change'}
+                         </Button>
+                         <Button onClick={handleRepairScoreFields} disabled={repairState === 'working'}>
+                             {repairState === 'working' ? 'Fixing...' : 'Fix now'}
+                         </Button>
+                     </div>
+                     {showRepairDetails && (
+                         <div className="w-full bg-white rounded border border-amber-200 overflow-x-auto">
+                             <div className="text-xs text-gray-600 p-2 border-b">
+                                 Only these profile fields change. Test records, answers and scores in the tables below are not touched.
+                             </div>
+                             <table className="w-full text-sm">
+                                 <thead className="bg-amber-100">
+                                     <tr>
+                                         <th className="p-2 text-left">Participant</th>
+                                         <th className="p-2 text-left">Group</th>
+                                         <th className="p-2 text-left">Module</th>
+                                         <th className="p-2 text-left">Profile field</th>
+                                         <th className="p-2 text-center">Now</th>
+                                         <th className="p-2 text-center">After fix</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody>
+                                     {scoreFieldFixes.flatMap(fix => fix.changes.map((c, idx) => (
+                                         <tr key={`${fix.participantId}-${c.field}`} className="border-t">
+                                             <td className="p-2 font-medium">{idx === 0 ? fix.name : ''}</td>
+                                             <td className="p-2">{idx === 0 ? (fix.group || '-') : ''}</td>
+                                             <td className="p-2">{idx === 0 ? (fix.module ? (MODULE_SHORT_LABELS[fix.module] || fix.module) : '-') : ''}</td>
+                                             <td className="p-2">{SCORE_FIELD_LABELS[c.field] || c.field}</td>
+                                             <td className={`p-2 text-center ${c.to === null ? 'text-red-700 line-through' : 'text-gray-500'}`}>{fmtFieldValue(c.from)}</td>
+                                             <td className={`p-2 text-center font-semibold ${c.to === null ? 'text-gray-500' : 'text-green-700'}`}>{c.to === null ? 'removed' : fmtFieldValue(c.to)}</td>
+                                         </tr>
+                                     )))}
+                                 </tbody>
+                             </table>
+                         </div>
+                     )}
+                 </div>
+             )}
+             {repairState === 'done' && (
+                 <div className="p-3 rounded-lg border border-green-300 bg-green-50 text-green-800 text-sm font-semibold">
+                     Participant score fields fixed. Refresh the page to see the corrected values in the Participants list.
+                 </div>
+             )}
+
+             {isModuleSeparated ? (
+                 // EmONC: one table per module so Newborn and Maternal/Obstetric scores are not mixed.
+                 <div className="space-y-8">
+                     {modules.map(module => {
+                         const theme = getSectionTheme(module === 'Emergency Maternal Care' ? 'maternal' : 'newborn');
+                         const moduleColumns = columns.filter(c => c.module === module);
+                         const moduleHeaders = ["Name", "Group", ...moduleColumns.map(c => `${c.type === 'pre-test' ? 'Pre-Test' : 'Post-Test'} Result`)];
+                         const statsFor = (type) => {
+                             const tests = participants.map(p => getTest(p, type, module)).filter(Boolean);
+                             const avg = tests.length ? tests.reduce((acc, t) => acc + Number(t.percentage || 0), 0) / tests.length : null;
+                             return { count: tests.length, avg };
+                         };
+                         const moduleParticipants = participantsByModule[module] || [];
+                         const statsForModule = (type) => {
+                             const tests = moduleParticipants.map(p => getTest(p, type, module)).filter(Boolean);
+                             const avg = tests.length ? tests.reduce((acc, t) => acc + Number(t.percentage || 0), 0) / tests.length : null;
+                             return { count: tests.length, avg };
+                         };
+                         const preStats = statsForModule('pre-test');
+                         const postStats = statsForModule('post-test');
+                         return (
+                             <section key={module} className={`rounded-xl border-2 ${theme.wrapper} overflow-hidden shadow-sm`}>
+                                 <div className={`${theme.header} text-white px-5 py-3 flex flex-wrap justify-between items-center gap-2`}>
+                                     <h3 className="text-lg md:text-xl font-extrabold">
+                                         {module === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : module}
+                                     </h3>
+                                     <div className="text-xs md:text-sm font-semibold flex flex-wrap gap-4">
+                                         <span>{moduleParticipants.length} participants with results</span>
+                                         <span>Pre-Test: {preStats.count} done{preStats.avg !== null ? ` · avg ${preStats.avg.toFixed(1)}%` : ''}</span>
+                                         <span>Post-Test: {postStats.count} done{postStats.avg !== null ? ` · avg ${postStats.avg.toFixed(1)}%` : ''}</span>
+                                     </div>
+                                 </div>
+                                 <div className="bg-white">
+                                     <Table headers={moduleHeaders}>
+                                        {moduleParticipants.length === 0 ? (
+                                            <tr><td colSpan={moduleHeaders.length} className="text-center p-4">No results recorded for this module yet.</td></tr>
+                                        ) : (
+                                            moduleParticipants.map(p => (
+                                                <tr key={p.id} className="hover:bg-gray-50">
+                                                    <td className="p-4 border font-medium">{p.name}</td>
+                                                    <td className="p-4 border">{p.group || '-'}</td>
+                                                    {moduleColumns.map(col => (
+                                                        <td key={col.type} className="p-4 border">
+                                                            <div className="flex items-center gap-4">
+                                                                {renderScoreCell(p, col)}
+                                                            </div>
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))
+                                        )}
+                                     </Table>
+                                 </div>
+                             </section>
+                         );
+                     })}
+
+                     {participantsByModule.unassigned.length > 0 && (
+                         <section className="rounded-xl border-2 border-gray-300 overflow-hidden shadow-sm">
+                             <div className="bg-gray-600 text-white px-5 py-3">
+                                 <h3 className="text-lg font-extrabold">No test result yet ({participantsByModule.unassigned.length} participants)</h3>
+                                 <div className="text-xs md:text-sm">
+                                     They have not sat the Newborn or the Maternal test. Once a result is recorded they move to that module's table.
+                                     The Module column shows the test they are expected to take, and can be set here.
+                                 </div>
+                             </div>
+                             <div className="bg-white">
+                                 <Table headers={["Name", "Group", "Expected module", ...modules.map(m => `Add ${MODULE_SHORT_LABELS[m] || m} Test`)]}>
+                                     {participantsByModule.unassigned.map(p => {
+                                         const expected = getParticipantAssignedModule(p, course);
+                                         return (
+                                             <tr key={p.id} className="hover:bg-gray-50">
+                                                 <td className="p-4 border font-medium">{p.name}</td>
+                                                 <td className="p-4 border">{p.group || '-'}</td>
+                                                 <td className="p-4 border">
+                                                     {canManageTests && onAssignModule ? (
+                                                         <Select
+                                                             value={expected || ''}
+                                                             disabled={assigningId === p.id}
+                                                             onChange={async (e) => {
+                                                                 const value = e.target.value;
+                                                                 if (!value) return;
+                                                                 setAssigningId(p.id);
+                                                                 try { await onAssignModule(p, value); } finally { setAssigningId(null); }
+                                                             }}
+                                                         >
+                                                             <option value="">{assigningId === p.id ? 'Saving...' : '-- Not set --'}</option>
+                                                             {modules.map(m => (
+                                                                 <option key={m} value={m}>{m === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : m}</option>
+                                                             ))}
+                                                         </Select>
+                                                     ) : <span className="text-gray-400">{expected ? (MODULE_SHORT_LABELS[expected] || expected) : 'Not set'}</span>}
+                                                 </td>
+                                                 {modules.map(m => (
+                                                     <td key={m} className="p-4 border">
+                                                         {canManageTests ? (
+                                                             <Button size="sm" variant="secondary" className="text-xs" onClick={() => onOpenEntry('pre-test', p.id, false, m)}>
+                                                                 + Add Pre-Test
+                                                             </Button>
+                                                         ) : <span className="text-gray-400">-</span>}
+                                                     </td>
+                                                 ))}
+                                             </tr>
+                                         );
+                                     })}
+                                 </Table>
+                             </div>
+                         </section>
+                     )}
+                 </div>
+             ) : (
              <Table headers={headers}>
                 {participants.length === 0 ? (
                     <tr><td colSpan={headers.length} className="text-center p-4">No participants found.</td></tr>
@@ -897,6 +1224,7 @@ const TestScoresDashboard = ({
                     ))
                 )}
              </Table>
+             )}
         </div>
     );
 };
@@ -1009,7 +1337,12 @@ export function CourseTestForm({
     });
 
     // Module used to store/look up results (EmONC only; null for single-test courses).
-    const currentModule = separatelyStoredModules.length ? emoncSubCourse : null;
+    // The module actually used for the questions and for storing the result.
+    // A module fixed by the link always wins over the dropdown value.
+    const activeEmoncModule = effectiveLockedModule && EMONC_TEST_MODULES.includes(effectiveLockedModule)
+        ? effectiveLockedModule
+        : emoncSubCourse;
+    const currentModule = separatelyStoredModules.length ? activeEmoncModule : null;
 
     const isProgramManagement = course?.course_type === 'Program Management';
 
@@ -1026,8 +1359,8 @@ export function CourseTestForm({
 
     // Enforce left-to-right alignment across all test views and course types
     const { testQuestions, testTitle, jobTitleOptions, isIccm, testSections = null } = useMemo(
-        () => resolveTestConfig(courseType, emoncSubCourse, ssnbSubCourse),
-        [courseType, emoncSubCourse, ssnbSubCourse]
+        () => resolveTestConfig(courseType, activeEmoncModule, ssnbSubCourse),
+        [courseType, activeEmoncModule, ssnbSubCourse]
     );
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
@@ -1106,11 +1439,60 @@ export function CourseTestForm({
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [localParticipants]);
 
+    // EmONC: a shared link for one module only lists that module's participants (plus those not yet assigned).
+    // The participant list follows the module of the test being entered: someone sitting the
+    // Newborn test must not appear in the Maternal (obstetric) list and the other way round.
+    const setupModule = isEmoncCourseType(courseType) ? activeEmoncModule : null;
+
+    const moduleEligibleParticipants = useMemo(() => {
+        if (!setupModule) return sortedParticipants;
+        const otherModule = EMONC_TEST_MODULES.find(m => m !== setupModule);
+        return sortedParticipants.filter(p => {
+            // Already sat this module's test -> always listed (to view or add the other test type).
+            const hasThisModule = findParticipantTest(participantTests, p.id, 'pre-test', setupModule, courseType)
+                || findParticipantTest(participantTests, p.id, 'post-test', setupModule, courseType);
+            if (hasThisModule) return true;
+            // Sat the other module's test -> they are not in this module.
+            const hasOtherModule = otherModule && (findParticipantTest(participantTests, p.id, 'pre-test', otherModule, courseType)
+                || findParticipantTest(participantTests, p.id, 'post-test', otherModule, courseType));
+            if (hasOtherModule) return false;
+            // No test yet: follow the module recorded for them, if any.
+            const assigned = getParticipantAssignedModule(p, course);
+            return !assigned || assigned === setupModule;
+        });
+    }, [sortedParticipants, setupModule, courseType, course, participantTests]);
+
     const filteredSetupParticipants = useMemo(() => {
-        let filtered = sortedParticipants;
+        let filtered = moduleEligibleParticipants;
         if (selectedSetupGroup) filtered = filtered.filter(p => p.group === selectedSetupGroup);
         return filtered;
-    }, [sortedParticipants, selectedSetupGroup]);
+    }, [moduleEligibleParticipants, selectedSetupGroup]);
+
+    const setupGroups = useMemo(() => {
+        return Array.from(new Set(moduleEligibleParticipants.map(p => p.group).filter(Boolean))).sort();
+    }, [moduleEligibleParticipants]);
+
+    // The module comes from the selected participant's group (they only take their own module's test).
+    const selectedParticipantModule = useMemo(() => {
+        if (!isEmoncCourseType(courseType) || !selectedParticipantId || selectedParticipantId === 'addNew') return null;
+        const participant = localParticipants.find(p => p.id === selectedParticipantId);
+        return getParticipantTestModule(participant, course, participantTests);
+    }, [courseType, selectedParticipantId, localParticipants, course, participantTests]);
+
+    // Selecting another module must not keep a participant who does not belong to it.
+    useEffect(() => {
+        if (!setupModule || !selectedParticipantId || selectedParticipantId === 'addNew') return;
+        if (!moduleEligibleParticipants.some(p => p.id === selectedParticipantId)) setSelectedParticipantId('');
+    }, [setupModule, moduleEligibleParticipants]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        // A module fixed by the shared link or by the dashboard column must never be changed by
+        // the participant's own module: the test that opens has to be the one that was selected.
+        if (effectiveLockedModule) return;
+        if (isSetupModalOpen && selectedParticipantModule && selectedParticipantModule !== emoncSubCourse) {
+            setEmoncSubCourse(selectedParticipantModule);
+        }
+    }, [isSetupModalOpen, selectedParticipantModule, effectiveLockedModule]); // eslint-disable-line react-hooks/exhaustive-deps
     
     // Results for the selected participant, for the CURRENT module only (EmONC: Newborn vs Maternal).
     const existingResults = useMemo(() => {
@@ -1162,6 +1544,18 @@ export function CourseTestForm({
         setAnswers(initializeAnswers(questionsForEntry));
         setManualScores(initializeManualScores(questionsForEntry)); 
         setSubmissionResult(null);
+    };
+
+    // Saves the chosen module on the participant (imci_sub_type), so they appear in the right list.
+    const handleAssignModule = async (participant, module) => {
+        if (!onSaveParticipant || !participant || !EMONC_TEST_MODULES.includes(module)) return;
+        try {
+            await onSaveParticipant({ ...participant, imci_sub_type: module }, null);
+            setLocalParticipants(prev => prev.map(p => (p.id === participant.id ? { ...p, imci_sub_type: module } : p)));
+        } catch (e) {
+            console.error(e);
+            alert('Could not save the module for this participant. Please try again.');
+        }
     };
 
     const handleDashboardDelete = async (pId, type, module = null) => {
@@ -1290,6 +1684,8 @@ export function CourseTestForm({
                 center_name: isProgramManagement ? 'N/A' : newParticipantCenter.trim(),
                 department: isProgramManagement ? newParticipantDepartment.trim() : null,
                 courseId: course.id,
+                // EmONC: remember which module this participant takes, so they are listed under it.
+                ...(currentModule ? { imci_sub_type: currentModule } : {}),
                 facilityId: (isIccm || isProgramManagement || (selectedFacilityId && selectedFacilityId.startsWith('pending_'))) ? null : selectedFacilityId,
                 ...(isIccm && { trained_before: false, last_imci_training: null, nearest_health_facility: null, hours_to_facility: null })
             };
@@ -1447,7 +1843,8 @@ export function CourseTestForm({
                         ...occupyingData,
                         testType: getStoredTestType(testType, occupyingModule),
                         baseTestType: testType,
-                        module: occupyingModule
+                        module: occupyingModule,
+                        participantScoreField: testType === 'post-test' ? 'post_test_score' : 'pre_test_score'
                     });
                 }
             }
@@ -1459,6 +1856,8 @@ export function CourseTestForm({
                 courseType: course.course_type,
                 testType: storedTestType,
                 baseTestType: testType,
+                // Participant profile box for this result (one module per participant): Pre-Test or Post-Test.
+                participantScoreField: testType === 'post-test' ? 'post_test_score' : 'pre_test_score',
                 ...(currentModule ? { module: currentModule } : {}),
                 answers: answers, 
                 manualScores: manualScores,
@@ -1502,6 +1901,7 @@ export function CourseTestForm({
                     <TestScoresDashboard 
                         courseId={course.id}
                         courseType={courseType}
+                        course={course}
                         modules={separatelyStoredModules.length ? separatelyStoredModules : [null]}
                         participants={sortedParticipants}
                         participantTests={participantTests}
@@ -1509,6 +1909,20 @@ export function CourseTestForm({
                         onOpenEntry={handleDashboardAdd}
                         onEdit={handleDashboardEdit}
                         onDelete={handleDashboardDelete}
+                        onAssignModule={handleAssignModule}
+                        onScoreFieldsRepaired={(fixes) => {
+                            const byId = new Map(fixes.map(f => [f.participantId, f.fields]));
+                            setLocalParticipants(prev => prev.map(p => {
+                                const fields = byId.get(p.id);
+                                if (!fields) return p;
+                                const updated = { ...p };
+                                Object.entries(fields).forEach(([key, value]) => {
+                                    if (value === null || value === undefined) delete updated[key];
+                                    else updated[key] = value;
+                                });
+                                return updated;
+                            }));
+                        }}
                     />
                     <div className="mt-4 border-t pt-4">
                         <Button variant="secondary" onClick={onCancel}>Back to Course</Button>
@@ -1543,7 +1957,7 @@ export function CourseTestForm({
             <TestResultScreen
                 participantName={participantName}
                 testType={formatTestLabel(existingTestResult.testType, currentModule)}
-                sectionScores={existingTestResult.sectionScores || (testSections && existingTestResult.answers ? computeSectionScores(testSections, existingTestResult.answers, existingTestResult.manualScores) : null)}
+                sectionScores={alignSectionScores(testSections, existingTestResult.sectionScores) || (testSections && existingTestResult.answers ? computeSectionScores(testSections, existingTestResult.answers, existingTestResult.manualScores) : null)}
                 score={existingTestResult.score}
                 total={existingTestResult.total}
                 percentage={existingTestResult.percentage}
@@ -1634,14 +2048,16 @@ export function CourseTestForm({
                     <div className="grid gap-6">
                         
                         {/* Values already defined by the shared link are shown read-only, not as dropdowns */}
-                        {((isPublicView && effectiveLockedModule && (isEmoncCourseType(courseType) || isSsnbCourseType(courseType))) || isTestTypeLocked) && (
+                        {((isPublicView && effectiveLockedModule && (isEmoncCourseType(courseType) || isSsnbCourseType(courseType))) || selectedParticipantModule || isTestTypeLocked) && (
                             <div className="grid gap-3 sm:grid-cols-2">
-                                {isPublicView && effectiveLockedModule && (isEmoncCourseType(courseType) || isSsnbCourseType(courseType)) && (
+                                {((isPublicView && effectiveLockedModule && (isEmoncCourseType(courseType) || isSsnbCourseType(courseType))) || selectedParticipantModule) && (
                                     <div className="border-2 border-sky-200 bg-sky-50 rounded-lg px-4 py-3">
-                                        <div className="text-xs font-bold uppercase tracking-wider text-sky-700">Module</div>
+                                        <div className="text-xs font-bold uppercase tracking-wider text-sky-700">
+                                            Module{selectedParticipantModule && !(isPublicView && effectiveLockedModule) ? " (from participant's group)" : ''}
+                                        </div>
                                         <div className="font-semibold text-gray-800">
                                             {isEmoncCourseType(courseType)
-                                                ? (emoncSubCourse === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : emoncSubCourse)
+                                                ? (activeEmoncModule === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : activeEmoncModule)
                                                 : ssnbSubCourse}
                                         </div>
                                     </div>
@@ -1655,7 +2071,7 @@ export function CourseTestForm({
                             </div>
                         )}
 
-                        {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && !(isPublicView && effectiveLockedModule) && (
+                        {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && !(isPublicView && effectiveLockedModule) && !selectedParticipantModule && (
                             <FormGroup label="Select EmONC Module">
                                 <Select 
                                     value={emoncSubCourse} 
@@ -1699,11 +2115,13 @@ export function CourseTestForm({
                                 <FormGroup label="Select Group (Optional)">
                                     <Select value={selectedSetupGroup} onChange={handleSetupGroupChange}>
                                         <option value="">-- All Groups --</option>
-                                        {uniqueGroups.map(group => <option key={group} value={group}>{group}</option>)}
+                                        {setupGroups.map(group => <option key={group} value={group}>{group}</option>)}
                                     </Select>
                                 </FormGroup>
 
-                                <FormGroup label="Select Participant">
+                                <FormGroup label={setupModule
+                                    ? `Select Participant (${MODULE_SHORT_LABELS[setupModule] || setupModule} test only)`
+                                    : 'Select Participant'}>
                                     <Select value={selectedParticipantId} onChange={handleParticipantSelectChange}>
                                         <option value="">-- Select a Participant --</option>
                                         {onSaveParticipant && testType === 'pre-test' && (
@@ -1924,7 +2342,7 @@ export function CourseTestForm({
                                     const params = new URLSearchParams();
                                     params.set('type', testType);
                                     if (course?.course_type === 'EmONC' || course?.course_type === 'EENC') {
-                                        params.set('module', emoncSubCourse);
+                                        params.set('module', activeEmoncModule);
                                     } else if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
                                         params.set('module', ssnbSubCourse);
                                     }
@@ -1941,7 +2359,7 @@ export function CourseTestForm({
                     {testSections && (
                         <div className="mt-6 mb-2 p-5 bg-white border-2 border-gray-200 rounded-xl shadow-sm">
                             <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800 uppercase tracking-wide text-center">
-                                {emoncSubCourse === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : emoncSubCourse} Module
+                                {activeEmoncModule === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : activeEmoncModule} Module
                             </h2>
                             <p className="text-gray-600 font-medium mt-1 text-center">This test has {testSections.length} separate parts. Please answer all questions in both parts.</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">

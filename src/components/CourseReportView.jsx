@@ -16,7 +16,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
 import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport, listParticipantTestsForCourse } from '../data.js';
-import { EMONC_TEST_MODULES, getTestSections, computeSectionScores, findParticipantTest } from './CourseTestForm';
+import { EMONC_TEST_MODULES, getTestSections, computeSectionScores, findParticipantTest, alignSectionScores } from './CourseTestForm';
 import { useAuth } from '../hooks/useAuth';
 import { useDataCache } from '../DataContext';
 import { db } from '../firebase';
@@ -358,7 +358,9 @@ const getEmoncModuleReportLabel = (module) => module === 'Emergency Maternal Car
 
 const getStoredPartScores = (test, sections) => {
     if (!test || !sections) return null;
-    if (Array.isArray(test.sectionScores) && test.sectionScores.length === sections.length) return test.sectionScores;
+    // Older records list EENC first, so line the stored parts up by key rather than position.
+    const aligned = alignSectionScores(sections, test.sectionScores);
+    if (aligned) return aligned;
     if (!test.answers) return null;
     return computeSectionScores(sections, test.answers, test.manualScores);
 };
@@ -370,8 +372,10 @@ const averageOf = (values) => {
 
 const fmtPartScore = (part) => (part ? `${part.score}/${part.total}` : '-');
 
-const buildEmoncModuleTestSummary = (courseType, participantsList, tests) => {
+// Each module table lists only the participants who sat that module's test.
+const buildEmoncModuleTestSummary = (course, participantsList, tests) => {
     if (!Array.isArray(tests) || tests.length === 0) return null;
+    const courseType = course?.course_type;
     const modules = EMONC_TEST_MODULES.map(module => {
         const sections = getTestSections(courseType, module);
         const rows = participantsList.map(p => {
@@ -398,6 +402,7 @@ const buildEmoncModuleTestSummary = (courseType, participantsList, tests) => {
             sections,
             rows,
             stats: {
+                participantCount: rows.length,
                 preAvg, postAvg,
                 preCount: rows.filter(r => r.prePct !== null).length,
                 postCount: rows.filter(r => r.postPct !== null).length,
@@ -972,7 +977,7 @@ export function CourseReportView({
     }, [isEmoncCourse, course?.id]);
 
     const emoncTestSummary = useMemo(
-        () => (isEmoncCourse ? buildEmoncModuleTestSummary(course.course_type, reportParticipants, emoncTests) : null),
+        () => (isEmoncCourse ? buildEmoncModuleTestSummary(course, reportParticipants, emoncTests) : null),
         [isEmoncCourse, course?.course_type, reportParticipants, emoncTests]
     );
     // When module-level results exist, they replace the single (module-less) pre/post score blocks.
@@ -1763,7 +1768,7 @@ export function CourseReportView({
                         <div id="emonc-module-test-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('emonc-module-test-kpis')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors z-10" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-1">Participant Test Scores by EmONC Module</h3>
-                            <p className="text-sm text-gray-500 mb-4">Each module is a separate test: Part 1 (EENC, shared) + Part 2 (module-specific).</p>
+                            <p className="text-sm text-gray-500 mb-4">Each module is a separate test: Part 1 (the module subject) + Part 2 (EENC, shared by both modules).</p>
 
                             <div id="emonc-module-test-kpis" className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 bg-white">
                                 {emoncTestSummary.modules.map(mod => {
@@ -1772,7 +1777,7 @@ export function CourseReportView({
                                         <div key={mod.module} className={`rounded-xl border-2 ${style.border} overflow-hidden`}>
                                             <div className={`${style.header} px-4 py-3`}>
                                                 <div className="text-lg font-extrabold">{mod.label}</div>
-                                                <div className="text-xs opacity-90">Pre-test: {mod.stats.preCount} participants &middot; Post-test: {mod.stats.postCount} participants</div>
+                                                <div className="text-xs opacity-90">{mod.stats.participantCount} participants with results &middot; Pre-test: {mod.stats.preCount} &middot; Post-test: {mod.stats.postCount}</div>
                                             </div>
                                             <div className={`${style.light} p-4`}>
                                                 <div className="grid grid-cols-3 gap-3 text-center mb-4">

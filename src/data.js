@@ -1857,10 +1857,24 @@ export async function getPublicTeamMemberProfileData(level, memberId) {
     }
 }
 
+// The participant profile keeps a copy of the test result in two boxes:
+//   pre_test_score  <- any pre-test  ('pre-test', or 'pre-test-maternal' for EmONC Maternal)
+//   post_test_score <- any post-test ('post-test', or 'post-test-maternal')
+// Each EmONC participant takes only their own module's test (Newborn OR Maternal), so both
+// modules use the same two boxes.
+// (The old rule was "exactly 'pre-test' -> pre box, anything else -> post box", which put a
+//  Maternal PRE-test into the POST box.)
+// The two *_maternal names are only listed so the repair can remove them if they were written.
+const PARTICIPANT_SCORE_FIELDS = ['pre_test_score', 'post_test_score', 'pre_test_score_maternal', 'post_test_score_maternal'];
+
+export const getParticipantScoreField = (testType) => (
+    String(testType || '').startsWith('post') ? 'post_test_score' : 'pre_test_score'
+);
+
 export async function upsertParticipantTest(payload) {
     const { participantId, testType, percentage } = payload;
     if (!participantId || !testType) throw new Error("Participant ID and Test Type are required.");
-    const scoreFieldToUpdate = testType === 'pre-test' ? 'pre_test_score' : 'post_test_score';
+    const scoreFieldToUpdate = getParticipantScoreField(testType);
     const participantRef = doc(db, "participants", participantId);
     const testRecordId = `${participantId}_${testType}`;
     const testRecordRef = doc(db, "participantTests", testRecordId);
@@ -1887,11 +1901,36 @@ export async function deleteParticipantTest(courseId, participantId, testType) {
     const testRecordId = `${participantId}_${testType}`;
     const testRecordRef = doc(db, "participantTests", testRecordId);
     const participantRef = doc(db, "participants", participantId);
-    const scoreFieldToReset = testType === 'pre-test' ? 'pre_test_score' : 'post_test_score';
+    const scoreFieldToReset = getParticipantScoreField(testType);
     const batch = writeBatch(db);
     batch.update(testRecordRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     batch.update(participantRef, { [scoreFieldToReset]: deleteField() });
     await executeOfflineSafeWrite(batch.commit(), `Delete Participant Test`);
+}
+
+// Corrects participant score fields written by the old rule above.
+// updates: [{ participantId, fields: { post_test_score: null, pre_test_score_maternal: 58.3, ... } }]
+// null / undefined removes the field. Only the four test-score fields can be touched.
+export async function repairParticipantScoreFields(updates = []) {
+    const valid = (updates || []).filter(u => u && u.participantId && u.fields);
+    if (valid.length === 0) return 0;
+    let fixed = 0;
+    for (let i = 0; i < valid.length; i += 400) {
+        const batch = writeBatch(db);
+        valid.slice(i, i + 400).forEach(({ participantId, fields }) => {
+            const data = {};
+            Object.entries(fields).forEach(([key, value]) => {
+                if (!PARTICIPANT_SCORE_FIELDS.includes(key)) return;
+                data[key] = (value === null || value === undefined) ? deleteField() : value;
+            });
+            if (Object.keys(data).length > 0) {
+                batch.update(doc(db, "participants", participantId), data);
+                fixed++;
+            }
+        });
+        await executeOfflineSafeWrite(batch.commit(), `Repair Participant Test Scores`);
+    }
+    return fixed;
 }
 
 export const queueCertificateEmail = async (participant, link, language) => {

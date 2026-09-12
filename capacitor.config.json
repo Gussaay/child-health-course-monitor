@@ -23,7 +23,13 @@
       }
     },
     "CapacitorUpdater": {
-      "autoUpdate": false
+      "autoUpdate": false,
+      "appReadyTimeout": 20000,
+      "responseTimeout": 20,
+      "autoDeleteFailed": true,
+      "autoDeletePrevious": true,
+      "resetWhenUpdate": true,
+      "directUpdate": false
     },
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]

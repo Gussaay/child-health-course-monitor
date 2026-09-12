@@ -1,137 +1,110 @@
 // src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
 import { Buffer } from 'buffer';
-window.Buffer = Buffer;
-
-import { DataProvider } from './DataContext'; 
-import './index.css';
-
-// --- SERVICE WORKER REGISTRATION ---
+import { Capacitor } from '@capacitor/core';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { registerSW } from 'virtual:pwa-register';
 
-// --- UPDATER IMPORTS ---
-import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import { Capacitor } from '@capacitor/core';
+import App from './App';
+import { DataProvider } from './DataContext';
+import { AuthProvider } from './hooks/useAuth';
+import { offerWebUpdate } from './hooks/useAppUpdate';
+import { isOnline } from './firebase';
+import './index.css';
 
-// =========================================================================
-// --- INTELLIGENT INSTANT UPDATE MANAGER (WEB & NATIVE) ---
-// =========================================================================
-window.pendingPwaUpdate = null;
-window.pendingOtaBundleId = null;
+window.Buffer = Buffer;
 
-// Helper to instantly trigger Native OTA restart
-window.applyCapgoUpdate = async (id) => {
-    try {
-        if (Capacitor.isNativePlatform()) {
-            await CapacitorUpdater.set({ id });
-        }
-    } catch (e) {
-        console.error("❌ Capacitor Updater: Failed to apply OTA bundle:", e);
-    }
-};
-
-// Evaluates safety and applies pending updates instantly
-window.checkAndApplyPendingUpdates = async () => {
-    // Regex identifies active data-entry routes where a sudden reload would lose data. Added root path `/` for Auth.[cite: 3]
-    const isCriticalPath = /(form|submit|observe|test|record|edit|new|update|manager|finalreport|attendance)/i.test(window.location.pathname) || window.location.pathname === '/';
-    
-    if (!isCriticalPath) {
-        // 1. Instantly apply PWA Update (Web)
-        if (window.pendingPwaUpdate) {
-            console.log("🔄 Safe state detected: Reloading Web PWA instantly.");
-            const updateFn = window.pendingPwaUpdate;
-            window.pendingPwaUpdate = null;
-            updateFn(true); // Triggers skipWaiting and reloads
-        }
-        // 2. Instantly apply Capgo OTA (Native)
-        if (window.pendingOtaBundleId) {
-            console.log("🔄 Safe state detected: Waking native app and reloading OTA instantly.");
-            const bundleId = window.pendingOtaBundleId;
-            window.pendingOtaBundleId = null;
-            window.applyCapgoUpdate(bundleId);
-        }
-    } else {
-        console.log("⚠️ Update downloaded and pending, but user is entering data. Waiting for safe navigation or app close to avoid data loss.");
-    }
-};
-
-// Intercept SPA routing to catch the exact moment a user leaves a critical form
-const originalPushState = window.history.pushState;
-window.history.pushState = function() {
-    originalPushState.apply(this, arguments);
-    setTimeout(() => window.checkAndApplyPendingUpdates(), 500); 
-};
-const originalReplaceState = window.history.replaceState;
-window.history.replaceState = function() {
-    originalReplaceState.apply(this, arguments);
-    setTimeout(() => window.checkAndApplyPendingUpdates(), 500);
-};
-window.addEventListener('popstate', () => {
-    setTimeout(() => window.checkAndApplyPendingUpdates(), 500);
-});
-
-// Register SW to capture PWA updates immediately and pass them to our manager
-const updateSW = registerSW({ 
-    onNeedRefresh() {
-        console.log("⬇️ PWA Service Worker downloaded new update.");
-        window.pendingPwaUpdate = updateSW;
-        window.checkAndApplyPendingUpdates();
-    },
-    immediate: true 
-});
-// =========================================================================
-
-// =========================================================================
-// --- AGGRESSIVE VERSION-CONTROLLED CACHE BUSTER ---
-// =========================================================================
+const IS_NATIVE = Capacitor.isNativePlatform();
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.2';
-window.APP_VERSION = APP_VERSION; 
+window.APP_VERSION = APP_VERSION;
 
-const localVersion = localStorage.getItem('app_version');
-
-if (localVersion !== APP_VERSION) {
-  console.log(`🔄 New version detected! Upgrading from ${localVersion || 'unknown'} to ${APP_VERSION}.`);
-
-  // The version is recorded BEFORE the wipe, not inside the innermost .then().
-  // The old order meant that if a single caches.delete() rejected — which happens
-  // routinely when a service worker is mid-update — app_version was never written,
-  // so the next boot saw a "new version" again and reloaded. That is the loop
-  // users experienced as the app restarting itself over and over.
+// -------------------------------------------------------------------------
+// VERSION LOG — the old "cache buster" is gone.
+// It deleted every cache, unregistered every service worker and reloaded the
+// page on EVERY release. On web it fought the service worker it had just
+// installed; on native it reloaded at the exact moment Capgo was verifying the
+// new bundle, which triggered rollbacks. The service worker (web) and Capgo
+// (native) already handle versioning, so we only record the version now.
+// -------------------------------------------------------------------------
+const previousVersion = localStorage.getItem('app_version');
+if (previousVersion !== APP_VERSION) {
+  console.log(`ℹ️ App version ${previousVersion || 'unknown'} → ${APP_VERSION}`);
   localStorage.setItem('app_version', APP_VERSION);
+}
 
-  if (navigator.onLine) {
-      console.log("Clearing cache to fetch fresh files...");
-      const wipe = async () => {
+// =========================================================================
+// PLATFORM SETUP
+// =========================================================================
+if (IS_NATIVE) {
+  // A service worker must NOT run inside the native app: it keeps serving the
+  // index.html and JS it saved from the OLD bundle after Capgo installs a new
+  // one, which looks like "the app went back to the previous version".
+  // Remove anything left by earlier builds.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then(async (regs) => {
+        if (!regs.length) return;
+        console.log(`🧹 Removing ${regs.length} service worker(s) from the native WebView`);
+        await Promise.allSettled(regs.map((r) => r.unregister()));
         if ('caches' in window) {
           const names = await caches.keys();
-          await Promise.allSettled(names.map(name => caches.delete(name)));
+          await Promise.allSettled(names.map((n) => caches.delete(n)));
         }
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.allSettled(registrations.map(r => r.unregister()));
-        }
-      };
+        // No reload here on purpose: the running code is already the new bundle.
+      })
+      .catch((e) => console.warn('Service worker cleanup failed:', e));
+  }
+} else {
+  // Web only. vite.config MUST use VitePWA({ registerType: 'prompt' }) —
+  // with 'autoUpdate' the plugin reloads by itself and the popup never shows.
+  const updateSW = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      console.log('⬇️ New web version downloaded.');
+      offerWebUpdate(updateSW); // shows the same "Restart and install / Later" popup
+    },
+    onRegisteredSW(_swUrl, registration) {
+      // Users who keep the PWA open for days still get updates.
+      if (registration) {
+        setInterval(() => {
+          if (isOnline()) registration.update().catch(() => {});
+        }, 60 * 60 * 1000);
+      }
+    },
+    onRegisterError(e) {
+      console.error('Service worker registration failed:', e);
+    },
+  });
 
-      wipe()
-        .catch((e) => console.warn("Cache wipe partially failed, continuing anyway:", e))
-        .finally(() => window.location.reload());
-  } else {
-      console.log("📱 Offline mode. Skipping cache wipe until network is restored to prevent crash.");
+  // Ask the browser not to delete IndexedDB when storage is low. The login
+  // session AND the Firestore offline cache both live there, so losing it
+  // signs the user out and wipes the saved data.
+  if (navigator.storage?.persist) {
+    navigator.storage
+      .persisted()
+      .then((already) => already || navigator.storage.persist())
+      .then((ok) => console.log(`💾 Persistent storage: ${ok ? 'granted' : 'not granted'}`))
+      .catch(() => {});
   }
 }
-// =========================================================================
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <DataProvider>
-    <App />
-  </DataProvider>
+// =========================================================================
+// RENDER
+// =========================================================================
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <AuthProvider>
+    <DataProvider>
+      <App />
+    </DataProvider>
+  </AuthProvider>
 );
 
-if (Capacitor.isNativePlatform()) {
+// Nothing above can reload the page any more, so this call is never cut off.
+// If Capgo does not receive it within appReadyTimeout, it rolls the update back.
+if (IS_NATIVE) {
   CapacitorUpdater.notifyAppReady()
-    .then(() => console.log("✅ Capacitor Updater: App booted successfully."))
-    .catch((err) => console.error("❌ Capacitor Updater: Failed to notify app ready.", err));
+    .then(() => console.log('✅ Capgo: app booted successfully.'))
+    .catch((err) => console.error('❌ Capgo: notifyAppReady failed:', err));
 }

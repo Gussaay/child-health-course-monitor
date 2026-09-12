@@ -1,155 +1,136 @@
 // src/hooks/usePushNotifications.jsx
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { doc, updateDoc } from 'firebase/firestore';
+import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from './useAuth'; 
+import { useAuth } from './useAuth';
+
+const VAPID_KEY =
+  'BEmmrhr6OeXSRrTHtIjApXDF9MTeca5juJ5pblMFyGu7N4vCQk_qQ0SFVA2OA4arm7TvobGETRuu173tYsJb0BY';
 
 export function usePushNotifications() {
-    const { user } = useAuth();
+  const { user } = useAuth();
+  const setupDoneForUid = useRef(null);
 
-    useEffect(() => {
-        console.log('[FCM] Hook triggered. User:', user?.uid || 'No user');
-        if (!user || !user.uid) return;
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!uid) return;
 
-        const saveTokenToFirestore = async (token) => {
-            // OPTIMIZATION: Check if we already saved this exact token locally
-            const savedToken = localStorage.getItem('fcm_token');
-            
-            if (savedToken === token) {
-                // Token hasn't changed, skip the expensive database write!
-                console.log('[FCM] Token unchanged, skipping Firestore write.');
-                return; 
-            }
+    // The old version re-ran whenever the `user` OBJECT changed identity, even
+    // for the same person, adding a new set of listeners each time. Result:
+    // the same notification shown two or three times.
+    if (setupDoneForUid.current === uid) return;
+    setupDoneForUid.current = uid;
 
-            console.log('[FCM] Attempting to save token to Firestore...', token);
-            try {
-                const userRef = doc(db, 'users', user.uid);
-                await updateDoc(userRef, {
-                    fcmToken: token,
-                    fcmTokenUpdatedAt: new Date()
-                });
-                
-                // Save the new token locally so we don't write it again next time
-                localStorage.setItem('fcm_token', token);
-                console.log('[FCM] ✅ Token successfully saved to profile!');
-            } catch (error) {
-                console.error('[FCM] ❌ Failed to save FCM token to Firestore. Check your security rules!', error);
-            }
-        };
+    let cancelled = false;
 
-        const setupPushNotifications = async () => {
-            const platform = Capacitor.getPlatform();
-            console.log(`[FCM] Setting up push notifications for platform: ${platform}`);
+    const saveToken = async (token) => {
+      if (!token) return;
+      // Token is stored per user: switching accounts on one phone used to skip
+      // the write, so notifications kept going to the previous account.
+      const cacheKey = `fcm_token:${uid}`;
+      if (localStorage.getItem(cacheKey) === token) return;
 
-            if (Capacitor.isNativePlatform()) {
-                // ---------------------------------------------
-                // NATIVE ANDROID / IOS LOGIC
-                // ---------------------------------------------
-                try {
-                    let permStatus = await PushNotifications.checkPermissions();
-                    console.log('[FCM Native] Permission status:', permStatus);
-                    
-                    if (permStatus.receive === 'prompt') {
-                        permStatus = await PushNotifications.requestPermissions();
-                        console.log('[FCM Native] Requested permissions:', permStatus);
-                    }
+      try {
+        // setDoc(merge) instead of updateDoc: updateDoc fails if the user
+        // document does not exist yet, which silently broke notifications for
+        // brand-new users. Offline, this is queued and uploaded automatically.
+        await setDoc(
+          doc(db, 'users', uid),
+          { fcmToken: token, fcmTokenUpdatedAt: serverTimestamp() },
+          { merge: true }
+        );
+        localStorage.setItem(cacheKey, token);
+        console.log('[FCM] ✅ Token saved.');
+      } catch (error) {
+        console.error('[FCM] ❌ Could not save the token. Check your security rules.', error);
+      }
+    };
 
-                    if (permStatus.receive !== 'granted') {
-                        console.warn("[FCM Native] ❌ User denied push notification permissions");
-                        return;
-                    }
+    const setupNative = async () => {
+      const platform = Capacitor.getPlatform();
+      try {
+        let perm = await PushNotifications.checkPermissions();
+        if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
+          perm = await PushNotifications.requestPermissions();
+        }
+        if (perm.receive !== 'granted') {
+          console.warn('[FCM] Notification permission was not granted.');
+          return;
+        }
 
-                    // For Android 8+ Heads Up Notifications
-                    if (platform === 'android') {
-                        await PushNotifications.createChannel({
-                            id: 'default',
-                            name: 'Default Notifications',
-                            description: 'General app notifications',
-                            importance: 5, 
-                            visibility: 1
-                        });
-                    }
+        if (platform === 'android') {
+          await PushNotifications.createChannel({
+            id: 'default',
+            name: 'Default Notifications',
+            description: 'General app notifications',
+            importance: 5,
+            visibility: 1,
+          }).catch(() => {});
+        }
 
-                    // ⚠️ CRITICAL FIX: Listeners MUST be attached BEFORE calling register() ⚠️
-                    PushNotifications.addListener('registration', (token) => {
-                        console.log('[FCM Native] ✅ Push registration success, token: ' + token.value);
-                        saveTokenToFirestore(token.value);
-                    });
+        // Remove anything left from a previous mount before adding new ones.
+        await PushNotifications.removeAllListeners();
+        if (cancelled) return;
 
-                    PushNotifications.addListener('registrationError', (error) => {
-                        console.error('[FCM Native] ❌ Error on registration: ', JSON.stringify(error));
-                    });
+        // Listeners must be attached BEFORE register().
+        await PushNotifications.addListener('registration', (token) => saveToken(token.value));
+        await PushNotifications.addListener('registrationError', (e) =>
+          console.error('[FCM] Registration error:', JSON.stringify(e))
+        );
+        await PushNotifications.addListener('pushNotificationReceived', (n) => {
+          // alert() blocks the whole WebView and cannot be dismissed by
+          // swiping. Replace this with your in-app toast component.
+          console.log('[FCM] Received in foreground:', n.title, n.body);
+        });
+        await PushNotifications.addListener('pushNotificationActionPerformed', (a) =>
+          console.log('[FCM] Notification tapped:', a?.notification?.data)
+        );
 
-                    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                        console.log('[FCM Native] Push received in foreground: ', notification);
-                        alert(`Notification: ${notification.title}\n${notification.body}`);
-                    });
+        await PushNotifications.register();
+      } catch (error) {
+        console.error('[FCM] Native setup failed:', error);
+      }
+    };
 
-                    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-                        console.log('[FCM Native] Push action performed: ', action);
-                    });
+    const setupWeb = async () => {
+      try {
+        // Not every browser supports web push (older iOS Safari, some WebViews).
+        // Without this check, getMessaging() throws and the whole hook dies.
+        if (!(await isSupported())) {
+          console.log('[FCM] Web push is not supported in this browser.');
+          return;
+        }
+        // Do not call requestPermission() automatically: browsers block prompts
+        // that are not started by a user action, and a refused prompt cannot be
+        // asked again. Ask from a button, then call this hook.
+        if (Notification.permission === 'denied') return;
+        if (Notification.permission !== 'granted') {
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') return;
+        }
 
-                    // Call register LAST so the listener above catches the event
-                    console.log('[FCM Native] Registering for push notifications...');
-                    await PushNotifications.register();
+        const messaging = getMessaging();
+        const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+        if (!cancelled && token) saveToken(token);
 
-                } catch (error) {
-                    console.error("[FCM Native] ❌ Failed to setup Native Push Notifications:", error);
-                }
-            } else {
-                // ---------------------------------------------
-                // WEB BROWSER LOGIC
-                // ---------------------------------------------
-                try {
-                    console.log('[FCM Web] Requesting notification permissions...');
-                    const permission = await Notification.requestPermission();
-                    console.log('[FCM Web] Permission result:', permission);
+        onMessage(messaging, (payload) => {
+          console.log('[FCM] Web message in foreground:', payload?.notification);
+        });
+      } catch (error) {
+        console.error('[FCM] Web setup failed:', error);
+      }
+    };
 
-                    if (permission === 'granted') {
-                        const messaging = getMessaging();
-                        console.log('[FCM Web] Getting token...');
-                        
-                        const vapidKey = 'BEmmrhr6OeXSRrTHtIjApXDF9MTeca5juJ5pblMFyGu7N4vCQk_qQ0SFVA2OA4arm7TvobGETRuu173tYsJb0BY';
-                        
-                        if (vapidKey === 'YOUR_PUBLIC_VAPID_KEY_HERE') {
-                             console.error('[FCM Web] ❌ VAPID KEY IS MISSING.');
-                             return;
-                        }
+    if (Capacitor.isNativePlatform()) setupNative();
+    else setupWeb();
 
-                        const currentToken = await getToken(messaging, { vapidKey });
-                        
-                        if (currentToken) {
-                            console.log('[FCM Web] ✅ Token generated:', currentToken);
-                            saveTokenToFirestore(currentToken);
-                        } else {
-                            console.warn('[FCM Web] ❌ No registration token available. Request permission to generate one.');
-                        }
-
-                        onMessage(messaging, (payload) => {
-                            console.log('[FCM Web] Message received in web foreground: ', payload);
-                            if (payload.notification) {
-                                alert(`Notification: ${payload.notification.title}\n${payload.notification.body}`);
-                            }
-                        });
-
-                    } else {
-                        console.warn("[FCM Web] ❌ User denied web push notification permissions");
-                    }
-                } catch (error) {
-                    console.error('[FCM Web] ❌ An error occurred while retrieving Web FCM token.', error);
-                }
-            }
-        };
-
-        setupPushNotifications();
-
-        return () => {
-            if (Capacitor.isNativePlatform()) {
-                PushNotifications.removeAllListeners();
-            }
-        };
-    }, [user]); 
+    return () => {
+      cancelled = true;
+      if (Capacitor.isNativePlatform()) PushNotifications.removeAllListeners();
+    };
+    // uid only: a new user object for the same person must not restart setup.
+  }, [user?.uid]);
 }
