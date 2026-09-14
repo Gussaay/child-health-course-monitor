@@ -4,6 +4,17 @@ import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, Spinn
 import { listObservationsForParticipant, listCasesForParticipant, upsertCaseAndObservations, deleteCaseAndObservations } from '../../data.js';
 import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, SKILLS_EMONC_NEONATAL, calcPct, fmtPct, pctBgClass } from '../constants.js';
 
+// --- SCORING SCALE ---
+// Done = full credit  |  Partially = half credit  |  Not Done = no credit  |  N/A = excluded from the score
+export const SCORE_DONE = 1;
+export const SCORE_PARTIAL = 0.5;
+export const SCORE_NOT_DONE = 0;
+export const SCORE_NA = -1;
+
+const isScored = (v) => v !== SCORE_NA && v !== undefined && v !== null;
+const creditOf = (v) => (v === SCORE_DONE ? 1 : v === SCORE_PARTIAL ? 0.5 : 0);
+const fmtScore = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
 const generateHash = (buffer) => Object.keys(buffer).sort().map(k => `${k}:${buffer[k]}`).join('|');
 
 // --- EENC MAPPING (Shared) ---
@@ -143,6 +154,24 @@ export const NEONATAL_CHECKLISTS = {
     advanced_resuscitation: {
         title: "Advanced Neonatal Resuscitation",
         domains: { "Resuscitation & Management": SKILLS_EMONC_NEONATAL.resuscitation.map(i => i.text) }
+    },
+    newborn_exam: {
+        title: "Newborn Examination (Competency Checklist)",
+        domains: {
+            "1. Know the baby": ["1. Reviews the antenatal and birth history: preterm, membranes ruptured more than 18 hours, maternal fever, difficult birth or asphyxia, known anomaly.", "2. States gestational age, birth weight, and Apgar score at 1, 5 and 10 minutes."],
+            "2. Prepare": ["1. Washes hands. Warm room, no draught. Warm flat surface, good light.", "2. Greets the mother, explains what will be done, keeps her beside the baby.", "3. Keeps the baby covered between parts. Handles the baby as little as possible."],
+            "3. Temperature, weight & measurements": ["1. Takes the axillary temperature correctly. States normal: 36.5–37.5 °C.", "2. Acts on it at once — below 36.5 °C: skin-to-skin, hat, cover, re-check. Above 37.5 °C: remove extra clothing, re-check.", "3. Weighs on a calibrated scale and records the weight.", "4. Classifies the weight: 2500 g and above normal · 1500 to below 2500 g low birth weight · below 1500 g very low birth weight.", "5. Measures length, head circumference and chest circumference and plots on appropriate centiles."],
+            "4. Look before you touch": ["1. Colour: pink, pale, blue or yellow.", "2. Activity: active, lethargic, or not responding.", "3. Tone and posture: normal flexion, floppy, or stiff. Both sides move equally."],
+            "5. Breathing": ["1. Counts the respiratory rate for one full minute. States normal: 30–60 per minute.", "2. Looks for chest indrawing, grunting, nasal flaring, apnoea.", "3. Looks at the shape of the chest and whether both sides move equally."],
+            "6. Circulation": ["1. Counts the heart rate by listening for one full minute. States normal: 100–160 per minute.", "2. Feels the brachial and femoral pulses and compares arms with legs.", "3. Checks capillary refill (normal under 3 seconds) and whether hands and feet are warm."],
+            "7. Head and face": ["1. Fontanelle (flat, bulging or sunken), sutures, moulding, caput, cephalhaematoma.", "2. Eyes: discharge, redness, cloudy cornea. Confirms eye care was given.", "3. Ears: shape and position.", "4. Mouth: looks AND feels the palate for a cleft. Tongue, mucous membranes, thrush."],
+            "8. Abdomen, cord, genitalia, anus": ["1. Abdomen: distension, visible loops of bowel, gastroschisis, exomphalos. Palpates gently for liver, spleen, kidneys and masses.", "2. Cord: clean and dry, no bleeding, no redness or pus, nothing applied, no binder.", "3. Genitalia: ambiguous genitalia, hypospadias, undescended testes.", "4. Anus present and in the normal position. Asks whether the baby has passed urine and meconium."],
+            "9. Back, limbs, hips, skin": ["1. Turns the baby over. Looks at and feels the whole spine: swelling, dimple, tuft of hair, open lesion.", "2. All four limbs: number of digits, joined or extra digits, talipes, swelling, an arm that does not move.", "3. Hips: Barlow and Ortolani. Notes any click, clunk or limited abduction.", "4. Skin: jaundice and how far down it reaches, pustules, blisters, petechiae, rash, birthmarks.", "5. If jaundiced: states the zone, when bilirubin will be measured, and the treatment threshold."],
+            "10. Neurology": ["1. Tone of the head and trunk, and of the limbs.", "2. Moro, rooting and sucking reflexes — present, equal on both sides, good strength.", "3. Names the subtle signs of seizure: lip smacking, cycling movements, eye deviation, apnoea. Separates these from jitteriness, which stops when you hold the limb."],
+            "11. Feeding": ["1. Watches a breastfeed, or assesses the baby’s ability to suck.", "2. Checks attachment: chin touching the breast, mouth wide open, lower lip turned out, more areola above the mouth than below. Notes suck and swallow.", "3. Classifies: feeding well · feeding difficulty · unable to feed — and states what to do for each."],
+            "12. Preventive care": ["1. Vitamin K 1 mg intramuscularly given. Site and time documented.", "2. Eye care given correctly.", "3. Immunisations given as per the national schedule, or the date planned."],
+            "13. Classify, plan, tell, record": ["1. CRITICAL — Names every danger sign found: breathing over 60 per minute, chest indrawing, temperature below 35.5 °C or above 38 °C, not feeding, no movement or lethargy, convulsions.", "2. Classifies the baby: routine care · intermediate care · advanced care.", "3. States a plan that matches the classification. If sepsis is suspected, gives the first dose of antibiotic without delay.", "4. Explains the findings and the plan to the mother in words she understands.", "5. Records findings, weight, temperature, feeding, classification and plan in the notes."]
+        }
     }
 };
 
@@ -152,15 +181,16 @@ export const NEONATAL_CHECKLISTS = {
 
 function ActionToggle({ currentValue, onClick }) {
     const options = [
-        ['Done', 1, 'bg-green-600 border-green-600'],
-        ['Not Done', 0, 'bg-red-600 border-red-600'],
-        ['N/A', -1, 'bg-gray-500 border-gray-500']
+        ['Done', SCORE_DONE, 'bg-green-600 border-green-600'],
+        ['Partially', SCORE_PARTIAL, 'bg-amber-500 border-amber-500'],
+        ['Not Done', SCORE_NOT_DONE, 'bg-red-600 border-red-600'],
+        ['N/A', SCORE_NA, 'bg-gray-500 border-gray-500']
     ];
     return (
         <div className="relative z-0 inline-flex shadow-sm rounded-md flex-shrink-0">
             {options.map(([label, value, activeClass], idx) => {
                 const isSelected = currentValue === value;
-                const baseClass = "relative inline-flex items-center justify-center px-3 py-1 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
+                const baseClass = "relative inline-flex items-center justify-center px-2.5 py-1 text-sm font-medium whitespace-nowrap focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
                 const activeState = isSelected ? `${activeClass} text-white` : "bg-white text-gray-700 hover:bg-gray-50";
                 let roundedClass = "";
                 if (idx === 0) roundedClass = "rounded-l-md";
@@ -278,7 +308,8 @@ export function EmoncMonitoring({ course, participant, participants, onChangePar
 
         setIsSaving(true);
         const currentCaseSerial = editingCase ? editingCase.case_serial : caseSerial;
-        const allCorrect = entries.every(([, v]) => v > 0);
+        const scoredEntries = entries.filter(([, v]) => isScored(v));
+        const allCorrect = scoredEntries.length > 0 && scoredEntries.every(([, v]) => v === SCORE_DONE);
         
         // Format: Maternal_placenta OR Neonatal_eenc_breathing
         const ageGroupString = `${moduleType === 'maternal' ? 'Maternal' : 'Neonatal'}_${scenario}`;
@@ -525,9 +556,10 @@ function SubmittedEmoncCases({ cases, observations, onEditCase, onDeleteCase }) 
             <Table headers={["Date", "Day", "Category", "Checklist", "Score", "Actions"]}>
                 {cases.sort((a,b) => b.day_of_course - a.day_of_course || b.case_serial - a.case_serial).map(c => {
                     const relatedObs = observations.filter(o => o.caseId === c.id);
-                    const total = relatedObs.length;
-                    const correct = relatedObs.filter(o => o.item_correct > 0).length;
-                    const pct = total > 0 ? (correct/total)*100 : 0;
+                    const scoredObs = relatedObs.filter(o => isScored(o.item_correct));
+                    const total = scoredObs.length;
+                    const earned = scoredObs.reduce((sum, o) => sum + creditOf(o.item_correct), 0);
+                    const pct = total > 0 ? (earned/total)*100 : 0;
                     
                     const [mod, scen] = c.age_group?.split('_', 2) || ['Unknown', 'Unknown'];
                     const isMaternal = mod.toLowerCase() === 'maternal';
@@ -544,7 +576,7 @@ function SubmittedEmoncCases({ cases, observations, onEditCase, onDeleteCase }) 
                                 </span>
                             </td>
                             <td className="p-2 font-medium">{checklistName || c.age_group}</td>
-                            <td className={`p-2 text-center font-mono ${pctBgClass(pct)}`}>{fmtPct(pct)} ({correct}/{total})</td>
+                            <td className={`p-2 text-center font-mono ${pctBgClass(pct)}`}>{fmtPct(pct)} ({fmtScore(earned)}/{total})</td>
                             <td className="p-2 text-right">
                                 <Button size="sm" variant="secondary" onClick={() => onEditCase(c)} className="mr-2">Edit</Button>
                                 <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>Delete</Button>
