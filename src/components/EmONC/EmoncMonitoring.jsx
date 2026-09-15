@@ -172,6 +172,79 @@ export const NEONATAL_CHECKLISTS = {
             "12. Preventive care": ["1. Vitamin K 1 mg intramuscularly given. Site and time documented.", "2. Eye care given correctly.", "3. Immunisations given as per the national schedule, or the date planned."],
             "13. Classify, plan, tell, record": ["1. CRITICAL — Names every danger sign found: breathing over 60 per minute, chest indrawing, temperature below 35.5 °C or above 38 °C, not feeding, no movement or lethargy, convulsions.", "2. Classifies the baby: routine care · intermediate care · advanced care.", "3. States a plan that matches the classification. If sepsis is suspected, gives the first dose of antibiotic without delay.", "4. Explains the findings and the plan to the mother in words she understands.", "5. Records findings, weight, temperature, feeding, classification and plan in the notes."]
         }
+    },
+    shock: {
+        title: "Shock in Neonates",
+        domains: {
+            "Airway (A)": ["1. Assesses airway patency and positions the newborn to open the airway"],
+            "Breathing (B)": ["2. Assesses respiratory rate and effort (apnoea, grunting, flaring); gives oxygen or ventilation if hypoxaemic or distressed"],
+            "Circulation (C)": ["3. Assesses heart rate, central and peripheral pulses, capillary refill, and extremity temperature (cold vs warm)", "4. Promptly establishes IV or IO access and draws initial labs (blood culture, metabolic panel, lactate)", "5. Administers normal saline / Ringer’s lactate bolus at 20 ml/kg (uses cautious 10 ml/kg if cardiogenic or preterm)", "6. Initiates broad-spectrum empirical antibiotics immediately (ideally after culture)", "7. Prepares vasopressors (dopamine, epinephrine) if hypotension persists after fluid resuscitation"],
+            "Disability (D)": ["8. Checks blood glucose and treats hypoglycaemia with 10% dextrose 2 ml/kg IV bolus", "9. Keeps the baby warm throughout — does not expose an already cold baby"],
+            "Reassessment & Escalation": ["10. Reassesses heart rate, capillary refill, urine output and respiratory status after each intervention", "11. Recognises failure to improve; suspects septic shock; prepares for referral"],
+            "Communication": ["12. Communicates clearly with the team and updates the family"]
+        }
+    },
+    hypoglycaemia: {
+        title: "Neonatal Hypoglycaemia",
+        domains: {
+            "Airway (A) & Breathing (B)": ["1. Assesses for respiratory clinical signs consistent with hypoglycaemia (e.g. apnoea) to determine emergency status. Ensures airway patency"],
+            "Circulation (C)": ["2. Admits or readmits the infant to the NICU and promptly obtains IV access", "3. Collects a blood sample for lab confirmation of blood glucose and hypoglycaemia screening tests; reviews the need to screen for and treat sepsis"],
+            "Disability (D)": ["4. Correctly identifies clinical emergency criteria: blood glucose < 1.0 mmol/L OR clinical signs consistent with hypoglycaemia", "5. Administers an immediate IV bolus of 2.5 ml/kg of 10% dextrose, correctly calculated for the weight", "6. Follows the bolus with a continuous infusion of 10% dextrose at 60 ml/kg/day (can increase GIR by 2 mg/kg/min by increasing volume or concentration)", "7. Recognises and corrects hypothermia as a driver of hypoglycaemia"],
+            "Reassessment (30 min)": ["8. Schedules and executes a blood glucose recheck exactly 30 minutes after the intervention", "9. If BG < 1.0 mmol/L OR abnormal clinical signs persist: repeats the entire cycle — another bolus, increases GIR, rechecks in 30 min", "10. If BG 1.0–2.5 mmol/L AND no abnormal signs: increases GIR by 2 mg/kg/min, continues oral feeds, rechecks in 30 min, and explicitly states an IV bolus is NOT indicated", "11. If BG > 2.5 mmol/L AND no abnormal signs: continues enteral feeds and initiates a slow wean of the IV infusion", "12. Continues monitoring BG until the infant is on full enteral feeds AND BG > 2.5 mmol/L (> 3.0 in hyperinsulinism) over several feed cycles for at least 24 hours"],
+            "Documentation": ["13. Records glucose values, times, doses and clinical signs accurately"]
+        }
+    },
+    seizures: {
+        title: "Neonatal Seizures",
+        domains: {
+            "Airway (A) & Breathing (B)": ["1. Secures the airway and provides oxygen or ventilation as needed. Establishes continuous monitoring for respiratory depression. Recognizes that refractory cases may require an ICU setting with ventilator support"],
+            "Circulation (C)": ["2. Promptly establishes IV access for medication delivery. Monitors blood pressure closely to watch for hypotension"],
+            "Treat reversible causes": ["3. Phase 1 (0–15 min): checks and corrects reversible causes FIRST — hypoglycaemia (< 2.6 mmol/L) with D10W IV; hypocalcaemia (ionized Ca < 0.8) with 10% calcium gluconate IV; hypomagnesaemia (< 0.7) with MgSO₄; empiric antibiotics and workup if infection suspected"],
+            "Recognition": ["4. Applies the STOP test and correctly distinguishes a true seizure from a mimic before giving any anticonvulsant"],
+            "First-line meds": ["5. Administers phenobarbital: correctly calculates and gives a loading dose of 20 mg/kg IV over 20 minutes"],
+            "Escalation 1": ["6. Phase 2 (15–60 min): reassesses after the loading dose. If seizures persist, gives an additional 10 mg/kg IV over 10 minutes. Recognizes the maximum loading dose is 40 mg/kg in the first 24 h"],
+            "Escalation 2": ["7. If still seizing after 40 mg/kg, selects an appropriate second-line option: Levetiracetam · Fosphenytoin/phenytoin · Midazolam infusion · Lidocaine infusion"],
+            "Refractory": ["8. Phase 3 (> 60 min): for refractory status epilepticus, escalates to comatose therapy (midazolam infusion to burst-suppression on EEG) or initiates critical metabolic trials (pyridoxine, pyridoxal-5′-phosphate, biotin, folinic acid) under EEG monitoring"],
+            "Reassessment / maintenance": ["9. Plans maintenance dosing (phenobarbital 3–5 mg/kg/day PO or IV every 12 h, starting 12–24 h after loading) once seizures are controlled"],
+            "Documentation & referral": ["10. Documents the seizure event on the standardized form; determines referral timing and prepares for safe transport"]
+        }
+    },
+    referral_transport: {
+        title: "Neonatal Referral and Transport",
+        domains: {
+            "Stabilization": ["1. Normalizes temperature BEFORE departure", "2. Secures the airway; correct neck position / ETT stabilized", "3. Assesses breathing and provides appropriate support", "4. Assesses circulation (pulses, CRT) and treats shock", "5. Checks blood glucose and prevents hypoglycaemia", "6. Gives antibiotics / anticonvulsants / vitamin K if indicated", "7. Places NG tube for distended abdomen; plans feeds or IV fluids"],
+            "Equipment": ["8. Completes the equipment check before moving", "9. Calculates the oxygen requirement for the journey correctly"],
+            "Team": ["10. Organizes the team and assigns clear duties"],
+            "Communication": ["11. Counsels the parents using the eight counselling points", "12. Encourages the mother to accompany the baby", "13. Gives a clear handover to the receiving unit and obtains read-back", "14. Uses closed-loop communication with team members by name"],
+            "Documentation": ["15. Writes a precise referral note with condition, reason and treatment given", "16. Records serial vital signs and temperature before and after transfer"],
+            "Handover": ["17. Gives a detailed handover on arrival and transfers care formally"]
+        }
+    },
+    kmc: {
+        title: "Kangaroo Mother Care Positioning",
+        domains: {
+            "Prepare Mother": ["1. Washes hands correctly before handling the baby", "2. Explains the procedure to the mother and obtains her agreement", "3. Ensures privacy and a warm room", "4. Mother's chest is bare; baby wears only a hat and a nappy"],
+            "Place baby": ["5. Places the baby in the fetal position — arms and hips flexed, slight hip abduction", "6. Baby is upright on the bare chest", "7. Turns the baby's head to one side in the 'sniffing' position", "8. Secures the baby with a cloth or wrap", "9. Head secured AT EAR LEVEL — neck neither hyperextended nor flexed", "10. Confirms the diaphragm can move freely — wrap is not restricting the abdomen", "11. Covers baby and parent with a shirt or blanket", "12. Arranges any cables and IV lines without tangles"],
+            "Confirm": ["13. Checks the airway visually after positioning", "14. Confirms the mother is comfortable and can maintain the position", "15. States that the parent may lie down only if the baby is firmly secured", "16. Checks and records the baby's temperature", "17. Washes and dries hands", "18. Documents the procedure"]
+        }
+    },
+    phototherapy: {
+        title: "Phototherapy",
+        domains: {
+            "Preparation": ["1. Explains to the mother what phototherapy is and that she can still feed", "2. Undresses the baby to a nappy only — maximum skin exposure", "3. Applies eye covers correctly; confirms they do not occlude the nostrils", "4. Positions the light source at the correct distance"],
+            "Operation": ["5. Starts the unit and records the time"],
+            "Monitoring & Escalation": ["6. Ensures adequate feeding; states that phototherapy increases insensible water loss", "7. States temperature is monitored 2–4 hourly; recognises both hyper- and hypothermia", "8. Turns the baby to expose all surfaces; removes eye covers during feeds", "9. Repeats TSB every 6–12 hours initially", "10. States when to escalate — rise > 0.5 mg/dL/hr, approaching exchange threshold, failure to respond"],
+            "Documentation": ["11. Documents device, start time, TSB trend, temperature and fluid status"]
+        }
+    },
+    exchange_transfusion: {
+        title: "Exchange Transfusion",
+        domains: {
+            "Preparation": ["1. Obtains informed consent from parents", "2. Specifies fresh (< 5 days), cross-matched, CMV-negative, irradiated, leukocyte-depleted", "3. Confirms compatibility with BOTH infant and mother", "4. Warms blood to 37 °C before transfusion", "5. Calculates double volume correctly — 160–180 mL/kg", "6. Corrects hypoglycaemia, hypocalcaemia and acidosis before starting", "7. Ensures aseptic technique, resuscitation equipment and monitoring ready"],
+            "Technique": ["8. Describes push–pull; correct aliquot size for weight — 5–10 mL term, 2–5 mL preterm"],
+            "Monitoring": ["9. Continuous cardiorespiratory monitoring; checks glucose, calcium, electrolytes, Hct, bilirubin", "10. Gives 10% calcium gluconate 1 mL/kg slow IV after every ~100 mL, WITH cardiac monitoring", "11. Continues INTENSIVE phototherapy after the exchange", "12. Rechecks bilirubin at 2 hours then every 4–6 hours"],
+            "Documentation": ["13. Documents volume, aliquot, duration, complications and full blood details"]
+        }
     }
 };
 
