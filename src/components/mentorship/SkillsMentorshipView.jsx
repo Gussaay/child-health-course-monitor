@@ -65,6 +65,31 @@ import {
     SaveStatusModal 
 } from '../FacilityForms.jsx';
 
+// --- IPC form tabs (all three IPC forms save with serviceType 'IPC') ---
+const IPC_LIST_TABS = [
+    { key: 'ipc', label: 'IPC Facility Assessment' },
+    { key: 'ams', label: 'Antimicrobial Stewardship' },
+    { key: 'handwashing', label: 'Hand Hygiene' }
+];
+
+const AMS_SECTION_KEYS = ['diagnostics', 'empirical', 'duration', 'stewardship_barriers', 'rational_use', 'reporting_surveillance', 'guidelines_eml'];
+
+const resolveIpcFormType = (sub = {}) => {
+    const raw = [sub.formType, sub.formCategory, sub.fullData?.formType, sub.fullData?.formCategory]
+        .filter(Boolean).join(' ').toLowerCase();
+
+    if (raw.includes('handwash') || raw.includes('hand_hygiene') || raw.includes('hand hygiene')) return 'handwashing';
+    if (raw.includes('ams') || raw.includes('stewardship')) return 'ams';
+
+    const scores = sub.scores || sub.fullData?.scores || {};
+    if (scores.opportunities_count !== undefined || scores.handwash_count !== undefined) return 'handwashing';
+
+    const sectionKeys = Object.keys(scores.sections || {});
+    if (sectionKeys.some(k => AMS_SECTION_KEYS.includes(k))) return 'ams';
+
+    return 'ipc';
+};
+
 // --- Bilingual Normalization Helpers ---
 const normalizeState = (stateVal) => {
     if (!stateVal || stateVal === 'N/A') return 'N/A';
@@ -2124,6 +2149,8 @@ const SkillsMentorshipView = ({
         return publicDashboardMode ? 'dashboard' : 'skills_list';
     });
     const [activeFormType, setActiveFormType] = useState('skills_assessment');
+    // IPC list is split per form instead of a single "Skills Assessments" list
+    const [ipcFormFilter, setIpcFormFilter] = useState('ipc');
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     
@@ -2551,6 +2578,22 @@ const SkillsMentorshipView = ({
         return mappedData;
     }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email]);
 
+    const ipcFormCounts = useMemo(() => {
+        const counts = { ipc: 0, ams: 0, handwashing: 0 };
+        if (activeService !== 'IPC') return counts;
+        processedSubmissions.forEach(sub => {
+            if (sub.service !== 'IPC') return;
+            const key = resolveIpcFormType(sub);
+            if (counts[key] !== undefined) counts[key]++;
+        });
+        return counts;
+    }, [processedSubmissions, activeService]);
+
+    // IPC has no mothers survey, so never leave the list on that tab
+    useEffect(() => {
+        if (activeService === 'IPC' && activeTab === 'mothers_list') setActiveTab('skills_list');
+    }, [activeService, activeTab]);
+
     // --- LIFTED SUBMISSIONS FILTERING TO TOP LEVEL ---
     const filteredSubmissions = useMemo(() => {
         let filtered = processedSubmissions;
@@ -2560,6 +2603,9 @@ const SkillsMentorshipView = ({
         
         if (filterServiceTarget) {
             filtered = filtered.filter(sub => sub.service === filterServiceTarget); 
+        }
+        if (activeService === 'IPC' && activeTab === 'skills_list') {
+            filtered = filtered.filter(sub => resolveIpcFormType(sub) === ipcFormFilter);
         }
         if (stateFilter) filtered = filtered.filter(sub => sub.state === stateFilter);
         if (localityFilter) filtered = filtered.filter(sub => sub.locality === localityFilter);
@@ -2579,7 +2625,7 @@ const SkillsMentorshipView = ({
             const timeB = b.effectiveDateTimestamp ? (b.effectiveDateTimestamp.seconds || b.effectiveDateTimestamp._seconds) : new Date(b.date).getTime() / 1000;
             return timeB - timeA;
         });
-    }, [processedSubmissions, activeService, activeTab, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter, customStartDate, customEndDate]);
+    }, [processedSubmissions, activeService, activeTab, ipcFormFilter, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter, customStartDate, customEndDate]);
 
     const uniqueVisitNumbers = useMemo(() => {
         const numbers = new Set();
@@ -4204,36 +4250,65 @@ const SkillsMentorshipView = ({
 
                         {!publicDashboardMode && activeTab !== 'dashboard' && (
                             <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
-                                <button
-                                    onClick={() => setActiveTab('skills_list')}
-                                    className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
-                                        activeTab === 'skills_list'
-                                            ? 'border-b-2 border-sky-500 text-sky-600'
-                                            : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                                >
-                                    Skills Assessments
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('mothers_list')}
-                                    className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
-                                        activeTab === 'mothers_list'
-                                            ? 'border-b-2 border-sky-500 text-sky-600'
-                                            : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                                >
-                                    Mothers Surveys
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('visit_reports')}
-                                    className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
-                                        activeTab === 'visit_reports'
-                                            ? 'border-b-2 border-sky-500 text-sky-600'
-                                            : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                                >
-                                    Visit Reports
-                                </button>
+                                {activeService === 'IPC' ? (
+                                    // IPC: one tab per form, no mothers survey
+                                    IPC_LIST_TABS.map(tab => {
+                                        const isActive = activeTab === 'skills_list' && ipcFormFilter === tab.key;
+                                        return (
+                                            <button
+                                                key={tab.key}
+                                                onClick={() => {
+                                                    setActiveTab('skills_list');
+                                                    setIpcFormFilter(tab.key);
+                                                    setSelectedSubmissionIds([]);
+                                                }}
+                                                className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap inline-flex items-center gap-2 ${
+                                                    isActive
+                                                        ? 'border-b-2 border-sky-500 text-sky-600'
+                                                        : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                            >
+                                                {tab.label}
+                                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-sky-100 text-sky-700' : 'bg-gray-200 text-gray-600'}`} dir="ltr">
+                                                    {ipcFormCounts[tab.key] || 0}
+                                                </span>
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => setActiveTab('skills_list')}
+                                            className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
+                                                activeTab === 'skills_list'
+                                                    ? 'border-b-2 border-sky-500 text-sky-600'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            Skills Assessments
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('mothers_list')}
+                                            className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
+                                                activeTab === 'mothers_list'
+                                                    ? 'border-b-2 border-sky-500 text-sky-600'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            Mothers Surveys
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('visit_reports')}
+                                            className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
+                                                activeTab === 'visit_reports'
+                                                    ? 'border-b-2 border-sky-500 text-sky-600'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            Visit Reports
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         )}
 

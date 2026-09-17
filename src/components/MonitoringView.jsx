@@ -10,8 +10,6 @@ import {
     SKILLS_ETAT, ETAT_DOMAINS, ETAT_DOMAIN_LABEL,
     DOMAINS_BY_AGE_IMNCI, DOMAIN_LABEL_IMNCI, getClassListImnci,
     SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL,
-    SKILLS_EMONC_NEONATAL, EMONC_DOMAINS_NEONATAL, EMONC_DOMAIN_LABEL_NEONATAL,
-    SKILLS_EMONC_MATERNAL, EMONC_DOMAINS_MATERNAL, EMONC_DOMAIN_LABEL_MATERNAL,
     getMentorshipSubType, getCourseMentorshipService,
     IMNCI_CASE_SCENARIOS, getScenarioById, compareMentorToStandard,
 } from './constants.js';
@@ -121,7 +119,7 @@ export function ObservationView({ course, participant, participants, onChangePar
         setEncounterDate(caseToEdit.encounter_date);
         setDayOfCourse(caseToEdit.day_of_course);
         if (isImnci) { setSetting(caseToEdit.setting); setAge(caseToEdit.age_group); }
-        if (isEenc) { setEencScenario(caseToEdit.age_group.replace('EENC_', '')); }
+        if (isEenc) { setEencScenario((caseToEdit.age_group || 'EENC_breathing').replace('EENC_', '')); }
         
         const caseObs = allObservations.filter(o => o.caseId === caseToEdit.id);
         const newBuffer = {};
@@ -201,8 +199,6 @@ export function ObservationView({ course, participant, participants, onChangePar
             let skillsMap;
             if (eencScenario === 'breathing') skillsMap = SKILLS_EENC_BREATHING;
             else if (eencScenario === 'not_breathing') skillsMap = SKILLS_EENC_NOT_BREATHING;
-            else if (eencScenario === 'neonatal_emergency') skillsMap = SKILLS_EMONC_NEONATAL;
-            else if (eencScenario === 'maternal_emergency') skillsMap = SKILLS_EMONC_MATERNAL;
 
             const totalSkills = Object.values(skillsMap || {}).reduce((acc, domain) => acc + domain.length, 0);
             if (entries.length < totalSkills) {
@@ -348,16 +344,10 @@ export function ObservationView({ course, participant, participants, onChangePar
                                 <option value="LT2M">Young Infant (0-59 days)</option>
                             </Select>
                         </FormGroup>}
-                        {isEenc && <FormGroup label={course.course_type === 'EmONC' ? "EmONC Module" : "EENC Scenario"}>
+                        {isEenc && <FormGroup label="EENC Scenario">
                             <Select value={eencScenario} onChange={(e) => setEencScenario(e.target.value)} disabled={!!editingCase}>
                                 <option value="breathing">Essential Newborn Care (Breathing)</option>
                                 <option value="not_breathing">Essential Newborn Care (Not Breathing)</option>
-                                {course.course_type === 'EmONC' && (
-                                    <>
-                                        <option value="neonatal_emergency">Neonatal Emergency Care</option>
-                                        <option value="maternal_emergency">Maternal Emergency Care</option>
-                                    </>
-                                )}
                             </Select>
                         </FormGroup>}
                         <FormGroup label="Encounter Date"><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
@@ -583,22 +573,14 @@ function EtatMonitoringGrid({ buffer, toggle }) {
 function EencMonitoringGrid({ scenario, buffer, toggle }) {
     let domains, skillsMap, labelsMap;
 
-    if (scenario === 'breathing') {
-        domains = EENC_DOMAINS_BREATHING;
-        skillsMap = SKILLS_EENC_BREATHING;
-        labelsMap = EENC_DOMAIN_LABEL_BREATHING;
-    } else if (scenario === 'not_breathing') {
+    if (scenario === 'not_breathing') {
         domains = EENC_DOMAINS_NOT_BREATHING;
         skillsMap = SKILLS_EENC_NOT_BREATHING;
         labelsMap = EENC_DOMAIN_LABEL_NOT_BREATHING;
-    } else if (scenario === 'neonatal_emergency') {
-        domains = EMONC_DOMAINS_NEONATAL;
-        skillsMap = SKILLS_EMONC_NEONATAL;
-        labelsMap = EMONC_DOMAIN_LABEL_NEONATAL;
-    } else if (scenario === 'maternal_emergency') {
-        domains = EMONC_DOMAINS_MATERNAL;
-        skillsMap = SKILLS_EMONC_MATERNAL;
-        labelsMap = EMONC_DOMAIN_LABEL_MATERNAL;
+    } else {
+        domains = EENC_DOMAINS_BREATHING;
+        skillsMap = SKILLS_EENC_BREATHING;
+        labelsMap = EENC_DOMAIN_LABEL_BREATHING;
     }
     
     const [expandedDomains, setExpandedDomains] = useState(new Set());
@@ -789,8 +771,10 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
         if (isEenc) {
             if (age?.includes('breathing') && !age.includes('not_')) return 'ENC (Breathing)';
             if (age?.includes('not_breathing')) return 'ENC (Not Breathing)';
-            if (age?.includes('neonatal_emergency')) return 'Neonatal Emergency';
-            if (age?.includes('maternal_emergency')) return 'Maternal Emergency';
+            // Legacy rows: EmONC cases used to be recorded here before the
+            // dedicated Maternal / Neonatal monitors took over.
+            if (age?.includes('neonatal_emergency')) return 'Neonatal Emergency (legacy)';
+            if (age?.includes('maternal_emergency')) return 'Maternal Emergency (legacy)';
         }
         return age;
     };

@@ -1,6 +1,7 @@
 // App.jsx
 import './i18n'; 
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from 'react-i18next'; 
 
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
@@ -15,7 +16,7 @@ import { Network } from '@capacitor/network';
 // --- CUSTOM HOOKS & UTILS ---
 import { downloadAndOpenFile } from './utils/fileDownloader';
 import { useAppUpdate } from './hooks/useAppUpdate';
-import { usePushNotifications } from './hooks/usePushNotifications'; 
+import { usePushNotifications, usePushEvents } from './hooks/usePushNotifications';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -110,7 +111,6 @@ import { auth, db } from './firebase';
 import { doc, getDoc, getDocFromServer, setDoc, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
 
 import { signOut, updateProfile, onAuthStateChanged } from 'firebase/auth'; 
-import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; 
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
@@ -384,6 +384,91 @@ function SplashScreen() {
     );
 }
 
+// --- FOREGROUND PUSH POPUP ---------------------------------------------
+// Portaled to document.body on purpose. Rendered inside the app tree, an
+// ancestor with transform / filter / backdrop-filter / perspective becomes the
+// containing block for `position: fixed`, and the overlay re-anchors to that
+// element instead of the viewport, so the box lands off-centre.
+// It also uses role="dialog", not role="alert": the mobile <style> block below
+// forces `bottom: 80px` on [role="alert"], which shortens an inset-0 overlay
+// from the bottom and lifts anything centred inside it by ~40px.
+function PushPopup({ open, title, body, onClose, onPrimary, primaryLabel, secondaryLabel = 'Dismiss' }) {
+    // In a WebView, 100vh is the LAYOUT viewport: it stays tall when the
+    // keyboard opens or the URL bar collapses, so centring against it puts the
+    // box below the fold. Measure the visual viewport instead.
+    const [vp, setVp] = useState(() => ({ height: typeof window === 'undefined' ? 0 : window.innerHeight, top: 0 }));
+
+    useEffect(() => {
+        const vv = window.visualViewport;
+        if (!vv) {
+            const onResize = () => setVp({ height: window.innerHeight, top: 0 });
+            window.addEventListener('resize', onResize);
+            return () => window.removeEventListener('resize', onResize);
+        }
+        const update = () => setVp({ height: vv.height, top: vv.offsetTop });
+        update();
+        vv.addEventListener('resize', update);
+        vv.addEventListener('scroll', update);
+        return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+    }, []);
+
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', onKey);
+        return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
+    }, [open, onClose]);
+
+    if (!open || typeof document === 'undefined') return null;
+
+    return createPortal(
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="push-popup-title"
+            onClick={onClose}
+            style={{
+                position: 'fixed', left: 0, right: 0, top: vp.top, height: vp.height,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 'calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-right, 0px) + 16px) calc(env(safe-area-inset-bottom, 0px) + 16px) calc(env(safe-area-inset-left, 0px) + 16px)',
+                background: 'rgba(15, 23, 42, 0.55)',
+                zIndex: 100010,
+            }}
+        >
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={{ width: '100%', maxWidth: 380, maxHeight: '100%', overflowY: 'auto', background: '#fff', borderRadius: 14, boxShadow: '0 20px 45px rgba(15,23,42,0.25)' }}
+            >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '20px 20px 0' }}>
+                    <span style={{ flexShrink: 0, display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: '50%', background: '#e0f2fe', color: '#0369a1' }}>
+                        <Bell size={18} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2 id="push-popup-title" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#0f172a', lineHeight: 1.3 }}>{title}</h2>
+                        {body && <p style={{ margin: '6px 0 0', fontSize: 14, color: '#475569', lineHeight: 1.5 }}>{body}</p>}
+                    </div>
+                    <button type="button" onClick={onClose} aria-label="Close" style={{ flexShrink: 0, background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: '#94a3b8' }}>
+                        <X size={18} />
+                    </button>
+                </div>
+                <div style={{ display: 'flex', gap: 10, padding: 20 }}>
+                    <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 16px', fontSize: 14, fontWeight: 600, color: '#334155', background: '#fff', border: '1px solid #cbd5e1', borderRadius: 9, cursor: 'pointer' }}>
+                        {secondaryLabel}
+                    </button>
+                    {primaryLabel && onPrimary && (
+                        <button type="button" onClick={onPrimary} style={{ flex: 1, padding: '10px 16px', fontSize: 14, fontWeight: 600, color: '#fff', background: '#0284c7', border: '1px solid #0284c7', borderRadius: 9, cursor: 'pointer' }}>
+                            {primaryLabel}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
 export default function App() {
     const { t, i18n } = useTranslation();
     
@@ -392,12 +477,16 @@ export default function App() {
     const notificationTimer = useRef(null);
     const [actionAlert, setActionAlert] = useState(null);
 
-    const { 
-        appVersion, 
-        isDownloadingAppUpdate, 
-        appUpdateProgress, 
-        handleManualUpdateCheck, 
-        AppUpdateModals 
+    const {
+        appVersion,
+        isDownloadingAppUpdate,
+        appUpdateProgress,
+        handleManualUpdateCheck,
+        AppUpdateModals,
+        // Header update button: green when a check confirmed the app is
+        // current, red when a bundle or a new APK is waiting, spinner while
+        // checking or downloading, grey before the first check / when offline.
+        UpdateButton,
     } = useAppUpdate();
 
     usePushNotifications(); 
@@ -671,72 +760,55 @@ export default function App() {
       return () => { window.removeEventListener('firestoreOperation', handleOperation); };
     }, []);
 
-    // --- UPDATED FOREGROUND FCM LISTENER ---
-    useEffect(() => {
-        let unsubscribe = null;
-        
-        const setupForegroundListener = async () => {
-             const supported = await isSupported().catch(() => false);
-             if (!supported) return;
+    // --- FOREGROUND PUSH: NATIVE + WEB, ONE PATH ---
+    // The old version used getMessaging()/onMessage() from firebase/messaging.
+    // That is the WEB sdk: inside the Capacitor WebView isSupported() resolves
+    // false, so setupForegroundListener() returned immediately and NOTHING was
+    // ever shown in the mobile app. Android also suppresses the tray
+    // notification while the app is in the foreground, so the user saw nothing
+    // at all. usePushEvents() is fed by both transports in usePushNotifications.
+    usePushEvents((event) => {
+        const { title, body, data, tapped } = event;
 
-             try {
-                const messaging = getMessaging();
-                unsubscribe = onMessage(messaging, (payload) => {
-                    console.log("Foreground FCM received:", payload);
-                    const title = payload.notification?.title || payload.data?.title || "New Notification";
-                    const body = payload.notification?.body || payload.data?.body || "";
-                    const data = payload.data || {};
+        // A tapped notification goes straight to its destination, no popup.
+        if (tapped && data?.actionView) {
+            const params = data.actionParams ? JSON.parse(data.actionParams) : {};
+            navigate(data.actionView, params);
+            return;
+        }
 
-                    // Intercept actionable notifications for Pop-up
-                    if (data.actionView) {
-                        setActionAlert({ title, body, data });
-                        return; 
-                    }
-                    
-                    // Add to queue instead of showing immediately
-                    notificationQueue.current.push({ title, body });
+        // Actionable notification -> popup with a button.
+        if (data?.actionView) {
+            setActionAlert({ title, body, data });
+            return;
+        }
 
-                    // Clear existing timer
-                    if (notificationTimer.current) {
-                        clearTimeout(notificationTimer.current);
-                    }
+        // Everything else is queued and debounced into a single toast.
+        notificationQueue.current.push({ title, body });
 
-                    // Set a debounce timer to combine messages received within 1 second
-                    notificationTimer.current = setTimeout(() => {
-                        const queueLength = notificationQueue.current.length;
-                        
-                        if (queueLength === 1) {
-                            // Show single notification
-                            const singleNotif = notificationQueue.current[0];
-                            setToast({
-                                show: true,
-                                message: `${singleNotif.title}: ${singleNotif.body}`,
-                                type: 'info'
-                            });
-                        } else if (queueLength > 1) {
-                            // Combine multiple notifications
-                            setToast({
-                                show: true,
-                                message: `You have ${queueLength} new notifications (e.g., ${notificationQueue.current[0].title})`,
-                                type: 'info'
-                            });
-                        }
-                        
-                        // Clear the queue
-                        notificationQueue.current = [];
-                    }, 1000); 
+        if (notificationTimer.current) clearTimeout(notificationTimer.current);
+
+        notificationTimer.current = setTimeout(() => {
+            const queueLength = notificationQueue.current.length;
+
+            if (queueLength === 1) {
+                const single = notificationQueue.current[0];
+                setToast({ show: true, message: `${single.title}: ${single.body}`, type: 'info' });
+            } else if (queueLength > 1) {
+                setToast({
+                    show: true,
+                    message: `You have ${queueLength} new notifications (e.g., ${notificationQueue.current[0].title})`,
+                    type: 'info'
                 });
-             } catch (error) {
-                 console.warn("Could not set up foreground FCM listener:", error);
-             }
-        };
+            }
 
-        setupForegroundListener();
+            notificationQueue.current = [];
+        }, 1000);
+    });
 
-        return () => {
-             if (unsubscribe) unsubscribe();
-             if (notificationTimer.current) clearTimeout(notificationTimer.current);
-        };
+    // The debounce timer still needs clearing on unmount.
+    useEffect(() => () => {
+        if (notificationTimer.current) clearTimeout(notificationTimer.current);
     }, []);
 
     useEffect(() => {
@@ -1923,8 +1995,12 @@ case 'meetings':
             
             <style>{`
                 @media (max-width: 768px) {
-                    .fixed.bottom-4, [role="alert"], .toast-container {
-                        bottom: 80px !important; 
+                    /* Scoped to the toast. This used to match [role="alert"] and
+                       .fixed.bottom-4, which caught modal overlays too: forcing
+                       bottom:80px on an inset-0 overlay shortens it from the
+                       bottom and lifts anything centred inside it off-centre. */
+                    .toast-container {
+                        bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
                         margin-bottom: 0 !important;
                     }
                 }
@@ -1964,8 +2040,8 @@ case 'meetings':
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
                                     <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
-                                    <span 
-                                        onClick={handleManualUpdateCheck}
+                                    <span
+                                        onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
                                         className="bg-slate-700 text-sky-300 text-[10px] px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
                                         title="Tap to check for updates"
                                     >
@@ -2032,7 +2108,12 @@ case 'meetings':
 
                     <div className="flex items-center justify-end gap-1.5 shrink-0">
                         <NotificationBell user={user} navigate={navigate} />
-                        
+
+                        {/* Update arrow. Red and pulsing when an update is
+                            waiting, green once a check confirms the app is
+                            current, spinner while checking or downloading. */}
+                        <UpdateButton />
+
                         <button
                             onClick={() => setIsSyncModalOpen(true)}
                             className={`p-1 sm:p-1.5 border rounded transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px] ${
@@ -2300,32 +2381,23 @@ case 'meetings':
                 )}
             </Suspense>
 
-            {/* ACTION ALERT MODAL FOR FOREGROUND FCM */}
-            <Suspense fallback={null}>
-                {actionAlert && (
-                    <Modal isOpen={!!actionAlert} onClose={() => setActionAlert(null)} title="Action Required">
-                        <div className="p-6 text-center space-y-4">
-                            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-sky-100 mb-4 shadow-sm">
-                                <Bell className="h-8 w-8 text-sky-600 animate-pulse" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900">{actionAlert.title}</h3>
-                            <p className="text-sm text-gray-600 leading-relaxed">{actionAlert.body}</p>
-                            <div className="flex justify-center gap-3 mt-8 border-t pt-6">
-                                <Button variant="secondary" onClick={() => setActionAlert(null)}>
-                                    Dismiss
-                                </Button>
-                                <Button onClick={() => {
-                                    setActionAlert(null);
-                                    const params = actionAlert.data.actionParams ? JSON.parse(actionAlert.data.actionParams) : {};
-                                    navigate(actionAlert.data.actionView, params);
-                                }}>
-                                    View Details Now
-                                </Button>
-                            </div>
-                        </div>
-                    </Modal>
-                )}
-            </Suspense>
+            {/* FOREGROUND PUSH POPUP — portaled to document.body so nothing in
+                the app tree can knock it off-centre, and pinned to the visual
+                viewport so the keyboard / collapsing URL bar cannot shift it. */}
+            <PushPopup
+                open={!!actionAlert}
+                title={actionAlert?.title}
+                body={actionAlert?.body}
+                onClose={() => setActionAlert(null)}
+                secondaryLabel="Dismiss"
+                primaryLabel="View details"
+                onPrimary={() => {
+                    const data = actionAlert?.data || {};
+                    setActionAlert(null);
+                    const params = data.actionParams ? JSON.parse(data.actionParams) : {};
+                    if (data.actionView) navigate(data.actionView, params);
+                }}
+            />
 
             {permissions.canUseSuperUserAdvancedFeatures && isMonitorVisible && (
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />

@@ -1129,14 +1129,34 @@ export function CoursesTable({
                                     </div>
                                 </div>
                                 <div className="bg-gray-50 p-3 rounded border">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-sm font-semibold">Course Monitoring</span>
-                                        <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
-                                            const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}`;
-                                            const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
-                                            shareViaWhatsApp(text, 'Monitoring link copied!');
-                                        }}><Eye size={14} /> Share</Button>
-                                    </div>
+                                    {(shareModalCourse.course_type === 'EmONC' || shareModalCourse.course_type === 'EENC') ? (
+                                        // EmONC monitoring is split into two checklist modules, so each gets its
+                                        // own link and the observer lands directly on the right set of checklists.
+                                        <>
+                                            <span className="text-sm font-semibold block mb-2">Course Monitoring</span>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                    { module: 'maternal', label: 'Maternal (Obstetric)' },
+                                                    { module: 'neonatal', label: 'Newborn' }
+                                                ].map(({ module, label }) => (
+                                                    <Button key={module} variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
+                                                        const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}?module=${module}`;
+                                                        const text = `*Course Monitoring - ${label}*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
+                                                        shareViaWhatsApp(text, `${label} monitoring link copied!`);
+                                                    }}><Eye size={14} /> {label}</Button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-sm font-semibold">Course Monitoring</span>
+                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
+                                                const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}`;
+                                                const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
+                                                shareViaWhatsApp(text, 'Monitoring link copied!');
+                                            }}><Eye size={14} /> Share</Button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {shareModalCourse.course_type === 'IMNCI' &&
@@ -2020,8 +2040,8 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         {/* --- DYNAMIC MONITORS BLOCK --- */}
         {selectedCourse.course_type === 'EmONC' ? (
             <>
-                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'maternal-monitoring'} onClick={() => setActiveCoursesTab('maternal-monitoring')}>Maternal Monitor</Button>
-                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'neonatal-monitoring'} onClick={() => setActiveCoursesTab('neonatal-monitoring')}>Neonatal Monitor</Button>
+                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring' && emoncModule === 'maternal'} onClick={() => { setEmoncModule('maternal'); setActiveCoursesTab('monitoring'); }}>Maternal Monitor</Button>
+                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring' && emoncModule === 'neonatal'} onClick={() => { setEmoncModule('neonatal'); setActiveCoursesTab('monitoring'); }}>Neonatal Monitor</Button>
             </>
         ) : (
             <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>
@@ -3075,11 +3095,25 @@ export function CourseForm({
     );
 }
 
+// Reads the EmONC module out of the URL query string. Tolerant of the longer
+// labels the test links use ('Emergency Newborn Care') as well as the short form.
+const getModuleFromUrl = () => {
+    try {
+        const raw = (new URLSearchParams(window.location.search).get('module') || '').toLowerCase();
+        if (raw.includes('neonat') || raw.includes('newborn')) return 'neonatal';
+        if (raw.includes('matern') || raw.includes('obstetric')) return 'maternal';
+    } catch (e) { /* no window / malformed query - fall through */ }
+    return 'maternal';
+};
+
 export function PublicCourseMonitoringView({ course, allParticipants }) {
     const [selectedParticipantId, setSelectedParticipantId] = useState(
         allParticipants && allParticipants.length > 0 ? allParticipants[0].id : null
     );
-    const [emoncModule, setEmoncModule] = useState('maternal'); // Internal file pointer router
+    // The shared monitoring link carries ?module=maternal or ?module=neonatal so the
+    // observer opens straight onto the right checklists. Anything unrecognised
+    // (or a link with no module at all) falls back to maternal, as before.
+    const [emoncModule, setEmoncModule] = useState(() => getModuleFromUrl());
     
     const currentParticipant = allParticipants?.find(p => p.id === selectedParticipantId);
 

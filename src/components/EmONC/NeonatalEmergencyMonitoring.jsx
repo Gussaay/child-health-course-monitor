@@ -135,6 +135,132 @@ export const NEONATAL_CHECKLISTS = {
             "Monitoring": ["9. Continuous cardiorespiratory monitoring; checks glucose, calcium, electrolytes, Hct, bilirubin", "10. Gives 10% calcium gluconate 1 mL/kg slow IV after every ~100 mL, WITH cardiac monitoring", "11. Continues INTENSIVE phototherapy after the exchange", "12. Rechecks bilirubin at 2 hours then every 4–6 hours"],
             "Documentation": ["13. Documents volume, aliquot, duration, complications and full blood details"]
         }
+    },
+    uvc: {
+        title: "Umbilical Vein Catheterisation (UVC)",
+        domains: {
+            "Preparation": ["1. Calculates correct catheter length", "2. Flushes catheter with saline — no air", "3. Places baby under radiant warmer; restrains safely"],
+            "Infection Control": ["4. Uses aseptic technique throughout, including the second glove change"],
+            "Technique": ["5. Ties cord base; cuts stump 1.5–2 cm from skin", "6. Identifies umbilical vein correctly — not an artery", "7. Advances catheter toward right shoulder", "8. Stops once blood return achieved"],
+            "Safety & Securing": ["9. Does not force against resistance", "10. Avoids hepatic infusion", "11. Secures catheter without tension", "12. Confirms catheter position by X-ray / ultrasound"],
+            "Monitoring & Documentation": ["13. Detects infection / malposition", "14. Completes documentation"]
+        }
+    },
+    uac: {
+        title: "Umbilical Artery Catheter (UAC)",
+        domains: {
+            "Preparation": ["1. Selects correct catheter size for birth weight", "2. Calculates insertion length accurately for chosen position"],
+            "Position & Infection Control": ["3. States high (T6–T9) vs low (L3–L4) and justifies the choice", "4. States that the tip must NEVER sit at T10–L2", "5. Maintains sterile field throughout"],
+            "Technique": ["6. Identifies umbilical arteries correctly — two, thick-walled, small lumen", "7. Dilates the arterial lumen before insertion", "8. Aims caudally, towards the feet", "9. Inserts catheter gently, no force at the normal resistance points", "10. Achieves blood return"],
+            "Safety & Securing": ["11. Avoids false tract or vessel injury", "12. Requests X-ray / ultrasound confirmation and reads tip against vertebrae", "13. Secures catheter correctly States haemorrhage risk — connections must never be left unsecured"],
+            "Monitoring & Documentation": ["14. Inspects legs, feet and buttocks for ischaemia after insertion", "15. Identifies ischaemia / thrombosis signs and states the action", "16. Documents procedure fully"]
+        }
+    },
+    picc: {
+        title: "Peripherally Inserted Central Catheter (PICC)",
+        domains: {
+            "Preparation": ["1. Selects appropriate vein", "2. Measures insertion distance — and rechecks before opening the set"],
+            "Infection Control": ["3. Applies FULL aseptic precautions — cap, mask, gown, large drape", "4. Prepares skin: spirit → dry → iodine → dry → spirit"],
+            "Technique": ["5. Achieves venous access safely", "6. Advances catheter smoothly, slowly, without force", "7. Repositions limb / head rather than forcing when resistance met", "8. Advances to the measured length only"],
+            "Safety & Securing": ["9. Avoids arterial cannulation", "10. States that the tip must NOT lie within the cardiac silhouette", "11. Secures line and applies transparent dressing keeping the site visible", "12. Requests imaging confirmation", "13. Does not use the line before the film is reviewed"],
+            "Monitoring & Documentation": ["14. Monitors for complications — infection, malposition, effusion, thrombosis", "15. States that access should be minimised", "16. Completes documentation"]
+        }
+    },
+    io_access: {
+        title: "Intraosseous Access",
+        domains: {
+            "Preparation & Infection Control": ["1. Selects correct site — 1–2 cm below, 1 cm medial to tibial tuberosity", "2. Prepares skin aseptically"],
+            "Technique": ["3. Directs needle away from the growth plate / joint", "4. Inserts with firm rotating motion", "5. Recognises loss of resistance and stops advancing", "6. Confirms needle stands firmly without support", "7. States that marrow aspiration is NOT necessary to confirm placement", "8. Injects 3 ml slowly to test placement", "9. Get sample for glucose, chemistry, group and cross-match, Hb, gas, culture"],
+            "Safety & Securing": ["10. Inspects for swelling at the FRONT of the leg AND the calf", "11. If swelling: removes needle and uses the other leg", "12. If difficult infusion without swelling: withdraws ~0.5 cm and retries", "13. Secures needle and attaches standard IV tubing"],
+            "Documentation": ["14. Documents procedure"]
+        }
+    },
+    needle_thoracotomy: {
+        title: "Needle Thoracotomy",
+        domains: {
+            "Preparation & Infection Control": ["1. Assembles cannula, three-way tap and syringe BEFORE puncture", "2. Prepares skin aseptically"],
+            "Landmark": ["3. Identifies correct intercostal space"],
+            "Technique & Confirmation": ["4. Inserts needle at correct intercostal space", "5. Advances over SUPERIOR rib margin — avoids the neurovascular bundle", "6. Identifies air release"],
+            "Safety, Monitoring & Confirmation": ["7. Avoids over-evacuation", "8. Monitors respiratory improvement — air entry, saturation, heart rate", "9. Obtains X-ray AFTER decompression"],
+            "Documentation": ["10. Documents procedure"]
+        }
+    },
+    chest_tube: {
+        title: "Chest Tube Insertion",
+        domains: {
+            "Preparation & Infection Control": ["1. Selects correct tube size for weight", "2. Positions baby correctly — arm abducted, affected side up", "3. Provides local anaesthetic and analgesia", "4. Maintains FULL aseptic technique — cap, mask, gown, drape"],
+            "Landmark": ["5. Identifies correct insertion landmark — safe triangle, anterior to mid-axillary line"],
+            "Technique": ["6. Performs BLUNT dissection safely — does not use the trocar", "7. Passes over the superior margin of the rib below", "8. Directs tube anteriorly for air, posteriorly/basally for fluid", "9. Inserts tube to correct depth — all side holes inside the chest"],
+            "Safety & Securing": ["10. Avoids organ injury — lung, heart, internal mammary vessels", "11. Identifies misting and bubbling", "12. Connects drainage system correctly", "13. States that the drain is NEVER clamped, including for transport", "14. Secures tube properly without kinking", "15. Confirms placement with X-ray", "16. Monitors output, bubbling, swinging and complications"],
+            "Documentation": ["17. Completes documentation"]
+        }
+    },
+    lumbar_puncture: {
+        title: "Lumbar Puncture",
+        domains: {
+            "Preparation": ["1. Positions baby correctly — hips and knees flexed, spine flexed", "2. Does NOT flex the neck", "3. Uses sterile technique", "4. Provides analgesia"],
+            "Landmark": ["5. Identifies correct interspace on the intercristal line — L3–L4 or L4–L5"],
+            "Technique": ["6. Inserts needle in the midline, angled towards the umbilicus, bevel up", "7. Advances slowly, removing the stylet frequently to check for CSF", "8. Collects CSF appropriately into the correct tubes", "9. Sends CSF glucose paired with a blood glucose"],
+            "Safety": ["10. Avoids traumatic tap", "11. Replaces stylet before withdrawal", "12. Applies pressure and dressing", "13. Reassesses the baby — saturation, heart rate, breathing"],
+            "Documentation": ["14. Documents procedure"]
+        }
+    },
+    urinary_catheterisation: {
+        title: "Urinary Catheterisation",
+        domains: {
+            "Preparation & Infection Control": ["1. Selects correct catheter size for weight", "2. Positions baby correctly", "3. Maintains sterile technique"],
+            "Technique": ["4. Cleans meatus correctly, outward, fresh swab each time", "5. Lubricates catheter", "6. Inserts catheter correctly — correct anatomy for the sex"],
+            "Safety & Monitoring": ["7. Does not force against resistance", "8. In girls, recognises vaginal placement and uses a fresh catheter", "9. Inflates balloon ONLY after urine flows", "10. Secures catheter without tension; bag below bladder level", "11. Observes for complications — trauma, blood, infection"],
+            "Documentation": ["12. Documents procedure"]
+        }
+    },
+    suprapubic_aspiration: {
+        title: "Suprapubic Aspiration",
+        domains: {
+            "Preparation": ["1. Prepares site aseptically", "2. Provides analgesia — sucrose, non-nutritive sucking, or local", "3. Positions baby correctly — supine, frog-leg"],
+            "Landmark": ["4. Identifies midline, 1–2 cm above the symphysis"],
+            "Technique": ["5. Inserts needle at correct site and angle — perpendicular or slightly cephalad", "6. Aspirates WHILE advancing", "7. Advances only 2–3 cm; stops when urine appears", "8. Aspirates urine correctly and slowly"],
+            "Safety": ["9. Avoids bowel injury — does not fan or redirect inside the abdomen", "10. If dry tap: withdraws completely, waits, retries once", "11. Applies pressure and dressing"],
+            "Documentation": ["12. Documents procedure"]
+        }
+    },
+    cpap_initiation: {
+        title: "CPAP Initiation",
+        domains: {
+            "Equipment": ["1. Assembles the circuit; connects air and oxygen; humidifier with distilled water"],
+            "Interface": ["2. Selects the correct prong size — biggest that fits without distending", "3. Fits the cap correctly — ears flat, not too small", "4. Applies barrier dressing; moistens prongs with saline", "5. Secures so the bridge does NOT abut the columella and does not blanch", "6. Inserts an orogastric tube"],
+            "Settings": ["7. Sets correct starting CPAP for the indication — 5 cmH₂O RD, 4–5 apnoea, 5 post-extubation", "8. Sets starting FiO₂ and flow correctly; titrates FiO₂ to the unit's SpO₂ target"],
+            "Monitoring": ["9. Confirms continuous bubbling in both phases", "10. States the danger signs to watch for after initiation"],
+            "Documentation": ["11. Documents time and settings"]
+        }
+    },
+    cpap_nasal_injury: {
+        title: "CPAP Nasal Injury Prevention & Staging",
+        domains: {
+            "Prevention": ["1. Selects the correct prong size — no distension", "2. Applies a barrier dressing under the nose and over the bridge", "3. Confirms the bridge does not abut the columella and does not blanch", "4. Removes prongs/mask 4-hourly to rest the nose"],
+            "Removal Technique": ["5. Removes by loosening tapes, not by pulling off the face", "6. Inspects columella, nares, eyes and ears at every physical check and stage accordingly"],
+            "Documentation": ["7. Documents nasal appearance and any change with the time"]
+        }
+    },
+    safe_medication: {
+        title: "Safe Medication Administration",
+        domains: {
+            "Preparation": ["1. Prepares medication in a well-lit area, free from interruption"],
+            "Calculation": ["2. Uses TODAY's weight; re-calculates rather than reusing a previous dose", "3. Calculates the dose correctly — decimal placement", "4. Performs unit conversion and dilution correctly"],
+            "Five Rights": ["5. Confirms right patient, right drug, right dose, right time, right route"],
+            "Double-check": ["6. Verifies the patient with two identifiers before administration", "7. A second person calculates INDEPENDENTLY before administration", "8. Does not assume the other person has already checked"],
+            "Response": ["9. Assesses the baby's response to the dose"],
+            "Documentation": ["10. Documents AFTER administration, accurately and promptly"]
+        }
+    },
+    blood_culture: {
+        title: "Blood Culture Collection",
+        domains: {
+            "Preparation & Infection Control": ["1. Verifies patient identity", "2. Calms the neonate and positions for access", "3. Prepares all materials before starting — gloves, alcohol, 23–25G, bottles, labels, transport bag", "4. Performs hand hygiene and wears sterile gloves", "5. Cleans site with 70% alcohol — full 30-second scrub", "6. Allows the site to AIR DRY before puncture", "7. Does NOT re-palpate the cleaned site"],
+            "Collection": ["8. Obtains adequate BLOOD volume — 1–2 mL per bottle", "9. States CSF volume 1 mL per bottle, and that volume is critical for detection", "10. If already on antibiotics, takes the culture immediately BEFORE the next dose", "11. Uses sterile, labelled containers", "12. Labels with name, file ID, date/time, collector's name, sample type"],
+            "Transport": ["13. Completes the culture request form; sends by the standard transferee procedure without delay"],
+            "Documentation": ["14. Records sample collection in the main case record registry"]
+        }
     }
 };
 

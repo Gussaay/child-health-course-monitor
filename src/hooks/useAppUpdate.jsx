@@ -15,13 +15,22 @@
 // Public API is unchanged:
 //   const { appVersion, isDownloadingAppUpdate, appUpdateProgress,
 //           handleManualUpdateCheck, AppUpdateModals } = useAppUpdate();
+//
+// Added for the header update button:
+//   updateStatus        'downloading' | 'checking' | 'update-available'
+//                       | 'up-to-date' | 'offline' | 'web' | 'unknown'
+//   handleUpdateButton  one click handler that does the right thing for the
+//                       current status (re-open a dismissed install prompt,
+//                       or run a forced check)
+//   UpdateButton        a ready-made <UpdateButton /> if you would rather not
+//                       style it yourself
 
-import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { RefreshCw, Download, X, Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Download, X, Info, AlertTriangle, CheckCircle2, ArrowUp, WifiOff } from 'lucide-react';
 
 import {
   db,
@@ -71,6 +80,12 @@ let otaState = {
   progress: 0,
   installing: false,
   lastError: null,
+  // Drives the colour of the header button. `upToDate` is only true after a
+  // check actually confirmed it, so a fresh launch shows neutral rather than
+  // claiming green before anything has been verified.
+  isChecking: false,
+  upToDate: false,
+  lastCheckedAt: null,
 };
 
 const otaListeners = new Set();
@@ -169,13 +184,14 @@ async function runOtaCheck(reason, { force = false } = {}) {
 
   checking = true;
   lastCheckAt = Date.now();
+  setOta({ isChecking: true });
 
   try {
     const currentVersion = await readCurrentVersion();
     const latest = await fetchManifest();
 
     if (latest.version === currentVersion) {
-      setOta({ lastError: null });
+      setOta({ lastError: null, upToDate: true, lastCheckedAt: Date.now() });
       return { status: 'up-to-date', version: currentVersion };
     }
 
@@ -221,6 +237,8 @@ async function runOtaCheck(reason, { force = false } = {}) {
       downloading: false,
       progress: 100,
       lastError: null,
+      upToDate: false,
+      lastCheckedAt: Date.now(),
     });
 
     cleanupOldBundles([bundle.id]);
@@ -236,6 +254,7 @@ async function runOtaCheck(reason, { force = false } = {}) {
     return { status: 'error', message };
   } finally {
     checking = false;
+    setOta({ isChecking: false });
   }
 }
 
@@ -423,6 +442,104 @@ export function useAppUpdate() {
       setTimeout(() => setManualModal({ isOpen: false, status: 'idle', message: '' }), 2500);
     }
   }, []);
+
+  // --- HEADER UPDATE BUTTON -------------------------------------------
+  // One value the UI can colour on. Order matters: an in-flight download wins
+  // over everything, a pending update wins over "up to date", and being
+  // offline is reported as its own state rather than as a false green.
+  const updateStatus = useMemo(() => {
+    if (!IS_NATIVE) return 'web';
+    if (ota.downloading || apkDownloading) return 'downloading';
+    if (ota.isChecking) return 'checking';
+    // `dismissed` only hides the popup. The update is still waiting, so the
+    // button stays red and tapping it brings the popup back.
+    if (nativeUpdatePrompt || ota.available) return 'update-available';
+    if (net.status === 'offline' || net.status === 'no-internet') return 'offline';
+    if (ota.upToDate) return 'up-to-date';
+    return 'unknown';
+  }, [ota.downloading, ota.isChecking, ota.available, ota.upToDate, apkDownloading, nativeUpdatePrompt, net.status]);
+
+  const handleUpdateButton = useCallback(() => {
+    // A bundle is already downloaded but the user pressed "Later". Re-checking
+    // would just return 'ready' and show nothing, so re-open the prompt.
+    if (otaState.available && otaState.dismissed) {
+      setOta({ dismissed: false });
+      return;
+    }
+    handleManualUpdateCheck();
+  }, [handleManualUpdateCheck]);
+
+  /**
+   * Icon button for the header action bar, sized to match the sync / language
+   * / logout buttons next to it. The arrow is always an arrow; the colour is
+   * what carries the state:
+   *
+   *   red + pulse  an update is waiting — tap to install
+   *   green        a check confirmed the app is current
+   *   spinner      checking, or downloading in the background
+   *   grey         no internet, or nothing checked yet this session
+   *
+   * Pass showVersion to append the version number instead of icon-only.
+   */
+  const UpdateButton = useCallback(({ className = '', showVersion = false }) => {
+    const progress = Math.round(apkDownloading ? apkProgress : ota.progress);
+
+    const look = {
+      downloading: {
+        style: 'text-sky-300 bg-slate-600 border-slate-500',
+        icon: <RefreshCw size={18} className="animate-spin" />,
+        label: `Downloading the update… ${progress}%`,
+      },
+      checking: {
+        style: 'text-slate-300 bg-slate-600 border-slate-500',
+        icon: <RefreshCw size={18} className="animate-spin" />,
+        label: 'Checking for updates…',
+      },
+      'update-available': {
+        style: 'text-white bg-red-600 border-red-400 hover:bg-red-500',
+        icon: <ArrowUp size={18} />,
+        label: 'An update is ready. Tap to install.',
+      },
+      'up-to-date': {
+        style: 'text-white bg-green-700 border-green-500 hover:bg-green-600',
+        icon: <ArrowUp size={18} />,
+        label: 'Up to date. Tap to check again.',
+      },
+      offline: {
+        style: 'text-slate-400 bg-slate-600 border-slate-500',
+        icon: <WifiOff size={18} />,
+        label: 'No internet, so updates cannot be checked.',
+      },
+      web: {
+        style: 'text-sky-400 bg-slate-600 border-slate-500 hover:bg-slate-500',
+        icon: <ArrowUp size={18} />,
+        label: 'Refresh the page to get the latest version.',
+      },
+      unknown: {
+        style: 'text-sky-400 bg-slate-600 border-slate-500 hover:bg-slate-500',
+        icon: <ArrowUp size={18} />,
+        label: 'Tap to check for updates.',
+      },
+    }[updateStatus];
+
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleUpdateButton();
+        }}
+        title={look.label}
+        aria-label={look.label}
+        className={`p-1 sm:p-1.5 border rounded transition-colors flex items-center justify-center gap-1 min-w-[32px] sm:min-w-[36px] ${look.style} ${
+          updateStatus === 'update-available' ? 'animate-pulse' : ''
+        } ${className}`}
+      >
+        {look.icon}
+        {showVersion && <span className="font-mono text-[10px]">v{ota.currentVersion}</span>}
+      </button>
+    );
+  }, [updateStatus, handleUpdateButton, ota.currentVersion, ota.progress, apkDownloading, apkProgress]);
 
   const downloadApk = useCallback((config) => {
     if (!config?.apkUrl) return;
@@ -638,5 +755,10 @@ export function useAppUpdate() {
     AppUpdateModals,
     otaUpdateReady: ota.available && !ota.dismissed,
     nativeUpdateRequired: !!nativeUpdatePrompt?.mandatory,
+    nativeUpdateAvailable: !!nativeUpdatePrompt,
+    updateStatus,
+    handleUpdateButton,
+    UpdateButton,
+    lastUpdateCheckAt: ota.lastCheckedAt,
   };
 }

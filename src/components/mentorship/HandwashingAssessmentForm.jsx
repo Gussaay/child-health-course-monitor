@@ -12,7 +12,16 @@ const INDICATIONS = [
     { id: 'aft_surr', label: 'بعد التلامس مع البيئة المحيطة للمريض' }
 ];
 
-// الفئات المهنية المتاحة لكل فرصة على حدة
+const ACTIONS = [
+    { id: 'wash', label: 'غسل بالصابون', short: 'غسل', input: 'text-sky-600 focus:ring-sky-500' },
+    { id: 'rub', label: 'فرك بالكحول', short: 'فرك', input: 'text-sky-600 focus:ring-sky-500' },
+    { id: 'missed', label: 'عدم غسل أو تطهير', short: 'لم يُنفذ', input: 'text-red-500 focus:ring-red-500' }
+];
+
+// أعمدة متساوية على الشاشات المتوسطة فأكبر، وتتحول إلى أزرار متراصة على الجوال
+const ROW_GRID = 'sm:grid sm:grid-cols-[minmax(0,1fr)_repeat(3,4.5rem)_4.5rem]';
+
+// الفئات المهنية المتاحة لكل بطاقة ملاحظة على حدة
 const WORKER_TYPES = [
     'اختصاصي',
     'نائب اختصاصي',
@@ -23,48 +32,79 @@ const WORKER_TYPES = [
     'عامل نظافة'
 ];
 
-const DEFAULT_OPPORTUNITY_COUNT = 4;
+const DEFAULT_CARD_COUNT = 4;
 
-const createOpportunity = () => ({ indications: [], action: '', gloveUse: false, workerType: '' });
+const createOpportunity = () => ({ indications: [], actions: {}, gloveUses: {}, workerType: '' });
+
+const normalizeOpportunity = (opp) => {
+    const indications = Array.isArray(opp?.indications) ? opp.indications : [];
+    const actions = (opp?.actions && typeof opp.actions === 'object') ? { ...opp.actions } : {};
+    const gloveUses = (opp?.gloveUses && typeof opp.gloveUses === 'object') ? { ...opp.gloveUses } : {};
+
+    // توافق مع السجلات القديمة: إجراء واحد للبطاقة كلها → يُسند لأول داعٍ محدد
+    if (Object.keys(actions).length === 0 && opp?.action && indications.length > 0) {
+        actions[indications[0]] = opp.action;
+        if (opp.gloveUse) gloveUses[indications[0]] = true;
+    }
+
+    return { indications, actions, gloveUses, workerType: opp?.workerType || '' };
+};
 
 const normalizeOpportunities = (data) => {
     if (!Array.isArray(data) || data.length === 0) {
-        return Array.from({ length: DEFAULT_OPPORTUNITY_COUNT }, createOpportunity);
+        return Array.from({ length: DEFAULT_CARD_COUNT }, createOpportunity);
     }
-    return data.map(opp => ({
-        indications: Array.isArray(opp?.indications) ? opp.indications : [],
-        action: opp?.action || '',
-        gloveUse: !!opp?.gloveUse,
-        workerType: opp?.workerType || ''
-    }));
+    return data.map(normalizeOpportunity);
 };
 
-const isOpportunityComplete = (opp) => opp.indications.length > 0 && !!opp.action;
+// كل داعٍ محدد ومعه إجراء = فرصة مكتملة مستقلة داخل نفس البطاقة
+const completedRows = (opp) => INDICATIONS
+    .filter(ind => opp.indications.includes(ind.id) && !!opp.actions[ind.id])
+    .map(ind => ({
+        indication: ind.id,
+        action: opp.actions[ind.id],
+        gloveUse: !!opp.gloveUses[ind.id]
+    }));
+
+const cardStats = (opp) => {
+    const rows = completedRows(opp);
+    const hw = rows.filter(r => r.action === 'wash').length;
+    const hr = rows.filter(r => r.action === 'rub').length;
+    return {
+        opp: rows.length,
+        hw,
+        hr,
+        compliance: rows.length > 0 ? Math.round(((hw + hr) / rows.length) * 100) : 0
+    };
+};
 
 const computeStats = (opps) => {
     let oppCount = 0, hwCount = 0, hrCount = 0;
     opps.forEach(opp => {
-        if (isOpportunityComplete(opp)) {
+        completedRows(opp).forEach(row => {
             oppCount++;
-            if (opp.action === 'wash') hwCount++;
-            if (opp.action === 'rub') hrCount++;
-        }
+            if (row.action === 'wash') hwCount++;
+            if (row.action === 'rub') hrCount++;
+        });
     });
     const totalActions = hwCount + hrCount;
     const compliance = oppCount > 0 ? Math.round((totalActions / oppCount) * 100) : 0;
     return { opp: oppCount, hw: hwCount, hr: hrCount, compliance };
 };
 
-// تجميع النتائج حسب الفئة المهنية المسجلة في كل فرصة
+// تجميع النتائج حسب الفئة المهنية المسجلة في كل بطاقة
 const computeWorkerTypeStats = (opps) => {
     const map = new Map();
     opps.forEach(opp => {
-        if (!isOpportunityComplete(opp)) return;
+        const rows = completedRows(opp);
+        if (rows.length === 0) return;
         const key = opp.workerType || 'غير محدد';
         const row = map.get(key) || { workerType: key, opp: 0, hw: 0, hr: 0, compliance: 0 };
-        row.opp++;
-        if (opp.action === 'wash') row.hw++;
-        if (opp.action === 'rub') row.hr++;
+        rows.forEach(r => {
+            row.opp++;
+            if (r.action === 'wash') row.hw++;
+            if (r.action === 'rub') row.hr++;
+        });
         map.set(key, row);
     });
     return Array.from(map.values()).map(row => ({
@@ -76,8 +116,9 @@ const computeWorkerTypeStats = (opps) => {
 const dominantWorkerType = (opps) => {
     const counts = {};
     opps.forEach(opp => {
-        if (isOpportunityComplete(opp) && opp.workerType) {
-            counts[opp.workerType] = (counts[opp.workerType] || 0) + 1;
+        const rows = completedRows(opp);
+        if (rows.length > 0 && opp.workerType) {
+            counts[opp.workerType] = (counts[opp.workerType] || 0) + rows.length;
         }
     });
     const entries = Object.entries(counts);
@@ -108,24 +149,40 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
         setWorkerTypeStats(computeWorkerTypeStats(opportunities));
     }, [opportunities]);
 
+    // إلغاء تحديد الداعي يمسح إجراءه وقفازاته معه
     const handleIndicationToggle = (idx, indId) => {
         setOpportunities(prev => prev.map((opp, i) => {
             if (i !== idx) return opp;
-            const inds = opp.indications.includes(indId)
-                ? opp.indications.filter(id => id !== indId)
-                : [...opp.indications, indId];
-            return { ...opp, indications: inds };
+            if (opp.indications.includes(indId)) {
+                const actions = { ...opp.actions };
+                const gloveUses = { ...opp.gloveUses };
+                delete actions[indId];
+                delete gloveUses[indId];
+                return { ...opp, indications: opp.indications.filter(id => id !== indId), actions, gloveUses };
+            }
+            return { ...opp, indications: [...opp.indications, indId] };
         }));
     };
 
-    const handleActionChange = (idx, actValue) => {
-        setOpportunities(prev => prev.map((opp, i) => (
-            i === idx ? { ...opp, action: actValue, gloveUse: actValue === 'missed' ? opp.gloveUse : false } : opp
-        )));
+    // اختيار الإجراء يحدد الداعي تلقائياً لأن الفرصة لا تُحتسب بدونه
+    const handleActionChange = (idx, indId, actValue) => {
+        setOpportunities(prev => prev.map((opp, i) => {
+            if (i !== idx) return opp;
+            const indications = opp.indications.includes(indId) ? opp.indications : [...opp.indications, indId];
+            const gloveUses = { ...opp.gloveUses };
+            if (actValue !== 'missed') delete gloveUses[indId];
+            return { ...opp, indications, actions: { ...opp.actions, [indId]: actValue }, gloveUses };
+        }));
     };
 
-    const handleGloveUseToggle = (idx) => {
-        setOpportunities(prev => prev.map((opp, i) => (i === idx ? { ...opp, gloveUse: !opp.gloveUse } : opp)));
+    const handleGloveUseToggle = (idx, indId) => {
+        setOpportunities(prev => prev.map((opp, i) => {
+            if (i !== idx) return opp;
+            const gloveUses = { ...opp.gloveUses };
+            if (gloveUses[indId]) delete gloveUses[indId];
+            else gloveUses[indId] = true;
+            return { ...opp, gloveUses };
+        }));
     };
 
     const handleWorkerTypeChange = (idx, value) => {
@@ -145,11 +202,13 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
             facilityType: facility?.['نوع_المؤسسةالصحية'] || null,
             healthWorkerName: healthWorkerName || null,
             workerType: dominantWorkerType(opps) || healthWorkerJobTitle || null,
-            workerTypes: Array.from(new Set(opps.filter(isOpportunityComplete).map(o => o.workerType).filter(Boolean))),
+            workerTypes: Array.from(new Set(opps.filter(o => completedRows(o).length > 0).map(o => o.workerType).filter(Boolean))),
             workerTypeStats: byWorkerType,
             sessionDate: new Date().toISOString().split('T')[0],
             effectiveDate: Timestamp.fromDate(new Date()),
             assessmentData: opps,
+            // قائمة مسطحة: كل سطر فرصة واحدة بداعيها وإجرائها — تسهّل التحليل لاحقاً
+            opportunityRows: opps.flatMap(opp => completedRows(opp).map(row => ({ ...row, workerType: opp.workerType || null }))),
             scores: {
                 overallScore_score: stats.compliance,
                 overallScore_maxScore: 100,
@@ -202,7 +261,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
         }
     }, [buildPayload, setToast, onSaveOverride]);
 
-    // إضافة فرصة جديدة = حفظ فوري بدون الضغط على زر الحفظ
+    // إضافة بطاقة جديدة = حفظ فوري بدون الضغط على زر الحفظ
     const handleAddOpportunity = async () => {
         const next = [...opportunities, createOpportunity()];
         setOpportunities(next);
@@ -219,9 +278,9 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
 
     return (
         <Card className="relative pb-20 text-right w-full" dir="rtl">
-            <div className={`fixed top-4 left-4 z-50 flex flex-col items-center justify-center p-3 w-32 h-32 rounded-full ${sessionStats.compliance >= 80 ? 'bg-green-600' : sessionStats.compliance >= 50 ? 'bg-yellow-500' : 'bg-red-600'} text-white shadow-2xl transition-all duration-300 border-4 border-white`}>
-                <div className="font-bold text-3xl leading-none drop-shadow-md">{sessionStats.compliance}%</div>
-                <div className="text-sm mt-1 text-center font-medium opacity-90">نسبة الامتثال</div>
+            <div className={`fixed top-2 left-2 sm:top-4 sm:left-4 z-50 flex flex-col items-center justify-center p-2 sm:p-3 w-20 h-20 sm:w-32 sm:h-32 rounded-full ${sessionStats.compliance >= 80 ? 'bg-green-600' : sessionStats.compliance >= 50 ? 'bg-yellow-500' : 'bg-red-600'} text-white shadow-2xl transition-all duration-300 border-2 sm:border-4 border-white`}>
+                <div className="font-bold text-xl sm:text-3xl leading-none drop-shadow-md">{sessionStats.compliance}%</div>
+                <div className="text-[10px] sm:text-sm mt-0.5 sm:mt-1 text-center font-medium opacity-90">نسبة الامتثال</div>
             </div>
 
             <form onSubmit={handleSubmit} className="w-full text-right" dir="rtl">
@@ -234,7 +293,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                             المنشأة: {facility?.['اسم_المؤسسة'] || 'غير محددة'}
                         </p>
                         <p className="text-gray-500 text-sm mt-1">
-                            الملاحظة تُسجَّل لكل فرصة على حدة — حدد الفئة المهنية بجانب كل فرصة.
+                            كل بطاقة تخص فئة مهنية واحدة، وكل سطر داخلها فرصة مستقلة بداعيها وإجرائها.
                         </p>
                     </div>
 
@@ -242,92 +301,113 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                         <h3 className="font-bold text-sky-900 mb-3 text-lg">تعليمات التقييم:</h3>
                         <ol className="list-decimal list-inside space-y-2 text-sm text-sky-800 font-medium leading-relaxed">
                             <li>يجوز للمراقب مراقبة ما يصل إلى ثلاثة من العاملين في مجال الرعاية الصحية في وقت واحد.</li>
-                            <li>بمجرد اكتشاف داعٍ لنظافة الأيدي، احسب "فرصة" في العمود المناسب، وضع علامة في المربع المقابل للداعي (الدواعي).</li>
-                            <li>حدد الفئة المهنية للعامل الملاحَظ من القائمة المجاورة لرقم الفرصة.</li>
-                            <li>ضع علامة في المربعات (قد ينطبق أكثر من خيار للفرصة الواحدة) أو الدوائر (خيار واحد فقط للإجراء).</li>
-                            <li>يجب دائماً تسجيل الإجراءات المنفذة أو الفائتة ضمن سياق الفرصة (لا تحتسب الفرصة مالم يتم تحديد داعٍ واحد على الأقل).</li>
-                            <li>يمكن تسجيل استخدام القفازات فقط عندما يتم تفويت إجراء نظافة الأيدي بينما يرتدي العامل القفازات.</li>
+                            <li>حدد الفئة المهنية للعامل الملاحَظ من القائمة المجاورة لرقم البطاقة.</li>
+                            <li>بمجرد اكتشاف داعٍ لنظافة الأيدي، ضع علامة في مربع الداعي وسجّل الإجراء في نفس السطر.</li>
+                            <li>لكل سطر إجراء واحد فقط، ولا تُحتسب الفرصة إلا باكتمال الداعي والإجراء معاً.</li>
+                            <li>يمكن تسجيل أكثر من فرصة داخل البطاقة الواحدة ما دامت لنفس الفئة المهنية.</li>
+                            <li>يُسجَّل استخدام القفازات فقط عند تفويت إجراء نظافة الأيدي بينما يرتدي العامل القفازات.</li>
                         </ol>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                        {opportunities.map((opp, idx) => (
-                            <div key={idx} className={`border rounded-xl p-4 shadow-sm transition-shadow ${isOpportunityComplete(opp) ? 'border-green-300 bg-green-50/30' : 'border-slate-300 bg-slate-50'}`}>
-                                <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-slate-200 pb-3">
-                                    <h4 className="font-bold text-sky-800 text-right">
-                                        <span className="align-middle">الفرصة رقم {idx + 1}</span>
-                                        {isOpportunityComplete(opp) && (
-                                            <span className="mr-3 align-middle text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">مكتملة</span>
-                                        )}
-                                    </h4>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+                        {opportunities.map((opp, idx) => {
+                            const stats = cardStats(opp);
+                            return (
+                                <div key={idx} className={`border rounded-xl p-4 shadow-sm transition-shadow ${stats.opp > 0 ? 'border-green-300 bg-green-50/30' : 'border-slate-300 bg-slate-50'}`}>
+                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-slate-200 pb-3">
+                                        <h4 className="font-bold text-sky-800 text-right">
+                                            <span className="align-middle">البطاقة رقم {idx + 1}</span>
+                                            {stats.opp > 0 && (
+                                                <span className="mr-3 align-middle text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">
+                                                    فرص مكتملة: {stats.opp}
+                                                </span>
+                                            )}
+                                        </h4>
 
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-slate-600 whitespace-nowrap">الفئة المهنية:</span>
-                                        <select
-                                            value={opp.workerType}
-                                            onChange={(e) => handleWorkerTypeChange(idx, e.target.value)}
-                                            className={`text-sm font-semibold border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 cursor-pointer ${opp.workerType ? 'border-sky-300 text-sky-800' : 'border-slate-300 text-slate-500'}`}
-                                        >
-                                            <option value="">-- اختر الفئة --</option>
-                                            {WORKER_TYPES.map(type => (
-                                                <option key={type} value={type}>{type}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm w-full text-right block">
-                                        <p className="font-bold text-sm mb-3 text-slate-800 border-b border-slate-100 pb-2">الدواعي:</p>
-                                        <div className="w-full space-y-1">
-                                            {INDICATIONS.map(ind => (
-                                                <label key={ind.id} className="block p-2 hover:bg-slate-50 rounded transition-colors cursor-pointer text-right">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={opp.indications.includes(ind.id)}
-                                                        onChange={() => handleIndicationToggle(idx, ind.id)}
-                                                        className="ml-3 align-middle w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 cursor-pointer"
-                                                    />
-                                                    <span className="align-middle text-sm text-gray-700 font-medium leading-relaxed">{ind.label}</span>
-                                                </label>
-                                            ))}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-slate-600 whitespace-nowrap">الفئة المهنية:</span>
+                                            <select
+                                                value={opp.workerType}
+                                                onChange={(e) => handleWorkerTypeChange(idx, e.target.value)}
+                                                className={`text-sm font-semibold border rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 cursor-pointer ${opp.workerType ? 'border-sky-300 text-sky-800' : 'border-slate-300 text-slate-500'}`}
+                                            >
+                                                <option value="">-- اختر الفئة --</option>
+                                                {WORKER_TYPES.map(type => (
+                                                    <option key={type} value={type}>{type}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
 
-                                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm w-full text-right block">
-                                        <p className="font-bold text-sm mb-4 text-slate-800 border-b border-slate-100 pb-2">الإجراء:</p>
-                                        <div className="w-full text-right">
-                                            <label className="inline-block ml-6 mb-3 cursor-pointer text-right">
-                                                <input type="radio" name={`action_${idx}`} checked={opp.action === 'wash'} onChange={() => handleActionChange(idx, 'wash')} className="ml-2 align-middle w-4 h-4 text-sky-600 focus:ring-sky-500 cursor-pointer" />
-                                                <span className="align-middle font-bold text-sm">غسل بالصابون</span>
-                                            </label>
-                                            <label className="inline-block ml-6 mb-3 cursor-pointer text-right">
-                                                <input type="radio" name={`action_${idx}`} checked={opp.action === 'rub'} onChange={() => handleActionChange(idx, 'rub')} className="ml-2 align-middle w-4 h-4 text-sky-600 focus:ring-sky-500 cursor-pointer" />
-                                                <span className="align-middle font-bold text-sm">فرك بالكحول</span>
-                                            </label>
-                                            <label className="inline-block mb-3 cursor-pointer text-right">
-                                                <input type="radio" name={`action_${idx}`} checked={opp.action === 'missed'} onChange={() => handleActionChange(idx, 'missed')} className="ml-2 align-middle w-4 h-4 text-red-500 focus:ring-red-500 cursor-pointer" />
-                                                <span className="align-middle font-bold text-sm text-slate-600">عدم غسل أو تطهير</span>
-                                            </label>
-                                        </div>
-
-                                        {opp.action === 'missed' && (
-                                            <div className="mt-2 pt-3 border-t border-slate-100 text-right block">
-                                                <label className="block p-2 hover:bg-slate-50 rounded transition-colors cursor-pointer text-right">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={opp.gloveUse}
-                                                        onChange={() => handleGloveUseToggle(idx)}
-                                                        className="ml-3 align-middle w-4 h-4 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer"
-                                                    />
-                                                    <span className="align-middle text-sm font-semibold text-amber-700">كان يرتدي قفازات وقت التفويت</span>
-                                                </label>
+                                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm w-full overflow-hidden">
+                                        <div className={`hidden ${ROW_GRID} bg-slate-50 border-b border-slate-200`}>
+                                            <div className="p-3 text-right font-bold text-slate-800 text-sm">الدواعي</div>
+                                            {ACTIONS.map(act => (
+                                                <div key={act.id} title={act.label} className={`flex items-center justify-center p-2 text-center font-bold text-[11px] leading-tight border-r border-slate-200 ${act.id === 'missed' ? 'text-slate-600' : 'text-slate-800'}`}>
+                                                    {act.label}
+                                                </div>
+                                            ))}
+                                            <div title="استخدام القفازات وقت التفويت" className="flex items-center justify-center p-2 text-center font-bold text-[11px] leading-tight text-amber-700 border-r border-slate-200">
+                                                قفازات
                                             </div>
-                                        )}
+                                        </div>
+
+                                        {INDICATIONS.map(ind => {
+                                            const checked = opp.indications.includes(ind.id);
+                                            const action = opp.actions[ind.id] || '';
+                                            const done = checked && !!action;
+                                            return (
+                                                <div key={ind.id} className={`border-b border-slate-100 last:border-b-0 ${ROW_GRID} sm:items-stretch ${done ? 'bg-green-50/60' : ''}`}>
+                                                    <label className="flex items-start gap-3 p-3 cursor-pointer hover:bg-slate-50 transition-colors text-right">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={checked}
+                                                            onChange={() => handleIndicationToggle(idx, ind.id)}
+                                                            className="mt-0.5 shrink-0 w-5 h-5 text-sky-600 border-slate-300 rounded focus:ring-sky-500 cursor-pointer"
+                                                        />
+                                                        <span className="text-sm text-gray-700 font-medium leading-relaxed">{ind.label}</span>
+                                                    </label>
+
+                                                    {/* على الجوال: أزرار متجاورة تحت الداعي — على الشاشات الأكبر: أعمدة داخل نفس الصف */}
+                                                    <div className="flex flex-wrap gap-2 px-3 pb-3 sm:contents">
+                                                        {ACTIONS.map(act => (
+                                                            <label
+                                                                key={act.id}
+                                                                title={act.label}
+                                                                className={`flex flex-1 min-w-[5.5rem] items-center justify-center gap-2 px-2 py-2 rounded-lg border cursor-pointer transition-colors sm:flex-none sm:min-w-0 sm:gap-0 sm:px-0 sm:py-3 sm:rounded-none sm:border-0 sm:border-r sm:border-slate-100 sm:bg-transparent sm:hover:bg-sky-50 ${action === act.id ? 'border-sky-400 bg-sky-50' : 'border-slate-200 bg-white'}`}
+                                                            >
+                                                                <input
+                                                                    type="radio"
+                                                                    name={`action_${idx}_${ind.id}`}
+                                                                    checked={action === act.id}
+                                                                    onChange={() => handleActionChange(idx, ind.id, act.id)}
+                                                                    className={`shrink-0 w-5 h-5 cursor-pointer ${act.input}`}
+                                                                />
+                                                                <span className="sm:hidden text-xs font-bold text-slate-700 whitespace-nowrap">{act.short}</span>
+                                                            </label>
+                                                        ))}
+
+                                                        <label
+                                                            title={action === 'missed' ? 'كان يرتدي قفازات وقت التفويت' : 'يُفعَّل فقط عند اختيار عدم غسل أو تطهير'}
+                                                            className={`${action === 'missed' ? 'flex' : 'hidden sm:flex sm:opacity-40 sm:cursor-not-allowed'} flex-1 min-w-[5.5rem] items-center justify-center gap-2 px-2 py-2 rounded-lg border border-amber-300 bg-amber-50 cursor-pointer transition-colors sm:flex-none sm:min-w-0 sm:gap-0 sm:px-0 sm:py-3 sm:rounded-none sm:border-0 sm:border-r sm:border-slate-100 sm:bg-transparent`}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={!!opp.gloveUses[ind.id]}
+                                                                disabled={action !== 'missed'}
+                                                                onChange={() => handleGloveUseToggle(idx, ind.id)}
+                                                                className="shrink-0 w-5 h-5 text-amber-600 border-amber-300 rounded focus:ring-amber-500 disabled:cursor-not-allowed"
+                                                            />
+                                                            <span className="sm:hidden text-xs font-bold text-amber-700 whitespace-nowrap">قفازات</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div className="text-center mb-10 w-full block">
@@ -338,7 +418,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                             variant="outline"
                             disabled={autoSave.status === 'saving'}
                         >
-                            {autoSave.status === 'saving' ? 'جاري الحفظ...' : '+ إضافة فرصة جديدة (حفظ تلقائي)'}
+                            {autoSave.status === 'saving' ? 'جاري الحفظ...' : '+ إضافة بطاقة جديدة (حفظ تلقائي)'}
                         </Button>
 
                         <div className="mt-3 text-sm font-semibold min-h-[20px]">

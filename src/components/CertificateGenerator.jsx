@@ -14,12 +14,12 @@ import {
     Button, Card, EmptyState, PageHeader, 
     Spinner, Table, Modal, CardBody, CardFooter, FormGroup, Select, Input
 } from './CommonComponents'; 
-import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft } from 'lucide-react'; 
+import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X } from 'lucide-react'; 
 
 // Data & Firebase
 import { STATE_LOCALITIES } from './constants'; 
 import { db } from '../firebase'; 
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, serverTimestamp, deleteField } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField } from 'firebase/firestore'; 
 import { useDataCache } from '../DataContext';
 import { 
     getParticipantById, 
@@ -493,6 +493,191 @@ export const defaultLogoLeft = (cfg = {}, slot, isArabic = false) => {
     return Math.min(100, Math.max(0, groupLeft + slot.side * spread));
 };
 
+// -----------------------------------------------------------------------------
+// EXTRA LOGOS
+// Any number of additional logos can be added on top of the four built-in
+// slots. They are stored as flat keys so the designer's element table can drive
+// them exactly like every other element:
+//   extraLogoIds: ['k3x9aa', ...]
+//   xlogo_<id>_Src / _Top / _Left / _Height / _Label / _Hidden
+// A logo with no image yet is a PLACEHOLDER: it shows as a dashed box in the
+// designer so it can be positioned first, and prints nothing.
+// -----------------------------------------------------------------------------
+
+export const EXTRA_LOGO_DEFAULT_HEIGHT = 25;
+export const xlogoKey = (id, prop) => `xlogo_${id}_${prop}`;
+const EXTRA_LOGO_SRC_RE = /^xlogo_.+_Src$/;
+export const newExtraLogoId = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+const getExtraLogoIds = (cfg) => (Array.isArray(cfg?.extraLogoIds) ? cfg.extraLogoIds.filter(Boolean) : []);
+
+// -----------------------------------------------------------------------------
+// TEMPLATE LAYERS: GENERAL → COURSE TYPE → COURSE
+//
+// A certificate is built from up to three layers, each overriding the one
+// before it field by field:
+//   1. the GENERAL template        certificateTemplates/general
+//   2. the COURSE-TYPE template    certificateTemplates/type_<courseType>
+//   3. the course's own overrides  courses/<id>.customCertificate
+// A blank value in a higher layer means "inherit", so a course only has to store
+// what is genuinely different about it.
+//
+// Signature images, dates and place are never stored in a shared template:
+// signatures because one scan must not silently print on every course (see the
+// signature-handling notes below), dates and place because they belong to a
+// single course. The general template also leaves course names alone.
+// -----------------------------------------------------------------------------
+
+export const CERT_TEMPLATES_COLLECTION = 'certificateTemplates';
+export const GENERAL_TEMPLATE_ID = 'general';
+export const courseTypeTemplateId = (courseType) => `type_${encodeURIComponent((courseType || '').trim())}`;
+
+export const TEMPLATE_EXCLUDED_KEYS = [
+    'thirdPartySignatureUrl', 'fourthPartySignatureUrl',
+    'dateStart', 'dateEnd', 'dateEn', 'dateAr',
+    'placeEn', 'placeAr'
+];
+export const GENERAL_TEMPLATE_EXCLUDED_KEYS = [
+    ...TEMPLATE_EXCLUDED_KEYS,
+    'courseTitleEn', 'courseTitleAr', 'subCourseEn', 'subCourseAr'
+];
+
+const isBlank = (v) => v === '' || v === undefined || v === null;
+
+/**
+ * Layers configs left to right. Blank values never override. extraLogoIds is a
+ * union, so a course keeps the logos its templates add (it can hide one with
+ * xlogo_<id>_Hidden, but not delete it).
+ */
+export const mergeCertificateConfigs = (...layers) => {
+    const out = {};
+    const ids = [];
+    layers.forEach(layer => {
+        if (!layer || typeof layer !== 'object') return;
+        Object.entries(layer).forEach(([k, v]) => {
+            if (k === 'extraLogoIds') {
+                if (Array.isArray(v)) v.forEach(id => { if (id && !ids.includes(id)) ids.push(id); });
+                return;
+            }
+            if (isBlank(v)) return;
+            out[k] = v;
+        });
+    });
+    if (ids.length) out.extraLogoIds = ids;
+    return out;
+};
+
+/** Removes blanks (and, for shared templates, course-only keys) before saving. */
+export const cleanCertificateConfig = (cfg = {}, scopeKind = 'course') => {
+    const excluded = scopeKind === 'general'
+        ? GENERAL_TEMPLATE_EXCLUDED_KEYS
+        : scopeKind === 'courseType' ? TEMPLATE_EXCLUDED_KEYS : [];
+    const out = {};
+    Object.entries(cfg).forEach(([k, v]) => {
+        if (excluded.includes(k)) return;
+        if (k === 'extraLogoIds') {
+            const ids = Array.isArray(v) ? v.filter(Boolean) : [];
+            if (ids.length) out.extraLogoIds = ids;
+            return;
+        }
+        if (isBlank(v)) return;
+        out[k] = v;
+    });
+    // In a shared template, drop keys of extra logos that were deleted. A course
+    // layer keeps them all, because it may be hiding a logo a template adds.
+    if (scopeKind !== 'course') {
+        const live = new Set(out.extraLogoIds || []);
+        Object.keys(out).forEach(k => {
+            const m = k.match(/^xlogo_(.+)_(Src|Top|Left|Height|Label|Hidden)$/);
+            if (m && !live.has(m[1])) delete out[k];
+        });
+    }
+    return out;
+};
+
+// Short-lived cache so a bulk run of 40 certificates reads each template once.
+const TEMPLATE_CACHE_TTL = 60 * 1000;
+const templateCache = new Map();
+export const invalidateCertificateTemplateCache = () => templateCache.clear();
+
+const readTemplateDoc = async (id) => {
+    const hit = templateCache.get(id);
+    if (hit && Date.now() - hit.at < TEMPLATE_CACHE_TTL) return hit.data;
+    try {
+        const snap = await getDoc(doc(db, CERT_TEMPLATES_COLLECTION, id));
+        const data = snap.exists() ? snap.data() : null;
+        templateCache.set(id, { at: Date.now(), data });
+        return data;
+    } catch (error) {
+        // Offline, or rules deny the read: print from the course alone.
+        console.warn(`[Certificate] Could not read template "${id}".`, error);
+        return hit ? hit.data : null;
+    }
+};
+
+/** The config a course inherits before its own overrides (general + its type). */
+export const loadInheritedCertificateConfig = async (courseType) => {
+    const [general, typed] = await Promise.all([
+        readTemplateDoc(GENERAL_TEMPLATE_ID),
+        courseType ? readTemplateDoc(courseTypeTemplateId(courseType)) : Promise.resolve(null)
+    ]);
+    // Cleaned on read as well as on save, so a template edited by hand in the
+    // console still can't put a signature or a date on every course.
+    return mergeCertificateConfigs(
+        cleanCertificateConfig(general?.config || {}, 'general'),
+        cleanCertificateConfig(typed?.config || {}, 'courseType')
+    );
+};
+
+/** Returns the course with customCertificate replaced by the fully layered config. */
+export const applyCertificateTemplates = async (course) => {
+    if (!course) return course;
+    const own = course.__ownCustomCertificate !== undefined ? course.__ownCustomCertificate : (course.customCertificate || {});
+    const inherited = await loadInheritedCertificateConfig(course.course_type);
+    return {
+        ...course,
+        __ownCustomCertificate: own,
+        customCertificate: mergeCertificateConfigs(inherited, own)
+    };
+};
+
+/** Same layering, synchronously, from template docs already in memory. */
+export const layerCourseWithTemplates = (course, templateDocs = {}) => {
+    if (!course) return course;
+    return {
+        ...course,
+        customCertificate: mergeCertificateConfigs(
+            cleanCertificateConfig(templateDocs[GENERAL_TEMPLATE_ID]?.config || {}, 'general'),
+            course.course_type ? cleanCertificateConfig(templateDocs[courseTypeTemplateId(course.course_type)]?.config || {}, 'courseType') : null,
+            course.customCertificate
+        )
+    };
+};
+
+/**
+ * A stand-in course for previewing a shared template. Uses the most recent real
+ * course of that type for realistic titles, but strips every signature, stamp
+ * and override so nothing course-specific leaks into (or can be deleted from)
+ * the template designer.
+ */
+export const buildTemplateSampleCourse = (courseType, allCourses = []) => {
+    const candidates = (allCourses || [])
+        .filter(c => !c.isDeleted && (!courseType || c.course_type === courseType))
+        .sort((a, b) => new Date(b.start_date || 0) - new Date(a.start_date || 0));
+    const base = candidates[0] ? { ...candidates[0] } : {};
+    [
+        ...SIGNATURE_FIELDS.courseLevel,
+        'approvedThirdPartyName', 'approvedThirdPartyRole',
+        'approvedFourthPartyName', 'approvedFourthPartyRole',
+        'customCertificate'
+    ].forEach(k => { delete base[k]; });
+    return {
+        ...base,
+        id: base.id || 'template-sample',
+        course_type: courseType || base.course_type || 'IMNCI',
+        __templateSample: true
+    };
+};
+
 // Assets stored on the custom template that must be inlined before html2canvas runs.
 const CUSTOM_ASSET_KEYS = [
     'logoTopRight1', 'logoTopRight2', 'logoTopLeft1', 'logoTopLeft2',
@@ -621,14 +806,21 @@ export const resolveCertificateSignatories = (course = {}, fallbackManagerName =
  * win. Falls back to the passed-in object when offline or on any error.
  */
 const loadAuthoritativeCourse = async (course) => {
-    if (!course?.id || course.__certCourseResolved) return course;
-    try {
-        const fresh = await getCourseById(course.id, navigator.onLine ? 'default' : 'cache');
-        if (fresh) return { ...course, ...fresh, __certCourseResolved: true };
-    } catch (error) {
-        console.warn('[Certificate] Could not re-read course from Firestore; using the cached copy.', error);
+    if (!course || course.__certCourseResolved) return course;
+    let base = course;
+    if (course.id) {
+        try {
+            const fresh = await getCourseById(course.id, navigator.onLine ? 'default' : 'cache');
+            // A fresh read carries the course's OWN overrides, so any previously
+            // layered copy is discarded and the templates are applied again.
+            if (fresh) base = { ...course, ...fresh, __ownCustomCertificate: undefined };
+        } catch (error) {
+            console.warn('[Certificate] Could not re-read course from Firestore; using the cached copy.', error);
+        }
     }
-    return { ...course, __certCourseResolved: true };
+    // General template → course-type template → this course.
+    const layered = await applyCertificateTemplates(base);
+    return { ...layered, __certCourseResolved: true };
 };
 
 /** Prints exactly what the third signature resolved to, so a blank one is diagnosable. */
@@ -655,7 +847,8 @@ const resolveCustomAssets = async (course) => {
     if (!cfg) return course;
 
     const resolved = { ...cfg };
-    await Promise.all(CUSTOM_ASSET_KEYS.map(async (key) => {
+    const keys = [...CUSTOM_ASSET_KEYS, ...Object.keys(cfg).filter(k => EXTRA_LOGO_SRC_RE.test(k))];
+    await Promise.all(keys.map(async (key) => {
         const value = cfg[key];
         if (value && /^https?:\/\//i.test(value)) {
             const base64 = await imageUrlToBase64(value);
@@ -702,7 +895,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     course, participant, federalProgramManagerName, participantSubCourse, language = 'en',
     directorNameAr, programManagerNameAr, programManagerSignatureUrl, directorName, directorSignatureUrl,  
     programStampUrl, thirdPartySignatureUrl: approvedThirdPartySignature = null,
-    fourthPartySignatureUrl: approvedFourthPartySignature = null, isTemplate = false 
+    fourthPartySignatureUrl: approvedFourthPartySignature = null, isTemplate = false,
+    showPlaceholders = false
 }) {
     const isArabic = language === 'ar';
     const courseType = course.course_type ? course.course_type.trim() : '';
@@ -755,6 +949,21 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         // No sub-course on the participant record. A line typed in the customizer
         // still prints, and falls back to the other language so one entry is
         // enough when the wording is the same in both.
+        displaySubCourse = isArabic
+            ? (customConfig.subCourseAr || customConfig.subCourseEn || '')
+            : (customConfig.subCourseEn || customConfig.subCourseAr || '');
+    }
+
+    // Sub-course line mode:
+    //   'auto'       participant's sub-course, or the typed text if any (default,
+    //                keeps every existing certificate unchanged)
+    //   'customOnly' only the text typed in the designer; the participant's
+    //                sub-course is ignored
+    //   'hide'       never printed
+    const subCourseMode = customConfig.subCourseMode || 'auto';
+    if (subCourseMode === 'hide') {
+        displaySubCourse = '';
+    } else if (subCourseMode === 'customOnly') {
         displaySubCourse = isArabic
             ? (customConfig.subCourseAr || customConfig.subCourseEn || '')
             : (customConfig.subCourseEn || customConfig.subCourseAr || '');
@@ -949,13 +1158,28 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const logoSources = {
         logoTopRight1, logoTopRight2, logoTopLeft1, logoTopLeft2
     };
-    const logoBoxes = LOGO_SLOTS.map(slot => ({
-        slot,
-        src: logoSources[slot.imageKey],
-        top: numOr(customConfig[`logo${slot.n}Top`], logoTop),
-        left: numOr(customConfig[`logo${slot.n}Left`], defaultLogoLeft(customConfig, slot, isArabic)),
-        height: numOr(customConfig[slot.heightKey], CERT_DEFAULTS[slot.heightKey])
-    }));
+    const logoBoxes = LOGO_SLOTS
+        .filter(slot => !customConfig[`hideLogo${slot.n}`])
+        .map(slot => ({
+            slot,
+            src: logoSources[slot.imageKey],
+            top: numOr(customConfig[`logo${slot.n}Top`], logoTop),
+            left: numOr(customConfig[`logo${slot.n}Left`], defaultLogoLeft(customConfig, slot, isArabic)),
+            height: numOr(customConfig[slot.heightKey], CERT_DEFAULTS[slot.heightKey])
+        }));
+
+    // Extra logos. One without an image is a placeholder: drawn only in the
+    // designer, never in a generated PDF.
+    const extraLogoBoxes = getExtraLogoIds(customConfig)
+        .filter(id => !customConfig[xlogoKey(id, 'Hidden')])
+        .map((id, i) => ({
+            id,
+            src: customConfig[xlogoKey(id, 'Src')] || '',
+            label: customConfig[xlogoKey(id, 'Label')] || `Logo ${LOGO_SLOTS.length + i + 1}`,
+            top: numOr(customConfig[xlogoKey(id, 'Top')], logoTop),
+            left: numOr(customConfig[xlogoKey(id, 'Left')], 50),
+            height: numOr(customConfig[xlogoKey(id, 'Height')], EXTRA_LOGO_DEFAULT_HEIGHT)
+        }));
 
     // --- COLOURS ---
     const col = (key) => customConfig[key] || CERT_DEFAULTS[key];
@@ -1063,6 +1287,29 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                         width: 'auto'
                     }}
                 />
+            ) : null)}
+
+            {extraLogoBoxes.map(({ id, src, label, top, left, height }) => src ? (
+                <img
+                    key={`xlogo-${id}`}
+                    src={src}
+                    crossOrigin="anonymous"
+                    alt={label}
+                    style={{ position: 'absolute', top: `${top}mm`, left: `${left}%`, transform: 'translateX(-50%)', zIndex: 1, height: `${height}mm`, width: 'auto' }}
+                />
+            ) : showPlaceholders ? (
+                <div
+                    key={`xlogo-${id}`}
+                    style={{
+                        position: 'absolute', top: `${top}mm`, left: `${left}%`, transform: 'translateX(-50%)', zIndex: 1,
+                        height: `${height}mm`, width: `${height}mm`, boxSizing: 'border-box',
+                        border: '2px dashed #94a3b8', borderRadius: '2mm', background: 'rgba(241,245,249,0.85)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center',
+                        fontFamily: 'Arial, sans-serif', fontSize: '11px', color: '#64748b', padding: '1mm', lineHeight: 1.2
+                    }}
+                >
+                    {label}<br />(logo)
+                </div>
             ) : null)}
 
             <div style={{ ...centred(headerLeft, headerWidth), top: `${headerTop}mm`, fontSize: `${headerFontSize}px`, fontWeight: 'bold', color: headerColor, lineHeight: '1.5', zIndex: 2, whiteSpace: 'pre-line' }}>
@@ -1582,8 +1829,9 @@ const readColor = (data, key) => data?.[key] || CERT_DEFAULTS[key] || '#000000';
 const buildEditorElements = (ctx) => {
     const {
         isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
+        subCourseMode = 'auto', autoSubCourse = '',
         hideManager, hideDirector, showSealNotice, signatureImages = [],
-        logoTopDef, logoLeftFor, sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef
+        logoTopDef, logoLeftFor, hiddenLogos = {}, extraLogos = [], sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef
     } = ctx;
 
     // Per-signature controls, generated so every block gets the same set.
@@ -1613,10 +1861,38 @@ const buildEditorElements = (ctx) => {
             topKey: `logo${slot.n}Top`, topDef: logoTopDef,
             leftKey: `logo${slot.n}Left`, leftDef: logoLeftFor(slot),
             box: { widthPct: 11, heightMm: 34 },
+            boxHeightKey: slot.heightKey, boxHeightDef: CERT_DEFAULTS[slot.heightKey],
             numbers: [
                 { key: slot.heightKey, label: 'Height (mm)', def: CERT_DEFAULTS[slot.heightKey], min: 5, max: 80 }
             ],
+            inactive: !!hiddenLogos[slot.n],
+            inactiveNote: 'Hidden. Untick “Hide this logo” below to print it again.',
+            checks: [{ key: `hideLogo${slot.n}`, label: 'Hide this logo' }],
             note: 'This logo moves and resizes on its own. Reset it to follow the shared logo row again.'
+        })),
+        // Extra logos added with “Add logo”. Without an image they are placeholders.
+        ...extraLogos.map((x, i) => ({
+            id: `xlogo:${x.id}`,
+            label: `${x.label || `Logo ${LOGO_SLOTS.length + i + 1}`}${x.src ? '' : ' (placeholder)'}`,
+            logoKey: xlogoKey(x.id, 'Src'),
+            extraLogoId: x.id,
+            extraInherited: x.inherited,
+            topKey: xlogoKey(x.id, 'Top'), topDef: logoTopDef,
+            leftKey: xlogoKey(x.id, 'Left'), leftDef: 50,
+            box: { widthPct: 11, heightMm: 34 },
+            boxHeightKey: xlogoKey(x.id, 'Height'), boxHeightDef: EXTRA_LOGO_DEFAULT_HEIGHT,
+            numbers: [
+                { key: xlogoKey(x.id, 'Height'), label: 'Height (mm)', def: EXTRA_LOGO_DEFAULT_HEIGHT, min: 5, max: 80 }
+            ],
+            texts: [
+                { key: xlogoKey(x.id, 'Label'), label: 'Name (shown in the designer only)', placeholder: 'e.g. Partner logo' }
+            ],
+            inactive: x.hidden,
+            inactiveNote: 'Hidden. Untick “Hide this logo” below to print it again.',
+            checks: [{ key: xlogoKey(x.id, 'Hidden'), label: 'Hide this logo' }],
+            note: x.src
+                ? 'An added logo. Drag it anywhere on the page.'
+                : 'A placeholder: position and size it now, upload the image whenever it is ready. Nothing prints until an image is added.'
         })),
         {
             id: 'header', label: 'Header text',
@@ -1691,14 +1967,28 @@ const buildEditorElements = (ctx) => {
             widthKey: 'subCourseWidth', widthDef: CERT_DEFAULTS.subCourseWidth,
             box: { widthPct: 56, heightMm: 8 },
             inactive: !hasSubCourse,
-            inactiveNote: 'Nothing on this line yet. Type the wording below and it appears on the certificate.',
+            inactiveNote: subCourseMode === 'hide'
+                ? 'Set to “Never print”. Change “What prints” below to bring it back.'
+                : 'Nothing on this line yet. Type the wording below and it appears on the certificate.',
+            selects: [{
+                key: 'subCourseMode',
+                label: 'What prints',
+                def: 'auto',
+                options: [
+                    { value: 'auto', label: 'Automatic — each participant’s sub-course (or the text below)' },
+                    { value: 'customOnly', label: 'Only the text typed below' },
+                    { value: 'hide', label: 'Never print this line' }
+                ]
+            }],
             texts: [
-                { key: 'subCourseEn', label: 'Text (English)', placeholder: 'Blank = the course sub-type' },
-                { key: 'subCourseAr', label: 'Text (Arabic)', rtl: true, placeholder: 'فارغ = النوع الفرعي للدورة' }
+                { key: 'subCourseEn', label: 'Text (English)', placeholder: subCourseMode === 'customOnly' ? 'Type the line to print' : 'Blank = participant’s sub-course' },
+                { key: 'subCourseAr', label: 'Text (Arabic)', rtl: true, placeholder: subCourseMode === 'customOnly' ? 'اكتب النص المطلوب' : 'فارغ = النوع الفرعي للمشارك' }
             ],
             colors: [{ key: 'subCourseColor', label: 'Text colour' }],
             fontKey: 'subCourseFontSize', fontDef: CERT_DEFAULTS.subCourseFontSize,
-            note: 'Prints in brackets under the course title. Filling only one language makes that text print in both.'
+            note: subCourseMode === 'auto' && autoSubCourse
+                ? `Printing automatically from the participant records: “${autoSubCourse}”. Choose “Only the text typed below” or “Never print” if you don’t want it.`
+                : 'Prints in brackets under the course title. Filling only one language makes that text print in both.'
         },
         {
             id: 'placeDate', label: 'Place & date',
@@ -1944,6 +2234,65 @@ const StepField = ({ value, defaultValue, min, max, step = 1, unit, onChange }) 
 };
 
 // -----------------------------------------------------------------------------
+// GRID & ALIGNMENT
+// The grid is drawn in page millimetres (an SVG with a 297 × 210 viewBox), so it
+// lines up exactly with the values stored in the template at every zoom level.
+// -----------------------------------------------------------------------------
+
+const PAGE_W_MM = 297;
+const PAGE_H_MM = 210;
+const SNAP_THRESHOLD_MM = 1.5;
+const GRID_PREFS_KEY = 'certDesigner.gridPrefs';
+
+const loadGridPrefs = () => {
+    try {
+        const raw = window.localStorage?.getItem(GRID_PREFS_KEY);
+        if (raw) return { gridSize: 10, snapToGrid: false, smartGuides: true, showRulers: true, ...JSON.parse(raw) };
+    } catch (e) { /* storage unavailable */ }
+    return { gridSize: 10, snapToGrid: false, smartGuides: true, showRulers: true };
+};
+
+const pctToMm = (pct) => (pct / 100) * PAGE_W_MM;
+const mmToPct = (mm) => (mm / PAGE_W_MM) * 100;
+const round2 = (v) => Math.round(v * 100) / 100;
+
+const GridOverlay = ({ gridSize, showRulers, guides }) => {
+    const lines = [];
+    if (gridSize > 0) {
+        const majorEvery = gridSize >= 10 ? 5 : 10; // a darker line every 50mm
+        for (let x = gridSize, i = 1; x < PAGE_W_MM; x += gridSize, i++) {
+            const major = i % majorEvery === 0;
+            lines.push(<line key={`v${x}`} x1={x} y1={0} x2={x} y2={PAGE_H_MM} stroke={major ? 'rgba(14,116,144,0.45)' : 'rgba(14,116,144,0.18)'} strokeWidth={major ? 0.3 : 0.15} />);
+            if (showRulers && major) lines.push(<text key={`vt${x}`} x={x + 0.8} y={3.2} fontSize={2.6} fill="rgba(14,116,144,0.9)">{x}</text>);
+        }
+        for (let y = gridSize, i = 1; y < PAGE_H_MM; y += gridSize, i++) {
+            const major = i % majorEvery === 0;
+            lines.push(<line key={`h${y}`} x1={0} y1={y} x2={PAGE_W_MM} y2={y} stroke={major ? 'rgba(14,116,144,0.45)' : 'rgba(14,116,144,0.18)'} strokeWidth={major ? 0.3 : 0.15} />);
+            if (showRulers && major) lines.push(<text key={`ht${y}`} x={0.8} y={y - 0.8} fontSize={2.6} fill="rgba(14,116,144,0.9)">{y}</text>);
+        }
+    }
+    return (
+        <svg
+            viewBox={`0 0 ${PAGE_W_MM} ${PAGE_H_MM}`}
+            preserveAspectRatio="none"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 20 }}
+        >
+            {lines}
+            {/* Page centre lines */}
+            <line x1={PAGE_W_MM / 2} y1={0} x2={PAGE_W_MM / 2} y2={PAGE_H_MM} stroke="rgba(239,68,68,0.55)" strokeWidth={0.3} strokeDasharray="2 1.5" />
+            <line x1={0} y1={PAGE_H_MM / 2} x2={PAGE_W_MM} y2={PAGE_H_MM / 2} stroke="rgba(239,68,68,0.35)" strokeWidth={0.3} strokeDasharray="2 1.5" />
+            {/* Live alignment guides while dragging */}
+            {(guides?.v || []).map(mm => (
+                <line key={`gv${mm}`} x1={mm} y1={0} x2={mm} y2={PAGE_H_MM} stroke="#d946ef" strokeWidth={0.45} />
+            ))}
+            {(guides?.h || []).map(mm => (
+                <line key={`gh${mm}`} x1={0} y1={mm} x2={PAGE_W_MM} y2={mm} stroke="#d946ef" strokeWidth={0.45} />
+            ))}
+        </svg>
+    );
+};
+
+// -----------------------------------------------------------------------------
 // APP BRANDING
 // Single place to change how the web app identifies itself inside the designer
 // so it reads as a page of the site rather than a floating tool. Edit these
@@ -1958,20 +2307,246 @@ export const APP_BRANDING = {
 };
 
 // -----------------------------------------------------------------------------
+// REAL CERTIFICATE PREVIEW
+// Runs the exact pipeline a download uses (layering, asset inlining, Arabic name
+// lookup, html2canvas) and shows the resulting page. Nothing is approximated, so
+// what appears here is what the PDF will contain.
+//
+// `course` is either a stored course (the pipeline re-reads it and applies the
+// templates, exactly like a download) or, from the designer, an already-layered
+// course marked __certCourseResolved so the UNSAVED edits are what gets drawn.
+// -----------------------------------------------------------------------------
+
+const SAMPLE_PARTICIPANT = {
+    en: { id: 'preview', name: 'Ahmed Mohamed Ali Hassan' },
+    ar: { id: 'preview', name: 'أحمد محمد علي حسن' }
+};
+
+const subCourseFor = (course, participant) => {
+    if (participant?.imci_sub_type) return participant.imci_sub_type;
+    const byGroup = course?.facilitatorAssignments?.find(a => a.group === participant?.group)?.imci_sub_type;
+    return byGroup || course?.director_imci_sub_type || null;
+};
+
+export function CertificatePreviewModal({ course, federalProgramManagerName = '', onClose, defaultLanguage = 'en', note = '' }) {
+    const [language, setLanguage] = useState(defaultLanguage);
+    const [participants, setParticipants] = useState([]);
+    const [participantId, setParticipantId] = useState('__sample');
+    const [imageUrl, setImageUrl] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+    const [zoomed, setZoomed] = useState(false);
+    const canvasRef = useRef(null);
+    const runRef = useRef(0);
+
+    const canListParticipants = !!course?.id && !course.__templateSample;
+
+    useEffect(() => {
+        if (!canListParticipants) return;
+        let alive = true;
+        (async () => {
+            try {
+                const list = await listAllParticipantsForCourse(course.id, { source: navigator.onLine ? 'server' : 'cache' });
+                if (alive) setParticipants((list || []).filter(p => !p.isDeleted).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+            } catch (err) {
+                console.warn('[Certificate preview] Could not load participants.', err);
+            }
+        })();
+        return () => { alive = false; };
+    }, [course?.id, canListParticipants]);
+
+    const participant = participantId === '__sample'
+        ? SAMPLE_PARTICIPANT[language]
+        : participants.find(p => p.id === participantId) || SAMPLE_PARTICIPANT[language];
+
+    const render = useCallback(async () => {
+        const run = ++runRef.current;
+        setBusy(true);
+        setError('');
+        try {
+            const canvas = await generateCertificatePdf(
+                course,
+                participant,
+                federalProgramManagerName,
+                subCourseFor(course, participant),
+                language
+            );
+            if (run !== runRef.current) return; // a newer render started
+            if (!canvas) throw new Error('The certificate could not be drawn. See the console for details.');
+            canvasRef.current = canvas;
+            setImageUrl(canvas.toDataURL('image/jpeg', 0.92));
+        } catch (err) {
+            if (run === runRef.current) setError(err.message || String(err));
+        } finally {
+            if (run === runRef.current) setBusy(false);
+        }
+    }, [course, participant, federalProgramManagerName, language]);
+
+    // Redraw whenever the language or participant changes.
+    useEffect(() => { render(); }, [language, participantId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const buildPdf = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return null;
+        const pdf = new jsPDF('landscape', 'mm', 'a4');
+        pdf.addImage(canvas.toDataURL('image/jpeg', 1), 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
+        return pdf;
+    };
+
+    const openPdf = async () => {
+        const pdf = buildPdf();
+        if (!pdf) return;
+        if (Capacitor.isNativePlatform()) {
+            await saveAndOpenPdf(pdf, `Certificate_Preview_${language.toUpperCase()}.pdf`);
+            return;
+        }
+        const url = pdf.output('bloburl');
+        const win = window.open(url, '_blank');
+        if (!win) await saveAndOpenPdf(pdf, `Certificate_Preview_${language.toUpperCase()}.pdf`); // pop-up blocked
+    };
+
+    const downloadPdf = async () => {
+        const pdf = buildPdf();
+        if (!pdf) return;
+        const who = participantId === '__sample' ? 'Sample' : (participant.name || 'Participant').replace(/\s+/g, '_');
+        await saveAndOpenPdf(pdf, `Certificate_Preview_${who}_${language.toUpperCase()}.pdf`);
+    };
+
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    return (
+        <div className="fixed inset-0 z-[70] bg-slate-900/80 flex flex-col" role="dialog" aria-modal="true" aria-label="Certificate preview">
+            <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-white border-b border-gray-200 shadow">
+                <Eye className="h-4 w-4 text-sky-700" />
+                <h2 className="font-bold text-gray-900 text-sm mr-2">Certificate preview</h2>
+                <span className="text-[11px] text-gray-500 hidden md:inline">
+                    Drawn by the same engine as the download — this is exactly what will be produced.
+                </span>
+
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                    <div className="flex rounded overflow-hidden border border-gray-300">
+                        <button type="button" onClick={() => setLanguage('en')} disabled={busy} className={`px-2.5 py-1 text-xs font-semibold ${language === 'en' ? 'bg-sky-600 text-white' : 'bg-white text-gray-700'}`}>EN</button>
+                        <button type="button" onClick={() => setLanguage('ar')} disabled={busy} className={`px-2.5 py-1 text-xs font-semibold ${language === 'ar' ? 'bg-sky-600 text-white' : 'bg-white text-gray-700'}`}>عربي</button>
+                    </div>
+
+                    <select
+                        value={participantId}
+                        onChange={e => setParticipantId(e.target.value)}
+                        disabled={busy}
+                        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white max-w-[14rem]"
+                        title="Whose certificate to draw"
+                    >
+                        <option value="__sample">Sample name</option>
+                        {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+
+                    <button type="button" onClick={render} disabled={busy} className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50" title="Draw again">
+                        <RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} /> Refresh
+                    </button>
+                    <button type="button" onClick={openPdf} disabled={busy || !imageUrl} className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-50">
+                        <Eye className="h-3.5 w-3.5" /> Open as PDF
+                    </button>
+                    <button type="button" onClick={downloadPdf} disabled={busy || !imageUrl} className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50">
+                        <Download className="h-3.5 w-3.5" /> Download
+                    </button>
+                    <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-gray-100" aria-label="Close preview">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
+
+            {note && (
+                <div className="px-4 py-1.5 text-[11px] font-semibold bg-amber-50 text-amber-800 border-b border-amber-200">{note}</div>
+            )}
+
+            <div className="flex-1 overflow-auto p-6 flex items-start justify-center">
+                {error ? (
+                    <div className="bg-white rounded-lg p-6 max-w-md text-center">
+                        <p className="font-semibold text-red-700 mb-2">Preview failed</p>
+                        <p className="text-sm text-gray-600 mb-4">{error}</p>
+                        <Button onClick={render}>Try again</Button>
+                    </div>
+                ) : (
+                    <div className="relative" style={{ width: zoomed ? 'min(1600px, 200%)' : 'min(100%, calc((100vh - 140px) * 297 / 210))' }}>
+                        {imageUrl && (
+                            <img
+                                src={imageUrl}
+                                alt="Certificate preview"
+                                onClick={() => setZoomed(z => !z)}
+                                className={`w-full h-auto bg-white shadow-2xl ${zoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'} ${busy ? 'opacity-40' : ''}`}
+                            />
+                        )}
+                        {busy && (
+                            <div className={`${imageUrl ? 'absolute inset-0' : 'bg-white rounded-lg shadow-2xl'} flex flex-col items-center justify-center gap-2`} style={imageUrl ? undefined : { aspectRatio: '297 / 210' }}>
+                                <Spinner />
+                                <span className="text-xs font-semibold text-gray-700 bg-white/90 rounded px-2 py-0.5">Rendering certificate…</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+            <p className="text-center text-[11px] text-slate-300 pb-2">Click the page to zoom. Esc closes.</p>
+        </div>
+    );
+}
+
+// -----------------------------------------------------------------------------
 // FULL-PAGE CERTIFICATE DESIGNER
 // Click an element on the canvas (or in the list) to select it, drag it to move
 // it on both axes, and edit its text, colour, size and position in the side
 // panel. Everything writes into the same customCertificate keys the PDF reads.
 // -----------------------------------------------------------------------------
 
-export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = APP_BRANDING }) {
-    const [data, setData] = useState(course?.customCertificate || {});
+export function CertificateDesigner({
+    course, onBack, onSaveSuccess, branding = APP_BRANDING,
+    // scope.kind: 'course' (this course's own overrides), 'courseType' (the
+    // template for scope.courseType) or 'general' (the template for everything).
+    scope = { kind: 'course' },
+    // For template scopes: the stored template config to start from.
+    initialConfig = null,
+    // Only used for the preview, so the manager's name matches a real download.
+    federalProgramManagerName = ''
+}) {
+    const scopeKind = scope?.kind || 'course';
+    const isTemplateScope = scopeKind !== 'course';
+    const templateDocId = scopeKind === 'general'
+        ? GENERAL_TEMPLATE_ID
+        : scopeKind === 'courseType' ? courseTypeTemplateId(scope.courseType) : null;
+    const excludedKeys = scopeKind === 'general'
+        ? GENERAL_TEMPLATE_EXCLUDED_KEYS
+        : scopeKind === 'courseType' ? TEMPLATE_EXCLUDED_KEYS : [];
+    const scopeLabel = scopeKind === 'general'
+        ? 'General template (all courses)'
+        : scopeKind === 'courseType' ? `Course-type template: ${scope.courseType}` : 'This course only';
+
+    const startingOwn = () => (isTemplateScope ? (initialConfig || {}) : (course?.customCertificate || {}));
+
+    // ownData = what this layer stores. inherited = the layers beneath it.
+    // data = what actually prints (inherited, then ownData on top); every
+    // position / preview calculation reads `data`, every edit writes `ownData`.
+    const [ownData, setOwnData] = useState(startingOwn);
+    const [inherited, setInherited] = useState({});
+    const data = useMemo(() => mergeCertificateConfigs(inherited, ownData), [inherited, ownData]);
     const [language, setLanguage] = useState('en');
     const [selectedId, setSelectedId] = useState('title');
     const [isSaving, setIsSaving] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [zoom, setZoom] = useState('fit');
     const [showGuides, setShowGuides] = useState(true);
+    const [showRealPreview, setShowRealPreview] = useState(false);
+    const [gridPrefs, setGridPrefs] = useState(loadGridPrefs);
+    const [activeGuides, setActiveGuides] = useState(null);
+    const updateGridPrefs = (patch) => setGridPrefs(prev => {
+        const next = { ...prev, ...patch };
+        try { window.localStorage?.setItem(GRID_PREFS_KEY, JSON.stringify(next)); } catch (e) { /* ignore */ }
+        return next;
+    });
+    const gridPrefsRef = useRef(gridPrefs);
+    useEffect(() => { gridPrefsRef.current = gridPrefs; }, [gridPrefs]);
 
     const canvasRef = useRef(null);
     const [fitScale, setFitScale] = useState(0.5);
@@ -1982,7 +2557,18 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     const [activeUploadKey, setActiveUploadKey] = useState(null);
     const [uploadingAsset, setUploadingAsset] = useState(null);
 
-    useEffect(() => { setData(course?.customCertificate || {}); setDirty(false); }, [course]);
+    useEffect(() => { setOwnData(startingOwn()); setDirty(false); }, [course, initialConfig]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            let cfg = {};
+            if (scopeKind === 'course') cfg = await loadInheritedCertificateConfig(course?.course_type);
+            else if (scopeKind === 'courseType') cfg = await loadInheritedCertificateConfig(null); // general only
+            if (alive) setInherited(cfg || {});
+        })();
+        return () => { alive = false; };
+    }, [scopeKind, course?.course_type]);
 
     const scale = zoom === 'fit' ? fitScale : Number(zoom);
     useEffect(() => { scaleRef.current = scale; }, [scale]);
@@ -2002,7 +2588,7 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     }, []);
 
     const set = useCallback((key, value) => {
-        setData(prev => ({ ...prev, [key]: value }));
+        setOwnData(prev => ({ ...prev, [key]: value }));
         setDirty(true);
     }, []);
 
@@ -2023,15 +2609,37 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     );
     const hasThirdParty = sigInfo.thirdPartyEnabled;
     const hasFourthParty = sigInfo.fourthPartyEnabled;
-    // A sub-course line prints when the participant record has one OR when the
-    // designer has been given wording of its own, so the element is editable on
-    // any course, not only IMNCI.
-    const hasSubCourse = !!(
-        course?.director_imci_sub_type ||
-        course?.course_type === 'IMNCI' ||
-        data.subCourseEn ||
-        data.subCourseAr
-    );
+    // The sub-course that prints is the PARTICIPANT's, so look where the real
+    // download looks: participant records first, then group assignments, then the
+    // course. Otherwise the designer can hide a line that still prints.
+    const [participantSubCourse, setParticipantSubCourse] = useState('');
+    useEffect(() => {
+        setParticipantSubCourse('');
+        if (isTemplateScope || !course?.id) return;
+        let alive = true;
+        (async () => {
+            try {
+                const list = await listAllParticipantsForCourse(course.id, { source: navigator.onLine ? 'default' : 'cache' });
+                const found = (list || []).find(p => !p.isDeleted && p.imci_sub_type)?.imci_sub_type || '';
+                if (alive) setParticipantSubCourse(found);
+            } catch (err) {
+                console.warn('[Certificate designer] Could not check participant sub-courses.', err);
+            }
+        })();
+        return () => { alive = false; };
+    }, [course?.id, isTemplateScope]);
+
+    const autoSubCourse = participantSubCourse
+        || course?.facilitatorAssignments?.find(a => a.imci_sub_type)?.imci_sub_type
+        || course?.director_imci_sub_type
+        || '';
+    const subCourseMode = data.subCourseMode || 'auto';
+    const typedSubCourse = !!(data.subCourseEn || data.subCourseAr);
+    const hasSubCourse = subCourseMode === 'hide'
+        ? false
+        : subCourseMode === 'customOnly'
+            ? typedSubCourse
+            : !!(autoSubCourse || course?.course_type === 'IMNCI' || typedSubCourse);
 
     // Mirrors the template's own signature geometry so the drag handles sit on
     // top of where the blocks actually render.
@@ -2075,23 +2683,111 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     const logoTopDef = defaultLogoTop(data);
     const logoLeftFor = useCallback((slot) => defaultLogoLeft(data, slot, isArabic), [data, isArabic]);
 
+    const hiddenLogos = useMemo(
+        () => Object.fromEntries(LOGO_SLOTS.map(s => [s.n, !!data[`hideLogo${s.n}`]])),
+        [data]
+    );
+    const ownExtraIds = getExtraLogoIds(ownData);
+    const extraLogos = useMemo(() => getExtraLogoIds(data).map(id => ({
+        id,
+        label: data[xlogoKey(id, 'Label')] || '',
+        src: data[xlogoKey(id, 'Src')] || '',
+        hidden: !!data[xlogoKey(id, 'Hidden')],
+        inherited: !ownExtraIds.includes(id)
+    })), [data, ownExtraIds.join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const addExtraLogo = () => {
+        const id = newExtraLogoId();
+        setOwnData(prev => ({
+            ...prev,
+            extraLogoIds: [...getExtraLogoIds(prev), id],
+            [xlogoKey(id, 'Top')]: String(Math.round(logoTopDef)),
+            [xlogoKey(id, 'Left')]: '50',
+            [xlogoKey(id, 'Height')]: String(EXTRA_LOGO_DEFAULT_HEIGHT)
+        }));
+        setDirty(true);
+        setSelectedId(`xlogo:${id}`);
+    };
+
+    const deleteExtraLogo = (id) => {
+        if (!window.confirm('Delete this logo from the template?')) return;
+        setOwnData(prev => {
+            const next = {};
+            Object.entries(prev).forEach(([k, v]) => { if (!k.startsWith(`xlogo_${id}_`)) next[k] = v; });
+            next.extraLogoIds = getExtraLogoIds(prev).filter(x => x !== id);
+            return next;
+        });
+        setDirty(true);
+        setSelectedId('logoRow');
+    };
+
     const elements = useMemo(
         () => buildEditorElements({
             isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
+            subCourseMode, autoSubCourse,
             hideManager: !!data.hideManager, hideDirector: !!data.hideDirector,
             showSealNotice: !!data.showSealNotice, signatureImages,
-            logoTopDef, logoLeftFor,
+            logoTopDef, logoLeftFor, hiddenLogos, extraLogos,
             sharedSigTop, sharedNameFs, sharedRoleFs,
             sideWidthDef: defaultSideWidth, thirdWidthDef
         }),
-        [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
+        [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, subCourseMode, autoSubCourse,
          data.hideManager, data.hideDirector, data.showSealNotice, signatureImages,
-         logoTopDef, logoLeftFor, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef]
+         logoTopDef, logoLeftFor, hiddenLogos, extraLogos, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef]
     );
 
     const selected = elements.find(e => e.id === selectedId) || elements[0];
 
+    // Text blocks that sit on top of each other (like a sub-course line under a
+    // moved place/date block). Box sizes are the designer's estimates of each
+    // block's printed footprint, so this is a warning, not a guarantee.
+    const overlaps = useMemo(() => {
+        const TEXT_IDS = ['header', 'title', 'name', 'completion', 'courseTitle', 'subCourse', 'placeDate', 'sealNotice'];
+        const boxes = elements
+            .filter(el => TEXT_IDS.includes(el.id) && !el.inactive)
+            .map(el => {
+                const top = readNum(data, el.topKey, el.topDef);
+                const centre = el.leftKey ? readNum(data, el.leftKey, el.leftDef) : 50;
+                return { el, top, bottom: top + el.box.heightMm, left: centre - el.box.widthPct / 2, right: centre + el.box.widthPct / 2 };
+            });
+        const pairs = [];
+        for (let i = 0; i < boxes.length; i++) {
+            for (let j = i + 1; j < boxes.length; j++) {
+                const a = boxes[i], b = boxes[j];
+                const vertical = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+                const horizontal = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+                if (vertical > 1 && horizontal > 0) pairs.push([a.el, b.el]);
+            }
+        }
+        return pairs;
+    }, [elements, data]);
+    const overlappingIds = useMemo(() => new Set(overlaps.flat().map(el => el.id)), [overlaps]);
+
     const previewCourse = useMemo(() => ({ ...liveCourse, customCertificate: data || {} }), [liveCourse, data]);
+
+    // For the real preview: already layered with the unsaved edits, and marked
+    // resolved so the pipeline doesn't re-read the stored copy over them.
+    const realPreviewCourse = useMemo(() => ({
+        ...liveCourse,
+        customCertificate: data || {},
+        __ownCustomCertificate: ownData,
+        __certCourseResolved: true
+    }), [liveCourse, data, ownData]);
+
+    // Where each positioned element sits, in page millimetres. Used by the smart
+    // guides and by the “Align” tools. Signature images are left out: they move
+    // in their own block-relative frame.
+    const anchorOf = useCallback((el) => {
+        if (!el || el.axes || !el.topKey) return null;
+        const top = readNum(data, el.topKey, el.topDef);
+        const height = el.boxHeightKey ? readNum(data, el.boxHeightKey, el.boxHeightDef) : null;
+        return {
+            id: el.id,
+            top,
+            bottom: height !== null ? top + height : null,
+            centreX: el.leftKey ? pctToMm(readNum(data, el.leftKey, el.leftDef)) : null
+        };
+    }, [data]);
 
     // --- dragging ---
     const onMove = useCallback((e) => {
@@ -2112,15 +2808,61 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
             return;
         }
 
-        const dxPct = ((e.clientX - d.startX) / (PAGE_W_PX * s)) * 100;
-        set(d.topKey, String(clamp(d.startTop + dyMm, 0, 205)));
-        if (d.leftKey) {
-            set(d.leftKey, String(clamp(d.startLeft + dxPct, 0, 100)));
+        const prefs = gridPrefsRef.current;
+        const grid = Number(prefs.gridSize) || 0;
+        const clampF = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+        let top = d.startTop + dyMm;
+        let centreX = d.leftKey ? pctToMm(d.startLeft) + dxMm : null;
+        const guides = { v: [], h: [] };
+
+        // 1. Snap to the grid.
+        if (prefs.snapToGrid && grid > 0 && !e.altKey) {
+            top = Math.round(top / grid) * grid;
+            if (centreX !== null) centreX = Math.round(centreX / grid) * grid;
         }
+
+        // 2. Smart guides win over the grid: line up with the page centre or with
+        //    another element's top, bottom or centre. Hold Alt to move freely.
+        if (prefs.smartGuides && !e.altKey) {
+            const bestMatch = (value, candidates) => {
+                let best = null;
+                candidates.forEach(c => {
+                    if (c === null || c === undefined) return;
+                    const dist = Math.abs(c - value);
+                    if (dist <= SNAP_THRESHOLD_MM && (!best || dist < best.dist)) best = { value: c, dist };
+                });
+                return best;
+            };
+            const heightMm = d.heightMm || 0;
+            const yTargets = [PAGE_H_MM / 2];
+            d.others.forEach(o => { yTargets.push(o.top); if (o.bottom !== null) yTargets.push(o.bottom); });
+
+            const topHit = bestMatch(top, yTargets);
+            const bottomHit = heightMm ? bestMatch(top + heightMm, yTargets) : null;
+            if (topHit && (!bottomHit || topHit.dist <= bottomHit.dist)) {
+                top = topHit.value; guides.h.push(topHit.value);
+            } else if (bottomHit) {
+                top = bottomHit.value - heightMm; guides.h.push(bottomHit.value);
+            }
+
+            if (centreX !== null) {
+                const xTargets = [PAGE_W_MM / 2, ...d.others.map(o => o.centreX)];
+                const xHit = bestMatch(centreX, xTargets);
+                if (xHit) { centreX = xHit.value; guides.v.push(xHit.value); }
+            }
+        }
+
+        set(d.topKey, String(round2(clampF(top, 0, 205))));
+        if (d.leftKey && centreX !== null) {
+            set(d.leftKey, String(round2(clampF(mmToPct(centreX), 0, 100))));
+        }
+        setActiveGuides(guides.v.length || guides.h.length ? guides : null);
     }, [set]);
 
     const onUp = useCallback(() => {
         dragRef.current = null;
+        setActiveGuides(null);
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
     }, [onMove]);
@@ -2140,6 +2882,12 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
             : {
                 topKey: el.topKey,
                 leftKey: el.leftKey || null,
+                heightMm: el.boxHeightKey ? readNum(data, el.boxHeightKey, el.boxHeightDef) : 0,
+                // Snapshot of everything else on the page to align against.
+                others: elements
+                    .filter(o => o.id !== el.id && !o.inactive)
+                    .map(anchorOf)
+                    .filter(Boolean),
                 startY: e.clientY,
                 startX: e.clientX,
                 startTop: readNum(data, el.topKey, el.topDef),
@@ -2160,7 +2908,8 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
             if (!selected) return;
             const tag = (e.target.tagName || '').toLowerCase();
             if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-            const step = e.shiftKey ? 5 : 1;
+            const gridStep = Number(gridPrefsRef.current.gridSize) || 5;
+            const step = e.shiftKey ? gridStep : 1;
 
             // Image elements move on their own mm axes, with the vertical value
             // measured upward, so Up must increase it.
@@ -2205,7 +2954,12 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
             const isSignature = /Signature/i.test(activeUploadKey);
             const url = isSignature
                 ? await fileToSignatureDataUrl(file)
-                : await uploadFile(file, `courses/${course.id}/certificate_assets/${activeUploadKey}_${Date.now()}`);
+                : await uploadFile(
+                    file,
+                    isTemplateScope
+                        ? `certificate_templates/${templateDocId}/${activeUploadKey}_${Date.now()}`
+                        : `courses/${course.id}/certificate_assets/${activeUploadKey}_${Date.now()}`
+                );
             set(activeUploadKey, url);
         } catch (err) {
             console.error(err);
@@ -2220,9 +2974,7 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const cleaned = Object.fromEntries(
-                Object.entries(data).filter(([, v]) => !(v === '' || v === undefined || v === null))
-            );
+            const cleaned = cleanCertificateConfig(ownData, scopeKind);
 
             // Inline signatures live in this document, so guard the 1 MiB ceiling
             // with a readable message rather than letting Firestore reject it.
@@ -2237,16 +2989,72 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                 return;
             }
 
-            await updateDoc(doc(db, 'courses', course.id), {
-                customCertificate: cleaned,
-                lastUpdatedAt: serverTimestamp()
-            });
+            if (isTemplateScope) {
+                await setDoc(doc(db, CERT_TEMPLATES_COLLECTION, templateDocId), {
+                    scope: scopeKind,
+                    courseType: scopeKind === 'courseType' ? scope.courseType : null,
+                    config: cleaned,
+                    updatedAt: serverTimestamp()
+                });
+                invalidateCertificateTemplateCache();
+            } else {
+                await updateDoc(doc(db, 'courses', course.id), {
+                    customCertificate: cleaned,
+                    lastUpdatedAt: serverTimestamp()
+                });
+            }
             setDirty(false);
             if (onSaveSuccess) onSaveSuccess();
             alert('Template saved.');
         } catch (err) {
             console.error(err);
             alert('Could not save the template. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Course scope only: push this course's overrides into a shared template so
+    // other courses pick them up. The course's own overrides can then be cleared
+    // (signature images and dates stay on the course either way).
+    const promoteToTemplate = async (target) => {
+        if (!course?.id || isTemplateScope) return;
+        const kind = target === 'general' ? 'general' : 'courseType';
+        if (kind === 'courseType' && !course.course_type) return;
+        const id = kind === 'general' ? GENERAL_TEMPLATE_ID : courseTypeTemplateId(course.course_type);
+        const targetName = kind === 'general' ? 'the GENERAL template (all courses)' : `the "${course.course_type}" template`;
+        if (!window.confirm(`Copy this course's layout into ${targetName}? Settings already in that template are kept unless this course changes them.`)) return;
+
+        setIsSaving(true);
+        try {
+            const snap = await getDoc(doc(db, CERT_TEMPLATES_COLLECTION, id));
+            const existing = snap.exists() ? (snap.data().config || {}) : {};
+            const config = cleanCertificateConfig(mergeCertificateConfigs(existing, ownData), kind);
+            await setDoc(doc(db, CERT_TEMPLATES_COLLECTION, id), {
+                scope: kind,
+                courseType: kind === 'courseType' ? course.course_type : null,
+                config,
+                updatedAt: serverTimestamp()
+            });
+            invalidateCertificateTemplateCache();
+
+            if (window.confirm('Saved to the template. Clear this course\'s own overrides so it simply follows the template now?')) {
+                // Whatever the template could not take stays on the course.
+                const courseOnlyKeys = kind === 'general' ? GENERAL_TEMPLATE_EXCLUDED_KEYS : TEMPLATE_EXCLUDED_KEYS;
+                const keep = cleanCertificateConfig(
+                    Object.fromEntries(Object.entries(ownData).filter(([k]) => courseOnlyKeys.includes(k))),
+                    'course'
+                );
+                await updateDoc(doc(db, 'courses', course.id), { customCertificate: keep, lastUpdatedAt: serverTimestamp() });
+                setOwnData(keep);
+                setDirty(false);
+            }
+            const fresh = await loadInheritedCertificateConfig(course.course_type);
+            setInherited(fresh || {});
+            if (onSaveSuccess) onSaveSuccess();
+        } catch (err) {
+            console.error(err);
+            alert('Could not save to the template. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -2277,7 +3085,7 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
      */
     const removeSignatureImage = async (block) => {
         const field = IMAGE_FIELDS[block];
-        if (!field || !course?.id) return;
+        if (!field || !course?.id || isTemplateScope) return;
         if (!window.confirm('Remove this signature image? The stored image is deleted immediately and will have to be uploaded again.')) return;
 
         setRemovingImage(block);
@@ -2287,7 +3095,7 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
             await updateDoc(doc(db, 'courses', course.id), payload);
 
             setCourseOverrides(prev => ({ ...prev, [field.courseKey]: null }));
-            if (field.customKey) setData(prev => ({ ...prev, [field.customKey]: '' }));
+            if (field.customKey) setOwnData(prev => ({ ...prev, [field.customKey]: '' }));
             if (onSaveSuccess) onSaveSuccess();
         } catch (err) {
             console.error(err);
@@ -2316,6 +3124,9 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
         return CERT_DEFAULTS[key] || '#000000';
     };
 
+    // What a blank box falls back to: the inherited template value, else the default.
+    const inh = (key, def) => readNum(inherited, key, def);
+
     const resetSelected = () => {
         if (!selected) return;
         const keys = [
@@ -2323,9 +3134,10 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
             ...(selected.colors || []).map(c => c.key),
             ...(selected.numbers || []).map(n => n.key),
             ...(selected.texts || []).map(t => t.key),
-            ...(selected.checks || []).map(c => c.key)
+            ...(selected.checks || []).map(c => c.key),
+            ...(selected.selects || []).map(c => c.key)
         ].filter(Boolean);
-        setData(prev => {
+        setOwnData(prev => {
             const next = { ...prev };
             keys.forEach(k => { next[k] = ''; });
             return next;
@@ -2374,8 +3186,13 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                 <nav className="min-w-0 text-xs text-gray-500 flex items-center gap-1.5 truncate">
                     <span className="hover:text-gray-700 cursor-pointer" onClick={handleBack}>Certificate Approvals</span>
                     <span className="text-gray-300">/</span>
-                    <span className="font-semibold text-gray-800 truncate">{course?.course_type || 'Course'}</span>
-                    {(course?.state || course?.locality) && (
+                    <span className="font-semibold text-gray-800 truncate">
+                        {scopeKind === 'general' ? 'General template' : scopeKind === 'courseType' ? `${scope.courseType} template` : (course?.course_type || 'Course')}
+                    </span>
+                    <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${isTemplateScope ? 'bg-violet-100 text-violet-700' : 'bg-sky-100 text-sky-700'}`}>
+                        <Layers className="inline h-3 w-3 mr-0.5 -mt-0.5" />{scopeLabel}
+                    </span>
+                    {!isTemplateScope && (course?.state || course?.locality) && (
                         <span className="text-gray-400 truncate hidden md:inline">— {course?.state} {course?.locality}</span>
                     )}
                 </nav>
@@ -2399,10 +3216,61 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                         <option value="1">100%</option>
                     </select>
 
-                    <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
-                        <input type="checkbox" checked={showGuides} onChange={e => setShowGuides(e.target.checked)} />
-                        Guides
-                    </label>
+                    <div className="flex items-center gap-1.5 border border-gray-300 rounded px-2 py-0.5 bg-white">
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="Show the grid, rulers and centre lines">
+                            <input type="checkbox" checked={showGuides} onChange={e => setShowGuides(e.target.checked)} />
+                            Grid
+                        </label>
+                        <select
+                            value={String(gridPrefs.gridSize)}
+                            onChange={e => updateGridPrefs({ gridSize: Number(e.target.value) })}
+                            className="text-xs bg-transparent outline-none"
+                            title="Grid spacing"
+                        >
+                            <option value="0">Centre lines only</option>
+                            <option value="2">2 mm</option>
+                            <option value="5">5 mm</option>
+                            <option value="10">10 mm</option>
+                            <option value="20">20 mm</option>
+                        </select>
+                        <span className="h-4 w-px bg-gray-200" />
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="Moved elements jump to the nearest grid line">
+                            <input type="checkbox" checked={!!gridPrefs.snapToGrid} disabled={!gridPrefs.gridSize} onChange={e => updateGridPrefs({ snapToGrid: e.target.checked })} />
+                            Snap
+                        </label>
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="Pink lines appear and the element locks on when it lines up with another element or the page centre">
+                            <input type="checkbox" checked={!!gridPrefs.smartGuides} onChange={e => updateGridPrefs({ smartGuides: e.target.checked })} />
+                            Smart guides
+                        </label>
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="Millimetre labels along the edges">
+                            <input type="checkbox" checked={!!gridPrefs.showRulers} onChange={e => updateGridPrefs({ showRulers: e.target.checked })} />
+                            mm
+                        </label>
+                    </div>
+
+                    {!isTemplateScope && (
+                        <select
+                            value=""
+                            disabled={isSaving}
+                            onChange={e => { const v = e.target.value; e.target.value = ''; if (v) promoteToTemplate(v); }}
+                            className="border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+                            title="Copy this layout into a shared template"
+                        >
+                            <option value="">Save as template…</option>
+                            {course?.course_type && <option value="courseType">For all {course.course_type} courses</option>}
+                            <option value="general">As the general template</option>
+                        </select>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() => setShowRealPreview(true)}
+                        disabled={!!uploadingAsset}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold border border-sky-600 text-sky-700 bg-white hover:bg-sky-50 disabled:opacity-50"
+                        title="Render the actual certificate, exactly as the PDF will be"
+                    >
+                        <Eye className="h-4 w-4" /> Preview certificate
+                    </button>
 
                     <Button variant="secondary" onClick={handleBack} disabled={isSaving}>Cancel</Button>
                     <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingAsset}>
@@ -2411,10 +3279,38 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                 </div>
             </header>
 
+            {showRealPreview && (
+                <CertificatePreviewModal
+                    course={realPreviewCourse}
+                    federalProgramManagerName={federalProgramManagerName || liveCourse.approvedByManagerName || ''}
+                    defaultLanguage={language}
+                    onClose={() => setShowRealPreview(false)}
+                    note={[
+                        dirty ? 'Includes your unsaved changes.' : '',
+                        isTemplateScope ? 'Template preview: uses a sample course, so no signatures or stamp are shown.' : ''
+                    ].filter(Boolean).join(' ')}
+                />
+            )}
+
             <div className="flex-1 flex min-h-0">
                 {/* ---- Element list ---- */}
                 <aside className="w-52 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
-                    <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500 border-b">Elements</div>
+                    <div className="px-3 py-2 border-b flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Elements</span>
+                        <button
+                            type="button"
+                            onClick={addExtraLogo}
+                            className="flex items-center gap-1 text-[11px] font-semibold text-sky-700 hover:text-sky-900 border border-sky-200 rounded px-1.5 py-0.5 hover:bg-sky-50"
+                            title="Add a logo placeholder"
+                        >
+                            <Plus className="h-3 w-3" /> Add logo
+                        </button>
+                    </div>
+                    <p className="px-3 py-2 text-[10px] leading-snug text-gray-500 bg-gray-50 border-b">
+                        {scopeKind === 'general' && 'Applies to every course unless a course-type template or the course itself changes it.'}
+                        {scopeKind === 'courseType' && `Applies to every ${scope.courseType} course. Blank boxes follow the general template.`}
+                        {scopeKind === 'course' && 'Changes here apply to this course only. Blank boxes follow the course-type and general templates.'}
+                    </p>
                     {elements.map(el => (
                         <button
                             key={el.id}
@@ -2424,6 +3320,7 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                         >
                             <span className="truncate">{el.label}</span>
                             {el.inactive && <span className="ml-auto text-[10px] border border-gray-300 rounded px-1 text-gray-500">add</span>}
+                            {!el.inactive && overlappingIds.has(el.id) && <span className="ml-auto text-[10px] font-bold text-red-600" title="Overlaps another element">overlap</span>}
                         </button>
                     ))}
                 </aside>
@@ -2446,7 +3343,7 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                 course={previewCourse}
                                 participant={{ name: isArabic ? 'اسم المشارك' : 'Participant Name', id: 'preview' }}
                                 federalProgramManagerName={liveCourse.approvedByManagerName || ''}
-                                participantSubCourse={course?.director_imci_sub_type || null}
+                                participantSubCourse={autoSubCourse || null}
                                 language={language}
                                 programManagerSignatureUrl={liveCourse.approvedByManagerSignatureUrl || null}
                                 directorName={liveCourse.approvedDirectorName || liveCourse.director || ''}
@@ -2454,11 +3351,16 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                 programStampUrl={liveCourse.approvedProgramStampUrl || null}
                                 thirdPartySignatureUrl={liveCourse.approvedThirdPartySignatureUrl || null}
                                 fourthPartySignatureUrl={liveCourse.approvedFourthPartySignatureUrl || null}
+                                showPlaceholders
                             />
                         </div>
 
-                        {showGuides && (
-                            <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: 'rgba(239,68,68,0.35)', pointerEvents: 'none' }} />
+                        {(showGuides || activeGuides) && (
+                            <GridOverlay
+                                gridSize={showGuides ? Number(gridPrefs.gridSize) || 0 : 0}
+                                showRulers={showGuides && gridPrefs.showRulers}
+                                guides={activeGuides}
+                            />
                         )}
 
                         {elements.filter(el => !el.inactive).map(el => {
@@ -2496,7 +3398,9 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                 boxW = el.box.widthMm
                                     ? el.box.widthMm * MM_TO_PX * scale
                                     : (el.box.widthPct / 100) * PAGE_W_PX * scale;
-                                boxH = Math.max(16, el.box.heightMm * MM_TO_PX * scale);
+                                const hMm = el.boxHeightKey ? readNum(data, el.boxHeightKey, el.boxHeightDef) : el.box.heightMm;
+                                if (el.boxHeightKey) boxW = Math.max(hMm * 1.2, 12) * MM_TO_PX * scale;
+                                boxH = Math.max(16, hMm * MM_TO_PX * scale);
                             }
 
                             return (
@@ -2512,8 +3416,8 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                         height: Math.max(12, boxH),
                                         cursor: 'move',
                                         zIndex: isSel ? 45 : (el.imageOf ? 35 : 30),
-                                        border: `1px ${isSel ? 'solid' : 'dashed'} ${isSel ? '#0284c7' : el.imageOf ? 'rgba(217,119,6,0.65)' : 'rgba(2,132,199,0.4)'}`,
-                                        background: isSel ? 'rgba(2,132,199,0.16)' : (el.imageOf ? 'rgba(217,119,6,0.10)' : 'rgba(2,132,199,0.04)'),
+                                        border: `1px ${isSel ? 'solid' : 'dashed'} ${isSel ? '#0284c7' : overlappingIds.has(el.id) ? '#dc2626' : el.imageOf ? 'rgba(217,119,6,0.65)' : 'rgba(2,132,199,0.4)'}`,
+                                        background: isSel ? 'rgba(2,132,199,0.16)' : overlappingIds.has(el.id) ? 'rgba(220,38,38,0.12)' : (el.imageOf ? 'rgba(217,119,6,0.10)' : 'rgba(2,132,199,0.04)'),
                                         borderRadius: 3
                                     }}
                                 >
@@ -2534,8 +3438,24 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                         })}
                     </div>
 
+                    {overlaps.length > 0 && (
+                        <div className="max-w-3xl mx-auto mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                            <span className="font-bold">Overlapping on the certificate: </span>
+                            {overlaps.map(([a, b], i) => (
+                                <span key={`${a.id}-${b.id}`}>
+                                    {i > 0 && ' · '}
+                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(a.id)}>{a.label}</button>
+                                    {' and '}
+                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(b.id)}>{b.label}</button>
+                                </span>
+                            ))}
+                            <span className="text-red-600"> — move one of them, or hide the line you don’t need.</span>
+                        </div>
+                    )}
+
                     <p className="text-center text-xs text-gray-500 mt-3">
-                        Drag any box to move it. Arrow keys nudge the selected element by 1mm, Shift+Arrow by 5.
+                        Drag any box to move it — pink lines show when it lines up with something (hold Alt to move freely).
+                        Arrow keys nudge by 1mm, Shift+Arrow by one grid step.
                     </p>
                 </main>
 
@@ -2558,8 +3478,8 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
 
                             <PropRow label="Vertical position" hint="Millimetres from the top of the page (0–210)">
                                 <StepField
-                                    value={data[selected.topKey]}
-                                    defaultValue={selected.topDef}
+                                    value={ownData[selected.topKey]}
+                                    defaultValue={inh(selected.topKey, selected.topDef)}
                                     min={0} max={205} unit="mm"
                                     onChange={v => set(selected.topKey, v)}
                                 />
@@ -2568,19 +3488,78 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                             {selected.leftKey && (
                                 <PropRow label="Horizontal position" hint="Centre of the element, as % of page width">
                                     <StepField
-                                        value={data[selected.leftKey]}
-                                        defaultValue={selected.leftDef}
+                                        value={ownData[selected.leftKey]}
+                                        defaultValue={inh(selected.leftKey, selected.leftDef)}
                                         min={0} max={100} unit="%"
                                         onChange={v => set(selected.leftKey, v)}
                                     />
                                 </PropRow>
                             )}
 
+                            {!selected.axes && selected.topKey && (() => {
+                                const targets = elements.filter(o => o.id !== selected.id && !o.inactive && !o.axes && o.topKey);
+                                const withHeight = targets.filter(o => o.boxHeightKey);
+                                const alignTo = (mode, targetId) => {
+                                    const t = anchorOf(elements.find(o => o.id === targetId));
+                                    if (!t) return;
+                                    if (mode === 'top') set(selected.topKey, String(round2(t.top)));
+                                    if (mode === 'bottom' && t.bottom !== null) {
+                                        const h = readNum(data, selected.boxHeightKey, selected.boxHeightDef);
+                                        set(selected.topKey, String(round2(t.bottom - h)));
+                                    }
+                                    if (mode === 'centre' && t.centreX !== null && selected.leftKey) {
+                                        set(selected.leftKey, String(round2(mmToPct(t.centreX))));
+                                    }
+                                };
+                                const AlignSelect = ({ mode, label, options }) => (
+                                    <select
+                                        value=""
+                                        onChange={e => { const v = e.target.value; if (v) alignTo(mode, v); }}
+                                        className="w-full border rounded px-1.5 py-1 text-xs bg-white"
+                                    >
+                                        <option value="">{label}</option>
+                                        {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                                    </select>
+                                );
+                                return (
+                                    <PropRow label="Align" hint="Lines this element up with another one. Logos align best by top or bottom edge.">
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            {selected.leftKey && (
+                                                <button type="button" onClick={() => set(selected.leftKey, '50')} className="border rounded px-1.5 py-1 text-xs hover:bg-gray-100">
+                                                    ⇔ Centre on page
+                                                </button>
+                                            )}
+                                            {gridPrefs.gridSize > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const g = Number(gridPrefs.gridSize);
+                                                        const a = anchorOf(selected);
+                                                        set(selected.topKey, String(Math.round(a.top / g) * g));
+                                                        if (selected.leftKey && a.centreX !== null) set(selected.leftKey, String(round2(mmToPct(Math.round(a.centreX / g) * g))));
+                                                    }}
+                                                    className="border rounded px-1.5 py-1 text-xs hover:bg-gray-100"
+                                                >
+                                                    ⌗ Snap to grid
+                                                </button>
+                                            )}
+                                            <AlignSelect mode="top" label="Top with…" options={targets} />
+                                            {selected.leftKey && (
+                                                <AlignSelect mode="centre" label="Centre with…" options={targets.filter(o => o.leftKey)} />
+                                            )}
+                                            {selected.boxHeightKey && withHeight.length > 0 && (
+                                                <AlignSelect mode="bottom" label="Bottom with…" options={withHeight} />
+                                            )}
+                                        </div>
+                                    </PropRow>
+                                );
+                            })()}
+
                             {selected.widthKey && (
                                 <PropRow label="Block width" hint="Wider blocks wrap less; narrower blocks wrap sooner">
                                     <StepField
-                                        value={data[selected.widthKey]}
-                                        defaultValue={selected.widthDef}
+                                        value={ownData[selected.widthKey]}
+                                        defaultValue={inh(selected.widthKey, selected.widthDef)}
                                         min={10} max={100} unit="%"
                                         onChange={v => set(selected.widthKey, v)}
                                     />
@@ -2590,8 +3569,8 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                             {selected.fontKey && (
                                 <PropRow label="Font size">
                                     <StepField
-                                        value={data[selected.fontKey]}
-                                        defaultValue={selected.fontDef}
+                                        value={ownData[selected.fontKey]}
+                                        defaultValue={inh(selected.fontKey, selected.fontDef)}
                                         min={6} max={140} unit="px"
                                         onChange={v => set(selected.fontKey, v)}
                                     />
@@ -2601,13 +3580,30 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                             {(selected.numbers || []).map(n => (
                                 <PropRow key={n.key} label={n.label}>
                                     <StepField
-                                        value={data[n.key]}
-                                        defaultValue={n.def}
+                                        value={ownData[n.key]}
+                                        defaultValue={inh(n.key, n.def)}
                                         min={n.min} max={n.max} step={n.step || 1}
                                         onChange={v => set(n.key, v)}
                                     />
                                 </PropRow>
                             ))}
+
+                            {(selected.selects || []).map(sel => {
+                                const inheritedValue = inherited[sel.key] || sel.def;
+                                const inheritedLabel = sel.options.find(o => o.value === inheritedValue)?.label || inheritedValue;
+                                return (
+                                    <PropRow key={sel.key} label={sel.label}>
+                                        <select
+                                            value={ownData[sel.key] || ''}
+                                            onChange={e => set(sel.key, e.target.value)}
+                                            className="w-full border rounded px-2 py-1 text-sm bg-white"
+                                        >
+                                            <option value="">{isTemplateScope && scopeKind === 'general' ? 'Default' : 'Inherit'}: {inheritedLabel}</option>
+                                            {sel.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </select>
+                                    </PropRow>
+                                );
+                            })}
 
                             {(selected.checks || []).map(c => (
                                 <label key={c.key} className="flex items-center gap-2 mb-2 text-sm text-gray-700 cursor-pointer select-none">
@@ -2623,28 +3619,28 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                             {(selected.colors || []).map(c => (
                                 <PropRow key={c.key} label={c.label}>
                                     <ColorField
-                                        value={data[c.key]}
-                                        defaultValue={effectiveColor(c.key)}
+                                        value={ownData[c.key]}
+                                        defaultValue={inherited[c.key] || effectiveColor(c.key)}
                                         onChange={v => set(c.key, v)}
                                     />
                                 </PropRow>
                             ))}
 
-                            {(selected.texts || []).map(t => (
+                            {(selected.texts || []).filter(t => !excludedKeys.includes(t.key)).map(t => (
                                 <PropRow key={t.key} label={t.label}>
                                     {t.multiline ? (
                                         <textarea
                                             dir={t.rtl ? 'rtl' : 'ltr'}
-                                            value={data[t.key] || ''}
-                                            placeholder={t.placeholder}
+                                            value={ownData[t.key] || ''}
+                                            placeholder={inherited[t.key] || t.placeholder}
                                             onChange={e => set(t.key, e.target.value)}
                                             className="w-full border rounded p-2 text-sm h-24"
                                         />
                                     ) : (
                                         <input
                                             dir={t.rtl ? 'rtl' : 'ltr'}
-                                            value={data[t.key] || ''}
-                                            placeholder={t.placeholder}
+                                            value={ownData[t.key] || ''}
+                                            placeholder={inherited[t.key] || t.placeholder}
                                             onChange={e => set(t.key, e.target.value)}
                                             className="w-full border rounded px-2 py-1 text-sm"
                                         />
@@ -2652,7 +3648,7 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                 </PropRow>
                             ))}
 
-                            {selected.dates && (
+                            {selected.dates && !isTemplateScope && (
                                 <div className="border-t pt-3 mt-3">
                                     <PropRow label="Start date">
                                         <input type="date" value={data.dateStart || ''} onChange={e => set('dateStart', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
@@ -2673,20 +3669,20 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                             onClick={() => {
                                                 const start = course?.start_date || '';
                                                 const dur = Number(course?.course_duration) || 1;
-                                                setData(prev => ({ ...prev, dateStart: start, dateEnd: addDaysISO(start, dur - 1) }));
+                                                setOwnData(prev => ({ ...prev, dateStart: start, dateEnd: addDaysISO(start, dur - 1) }));
                                                 setDirty(true);
                                             }}
                                         >Fill from course</button>
                                         <button
                                             type="button"
                                             className="text-[11px] underline text-gray-500"
-                                            onClick={() => { setData(prev => ({ ...prev, dateStart: '', dateEnd: '' })); setDirty(true); }}
+                                            onClick={() => { setOwnData(prev => ({ ...prev, dateStart: '', dateEnd: '' })); setDirty(true); }}
                                         >Clear</button>
                                     </div>
                                 </div>
                             )}
 
-                            {(selected.imageOf || selected.id === 'stamp') && (
+                            {!isTemplateScope && (selected.imageOf || selected.id === 'stamp') && (
                                 <PropRow label="Stored image">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         {(() => {
@@ -2713,7 +3709,13 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                 </PropRow>
                             )}
 
-                            {selected.signatureKey && (() => {
+                            {isTemplateScope && selected.signatureKey && (
+                                <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3">
+                                    Signature images are never stored in a shared template. Upload them on each course.
+                                </p>
+                            )}
+
+                            {!isTemplateScope && selected.signatureKey && (() => {
                                 const blk = selected.signatureKey === 'fourthPartySignatureUrl' ? 'fourth' : 'third';
                                 const courseKey = IMAGE_FIELDS[blk].courseKey;
                                 const src = data[selected.signatureKey] || liveCourse[courseKey] || null;
@@ -2747,11 +3749,25 @@ export function CertificateDesigner({ course, onBack, onSaveSuccess, branding = 
                                             <Button size="sm" variant="secondary" className="text-xs" onClick={() => triggerUpload(selected.logoKey)} disabled={!!uploadingAsset}>
                                                 {uploadingAsset === selected.logoKey ? <Spinner size="sm" /> : (data[selected.logoKey] ? 'Replace' : 'Upload')}
                                             </Button>
-                                            {data[selected.logoKey] && (
+                                            {ownData[selected.logoKey] && (
                                                 <button type="button" onClick={() => set(selected.logoKey, '')} className="text-[11px] text-red-600 underline">Remove</button>
                                             )}
                                         </div>
+                                        {!ownData[selected.logoKey] && inherited[selected.logoKey] && (
+                                            <p className="text-[11px] text-gray-400 mt-1">Image comes from a template. Upload to replace it here, or tick “Hide this logo”.</p>
+                                        )}
                                     </PropRow>
+                                    {selected.extraLogoId && (
+                                        selected.extraInherited ? (
+                                            <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2">
+                                                Added by a template. Edit that template to delete it, or hide it here.
+                                            </p>
+                                        ) : (
+                                            <Button size="sm" variant="danger" className="text-xs flex items-center gap-1" onClick={() => deleteExtraLogo(selected.extraLogoId)}>
+                                                <Trash2 className="h-3 w-3" /> Delete this logo
+                                            </Button>
+                                        )
+                                    )}
                                 </div>
                             )}
                         </>
@@ -3501,6 +4517,116 @@ const ApprovalSignatoryRow = ({ position, roleEn, roleAr, nameEn, nameAr, isCust
 );
 
 // -----------------------------------------------------------------------------
+// TEMPLATES PANEL — general template + one template per course type
+// -----------------------------------------------------------------------------
+
+const templateSummary = (tpl) => {
+    const cfg = tpl?.config || {};
+    const n = Object.keys(cfg).filter(k => k !== 'extraLogoIds').length;
+    const logos = getExtraLogoIds(cfg).length;
+    if (!tpl) return 'Not set — built-in layout';
+    return `${n} setting${n === 1 ? '' : 's'}${logos ? ` · ${logos} extra logo${logos === 1 ? '' : 's'}` : ''}`;
+};
+
+const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit, onClear, busy }) => {
+    const [newType, setNewType] = useState('');
+    const general = templateDocs[GENERAL_TEMPLATE_ID];
+    const rows = courseTypes.map(t => ({ type: t, tpl: templateDocs[courseTypeTemplateId(t)] }));
+
+    return (
+        <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50/40">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-violet-200">
+                <Layers className="h-4 w-4 text-violet-700" />
+                <h3 className="font-bold text-gray-800 text-sm">Certificate templates</h3>
+                <span className="text-[11px] text-gray-500 hidden md:inline">
+                    Each certificate is built from: General → Course type → the course’s own changes.
+                </span>
+            </div>
+
+            <div className="p-4 space-y-4">
+                <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-lg p-3">
+                    <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-gray-800 text-sm">General template</div>
+                        <div className="text-[11px] text-gray-500">{templateSummary(general)} · used by every course</div>
+                    </div>
+                    {canEdit && (
+                        <div className="flex gap-2">
+                            <Button size="sm" variant="primary" className="text-xs" disabled={busy} onClick={() => onEdit({ kind: 'general' })}>
+                                {general ? 'Edit' : 'Set up'}
+                            </Button>
+                            {general && (
+                                <Button size="sm" variant="danger" className="text-xs" disabled={busy} onClick={() => onClear(GENERAL_TEMPLATE_ID, 'the general template')}>
+                                    Clear
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500">
+                            <tr>
+                                <th className="text-left px-3 py-2 font-semibold">Course type</th>
+                                <th className="text-left px-3 py-2 font-semibold">Template</th>
+                                {canEdit && <th className="px-3 py-2" />}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.length === 0 && (
+                                <tr><td colSpan={3} className="px-3 py-3 text-xs text-gray-500">No course types yet.</td></tr>
+                            )}
+                            {rows.map(({ type, tpl }) => (
+                                <tr key={type} className="border-t border-gray-100">
+                                    <td className="px-3 py-2 font-medium text-gray-800">{type}</td>
+                                    <td className="px-3 py-2 text-xs">
+                                        {tpl
+                                            ? <span className="text-violet-700 font-semibold">{templateSummary(tpl)}</span>
+                                            : <span className="text-gray-400">Uses general template</span>}
+                                    </td>
+                                    {canEdit && (
+                                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                                            <Button size="sm" variant="secondary" className="text-xs mr-1" disabled={busy} onClick={() => onEdit({ kind: 'courseType', courseType: type })}>
+                                                {tpl ? 'Edit' : 'Create'}
+                                            </Button>
+                                            {tpl && (
+                                                <Button size="sm" variant="danger" className="text-xs" disabled={busy} onClick={() => onClear(courseTypeTemplateId(type), `the ${type} template`)}>
+                                                    Clear
+                                                </Button>
+                                            )}
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {canEdit && (
+                    <div className="flex flex-wrap items-end gap-2">
+                        <FormGroup label="Template for another course type">
+                            <Input value={newType} onChange={e => setNewType(e.target.value)} placeholder="Course type exactly as stored, e.g. ETAT" />
+                        </FormGroup>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            className="text-xs mb-1"
+                            disabled={busy || !newType.trim()}
+                            onClick={() => { onEdit({ kind: 'courseType', courseType: newType.trim() }); setNewType(''); }}
+                        >
+                            <Plus className="inline h-3 w-3 mr-1" />Create
+                        </Button>
+                    </div>
+                )}
+                {!canEdit && (
+                    <p className="text-[11px] text-gray-500">Only the Federal Program Manager can change shared templates.</p>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// -----------------------------------------------------------------------------
 // SEPARATED CERTIFICATE APPROVALS VIEW
 // -----------------------------------------------------------------------------
 export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole, canUseFederalManagerAdvancedFeatures, singleCourseMode = false, title = 'Certificate Approvals' }) => {
@@ -3514,7 +4640,50 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     const fileInputRef = React.useRef(null);
     const [uploadContext, setUploadContext] = React.useState({ course: null, assetType: null });
     const [courseToApprove, setCourseToApprove] = React.useState(null);
-    const [courseToDesign, setCourseToDesign] = React.useState(null);
+    // { scope: {kind, courseType}, course, initialConfig } — null when closed.
+    const [designTarget, setDesignTarget] = React.useState(null);
+    const [templateDocs, setTemplateDocs] = React.useState({});
+    const [templatesBusy, setTemplatesBusy] = React.useState(false);
+    const [courseToPreview, setCourseToPreview] = React.useState(null);
+
+    const reloadTemplates = React.useCallback(async () => {
+        try {
+            const snap = await getDocs(collection(db, CERT_TEMPLATES_COLLECTION));
+            const map = {};
+            snap.forEach(d => { map[d.id] = d.data(); });
+            setTemplateDocs(map);
+            invalidateCertificateTemplateCache();
+        } catch (err) {
+            console.warn('[Certificate] Could not load templates.', err);
+        }
+    }, []);
+
+    React.useEffect(() => { reloadTemplates(); }, [reloadTemplates]);
+
+    // The course as it will actually print: templates layered under its own changes.
+    const effective = React.useCallback((c) => layerCourseWithTemplates(c, templateDocs), [templateDocs]);
+
+    const openCourseDesigner = (c) => setDesignTarget({ scope: { kind: 'course' }, course: c, initialConfig: null });
+    const openTemplateDesigner = (scope) => {
+        const id = scope.kind === 'general' ? GENERAL_TEMPLATE_ID : courseTypeTemplateId(scope.courseType);
+        setDesignTarget({
+            scope,
+            course: buildTemplateSampleCourse(scope.kind === 'courseType' ? scope.courseType : null, allCourses),
+            initialConfig: templateDocs[id]?.config || {}
+        });
+    };
+
+    const clearTemplate = async (id, label) => {
+        if (!window.confirm(`Delete ${label}? Courses that rely on it go back to the next layer down.`)) return;
+        setTemplatesBusy(true);
+        try {
+            await deleteDoc(doc(db, CERT_TEMPLATES_COLLECTION, id));
+            await reloadTemplates();
+            setToast({ show: true, message: 'Template cleared.', type: 'info' });
+        } catch (err) {
+            setToast({ show: true, message: `Could not clear the template: ${err.message}`, type: 'error' });
+        } finally { setTemplatesBusy(false); }
+    };
 
     const [filterState, setFilterState] = React.useState('All');
     const [filterLocality, setFilterLocality] = React.useState('All');
@@ -3532,6 +4701,12 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         return ['All', ...Array.from(locs).sort()];
     }, [allCourses, filterState]);
     const courseTypes = React.useMemo(() => ['All', ...new Set(allCourses.map(c => c.course_type).filter(Boolean))].sort(), [allCourses]);
+    // Every type that has courses or already has a template.
+    const templateCourseTypes = React.useMemo(() => {
+        const set = new Set(allCourses.map(c => c.course_type).filter(Boolean));
+        Object.values(templateDocs).forEach(t => { if (t?.scope === 'courseType' && t.courseType) set.add(t.courseType); });
+        return [...set].sort();
+    }, [allCourses, templateDocs]);
 
     const courses = React.useMemo(() => {
         let filtered = allCourses.map(c => ({
@@ -3552,8 +4727,8 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     // Everything the approval dialog shows, resolved through the same rules as the certificate.
     const approvalPreview = React.useMemo(() => {
         if (!courseToApprove) return null;
-        return resolveCertificateSignatories(courseToApprove, managerName);
-    }, [courseToApprove, managerName]);
+        return resolveCertificateSignatories(effective(courseToApprove), managerName);
+    }, [courseToApprove, managerName, effective]);
 
     const loadData = async () => {
         setLoadingApprovals(true);
@@ -3575,7 +4750,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         if (!courseToApprove) return;
         setIsProcessing(true);
         try {
-            const sig = resolveCertificateSignatories(courseToApprove, managerName);
+            const sig = resolveCertificateSignatories(effective(courseToApprove), managerName);
 
             // Persist the names that will actually be printed, so approval records
             // and generated certificates never disagree.
@@ -3694,7 +4869,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             const url = await fileToSignatureDataUrl(file);
             
             const updatePayload = { lastUpdatedAt: serverTimestamp() }; 
-            const sig = resolveCertificateSignatories(course, managerName);
+            const sig = resolveCertificateSignatories(effective(course), managerName);
             
             if (assetType === 'managerSignature') { updatePayload.approvedByManagerSignatureUrl = url; updatePayload.approvedByManagerName = sig.managerEn || managerName; }
             else if (assetType === 'directorSignature') { updatePayload.approvedDirectorSignatureUrl = url; updatePayload.approvedDirectorName = sig.directorEn || course.director || ''; }
@@ -3735,12 +4910,27 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         <>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
 
-            {courseToDesign && (
+            {courseToPreview && (
+                <CertificatePreviewModal
+                    // A stored course: the pipeline re-reads it and applies the
+                    // templates, exactly as a real download does.
+                    course={courseToPreview}
+                    federalProgramManagerName={managerName}
+                    onClose={() => setCourseToPreview(null)}
+                    note={courseToPreview.isCertificateApproved ? '' : 'Not approved yet — participants cannot download this until it is approved.'}
+                />
+            )}
+
+            {designTarget && (
                 <CertificateDesigner
-                    course={courseToDesign}
-                    onBack={() => setCourseToDesign(null)}
+                    course={designTarget.course}
+                    scope={designTarget.scope}
+                    initialConfig={designTarget.initialConfig}
+                    federalProgramManagerName={managerName}
+                    onBack={() => setDesignTarget(null)}
                     onSaveSuccess={() => {
                         setToast({ show: true, message: "Certificate template saved.", type: 'success' });
+                        reloadTemplates();
                         fetchCourses(true);
                     }}
                 />
@@ -3817,10 +5007,17 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
 
                     <button
                         type="button"
-                        onClick={() => { setCourseToDesign(courseToApprove); setCourseToApprove(null); }}
+                        onClick={() => { openCourseDesigner(courseToApprove); setCourseToApprove(null); }}
                         className="text-sm text-sky-700 font-semibold hover:underline flex items-center gap-1"
                     >
                         <Settings size={14} /> Edit these names first
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setCourseToPreview(courseToApprove)}
+                        className="text-sm text-sky-700 font-semibold hover:underline flex items-center gap-1"
+                    >
+                        <Eye size={14} /> Preview the certificate before approving
                     </button>
                 </CardBody>
                 <CardFooter className="flex justify-end gap-2">
@@ -3836,6 +5033,17 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 
                 {/* In single-course mode the list is already one row, so the filters
                     would only be noise. */}
+                {!singleCourseMode && (
+                    <CertificateTemplatesPanel
+                        templateDocs={templateDocs}
+                        courseTypes={templateCourseTypes}
+                        canEdit={isFederalProgramManager}
+                        busy={templatesBusy || isProcessing}
+                        onEdit={openTemplateDesigner}
+                        onClear={clearTemplate}
+                    />
+                )}
+
                 {!singleCourseMode && (
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                         <FormGroup label="State"><Select value={filterState} onChange={e => setFilterState(e.target.value)}>{states.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
@@ -3862,13 +5070,19 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                                 const isCustomized = hasCustomTemplate;
                                 // Resolve the row's signatories so the 3rd/4th upload
                                 // buttons appear only for courses that actually use them.
-                                const rowSig = resolveCertificateSignatories(c, managerName);
+                                const rowSig = resolveCertificateSignatories(effective(c), managerName);
+                                const hasTypeTemplate = !!(c.course_type && templateDocs[courseTypeTemplateId(c.course_type)]);
+                                const hasGeneralTemplate = !!templateDocs[GENERAL_TEMPLATE_ID];
                                 
                                 return (
                                     <tr key={c.id} className={`transition-colors hover:bg-gray-50 group ${isApproved ? "bg-green-50/20" : ""}`}>
                                         <td className="p-3 align-middle border-b border-slate-200">
                                             <div className="font-bold text-sky-700 truncate" title={c.course_type}>{c.course_type}</div>
-                                            {hasCustomTemplate && <div className="text-[9px] font-bold uppercase tracking-wider text-sky-600">Custom template</div>}
+                                            <div className="flex flex-wrap gap-1 mt-0.5">
+                                                {hasCustomTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-sky-600">Course changes</span>}
+                                                {hasTypeTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600">Type template</span>}
+                                                {!hasTypeTemplate && hasGeneralTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500">General template</span>}
+                                            </div>
                                         </td>
                                         <td className="p-3 align-middle border-b border-slate-200 overflow-hidden">
                                             <div className="font-semibold text-gray-800 truncate" title={`${c.state} - ${c.locality}`}>{c.state} - {c.locality}</div>
@@ -3889,8 +5103,12 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                                         <td className="p-3 align-middle border-b border-slate-200 text-right">
                                             <div className="flex flex-nowrap items-center justify-end gap-1">
                                                 
-                                                <Button onClick={() => setCourseToDesign(c)} disabled={isProcessing} variant="secondary" className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 border-gray-300">
+                                                <Button onClick={() => openCourseDesigner(c)} disabled={isProcessing} variant="secondary" className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 border-gray-300">
                                                     <Settings size={12} /> Customize
+                                                </Button>
+
+                                                <Button onClick={() => setCourseToPreview(c)} disabled={isProcessing} variant="secondary" className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 border-gray-300" title="See the real certificate">
+                                                    <Eye size={12} /> Preview
                                                 </Button>
 
                                                 {isApproved ? (

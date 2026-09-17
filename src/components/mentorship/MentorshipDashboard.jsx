@@ -981,10 +981,9 @@ const MentorshipDashboard = ({
                 {FilterControls}
             </div>
             
-            {/* 3. OPTIMIZED TABS: Stronger visual contrast for the active state */}
-            <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-slate-300 w-fit">
-                {/* --- CONDITIONAL TABS FOR IPC --- */}
-                {activeService !== 'IPC' ? (
+            {/* 3. OPTIMIZED TABS: hidden for IPC, which has its own per-form tabs inside IPCDashboardTab */}
+            {activeService !== 'IPC' && (
+                <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-slate-300 w-fit">
                     <>
                         <button 
                             className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
@@ -1019,13 +1018,9 @@ const MentorshipDashboard = ({
                             </button>
                         )}
                     </>
-                ) : (
-                    // IPC: only one tab (Assessment)
-                    <button className="py-2 px-5 font-semibold text-sm rounded-lg bg-sky-600 shadow-md text-white border border-transparent">
-                        {t('Assessment')}
-                    </button>
-                )}
-            </div>
+                    </>
+                </div>
+            )}
 
             <div>
                 {activeService !== 'IPC' ? (
@@ -1092,6 +1087,8 @@ const MentorshipDashboard = ({
                         scopeTitle={scopeTitle}
                         geographicLevelName={geographicLevelName}
                         filteredSubmissions={filteredSubmissions}
+                        STATE_LOCALITIES={STATE_LOCALITIES}
+                        activeState={activeState}
                     />
                 )}
             </div>
