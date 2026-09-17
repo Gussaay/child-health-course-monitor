@@ -1018,7 +1018,6 @@ const MentorshipDashboard = ({
                             </button>
                         )}
                     </>
-                    </>
                 </div>
             )}
 
