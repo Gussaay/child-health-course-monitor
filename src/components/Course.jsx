@@ -53,6 +53,7 @@ import {
     PublicCourseCertificatesView, 
     CertificateApprovalsView 
 } from './CertificateGenerator';
+import { notify, confirmDialog } from './dialogs';
 
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
 const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
@@ -171,7 +172,7 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
             setUnmatchedList(unmatched);
 
         } catch (error) {
-            alert("Error analyzing data: " + error.message);
+            notify("Error analyzing data: " + error.message);
         } finally {
             setLoading(false);
         }
@@ -275,12 +276,12 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                 }
             }
 
-            alert(`Success! Updated ${updatedCount} courses. Both IDs and Names have been permanently synchronized.`);
+            notify(`Success! Updated ${updatedCount} courses. Both IDs and Names have been permanently synchronized.`);
             if (onComplete) onComplete();
             onClose();
 
         } catch (err) {
-            alert("Error applying migration: " + err.message);
+            notify("Error applying migration: " + err.message);
         } finally {
             setLoading(false);
         }
@@ -743,8 +744,8 @@ function QRShareModal({ isOpen, onClose, url, title }) {
     const qrCanvasRef = useRef(null);
 
     const handleCopyLink = async () => {
-        try { await navigator.clipboard.writeText(url); alert('Link copied to clipboard!'); }
-        catch { alert('Failed to copy link.'); }
+        try { await navigator.clipboard.writeText(url); notify('Link copied to clipboard!'); }
+        catch { notify('Failed to copy link.'); }
     };
 
     const handleOpenLink = () => { window.open(url, '_blank'); };
@@ -859,10 +860,10 @@ export function CoursesTable({
             if (Capacitor.isNativePlatform()) {
                 window.open(`whatsapp://send?text=${encodeURIComponent(textToShare)}`, '_system');
             } else {
-                alert(successMessage || 'Link copied!');
+                notify(successMessage || 'Link copied!');
             }
         }).catch(() => {
-            alert('Failed to copy text. Please try again.');
+            notify('Failed to copy text. Please try again.');
         });
     };
 
@@ -993,7 +994,7 @@ export function CoursesTable({
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px] text-gray-600 flex items-center gap-1" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
                                                 <Edit size={12} /> Edit
                                             </Button>
-                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={() => { if(window.confirm(`Are you sure you want to delete ${c.course_type} (${c.state})? It will be moved to Deleted Courses.`)) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={async () => { if(await confirmDialog(`Are you sure you want to delete ${c.course_type} (${c.state})? It will be moved to Deleted Courses.`)) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                                 <Trash2 size={12} /> Delete
                                             </Button>
                                         </div>
@@ -1060,7 +1061,7 @@ export function CoursesTable({
                                     <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
                                         <Share2 size={16} /> Share
                                     </Button>
-                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={() => { if(window.confirm(`Are you sure you want to delete ${c.course_type} (${c.state})? It will be moved to Deleted Courses.`)) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={async () => { if(await confirmDialog(`Are you sure you want to delete ${c.course_type} (${c.state})? It will be moved to Deleted Courses.`)) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                         <Trash2 size={16} /> Delete
                                     </Button>
                                 </div>
@@ -1892,7 +1893,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     };
 
     const handlePermanentDelete = async (courseId) => { 
-        if (window.confirm("Are you sure? This will permanently delete the course and cannot be undone.")) {
+        if (await confirmDialog("Are you sure? This will permanently delete the course and cannot be undone.")) {
             setIsProcessing(true);
             try {
                 await deleteCourse(courseId, currentUserIdentifier);
@@ -1923,7 +1924,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     };
 
     const handleRejectCourse = async (courseId) => {
-        if (window.confirm("Are you sure you want to reject this course? It will be moved to the Deleted Courses bin.")) {
+        if (await confirmDialog("Are you sure you want to reject this course? It will be moved to the Deleted Courses bin.")) {
             const courseToUpdate = allCourses.find(c => c.id === courseId);
             if (courseToUpdate) {
                 setIsProcessing(true);
@@ -1954,7 +1955,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     };
     
     const handleRestoreCourse = async (course) => { 
-        if (window.confirm(`Are you sure you want to restore the course: ${course.course_type}?`)) {
+        if (await confirmDialog(`Are you sure you want to restore the course: ${course.course_type}?`)) {
             setIsProcessing(true);
             try {
                 await upsertCourse({ ...course, inRecycleBin: false }, currentUserIdentifier); 
@@ -2773,14 +2774,14 @@ export function CourseForm({
 
         if (missingFields.length > 0) {
             const errorMsg = 'الرجاء إكمال الحقول الإلزامية التالية:\n- ' + missingFields.join('\n- ');
-            alert(errorMsg); // This triggers the requested popup
+            notify(errorMsg); // This triggers the requested popup
             setError('الرجاء إكمال الحقول الإلزامية التالية: ' + missingFields.join('، '));
             return;
         }
 
         if (!courseType) {
             const typeError = 'تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.';
-            alert(typeError);
+            notify(typeError);
             setError(typeError);
             return;
         }

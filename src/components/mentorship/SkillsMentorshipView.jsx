@@ -64,6 +64,7 @@ import {
     CriticalCareFormFields,
     SaveStatusModal 
 } from '../FacilityForms.jsx';
+import { confirmDialog } from '../dialogs';
 
 // --- IPC form tabs (all three IPC forms save with serviceType 'IPC') ---
 const IPC_LIST_TABS = [
@@ -2853,7 +2854,7 @@ const SkillsMentorshipView = ({
              return;
         }
         
-        if (window.confirm('Are you sure you want to delete this visit report?')) {
+        if (await confirmDialog('Are you sure you want to delete this visit report?')) {
             setDeletedReportIds(prev => new Set(prev).add(reportId));
             try {
                 if (activeService === 'IMNCI') {
@@ -2870,7 +2871,7 @@ const SkillsMentorshipView = ({
 
     const handleBulkDeleteReports = async () => {
         if (!canManageMentorship) return;
-        if (!window.confirm(`Are you sure you want to delete ${selectedReportIds.length} reports?`)) return;
+        if (!await confirmDialog(`Are you sure you want to delete ${selectedReportIds.length} reports?`)) return;
 
         const reportsToDelete = selectedReportIds.map(id => processedVisitReports.find(r => r.id === id)).filter(Boolean);
 
@@ -3731,7 +3732,7 @@ const SkillsMentorshipView = ({
         startFormEntry();
     };
 
-    const startFormEntry = () => {
+    const startFormEntry = async () => {
         if (activeFormType === 'facility_update') {
             setIsStandaloneFacilityModalOpen(true);
         }
@@ -3744,7 +3745,7 @@ const SkillsMentorshipView = ({
                 );
 
                 if (draftForSelectedWorker) {
-                    const confirmEdit = window.confirm(
+                    const confirmEdit = await confirmDialog(
                         `يوجد لديك مسودة محفوظة لهذا العامل الصحي: \n\n${draftForSelectedWorker.staff} \n${draftForSelectedWorker.facility} \nبتاريخ: ${draftForSelectedWorker.date}\n\nهل تريد تعديل هذه المسودة؟ \n\n(ملاحظة: الضغط على 'Cancel' سيبدأ جلسة جديدة فارغة لهذا العامل.)`
                     );
                     
@@ -4005,7 +4006,7 @@ const SkillsMentorshipView = ({
 
         const confirmMessage = `هل أنت متأكد من حذف جلسة العامل الصحي: ${submissionToDelete.staff || submissionToDelete.motherName || 'N/A'} بتاريخ ${submissionToDelete.date}؟\n${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
-        if (window.confirm(confirmMessage)) {
+        if (await confirmDialog(confirmMessage)) {
             setDeletedSubmissionIds(prev => new Set(prev).add(submissionId));
             try {
                 await deleteMentorshipSession(submissionId);
@@ -4021,7 +4022,7 @@ const SkillsMentorshipView = ({
 
     const handleBulkDeleteSubmissions = async () => {
         if (!canManageMentorship) return;
-        if (!window.confirm(`Are you sure you want to delete ${selectedSubmissionIds.length} items?`)) return;
+        if (!await confirmDialog(`Are you sure you want to delete ${selectedSubmissionIds.length} items?`)) return;
 
         const newDeleted = new Set(deletedSubmissionIds);
         selectedSubmissionIds.forEach(id => newDeleted.add(id));

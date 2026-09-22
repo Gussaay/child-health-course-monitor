@@ -12,6 +12,7 @@ import {
     ChevronUp, Calendar, Activity, FileSpreadsheet, CheckCircle2, 
     AlertTriangle, Briefcase, Save, X, BarChart2, PieChart, Layers, ListFilter, FileText, Download, Upload
 } from 'lucide-react';
+import { notify, confirmDialog } from './dialogs';
 
 // --- الثوابت الأساسية والقوائم ---
 const AXIS_OPTIONS = ['الحاكمية', 'بناء القدرات', 'تقديم الخدمات', 'نظام المعلومات', 'الإمداد', 'التمويل'];
@@ -359,7 +360,7 @@ export default function PlanningView() {
 
     const exportAllMasterPlansExcel = () => {
         if (!filteredPlans || filteredPlans.length === 0) {
-            alert("لا توجد خطط سنوية لتصديرها");
+            notify("لا توجد خطط سنوية لتصديرها");
             return;
         }
 
@@ -404,7 +405,7 @@ export default function PlanningView() {
         const activePlans = filteredOpPlans.filter(op => op.planType === PLAN_TYPES[activeTab.toUpperCase()]);
         
         if (!activePlans || activePlans.length === 0) {
-            alert("لا توجد خطط تشغيلية لتصديرها");
+            notify("لا توجد خطط تشغيلية لتصديرها");
             return;
         }
 
@@ -999,7 +1000,7 @@ export default function PlanningView() {
         });
 
         if (rows.length === 0) {
-            alert("لا توجد بيانات لتصديرها");
+            notify("لا توجد بيانات لتصديرها");
             return;
         }
 
@@ -1638,7 +1639,7 @@ export default function PlanningView() {
                                         </div>
                                         <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto w-full sm:w-auto justify-end">
                                             <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setCurrentPlan(plan); setIsEditingMatrix(true); }}><Edit size={14}/></Button>
-                                            <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); if(confirm("حذف؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }}><Trash2 size={14}/></Button>
+                                            <Button size="sm" variant="danger" onClick={async (e) => { e.stopPropagation(); if(await confirmDialog("حذف؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }}><Trash2 size={14}/></Button>
                                             {expandedPlanId === plan.id ? <ChevronUp size={20} className="text-gray-500"/> : <ChevronDown size={20} className="text-gray-500"/>}
                                         </div>
                                     </div>
@@ -1740,7 +1741,7 @@ export default function PlanningView() {
                                             </Button>
                                         )}
                                         <Button variant="secondary" size="sm" onClick={() => handleEditOpPlan(op)}><Edit size={16}/></Button>
-                                        <Button variant="danger" size="sm" onClick={() => { if(confirm("حذف؟")) deleteOperationalPlan(op.id).then(()=>fetchOperationalPlans(true)); }}><Trash2 size={16}/></Button>
+                                        <Button variant="danger" size="sm" onClick={async () => { if(await confirmDialog("حذف؟")) deleteOperationalPlan(op.id).then(()=>fetchOperationalPlans(true)); }}><Trash2 size={16}/></Button>
                                     </div>
                                 </CardBody>
                             </Card>

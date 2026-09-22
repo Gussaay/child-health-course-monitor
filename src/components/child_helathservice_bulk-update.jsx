@@ -747,7 +747,9 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                     return val || '';
                 });
                 
-                const type = updates[f.id]?.[col.key] ?? f['نوع_المؤسسةالصحية'];
+                // `col` is not in scope here — it belongs to the .map() above, so this
+                // line threw a ReferenceError and the export never produced a file.
+                const type = f['نوع_المؤسسةالصحية'];
                 return [...dynamicVals.reverse(), type || '', f['اسم_المؤسسة'] || '', (i + 1).toString()];
             });
 

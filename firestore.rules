@@ -1,0 +1,330 @@
+rules_version = '2';
+
+// =============================================================================
+// NCHP Monitoring — Firestore security rules
+//
+// READ THIS BEFORE DEPLOYING.
+// These rules were written from the access patterns in src/data.js. They have
+// never run against the production database, and they are deliberately stricter
+// than what the app has been relying on. Deploying them blind can lock users
+// out of screens that used to work.
+//
+//   1. Start the emulator and run the rules tests:  npm run test:rules
+//   2. Deploy to a test project, or use the Rules Playground in the console to
+//      simulate the reads each role performs.
+//   3. Only then:  firebase deploy --only firestore:rules
+//
+// The model:
+//   - A user can read their own profile but can NEVER write role, roles or
+//     permissions. Those are set by the createUserProfile / setUserRoles Cloud
+//     Functions, which run with admin credentials and bypass these rules.
+//   - Program data requires sign-in. Writes require the matching permission
+//     from the caller's own profile document.
+//   - Anonymous reads are limited to documents explicitly flagged public
+//     (isPublic / isPublicReport), which is what the share links rely on.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // .get(key, default) rather than direct indexing: reading a key that is not
+    // present on a map is an evaluation ERROR in rules, not `false`. An error
+    // inside an || chain poisons the whole expression, so a legitimate user
+    // whose profile simply lacks one key would be denied for the wrong reason.
+    function roles() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? (profile().get('roles', []) is list && profile().get('roles', []).size() > 0
+            ? profile().get('roles', [])
+            : [profile().get('role', 'user')])
+        : [];
+    }
+
+    function hasRole(role) {
+      return role in roles();
+    }
+
+    function isAdmin() {
+      return hasRole('super_user') || hasRole('manager') || hasRole('federal_manager');
+    }
+
+    // Permissions live on the profile as a map of booleans. Missing key == false.
+    function can(permission) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && profile().get('permissions', {}).get(permission, false) == true;
+    }
+
+    // Fields only a Cloud Function may set. Admin SDK writes bypass rules
+    // entirely, so listing them here blocks the client and nothing else.
+    function privilegedFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['role', 'roles', 'permissions', 'assignedState', 'assignedLocality', 'isAdmin']);
+    }
+
+    function isPublicDoc() {
+      return resource != null
+        && (resource.data.get('isPublic', false) == true
+            || resource.data.get('isPublicReport', false) == true);
+    }
+
+    // ---------- users ----------
+
+    match /users/{userId} {
+      // Your own profile, or any profile if you administer people.
+      allow get: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+
+      // Profiles are created by the createUserProfile Cloud Function.
+      allow create: if false;
+
+      // You may maintain your own contact details and push token — never your
+      // own role or permissions. Admins go through the setUserRoles function.
+      allow update: if signedIn()
+                    && request.auth.uid == userId
+                    && privilegedFieldsUnchanged();
+
+      allow delete: if false;
+    }
+
+    // Usage counters the client increments for itself.
+    match /userUsageStats/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /notificationRateLimits/{userId} {
+      allow read, write: if false; // Cloud Functions only.
+    }
+
+    // ---------- courses and participants ----------
+
+    match /courses/{courseId} {
+      // Anonymous visitors may read a course only when it was explicitly shared.
+      allow get: if isPublicDoc() || signedIn();
+      allow list: if signedIn();
+      allow create: if can('canAddCourse') || can('canManageCourse');
+      allow update, delete: if can('canManageCourse');
+    }
+
+    // Participants carry names and phone numbers. A public course report needs
+    // them, so the read is allowed only when the parent course is public.
+    function parentCourseIsPublic(courseId) {
+      return exists(/databases/$(database)/documents/courses/$(courseId))
+        && get(/databases/$(database)/documents/courses/$(courseId)).data.get('isPublic', false) == true;
+    }
+
+    match /participants/{participantId} {
+      allow get, list: if signedIn()
+        || (resource != null && parentCourseIsPublic(resource.data.get('courseId', '')));
+      allow create, update: if can('canManageCourse') || can('canAddCourse');
+      allow delete: if can('canManageCourse');
+    }
+
+    match /participantTests/{testId} {
+      allow read: if signedIn();
+      allow write: if can('canManageCourse');
+    }
+
+    match /observations/{observationId} {
+      allow read: if signedIn();
+      allow write: if can('canManageCourse');
+    }
+
+    match /cases/{caseId} {
+      allow read: if signedIn();
+      allow write: if can('canManageCourse');
+    }
+
+    match /finalReports/{reportId} {
+      allow get: if isPublicDoc() || signedIn();
+      allow list: if signedIn();
+      allow write: if can('canManageCourse');
+    }
+
+    // ---------- facilities and health workers ----------
+
+    match /healthFacilities/{facilityId} {
+      allow read: if signedIn();
+      allow create, update: if can('canManageFacilities');
+      allow delete: if can('canManageFacilities') && isAdmin();
+    }
+
+    match /facilitySnapshots/{snapshotId} {
+      allow read: if signedIn();
+      allow write: if can('canManageFacilities');
+    }
+
+    match /facility_snapshots/{snapshotId} {
+      allow read: if signedIn();
+      allow write: if can('canManageFacilities');
+    }
+
+    // Public update forms: anyone with the link may submit, nobody may read
+    // back the queue except reviewers.
+    match /facilitySubmissions/{submissionId} {
+      allow create: if true;
+      allow read, update, delete: if can('canApproveSubmissions') || can('canManageFacilities');
+    }
+
+    // ---------- people: facilitators, coordinators, teams ----------
+
+    match /facilitators/{facilitatorId} {
+      allow get: if isPublicDoc() || signedIn();
+      allow list: if signedIn();
+      allow write: if can('canManageHumanResource');
+    }
+
+    // Application queues share one shape: anyone with the link may submit,
+    // only reviewers may read the queue back.
+    function canReviewPeople() {
+      return can('canApproveSubmissions') || can('canManageHumanResource');
+    }
+
+    match /facilitatorSubmissions/{id} {
+      allow create: if true;
+      allow read, update, delete: if canReviewPeople();
+    }
+    match /coordinatorSubmissions/{id} {
+      allow create: if true;
+      allow read, update, delete: if canReviewPeople();
+    }
+    match /federalCoordinatorSubmissions/{id} {
+      allow create: if true;
+      allow read, update, delete: if canReviewPeople();
+    }
+    match /localityCoordinatorSubmissions/{id} {
+      allow create: if true;
+      allow read, update, delete: if canReviewPeople();
+    }
+
+    match /coordinators/{id} {
+      allow read: if signedIn();
+      allow write: if can('canManageHumanResource');
+    }
+    match /federalCoordinators/{id} {
+      allow read: if signedIn();
+      allow write: if can('canManageHumanResource');
+    }
+    match /stateCoordinators/{id} {
+      allow read: if signedIn();
+      allow write: if can('canManageHumanResource');
+    }
+    match /localityCoordinators/{id} {
+      allow read: if signedIn();
+      allow write: if can('canManageHumanResource');
+    }
+
+    // ---------- mentorship ----------
+
+    match /skillMentorship/{sessionId} {
+      allow get: if isPublicDoc() || signedIn();
+      allow list: if signedIn();
+      allow create: if can('canAddMentorshipVisit') || can('canManageSkillsMentorship');
+      allow update, delete: if can('canManageSkillsMentorship');
+    }
+
+    match /imnciVisitReports/{reportId} {
+      allow get: if isPublicDoc() || signedIn();
+      allow list: if signedIn();
+      allow create: if can('canAddMentorshipVisit') || can('canManageSkillsMentorship');
+      allow update, delete: if can('canManageSkillsMentorship');
+    }
+
+    match /eencVisitReports/{reportId} {
+      allow get: if isPublicDoc() || signedIn();
+      allow list: if signedIn();
+      allow create: if can('canAddMentorshipVisit') || can('canManageSkillsMentorship');
+      allow update, delete: if can('canManageSkillsMentorship');
+    }
+
+    match /imnciPatientRecords/{recordId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if can('canManageSkillsMentorship');
+    }
+
+    // ---------- planning ----------
+
+    match /projects/{id} {
+      allow read: if signedIn();
+      allow write: if can('canEditLocalityPlan') || isAdmin();
+    }
+    match /masterPlans/{id} {
+      allow read: if signedIn() && can('canViewLocalityPlan');
+      allow write: if can('canEditLocalityPlan');
+    }
+    match /operationalPlans/{id} {
+      allow read: if signedIn() && can('canViewLocalityPlan');
+      allow write: if can('canEditLocalityPlan');
+    }
+    match /unitMeetings/{id} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+    match /funders/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------- exercises ----------
+
+    match /exerciseDefinitions/{id} {
+      allow read: if true;             // public training exercises
+      allow write: if can('canManageCourse');
+    }
+    match /exerciseAttempts/{id} {
+      allow create: if true;           // anonymous learners submit attempts
+      allow read: if signedIn();
+      allow update, delete: if can('canManageCourse');
+    }
+
+    // ---------- app configuration and notifications ----------
+
+    match /meta/{docId} {
+      allow read: if true;             // update_config drives the update banner
+      allow write: if isAdmin();
+    }
+    match /settings/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /appSettings/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /update_history/{docId} {
+      allow read: if signedIn();
+      allow write: if false;           // written by CI with admin credentials
+    }
+    match /notifications/{docId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // The Trigger Email extension's queue. Clients must never read it — it
+    // contains every address the system has mailed.
+    match /mail/{docId} {
+      allow read: if false;
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+
+    // ---------- default deny ----------
+    // Anything not matched above is closed. If a screen breaks after deploying
+    // these rules, the collection it needs is missing from this file — add it
+    // explicitly rather than widening the rules here.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

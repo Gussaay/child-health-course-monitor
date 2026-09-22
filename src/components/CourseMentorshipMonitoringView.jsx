@@ -36,6 +36,7 @@ import {
     upsertCaseAndObservations,
     deleteCaseAndObservations,
 } from '../data.js';
+import { notify, confirmDialog } from './dialogs';
 
 // The field forms, imported exactly as SkillsMentorshipView imports them. They
 // are lazy-loaded because the course tab is itself lazy-loaded and most courses
@@ -926,7 +927,7 @@ export function MentorshipMonitoringView({
     };
 
     const handleDeleteSession = async (caseToDelete) => {
-        if (!window.confirm('Delete this practice session and everything recorded in it? This cannot be undone.')) return;
+        if (!await confirmDialog('Delete this practice session and everything recorded in it? This cannot be undone.')) return;
 
         const prevCases = [...cases];
         const prevObs = [...observations];
@@ -939,7 +940,7 @@ export function MentorshipMonitoringView({
             console.error('Failed to delete practice session:', err);
             setCases(prevCases);
             setObservations(prevObs);
-            alert(`Could not delete this session: ${err.message}. It has been restored in your view.`);
+            notify(`Could not delete this session: ${err.message}. It has been restored in your view.`);
         }
     };
 

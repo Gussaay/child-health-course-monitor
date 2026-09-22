@@ -47,6 +47,7 @@ import { amiriFontBase64 } from './AmiriFont.js';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
+import { notify, confirmDialog } from './dialogs';
 
 // Standard job titles for normalization
 const STANDARD_JOB_TITLES = ['صحة عامة', 'طبيب', 'ممرض', 'ظابط تغذية', 'مساعد طبي', 'صيدلي', 'إحصائي', 'إدارة اعمال'];
@@ -73,10 +74,10 @@ const shareViaWhatsApp = (textToShare, successMessage) => {
         if (Capacitor.isNativePlatform()) {
             window.open(`whatsapp://send?text=${encodeURIComponent(textToShare)}`, '_system');
         } else {
-            alert(successMessage || 'تم النسخ بنجاح!');
+            notify(successMessage || 'تم النسخ بنجاح!');
         }
     }).catch(() => {
-        alert('فشل النسخ. يرجى المحاولة مرة أخرى.');
+        notify('فشل النسخ. يرجى المحاولة مرة أخرى.');
     });
 };
 
@@ -291,7 +292,7 @@ function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
             setFormData(prev => ({ ...prev, imageUrl: downloadUrl }));
         } catch (error) {
             console.error("Upload failed:", error);
-            alert("Failed to upload image. Please try again.");
+            notify("Failed to upload image. Please try again.");
         } finally {
             setIsUploadingImage(false);
         }
@@ -737,13 +738,6 @@ const generateHrReportPdf = async (quality, onSuccess, onError, groupedByState, 
 function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, localityCoordinators, filters, setToast }) {
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
-    const notify = (message, type = 'info') => {
-        if (setToast) {
-            setToast({ show: true, message, type });
-        } else {
-            alert(message);
-        }
-    };
 
     // Helper to extract numeric years of experience
     const extractYears = (durationStr) => {
@@ -2089,7 +2083,7 @@ export function ProgramTeamView({ permissions, userStates }) {
 
                 if (newRole && dataToSave.email) {
                     try { await updateUserRoleByEmail(dataToSave.email, newRole, dataToSave.state, dataToSave.locality); } 
-                    catch (roleError) { alert(`Team member saved, but role could not be assigned. \n\nError: ${roleError.message}`); }
+                    catch (roleError) { notify(`Team member saved, but role could not be assigned. \n\nError: ${roleError.message}`); }
                 }
             }
 
@@ -2276,7 +2270,7 @@ export function ProgramTeamView({ permissions, userStates }) {
 
             if (newRole && submission.email) {
                  try { await updateUserRoleByEmail(submission.email, newRole, submission.state, submission.locality); } 
-                 catch (roleError) { alert(`Approved, but role assignment failed. \n\nError: ${roleError.message}`); }
+                 catch (roleError) { notify(`Approved, but role assignment failed. \n\nError: ${roleError.message}`); }
             }
             
             // Allow the actual backend fetch to happen silently in background
@@ -2295,7 +2289,7 @@ export function ProgramTeamView({ permissions, userStates }) {
         if (!filters.level) return;
         if (!auth.currentUser) return setFeedbackModal({ isOpen: true, type: 'error', message: 'Error: You must be logged in.' });
         
-        if (window.confirm("Are you sure you want to reject this submission?")) {
+        if (await confirmDialog("Are you sure you want to reject this submission?")) {
             setIsActionDisabled(true); 
             try {
                 const rejectFn = rejectFnMap[filters.level];
@@ -2794,7 +2788,7 @@ export function TeamMemberApplicationForm() {
             setFormData(prev => ({ ...prev, imageUrl: downloadUrl }));
         } catch (error) {
             console.error("Upload failed:", error);
-            alert("Failed to upload image. Please try again.");
+            notify("Failed to upload image. Please try again.");
         } finally {
             setIsUploadingImage(false);
         }

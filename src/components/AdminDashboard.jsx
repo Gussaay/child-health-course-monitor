@@ -24,6 +24,7 @@ import {
     ROLES,
     PERMISSION_DESCRIPTIONS
 } from './permissions';
+import { confirmDialog } from './dialogs';
 
 // -----------------------------------------------------------------------------
 // LOCAL CONSTANTS
@@ -380,7 +381,7 @@ export function AdminDashboard() {
     // REMOTE CACHE WIPE HANDLERS
     // =========================================================================
     const handleForceCacheReset = async (userId, userEmail) => {
-        if (!window.confirm(`Are you sure you want to wipe the local storage on ${userEmail}'s device? This will happen the next time they open the app while online.`)) {
+        if (!await confirmDialog(`Are you sure you want to wipe the local storage on ${userEmail}'s device? This will happen the next time they open the app while online.`)) {
             return;
         }
         
@@ -397,7 +398,7 @@ export function AdminDashboard() {
     };
 
     const handleForceCacheResetAll = async () => {
-        if (!window.confirm(`WARNING: Are you sure you want to wipe the local storage for ALL users?`)) return;
+        if (!await confirmDialog(`WARNING: Are you sure you want to wipe the local storage for ALL users?`)) return;
         
         try {
             const usersSnap = await getDocs(collection(db, 'users'));
@@ -417,7 +418,7 @@ export function AdminDashboard() {
         const { versionData, mandatory, notify } = historyPushModal;
         if (!versionData) return;
     
-        if (!window.confirm(`Are you sure you want to deploy v${versionData.versionString} to users?`)) return;
+        if (!await confirmDialog(`Are you sure you want to deploy v${versionData.versionString} to users?`)) return;
         
         setLoading(true);
         try {
@@ -505,7 +506,7 @@ export function AdminDashboard() {
             confirmMessage += `\n\nNo alternative configured updates found. The update block will be completely deactivated for everyone.`;
         }
     
-        if (!window.confirm(confirmMessage)) return;
+        if (!await confirmDialog(confirmMessage)) return;
         
         setLoading(true);
         try {
@@ -541,7 +542,7 @@ export function AdminDashboard() {
     const handleDeleteHistoryRecord = async (stat) => {
         const confirmMessage = `WARNING:\n\nAre you sure you want to delete version v${stat.versionString}?\n\nThis will permanently delete the visual record from this table AND permanently delete the physical .apk file from Firebase Storage.`;
         
-        if (!window.confirm(confirmMessage)) return;
+        if (!await confirmDialog(confirmMessage)) return;
         
         setLoading(true);
         try {
@@ -711,7 +712,7 @@ export function AdminDashboard() {
             console.error("Error updating individual permissions:", error);
             setToast({ show: true, message: "Failed to update custom permissions.", type: "error" });
         } finally {
-            sm:setLoading(false);
+            setLoading(false);
         }
     };
 
@@ -766,7 +767,7 @@ export function AdminDashboard() {
 
     const handleSendPasswordReset = async (email) => {
         if (!email) return;
-        if (window.confirm(`Send a password reset email to ${email}?`)) {
+        if (await confirmDialog(`Send a password reset email to ${email}?`)) {
             try {
                 await sendPasswordResetEmail(auth, email);
                 setToast({ show: true, message: `Password reset email sent to ${email}.`, type: 'success' });
@@ -782,7 +783,7 @@ export function AdminDashboard() {
         
         const confirmMessage = `CRITICAL WARNING:\n\nAre you sure you want to delete the database profile for ${userEmail}?\n\nNote: This removes their permissions and profile from the app. For total removal, their Firebase Authentication account must also be deleted via the Firebase Console or a Cloud Function.`;
         
-        if (window.confirm(confirmMessage)) {
+        if (await confirmDialog(confirmMessage)) {
             setLoading(true);
             try {
                 await deleteDoc(doc(db, "users", userId));

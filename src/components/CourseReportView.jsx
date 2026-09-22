@@ -24,6 +24,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { ReportsView } from './ReportsView'; 
 import { ExerciseCourseReport } from './Online-exercise'; 
 import { FinalReportManager } from './FinalReportManager';
+import { notify } from './dialogs';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 
@@ -1070,13 +1071,6 @@ export function CourseReportView({
         }
     };
     
-    const notify = (message, type = 'info') => {
-        if (setToast) {
-            setToast({ show: true, message, type });
-        } else {
-            alert(message);
-        }
-    };
 
     const isLoading = !course || !participants || !allObs || !allCases;
 
@@ -1492,7 +1486,7 @@ export function CourseReportView({
 
     const handleCopyAsImage = async (elementId) => {
         const element = document.getElementById(elementId);
-        if (!element) { alert('Could not find element to copy.'); return; }
+        if (!element) { notify('Could not find element to copy.'); return; }
         try {
             const canvas = await html2canvas(element, {
                 scale: 2, useCORS: true, backgroundColor: '#ffffff',
@@ -1503,10 +1497,10 @@ export function CourseReportView({
             });
             canvas.toBlob(async (blob) => {
                 if (navigator.clipboard && navigator.clipboard.write) {
-                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); alert('Card copied to clipboard as an image!');
-                } else { alert('Clipboard API not available in this browser.'); }
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); notify('Card copied to clipboard as an image!');
+                } else { notify('Clipboard API not available in this browser.'); }
             }, 'image/png');
-        } catch (error) { console.error('Failed to copy image:', error); alert('Failed to copy image to clipboard.'); }
+        } catch (error) { console.error('Failed to copy image:', error); notify('Failed to copy image to clipboard.'); }
     };
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];

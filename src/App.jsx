@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallbac
 import { createPortal } from "react-dom";
 import { useTranslation } from 'react-i18next'; 
 
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
     Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff
@@ -28,7 +27,6 @@ if (typeof window !== 'undefined') {
     }
 }
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
 
 // --- Lazy Load View Components ---
 const DashboardView = lazy(() => import('./components/DashboardView'));
@@ -108,16 +106,40 @@ import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
 
-import { doc, getDoc, getDocFromServer, setDoc, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
 
 import { signOut, updateProfile, onAuthStateChanged } from 'firebase/auth'; 
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
 import NotificationBell from './components/NotificationBell.jsx';
+import { notify, confirmDialog, DialogHost } from './components/dialogs';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
+
+/**
+ * Reads a JSON value from localStorage without ever throwing. A corrupt entry
+ * is discarded rather than left in place to fail again on the next launch.
+ */
+function readBackup(key, fallback) {
+    let raw = null;
+    try {
+        raw = localStorage.getItem(key);
+    } catch {
+        return fallback; // storage blocked entirely (private mode, disabled cookies)
+    }
+    if (raw == null) return fallback;
+    try {
+        const parsed = JSON.parse(raw);
+        return parsed == null ? fallback : parsed;
+    } catch {
+        console.warn(`[backup] discarding unreadable localStorage entry: ${key}`);
+        try { localStorage.removeItem(key); } catch { /* nothing more to do */ }
+        return fallback;
+    }
+}
 
 function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSave }) {
     const [accessLevel, setAccessLevel] = useState('private');
@@ -595,7 +617,7 @@ export default function App() {
                     localStorage.removeItem(k);
                 });
 
-                alert("قام مدير النظام بتحديث بيانات التطبيق وإصلاح الأخطاء. سيتم إعادة تحميل التطبيق الآن.\n\n(The administrator has refreshed your app data to fix errors. The app will now reload.)");
+                notify("قام مدير النظام بتحديث بيانات التطبيق وإصلاح الأخطاء. سيتم إعادة تحميل التطبيق الآن.\n\n(The administrator has refreshed your app data to fix errors. The app will now reload.)");
 
                 window.location.reload();
             });
@@ -742,7 +764,7 @@ export default function App() {
             onStart: () => { setIsFileDownloading(true); setFileDownloadProgress(0); },
             onSuccess: () => setToast({ show: true, message: 'Download complete. Opening...', type: 'success' }),
             onError: (error) => {
-                alert(`NATIVE ERROR: ${error.message || JSON.stringify(error)}`);
+                notify(`NATIVE ERROR: ${error.message || JSON.stringify(error)}`);
                 setToast({ show: true, message: `Failed to open automatically.`, type: 'error' });
             },
             onFinally: () => { setIsFileDownloading(false); setFileDownloadProgress(0); }
@@ -1078,14 +1100,70 @@ export default function App() {
             setPermissionsLoading(true);
             setPermissionsError(false);
 
-            // 1. Instantly load from local backups to prevent UI flicker
+            // Applies a profile document to state and refreshes the local backup.
+            const applyProfile = (data, fromCache) => {
+                const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
+                const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+                const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
+
+                const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
+                // A profile created by the Cloud Function starts with an empty
+                // permissions map, so fall back to the role's defaults.
+                const storedPerms = data.permissions && Object.keys(data.permissions).length > 0
+                    ? data.permissions
+                    : (DEFAULT_ROLE_PERMISSIONS[newRole] || DEFAULT_ROLE_PERMISSIONS.user);
+                const newPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...storedPerms });
+
+                const newStates = data.assignedState ? [data.assignedState] : [];
+                const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
+
+                if (!fromCache) {
+                    try {
+                        localStorage.setItem(`backup_role_${user.uid}`, newRole);
+                        localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
+                        localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
+                        localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
+                        localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
+                    } catch (e) {
+                        console.warn('[backup] could not save profile locally:', e?.message);
+                    }
+                }
+
+                setUserRole(newRole);
+                setUserRoles(newRoles);
+                setUserPermissions(newPermissionsData);
+                setUserStates(newStates);
+                setUserLocalities(newLocalities);
+            };
+
+            // Polls for the profile the createUserProfile trigger is writing.
+            // Returns its data, or null if it has not appeared in time.
+            const waitForProfile = async (ref) => {
+                for (let attempt = 0; attempt < 5; attempt += 1) {
+                    await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+                    try {
+                        const snap = await getDocFromServer(ref);
+                        if (snap.exists()) return snap.data();
+                    } catch (e) {
+                        console.warn('[profile] retry failed:', e?.message);
+                    }
+                }
+                return null;
+            };
+
+            // 1. Instantly load from local backups to prevent UI flicker.
+            // These parses sit OUTSIDE the try/finally below, so a truncated
+            // localStorage value (quota eviction, an interrupted write) used to
+            // throw here and skip setPermissionsLoading(false) — leaving the app
+            // on its loading spinner forever, on every launch, with no way out
+            // on the Android build. readBackup() never throws.
             const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
             if (backupRole) {
                 setUserRole(backupRole);
-                setUserRoles(JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${backupRole}"]`));
-                setUserPermissions(JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}"));
-                setUserStates(JSON.parse(localStorage.getItem(`backup_states_${user.uid}`) || "[]"));
-                setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
+                setUserRoles(readBackup(`backup_roles_${user.uid}`, [backupRole]));
+                setUserPermissions(readBackup(`backup_perms_${user.uid}`, {}));
+                setUserStates(readBackup(`backup_states_${user.uid}`, []));
+                setUserLocalities(readBackup(`backup_localities_${user.uid}`, []));
             }
 
             try {
@@ -1136,32 +1214,7 @@ export default function App() {
                 if (!isMounted) return;
 
                 if (userSnap && userSnap.exists()) {
-                    const data = userSnap.data();
-                    
-                    const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
-                    const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
-                    const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
-
-                    const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-                    const newPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
-
-                    const newStates = data.assignedState ? [data.assignedState] : [];
-                    const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
-
-                    // Update local backups
-                    if (!userSnap.metadata?.fromCache) {
-                        localStorage.setItem(`backup_role_${user.uid}`, newRole);
-                        localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
-                        localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
-                        localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
-                        localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
-                    }
-
-                    setUserRole(newRole);
-                    setUserRoles(newRoles);
-                    setUserPermissions(newPermissionsData);
-                    setUserStates(newStates);
-                    setUserLocalities(newLocalities);
+                    applyProfile(userSnap.data(), userSnap.metadata?.fromCache);
                 } else if (userSnap && !userSnap.exists()) {
                     // --- GUARD AGAINST SILENT DEMOTION ---
                     // A "missing" profile is only believable if the server said so.
@@ -1175,24 +1228,25 @@ export default function App() {
                         return;
                     }
 
-                    // Create default profile for brand new Google Sign-Ins
-                    const status = await Network.getStatus();
-                    if (status.connected) {
-                        const defaultRole = 'user';
-                        const defaultRoles = ['user'];
-                        const defaultPerms = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
+                    // --- THE CLIENT NO LONGER CREATES ITS OWN PROFILE ---
+                    // Writing role/roles/permissions from the browser only worked
+                    // because the rules let a user write their own profile, which
+                    // also let any signed-in user grant themselves super_user from
+                    // the console. The createUserProfile Cloud Function writes it
+                    // now, and firestore.rules refuses every client write to those
+                    // fields. That trigger fires just after the account is created,
+                    // so on a first sign-in the document can be a second or two
+                    // behind — wait for it rather than assuming anything.
+                    const profile = await waitForProfile(userRef);
+                    if (!isMounted) return;
 
-                        setUserRole(defaultRole); setUserRoles(defaultRoles); setUserPermissions(defaultPerms);
+                    if (profile) {
+                        applyProfile(profile);
+                    } else {
+                        console.warn("Profile has not appeared yet. Not assuming a role.");
+                        setUserRole(null); setUserRoles([]); setUserPermissions({});
                         setUserStates([]); setUserLocalities([]);
-
-                        await setDoc(userRef, { 
-                            email: user.email, 
-                            role: defaultRole, 
-                            roles: defaultRoles, 
-                            permissions: defaultPerms, 
-                            lastLogin: new Date(), 
-                            assignedState: '' 
-                        }, { merge: true }).catch(err => console.warn("Failed to set default doc:", err));
+                        setPermissionsError(true);
                     }
                 }
             } catch (error) {
@@ -1490,7 +1544,7 @@ export default function App() {
     }, [navigate]); 
 
     const handleApproveSubmission = useCallback(async (submission) => {
-        if (window.confirm(`Approve ${submission.name}?`)) {
+        if (await confirmDialog(`Approve ${submission.name}?`)) {
             try {
                 await approveFacilitatorSubmission(submission, user.email);
                 setToast({ show: true, message: 'Facilitator approved.', type: 'success' });
@@ -1500,7 +1554,7 @@ export default function App() {
     }, [user, fetchPendingSubmissions, fetchFacilitators]);
 
     const handleRejectSubmission = useCallback(async (submissionId) => {
-        if (window.confirm('Reject this submission?')) {
+        if (await confirmDialog('Reject this submission?')) {
             try { await rejectFacilitatorSubmission(submissionId, user.email); setToast({ show: true, message: 'Submission rejected.', type: 'success' }); await fetchPendingSubmissions(); } 
             catch (error) { setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' }); }
         }
@@ -1517,7 +1571,7 @@ export default function App() {
 
     const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
         if (!permissions.canManageHumanResource) return;
-        if (window.confirm('Are you sure you want to delete this facilitator?')) {
+        if (await confirmDialog('Are you sure you want to delete this facilitator?')) {
             setLoading(true);
             try {
                 await deleteFacilitator(facilitatorId); await fetchFacilitators(); 
@@ -1607,7 +1661,7 @@ export default function App() {
     const handleDeletePdf = useCallback(async (courseId) => {  }, [permissions, courseDetails.finalReport]);
 
     const handleLogout = useCallback(async () => { 
-        if (window.confirm('Are you sure you want to log out?')) {
+        if (await confirmDialog('Are you sure you want to log out?')) {
             try { 
                 if (user) {
                     localStorage.removeItem(`backup_role_${user.uid}`);
@@ -2155,10 +2209,16 @@ case 'meetings':
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
+            {/* in-app replacements for alert()/confirm(); see components/dialogs.jsx */}
+            <DialogHost />
+
             <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-24 md:pb-8 overflow-x-hidden">
-                <Suspense fallback={<Card><Spinner /></Card>}>
-                    {mainContent}
-                </Suspense>
+                {/* keyed on `view` so navigating away from a crashed screen clears the error */}
+                <ErrorBoundary key={view} onGoHome={() => navigate('landing')}>
+                    <Suspense fallback={<Card><Spinner /></Card>}>
+                        {mainContent}
+                    </Suspense>
+                </ErrorBoundary>
             </main>
 
             { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} currentView={view} /> }

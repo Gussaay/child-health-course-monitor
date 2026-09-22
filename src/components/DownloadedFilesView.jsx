@@ -5,6 +5,7 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 import { Trash2, File, ExternalLink, ArrowLeft, RefreshCw, HardDrive } from 'lucide-react';
 import { Card, PageHeader, Button, Spinner, EmptyState } from './CommonComponents';
+import { confirmDialog } from './dialogs';
 
 export default function DownloadedFilesView({ onBack, setToast }) {
     const [files, setFiles] = useState([]);
@@ -94,7 +95,7 @@ export default function DownloadedFilesView({ onBack, setToast }) {
     };
 
     const handleDeleteFile = async (fileName) => {
-        if (window.confirm(`Are you sure you want to delete ${fileName}?`)) {
+        if (await confirmDialog(`Are you sure you want to delete ${fileName}?`)) {
             try {
                 // Delete from the correct directory
                 await Filesystem.deleteFile({

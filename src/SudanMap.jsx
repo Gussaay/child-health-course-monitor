@@ -9,9 +9,30 @@ import {
 } from "react-simple-maps";
 import { geoCentroid } from "d3-geo";
 
-// 1. IMPORT THE JSON FILES DIRECTLY (Make sure they are in the same folder as this component)
-import sudanGeoJson from "./sudan.json"; 
-import localitiesGeoJson from "./sudan_localities.json";
+// The two GeoJSON files are 3 MB together. Importing them compiled them into
+// the JavaScript bundle, so they were parsed as JS on every load of any screen
+// with a map, and re-downloaded whenever unrelated code changed. They now live
+// in public/geo/ and are fetched once, then cached by the service worker and
+// kept in this module so a second map does not fetch them again.
+const geoCache = new Map();
+
+function loadGeo(name) {
+  if (!geoCache.has(name)) {
+    geoCache.set(
+      name,
+      fetch(`/geo/${name}.json`)
+        .then((response) => {
+          if (!response.ok) throw new Error(`Could not load map data (${response.status})`);
+          return response.json();
+        })
+        .catch((error) => {
+          geoCache.delete(name); // let a later render retry
+          throw error;
+        })
+    );
+  }
+  return geoCache.get(name);
+}
 
 // Maps app state names to the names used in the localities GeoJSON file.
 const STATE_NAME_MAP = {
@@ -43,25 +64,41 @@ const SudanMap = ({
 }) => {
   const [localities, setLocalities] = useState(null);
   const [localityFeatures, setLocalityFeatures] = useState([]);
+  const [sudanGeoJson, setSudanGeoJson] = useState(null);
+  const [geoError, setGeoError] = useState(null);
 
   useEffect(() => {
-    // 2. USE THE IMPORTED JSON DIRECTLY (No fetch network request needed)
-    if (focusedState) {
-      // State view: Filter localities for the focused state
-      const localityStateName = STATE_NAME_MAP[focusedState] || focusedState;
-      const filteredLocalities = {
-        ...localitiesGeoJson,
-        features: localitiesGeoJson.features.filter(
-          feature => feature.properties.admin_1 === localityStateName
-        )
-      };
-      setLocalities(filteredLocalities);
-      setLocalityFeatures(filteredLocalities.features);
-    } else {
-      // National view: Load ALL localities
-      setLocalities(localitiesGeoJson);
-      setLocalityFeatures(localitiesGeoJson.features);
-    }
+    let cancelled = false;
+    loadGeo('sudan')
+      .then((geo) => { if (!cancelled) setSudanGeoJson(geo); })
+      .catch((error) => { if (!cancelled) setGeoError(error.message); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadGeo('sudan_localities')
+      .then((localitiesGeoJson) => {
+        if (cancelled) return;
+        if (focusedState) {
+          // State view: Filter localities for the focused state
+          const localityStateName = STATE_NAME_MAP[focusedState] || focusedState;
+          const filteredLocalities = {
+            ...localitiesGeoJson,
+            features: localitiesGeoJson.features.filter(
+              feature => feature.properties.admin_1 === localityStateName
+            )
+          };
+          setLocalities(filteredLocalities);
+          setLocalityFeatures(filteredLocalities.features);
+        } else {
+          // National view: Load ALL localities
+          setLocalities(localitiesGeoJson);
+          setLocalityFeatures(localitiesGeoJson.features);
+        }
+      })
+      .catch((error) => { if (!cancelled) setGeoError(error.message); });
+    return () => { cancelled = true; };
   }, [focusedState]);
 
   const dataMap = useMemo(() => new Map((data || []).map(item => [item.state, item])), [data]);
@@ -244,6 +281,25 @@ const SudanMap = ({
   );
 
   const isZoomable = isMovable !== false || pannable !== false;
+
+  // The map data arrives over the network now, so the component has two states
+  // it never had before. Both are silent failures if they are not handled: an
+  // empty <ComposableMap> looks like "there is no data for this area".
+  if (geoError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center p-4 text-center text-sm text-gray-500">
+        The map could not be loaded. Check your connection and try again.
+      </div>
+    );
+  }
+
+  if (!sudanGeoJson) {
+    return (
+      <div className="flex h-full w-full items-center justify-center p-4">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-sky-600" aria-label="Loading map" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full">

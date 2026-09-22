@@ -28,6 +28,7 @@ import {
     NORMAL_BREATHING_ITEMS, 
     RESUSCITATION_ITEMS 
 } from './EENCSkillsAssessmentForm.jsx'; 
+import { notify } from '../dialogs';
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler 
@@ -259,11 +260,11 @@ export const CopyImageButton = ({ targetRef, title }) => {
             if (blob) {
                 const item = new ClipboardItem({ 'image/png': blob });
                 await navigator.clipboard.write([item]);
-                alert(`${t("Copy as Image")}: "${t(title)}"`);
+                notify(`${t("Copy as Image")}: "${t(title)}"`);
             }
         } catch (error) {
             console.error('Error copying image:', error);
-            alert(t('Failed to copy image to clipboard.'));
+            notify(t('Failed to copy image to clipboard.'));
         } finally {
             touched.forEach(([el, prev]) => { el.style.letterSpacing = prev; });
             setIsCopying(false);

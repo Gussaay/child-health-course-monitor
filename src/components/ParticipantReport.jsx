@@ -3,6 +3,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Bar } from 'react-chartjs-2';
+import './chartSetup'; // registers the scales and elements these charts use
 import { getElementAtEvent } from 'react-chartjs-2';
 import {
     Card, PageHeader, Button, FormGroup, Select, Table, EmptyState, Spinner, PdfIcon, Modal
@@ -13,6 +14,7 @@ import {
     ETAT_DOMAINS, DOMAINS_BY_AGE_IMNCI,
     EMONC_DOMAIN_LABEL_NEONATAL, EMONC_DOMAIN_LABEL_MATERNAL
 } from './constants.js';
+import { notify } from './dialogs';
 
 // --- Reusable Share Icon for the button ---
 const ShareIcon = () => (
@@ -286,7 +288,7 @@ export function ParticipantReportView({
             pdf.save(fileName);
         } catch (error) {
             console.error("Failed to generate PDF:", error);
-            alert("An error occurred while generating the PDF.");
+            notify("An error occurred while generating the PDF.");
         } finally {
             setIsPdfGenerating(false);
         }

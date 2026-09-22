@@ -7,20 +7,35 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-package-lock.json
 node_modules
 dist
 dist-ssr
+release
 *.local
 
-# Add the filename to .gitignore
-echo "service-account-key.json" >> .gitignore
+# Secrets — never commit these.
+# The Android release key is supplied to CI through secrets.KEYSTORE_BASE64,
+# and the Firebase admin key through secrets.FIREBASE_SERVICE_ACCOUNT_*.
+service-account-key.json
+*.keystore
+*.jks
+keystore.txt
+.env
+.env.*
+!.env.example
+
+# Build tooling
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+desktop.ini
 *.suo
 *.ntvs*
 *.njsproj

@@ -409,7 +409,10 @@ const FacilityInformationDashboardTab = ({
             });
         });
 
-        if (process.env.NODE_ENV !== 'production' && withoutData > 0) {
+        // `process` does not exist in the browser and Vite does not shim it, so
+        // this threw a ReferenceError in the production bundle every time this
+        // dashboard computed its aggregates.
+        if (import.meta.env.DEV && withoutData > 0) {
             const sample = scopedReports.find(r => !resolveToolSource(r));
             console.warn(
                 `[FacilityInfo] ${withoutData}/${scopedReports.length} ${activeService} reports carry no tool data. ` +

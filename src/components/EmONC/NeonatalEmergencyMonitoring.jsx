@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, Spinner } from "../CommonComponents";
 import { listObservationsForParticipant, listCasesForParticipant, upsertCaseAndObservations, deleteCaseAndObservations } from '../../data.js';
 import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, SKILLS_EMONC_NEONATAL, calcPct, fmtPct, pctBgClass } from '../constants.js';
+import { notify, confirmDialog } from '../dialogs';
 
 // --- SCORING SCALE ---
 // Done = full credit  |  Partially = half credit  |  Not Done = no credit  |  N/A = excluded from the score
@@ -366,7 +367,7 @@ export function NeonatalEmergencyMonitoring({ course, participant, participants,
     const submitCase = async () => {
         if (isSaving) return; 
         const entries = Object.entries(buffer);
-        if (entries.length === 0) { alert('No skills/actions selected.'); return; }
+        if (entries.length === 0) { notify('No skills/actions selected.'); return; }
         setIsSaving(true);
         const currentCaseSerial = editingCase ? editingCase.case_serial : caseSerial;
         const scoredEntries = entries.filter(([, v]) => isScored(v));
@@ -400,14 +401,14 @@ export function NeonatalEmergencyMonitoring({ course, participant, participants,
             setBuffer({});
             setEditingCase(null);
         } catch (err) {
-            alert(`Failed to save case: ${err.message}`);
+            notify(`Failed to save case: ${err.message}`);
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDeleteCase = async (caseToDelete) => {
-        if (!window.confirm('Delete this case and all its observations? This cannot be undone.')) return;
+        if (!await confirmDialog('Delete this case and all its observations? This cannot be undone.')) return;
         const previousCases = [...cases];
         const previousObservations = [...observations];
         setCases(prev => prev.filter(c => c.id !== caseToDelete.id));
@@ -417,7 +418,7 @@ export function NeonatalEmergencyMonitoring({ course, participant, participants,
         } catch (err) {
             setCases(previousCases);
             setObservations(previousObservations);
-            alert(`Failed to delete: ${err.message}`);
+            notify(`Failed to delete: ${err.message}`);
         }
     };
 

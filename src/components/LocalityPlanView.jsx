@@ -12,6 +12,7 @@ import { STATE_LOCALITIES } from './constants';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
+import { notify, confirmDialog } from './dialogs';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 2 + i);
@@ -155,6 +156,14 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false); 
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+
+    // MISSING IMPLEMENTATION — exportDashboardPDF has never been defined in this
+    // file or imported from anywhere. Referencing it in the JSX below threw a
+    // ReferenceError during render, which blanked this screen. Restore the real
+    // export here; until then the button reports the problem instead of crashing.
+    const exportDashboardPDF = () => {
+        notify('The dashboard PDF export is not available in this build.', 'error');
+    };
     const [currentPlan, setCurrentPlan] = useState(null);
     const [expandedPlanId, setExpandedPlanId] = useState(null);
 
@@ -391,7 +400,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         if (asFederalTemplate) {
             const existingFederalPlan = federalTemplates.find(p => p.quarter === selectedQuarter && String(p.year) === String(globalFilter.year));
             if (existingFederalPlan) {
-                alert(`عفواً، يوجد قالب إتحادي مسجل بالفعل لـ ${selectedQuarter} لعام ${globalFilter.year}. الرجاء تعديله من القائمة بدلاً من إنشاء واحد جديد.`);
+                notify(`عفواً، يوجد قالب إتحادي مسجل بالفعل لـ ${selectedQuarter} لعام ${globalFilter.year}. الرجاء تعديله من القائمة بدلاً من إنشاء واحد جديد.`);
                 return;
             }
 
@@ -424,7 +433,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
         const assignedLocality = isLocalityManager ? (userLocalities?.[0] || '') : globalFilter.locality;
         if (!assignedLocality) {
-            alert("الرجاء تحديد المحلية من الفلاتر أولاً للتمكن من إضافة خطة جديدة.");
+            notify("الرجاء تحديد المحلية من الفلاتر أولاً للتمكن من إضافة خطة جديدة.");
             return;
         }
 
@@ -432,7 +441,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
         const existingLocalityPlan = localityPlans.find(p => String(p.year) === String(globalFilter.year) && p.quarter === selectedQuarter && p.locality === assignedLocality && p.state === stateToUse);
         if (existingLocalityPlan) {
-            alert(`عفواً، توجد خطة مسجلة بالفعل لـ ${selectedQuarter} لمحلية ${assignedLocality}. الرجاء تعديلها من القائمة بدلاً من إنشاء خطة جديدة.`);
+            notify(`عفواً، توجد خطة مسجلة بالفعل لـ ${selectedQuarter} لمحلية ${assignedLocality}. الرجاء تعديلها من القائمة بدلاً من إنشاء خطة جديدة.`);
             return;
         }
 
@@ -495,9 +504,9 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
     const handleSaveMaster = async (e) => {
         if (e) e.preventDefault();
-        if (currentPlan.level === 'locality' && !currentPlan.state) return alert("الرجاء تحديد الولاية.");
-        if (currentPlan.level === 'locality' && !currentPlan.locality) return alert("الرجاء تحديد المحلية.");
-        if (!currentPlan.quarter) return alert("الرجاء تحديد الربع.");
+        if (currentPlan.level === 'locality' && !currentPlan.state) return notify("الرجاء تحديد الولاية.");
+        if (currentPlan.level === 'locality' && !currentPlan.locality) return notify("الرجاء تحديد المحلية.");
+        if (!currentPlan.quarter) return notify("الرجاء تحديد الربع.");
 
         setIsSaving(true);
         try {
@@ -528,7 +537,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
             await fetchMasterPlans(true);
             setIsEditing(false);
         } catch (error) {
-            alert("حدث خطأ أثناء الحفظ.\nالتفاصيل: " + error.message);
+            notify("حدث خطأ أثناء الحفظ.\nالتفاصيل: " + error.message);
         } finally {
             setIsSaving(false);
         }
@@ -536,19 +545,19 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
     // دوال الاستعادة والحذف النهائي
     const handleRestorePlan = async (plan) => {
-        if(window.confirm("هل أنت متأكد من استعادة هذه الخطة المحذوفة؟")) {
+        if(await confirmDialog("هل أنت متأكد من استعادة هذه الخطة المحذوفة؟")) {
             await upsertMasterPlan({ ...plan, isDeleted: false });
             fetchMasterPlans(true);
         }
     };
 
     const handlePermanentDelete = async (id) => {
-        if(window.confirm("⚠️ تحذير: هذا الإجراء سيقوم بمسح الخطة بشكل نهائي من قاعدة البيانات ولن يمكن التراجع عنه! هل أنت متأكد؟")) {
+        if(await confirmDialog("⚠️ تحذير: هذا الإجراء سيقوم بمسح الخطة بشكل نهائي من قاعدة البيانات ولن يمكن التراجع عنه! هل أنت متأكد؟")) {
             try {
                 await deleteMasterPlan(id);
                 fetchMasterPlans(true);
             } catch(e) {
-                alert("حدث خطأ أثناء الحذف النهائي.");
+                notify("حدث خطأ أثناء الحذف النهائي.");
             }
         }
     };
@@ -862,7 +871,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                                                 <div className="flex gap-2">
                                                     <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setCurrentPlan(plan); setIsEditing(true); }} className="px-4 py-2"><Edit size={16}/></Button>
-                                                    <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); if(window.confirm("حذف القالب الإتحادي؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }} className="px-4 py-2"><Trash2 size={16}/></Button>
+                                                    <Button size="sm" variant="danger" onClick={async (e) => { e.stopPropagation(); if(await confirmDialog("حذف القالب الإتحادي؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }} className="px-4 py-2"><Trash2 size={16}/></Button>
                                                 </div>
                                                 {expandedPlanId === plan.id ? <ChevronUp size={24} className="text-gray-500"/> : <ChevronDown size={24} className="text-gray-500"/>}
                                             </div>
@@ -962,7 +971,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                             setCurrentPlan({ ...plan, interventions: syncedInterventions }); 
                                                             setIsEditing(true); 
                                                         }} className="px-4 py-2"><Edit size={16}/></Button>
-                                                        <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); if(window.confirm("حذف الخطة للتوجه لسلة المهملات؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }} className="px-4 py-2"><Trash2 size={16}/></Button></>
+                                                        <Button size="sm" variant="danger" onClick={async (e) => { e.stopPropagation(); if(await confirmDialog("حذف الخطة للتوجه لسلة المهملات؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }} className="px-4 py-2"><Trash2 size={16}/></Button></>
                                                     )}
                                                 </div>
                                                 {expandedPlanId === plan.id ? <ChevronUp size={24} className="text-gray-500"/> : <ChevronDown size={24} className="text-gray-500"/>}

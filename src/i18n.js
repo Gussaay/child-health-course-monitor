@@ -758,7 +758,6 @@ const resources = {
       "Amoxicillin": "Amoxicillin",
       "Zinc": "Zinc",
       "ORS": "ORS",
-      "Coartem": "Coartem",
       "Availability": "Availability",
       "of": "of",
       "facilities": "facilities",
