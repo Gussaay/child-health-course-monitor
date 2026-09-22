@@ -69,15 +69,45 @@ done
 PERMS="${PERMS#,}"
 
 ACCOUNT=$(gcloud config get-value account 2>/dev/null)
+
+# Printed as a notice so it is visible in the run summary, not just buried in
+# the step log. Every grant below has to name this account, and finding it was
+# the slow part the one time this actually mattered.
+echo "::notice::CI identity is ${ACCOUNT:-unknown}. IAM grants must name serviceAccount:${ACCOUNT:-<this account>}."
 echo "Checking deploy permissions for ${ACCOUNT:-the active credentials} on ${PROJECT}"
+
+# The full set of grants a Cloud Functions deploy needs, printed whenever this
+# script cannot verify things for itself. `iam.serviceAccounts.actAs` is the
+# one that catches people out: it is granted ON THE SERVICE ACCOUNT as a
+# resource, so adding "Service Account User" on the project IAM page does not
+# supply it and the deploy keeps failing with the same error.
+print_all_grants() {
+  echo ""
+  echo "If the deploy fails on permissions, run these in Cloud Shell as a project owner:"
+  echo ""
+  echo "gcloud iam service-accounts add-iam-policy-binding ${PROJECT}@appspot.gserviceaccount.com \\"
+  echo "  --member=\"serviceAccount:${ACCOUNT}\" \\"
+  echo "  --role=\"roles/iam.serviceAccountUser\" --project=${PROJECT}"
+  echo ""
+  for ROLE in roles/cloudfunctions.admin roles/run.admin \
+              roles/cloudbuild.builds.editor roles/artifactregistry.admin \
+              roles/serviceusage.serviceUsageConsumer; do
+    echo "gcloud projects add-iam-policy-binding ${PROJECT} \\"
+    echo "  --member=\"serviceAccount:${ACCOUNT}\" --role=\"${ROLE}\""
+  done
+  echo ""
+}
 
 HELD=$(gcloud projects test-iam-permissions "$PROJECT" \
   --permissions="$PERMS" \
   --format="value(permissions)" 2>/dev/null | tr ';' '\n' | tr -d ' ')
 
 if [ -z "$HELD" ]; then
-  echo "::warning::Could not read the permissions of ${ACCOUNT:-the active credentials} on ${PROJECT}."
-  echo "Skipping the preflight check — the deploy itself will report the real error."
+  # This account cannot even ask what it is allowed to do, which usually means
+  # it holds far less than a deploy needs. Do not let the run reach a fifteen
+  # minute Android build on that basis without putting the fix in the log.
+  echo "::warning::Could not read the permissions of ${ACCOUNT:-the active credentials} on ${PROJECT}. The preflight verified NOTHING."
+  print_all_grants
   exit 0
 fi
 
@@ -161,7 +191,14 @@ for SA in $APPSPOT_SA $COMPUTE_SA; do
   # not exist on this project, or the API refused the call. That is not the
   # same as "the permission is missing", so it must not fail the release.
   if [ "$RC" -ne 0 ]; then
-    echo "::warning::Could not check iam.serviceAccounts.actAs on ${SA}."
+    # Unverifiable, not verified. The appspot account is the one a deploy
+    # always needs, so say plainly that this is the likely cause rather than
+    # letting a quiet warning read as a pass.
+    echo "::warning::Could not check iam.serviceAccounts.actAs on ${SA}. If the deploy fails, this is the first thing to grant."
+    if [ "$SA" = "$APPSPOT_SA" ]; then
+      MISSING_ACTAS="${MISSING_ACTAS} ${SA}"
+      ADVISORY_MISSING=1
+    fi
     continue
   fi
   if [ -n "$ACTAS" ]; then
