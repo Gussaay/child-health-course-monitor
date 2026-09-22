@@ -97,7 +97,9 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "firebase emulators:exec --only firestore --project imnci-courses-monitor-test \"vitest run --config vitest.rules.config.js\""
+    "test:rules": "firebase emulators:exec --only firestore --project imnci-courses-monitor-test \"vitest run --config vitest.rules.config.js\"",
+    "deploy:functions": "firebase deploy --only functions --project imnci-courses-monitor",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage --project imnci-courses-monitor"
   },
   "build": {
     "appId": "com.nchp.monitoring.desktop",

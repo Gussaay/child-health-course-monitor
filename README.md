@@ -96,6 +96,23 @@ only check.
 Permission names and the role presets are defined in
 `src/components/permissions.js`, which is covered by `tests/permissions.test.js`.
 
+### Deploy order — this matters
+
+The GitHub workflow deploys **only the web app**. Cloud Functions and security
+rules are deployed deliberately, by hand, because getting either wrong locks
+users out.
+
+The browser no longer creates its own `users/{uid}` document — the
+`createUserProfile` Auth trigger does. **So the functions must be deployed
+before or with the web release, or nobody new will be able to sign up.**
+Existing users are unaffected; their profiles already exist.
+
+```bash
+npm run deploy:functions   # FIRST — createUserProfile, setUserRoles, notifications
+# then merge to main, which deploys the web app
+npm run deploy:rules       # LAST — and only after testing (see below)
+```
+
 ### Changing the rules
 
 ```bash
