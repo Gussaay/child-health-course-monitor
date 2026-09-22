@@ -52,14 +52,16 @@ There is no `.env` to fill in for normal development — the Firebase config is 
 
 Pushing to `main` runs `.github/workflows/deploy.yml`, which:
 
-1. **Verifies** — lint and unit tests. A failure here stops the deploy.
+1. **Verifies** — lint, unit tests, and the Firestore rules tests against the
+   emulator. A failure here stops the deploy.
 2. Derives a version from the run number and writes it into `package.json`.
 3. Builds the web assets and zips them as a Capgo OTA bundle, with a checksum.
 4. Builds and signs the Android APK, then verifies the signature.
 5. Uploads the APK to Firebase Storage and writes `native-version.json`.
-6. Deploys the web app to Firebase Hosting (`live`).
-7. Polls until `update.json` is actually live before telling devices about it.
-8. Records the release in Firestore via `scripts/push-update.js`.
+6. Deploys Cloud Functions and the Firestore/Storage rules.
+7. Deploys the web app to Firebase Hosting (`live`).
+8. Polls until `update.json` is actually live before telling devices about it.
+9. Records the release in Firestore via `scripts/push-update.js`.
 
 Pull requests run `.github/workflows/preview.yml`: the same checks, plus a
 first-load payload budget and a deployed preview URL that expires after 7 days.
@@ -98,19 +100,28 @@ Permission names and the role presets are defined in
 
 ### Deploy order — this matters
 
-The GitHub workflow deploys **only the web app**. Cloud Functions and security
-rules are deployed deliberately, by hand, because getting either wrong locks
-users out.
+A release deploys three things, and the order is not arbitrary. The workflow
+does all of it, in this order:
+
+1. **Cloud Functions and security rules**, then
+2. **the web app**, then
+3. the APK manifest that tells devices a new version exists.
 
 The browser no longer creates its own `users/{uid}` document — the
-`createUserProfile` Auth trigger does. **So the functions must be deployed
-before or with the web release, or nobody new will be able to sign up.**
-Existing users are unaffected; their profiles already exist.
+`createUserProfile` Auth trigger does. A web release that reached users before
+the functions did would leave every new sign-up without a profile, so the
+functions step runs first and a failure there stops the release.
+
+The rules ship in the same step, gated on `npm run test:rules` passing in the
+verify job. If a screen breaks after a release, Firestore keeps every previous
+ruleset: roll back from the Rules tab in the Firebase console, which takes
+effect in seconds.
+
+To deploy either by hand:
 
 ```bash
-npm run deploy:functions   # FIRST — createUserProfile, setUserRoles, notifications
-# then merge to main, which deploys the web app
-npm run deploy:rules       # LAST — and only after testing (see below)
+npm run deploy:functions
+npm run deploy:rules
 ```
 
 ### Changing the rules
