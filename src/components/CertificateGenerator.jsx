@@ -29,6 +29,7 @@ import {
     unapproveCourseCertificates, 
     uploadFile 
 } from '../data.js';
+import { notify, confirmDialog } from './dialogs';
 
 // -----------------------------------------------------------------------------
 // HELPER FUNCTIONS
@@ -1469,7 +1470,7 @@ export const saveAndOpenPdf = async (doc, fileName) => {
                 await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
             } catch (openError) {
                 console.error("FileOpener Error:", openError);
-                alert("Certificate saved to your Documents/downloads folder, but no PDF viewer was found on your device to open it automatically.");
+                notify("Certificate saved to your Documents/downloads folder, but no PDF viewer was found on your device to open it automatically.");
             }
 
         } catch (err) {
@@ -1521,7 +1522,7 @@ export const generateCertificatePdf = async (inputCourse, participant, federalPr
         });
     } catch (error) {
         console.error(error);
-        alert(error.message);
+        notify(error.message);
         return null;
     }
 
@@ -1546,7 +1547,7 @@ export const generateCertificatePdf = async (inputCourse, participant, federalPr
         return canvas;
     } catch (error) {
         console.error("Error generating certificate:", error);
-        alert(`Could not generate certificate for ${participant.name}. See console for details.`);
+        notify(`Could not generate certificate for ${participant.name}. See console for details.`);
         return null;
     } finally {
         if (container.parentNode === document.body) { root.unmount(); document.body.removeChild(container); }
@@ -1589,7 +1590,7 @@ export const generateBlankCertificatePdf = async (inputCourse, federalProgramMan
             img.onload = resolve;
             img.onerror = () => reject(new Error("Failed to load certificate background image."));
         });
-    } catch (error) { console.error(error); alert(error.message); return null; }
+    } catch (error) { console.error(error); notify(error.message); return null; }
 
     const container = document.createElement('div');
     container.style.position = 'absolute';
@@ -1617,12 +1618,12 @@ export const generateBlankCertificatePdf = async (inputCourse, federalProgramMan
 
         canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
         return canvas;
-    } catch (error) { console.error("Error generating certificate template:", error); alert("Could not generate certificate template."); return null; } 
+    } catch (error) { console.error("Error generating certificate template:", error); notify("Could not generate certificate template."); return null; } 
     finally { if (container.parentNode === document.body) { root.unmount(); document.body.removeChild(container); } }
 };
 
 export const generateAllCertificatesPdf = async (inputCourse, participants, federalProgramManagerName, language = 'en', onProgress = null, cachedFacilitators = null, cachedCoordinators = null) => {
-    if (!participants || participants.length === 0) { alert("No participants found to generate certificates."); return; }
+    if (!participants || participants.length === 0) { notify("No participants found to generate certificates."); return; }
 
     // Resolve once for the whole batch instead of once per participant.
     const course = await loadAuthoritativeCourse(inputCourse);
@@ -1657,7 +1658,7 @@ export const generateAllCertificatesPdf = async (inputCourse, participants, fede
         const langSuffix = language === 'ar' ? 'AR' : 'EN';
         const fileName = `All_Certificates_${langSuffix}_${course.course_type}_${course.start_date}.pdf`;
         await saveAndOpenPdf(doc, fileName);
-    } else { alert("Failed to generate any certificates."); }
+    } else { notify("Failed to generate any certificates."); }
 };
 
 
@@ -2709,8 +2710,8 @@ export function CertificateDesigner({
         setSelectedId(`xlogo:${id}`);
     };
 
-    const deleteExtraLogo = (id) => {
-        if (!window.confirm('Delete this logo from the template?')) return;
+    const deleteExtraLogo = async (id) => {
+        if (!await confirmDialog('Delete this logo from the template?')) return;
         setOwnData(prev => {
             const next = {};
             Object.entries(prev).forEach(([k, v]) => { if (!k.startsWith(`xlogo_${id}_`)) next[k] = v; });
@@ -2963,7 +2964,7 @@ export function CertificateDesigner({
             set(activeUploadKey, url);
         } catch (err) {
             console.error(err);
-            alert('Upload failed. Please try again.');
+            notify('Upload failed. Please try again.');
         } finally {
             setUploadingAsset(null);
             setActiveUploadKey(null);
@@ -2980,7 +2981,7 @@ export function CertificateDesigner({
             // with a readable message rather than letting Firestore reject it.
             const approxBytes = new Blob([JSON.stringify(cleaned)]).size;
             if (approxBytes > MAX_CUSTOM_CERT_BYTES) {
-                alert(
+                notify(
                     `This template is too large to save (${Math.round(approxBytes / 1024)} KB, limit ${Math.round(MAX_CUSTOM_CERT_BYTES / 1024)} KB). ` +
                     `Signature images are stored inside the course record for security. ` +
                     `Remove or re-crop one of the signature images and try again.`
@@ -3005,10 +3006,10 @@ export function CertificateDesigner({
             }
             setDirty(false);
             if (onSaveSuccess) onSaveSuccess();
-            alert('Template saved.');
+            notify('Template saved.');
         } catch (err) {
             console.error(err);
-            alert('Could not save the template. Please try again.');
+            notify('Could not save the template. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -3023,7 +3024,7 @@ export function CertificateDesigner({
         if (kind === 'courseType' && !course.course_type) return;
         const id = kind === 'general' ? GENERAL_TEMPLATE_ID : courseTypeTemplateId(course.course_type);
         const targetName = kind === 'general' ? 'the GENERAL template (all courses)' : `the "${course.course_type}" template`;
-        if (!window.confirm(`Copy this course's layout into ${targetName}? Settings already in that template are kept unless this course changes them.`)) return;
+        if (!await confirmDialog(`Copy this course's layout into ${targetName}? Settings already in that template are kept unless this course changes them.`)) return;
 
         setIsSaving(true);
         try {
@@ -3038,7 +3039,7 @@ export function CertificateDesigner({
             });
             invalidateCertificateTemplateCache();
 
-            if (window.confirm('Saved to the template. Clear this course\'s own overrides so it simply follows the template now?')) {
+            if (await confirmDialog('Saved to the template. Clear this course\'s own overrides so it simply follows the template now?')) {
                 // Whatever the template could not take stays on the course.
                 const courseOnlyKeys = kind === 'general' ? GENERAL_TEMPLATE_EXCLUDED_KEYS : TEMPLATE_EXCLUDED_KEYS;
                 const keep = cleanCertificateConfig(
@@ -3054,14 +3055,14 @@ export function CertificateDesigner({
             if (onSaveSuccess) onSaveSuccess();
         } catch (err) {
             console.error(err);
-            alert('Could not save to the template. Please try again.');
+            notify('Could not save to the template. Please try again.');
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleBack = () => {
-        if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return;
+    const handleBack = async () => {
+        if (dirty && !await confirmDialog('You have unsaved changes. Leave without saving?')) return;
         onBack?.();
     };
 
@@ -3086,7 +3087,7 @@ export function CertificateDesigner({
     const removeSignatureImage = async (block) => {
         const field = IMAGE_FIELDS[block];
         if (!field || !course?.id || isTemplateScope) return;
-        if (!window.confirm('Remove this signature image? The stored image is deleted immediately and will have to be uploaded again.')) return;
+        if (!await confirmDialog('Remove this signature image? The stored image is deleted immediately and will have to be uploaded again.')) return;
 
         setRemovingImage(block);
         try {
@@ -3099,7 +3100,7 @@ export function CertificateDesigner({
             if (onSaveSuccess) onSaveSuccess();
         } catch (err) {
             console.error(err);
-            alert('Could not remove the image. Please try again.');
+            notify('Could not remove the image. Please try again.');
         } finally {
             setRemovingImage(null);
         }
@@ -3824,7 +3825,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                 : await uploadFile(file, `courses/${course.id}/logos/${key}_${Date.now()}`);
             setData(prev => ({ ...prev, [key]: url }));
         } catch (err) {
-            alert("Upload failed: " + err.message);
+            notify("Upload failed: " + err.message);
         } finally {
             setUploadingAsset(null);
             setActiveUploadKey(null);
@@ -3847,14 +3848,14 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
             if (onSaveSuccess) onSaveSuccess();
             onClose();
         } catch (err) {
-            alert("Failed to save template: " + err.message);
+            notify("Failed to save template: " + err.message);
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleClear = () => {
-        if (window.confirm("Revert to the default template? This erases every custom override for this course.")) {
+    const handleClear = async () => {
+        if (await confirmDialog("Revert to the default template? This erases every custom override for this course.")) {
             setData({});
         }
     };
@@ -4389,7 +4390,7 @@ export function PublicCertificateDownloadView({ participantId }) {
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
                 await saveAndOpenPdf(doc, `Certificate_${data.participant.name.replace(/\s+/g, '_')}_${lang}.pdf`);
             }
-        } catch(e) { alert("Download failed: " + e.message); }
+        } catch(e) { notify("Download failed: " + e.message); }
         finally { setDownloading(false); }
     };
 
@@ -4450,7 +4451,7 @@ export function PublicCourseCertificatesView({ courseId }) {
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
                 await saveAndOpenPdf(doc, `Certificate_${p.name.replace(/\s+/g, '_')}_${lang}.pdf`);
             }
-        } catch(e) { alert("Download failed: " + e.message); }
+        } catch(e) { notify("Download failed: " + e.message); }
         finally { setDownloadingId(null); }
     };
 
@@ -4674,7 +4675,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     };
 
     const clearTemplate = async (id, label) => {
-        if (!window.confirm(`Delete ${label}? Courses that rely on it go back to the next layer down.`)) return;
+        if (!await confirmDialog(`Delete ${label}? Courses that rely on it go back to the next layer down.`)) return;
         setTemplatesBusy(true);
         try {
             await deleteDoc(doc(db, CERT_TEMPLATES_COLLECTION, id));
@@ -4794,7 +4795,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     };
 
     const handleUnapprove = async (course) => {
-        if (window.confirm(
+        if (await confirmDialog(
             `Revoke approval for ${course.course_type}?\n\n` +
             `This also ERASES every stored signature and stamp image for this course. ` +
             `They will have to be uploaded again before certificates can be re-approved.`
@@ -4845,7 +4846,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         };
         const field = map[assetType];
         if (!field) return;
-        if (!window.confirm('Remove this stored image? It will have to be uploaded again.')) return;
+        if (!await confirmDialog('Remove this stored image? It will have to be uploaded again.')) return;
 
         setIsProcessing(true);
         try {

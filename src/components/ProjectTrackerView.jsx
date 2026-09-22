@@ -12,6 +12,7 @@ import {
     Baby, Stethoscope, Users, Activity, Package, HeartPulse, 
     BarChart2, Target, Search, Share2, Link as LinkIcon, AlertTriangle, Calendar
 } from 'lucide-react';
+import { confirmDialog } from './dialogs';
 
 const PROGRAM_UNITS_DATA = [
     { id: "Neonatal Health Unit", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100", border: "border-blue-200" },
@@ -373,7 +374,7 @@ export default function ProjectTrackerView({ permissions }) {
     };
 
     const handleDeleteSubtask = async (subtaskId, projectId) => {
-        if (window.confirm("Delete this task?")) {
+        if (await confirmDialog("Delete this task?")) {
             const targetProjectId = projectId || activeProject?.id;
             const targetProject = allActiveProjects.find(p => p.id === targetProjectId);
             

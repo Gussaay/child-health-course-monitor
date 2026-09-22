@@ -1,0 +1,14 @@
+# Keep every text file LF in the repository, whatever the author's OS does
+# locally. The deploy workflow was once written as UTF-16 with CR endings by a
+# PowerShell redirect, which made it unreadable in diffs.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.keystore binary
+*.apk binary
+*.pdf binary

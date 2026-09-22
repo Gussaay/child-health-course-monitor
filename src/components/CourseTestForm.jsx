@@ -14,6 +14,7 @@ import {
     repairParticipantScoreFields
 } from '../data.js';
 import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X } from 'lucide-react'; 
+import { notify, confirmDialog } from './dialogs';
 
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -1014,8 +1015,8 @@ const TestScoresDashboard = ({
                                 if (module) params.set('module', module);
                                 const link = `${window.location.origin}/public/test/course/${courseId}?${params.toString()}`;
                                 navigator.clipboard.writeText(link)
-                                    .then(() => alert(`${formatTestLabel(type, module || null)} link copied to clipboard!`))
-                                    .catch(() => alert('Failed to copy link.'));
+                                    .then(() => notify(`${formatTestLabel(type, module || null)} link copied to clipboard!`))
+                                    .catch(() => notify('Failed to copy link.'));
                             }}
                             title="Copy public link for test entry"
                         >
@@ -1554,19 +1555,19 @@ export function CourseTestForm({
             setLocalParticipants(prev => prev.map(p => (p.id === participant.id ? { ...p, imci_sub_type: module } : p)));
         } catch (e) {
             console.error(e);
-            alert('Could not save the module for this participant. Please try again.');
+            notify('Could not save the module for this participant. Please try again.');
         }
     };
 
     const handleDashboardDelete = async (pId, type, module = null) => {
-        if (!window.confirm(`Are you sure you want to delete the ${formatTestLabel(type, module)} result?`)) return;
+        if (!await confirmDialog(`Are you sure you want to delete the ${formatTestLabel(type, module)} result?`)) return;
         try {
             const record = findParticipantTest(participantTests, pId, type, module, courseType);
             await deleteParticipantTest(course.id, pId, record?.testType || getStoredTestType(type, module));
             const refreshPayload = { participantId: pId, deleted: true };
             if (onSaveTest) await onSaveTest(refreshPayload); else onSave(refreshPayload);
         } catch (err) {
-            alert(`Failed to delete: ${err.message}`);
+            notify(`Failed to delete: ${err.message}`);
         }
     };
 
@@ -1775,7 +1776,7 @@ export function CourseTestForm({
     };
 
     const handleDeleteTest = async () => {
-        if (!window.confirm("Are you sure you want to delete this test record?")) return;
+        if (!await confirmDialog("Are you sure you want to delete this test record?")) return;
         setIsSaving(true);
         try {
             const storedType = existingResults[testType]?.testType || getStoredTestType(testType, currentModule);
@@ -2347,7 +2348,7 @@ export function CourseTestForm({
                                         params.set('module', ssnbSubCourse);
                                     }
                                     const link = `${window.location.origin}/public/test/course/${course.id}?${params.toString()}`;
-                                    navigator.clipboard.writeText(link).then(() => alert('Link copied!')).catch(() => alert('Failed to copy.')); 
+                                    navigator.clipboard.writeText(link).then(() => notify('Link copied!')).catch(() => notify('Failed to copy.')); 
                                 }} 
                                 title="Copy link"
                             >

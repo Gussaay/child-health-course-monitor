@@ -4,6 +4,7 @@ import { Button, Card, FormGroup, Input, PageHeader, PdfIcon, Select, Table, Tex
 import { Copy, Image as ImageIcon, Users, BookOpen } from 'lucide-react';
 import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES } from './constants';
+import { notify } from './dialogs';
 import html2canvas from 'html2canvas'; // <-- Added proper import
 
 // --- Shared Utility: Copy as Image ---
@@ -21,22 +22,22 @@ const copyAsImage = async (ref) => {
 
         canvas.toBlob(async (blob) => {
             if (!blob) {
-                alert("Failed to create image blob.");
+                notify("Failed to create image blob.");
                 return;
             }
             try {
                 // Modern Clipboard API requires secure context (HTTPS)
                 const item = new window.ClipboardItem({ 'image/png': blob });
                 await navigator.clipboard.write([item]);
-                alert("Image copied to clipboard!");
+                notify("Image copied to clipboard!");
             } catch (err) {
                 console.error("Clipboard API failed:", err);
-                alert("Failed to copy image. Your browser might require HTTPS or strict permissions.");
+                notify("Failed to copy image. Your browser might require HTTPS or strict permissions.");
             }
         }, 'image/png');
     } catch (err) {
         console.error("HTML2Canvas Error:", err);
-        alert("Failed to generate image.");
+        notify("Failed to generate image.");
     }
 };
 
@@ -75,8 +76,8 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
         ]);
         const tsv = [displayHeaders.join('\t'), ...rows.map(row => row.join('\t'))].join('\n');
         navigator.clipboard.writeText(tsv)
-            .then(() => alert(`Table for ${subCourse} copied as text!`))
-            .catch(err => alert("Failed to copy table."));
+            .then(() => notify(`Table for ${subCourse} copied as text!`))
+            .catch(err => notify("Failed to copy table."));
     };
 
     return (
@@ -137,8 +138,8 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
         const rows = annexFacilitators.map((f, i) => [i + 1, f.name, f.phone, f.qualification]);
         const tsv = [facilitatorHeaders.join('\t'), ...rows.map(row => row.join('\t'))].join('\n');
         navigator.clipboard.writeText(tsv)
-            .then(() => alert("Table copied as text!"))
-            .catch(err => alert("Failed to copy table."));
+            .then(() => notify("Table copied as text!"))
+            .catch(err => notify("Failed to copy table."));
     };
 
     return (

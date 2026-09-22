@@ -3,6 +3,7 @@ import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
+import './chartSetup'; // registers the scales and elements these charts use
 import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Button, Card, EmptyState, FormGroup, Input, PageHeader, Select, Spinner, Table, Textarea, Modal, CardBody, CardFooter, CardHeader } from './CommonComponents';
@@ -28,6 +29,7 @@ import { useDataCache } from '../DataContext';
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './permissions';
 import SudanMap from '../SudanMap'; 
 import { Capacitor } from '@capacitor/core';
+import { notify } from './dialogs';
 
 // --- Helper Functions ---
 const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
@@ -37,10 +39,10 @@ const shareViaWhatsApp = (textToShare, successMessage) => {
         if (Capacitor.isNativePlatform()) {
             window.open(`whatsapp://send?text=${encodeURIComponent(textToShare)}`, '_system');
         } else {
-            alert(successMessage || 'تم النسخ بنجاح!');
+            notify(successMessage || 'تم النسخ بنجاح!');
         }
     }).catch(() => {
-        alert('فشل النسخ. يرجى المحاولة مرة أخرى.');
+        notify('فشل النسخ. يرجى المحاولة مرة أخرى.');
     });
 };
 
@@ -274,7 +276,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
                 setError(`All imported facilitators are already in the system (${duplicates.join(', ')}). Duplicate check applies to Phone and Email.`);
                 return;
             } else {
-                alert(`The following facilitators were skipped because they are duplicates: ${duplicates.join(', ')}`);
+                notify(`The following facilitators were skipped because they are duplicates: ${duplicates.join(', ')}`);
             }
         }
 
@@ -682,7 +684,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
         );
         
         if (isDuplicate) {
-            alert("Cannot approve: A facilitator with this phone number or email already exists in the system. Please reject this submission to avoid duplicates.");
+            notify("Cannot approve: A facilitator with this phone number or email already exists in the system. Please reject this submission to avoid duplicates.");
             return;
         }
 

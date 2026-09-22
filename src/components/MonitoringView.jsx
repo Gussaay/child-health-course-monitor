@@ -42,6 +42,7 @@ import {
 // Visit report, reused for mentor training. The onSaveOverride prop keeps the
 // training copy inside course records instead of the mentorship collection.
 import { IMNCIVisitReport, EENCVisitReport } from './mentorship/VisitReports.jsx';
+import { notify, confirmDialog } from './dialogs';
 
 // The mentorship practice tab now opens the same forms the facility mentorship
 // view opens, for every training rather than only IMNCI and EENC, and saves the
@@ -184,7 +185,7 @@ export function ObservationView({ course, participant, participants, onChangePar
             if (newHash.length > 0) {
                 const duplicateCase = cases.find(c => c.contentHash === newHash);
                 if (duplicateCase) {
-                    const confirmSubmit = window.confirm(
+                    const confirmSubmit = await confirmDialog(
                         `WARNING: This case appears to be an exact duplicate of a case previously submitted on ${duplicateCase.encounter_date} (Serial #${duplicateCase.case_serial}).\n\nAre you sure you want to submit this duplicate case?`
                     );
                     if (!confirmSubmit) return; 
@@ -202,14 +203,14 @@ export function ObservationView({ course, participant, participants, onChangePar
 
             const totalSkills = Object.values(skillsMap || {}).reduce((acc, domain) => acc + domain.length, 0);
             if (entries.length < totalSkills) {
-                alert('Please complete the form before submission');
+                notify('Please complete the form before submission');
                 setIsSaving(false);
                 return;
             }
         }
 
         if (entries.length === 0) { 
-            alert('No skills/classifications selected.'); 
+            notify('No skills/classifications selected.'); 
             setIsSaving(false);
             return; 
         }
@@ -271,14 +272,14 @@ export function ObservationView({ course, participant, participants, onChangePar
             setEditingCase(null);
         } catch (error) {
             console.error("ERROR saving to Firestore:", error);
-            alert(`Failed to save case: ${error.message}`);
+            notify(`Failed to save case: ${error.message}`);
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDeleteCase = async (caseToDelete) => {
-        if (!window.confirm('Delete this case and all its observations? This cannot be undone.')) return;
+        if (!await confirmDialog('Delete this case and all its observations? This cannot be undone.')) return;
 
         // 1. Capture the current state in case we need to revert
         const previousCases = [...cases];
@@ -298,7 +299,7 @@ export function ObservationView({ course, participant, participants, onChangePar
             setCases(previousCases);
             setObservations(previousObservations);
             
-            alert(`Failed to delete case: ${error.message}. The case has been restored in your view.`);
+            notify(`Failed to delete case: ${error.message}. The case has been restored in your view.`);
         }
     };
 
@@ -1598,7 +1599,7 @@ export function LegacyMentorshipMonitoringView({
             setVisibleStep(1);
         } catch (err) {
             console.error('Failed to save mentorship session:', err);
-            alert(`Could not save this session: ${err.message}`);
+            notify(`Could not save this session: ${err.message}`);
         } finally {
             setIsSaving(false);
         }
@@ -1648,7 +1649,7 @@ export function LegacyMentorshipMonitoringView({
     }, []);
 
     const handleDeleteSession = async (caseToDelete) => {
-        if (!window.confirm('Delete this mentorship session and everything recorded in it? This cannot be undone.')) return;
+        if (!await confirmDialog('Delete this mentorship session and everything recorded in it? This cannot be undone.')) return;
 
         const prevCases = [...cases];
         const prevObs = [...observations];
@@ -1661,7 +1662,7 @@ export function LegacyMentorshipMonitoringView({
             console.error('Failed to delete mentorship session:', err);
             setCases(prevCases);
             setObservations(prevObs);
-            alert(`Could not delete this session: ${err.message}. It has been restored in your view.`);
+            notify(`Could not delete this session: ${err.message}. It has been restored in your view.`);
         }
     };
 

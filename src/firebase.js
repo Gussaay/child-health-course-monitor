@@ -59,14 +59,16 @@ function createAuth() {
 }
 export const auth = createAuth();
 
-// DIAGNOSTIC: prints a stack trace every time ANY code calls signOut(auth).
-// If users are logged out and this never prints, the stored session was
-// cleared by the browser/OS, not by your code. Remove once the bug is found.
-const realSignOut = auth.signOut.bind(auth);
-auth.signOut = async (...args) => {
-  console.warn('[Auth] signOut() called from:\n', new Error().stack);
-  return realSignOut(...args);
-};
+// DIAGNOSTIC (development only): prints a stack trace every time any code calls
+// signOut(auth). If users are logged out and this never prints, the stored
+// session was cleared by the browser/OS, not by your code.
+if (import.meta.env.DEV) {
+  const realSignOut = auth.signOut.bind(auth);
+  auth.signOut = async (...args) => {
+    console.warn('[Auth] signOut() called from:\n', new Error().stack);
+    return realSignOut(...args);
+  };
+}
 
 // =========================================================================
 // FIRESTORE

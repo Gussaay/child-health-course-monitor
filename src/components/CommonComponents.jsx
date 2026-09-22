@@ -1,7 +1,4 @@
-import React, { useEffect } from 'react';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+import React, { useEffect, useRef } from 'react';
 
 // =============================================================================
 // Card & Page Layout Components
@@ -238,24 +235,57 @@ export const CourseIcon = ({ course }) => {
 // Overlays & Notifications
 // =============================================================================
 
+// Built on the native <dialog> element, which brings Escape-to-close, focus
+// trapping, focus restore and the backdrop for free — none of which the old
+// div-based modal had. showModal() also makes the rest of the page inert, so
+// background content can no longer be tabbed into or scrolled behind it.
 export function Modal({ isOpen, onClose, title, children }) {
+    const dialogRef = useRef(null);
+
+    useEffect(() => {
+        const node = dialogRef.current;
+        if (!node) return undefined;
+
+        if (isOpen && !node.open) node.showModal();
+        if (!isOpen && node.open) node.close();
+
+        const handleCancel = (event) => {
+            event.preventDefault(); // stop the default close so onClose owns the state
+            onClose?.();
+        };
+        // Clicking the backdrop targets the dialog itself, not its contents.
+        const handleClick = (event) => {
+            if (event.target === node) onClose?.();
+        };
+
+        node.addEventListener('cancel', handleCancel);
+        node.addEventListener('click', handleClick);
+        return () => {
+            node.removeEventListener('cancel', handleCancel);
+            node.removeEventListener('click', handleClick);
+        };
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between p-4 border-b">
-                    <h3 className="text-lg font-semibold">{title}</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-                <div className="p-4">
-                    {children}
-                </div>
+        <dialog
+            ref={dialogRef}
+            aria-labelledby="modal-title"
+            className="max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto rounded-lg bg-white p-0 shadow-xl backdrop:bg-black/50"
+        >
+            <div className="flex items-center justify-between p-4 border-b">
+                <h3 id="modal-title" className="text-lg font-semibold">{title}</h3>
+                <button type="button" onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
-        </div>
+            <div className="p-4">
+                {children}
+            </div>
+        </dialog>
     );
 }
 

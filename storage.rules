@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// =============================================================================
+// NCHP Monitoring — Cloud Storage security rules
+//
+// See the note at the top of firestore.rules: test these before deploying.
+// Limits here must stay in step with validateUpload() in src/data.js, which
+// enforces the same rules client-side so the user gets a useful error instead
+// of a failed upload.
+// =============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function withinSize(megabytes) {
+      return request.resource.size < megabytes * 1024 * 1024;
+    }
+
+    function isImageOrDocument() {
+      return request.resource.contentType.matches('image/(png|jpe?g|webp|gif)')
+          || request.resource.contentType == 'application/pdf';
+    }
+
+    // Attachments from the app: signature images, facility photos, report PDFs.
+    match /uploads/{fileName} {
+      allow read: if true;   // download URLs are unguessable and shared in reports
+      allow write: if signedIn() && withinSize(5) && isImageOrDocument();
+    }
+
+    // APKs published by the deploy workflow. The in-app "Download update"
+    // button fetches these with ?alt=media and no login, so they stay readable.
+    match /apks/{fileName} {
+      allow read: if true;
+      allow write: if false;  // CI writes with a service account, bypassing rules
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

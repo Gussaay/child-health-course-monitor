@@ -15,6 +15,7 @@ import { doc, getDoc } from 'firebase/firestore';
 // Data and cache imports for Auto Fetching
 import { fetchFacilitiesHistoryMultiDate, upsertCourse } from '../data.js';
 import { useDataCache } from '../DataContext';
+import { notify } from './dialogs';
 
 // --- Helper Components ---
 const Select = (props) => <select {...props} className={`border border-gray-300 rounded-md p-2 text-sm w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`}>{props.children}</select>;
@@ -179,7 +180,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
 
         } catch (error) {
             console.error("Error calculating historical coverage:", error);
-            alert("Failed to load historical coverage baseline.");
+            notify("Failed to load historical coverage baseline.");
             setIsCoverageModalOpen(false);
         } finally {
             setIsPreviewLoading(false);
@@ -200,9 +201,9 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
             if (fetchCourses) await fetchCourses(); 
             
             setIsCoverageModalOpen(false);
-            alert("Baseline coverage saved successfully.");
+            notify("Baseline coverage saved successfully.");
         } catch (error) {
-            alert("Failed to save coverage.");
+            notify("Failed to save coverage.");
         } finally {
             setIsSavingCoverage(false);
         }
@@ -758,7 +759,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                                                     ) : isSuperUser ? (
                                                         <div className="flex flex-col gap-1 items-center justify-center">
                                                             <Button size="sm" onClick={() => handleAutoFetchCoverage(c.id)}>Auto Fetch</Button>
-                                                            <Button size="sm" variant="secondary" onClick={() => alert("Please open the Full Course Report to Manually Edit this baseline.")}>Manual</Button>
+                                                            <Button size="sm" variant="secondary" onClick={() => notify("Please open the Full Course Report to Manually Edit this baseline.")}>Manual</Button>
                                                         </div>
                                                     ) : (
                                                         <span className="text-gray-400">N/A</span>

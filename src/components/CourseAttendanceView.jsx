@@ -15,6 +15,7 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { amiriFontBase64 } from './AmiriFont.js';
+import { notify, confirmDialog, promptDialog } from './dialogs';
 
 // --- Helper Functions ---
 
@@ -237,7 +238,7 @@ const generateAttendanceReportPdf = async (course, participants, columns, onSucc
     } catch (error) {
         console.error("Error generating attendance report:", error);
         if (onError) onError("Failed to generate report: " + error.message);
-        else alert("Failed to generate report: " + error.message);
+        else notify("Failed to generate report: " + error.message);
     }
 };
 
@@ -259,7 +260,7 @@ export function AttendanceManagerView({ course, onClose }) {
                 setParticipants(data || []);
             } catch (err) {
                 console.error(err);
-                alert("Failed to load participants.");
+                notify("Failed to load participants.");
             } finally {
                 setLoading(false);
             }
@@ -311,7 +312,7 @@ export function AttendanceManagerView({ course, onClose }) {
             }
         } catch (err) {
             console.error("Failed to update attendance:", err);
-            alert("Failed to save attendance change.");
+            notify("Failed to save attendance change.");
             setParticipants(prev => prev.map(p => 
                 p.id === participant.id ? participant : p 
             ));
@@ -319,7 +320,7 @@ export function AttendanceManagerView({ course, onClose }) {
     };
 
     const handleDeleteDate = async (dateToDelete) => {
-        if (!window.confirm(`Are you sure you want to remove ${dateToDelete}? This will remove attendance records for this date from ALL participants.`)) return;
+        if (!await confirmDialog(`Are you sure you want to remove ${dateToDelete}? This will remove attendance records for this date from ALL participants.`)) return;
         
         setUpdating(true);
         try {
@@ -346,17 +347,17 @@ export function AttendanceManagerView({ course, onClose }) {
 
         } catch (err) {
             console.error(err);
-            alert("Failed to delete date.");
+            notify("Failed to delete date.");
         } finally {
             setUpdating(false);
         }
     };
 
     const handleEditDate = async (oldDate) => {
-        const newDate = window.prompt("Enter new date (YYYY-MM-DD):", oldDate);
+        const newDate = await promptDialog("Enter new date", { title: "Change session date", defaultValue: oldDate, inputType: "date" });
         if (!newDate || newDate === oldDate) return;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
-            alert("Invalid date format. Use YYYY-MM-DD");
+            notify("Invalid date format. Use YYYY-MM-DD");
             return;
         }
 
@@ -383,22 +384,22 @@ export function AttendanceManagerView({ course, onClose }) {
 
         } catch (err) {
             console.error(err);
-            alert("Failed to edit date.");
+            notify("Failed to edit date.");
         } finally {
             setUpdating(false);
         }
     };
 
-    const handleAddColumn = () => {
+    const handleAddColumn = async () => {
         const today = new Date().toISOString().split('T')[0];
-        const newDate = window.prompt("Add new Session Date (YYYY-MM-DD):", today);
+        const newDate = await promptDialog("Session date", { title: "Add a session date", defaultValue: today, inputType: "date" });
         if (newDate) {
             if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
-                alert("Invalid date format.");
+                notify("Invalid date format.");
                 return;
             }
             if (sessionDates.includes(newDate)) {
-                alert("Date already exists.");
+                notify("Date already exists.");
                 return;
             }
             setManualDates(prev => [...prev, newDate]);
@@ -412,8 +413,8 @@ export function AttendanceManagerView({ course, onClose }) {
             course, 
             participants, 
             sessionDates,
-            (msg) => { alert(msg); setIsPdfGenerating(false); },
-            (msg) => { alert(msg); setIsPdfGenerating(false); }
+            (msg) => { notify(msg); setIsPdfGenerating(false); },
+            (msg) => { notify(msg); setIsPdfGenerating(false); }
         );
     };
 
@@ -615,7 +616,7 @@ export function PublicAttendanceView({ courseId }) {
                 return p;
             }));
         } catch (err) {
-            alert("Failed to mark attendance. Please try again.");
+            notify("Failed to mark attendance. Please try again.");
             console.error(err);
         }
     };

@@ -10,6 +10,7 @@ import { amiriFontBase64 } from './AmiriFont.js';
 import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
 import { upsertUnitMeeting, deleteUnitMeeting } from '../data';
 import { useDataCache } from '../DataContext';
+import { promptDialog } from './dialogs';
 import { 
     Users, Baby, Stethoscope, Activity, Package, HeartPulse, 
     Calendar, Edit, Trash2, Plus, Download, UserPlus, BarChart2
@@ -218,8 +219,8 @@ export default function MeetingTrackerView({ permissions }) {
                                 <div className="p-4 border rounded-lg shadow-sm border-l-4 border-l-green-500">
                                     <div className="flex justify-between items-center border-b pb-2 mb-4">
                                         <h4 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-4 h-4"/> Attendance Tracking</h4>
-                                        <Button size="sm" onClick={() => {
-                                            const newDate = window.prompt("Enter new session date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+                                        <Button size="sm" onClick={async () => {
+                                            const newDate = await promptDialog("Session date", { title: "Add a session date", defaultValue: new Date().toISOString().split('T')[0], inputType: "date" });
                                             if (newDate && !activeMeeting.sessionDates?.includes(newDate)) {
                                                 handleUpdateActiveMeeting({ ...activeMeeting, sessionDates: [...(activeMeeting.sessionDates || []), newDate].sort() });
                                             }

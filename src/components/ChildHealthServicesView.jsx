@@ -47,6 +47,16 @@ import {
     SaveStatusModal 
 } from './FacilityForms.jsx';
 import { STATE_LOCALITIES } from "./constants.js";
+import { notify, confirmDialog } from './dialogs';
+
+// MISSING IMPLEMENTATION — generateFacilityListPdf is called below but has never
+// been defined in this file or imported from anywhere, so the facility-list PDF
+// export has always failed. The call sits inside a try/catch, which is why it
+// failed quietly rather than crashing. Restore the real generator here.
+async function generateFacilityListPdf(_facilities, _activeTab, _serviceTypeFilter, _quality, _onSuccess, onError) {
+    onError?.('The facility list PDF export is not available in this build.');
+}
+
 
 const TABS = {
     PENDING: 'Pending Submissions',
@@ -823,8 +833,8 @@ const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted
     const handleSelectionChange = (key) => { setSelectedGroups(prev => ({ ...prev, [key]: !prev[key] })); };
     const handleDeleteSelected = async () => {
         const idsToDelete = []; duplicateGroups.forEach(group => { if (selectedGroups[group.key]) group.duplicates.forEach(d => idsToDelete.push(d.id)); });
-        if (idsToDelete.length === 0) { alert("No duplicates selected for deletion."); return; }
-        if (window.confirm(`Are you sure you want to permanently delete ${idsToDelete.length} duplicate records?`)) { try { await deleteFacilitiesBatch(idsToDelete); alert(`${idsToDelete.length} duplicates deleted successfully.`); onDuplicatesDeleted(); onClose(); } catch (error) { alert(`Failed to delete duplicates: ${error.message}`); } }
+        if (idsToDelete.length === 0) { notify("No duplicates selected for deletion."); return; }
+        if (await confirmDialog(`Are you sure you want to permanently delete ${idsToDelete.length} duplicate records?`)) { try { await deleteFacilitiesBatch(idsToDelete); notify(`${idsToDelete.length} duplicates deleted successfully.`); onDuplicatesDeleted(); onClose(); } catch (error) { notify(`Failed to delete duplicates: ${error.message}`); } }
     };
     const totalDuplicates = duplicateGroups.reduce((acc, group) => acc + group.duplicates.length, 0);
     return (<Modal isOpen={isOpen} onClose={onClose} title="Find & Fix Duplicates"><div className="p-4">{isLoading && <div className="text-center"><Spinner /></div>}{!isLoading && duplicateGroups.length === 0 && <div className="text-center p-4"><EmptyState message="No duplicate facilities found." /></div>}{!isLoading && duplicateGroups.length > 0 && (<div><p className="mb-4 text-sm text-gray-700">Found <strong>{totalDuplicates}</strong> duplicate records across <strong>{duplicateGroups.length}</strong> groups. Uncheck any group you do not want to clean up.</p><div className="space-y-4 max-h-96 overflow-y-auto p-2 border rounded">{duplicateGroups.map(group => (<div key={group.key} className="p-3 border rounded-md bg-gray-50"><div className="flex items-center justify-between mb-2"><h4 className="font-bold text-gray-800">{group.original['اسم_المؤسسة']}<span className="text-sm font-normal text-gray-500 ml-2">({group.original['الولاية']} / {group.original['المحلية']})</span></h4><label className="flex items-center gap-2 cursor-pointer">
@@ -836,12 +846,12 @@ const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted
 const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setToast, cleanupConfig }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
-    const [selectedFieldKey, useStateFieldKey] = useState('');
+    const [selectedFieldKey, setSelectedFieldKey] = useState('');
     const [nonStandardValues, setNonStandardValues] = useState([]);
     const [mappings, setMappings] = useState({});
     const auth = getAuth();
     
-    useEffect(() => { if (!isOpen) { useStateFieldKey(''); } setNonStandardValues([]); setMappings({}); }, [isOpen]);
+    useEffect(() => { if (!isOpen) { setSelectedFieldKey(''); } setNonStandardValues([]); setMappings({}); }, [isOpen]);
     
     useEffect(() => {
         if (selectedFieldKey) {
@@ -917,7 +927,7 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
         }
     };
     
-    const renderSelectionScreen = () => ( <div><FormGroup label="Select a data field to clean"><Select value={selectedFieldKey} onChange={(e) => useStateFieldKey(e.target.value)}><option value="">-- Choose field --</option>{Object.entries(cleanupConfig).map(([key, config]) => ( <option key={key} value={key}>{config.label}</option> ))}</Select></FormGroup></div> );
+    const renderSelectionScreen = () => ( <div><FormGroup label="Select a data field to clean"><Select value={selectedFieldKey} onChange={(e) => setSelectedFieldKey(e.target.value)}><option value="">-- Choose field --</option>{Object.entries(cleanupConfig).map(([key, config]) => ( <option key={key} value={key}>{config.label}</option> ))}</Select></FormGroup></div> );
     
     const renderMappingScreen = () => {
         const config = cleanupConfig[selectedFieldKey];
@@ -966,7 +976,7 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
                     </div> 
                 )}
                 <div className="flex justify-between items-center mt-6">
-                    <Button variant="secondary" onClick={() => useStateFieldKey('')}>Back to Selection</Button>
+                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')}>Back to Selection</Button>
                     <Button onClick={handleApplyFixes} disabled={isUpdating || Object.keys(mappings).length === 0 || nonStandardValues.length === 0}>
                         {isUpdating ? 'Applying Fixes...' : `Apply Fixes for ${Object.keys(mappings).length} Value(s)`}
                     </Button>
@@ -1193,13 +1203,6 @@ const ChildHealthServicesView = ({
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
-    const notify = (message, type = 'info') => {
-        if (setToast) {
-            setToast({ show: true, message, type });
-        } else {
-            alert(message);
-        }
-    };
 
    const handlePdfListGeneration = async (quality) => {
         if (!filteredFacilities || filteredFacilities.length === 0) {
@@ -1625,7 +1628,7 @@ const ChildHealthServicesView = ({
         }
         if (!facility) { setToast({ show: true, message: 'Facility not found or you do not have permission to delete it.', type: 'error' }); return; }
         const confirmMessage = permissions.canApproveSubmissions ? `Are you sure you want to permanently delete "${facility['اسم_المؤسسة']}"? This action cannot be undone.` : `Are you sure you want to request deletion for "${facility['اسم_المؤسسة']}"? This will be sent for approval.`;
-        if (window.confirm(confirmMessage)) {
+        if (await confirmDialog(confirmMessage)) {
             try {
                 if (permissions.canApproveSubmissions) {
                     await deleteHealthFacility(facilityId);
@@ -1697,7 +1700,7 @@ const ChildHealthServicesView = ({
     const handleReject = async (submissionIds, isDeletionRequest = false) => {
         if (!permissions.canApproveSubmissions) return;
         const action = isDeletionRequest ? "deletion request" : "submission";
-        if (window.confirm(`Are you sure you want to reject this ${action}?`)) {
+        if (await confirmDialog(`Are you sure you want to reject this ${action}?`)) {
             try {
                 // --- FIX 5: Safely ensure we don't pass undefined values to rejectDoc ---
                 const idsArray = (Array.isArray(submissionIds) ? submissionIds : [submissionIds]).filter(Boolean);

@@ -1,5 +1,5 @@
 // data.js
-import { db, auth as firebaseAuth } from './firebase'; 
+import { db, auth as firebaseAuth, isOnline } from './firebase';
 import {
     collection,
     query,
@@ -20,11 +20,13 @@ import {
     startAfter,
     deleteField,
     arrayUnion,
-    onSnapshot
+    onSnapshot,
+    waitForPendingWrites
 } from "firebase/firestore";
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { validateUpload, safeFileName, MAX_UPLOAD_BYTES } from './utils/uploadValidation';
 
 // --- USAGE TRACKING VARIABLES ---
 let currentUser = null;
@@ -213,11 +215,32 @@ export const clearPendingSyncQueue = () => {
     window.dispatchEvent(new Event('syncQueueUpdated'));
 };
 
+let drainWatcher = null;
+
+/**
+ * Firestore already tracks unsynced writes; this list only exists so the UI can
+ * name them. It used to be cleared by hand, so it kept showing work that had
+ * finished hours earlier. waitForPendingWrites() resolves once every queued
+ * write has been acknowledged by the server, which is the real "all synced"
+ * signal — so the list now empties itself.
+ */
+const watchForDrain = () => {
+    if (drainWatcher) return;
+    drainWatcher = waitForPendingWrites(db)
+        .then(() => {
+            localStorage.removeItem('cosmetic_sync_queue');
+            window.dispatchEvent(new Event('syncQueueUpdated'));
+        })
+        .catch((e) => console.warn('[sync] waitForPendingWrites failed:', e))
+        .finally(() => { drainWatcher = null; });
+};
+
 const addToPendingQueue = (actionName) => {
     const queue = getPendingSyncQueue();
     queue.push({ name: actionName, type: 'Local Save', time: Date.now() });
     localStorage.setItem('cosmetic_sync_queue', JSON.stringify(queue));
-    window.dispatchEvent(new Event('syncQueueUpdated')); 
+    window.dispatchEvent(new Event('syncQueueUpdated'));
+    watchForDrain();
 };
 
 // --- FIRESTORE WRAPPERS ---
@@ -294,35 +317,46 @@ async function getData(query, sourceOptions = {}) {
     }
 }
 
-// --- UPDATED: OFFLINE-SAFE WRITE HELPER ---
+// --- OFFLINE-SAFE WRITE HELPER ---
+// Uses isOnline() from firebase.js rather than navigator.onLine. navigator.onLine
+// reports that a network exists, not that it reaches anything — it says "online"
+// on captive portals, on mobile data with no balance, and on Wi-Fi with a dead
+// uplink, which is most of what this app runs on. firebase.js probes the real
+// servers and is the only thing here that knows the difference.
 export const executeOfflineSafeWrite = async (writePromise, actionName = 'Data Update') => {
-    if (!navigator.onLine) {
+    if (!isOnline()) {
         addToPendingQueue(actionName);
         writePromise.catch(e => console.error("Offline write later failed:", e));
         return { status: 'queued' };
     }
     let isTimeout = false;
     const timeoutPromise = new Promise(resolve => setTimeout(() => { isTimeout = true; resolve(); }, 4000));
-    
+
     try {
         await Promise.race([writePromise, timeoutPromise]);
         if (isTimeout) {
             addToPendingQueue(actionName);
-            return { status: 'queued' }; 
+            return { status: 'queued' };
         }
         return { status: 'success' };
     } catch (error) {
-        throw error; 
+        throw error;
     }
 };
 
 // --- STORAGE HELPERS ---
+
+export { validateUpload, MAX_UPLOAD_BYTES };
+
 export async function uploadFile(file) {
     if (!file) return null;
-    if (!navigator.onLine) {
+    if (!isOnline()) {
         throw new Error("Cannot upload files while offline. Please connect to the internet to upload PDFs or images.");
     }
-    const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
+    const problem = validateUpload(file);
+    if (problem) throw new Error(problem);
+
+    const storageRef = ref(storage, `uploads/${Date.now()}_${safeFileName(file.name)}`);
     try {
         const snapshot = await uploadBytes(storageRef, file);
         return await getDownloadURL(snapshot.ref);
@@ -1282,9 +1316,13 @@ export async function updateParticipantSharingSettings(participantId, settings) 
 }
 
 export async function importParticipants(participants) {
-    if (!participants || participants.length === 0) return true; 
-    const batch = writeBatch(db); 
-    const phoneCourseSet = new Set(); 
+    if (!participants || participants.length === 0) return true;
+    // Firestore rejects a batch over 500 operations. Validation below runs over
+    // the whole file first so a bad row fails before anything is written, then
+    // the writes go out in chunks like every other importer in this file.
+    const BATCH_SIZE = 490;
+    const writes = [];
+    const phoneCourseSet = new Set();
     const courseId = participants[0]?.courseId;
     if (!courseId) throw new Error("Course ID not found on participants for import.");
     
@@ -1313,14 +1351,21 @@ export async function importParticipants(participants) {
         phoneCourseSet.add(cleanPhone); 
 
         if (participant.id) {
-            const participantRef = doc(db, "participants", participant.id);
-            batch.update(participantRef, { ...participant, lastUpdatedAt: serverTimestamp() });
+            writes.push({ ref: doc(db, "participants", participant.id), data: participant, mode: 'update' });
         } else {
-            const participantRef = doc(collection(db, "participants"));
-            batch.set(participantRef, { ...participant, lastUpdatedAt: serverTimestamp() });
+            writes.push({ ref: doc(collection(db, "participants")), data: participant, mode: 'set' });
         }
     }
-    await batch.commit();
+
+    for (let i = 0; i < writes.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        for (const write of writes.slice(i, i + BATCH_SIZE)) {
+            const payload = { ...write.data, lastUpdatedAt: serverTimestamp() };
+            if (write.mode === 'update') batch.update(write.ref, payload);
+            else batch.set(write.ref, payload);
+        }
+        await batch.commit();
+    }
     return true;
 }
 

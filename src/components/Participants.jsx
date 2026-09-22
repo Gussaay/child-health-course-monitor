@@ -32,6 +32,7 @@ import { useAuth } from '../hooks/useAuth';
 
 // --- Import Certificate Generators ---
 import { generateCertificatePdf, generateAllCertificatesPdf, generateBlankCertificatePdf } from './CertificateGenerator';
+import { confirmDialog } from './dialogs';
 
 
 // ====================================================================
@@ -2112,7 +2113,7 @@ export function ParticipantsView({
 
     const handleDeleteParticipant = async (participantId) => {
         if (!canEditDeleteParticipantActiveCourse && !canEditDeleteParticipantInactiveCourse) return;
-        if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
+        if (await confirmDialog('Are you sure you want to delete this participant and all their data?')) {
             setProcessingRowId(participantId);
             setIsProcessing(true);
             try {
@@ -2877,8 +2878,28 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
     const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
     const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
-    const [selectedFacility, setSelectedFacility] = useState(null); 
+    const [selectedFacility, setSelectedFacility] = useState(null);
     const [isEditingExistingWorker, setIsEditingExistingWorker] = useState(false);
+
+    // Hoisted out of the JSX below, where it sat inside one branch of a ternary.
+    // A hook in a conditional branch changes the hook order when the condition
+    // flips — here, whenever the course type switches between ICCM/CPCM and the
+    // others — and React then throws "rendered fewer hooks than expected",
+    // taking the whole form down mid-entry.
+    const existingStaffOptions = useMemo(() => {
+        const staffField = isEtat ? 'critical_staff'
+            : (isSsnc || course?.course_type === 'IPC') ? 'neonatal_staff'
+            : isEenc ? 'eenc_staff' : 'imnci_staff';
+        if (!selectedFacility?.[staffField]) return [];
+        try {
+            const staff = typeof selectedFacility[staffField] === 'string'
+                ? JSON.parse(selectedFacility[staffField])
+                : selectedFacility[staffField];
+            return Array.isArray(staff) ? staff : [];
+        } catch {
+            return [];
+        }
+    }, [selectedFacility, isEenc, isEtat, isSsnc, course?.course_type]);
     const [isFacilitySearchOpen, setIsFacilitySearchOpen] = useState(false);
 
     const [showNewParticipantForm, setShowNewParticipantForm] = useState(false);
@@ -3459,16 +3480,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                         value={name}
                                         onChange={setName}
                                         onSelect={handleHealthWorkerSelect}
-                                        options={useMemo(() => {
-                                             const staffField = isEtat ? 'critical_staff' : (isSsnc || course?.course_type === 'IPC') ? 'neonatal_staff' : isEenc ? 'eenc_staff' : 'imnci_staff';
-                                             if (!selectedFacility?.[staffField]) return [];
-                                             try {
-                                                 let staff = typeof selectedFacility[staffField] === 'string'
-                                                     ? JSON.parse(selectedFacility[staffField])
-                                                     : selectedFacility[staffField];
-                                                return Array.isArray(staff) ? staff : [];
-                                             } catch (e) { return []; }
-                                         }, [selectedFacility, isEenc, isEtat, isSsnc, course?.course_type])}
+                                        options={existingStaffOptions}
                                         disabled={!selectedFacility || selectedFacility.id.startsWith('pending_') || isSaving} 
                                     />
                                      {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">تعديل بيانات الموظف الحالي.</p>}

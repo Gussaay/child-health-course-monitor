@@ -5,6 +5,7 @@ import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, onSnapsho
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Card, CardBody, Button, Input, FormGroup, Select, Toast, Table, Modal } from './CommonComponents';
 import { Trash2, CheckCircle, Clock, Eye } from 'lucide-react';
+import { confirmDialog } from './dialogs';
 
 export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
     const [users, setUsers] = useState([]);
@@ -122,7 +123,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to permanently delete this notification? It will be removed for all users.")) return;
+        if (!await confirmDialog("Are you sure you want to permanently delete this notification? It will be removed for all users.")) return;
         
         try {
             await deleteDoc(doc(db, 'notifications', id));

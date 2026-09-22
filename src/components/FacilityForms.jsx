@@ -19,6 +19,7 @@ import {
 import {
     STATE_LOCALITIES
 } from "./constants.js";
+import { notify } from './dialogs';
 
 const SERVICE_LABELS = {
     'imnci_staff': 'العلاج المتكامل (IMNCI)',
@@ -241,7 +242,7 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                 } catch (err) {
                     const errorMsg = `خطأ في تحميل بيانات المنشأة: ${err.message}`;
                     setError(errorMsg);
-                    alert(errorMsg);
+                    notify(errorMsg);
                 } finally {
                     setLoading(false);
                 }
@@ -446,7 +447,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             if (!data) {
                 const msg = 'عذراً، تعذر العثور على بيانات هذه المنشأة.';
                 setToast({show: true, message: msg, type: 'error'});
-                alert(msg);
+                notify(msg);
                 return;
             }
             
@@ -470,7 +471,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
         } catch (error) {
             const errorMsg = `حدث خطأ أثناء تحميل بيانات المنشأة: ${error.message}`;
             setToast({ show: true, message: errorMsg, type: 'error' });
-            alert(errorMsg);
+            notify(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -1152,7 +1153,7 @@ export const GenericFacilityForm = React.forwardRef(({
             await onSave({ ...processedData, 'اخر تحديث': new Date().toISOString(), 'updated_by': updaterIdentifier });
         } catch (error) {
             setToast({ show: true, message: `Failed to save facility: ${error.message}`, type: 'error' });
-            alert(`حدث خطأ أثناء الحفظ: ${error.message}`);
+            notify(`حدث خطأ أثناء الحفظ: ${error.message}`);
         } finally {
             setIsLocalSubmitting(false);
             setShowNamePrompt(false); 

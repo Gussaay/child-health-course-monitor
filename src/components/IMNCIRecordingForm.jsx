@@ -11,6 +11,7 @@ import { db } from '../firebase';
 import { serverTimestamp } from 'firebase/firestore';
 import { useDataCache } from '../DataContext';
 import { saveIMNCIPatientRecord } from '../data';
+import { notify } from './dialogs';
 
 // ============================================================================
 // RECORD DETAILS MODAL (VIEW INDIVIDUAL FORM)
@@ -1238,11 +1239,11 @@ export function InfantForm({ selectedState, selectedLocality, selectedFacility, 
     const handleSave = async () => {
         if (trainingCase) { if (!trainingLocked) handleTrainingCheck(); return; }
         if (!selectedState || !selectedLocality || !selectedFacility) {
-            alert(t('imci.common.please_select_facility', 'Please select a facility first.'));
+            notify(t('imci.common.please_select_facility', 'Please select a facility first.'));
             return;
         }
         if (!infantData.childName) {
-            alert(t('imci.common.please_enter_name', 'Please enter the child\'s name.'));
+            notify(t('imci.common.please_enter_name', 'Please enter the child\'s name.'));
             return;
         }
 
@@ -2304,11 +2305,11 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
     const handleSave = async () => {
         if (trainingCase) { if (!trainingLocked) handleTrainingCheck(); return; }
         if (!selectedState || !selectedLocality || !selectedFacility) {
-            alert(t('imci.common.please_select_facility', 'Please select a facility first.'));
+            notify(t('imci.common.please_select_facility', 'Please select a facility first.'));
             return;
         }
         if (!childData.childName) {
-            alert(t('imci.common.please_enter_name', 'Please enter the child\'s name.'));
+            notify(t('imci.common.please_enter_name', 'Please enter the child\'s name.'));
             return;
         }
 
@@ -2817,7 +2818,7 @@ export default function IMNCIRecordingForm() {
 
     const handleNavigation = (view) => {
         if ((view === 'infant' || view === 'child') && !selectedFacility) {
-            alert("الرجاء اختيار المؤسسة الصحية أولاً للبدء في التسجيل.");
+            notify("الرجاء اختيار المؤسسة الصحية أولاً للبدء في التسجيل.");
             return;
         }
         setActiveView(view);

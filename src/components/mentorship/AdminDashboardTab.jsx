@@ -2,6 +2,7 @@
 import React, { useRef, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KpiCard, VolumeLineChart, GeographicVolumeTable, MentorPerformanceTable } from './MentorshipDashboardShared';
+import { notify } from '../dialogs';
 
 /* ============================================================================
    HEALTH WORKER VISITS & INTERVALS
@@ -746,10 +747,10 @@ const AdminDashboardTab = ({
             });
             
             await navigator.clipboard.write([clipboardItem]);
-            alert(t('Table copied successfully! You can now paste it directly into Microsoft Word.'));
+            notify(t('Table copied successfully! You can now paste it directly into Microsoft Word.'));
         } catch (err) {
             console.error('Failed to copy the table: ', err);
-            alert(t('Failed to copy the table. Please check your browser permissions.'));
+            notify(t('Failed to copy the table. Please check your browser permissions.'));
         }
     };
 

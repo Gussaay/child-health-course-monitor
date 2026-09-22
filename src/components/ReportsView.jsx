@@ -32,6 +32,7 @@ import {
     EMONC_TEST_MODULES, MODULE_SHORT_LABELS,
     getTestSections, computeSectionScores, findParticipantTest, alignSectionScores
 } from './CourseTestForm'; 
+import { notify } from './dialogs';
 
 // EmONC test parts: colours used in the report (Part 1 EENC / Part 2 Newborn or Maternal)
 const REPORT_SECTION_STYLES = {
@@ -58,9 +59,6 @@ const PrintIcon = () => (
     </svg>
 );
 
-const notify = (message, type = 'info') => {
-    alert(message);
-};
 
 const saveJsPdfDoc = async (doc, fileName, onSuccess, onError) => {
     try {

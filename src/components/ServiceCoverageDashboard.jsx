@@ -443,13 +443,13 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
 
     const equipmentTableData = useMemo(() => {
         const activeUnits = displayedFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes');
-        const aggK = !!stateFilter ? 'اسم_المؤسسة' : 'الولاية';
+        const aggK = stateFilter ? 'اسم_المؤسسة' : 'الولاية';
         const sum = {};
         activeUnits.forEach(f => {
             const key = f[aggK];
             if (!key || key === 'إتحادي') return;
             if (!sum[key]) sum[key] = { 
-                name: !!stateFilter ? f['اسم_المؤسسة'] : getLocalizedStateName(key, i18n.language), 
+                name: stateFilter ? f['اسم_المؤسسة'] : getLocalizedStateName(key, i18n.language), 
                 key, hasData: false, ...Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k => [k, 0])) 
             };
             NEONATAL_EQUIPMENT_KEYS.forEach(eK => {
@@ -629,7 +629,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     };
 
     const equipmentHeaders = [
-        !!stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName,
+        stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName,
         ...Object.values(NEONATAL_EQUIPMENT_SPEC).map(h => t(`dashboard.equip.${h}`, h))
     ];
 

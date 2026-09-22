@@ -1,0 +1,88 @@
+name: Checks and Preview
+
+# Gives every pull request the same checks as main, plus a real deployed copy of
+# the app on a temporary Firebase Hosting preview URL. Preview channels are free
+# and expire on their own, so a change can be tried on a phone before it reaches
+# anyone using the system for real.
+#
+# Pushes to main still deploy straight to live (see deploy.yml) so the existing
+# release habit is unchanged. To make main go to a preview first instead, set
+# channelId below to `live` here and remove the hosting deploy from deploy.yml.
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: preview-${{ github.head_ref }}
+  cancel-in-progress: true
+
+# The Firebase action posts a "Deploy Preview" check run and a comment with the
+# preview URL. In a pull_request workflow the default GITHUB_TOKEN is read-only
+# unless the workflow asks for more, which is why the first run failed with
+# "Resource not accessible by integration".
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build Web Assets
+        run: npm run build
+
+      # Fails the PR if the first-load payload grows without anyone noticing.
+      # The budget is the current measured size plus room to move; raise it
+      # deliberately, in a commit that explains why.
+      - name: Check first-load payload budget
+        run: |
+          BUDGET_KB=450
+          TOTAL=0
+          for FILE in $(grep -oE '/assets/[^"]+' dist/index.html); do
+            SIZE=$(gzip -c "dist${FILE}" | wc -c)
+            echo "$((SIZE / 1024)) KB  ${FILE}"
+            TOTAL=$((TOTAL + SIZE))
+          done
+          TOTAL_KB=$((TOTAL / 1024))
+          echo "First load: ${TOTAL_KB} KB gzipped (budget ${BUDGET_KB} KB)"
+          if [ "$TOTAL_KB" -gt "$BUDGET_KB" ]; then
+            echo "::error::First-load payload is ${TOTAL_KB} KB, over the ${BUDGET_KB} KB budget."
+            exit 1
+          fi
+
+      # Only runs for PRs from this repository; forks have no access to secrets.
+      #
+      # continue-on-error: a preview URL is a convenience, not a correctness
+      # gate. The checks above are what decide whether this change is safe to
+      # merge, so a problem with the preview infrastructure — a missing secret,
+      # a token permission, a Firebase outage — must not block a good PR.
+      - name: Deploy preview to Firebase Hosting
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}"
+          projectId: "imnci-courses-monitor"
+          expires: 7d

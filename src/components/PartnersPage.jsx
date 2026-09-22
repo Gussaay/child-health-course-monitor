@@ -4,6 +4,7 @@ import { Button, Card, FormGroup, Input, PageHeader, Spinner, Table, Modal, Card
 import { upsertFunder, deleteFunder } from '../data.js';
 import { STATE_LOCALITIES } from './constants.js';
 import { useDataCache } from '../DataContext'; 
+import { confirmDialog } from './dialogs';
 
 export function PartnersPage({ permissions, userStates }) {
     const { 
@@ -77,7 +78,7 @@ export function PartnersPage({ permissions, userStates }) {
 
     const handleDelete = async (id) => {
         if (!canManage) return;
-        if (window.confirm('Are you sure you want to delete this partner?')) {
+        if (await confirmDialog('Are you sure you want to delete this partner?')) {
             await deleteFunder(id);
             await fetchFunders(true); // force=true
         }

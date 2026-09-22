@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/child.png" />
     
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- maximum-scale/user-scalable were removed: blocking pinch-zoom fails WCAG
+         1.4.4 and hurts exactly the people who need it most — anyone reading
+         dense Arabic tables on a small phone. They are usually set to stop iOS
+         zooming when an input is focused, which a 16px input font size fixes
+         instead (see index.css). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0284c7" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
