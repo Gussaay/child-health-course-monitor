@@ -16,7 +16,13 @@ initializeApp();
 // privileged operation cannot accidentally ship without the check — which is
 // exactly how sendFCMNotification below came to accept "broadcast to everyone"
 // from any signed-in account.
-const ADMIN_ROLES = ["super_user", "manager", "federal_manager"];
+//
+// These are the roles src/components/permissions.js actually defines, and they
+// match isManager() in firestore.rules. There is no "manager" role in this
+// system; an earlier version of this list invented one and omitted
+// states_manager, which would have quietly stripped state managers of the
+// admin rights they have today.
+const ADMIN_ROLES = ["super_user", "federal_manager", "states_manager"];
 
 /** Reads the caller's roles from their profile. Never trusts client input. */
 async function getCallerRoles(db, uid) {
