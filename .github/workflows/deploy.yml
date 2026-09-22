@@ -224,7 +224,7 @@ jobs:
           #   gs://imnci-courses-monitor.firebasestorage.app/apks/National_Child_Health_Program_APP_v${{ env.BUILD_VERSION }}.apk \
           #   --add-acl-grant=entity=AllUsers,role=READER
 
-      # --- STEP 5: CLOUD FUNCTIONS AND SECURITY RULES ---
+      # --- STEP 5: CLOUD FUNCTIONS ---
       #
       # These must go out BEFORE the web app, not after.
       #
@@ -234,19 +234,22 @@ jobs:
       # users before the functions did would leave every new sign-up unable to
       # get a profile at all.
       #
-      # Deploying rules here is also what makes the change real: until they are
-      # live, the client-side permission checks are the only thing standing
-      # between a user and someone else's data. The rules tests in the verify
-      # job above are the gate on this step. If a screen breaks after a release,
-      # Firestore keeps every previous ruleset — roll back from the Rules tab in
-      # the Firebase console, which takes effect in seconds.
+      # SECURITY RULES ARE NOT DEPLOYED HERE, on purpose. A rules mistake takes
+      # the whole app down for everyone at once, and the failure looks like
+      # "this screen is empty" rather than an error anyone can act on. They go
+      # out as a separate, deliberate step:
+      #
+      #     npm run test:rules && npm run deploy:rules
+      #
+      # The rules tests still run in the verify job above, so a broken ruleset
+      # fails CI whether or not this pipeline is the thing that ships it.
       #
       # google-github-actions/auth ran above, so GOOGLE_APPLICATION_CREDENTIALS
       # is already set for the CLI.
-      - name: Deploy Cloud Functions and security rules
+      - name: Deploy Cloud Functions
         run: |
           npx --yes firebase-tools@13 deploy \
-            --only functions,firestore:rules,storage \
+            --only functions \
             --project imnci-courses-monitor \
             --non-interactive \
             --force

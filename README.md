@@ -58,7 +58,7 @@ Pushing to `main` runs `.github/workflows/deploy.yml`, which:
 3. Builds the web assets and zips them as a Capgo OTA bundle, with a checksum.
 4. Builds and signs the Android APK, then verifies the signature.
 5. Uploads the APK to Firebase Storage and writes `native-version.json`.
-6. Deploys Cloud Functions and the Firestore/Storage rules.
+6. Deploys Cloud Functions (not the security rules — see below).
 7. Deploys the web app to Firebase Hosting (`live`).
 8. Polls until `update.json` is actually live before telling devices about it.
 9. Records the release in Firestore via `scripts/push-update.js`.
@@ -89,51 +89,55 @@ decide what to *show*; they are not a security boundary and must never be the
 only check.
 
 - A user's roles and permissions live on `users/{uid}`.
-- The client can never write `role`, `roles`, `permissions`, `assignedState` or
-  `assignedLocality` — the rules reject it.
+- The client can never write `role`, `roles`, `permissions`, `assignedState`,
+  `assignedLocality`, `access` or `isAdmin` on its own profile — the rules
+  reject it. Managers can still administer other people exactly as before.
 - New profiles are created by the `createUserProfile` Auth trigger.
 - Roles are changed by the `setUserRoles` callable function, which requires the
-  caller to hold `super_user`, `manager` or `federal_manager`.
+  caller to hold `super_user`, `federal_manager` or `states_manager` — the same
+  set as `isManager()` in the rules. There is no `manager` role.
 
 Permission names and the role presets are defined in
 `src/components/permissions.js`, which is covered by `tests/permissions.test.js`.
 
 ### Deploy order — this matters
 
-A release deploys three things, and the order is not arbitrary. The workflow
-does all of it, in this order:
-
-1. **Cloud Functions and security rules**, then
-2. **the web app**, then
-3. the APK manifest that tells devices a new version exists.
+A release deploys **Cloud Functions first, then the web app**, then the APK
+manifest that tells devices a new version exists. The workflow does that.
 
 The browser no longer creates its own `users/{uid}` document — the
 `createUserProfile` Auth trigger does. A web release that reached users before
 the functions did would leave every new sign-up without a profile, so the
 functions step runs first and a failure there stops the release.
 
-The rules ship in the same step, gated on `npm run test:rules` passing in the
-verify job. If a screen breaks after a release, Firestore keeps every previous
-ruleset: roll back from the Rules tab in the Firebase console, which takes
-effect in seconds.
-
-To deploy either by hand:
+**Security rules are not deployed by the workflow.** A rules mistake takes the
+whole app down for everyone at once, and it shows up as "this screen is empty"
+rather than as an error anyone can act on. They go out deliberately:
 
 ```bash
-npm run deploy:functions
+npm run test:rules     # 34 tests against the Firestore emulator
 npm run deploy:rules
 ```
 
 ### Changing the rules
 
-```bash
-npm run test:rules                      # against the emulator
-firebase deploy --only firestore:rules  # only after the tests pass
-```
+`firestore.rules` is the live ruleset. Treat it that way: start from what is
+deployed and change one thing at a time.
 
-`firestore.rules` is deliberately stricter than what the app historically relied
-on. If a screen breaks after a rules deploy, add the collection it needs
-explicitly rather than widening the catch-all at the bottom of the file.
+A previous version of this file was written from scratch by reading `data.js`
+for collection names. It passed its own tests and would still have broken
+production, because it silently omitted `course_sub_types` and closed public
+paths the app depends on — participant registration, public course reports,
+online exercises, the facility forms. The tests in `tests/rules/` now assert
+those public flows explicitly, so the same mistake fails CI.
+
+If a screen breaks after a rules deploy: **Firebase console → Firestore →
+Rules → version history** and roll back. It takes effect in seconds.
+
+Roles, for reference: `super_user`, `federal_manager`, `states_manager`,
+`locality_manager`, `federal_coordinator`, `state_coordinator`,
+`course_coordinator`, `facilitator`, `user`. `isManager()` in the rules means
+the first three.
 
 ---
 
