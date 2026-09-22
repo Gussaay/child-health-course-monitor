@@ -81,6 +81,30 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # --- STEP 0: CAN THIS RUN ACTUALLY DEPLOY? ---
+      #
+      # Authenticating here rather than just before the APK upload costs
+      # nothing and buys the check below, which asks Google whether the CI
+      # service account holds the permissions the Cloud Functions deploy
+      # needs.
+      #
+      # A release once died on a missing IAM permission at step 5, after a
+      # fifteen-minute Android build and after the signed APK had already
+      # been uploaded to Storage — and the error was a bare 403 from the
+      # Cloud Functions API that named neither the permission nor the
+      # account. Finding that out in the first minute, with the grant
+      # commands printed in the log, is the whole point of this step.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Check deploy permissions
+        run: bash scripts/preflight-deploy-iam.sh imnci-courses-monitor
+
       - name: Set App Version
         run: |
           RUN_ID=${{ github.run_number }}
@@ -202,14 +226,7 @@ jobs:
           cat public/native-version.json
 
       # --- STEP 4: UPLOAD THE APK ---
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
-
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
+      # Google Cloud authentication happened in step 0, so gcloud is ready.
       - name: Upload APK to Firebase Cloud Storage
         run: |
           gcloud storage cp \

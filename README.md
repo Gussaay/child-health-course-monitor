@@ -54,14 +54,17 @@ Pushing to `main` runs `.github/workflows/deploy.yml`, which:
 
 1. **Verifies** — lint, unit tests, and the Firestore rules tests against the
    emulator. A failure here stops the deploy.
-2. Derives a version from the run number and writes it into `package.json`.
-3. Builds the web assets and zips them as a Capgo OTA bundle, with a checksum.
-4. Builds and signs the Android APK, then verifies the signature.
-5. Uploads the APK to Firebase Storage and writes `native-version.json`.
-6. Deploys Cloud Functions (not the security rules — see below).
-7. Deploys the web app to Firebase Hosting (`live`).
-8. Polls until `update.json` is actually live before telling devices about it.
-9. Records the release in Firestore via `scripts/push-update.js`.
+2. **Checks that it can deploy at all** — `scripts/preflight-deploy-iam.sh`
+   asks Google whether the CI service account holds the permissions the Cloud
+   Functions deploy needs, before anything is built. See below.
+3. Derives a version from the run number and writes it into `package.json`.
+4. Builds the web assets and zips them as a Capgo OTA bundle, with a checksum.
+5. Builds and signs the Android APK, then verifies the signature.
+6. Uploads the APK to Firebase Storage and writes `native-version.json`.
+7. Deploys Cloud Functions (not the security rules — see below).
+8. Deploys the web app to Firebase Hosting (`live`).
+9. Polls until `update.json` is actually live before telling devices about it.
+10. Records the release in Firestore via `scripts/push-update.js`.
 
 Pull requests run `.github/workflows/preview.yml`: the same checks, plus a
 first-load payload budget and a deployed preview URL that expires after 7 days.
@@ -78,6 +81,82 @@ A commit message containing `[force-update]` marks the APK as mandatory.
 
 **Never commit the keystore or a service-account key.** Both were committed to
 this repository in the past; `.gitignore` now covers them.
+
+### When the Cloud Functions deploy fails on permissions
+
+`functions/index.js` ships three v2 callables — which are Cloud Run services
+underneath — and one v1 Auth `onCreate` trigger. Deploying that mix touches
+more of Google Cloud than Firebase Hosting does: Cloud Functions, Cloud Run,
+Cloud Build, Artifact Registry, Storage for the uploaded source, and Service
+Usage because the CLI enables APIs as it goes.
+
+The service account behind `FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR`
+needs all of it. When a role is missing the CLI returns a bare 403 that names
+neither the permission nor the account, and — because the functions step used
+to run after the Android build — it cost a full release to find out.
+
+The preflight step now reports exactly what is missing in the first minute of
+the run, and prints the `gcloud` commands that fix it. Run them in
+[Cloud Shell](https://console.cloud.google.com/?cloudshell=true) as a project
+owner, then re-run the workflow.
+
+It fails the run only on permissions that *every* deploy needs. The ones used
+just to create something for the first time — a function that does not exist
+yet, the Artifact Registry repository, the public-invoker binding on a new
+Cloud Run service — are printed as warnings and the deploy continues, because
+a release that only updates existing functions never uses them. The roles it
+checks for:
+
+| Role | Why |
+| --- | --- |
+| `roles/cloudfunctions.admin` | Create and update the functions themselves |
+| `roles/run.admin` | The v2 callables are Cloud Run services |
+| `roles/cloudbuild.builds.editor` | Building the function container |
+| `roles/artifactregistry.admin` | Storing that container |
+| `roles/storage.admin` | Uploading the function source, and the APK |
+| `roles/serviceusage.serviceUsageConsumer` | Enabling the APIs the deploy uses |
+| `roles/firebase.admin` | Reading the project through the Firebase API |
+| `roles/iam.serviceAccountUser` | **On the runtime service accounts**, not on the project |
+
+That last one is the one people miss. A function runs *as* a service account —
+`imnci-courses-monitor@appspot.gserviceaccount.com`, and the project's
+`*-compute@developer.gserviceaccount.com` for v2 — and deploying it requires
+`iam.serviceAccounts.actAs` on that account specifically. No project-level role
+implies it; the binding goes on the service account itself:
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding imnci-courses-monitor@appspot.gserviceaccount.com --member="serviceAccount:<the CI service account>" --role="roles/iam.serviceAccountUser"
+```
+
+The preflight never fails the release on its own uncertainty. If it cannot
+read the policy — the API is down, the account cannot see the project — it
+warns and lets the deploy report the real error.
+
+### The Compute Engine API has to be on
+
+`firebase-tools` 14 runs v2 functions as the project's *compute* default
+service account, `928082473485-compute@developer.gserviceaccount.com`. That
+account is created when the Compute Engine API is first enabled — and on this
+project it never was. `firebase deploy --debug` says so plainly:
+
+```
+unable to look up default compute service account.
+Falling back to 928082473485-compute@developer.gserviceaccount.com
+```
+
+Creating a new v2 function then fails with *"Default service account ...
+doesn't exist"*, which reads like a permission problem and is not one. No IAM
+grant fixes it; the API has to be enabled, which is what provisions the
+account:
+
+```bash
+gcloud services enable compute.googleapis.com --project=imnci-courses-monitor
+```
+
+`listUsers` and `sendFCMNotification` predate this and were deployed under the
+App Engine default account, so they update fine — which is why the problem
+only shows up when a *new* function is added. The preflight now checks that
+the account exists.
 
 ---
 
