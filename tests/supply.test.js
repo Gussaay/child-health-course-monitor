@@ -98,3 +98,42 @@ describe('annualNeed', () => {
         }, null, 50)).toBe(100);
     });
 });
+
+describe('description and indicative price', () => {
+    const SHEET_WITH_PRICE = [
+        ['Category', 'Service', 'Item name', 'Unit', 'Description', 'Indicative price', 'Currency'],
+        ['Drugs & Medicines', 'IMNCI', 'Amoxicillin DT', 'Tablet', 'Blister of 10', '0.05', 'USD'],
+        ['Consumables & Supplies', 'IMNCI', 'Malaria RDT', 'Piece', 'Individually wrapped', '1,250', 'SDG'],
+        ['Equipment & Devices', 'ETAT', 'No price item', 'Piece', 'Nothing quoted', '', ''],
+        ['Drugs & Medicines', 'IMNCI', 'Bad price', 'Tablet', '', 'n/a', 'USD'],
+    ];
+
+    const result = parseSupplyRows(SHEET_WITH_PRICE);
+
+    it('reads the description', () => {
+        expect(result.rows[0].description).toBe('Blister of 10');
+    });
+
+    it('stores the price as a number so a forecast can sum it', () => {
+        expect(result.rows[0].indicativePrice).toBe(0.05);
+    });
+
+    it('strips thousands separators and keeps the stated currency', () => {
+        expect(result.rows[1].indicativePrice).toBe(1250);
+        expect(result.rows[1].currency).toBe('SDG');
+    });
+
+    // A blank price is unknown, not free. Storing 0 would make an item look
+    // costless in any total built from these figures.
+    it('leaves a blank price blank rather than zero', () => {
+        expect(result.rows[2].indicativePrice).toBe('');
+    });
+
+    it('keeps the default currency when the cell is blank', () => {
+        expect(result.rows[2].currency).toBe('USD');
+    });
+
+    it('rejects a price that is not a number', () => {
+        expect(result.rows[3].indicativePrice).toBe('');
+    });
+});

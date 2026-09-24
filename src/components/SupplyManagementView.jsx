@@ -315,6 +315,18 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                             {UNITS_OF_MEASURE.map((u) => <option key={u} value={u}>{u}</option>)}
                         </Select>
 
+                        <Input
+                            label="Indicative price (per unit)"
+                            type="number" min="0" step="any"
+                            value={form.indicativePrice ?? ''}
+                            onChange={(e) => setField('indicativePrice', e.target.value)}
+                            placeholder="e.g. 0.85"
+                        />
+                        <Select label="Currency" value={form.currency || 'USD'}
+                            onChange={(e) => setField('currency', e.target.value)}>
+                            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </Select>
+
                         {isDrug && (
                             <>
                                 <Input
@@ -330,6 +342,14 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                             </>
                         )}
                     </div>
+
+                    <Textarea
+                        label="Description"
+                        rows={2}
+                        value={form.description || ''}
+                        onChange={(e) => setField('description', e.target.value)}
+                        placeholder="Specification, presentation or any detail a procurement officer needs"
+                    />
 
                     <FormGroup label="Required at">
                         <div className="flex flex-wrap gap-4">
@@ -504,6 +524,9 @@ const IMPORT_COLUMNS = [
     { id: 'strength', label: 'Strength', headers: ['strength', 'dose'] },
     { id: 'form', label: 'Form', headers: ['form', 'dosage form'] },
     { id: 'unit', label: 'Unit', headers: ['unit', 'unit of measure', 'uom'] },
+    { id: 'description', label: 'Description', headers: ['description', 'specification', 'details'] },
+    { id: 'indicativePrice', label: 'Indicative price', headers: ['indicative price', 'price', 'unit price', 'unit cost'] },
+    { id: 'currency', label: 'Currency', headers: ['currency', 'ccy'] },
 ];
 
 const normCell = (v) => String(v ?? '').trim();
@@ -574,9 +597,23 @@ export function parseSupplyRows(rows) {
 
         const item = emptySupplyItem(category, service);
         item.name = name;
-        ['nameAr', 'code', 'strength', 'form', 'unit'].forEach((id) => {
+        ['nameAr', 'code', 'strength', 'form', 'unit', 'description'].forEach((id) => {
             if (columns[id] >= 0) item[id] = normCell(row[columns[id]]);
         });
+
+        // A price has to be a number to be summed in a forecast; a blank cell
+        // stays blank rather than becoming 0, which would read as "free".
+        if (columns.indicativePrice >= 0) {
+            const raw = normCell(row[columns.indicativePrice]).replace(/[, ]/g, '');
+            const n = Number(raw);
+            item.indicativePrice = raw !== '' && Number.isFinite(n) && n >= 0 ? n : '';
+        }
+        // Only overwrite the default when the sheet actually says something,
+        // otherwise an empty column would blank the currency on every row.
+        if (columns.currency >= 0) {
+            const ccy = normCell(row[columns.currency]).toUpperCase();
+            if (CURRENCIES.includes(ccy)) item.currency = ccy;
+        }
         parsed.push(item);
     }
 
@@ -596,10 +633,14 @@ export async function downloadSupplyTemplate() {
     const XLSX = await import('xlsx');
     const header = IMPORT_COLUMNS.map((c) => c.label);
     const example = [
-        ['Drugs & Medicines', 'IMNCI', 'Amoxicillin dispersible', 'أموكسيسيلين', 'AMX250', '250 mg', 'Tablet', 'Tablet'],
-        ['Consumables & Supplies', 'IMNCI', 'Malaria RDT', 'اختبار الملاريا السريع', 'RDT01', '', '', 'Piece'],
-        ['Equipment & Devices', 'ETAT', 'Pulse oximeter', 'مقياس التأكسج', 'EQ-POX', '', '', 'Piece'],
-        ['Information Supplies', 'IMNCI', 'IMNCI recording form', 'استمارة تسجيل', 'FRM01', '', '', 'Book'],
+        ['Drugs & Medicines', 'IMNCI', 'Amoxicillin dispersible', 'أموكسيسيلين', 'AMX250', '250 mg', 'Tablet', 'Tablet',
+            'Dispersible tablet, blister of 10', 0.05, 'USD'],
+        ['Consumables & Supplies', 'IMNCI', 'Malaria RDT', 'اختبار الملاريا السريع', 'RDT01', '', '', 'Piece',
+            'Rapid diagnostic test, individually wrapped', 0.35, 'USD'],
+        ['Equipment & Devices', 'ETAT', 'Pulse oximeter', 'مقياس التأكسج', 'EQ-POX', '', '', 'Piece',
+            'Handheld, paediatric probe included', 120, 'USD'],
+        ['Information Supplies', 'IMNCI', 'IMNCI recording form', 'استمارة تسجيل', 'FRM01', '', '', 'Book',
+            'A4, 100 pages per book', 1.2, 'USD'],
     ];
     const ws = XLSX.utils.aoa_to_sheet([header, ...example]);
     ws['!cols'] = IMPORT_COLUMNS.map(() => ({ wch: 24 }));
@@ -610,6 +651,8 @@ export async function downloadSupplyTemplate() {
         [],
         ['Category must be one of', SUPPLY_CATEGORIES.map((c) => c.label).join(' | '), ''],
         ['Service must be one of', SUPPLY_SERVICES.join(' | '), ''],
+        ['Currency must be one of', CURRENCIES.join(' | ') + ' (defaults to USD if blank)', ''],
+        ['Indicative price', 'Per unit, a planning figure only — not a contracted price.', ''],
         [],
         ['', 'Quantification is NOT set here. Imported items get their category default,', ''],
         ['', 'which you then refine on the Quantification tab.', ''],
@@ -869,8 +912,8 @@ export default function SupplyManagementView({ permissions = {} }) {
     const headers = isQuant
         ? ['Item', 'Service', 'Basis', 'Incidence /1000', 'Reach %', 'Units/case',
             'Wastage %', 'Buffer %', ...(canManage ? ['Actions'] : [])]
-        : ['Item', 'Code', isDrugTab ? 'Strength / form' : 'Required at',
-            'Unit', 'Service', 'On list', ...(canManage ? ['Actions'] : [])];
+        : ['Item', 'Description', 'Code', isDrugTab ? 'Strength / form' : 'Required at',
+            'Unit', 'Indicative price', 'Service', ...(canManage ? ['Actions'] : [])];
 
     return (
         <div className="space-y-4">
@@ -985,6 +1028,9 @@ export default function SupplyManagementView({ permissions = {} }) {
                                         </>
                                     ) : (
                                         <>
+                                            <td className="text-gray-600 max-w-xs">
+                                                <span className="line-clamp-2">{item.description || '—'}</span>
+                                            </td>
                                             <td className="text-gray-600">{item.code || '—'}</td>
                                             <td className="text-gray-600">
                                                 {isDrugTab
@@ -997,15 +1043,18 @@ export default function SupplyManagementView({ permissions = {} }) {
                                                         .join(', ') || '—'}
                                             </td>
                                             <td className="text-gray-600">{item.unit || '—'}</td>
+                                            <td className="text-gray-700 whitespace-nowrap">
+                                                {item.indicativePrice === '' || item.indicativePrice == null
+                                                    ? '—'
+                                                    : `${Number(item.indicativePrice).toLocaleString()} ${item.currency || 'USD'}`}
+                                            </td>
                                             <td>
                                                 <span className="px-2 py-1 bg-sky-100 text-sky-800 rounded text-xs">
                                                     {item.service}
                                                 </span>
-                                            </td>
-                                            <td>
-                                                {item.isEssential === false
-                                                    ? <span className="text-gray-400 text-xs">no</span>
-                                                    : <span className="text-green-700 text-xs">yes</span>}
+                                                {item.isEssential === false && (
+                                                    <span className="ml-1 text-gray-400 text-xs">(not on list)</span>
+                                                )}
                                             </td>
                                         </>
                                     )}
