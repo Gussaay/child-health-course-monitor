@@ -811,7 +811,7 @@ const resources = {
       },
       landing: {
         welcome: "Welcome", subtitle: "Select a module to get started", no_permissions: "You do not have permissions to view any modules. Please contact an administrator.",
-        modules: { dashboard: "Dashboard", courses: "Courses", human_resources: "Human Resources", facilities: "Child Health Services", mentorship: "Skills Mentorship", imci: "IMCI Assessment", projects: "Project Tracker", planning: "Master Plan", admin: "Admin", home: "Home" }
+        modules: { dashboard: "Dashboard", courses: "Courses", human_resources: "Human Resources", facilities: "Child Health Services", mentorship: "Skills Mentorship", imci: "IMCI Assessment", projects: "Project Tracker", planning: "Master Plan", supply: "Supply Management", supervision: "Supervision", admin: "Admin", home: "Home" }
       },
       app: {
         title: "National Child Health Program", subtitle: "Program & Course Monitoring System", loading_system: "Loading application, please wait...", offline: "You are offline. Changes are saved locally and will sync when reconnected.", syncing: "Syncing offline data to the cloud...", welcome: "Welcome", logout: "Logout"
@@ -1652,7 +1652,7 @@ const resources = {
       },
       landing: {
         welcome: "مرحباً", subtitle: "اختر الوحدة للبدء", no_permissions: "لا تملك الصلاحيات لعرض أي وحدات. يرجى التواصل مع مسؤول النظام.",
-        modules: { dashboard: "منصة المعلومات", courses: "الدورات", human_resources: "الموارد البشرية", facilities: "خدمات صحة الطفل", mentorship: "الإرشاد السريري", imci: "تقييم IMCI", projects: "متابعة المشاريع", planning: "الخطة الرئيسية", admin: "المدير", home: "الرئيسية" }
+        modules: { dashboard: "منصة المعلومات", courses: "الدورات", human_resources: "الموارد البشرية", facilities: "خدمات صحة الطفل", mentorship: "الإرشاد السريري", imci: "تقييم IMCI", projects: "متابعة المشاريع", planning: "الخطة الرئيسية", supply: "إدارة الإمدادات", supervision: "الإشراف والمتابعة", admin: "المدير", home: "الرئيسية" }
       },
       app: {
         title: "البرنامج القومي لصحة الطفل", subtitle: "نظام متابعة البرامج والدورات", loading_system: "جاري تحميل النظام، يرجى الانتظار...", offline: "أنت غير متصل بالإنترنت. يتم حفظ التغييرات محلياً وستتم مزامنتها عند الاتصال.", syncing: "جاري مزامنة البيانات غير المتصلة مع السحابة...", welcome: "مرحباً", logout: "تسجيل الخروج"

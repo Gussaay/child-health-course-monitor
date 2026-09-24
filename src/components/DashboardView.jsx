@@ -1,5 +1,5 @@
 // src/components/DashboardView.jsx
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
     NeonatalCoverageDashboard, 
@@ -9,6 +9,9 @@ import {
     CriticalCareCoverageDashboard 
 } from "./ServiceCoverageDashboard.jsx";
 import { useDataCache } from '../DataContext';
+
+// The denominators behind every coverage percentage on the other tabs.
+const PopulationDashboard = lazy(() => import('./PopulationView').then((m) => ({ default: m.PopulationDashboard })));
 
 const Button = ({ onClick, children, variant = 'primary', className = '', disabled = false }) => (
     <button onClick={onClick} disabled={disabled} className={`px-4 py-2 rounded-md font-semibold text-sm transition-all shadow-sm focus:outline-none focus:ring-2 flex items-center gap-2 justify-center ${variant === 'primary' ? 'bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 disabled:opacity-50'} ${className}`}>
@@ -67,7 +70,8 @@ function DashboardView({ userStates, userLocalities }) {
                             { id: 'neonatalCoverage', label: t('dashboard.tabs.neonatal', 'Neonatal Care Coverage') },
                             { id: 'eencCoverage', label: t('dashboard.tabs.eenc', 'EENC Coverage') },
                             { id: 'imnciCoverage', label: t('dashboard.tabs.imnci', 'IMNCI Coverage') },
-                            { id: 'criticalCoverage', label: t('dashboard.tabs.critical', 'Emergency & Critical Care') } 
+                            { id: 'criticalCoverage', label: t('dashboard.tabs.critical', 'Emergency & Critical Care') },
+                            { id: 'population', label: t('dashboard.tabs.population', 'Population') }
                         ].map(tab => (
                             <button 
                                 key={tab.id} 
@@ -102,6 +106,9 @@ function DashboardView({ userStates, userLocalities }) {
                     {viewType === 'eencCoverage' && <EENCCoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
                     {viewType === 'imnciCoverage' && <IMNCICoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
                     {viewType === 'criticalCoverage' && <CriticalCareCoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
+                    {viewType === 'population' && (
+                        <Suspense fallback={<Spinner />}><PopulationDashboard /></Suspense>
+                    )}
                 </div>
             )}
         </div>

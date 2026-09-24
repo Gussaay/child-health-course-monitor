@@ -253,16 +253,41 @@ export function Modal({ isOpen, onClose, title, children }) {
             event.preventDefault(); // stop the default close so onClose owns the state
             onClose?.();
         };
-        // Clicking the backdrop targets the dialog itself, not its contents.
-        const handleClick = (event) => {
-            if (event.target === node) onClose?.();
+        // Closing on a backdrop click is decided by POINTER POSITION, not by
+        // event.target, and the press and the release must both be outside.
+        //
+        // event.target is unreliable here because a <dialog> is its own
+        // scrolling box: its scrollbar belongs to the dialog element, so
+        // dragging that scrollbar reports the dialog as the target and used to
+        // close the whole thing mid-scroll. Returning from an operating-system
+        // file picker delivers a stray click reporting the dialog too, which
+        // made <input type="file"> inside a modal unusable.
+        //
+        // The bounding rect includes the scrollbar, so a press anywhere on the
+        // dialog or its scrollbar counts as inside and never closes.
+        const isOutside = (event) => {
+            const r = node.getBoundingClientRect();
+            // A click dispatched without coordinates (keyboard activation,
+            // synthetic events) reports 0,0 and must not be read as a corner click.
+            if (event.clientX === 0 && event.clientY === 0) return false;
+            return event.clientX < r.left || event.clientX > r.right
+                || event.clientY < r.top || event.clientY > r.bottom;
+        };
+
+        let pressedOutside = false;
+        const handleMouseDown = (event) => { pressedOutside = isOutside(event); };
+        const handleMouseUp = (event) => {
+            if (pressedOutside && isOutside(event)) onClose?.();
+            pressedOutside = false;
         };
 
         node.addEventListener('cancel', handleCancel);
-        node.addEventListener('click', handleClick);
+        node.addEventListener('mousedown', handleMouseDown);
+        node.addEventListener('mouseup', handleMouseUp);
         return () => {
             node.removeEventListener('cancel', handleCancel);
-            node.removeEventListener('click', handleClick);
+            node.removeEventListener('mousedown', handleMouseDown);
+            node.removeEventListener('mouseup', handleMouseUp);
         };
     }, [isOpen, onClose]);
 

@@ -47,21 +47,27 @@ async function requireAdmin(db, auth, action) {
 // Without it, one compromised manager account can notify every device in a loop.
 const BROADCAST_LIMIT_PER_HOUR = 20;
 
-async function enforceBroadcastRateLimit(db, uid) {
+// Targeted sends were not limited at all. Sign-up is open to the public, so any
+// stranger with an account could push an unlimited stream of notifications,
+// with a title and body of their choosing, at any uid they could name — and a
+// push notification carries the programme's name and icon, so it is a far more
+// convincing phishing surface than an email would be. The cap is generous
+// enough for the legitimate case (a submitted report notifying its reviewer)
+// and small enough that the channel is not worth abusing.
+const TARGETED_LIMIT_PER_HOUR = 60;
+
+async function enforceSendRateLimit(db, uid, field, limit, message) {
   const ref = db.collection("notificationRateLimits").doc(uid);
   const windowStart = Date.now() - 60 * 60 * 1000;
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const recent = (snap.exists ? snap.data().sentAt || [] : []).filter((ms) => ms > windowStart);
-    if (recent.length >= BROADCAST_LIMIT_PER_HOUR) {
-      throw new HttpsError(
-        "resource-exhausted",
-        "Too many broadcasts in the last hour. Try again later."
-      );
+    const recent = (snap.exists ? snap.data()[field] || [] : []).filter((ms) => ms > windowStart);
+    if (recent.length >= limit) {
+      throw new HttpsError("resource-exhausted", message);
     }
     recent.push(Date.now());
-    tx.set(ref, { sentAt: recent }, { merge: true });
+    tx.set(ref, { [field]: recent }, { merge: true });
   });
 }
 
@@ -93,7 +99,15 @@ exports.sendFCMNotification = onCall(async (request) => {
   const isBroadcast = targetUserId === "all" || targetUserId === "managers_and_super_users";
   if (isBroadcast) {
     await requireAdmin(db, auth, "send notifications to all users");
-    await enforceBroadcastRateLimit(db, senderUid);
+    await enforceSendRateLimit(
+      db, senderUid, "sentAt", BROADCAST_LIMIT_PER_HOUR,
+      "Too many broadcasts in the last hour. Try again later."
+    );
+  } else {
+    await enforceSendRateLimit(
+      db, senderUid, "targetedAt", TARGETED_LIMIT_PER_HOUR,
+      "Too many notifications in the last hour. Try again later."
+    );
   }
 
   try {

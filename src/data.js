@@ -1978,24 +1978,43 @@ export async function repairParticipantScoreFields(updates = []) {
     return fixed;
 }
 
+// Participant documents are writable by anyone — the registration link is
+// public by design — so a name is untrusted input. It used to be interpolated
+// straight into the certificate email body, which meant whoever registered
+// chose part of the HTML the programme then sent out under its own name.
+const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 export const queueCertificateEmail = async (participant, link, language) => {
     if (!participant.email) return { success: false, error: "No email address found for participant." };
 
-    const subject = language === 'ar' 
+    const safeName = escapeHtml(participant.name);
+    // Only the certificate links the app builds itself; anything else would
+    // turn this into a way to mail an arbitrary destination from our domain.
+    if (!/^https:\/\/[^\s"']+$/.test(String(link || ''))) {
+        return { success: false, error: "Refusing to email an unrecognised certificate link." };
+    }
+    const safeLink = escapeHtml(link);
+
+    const subject = language === 'ar'
         ? `شهادة إكمال الدورة - ${participant.name}`
         : `Course Completion Certificate - ${participant.name}`;
 
-    const body = language === 'ar' 
-        ? `<p>عزيزي/عزيزتي <strong>${participant.name}</strong>،</p>
+    const body = language === 'ar'
+        ? `<p>عزيزي/عزيزتي <strong>${safeName}</strong>،</p>
            <p>تهانينا على إكمال الدورة التدريبية.</p>
            <p>يمكنك تحميل شهادتك مباشرة من الرابط أدناه:</p>
-           <p><a href="${link}">اضغط هنا لتحميل الشهادة</a></p>
+           <p><a href="${safeLink}">اضغط هنا لتحميل الشهادة</a></p>
            <br/>
            <p>البرنامج القومي لصحة الطفل</p>`
-        : `<p>Dear <strong>${participant.name}</strong>,</p>
+        : `<p>Dear <strong>${safeName}</strong>,</p>
            <p>Congratulations on completing the training course.</p>
            <p>You can download your certificate directly from the link below:</p>
-           <p><a href="${link}">Click here to download certificate</a></p>
+           <p><a href="${safeLink}">Click here to download certificate</a></p>
            <br/>
            <p>National Child Health Program</p>`;
 
@@ -2015,6 +2034,221 @@ export const queueCertificateEmail = async (participant, link, language) => {
         return { success: false, error: error.message };
     }
 };
+
+// ============================================================================
+// --- SUPERVISION ASSESSMENTS ---
+//
+// One document per facility assessment. The checklist itself is code
+// (SUPERVISION_CHECKLISTS in SupervisionView.jsx), not data: a checklist is a
+// published national form, and versioning it in the repo means an assessment
+// can always be read back against the form it was filled on.
+// ============================================================================
+
+export async function upsertSupervisionAssessment(payload) {
+    if (payload.id) {
+        const docRef = doc(db, "supervisionAssessments", payload.id);
+        const writePromise = fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise, `Assessment: ${payload.facilityName}`);
+        return payload.id;
+    }
+    const { id, ...dataToSave } = payload;
+    const newRef = doc(collection(db, "supervisionAssessments"));
+    const writePromise = fbSetDoc(newRef, {
+        ...dataToSave,
+        createdAt: serverTimestamp(),
+        lastUpdatedAt: serverTimestamp(),
+    });
+    await executeOfflineSafeWrite(writePromise, `Assessment: ${payload.facilityName}`);
+    return newRef.id;
+}
+
+export async function listSupervisionAssessments(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "supervisionAssessments");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching supervision assessments:", error);
+        throw error;
+    }
+}
+
+export async function deleteSupervisionAssessment(assessmentId) {
+    await fbUpdateDoc(doc(db, "supervisionAssessments", assessmentId), {
+        isDeleted: true, lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+// ============================================================================
+// --- POPULATION TARGETS ---
+//
+// Projected denominators by year and locality. The document id is built from
+// the year, state and locality, which makes a re-upload of the same workbook
+// idempotent: the second import overwrites the first rather than doubling every
+// locality. It also means a year's figures can be replaced in place when a
+// projection is revised, without orphaning the old rows.
+//
+// The id has to be sanitised. One real locality is called "As Salam / Ar
+// Rawat", and a forward slash in a document id is a path separator, so
+// Firestore rejected the whole import with "Document references must have an
+// even number of segments". The state and locality are stored as fields as
+// well, so the id only has to be unique and deterministic, not reversible —
+// and across all 191 localities the substitution produces no collisions.
+// ============================================================================
+
+// Characters Firestore forbids or treats specially inside a document id.
+const safeIdPart = (value) => String(value ?? '').replace(/[/\\.#?[\]*]/g, '-').trim();
+
+export const populationTargetId = (year, stateKey, localityKey) =>
+    `${year}__${safeIdPart(stateKey)}__${safeIdPart(localityKey)}`;
+
+export async function upsertPopulationTarget(payload) {
+    const { year, stateKey, localityKey } = payload || {};
+    if (!year || !stateKey || !localityKey) {
+        throw new Error("year, stateKey and localityKey are required.");
+    }
+    const id = populationTargetId(year, stateKey, localityKey);
+    const docRef = doc(db, "populationTargets", id);
+    const writePromise = fbSetDoc(
+        docRef,
+        { ...payload, id, isDeleted: false, lastUpdatedAt: serverTimestamp() },
+        { merge: true }
+    );
+    await executeOfflineSafeWrite(writePromise, `Population: ${stateKey}/${localityKey} ${year}`);
+    return id;
+}
+
+// One batched write per chunk, so importing a 189-row workbook is a handful of
+// round trips rather than 189. Firestore caps a batch at 500 operations.
+//
+// Deliberately NOT executeOfflineSafeWrite. That helper stops waiting after four
+// seconds and reports `queued`, which is the right trade for a single form save
+// but wrong here: a 189-document batch routinely takes longer, so the import
+// reported success, the screen refreshed against the server before the batch had
+// landed, found nothing, and then advanced the delta watermark past the import —
+// after which every later fetch skipped those documents and the table stayed
+// empty for good. An import must know whether it actually committed.
+export async function bulkUpsertPopulationTargets(rows) {
+    const valid = (rows || []).filter(r => r?.year && r?.stateKey && r?.localityKey);
+    if (valid.length === 0) return 0;
+
+    if (!isOnline()) {
+        throw new Error('You appear to be offline. Connect to the internet and import again — nothing was saved.');
+    }
+
+    for (let i = 0; i < valid.length; i += 400) {
+        const batch = writeBatch(db);
+        valid.slice(i, i + 400).forEach((row) => {
+            const id = populationTargetId(row.year, row.stateKey, row.localityKey);
+            batch.set(
+                doc(db, "populationTargets", id),
+                { ...row, id, isDeleted: false, lastUpdatedAt: serverTimestamp() },
+                { merge: true }
+            );
+        });
+        // Awaited to completion. If this rejects the caller reports a real
+        // failure instead of a success the data does not support.
+        await batch.commit();
+    }
+    return valid.length;
+}
+
+export async function listPopulationTargets(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "populationTargets");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching population targets:", error);
+        throw error;
+    }
+}
+
+export async function deletePopulationTarget(targetId) {
+    await fbUpdateDoc(doc(db, "populationTargets", targetId), {
+        isDeleted: true, lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+// ============================================================================
+// --- SUPPLY MANAGEMENT: ESSENTIAL SUPPLY LISTS ---
+//
+// One collection holds all three categories (drugs, equipment, information
+// supplies) rather than three collections. They share every field that matters
+// — service, unit, quantification parameters — and the forecasting and supply
+// chain screens need to read across all three at once, which a single
+// collection does in one query instead of three.
+// ============================================================================
+
+export async function upsertSupplyItem(payload) {
+    if (payload.id) {
+        const docRef = doc(db, "supplyItems", payload.id);
+        const writePromise = fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise, `Supply item: ${payload.name}`);
+        return payload.id;
+    }
+    const { id, ...dataToSave } = payload;
+    const newRef = doc(collection(db, "supplyItems"));
+    const writePromise = fbSetDoc(newRef, {
+        ...dataToSave,
+        createdAt: serverTimestamp(),
+        lastUpdatedAt: serverTimestamp(),
+    });
+    await executeOfflineSafeWrite(writePromise, `Supply item: ${payload.name}`);
+    return newRef.id;
+}
+
+// Same reasoning as bulkUpsertPopulationTargets: awaited to completion rather
+// than run through executeOfflineSafeWrite, so an import cannot report success
+// for a batch that has not landed.
+export async function bulkUpsertSupplyItems(items) {
+    const valid = (items || []).filter(i => i?.name && i?.category && i?.service);
+    if (valid.length === 0) return 0;
+
+    if (!isOnline()) {
+        throw new Error('You appear to be offline. Connect to the internet and import again — nothing was saved.');
+    }
+
+    for (let i = 0; i < valid.length; i += 400) {
+        const batch = writeBatch(db);
+        valid.slice(i, i + 400).forEach((item) => {
+            const ref = doc(collection(db, "supplyItems"));
+            batch.set(ref, {
+                ...item, isDeleted: false,
+                createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
+            });
+        });
+        await batch.commit();
+    }
+    return valid.length;
+}
+
+export async function listSupplyItems(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "supplyItems");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching supply items:", error);
+        throw error;
+    }
+}
+
+export async function deleteSupplyItem(itemId) {
+    await fbUpdateDoc(doc(db, "supplyItems", itemId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    return true;
+}
 
 // --- PROJECT TRACKER ---
 export async function upsertProject(payload) {

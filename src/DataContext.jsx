@@ -24,6 +24,9 @@ import {
     listOperationalPlans,
     listUnitMeetings,
     listIMNCIPatientRecords,
+    listSupplyItems,
+    listPopulationTargets,
+    listSupervisionAssessments,
     fetchFacilitiesHistoryMultiDate, 
     listSnapshotsForFacility,
     getAboutTeamImages 
@@ -183,6 +186,9 @@ export const DataProvider = ({ children }) => {
         masterPlans: null,
         operationalPlans: null,
         unitMeetings: null,
+        supplyItems: null,
+        populationTargets: null,
+        supervisionAssessments: null,
         aboutTeamImages: null, 
     });
 
@@ -206,6 +212,9 @@ export const DataProvider = ({ children }) => {
         masterPlans: true,
         operationalPlans: true,
         unitMeetings: true,
+        supplyItems: true,
+        populationTargets: true,
+        supervisionAssessments: true,
         aboutTeamImages: true, 
     });
     
@@ -517,6 +526,9 @@ export const DataProvider = ({ children }) => {
         fetchMasterPlans: createFetcher('masterPlans', (opts, lastSync) => listMasterPlans(opts, lastSync)),
         fetchOperationalPlans: createFetcher('operationalPlans', (opts, lastSync) => listOperationalPlans(opts, lastSync)),
         fetchUnitMeetings: createFetcher('unitMeetings', (opts, lastSync) => listUnitMeetings(opts, lastSync)),
+        fetchSupplyItems: createFetcher('supplyItems', (opts, lastSync) => listSupplyItems(opts, lastSync)),
+        fetchPopulationTargets: createFetcher('populationTargets', (opts, lastSync) => listPopulationTargets(opts, lastSync)),
+        fetchSupervisionAssessments: createFetcher('supervisionAssessments', (opts, lastSync) => listSupervisionAssessments(opts, lastSync)),
         
         fetchAboutTeamImages: createFetcher('aboutTeamImages', (opts) => getAboutTeamImages(opts)),
     }), [createFetcher]);

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -67,6 +67,8 @@ const NewFacilityEntryForm = lazy(() => import('./components/FacilityForms.jsx')
 const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMentorshipView.jsx'));
 
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
+const SupplyManagementView = lazy(() => import('./components/SupplyManagementView'));
+const SupervisionView = lazy(() => import('./components/SupervisionView'));
 const MeetingTrackerView = lazy(() => import('./components/MeetingTrackerView'));
 
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
@@ -318,6 +320,8 @@ function Landing({ navigate, permissions }) {
         { label: 'Meeting Tracker', view: 'meetings', icon: Users, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
+        { label: t('landing.modules.supply', 'Supply Management'), view: 'supplyManagement', icon: Package, permission: permissions.canViewSupplyChain },
+        { label: t('landing.modules.supervision', 'Supervision'), view: 'supervision', icon: ClipboardCheck, permission: permissions.canViewSupervision },
         { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
@@ -1431,6 +1435,8 @@ export default function App() {
 
 
  'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
+            'supplyManagement': permissions.canViewSupplyChain,
+            'supervision': permissions.canViewSupervision,
             'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
 
@@ -1459,9 +1465,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'downloads', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
@@ -1738,6 +1744,12 @@ export default function App() {
                 return permissions.canViewSkillsMentorship ? (
                     <SkillsMentorshipView setToast={setToast} permissions={permissions} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
                 ) : null;
+
+           case 'supplyManagement':
+    return permissions.canViewSupplyChain ? ( <Suspense fallback={<Spinner />}><SupplyManagementView permissions={permissions} /></Suspense> ) : null;
+
+           case 'supervision':
+    return permissions.canViewSupervision ? ( <Suspense fallback={<Spinner />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
 
            case 'projects':
     return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><ProjectTrackerView permissions={permissions} /></Suspense> ) : null;

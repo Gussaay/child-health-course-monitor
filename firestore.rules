@@ -3,16 +3,30 @@ rules_version = '2';
 // =============================================================================
 // NCHP Monitoring — Firestore security rules
 //
-// This file is the LIVE production ruleset with one change: the `users`
-// collection no longer lets a signed-in account grant itself privileges.
-// Everything else — including every public read and every unauthenticated
-// form — is byte-for-byte what was already deployed and working.
+// Derived from the LIVE production ruleset. The public paths the app genuinely
+// depends on — participant registration, public course reports, online
+// exercises, the sub-course catalogue — are unchanged and covered by tests,
+// because an earlier rewrite of this file guessed at them from src/data.js and
+// silently broke them. Rules are not a place to guess.
 //
-// That restraint is deliberate. An earlier version of this file was written
-// from scratch by reading src/data.js, and it silently dropped collections the
-// app uses (course_sub_types) and closed public paths the app depends on
-// (participant registration, public course reports, online exercises). Rules
-// are not a place to guess: start from what is deployed and change one thing.
+// Changes since that ruleset, each one traced to the code that proves it safe:
+//
+//   * users/{uid} — a signed-in account cannot grant itself privileges, and
+//     only a super user can grant super_user.
+//   * isStaff() — sign-up is open to the public, so `request.auth != null` on
+//     a write rule meant "anyone on the internet". Programme data now needs a
+//     real role.
+//   * imnciPatientRecords — was world-readable. It holds children's names and
+//     clinical classifications.
+//   * mail/{id} — was an open relay through the Trigger Email extension.
+//   * exerciseAttempts — an anonymous caller could rewrite another learner's
+//     score, which feeds certificates.
+//   * unitMeetings — the anonymous link marks attendance and nothing else.
+//
+// KNOWN AND ACCEPTED: /participants is publicly readable and writable. It
+// carries health workers' names, phones and emails. Closing it would put a
+// sign-in in front of the registration and certificate links that courses are
+// run on, so it was left open deliberately. See the note on that match block.
 //
 // Testing:  npm run test:rules   (Firestore emulator, tests/rules/)
 // Rollback: Firebase console → Firestore → Rules → version history.
@@ -50,6 +64,36 @@ service cloud.firestore {
       return doc.role == 'locality_manager' || (doc.roles != null && 'locality_manager' in doc.roles);
     }
 
+    // Anyone holding a real job in the programme, as opposed to a brand-new
+    // account. Sign-up is open to the public (auth-ui.jsx calls
+    // createUserWithEmailAndPassword with no invite or domain check) and
+    // createUserProfile gives every new account role 'user', so
+    // `request.auth != null` on a write rule meant "anyone on the internet who
+    // filled in a sign-up form". This is the allowlist of roles that actually
+    // administer data; 'user' is deliberately absent.
+    //
+    // It is an allowlist rather than `role != 'user'` so that an unrecognised
+    // or misspelled role fails closed instead of inheriting write access.
+    function staffRoles() {
+      return ['super_user', 'federal_manager', 'states_manager', 'locality_manager',
+              'federal_coordinator', 'facilitator', 'state_coordinator', 'course_coordinator'];
+    }
+
+    // The request.auth check is not redundant: without it an anonymous caller
+    // makes getUserDoc() read users/null, which raises an evaluation error
+    // rather than returning false. That still denies, but it denies by
+    // crashing, it costs a document read on every anonymous write attempt, and
+    // it buries the real reason in the emulator log.
+    function isStaff() {
+      return request.auth != null && hasStaffRole();
+    }
+
+    function hasStaffRole() {
+      let doc = getUserDoc();
+      return (doc.roles != null && doc.roles.hasAny(staffRoles()))
+             || (doc.roles == null && doc.role in staffRoles());
+    }
+
     // Who may edit the sub-course catalogue. Deliberately NOT isManager():
     // that also admits states_manager, but the UI only shows the sub-course
     // tools to federal managers and super users. Keeping the two in sync means
@@ -85,29 +129,79 @@ service cloud.firestore {
 
     match /federalCoordinators/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isStaff();
     }
 
     match /facilitators/{facilitatorId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isStaff();
     }
 
     match /stateCoordinators/{docId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if isStaff();
     }
     match /localityCoordinators/{docId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if isStaff();
     }
     match /coordinators/{coordinatorId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if isStaff();
     }
     match /funders/{funderId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if isStaff();
     }
 
     match /skillMentorship/{mentorshipId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if isStaff();
+    }
+
+    // =========================================================================
+    // --- SUPERVISION ASSESSMENTS ---
+    //
+    // Facility assessments carried out by federal, state and locality managers.
+    // Staff read them because the findings drive follow-up across the
+    // programme; only the managers who supervise may write them, which is what
+    // isManager() plus isLocalityManager() already means elsewhere in this file.
+    // =========================================================================
+    match /supervisionAssessments/{assessmentId} {
+      allow read: if isStaff();
+      allow write: if request.auth != null && (isManager() || isLocalityManager());
+    }
+
+    // =========================================================================
+    // --- POPULATION TARGETS ---
+    //
+    // Projected denominators by year and locality. Read is open to any
+    // signed-in user because coverage figures throughout the app divide by
+    // them and a state needs to see its own. Writing is federal: these are the
+    // national projections, and a locality revising its own denominator would
+    // silently change its own reported coverage.
+    // =========================================================================
+    match /populationTargets/{targetId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isSubCourseEditor();
+    }
+
+    // =========================================================================
+    // --- SUPPLY MANAGEMENT ---
+    //
+    // The essential supply lists decide what every service is expected to have
+    // in stock, and their quantification parameters drive the national
+    // forecast, so writing them is a federal decision. isSubCourseEditor() is
+    // the existing helper for "federal manager or super user" and is reused
+    // here rather than adding a second spelling of the same rule — but note it
+    // deliberately excludes states_manager, which isManager() would admit.
+    //
+    // Read is open to any signed-in user: a state or locality needs to see the
+    // list it is expected to stock against.
+    // =========================================================================
+    match /supplyItems/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isSubCourseEditor();
     }
 
     // --- PROJECT TRACKER, MASTER PLAN, OPERATIONAL PLANS & MEETINGS ---
@@ -126,19 +220,35 @@ service cloud.firestore {
       allow write: if request.auth != null && (isManager() || isLocalityManager());
     }
 
+    // The /public/meeting/{id} link lets an invitee mark their own attendance
+    // without signing in, which is why update was `if true`. That also let any
+    // passer-by rewrite the title, the invitee list or the session dates of
+    // any meeting. The anonymous path is now narrowed to the one field that
+    // screen actually changes; everything else needs a manager.
+    //
+    // upsertUnitMeeting() merges the whole meeting object back, but
+    // affectedKeys() only reports keys whose value really changed, so an
+    // unmodified field does not trip this.
     match /unitMeetings/{meetingId} {
       allow read: if true;
-      allow update: if true;
+      allow update: if (request.auth != null && isManager())
+                    || request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['attendance', 'lastUpdatedAt']);
       allow create, delete: if request.auth != null && isManager();
     }
 
     // --- IMNCI & EENC Visit Reports ---
+    //
+    // Mentorship reports name the facility, the mentor and the providers
+    // assessed. Adding one needs canAddMentorshipVisit and reading them needs
+    // canViewSkillsMentorship, neither of which the default 'user' role has, so
+    // `request.auth != null` was wider than the interface it backs.
     match /imnciVisitReports/{reportId} {
       function isOwner() {
         return request.auth.token.email == resource.data.mentorEmail;
       }
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
+      allow create: if isStaff();
+      allow read: if isStaff();
       allow update, delete: if request.auth != null && (isOwner() || isManager());
     }
 
@@ -146,17 +256,27 @@ service cloud.firestore {
       function isOwner() {
         return request.auth.token.email == resource.data.mentorEmail;
       }
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
+      allow create: if isStaff();
+      allow read: if isStaff();
       allow update, delete: if request.auth != null && (isOwner() || isManager());
     }
 
     // =========================================================================
-    // --- NEW: IMNCI Patient Records (From the clinical form) ---
+    // --- IMNCI Patient Records (From the clinical form) ---
+    //
+    // These documents carry childName alongside the IMNCI assessment and
+    // classification — identifiable clinical data about children. Both read and
+    // create were `if true`, so the whole collection could be downloaded by
+    // anyone who knew the project id, which ships in the client bundle.
+    //
+    // There is no public form behind this. IMNCIRecordingForm is only ever
+    // rendered from App.jsx for a signed-in user holding canViewCourse, and
+    // saveIMNCIPatientRecord in src/data.js has no other caller. The old
+    // comment describing a "public form" did not match the application.
     match /imnciPatientRecords/{recordId} {
-      allow create: if true; // Allows public forms to save data
-      allow read: if true;   // Allows dashboards to fetch the data
-      allow update, delete: if request.auth != null;
+      allow create: if isStaff();
+      allow read: if request.auth != null;
+      allow update, delete: if isStaff();
     }
     // =========================================================================
 
@@ -175,34 +295,40 @@ service cloud.firestore {
       allow create: if true;
       allow read, update: if request.auth != null && isManager();
     }
+    // Submission queues hold applicants' names, phones and emails, and
+    // approving one creates a real coordinator or facilitator record. Reading
+    // and acting on the queue is staff work, not something a fresh sign-up
+    // should reach.
     match /coordinatorSubmissions/{docId} {
       allow create: if request.resource.data.name is string && request.resource.data.email is string && request.resource.data.status == 'pending';
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isStaff();
     }
     match /federalCoordinatorSubmissions/{docId} {
       allow create: if request.resource.data.name is string && request.resource.data.email is string && request.resource.data.status == 'pending';
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isStaff();
     }
     match /localityCoordinatorSubmissions/{docId} {
       allow create: if request.resource.data.name is string && request.resource.data.email is string && request.resource.data.status == 'pending';
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isStaff();
     }
     match /facilitatorSubmissions/{submissionId} {
       allow create: if request.resource.data.name is string && request.resource.data.phone is string && request.resource.data.email is string && request.resource.data.status == 'pending';
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isStaff();
     }
 
     // --- Application Settings ---
+    // The anonymous branch is the app-open counter and stays. The signed-in
+    // branch is what configures the application for everyone, so it is staff.
     match /appSettings/{docId} {
       allow read: if true;
-      allow write: if request.auth != null || (
+      allow write: if isStaff() || (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['openCount']) &&
           request.resource.data.openCount == resource.data.openCount + 1
         );
     }
     match /settings/{docId} {
       allow read: if true;
-      allow write: if request.auth != null || (
+      allow write: if isStaff() || (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['openCount']) &&
           request.resource.data.openCount == resource.data.openCount + 1
         );
@@ -212,7 +338,7 @@ service cloud.firestore {
 
     match /courses/{courseId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isStaff();
     }
 
     // =========================================================================
@@ -254,30 +380,38 @@ service cloud.firestore {
     }
     // =========================================================================
 
+    // ACCEPTED RISK, decided deliberately: read, create and update stay open.
+    // These documents hold health workers' names, phone numbers and emails, and
+    // anyone can query the collection. Closing it would require sign-in on the
+    // public registration, shared-report and certificate links, which is how
+    // courses are actually run in the field, so the exposure is accepted rather
+    // than overlooked. Revisit together with App Check, which would at least
+    // bind this surface to the real app.
     match /participants/{participantId} {
       allow read: if true;
       allow create: if true;
       allow update: if true;
-      allow delete: if request.auth != null;
+      allow delete: if isStaff();
     }
 
     match /observations/{observationId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
-      allow write: if request.auth != null;
+      allow write: if isStaff();
     }
     match /cases/{caseId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
-      allow write: if request.auth != null;
+      allow write: if isStaff();
     }
     match /finalReports/{reportId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
-      allow write: if request.auth != null;
+      allow write: if isStaff();
     }
 
+    // Create stays public: participants sit tests from an unauthenticated link.
     match /participantTests/{testRecordId} {
       allow read: if true;
       allow create: if true;
-      allow update, delete: if request.auth != null;
+      allow update, delete: if isStaff();
     }
 
     // =========================================================================
@@ -291,20 +425,36 @@ service cloud.firestore {
     match /exerciseAttempts/{attemptId} {
       allow read: if true;
 
-      allow create, update: if
-           request.resource.data.courseId is string
-        && request.resource.data.participantId is string
-        && request.resource.data.exerciseId is string
-        && request.resource.data.attemptNo is int
-        && request.resource.data.percent is number
-        && request.resource.data.percent >= 0
-        && request.resource.data.percent <= 100
-        && attemptId == request.resource.data.courseId + '__' +
-                        request.resource.data.participantId + '__' +
-                        request.resource.data.exerciseId + '__' +
-                        string(request.resource.data.attemptNo);
+      function wellFormed() {
+        return request.resource.data.courseId is string
+          && request.resource.data.participantId is string
+          && request.resource.data.exerciseId is string
+          && request.resource.data.attemptNo is int
+          && request.resource.data.percent is number
+          && request.resource.data.percent >= 0
+          && request.resource.data.percent <= 100
+          && attemptId == request.resource.data.courseId + '__' +
+                          request.resource.data.participantId + '__' +
+                          request.resource.data.exerciseId + '__' +
+                          string(request.resource.data.attemptNo);
+      }
 
-      allow delete: if request.auth != null;
+      allow create: if wellFormed();
+
+      // The id check above only proves a document is internally consistent, not
+      // that the person writing it owns the attempt. With update also open,
+      // anyone could recompute another learner's attempt id and overwrite their
+      // score — and these scores feed certificates.
+      //
+      // Update stays anonymous purely so the offline queue can replay its own
+      // setDoc after reconnect (see the deterministic-id note in src/data.js),
+      // so it is allowed only when it does not move the mark. Re-sitting an
+      // exercise writes a new document with the next attemptNo, which is a
+      // create, so genuine retries are unaffected.
+      allow update: if (wellFormed() && request.resource.data.percent == resource.data.percent)
+        || isStaff();
+
+      allow delete: if isStaff();
     }
     // =========================================================================
 
@@ -315,7 +465,7 @@ service cloud.firestore {
     // =========================================================================
     match /exerciseDefinitions/{exerciseId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null;
+      allow create, update, delete: if isStaff();
     }
     // =========================================================================
 
@@ -324,8 +474,20 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if request.auth != null;
 
-      // Allow public users to trigger/send a notification (required for unauthenticated forms)
-      allow create: if true;
+      // Was `if true`, described as "required for unauthenticated forms". No
+      // such form exists: every caller of addDoc(collection(db,
+      // 'notifications')) sits behind a screen that App.jsx renders only for a
+      // signed-in user, and FacilityForms.jsx guards its own call with
+      // `if (currentUser)`. Anonymous create bought nothing and let anyone fill
+      // every manager's notification tray.
+      //
+      // Not isStaff(): submitting a facility update is something a plain
+      // account legitimately does, and that submission notifies the reviewers.
+      allow create: if request.auth != null
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 2000;
 
       // Keep modifications and deletions restricted to managers
       allow update, delete: if request.auth != null && isManager();
@@ -335,9 +497,27 @@ service cloud.firestore {
     // =========================================================================
     // --- Email Queue ---
     // =========================================================================
+    // A document here is picked up by the Trigger Email extension and delivered
+    // from the programme's verified sender address, with whatever `to`,
+    // `subject` and `html` it contains. `request.auth != null` therefore meant
+    // that anyone who signed themselves up could send mail as the National
+    // Child Health Program — a phishing channel with the organisation's own
+    // reputation behind it.
+    //
+    // Restricted to staff and to the one shape sendCertificateEmail writes, so
+    // a compromised staff account cannot queue arbitrary attachments, headers
+    // or bcc lists either.
     match /mail/{docId} {
-      // Allows authenticated users to queue emails for sending certificates
-      allow create: if request.auth != null;
+      allow create: if isStaff()
+        && request.resource.data.keys().hasOnly(['to', 'message'])
+        && request.resource.data.to is string
+        && request.resource.data.to.size() <= 320
+        && request.resource.data.message.keys().hasOnly(['subject', 'html'])
+        && request.resource.data.message.subject is string
+        && request.resource.data.message.subject.size() <= 200
+        && request.resource.data.message.html is string
+        && request.resource.data.message.html.size() <= 20000;
+
       // Prevents users from reading, updating, or deleting queued emails
       allow read, update, delete: if false;
     }
@@ -358,13 +538,34 @@ service cloud.firestore {
     // unaffected and can still administer other people exactly as before; the
     // createUserProfile and setUserRoles Cloud Functions use the Admin SDK and
     // bypass rules entirely.
+    // A second gap, below the one described above: managers may administer
+    // other people's profiles, and nothing stopped a manager writing
+    // role: 'super_user' onto a second account and signing into it. The
+    // setUserRoles Cloud Function refuses to do that, but AdminDashboard.jsx
+    // never calls it — it writes users/{uid} straight from the browser, so the
+    // function's guards were never in the path.
+    //
+    // Super user is the role that can rewrite meta/update_config, which decides
+    // the APK URL every device downloads, so granting it has to stay with the
+    // people who already hold it.
+    function grantsSuperUser() {
+      return request.resource.data.get('role', '') == 'super_user'
+             || ('super_user' in request.resource.data.get('roles', []));
+    }
+
+    function alreadySuperUser() {
+      return resource.data.get('role', '') == 'super_user'
+             || ('super_user' in resource.data.get('roles', []));
+    }
+
     match /users/{userId} {
       allow create: if request.auth != null && request.auth.uid == userId
                     && writesNoPrivilegedFields();
 
       allow read: if request.auth.uid == userId || (request.auth != null && isManager());
 
-      allow update: if (request.auth != null && isManager())
+      allow update: if (request.auth != null && isManager()
+                        && (isSuperUser() || !grantsSuperUser() || alreadySuperUser()))
                     || (request.auth.uid == userId && privilegedFieldsUnchanged());
     }
 

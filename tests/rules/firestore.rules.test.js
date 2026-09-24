@@ -4,7 +4,7 @@ import {
     assertFails,
     assertSucceeds,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
 import fs from 'node:fs';
 
 // Run with:  npm run test:rules   (starts the Firestore emulator around them)
@@ -189,10 +189,6 @@ describe('public flows still work', () => {
         }));
     });
 
-    it('lets an anonymous visitor read the clinical record form data', async () => {
-        await assertSucceeds(setDoc(doc(anonymous(), 'imnciPatientRecords', 'r1'), { age: 3 }));
-    });
-
     it('lets an anonymous visitor increment the application open counter', async () => {
         await assertSucceeds(updateDoc(doc(anonymous(), 'appSettings', 'facilitatorApplication'), {
             openCount: 6,
@@ -236,5 +232,320 @@ describe('existing restrictions are preserved', () => {
     it('only a manager may write health facilities', async () => {
         await assertSucceeds(setDoc(doc(as('statesManager'), 'healthFacilities', 'f1'), { name: 'X' }));
         await assertFails(setDoc(doc(as('plainUser'), 'healthFacilities', 'f2'), { name: 'Y' }));
+    });
+});
+
+// =============================================================================
+// Supervision assessments.
+// =============================================================================
+describe('supervisionAssessments — supervising managers write, staff read', () => {
+    const assessment = {
+        checklistId: 'nicu_coe', facilityName: 'Test Hospital',
+        stateKey: 'Gezira', status: 'draft', responses: {},
+    };
+
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'supervisionAssessments', 'a1'), assessment);
+        });
+    });
+
+    it('lets the managers who supervise write an assessment', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'supervisionAssessments', 'a2'), assessment));
+        await assertSucceeds(setDoc(doc(as('statesManager'), 'supervisionAssessments', 'a3'), assessment));
+    });
+
+    it('lets staff read the findings', async () => {
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'supervisionAssessments')));
+    });
+
+    it('does NOT let a facilitator write an assessment', async () => {
+        await assertFails(setDoc(doc(as('facilitator'), 'supervisionAssessments', 'a4'), assessment));
+    });
+
+    it('does NOT let a self-registered account read or write', async () => {
+        await assertFails(getDocs(collection(as('plainUser'), 'supervisionAssessments')));
+        await assertFails(setDoc(doc(as('plainUser'), 'supervisionAssessments', 'a5'), assessment));
+    });
+
+    it('does NOT let an anonymous visitor read them', async () => {
+        await assertFails(getDocs(collection(anonymous(), 'supervisionAssessments')));
+    });
+});
+
+// =============================================================================
+// Population targets. These are the denominators every coverage figure and
+// every supply forecast divides by, so a state needs to read its own while
+// only the federal level may publish them.
+//
+// The operations here mirror exactly what src/data.js does: listPopulationTargets
+// runs a collection query (a LIST, not a get), and the import writes a batch.
+// =============================================================================
+describe('populationTargets — federal writes, everyone signed in reads', () => {
+    const target = {
+        year: 2026, stateKey: 'Gezira', localityKey: 'Al Hasahisa',
+        totalPopulation: 500000, under5: 80000,
+    };
+    const id = '2026__Gezira__Al Hasahisa';
+
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'populationTargets', id), target);
+        });
+    });
+
+    it('lets a signed-in user LIST the collection, which is how the app reads it', async () => {
+        await assertSucceeds(getDocs(collection(as('plainUser'), 'populationTargets')));
+    });
+
+    it('lets a signed-in user read one target', async () => {
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'populationTargets', id)));
+    });
+
+    it('does NOT let an anonymous visitor read the targets', async () => {
+        await assertFails(getDocs(collection(anonymous(), 'populationTargets')));
+    });
+
+    it('lets a federal manager and a super user import targets', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'populationTargets', '2027__Gezira__Al Kamlin'), target));
+        await assertSucceeds(setDoc(doc(as('superUser'), 'populationTargets', '2027__Gezira__Al Manaqil'), target));
+    });
+
+    it('does NOT let a states manager or a plain user publish targets', async () => {
+        await assertFails(setDoc(doc(as('statesManager'), 'populationTargets', '2027__Gezira__Al Qurashi'), target));
+        await assertFails(setDoc(doc(as('plainUser'), 'populationTargets', '2027__Gezira__Um Algura'), target));
+    });
+
+    // The locality "As Salam / Ar Rawat" contains a slash; data.js replaces it
+    // so the id stays a single path segment. The sanitised id must be writable.
+    it('accepts the sanitised id for a locality whose name contains a slash', async () => {
+        await assertSucceeds(setDoc(
+            doc(as('federalManager'), 'populationTargets', '2026__White Nile__As Salam - Ar Rawat'),
+            { ...target, stateKey: 'White Nile', localityKey: 'As Salam / Ar Rawat' }
+        ));
+    });
+});
+
+// =============================================================================
+// Supply Management. The essential lists drive the national forecast, so
+// writing them is a federal decision; reading them is not, because a state or
+// locality has to see what it is expected to stock.
+// =============================================================================
+describe('supplyItems — federal writes, everyone signed in reads', () => {
+    const item = { category: 'drugs', service: 'IMNCI', name: 'Amoxicillin DT', unit: 'Tablet' };
+
+    it('lets a federal manager and a super user maintain the list', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'supplyItems', 'i1'), item));
+        await assertSucceeds(setDoc(doc(as('superUser'), 'supplyItems', 'i2'), item));
+    });
+
+    it('does NOT let a states manager or a facilitator write the list', async () => {
+        await assertFails(setDoc(doc(as('statesManager'), 'supplyItems', 'i3'), item));
+        await assertFails(setDoc(doc(as('facilitator'), 'supplyItems', 'i4'), item));
+    });
+
+    it('does NOT let a self-registered account write the list', async () => {
+        await assertFails(setDoc(doc(as('plainUser'), 'supplyItems', 'i5'), item));
+    });
+
+    it('lets any signed-in user read the list', async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'supplyItems', 'i6'), item);
+        });
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'supplyItems', 'i6')));
+    });
+
+    it('does NOT let an anonymous visitor read the list', async () => {
+        await assertFails(getDocs(collection(anonymous(), 'supplyItems')));
+    });
+});
+
+// =============================================================================
+// Identifiable clinical data about children. Both read and create used to be
+// `if true`, so the collection could be downloaded by anyone holding the
+// project id — which ships in the client bundle.
+// =============================================================================
+describe('imnciPatientRecords — clinical data is not public', () => {
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'imnciPatientRecords', 'r1'), {
+                childName: 'Test Child', age: 3, classification: 'pneumonia',
+            });
+        });
+    });
+
+    it('does NOT let an anonymous visitor read a patient record', async () => {
+        await assertFails(getDoc(doc(anonymous(), 'imnciPatientRecords', 'r1')));
+    });
+
+    it('does NOT let an anonymous visitor list the collection', async () => {
+        await assertFails(getDocs(collection(anonymous(), 'imnciPatientRecords')));
+    });
+
+    it('does NOT let an anonymous visitor create a patient record', async () => {
+        await assertFails(setDoc(doc(anonymous(), 'imnciPatientRecords', 'r2'), { childName: 'X', age: 1 }));
+    });
+
+    it('does NOT let a brand-new account create a patient record', async () => {
+        await assertFails(setDoc(doc(as('plainUser'), 'imnciPatientRecords', 'r3'), { childName: 'X', age: 1 }));
+    });
+
+    it('lets clinical staff read and write records', async () => {
+        await assertSucceeds(getDoc(doc(as('facilitator'), 'imnciPatientRecords', 'r1')));
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'imnciPatientRecords', 'r4'), { childName: 'Y', age: 2 }));
+    });
+});
+
+// =============================================================================
+// Sign-up is open to the public, so `request.auth != null` on a write rule
+// meant "anyone who filled in the sign-up form". Programme data now needs a
+// real role.
+// =============================================================================
+describe('a self-registered account cannot write programme data', () => {
+    const collectionsNeedingStaff = [
+        'facilitators', 'federalCoordinators', 'stateCoordinators', 'localityCoordinators',
+        'coordinators', 'funders', 'skillMentorship', 'courses', 'exerciseDefinitions',
+    ];
+
+    for (const name of collectionsNeedingStaff) {
+        it(`does NOT let a plain user write ${name}`, async () => {
+            await assertFails(setDoc(doc(as('plainUser'), name, 'x1'), { name: 'Injected' }));
+        });
+
+        it(`still lets a facilitator write ${name}`, async () => {
+            await assertSucceeds(setDoc(doc(as('facilitator'), name, 'x2'), { name: 'Legitimate' }));
+        });
+    }
+
+    it('does NOT let a plain user delete a participant', async () => {
+        await assertFails(deleteDoc(doc(as('plainUser'), 'participants', 'p1')));
+    });
+
+    it('does NOT let a plain user reconfigure the application', async () => {
+        await assertFails(updateDoc(doc(as('plainUser'), 'appSettings', 'facilitatorApplication'), {
+            isActive: false,
+        }));
+    });
+
+    it('does NOT let a plain user read the facilitator application queue', async () => {
+        await assertFails(getDocs(collection(as('plainUser'), 'facilitatorSubmissions')));
+    });
+});
+
+// =============================================================================
+// The Trigger Email extension delivers whatever lands in /mail from the
+// programme's verified sender address.
+// =============================================================================
+describe('mail queue is not an open relay', () => {
+    const wellFormed = {
+        to: 'participant@example.org',
+        message: { subject: 'Your certificate', html: '<p>Hello</p>' },
+    };
+
+    it('does NOT let a self-registered account queue an email', async () => {
+        await assertFails(setDoc(doc(as('plainUser'), 'mail', 'm1'), wellFormed));
+    });
+
+    it('lets staff queue a certificate email', async () => {
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'mail', 'm2'), wellFormed));
+    });
+
+    it('rejects a message carrying extra delivery fields', async () => {
+        await assertFails(setDoc(doc(as('facilitator'), 'mail', 'm3'), {
+            ...wellFormed, bcc: 'everyone@example.org',
+        }));
+        await assertFails(setDoc(doc(as('facilitator'), 'mail', 'm4'), {
+            to: 'a@b.c', message: { subject: 'S', html: '<p>x</p>', attachments: [] },
+        }));
+    });
+});
+
+// =============================================================================
+// Exercise scores feed certificates, so they must not be rewritable by whoever
+// can guess an attempt id.
+// =============================================================================
+describe('exercise attempts cannot be re-scored anonymously', () => {
+    const body = { courseId: 'c1', participantId: 'p1', exerciseId: 'e1', attemptNo: 1, percent: 40 };
+
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'exerciseAttempts', 'c1__p1__e1__1'), body);
+        });
+    });
+
+    it('does NOT let an anonymous caller raise an existing score', async () => {
+        await assertFails(setDoc(doc(anonymous(), 'exerciseAttempts', 'c1__p1__e1__1'), {
+            ...body, percent: 100,
+        }));
+    });
+
+    it('still lets the offline queue replay an identical write', async () => {
+        await assertSucceeds(setDoc(doc(anonymous(), 'exerciseAttempts', 'c1__p1__e1__1'), body));
+    });
+
+    it('still lets a fresh attempt be created anonymously', async () => {
+        await assertSucceeds(setDoc(doc(anonymous(), 'exerciseAttempts', 'c1__p1__e1__2'), {
+            ...body, attemptNo: 2, percent: 95,
+        }));
+    });
+});
+
+// =============================================================================
+// The public /public/meeting/{id} link marks attendance without signing in.
+// =============================================================================
+describe('unitMeetings — the anonymous link only marks attendance', () => {
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'unitMeetings', 'm1'), {
+                title: 'Federal review', invitees: ['a', 'b'], attendance: {},
+            });
+        });
+    });
+
+    it('lets an anonymous invitee mark attendance', async () => {
+        await assertSucceeds(updateDoc(doc(anonymous(), 'unitMeetings', 'm1'), {
+            attendance: { a: ['2026-01-01'] },
+        }));
+    });
+
+    it('does NOT let an anonymous visitor rewrite the meeting itself', async () => {
+        await assertFails(updateDoc(doc(anonymous(), 'unitMeetings', 'm1'), { title: 'Hijacked' }));
+        await assertFails(updateDoc(doc(anonymous(), 'unitMeetings', 'm1'), { invitees: [] }));
+    });
+});
+
+// =============================================================================
+// AdminDashboard writes users/{uid} straight from the browser, so the
+// setUserRoles Cloud Function's guards were never in the path.
+// =============================================================================
+describe('only a super user may grant super_user', () => {
+    it('does NOT let a federal manager mint a super user', async () => {
+        await assertFails(updateDoc(doc(as('federalManager'), 'users', 'plainUser'), {
+            role: 'super_user', roles: ['super_user'],
+        }));
+    });
+
+    it('does NOT let a states manager mint a super user', async () => {
+        await assertFails(updateDoc(doc(as('statesManager'), 'users', 'plainUser'), {
+            role: 'super_user', roles: ['super_user'],
+        }));
+    });
+
+    it('lets a super user grant super_user', async () => {
+        await assertSucceeds(updateDoc(doc(as('superUser'), 'users', 'plainUser'), {
+            role: 'super_user', roles: ['super_user'],
+        }));
+    });
+
+    it('still lets a manager assign the non-admin roles they administer', async () => {
+        await assertSucceeds(updateDoc(doc(as('federalManager'), 'users', 'plainUser'), {
+            role: 'facilitator', roles: ['facilitator'],
+        }));
+    });
+
+    it('still lets a manager edit an existing super user without demoting them', async () => {
+        await assertSucceeds(updateDoc(doc(as('federalManager'), 'users', 'superUser'), {
+            assignedState: 'Khartoum',
+        }));
     });
 });

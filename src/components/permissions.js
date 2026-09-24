@@ -22,6 +22,11 @@ export const ALL_PERMISSIONS = {
     canViewAdmin: false,
     canViewLocalityPlan: false,
     canEditLocalityPlan: false,
+    canViewSupplyChain: false,
+    canManageSupplyChain: false,
+    canManagePopulation: false,
+    canViewSupervision: false,
+    canManageSupervision: false,
 };
 
 export const ALL_PERMISSION_KEYS = Object.keys(ALL_PERMISSIONS);
@@ -44,6 +49,12 @@ export const applyDerivedPermissions = (permissions) => {
     }
     if (basePermissions.canManageSkillsMentorship) {
         basePermissions.canViewSkillsMentorship = true;
+    }
+    if (basePermissions.canManageSupplyChain) {
+        basePermissions.canViewSupplyChain = true;
+    }
+    if (basePermissions.canManageSupervision) {
+        basePermissions.canViewSupervision = true;
     }
     if (basePermissions.canUseFederalManagerAdvancedFeatures) {
         basePermissions.canApproveSubmissions = true;
@@ -137,6 +148,11 @@ const SUPER_USER_PERMS = {
     canUseFederalManagerAdvancedFeatures: true, 
     canManageCertificates: true, 
     canViewLocalityPlan: true,
+    canViewSupplyChain: true,
+    canManageSupplyChain: true,
+    canManagePopulation: true,
+    canViewSupervision: true,
+    canManageSupervision: true,
     manageScope: 'federal', 
     manageTimePeriod: 'anytime' 
 };
@@ -151,12 +167,17 @@ const FEDERAL_MANAGER_PERMS = {
     ...ADVANCED_PERMS_NONE, 
     canUseFederalManagerAdvancedFeatures: true, 
     canManageCertificates: true, 
+    canViewSupplyChain: true,
+    canManageSupplyChain: true,
+    canManagePopulation: true,
+    canViewSupervision: true,
+    canManageSupervision: true,
     manageScope: 'federal', 
     manageTimePeriod: 'anytime' 
 };
 
-const STATES_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...COURSE_ADD_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'state', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
-const LOCALITY_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...COURSE_ADD_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'locality', manageLocation: 'user_locality', manageTimePeriod: 'course_period_only', canViewLocalityPlan: true, canEditLocalityPlan: true };
+const STATES_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...COURSE_ADD_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'state', manageLocation: 'user_state', manageTimePeriod: 'course_period_only', canViewSupervision: true, canManageSupervision: true };
+const LOCALITY_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...COURSE_ADD_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'locality', manageLocation: 'user_locality', manageTimePeriod: 'course_period_only', canViewLocalityPlan: true, canEditLocalityPlan: true, canViewSupervision: true, canManageSupervision: true };
 
 // Lower-level roles do NOT get COURSE_ADD_STANDARD by default (they can only manage assigned courses)
 // UPDATED: Federal Coordinator now has COURSE_ADD_STANDARD so they can create courses.
@@ -214,5 +235,10 @@ export const PERMISSION_DESCRIPTIONS = {
     canViewDashboard: "Derived: Allow navigating to the dashboard.",
     canViewAdmin: "Access the Admin Dashboard.",
     canViewLocalityPlan: "View the bottom-up Locality Plan.",
-    canEditLocalityPlan: "Edit the bottom-up Locality Plan."
+    canEditLocalityPlan: "Edit the bottom-up Locality Plan.",
+    canViewSupplyChain: "View Supply Management: essential lists, forecasting and the supply chain.",
+    canManageSupplyChain: "Add, edit and delete essential supply items and their quantification parameters.",
+    canManagePopulation: "Import and edit the yearly population targets used as denominators.",
+    canViewSupervision: "View supervision assessments and their results.",
+    canManageSupervision: "Carry out and edit supervision assessments."
 };

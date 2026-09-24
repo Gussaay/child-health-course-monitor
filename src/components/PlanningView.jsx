@@ -1,5 +1,5 @@
 // src/components/PlanningView.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
@@ -10,9 +10,14 @@ import { useDataCache } from '../DataContext';
 import { 
     Plus, Edit, Trash2, TrendingUp, Target, ChevronDown, 
     ChevronUp, Calendar, Activity, FileSpreadsheet, CheckCircle2, 
-    AlertTriangle, Briefcase, Save, X, BarChart2, PieChart, Layers, ListFilter, FileText, Download, Upload
+    AlertTriangle, Briefcase, Save, X, BarChart2, PieChart, Layers, ListFilter, FileText, Download, Upload, Users
 } from 'lucide-react';
 import { notify, confirmDialog } from './dialogs';
+
+// Population targets are the denominators the plans are measured against, so
+// they are maintained here rather than in a screen of their own. Lazy because
+// the import path pulls in the spreadsheet parser.
+const PopulationManagementView = lazy(() => import('./PopulationView'));
 
 // --- الثوابت الأساسية والقوائم ---
 const AXIS_OPTIONS = ['الحاكمية', 'بناء القدرات', 'تقديم الخدمات', 'نظام المعلومات', 'الإمداد', 'التمويل'];
@@ -131,7 +136,7 @@ const SelectWithOther = ({ options, value, onChange, placeholder, otherLabel = '
     );
 };
 
-export default function PlanningView() {
+export default function PlanningView({ permissions = {} }) {
     const { 
         masterPlans: rawPlans, fetchMasterPlans, 
         operationalPlans: rawOpPlans, fetchOperationalPlans, 
@@ -1587,7 +1592,8 @@ export default function PlanningView() {
                         { id: 'quarterly', label: 'الخطط الربعية', icon: Calendar },
                         { id: 'monthly', label: 'الخطط الشهرية', icon: Calendar },
                         { id: 'weekly', label: 'التشغيلية الأسبوعية', icon: FileSpreadsheet },
-                        { id: 'evaluation', label: 'التقييم', icon: Activity }
+                        { id: 'evaluation', label: 'التقييم', icon: Activity },
+                        { id: 'population', label: 'السكان المستهدفون', icon: Users }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -1754,6 +1760,12 @@ export default function PlanningView() {
             )}
 
             {/* --- Evaluation Dashboard --- */}
+            {activeTab === 'population' && (
+                <Suspense fallback={<div className="p-8 flex justify-center"><Spinner /></div>}>
+                    <PopulationManagementView permissions={permissions} />
+                </Suspense>
+            )}
+
             {activeTab === 'evaluation' && (
                 <div className="space-y-6 animate-in fade-in pt-4">
                     

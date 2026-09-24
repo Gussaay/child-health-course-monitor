@@ -119,6 +119,7 @@ export const STATE_LOCALITIES = {
       { "en": "Al Koma", "ar": "الكومة" },
       { "en": "Al Lait", "ar": "اللعيت" },
       { "en": "Al Malha", "ar": "المالحة" },
+      { "en": "Al Waha", "ar": "الواحة" },
       { "en": "As Serief", "ar": "السريف" },
       { "en": "At Tawisha", "ar": "الطويشة" },
       { "en": "At Tina", "ar": "الطينة" },
@@ -1135,3 +1136,307 @@ export const checkEtatScenario = (payload, scenario) => {
 // the standard. Wider than MENTOR_SCORE_TOLERANCE because it is measured in
 // percentage points on a denominator that moves between sessions.
 export const ETAT_PCT_TOLERANCE = 10;
+
+
+// =============================================================================
+// --- POPULATION WORKBOOK NAME ALIASES ---
+//
+// Every spelling of a state or locality that has appeared in an EPI population
+// workbook, mapped to the canonical names above.
+//
+// Written out in full and deliberately NOT computed by string similarity at
+// run time. Fuzzy matching over these names is confidently wrong: it paired
+// "South Gezira" with Sharg Al Jazirah (east, not south) and reversed the two
+// Gedaref localities. A mis-mapped locality sends the wrong quantity of
+// medicine to the wrong place, so this is data a person reviewed, not a guess
+// a function makes again on every import.
+//
+// To add a spelling: put it under its state with the canonical name from
+// STATE_LOCALITIES above. Lookup is case- and whitespace-insensitive.
+// =============================================================================
+
+export const LOCALITY_ALIASES = {
+    "Blue Nile": {
+        "Baw": "Baw",
+        "Eldamazin": "Ed Damazine",
+        "Elkormuk": "Al Kurmuk",
+        "Elrussirs": "Ar Rusayris",
+        "Gaysan": "Geisan",
+        "Tadamon": "At Tadamon - BN",
+        "Wad almahi": "Wad Al Mahi",
+    },
+    "Central Darfur": {
+        "Azoom": "Azum",
+        "Bindse": "Bendasi",
+        "Golo": "Wasat Jabal Marrah",
+        "Mukjer": "Mukjar",
+        "Naertity": "Gharb Jabal Marrah",
+        "Om Dokhon": "Um Dukhun",
+        "Rokro": "Shamal Jabal Marrah",
+        "Wad Salih": "Wadi Salih",
+        "Zallinge": "Zalingi",
+    },
+    "East Darfur": {
+        "Abu Jabra": "Abu Jabrah",
+        "Abu Karinka": "Abu Karinka",
+        "Adeila": "Adila",
+        "Aldein": "Ad Du'ayn",
+        "Assalaya": "Assalaya",
+        "Bahr Alarab": "Bahr Al Arab",
+        "El Firduce": "Al Firdous",
+        "Shiaria": "Shia'ria",
+        "Yaseen": "Yassin",
+    },
+    "Gedaref": {
+        "Alfao": "Al Fao",
+        "Algirasha": "Al Qureisha",
+        "Basunda": "Basundah",
+        "East galabat": "Galabat Ash-Shargiah",
+        "Elbotana": "Al Butanah",
+        "Elfashaga": "Al Fashaga",
+        "ElGedarif": "Madeinat Al Gedaref",
+        "Elmfaza": "Al Mafaza",
+        "Elrahad": "Ar Rahad",
+        "Gala alnahal": "Gala'a Al Nahal",
+        "MID Gedarif": "Wasat Al Gedaref",
+        "West galabat": "Al Galabat Al Gharbyah - Kassab",
+    },
+    "Gezira": {
+        "(East Gezira)": "Sharg Al Jazirah",
+        "algorashe": "Al Qurashi",
+        "Alhasahisa": "Al Hasahisa",
+        "Almanagil": "Al Manaqil",
+        "ELKamleen": "Al Kamlin",
+        "Madani": "Medani Al Kubra",
+        "South Gezira": "Janub Al Jazirah",
+        "Umelgura": "Um Algura",
+    },
+    "Kassala": {
+        "Hamshkoreep": "Reifi Hamashkureib",
+        "Kassala Town": "Madeinat Kassala",
+        "Nahr Atbara": "Reifi Nahr Atbara",
+        "North-DaLta": "Reifi Shamal Ad Delta",
+        "Reifi Algirba": "Reifi Khashm Elgirba",
+        "Reifi Aroma": "Reifi Aroma",
+        "Reifi Halfa": "Halfa Aj Jadeedah",
+        "Reifi Kassala": "Reifi Kassla",
+        "Reifi Wed Hilaio": "Reifi Wad Elhilaiw",
+        "Talkook": "Reifi Telkok",
+        "West Kassala": "Reifi Gharb Kassala",
+    },
+    "Khartoum": {
+        "Bahry": "Bahri",
+        "Gebal Awleya": "Jebel Awlia",
+        "Karary": "Karrari",
+        "Khartoum": "Khartoum",
+        "Sharg Elneel": "Sharg An Neel",
+        "Um Durman": "Um Durman",
+        "Umbada": "Um Bada",
+    },
+    "North Darfur": {
+        "Al-liayit": "Al Lait",
+        "Alfasher": "Al Fasher",
+        "alteena": "At Tina",
+        "Altiwasha": "At Tawisha",
+        "Alwaha": "Al Waha",
+        "Am baro": "Um Baru",
+        "Dar-Alsalam": "Dar As Salam",
+        "Elkoma": "Al Koma",
+        "Elmalha": "Al Malha",
+        "Elsiraif": "As Serief",
+        "kabkabeia": "Kebkabiya",
+        "Klamindo": "Kelemando",
+        "Kotum": "Kutum",
+        "Kranoy": "Kernoi",
+        "maleet": "Melit",
+        "Saraf Omra": "Saraf Omra",
+        "tawila": "Tawila",
+        "Um kadada": "Um Kadadah",
+    },
+    "North Kordofan": {
+        "Bara": "Bara",
+        "Elrahad": "Ar Rahad",
+        "Ewest Bara": "Gharb Bara",
+        "Gabra": "Gebrat Al Sheikh",
+        "Sheikan": "Sheikan",
+        "Sodary": "Soudari",
+        "Umdam": "Um Dam Haj Ahmed",
+        "Umrowaba": "Um Rawaba",
+    },
+    "Northern": {
+        "Dalgou": "Delgo",
+        "Dongola": "Dongola",
+        "Elbrgeg": "Al Burgaig",
+        "Eldabba": "Ad Dabbah",
+        "Elgolid": "Al Golid",
+        "Merowe": "Merwoe",
+        "Wadi Halfa": "Halfa",
+    },
+    "Red Sea": {
+        "Ageeg": "Agig",
+        "Dordaib": "Dordieb",
+        "Gabait": "Jubayt Elma'aadin",
+        "GanibOlaib": "Al Ganab",
+        "Halaib": "Hala'ib",
+        "Haya": "Haya",
+        "Portsudan": "Port Sudan",
+        "Seinkat": "Sinkat",
+        "Swakin": "Sawakin",
+        "Toker": "Tawkar",
+    },
+    "River Nile": {
+        "Abu Hamad": "Abu Hamad",
+        "Atbara": "Atbara",
+        "Berber": "Barbar",
+        "Elbohira": "Al Buhaira",
+        "Eldamer": "Ad Damar",
+        "Elmatama": "Al Matama",
+        "Shandi": "Shendi",
+    },
+    "Sennar": {
+        "AbuHugar": "Abu Hujar",
+        "Adali And Almazmom": "Ad Dali",
+        "Aldindir": "Ad Dinder",
+        "Alsooki": "As Suki",
+        "East Sennar": "Sharg Sennar",
+        "Sennar": "Sennar",
+        "Singa": "Sinja",
+    },
+    "South Darfur": {
+        "Alradom": "Al Radoum",
+        "Alsunta": "As Sunta",
+        "Belail": "Beliel",
+        "Buraam": "Buram",
+        "Dimso": "Damso",
+        "Elmlam": "Al Wihda",
+        "Elsalam": "As Salam - SD",
+        "Garidha": "Gereida",
+        "Idd El Fursan": "Ed Al Fursan",
+        "Kass": "Kas",
+        "Kateila": "Kateila",
+        "Kubum": "Kubum",
+        "Mershing": "Mershing",
+        "Netiga": "Nitega",
+        "Nyala": "Nyala Janoub",
+        "Nyala North": "Nyala Shimal",
+        "Rehaid El Burdi": "Rehaid Albirdi",
+        "Sharq El Jabal": "Sharg Aj Jabal",
+        "Shatia": "Shattaya",
+        "Tulus": "Tulus",
+        "Umdafoug": "Um Dafoug",
+    },
+    "South Kordofan": {
+        "abokarshola": "Abu Kershola",
+        "AbuGibaiha": "Abu Jubayhah",
+        "Alabasiya": "Abassiya",
+        "Alburam": "Al Buram",
+        "Aldalang": "Dilling",
+        "Algooz": "Al Quoz",
+        "Alleri": "Al Leri",
+        "Alrashad": "Ar Rashad",
+        "AlReif Alshargi": "Ar Reif Ash Shargi",
+        "Altdamon": "At Tadamon - SK",
+        "Dalmi": "Delami",
+        "Gadeeir": "Ghadeer",
+        "habila": "Habila - SK",
+        "Heban": "Heiban",
+        "kadogli": "Kadugli",
+        "Talodi": "Talawdi",
+        "Umdoren": "Um Durein",
+    },
+    "West Darfur": {
+        "Beida": "Beida",
+        "Elgenina": "Ag Geneina",
+        "Forbaranga": "Foro Baranga",
+        "Gabal Moon": "Jebel Moon",
+        "Habilla": "Habila - WD",
+        "Kerainik": "Kereneik",
+        "Koulbos": "Kulbus",
+        "Serba": "Sirba",
+    },
+    "West Kordofan": {
+        "Abu zabad": "Abu Zabad",
+        "Abyei": "Abyei",
+        "Aldebab": "Al Dibab",
+        "Almeram": "Al Meiram",
+        "Alodia": "Al Idia",
+        "Alsalam": "As Salam - WK",
+        "Alsenoot": "As Sunut",
+        "Babanoosa": "Babanusa",
+        "Elkhawi": "Al Khiwai",
+        "Elnuhood": "An Nuhud",
+        "Gebaish": "Ghubaish",
+        "Kailak": "Keilak",
+        "Lagawa": "Al Lagowa",
+        "Wad Banda": "Wad Bandah",
+    },
+    "White Nile": {
+        "Algabalain": "Aj Jabalain",
+        "Alsalam": "As Salam / Ar Rawat",
+        "Eldewam": "Ad Diwaim",
+        "Elgeteana": "Al Gitaina",
+        "Guli": "Guli",
+        "Kosti": "Kosti",
+        "Rabak": "Rabak",
+        "Tandalti": "Tendalti",
+        "Umrimta": "Um Rimta",
+    },
+};
+
+// State names as they appear in the workbooks, mapped to the canonical key.
+export const STATE_ALIASES = {
+    "Blue Nile": "Blue Nile",
+    "C. Darfor": "Central Darfur",
+    "E.Darfur": "East Darfur",
+    "Gedarif": "Gedaref",
+    "Gezira.": "Gezira",
+    "Kassala": "Kassala",
+    "Khartoum": "Khartoum",
+    "N.Darfur": "North Darfur",
+    "N.Kordofan": "North Kordofan",
+    "Northern": "Northern",
+    "Read Sea": "Red Sea",
+    "River Nile": "River Nile",
+    "S.Darfur": "South Darfur",
+    "S.Kordofan": "South Kordofan",
+    "Sennar": "Sennar",
+    "W.Darfur": "West Darfur",
+    "W.kordofan": "West Kordofan",
+    "White Nile": "White Nile",
+};
+
+// The workbooks carry a subtotal row per state; it is not a locality.
+export const TOTAL_ROW_PATTERN = /^(total|total state|state|grand total)$/i;
+
+const normalise = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+// A name that is already canonical must resolve to itself. The alias tables
+// only hold the *other* spellings, so without this pass the import template —
+// which is filled with canonical names precisely so that it always matches —
+// failed to match anything, and so would any file exported from the system and
+// uploaded back into it.
+export function canonicalState(name) {
+    const n = normalise(name);
+
+    const exact = Object.keys(STATE_LOCALITIES).find((key) => key !== 'Federal' && (
+        normalise(key) === n || normalise(STATE_LOCALITIES[key].en) === n
+        || normalise(STATE_LOCALITIES[key].ar) === n
+    ));
+    if (exact) return exact;
+
+    const hit = Object.keys(STATE_ALIASES).find((k) => normalise(k) === n);
+    return hit ? STATE_ALIASES[hit] : null;
+}
+
+export function canonicalLocality(stateKey, name) {
+    const n = normalise(name);
+
+    const known = STATE_LOCALITIES[stateKey]?.localities || [];
+    const exact = known.find((l) => normalise(l.en) === n || normalise(l.ar) === n);
+    if (exact) return exact.en;
+
+    const table = LOCALITY_ALIASES[stateKey];
+    if (!table) return null;
+    const hit = Object.keys(table).find((k) => normalise(k) === n);
+    return hit ? table[hit] : null;
+}
