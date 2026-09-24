@@ -274,6 +274,17 @@ jobs:
       # The rules tests still run in the verify job above, so a broken ruleset
       # fails CI whether or not this pipeline is the thing that ships it.
       #
+      # The root `npm ci` above installs the app's dependencies, not the
+      # functions'. functions/ is a separate package with its own lockfile, and
+      # without this step the deploy fails with "Cannot find module
+      # 'firebase-functions/v2/https'" — the CLI parses index.js in place to
+      # discover the triggers, so the packages have to be on disk first. It
+      # worked locally only because functions/node_modules already existed
+      # there.
+      - name: Install Cloud Functions dependencies
+        working-directory: functions
+        run: npm ci
+
       # google-github-actions/auth ran above, so GOOGLE_APPLICATION_CREDENTIALS
       # is already set for the CLI.
       - name: Deploy Cloud Functions
