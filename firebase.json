@@ -16,7 +16,7 @@
     {
       "codebase": "default",
       "source": "functions",
-      "runtime": "nodejs20",
+      "runtime": "nodejs22",
       "ignore": [
         "node_modules",
         ".git",

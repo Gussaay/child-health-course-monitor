@@ -260,10 +260,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Matches the deployed runtime (firebase.json) rather than the version the
+      # web build uses, so what npm installs here is what the functions will
+      # actually run on.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '22'
           cache: 'npm'
 
       - name: Authenticate to Google Cloud
