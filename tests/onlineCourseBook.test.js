@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-    parsePdfIntoSections, looksLikeHeading, countWords,
+    parsePdfIntoSections, looksLikeHeading, countWords, tabContent, SECTION_TABS,
+    newQuestion, newExerciseLink, videoSource, BLOCK_TYPES, contentsTitles,
 } from '../src/components/online-course/book';
 import {
     IMNCI_SEVERITIES, severityById, severityByProtocolColor,
@@ -62,13 +63,13 @@ describe('parsePdfIntoSections', () => {
 
     it('joins a sentence broken across lines', () => {
         const s = sections.find((x) => x.number === '1.0');
-        expect(s.blocks[0].text).toBe(
+        expect(s.read[0].text).toBe(
             'A mother usually brings a child to the clinic because the child is sick. Greet the mother appropriately.');
     });
 
     it('collects bullets into one list, whatever marks them', () => {
         const s = sections.find((x) => x.number === '2.0');
-        const list = s.blocks.find((b) => b.type === 'list');
+        const list = s.read.find((b) => b.type === 'list');
         expect(list.items).toEqual([
             'The child is not able to drink',
             'The child vomits everything',
@@ -78,7 +79,7 @@ describe('parsePdfIntoSections', () => {
 
     it('drops the page number printed at the foot of a page', () => {
         const s = sections.find((x) => x.number === '1.0');
-        const text = JSON.stringify(s.blocks);
+        const text = JSON.stringify(s.read);
         expect(text).not.toContain('"5"');
     });
 
@@ -139,14 +140,14 @@ describe('figures are placed with their page', () => {
     it('puts each figure in the section that was open on that page', () => {
         const first = sections.find((s) => s.number === '1.0');
         const second = sections.find((s) => s.number === '2.0');
-        const firstImg = first.blocks.find((b) => b.type === 'image');
-        const secondImg = second.blocks.find((b) => b.type === 'image');
+        const firstImg = first.see.find((b) => b.type === 'image');
+        const secondImg = second.see.find((b) => b.type === 'image');
         expect(firstImg.page).toBe(3);
         expect(secondImg.page).toBe(4);
     });
 
     it('numbers figures so the uploader can match blob to block', () => {
-        const all = sections.flatMap((s) => s.blocks.filter((b) => b.type === 'image'));
+        const all = sections.flatMap((s) => s.see.filter((b) => b.type === 'image'));
         expect(all.map((b) => b.imageIndex)).toEqual([0, 1]);
     });
 
@@ -191,5 +192,165 @@ describe('classification severity is shared and stable', () => {
             expect(s.label).toBeTruthy();
             expect(s.labelAr).toBeTruthy();
         });
+    });
+});
+
+// Content written before the tabs existed must keep working untouched.
+const INTRO_BOOK = [
+    { page: 1, lines: ['INTEGRATED MANAGEMENT OF CHILDHOOD ILLNESSES', 'INTRODUCTION', '2023'] },
+    { page: 2, lines: ['Prepared by the World Health Organization.'] },
+    {
+        page: 3,
+        lines: [
+            'CONTENTS',
+            'INTRODUCTION\u2026\u2026\u2026\u2026\u2026\u2026 1',
+            'THE CASE MANAGEMENT PROCESS\u2026\u2026\u2026\u2026 2',
+            'HOW TO SELECT THEC APPROPRIATE CASE',
+            'MANAGEMENT CHARTS\u2026\u2026\u2026\u2026\u2026\u2026 4',
+            'GLOSSARY\u2026\u2026\u2026\u2026\u2026\u2026\u2026 7',
+        ],
+    },
+    { page: 4, lines: ['INTRODUCTION', 'Pneumonia, diarrhoea and malaria cause most deaths under five.'] },
+    { page: 5, lines: ['THE CASE MANAGEMENT PROCESS', 'The process is presented on a series of charts.', 'ASSESS AND CLASSIFY THE SICK CHILD'] },
+    { page: 6, lines: ['HOW TO SELECT THE APPROPRIATE CASE MANAGEMENT CHARTS', 'Decide which age group the child is in.'] },
+    { page: 7, lines: ['GLOSSARY', 'Abscess: a collection of pus.'] },
+];
+
+describe('a book with no numbered headings', () => {
+    it('reads the contents page through its ellipsis leaders', () => {
+        expect(contentsTitles(INTRO_BOOK)).toEqual([
+            'INTRODUCTION',
+            'THE CASE MANAGEMENT PROCESS',
+            'HOW TO SELECT THEC APPROPRIATE CASE MANAGEMENT CHARTS',
+            'GLOSSARY',
+        ]);
+    });
+
+    it('splits the book at the topics its contents page names', () => {
+        const { sections } = parsePdfIntoSections(INTRO_BOOK);
+        expect(sections.map((x) => x.title)).toEqual([
+            'INTRODUCTION',
+            'THE CASE MANAGEMENT PROCESS',
+            'HOW TO SELECT THEC APPROPRIATE CASE MANAGEMENT CHARTS',
+            'GLOSSARY',
+        ]);
+        expect(sections.map((x) => x.number)).toEqual(['1', '2', '3', '4']);
+    });
+
+    it('starts after the contents page, not at the cover', () => {
+        // The cover of this book prints the word INTRODUCTION, which used to
+        // pull the cover and the whole contents page into the first topic.
+        const { sections, firstContentPage } = parsePdfIntoSections(INTRO_BOOK);
+        expect(firstContentPage).toBe(4);
+        expect(sections[0].startPage).toBe(4);
+        expect(countWords(sections[0])).toBeLessThan(20);
+    });
+
+    it('does not mistake a chart name in capitals for a topic', () => {
+        // "ASSESS AND CLASSIFY THE SICK CHILD" sits on its own line in the
+        // prose. Only what the contents page names becomes a section.
+        const { sections } = parsePdfIntoSections(INTRO_BOOK);
+        expect(sections.some((x) => x.title.startsWith('ASSESS AND CLASSIFY'))).toBe(false);
+    });
+
+    it('says where the topics came from', () => {
+        const { warnings } = parsePdfIntoSections(INTRO_BOOK);
+        expect(warnings.some((w) => /contents page/i.test(w))).toBe(true);
+    });
+});
+
+describe('section tabs', () => {
+    it('reads legacy blocks as the Read tab', () => {
+        const legacy = { blocks: [{ type: 'paragraph', text: 'Old content' }] };
+        expect(tabContent(legacy, 'read')).toEqual(legacy.blocks);
+        expect(tabContent(legacy, 'see')).toEqual([]);
+    });
+
+    it('prefers the new field when a section has both', () => {
+        const both = {
+            blocks: [{ type: 'paragraph', text: 'old' }],
+            read: [{ type: 'paragraph', text: 'new' }],
+        };
+        expect(tabContent(both, 'read')[0].text).toBe('new');
+    });
+
+    it('offers the three training tabs in order', () => {
+        expect(SECTION_TABS.map((t) => t.id)).toEqual(['read', 'see', 'practise']);
+        SECTION_TABS.forEach((t) => {
+            expect(t.label).toBeTruthy();
+            expect(t.labelAr).toBeTruthy();
+        });
+    });
+
+    it('shows retired Test content under Practise instead of losing it', () => {
+        const old = {
+            practise: [{ type: 'note', text: 'a case' }],
+            test: [{ type: 'question', text: 'an old question', options: ['a', 'b'], answer: 0 }],
+        };
+        const shown = tabContent(old, 'practise');
+        expect(shown).toHaveLength(2);
+        expect(shown[1].text).toBe('an old question');
+    });
+
+    it('counts words across every tab, not just Read', () => {
+        expect(countWords({
+            read: [{ type: 'paragraph', text: 'one two' }],
+            practise: [{ type: 'paragraph', text: 'three four five' }],
+        })).toBe(5);
+    });
+
+    it('has an empty tab where there is no content, never undefined', () => {
+        // The views map over what this returns; undefined would be a crash on a
+        // section that has text but no questions, which is most of them.
+        SECTION_TABS.forEach((t) => {
+            expect(Array.isArray(tabContent({}, t.id))).toBe(true);
+            expect(tabContent(null, t.id)).toEqual([]);
+        });
+    });
+});
+
+describe('questions', () => {
+    it('starts with two answers and the first marked correct', () => {
+        const q = newQuestion();
+        expect(q.type).toBe('question');
+        expect(q.options).toHaveLength(2);
+        expect(q.answer).toBe(0);
+    });
+
+    it('knows the authored block types', () => {
+        ['question', 'page', 'video', 'exercise'].forEach((t) => {
+            expect(BLOCK_TYPES).toContain(t);
+        });
+    });
+
+    it('starts an exercise link with nothing chosen, so saving is refused', () => {
+        expect(newExerciseLink().exerciseId).toBe('');
+    });
+});
+
+describe('video addresses', () => {
+    it('embeds a YouTube watch link', () => {
+        expect(videoSource('https://www.youtube.com/watch?v=dQw4w9WgXcQ'))
+            .toEqual({ kind: 'embed', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' });
+    });
+
+    it('embeds a shortened YouTube link', () => {
+        expect(videoSource('https://youtu.be/dQw4w9WgXcQ').src)
+            .toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
+    });
+
+    it('embeds a Vimeo link', () => {
+        expect(videoSource('https://vimeo.com/123456789'))
+            .toEqual({ kind: 'embed', src: 'https://player.vimeo.com/video/123456789' });
+    });
+
+    it('plays anything else as a file', () => {
+        expect(videoSource('https://example.org/teaching.mp4'))
+            .toEqual({ kind: 'file', src: 'https://example.org/teaching.mp4' });
+    });
+
+    it('treats a blank address as no video at all', () => {
+        expect(videoSource('')).toBeNull();
+        expect(videoSource(null)).toBeNull();
     });
 });

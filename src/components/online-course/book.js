@@ -18,9 +18,64 @@
 
 const HEADING = /^(\d+(?:\.\d+)*)\s+(.{3,120})$/;
 
-const isTocLine = (s) => /\.{4,}/.test(s);
+// Dot leaders on a contents page. Both spellings appear in these books: a run
+// of full stops, and a run of the single … character, which is what the
+// Introduction book uses — matching only full stops found no contents page
+// there at all.
+const LEADERS = /[.…]{4,}/;
+const isTocLine = (s) => LEADERS.test(s);
 const isPageNumber = (s) => /^\d{1,3}$/.test(s.trim());
 const BULLET = /^[••▪·o\-–]\s+/;
+
+// Letters only, in capitals. Used to compare a contents entry with the heading
+// it points at: the PDF loses spaces between words at random ("PURPOSEOF THIS
+// TRAINING COURSE"), so anything that counts spaces cannot match the two up.
+const letterKey = (s) => String(s).replace(/[^A-Za-z]/g, '').toUpperCase();
+
+// Is this line set in capitals, the way every heading in these books is?
+function isShouted(line) {
+    const letters = String(line).replace(/[^A-Za-z]/g, '');
+    if (letters.length < 3) return false;
+    return letters.replace(/[^A-Z]/g, '').length / letters.length >= 0.6;
+}
+
+/**
+ * The titles listed on a book's CONTENTS page, in order.
+ *
+ * The Introduction book does not number its headings, so there is nothing for
+ * HEADING to match. It does print a contents page with dot leaders, and those
+ * entries are the headings — following the book's own table of contents is far
+ * safer than guessing which capitalised line is a title, because these books
+ * also set chart names ("TREAT THE CHILD") in capitals on a line of their own.
+ *
+ * @param {Array<{page:number, lines:string[]}>} pages
+ * @returns {string[]}
+ */
+export function findContents(pages) {
+    const out = [];
+    let found = 0;
+    for (const pg of pages || []) {
+        const lines = (pg.lines || []).map((l) => String(l).trim());
+        lines.forEach((line, i) => {
+            if (!isTocLine(line)) return;
+            // Strip the leaders and the page number they run into.
+            let title = line.split(LEADERS)[0].trim().replace(/\s*\d{1,3}$/, '').trim();
+            // A long entry wraps, leaving the first half on the line above with
+            // no leaders of its own: "HOW TO SELECT THE APPROPRIATE CASE" then
+            // "MANAGEMENT CHARTS.........6".
+            const above = lines[i - 1];
+            if (above && !isTocLine(above) && isShouted(above) && !/^CONTENTS$/i.test(above)) {
+                title = `${above} ${title}`.trim();
+            }
+            if (letterKey(title).length >= 4) out.push(title.replace(/\s+/g, ' '));
+        });
+        if (out.length) { found = pg.page; break; }   // one contents page is enough
+    }
+    return { titles: out, page: found };
+}
+
+/** The contents titles alone, for callers that do not care which page they were on. */
+export const contentsTitles = (pages) => findContents(pages).titles;
 
 export function looksLikeHeading(line) {
     // "9 .1 CHECK ..." reaches us with the number split across two text items,
@@ -60,6 +115,41 @@ export function parsePdfIntoSections(pages) {
     if (intro) firstContentPage = intro.page;
     else warnings.push('No INTRODUCTION page was found, so the contents pages may appear as sections.');
 
+    // Books with numbered headings are split on those. The Introduction book has
+    // none, so its contents page supplies the headings instead, and they are
+    // numbered 1, 2, 3 ... here so a section still has a stable number to show.
+    const numbered = pages.some((pg) => (pg.lines || []).some((l) => looksLikeHeading(l)));
+    const found = numbered ? { titles: [], page: 0 } : findContents(pages);
+    const contents = found.titles;
+    if (!numbered) {
+        if (contents.length) {
+            warnings.push(`This book does not number its headings, so its ${contents.length} topics were taken from the contents page.`);
+            // Reading must start AFTER the contents page. The Introduction book
+            // prints the word INTRODUCTION on its cover, so the usual rule put
+            // the cover and the contents inside the first topic — and the
+            // contents entries themselves were then read as headings.
+            firstContentPage = Math.max(firstContentPage, found.page + 1);
+        } else {
+            warnings.push('No numbered headings and no contents page were found, so the book could not be split.');
+        }
+    }
+
+    // Compared on a prefix, not in full: the contents page and the heading it
+    // points at disagree in these books ("THEC APPROPRIATE" against "THE
+    // APPROPRIATE"), and a typo in one of them should not lose a whole topic.
+    const CONTENTS_PREFIX = 12;
+    const contentsKeys = contents.map((t) => letterKey(t));
+    const matchesContents = (line) => {
+        if (!isShouted(line)) return -1;
+        const key = letterKey(line);
+        if (key.length < 4) return -1;
+        return contentsKeys.findIndex((c) => {
+            const n = Math.min(CONTENTS_PREFIX, c.length, key.length);
+            return n >= 4 && c.slice(0, n) === key.slice(0, n);
+        });
+    };
+    const usedContents = new Set();
+
     const sections = [];
     let current = null;
 
@@ -79,7 +169,17 @@ export function parsePdfIntoSections(pages) {
             const line = String(raw).trim();
             if (!line || isPageNumber(line) || isTocLine(line)) return;
 
-            const h = looksLikeHeading(line);
+            // An unnumbered book: the line is a heading when the contents page
+            // names it, and only the first time, so a title repeated in the
+            // body does not start the same section twice.
+            let h = looksLikeHeading(line);
+            if (!h && contents.length) {
+                const at = matchesContents(line);
+                if (at >= 0 && !usedContents.has(at)) {
+                    usedContents.add(at);
+                    h = { number: String(sections.length + 1), title: contents[at] };
+                }
+            }
             if (h) {
                 current = {
                     number: h.number,
@@ -87,7 +187,13 @@ export function parsePdfIntoSections(pages) {
                     level: h.number.split('.').length,
                     startPage: page,
                     endPage: page,
-                    blocks: [],
+                    // Text goes to Read, pictures to See. The books put a
+                    // classification chart and the prose explaining it on the
+                    // same page, and a learner wants them side by side, not
+                    // interleaved.
+                    read: [],
+                    see: [],
+                    practise: [],
                 };
                 sections.push(current);
                 return;
@@ -97,26 +203,26 @@ export function parsePdfIntoSections(pages) {
 
             if (BULLET.test(line)) {
                 const text = line.replace(BULLET, '').trim();
-                const last = current.blocks[current.blocks.length - 1];
+                const last = current.read[current.read.length - 1];
                 if (last && last.type === 'list') last.items.push(text);
-                else current.blocks.push({ type: 'list', items: [text] });
+                else current.read.push({ type: 'list', items: [text] });
                 return;
             }
 
-            const last = current.blocks[current.blocks.length - 1];
+            const last = current.read[current.read.length - 1];
             // PDFs break a sentence across lines with no marker, so a line that
             // continues an unfinished paragraph is joined to it rather than
             // starting a new one.
             if (last && last.type === 'paragraph' && !/[.:;?!]$/.test(last.text)) {
                 last.text += ' ' + line;
             } else {
-                current.blocks.push({ type: 'paragraph', text: line });
+                current.read.push({ type: 'paragraph', text: line });
             }
         });
 
         (images || []).forEach((img) => {
             if (current) {
-                current.blocks.push({
+                current.see.push({
                     type: 'image', imageIndex, page,
                     width: img.width, height: img.height,
                 });
@@ -124,6 +230,13 @@ export function parsePdfIntoSections(pages) {
             imageIndex += 1;
         });
     });
+
+    if (contents.length) {
+        const missed = contents.filter((_, i) => !usedContents.has(i));
+        if (missed.length) {
+            warnings.push(`${missed.length} topic(s) on the contents page were not found in the text: ${missed.join(', ')}.`);
+        }
+    }
 
     const seen = new Map();
     sections.forEach((s) => {
@@ -140,22 +253,91 @@ export function parsePdfIntoSections(pages) {
     }
 
     const imageBlocks = sections.reduce((n, sec) =>
-        n + sec.blocks.filter((b) => b.type === 'image').length, 0);
+        n + sec.see.filter((b) => b.type === 'image').length, 0);
 
     return { sections, warnings, firstContentPage, imageCount: imageBlocks };
 }
 
+// The three ways a learner meets a section: read it, see it, practise it.
+// There was a fourth, Test, and it is gone — a separate bank of questions after
+// the practice was answering the same thing twice, and the cases teach more
+// than a quiz does. Anything already written into a Test tab is shown under
+// Practise (see tabContent) rather than deleted.
+export const SECTION_TABS = [
+    { id: 'read', label: 'Read', labelAr: 'اقرأ', hint: 'The text of the module' },
+    { id: 'see', label: 'See', labelAr: 'شاهد', hint: 'Charts, figures and video' },
+    { id: 'practise', label: 'Practise', labelAr: 'تدرب', hint: 'Cases, exercises and questions' },
+];
+
+// Content written before the tabs existed lives in `blocks`. It is read as the
+// Read tab rather than migrated, so nothing has to be rewritten in the database
+// and an older section keeps working untouched. The retired Test tab is folded
+// into Practise for the same reason: no content written before today is lost
+// because the tabs changed under it.
+export function tabContent(section, tab) {
+    if (!section) return [];
+    if (tab === 'read') return section.read || section.blocks || [];
+    if (tab === 'practise') return [...(section.practise || []), ...(section.test || [])];
+    return section[tab] || [];
+}
+
 export function countWords(section) {
-    return (section.blocks || []).reduce((n, b) => {
+    const all = [
+        ...(section.read || section.blocks || []),
+        ...(section.see || []),
+        ...(section.practise || []),
+        ...(section.test || []),
+    ];
+    return all.reduce((n, b) => {
         if (b.type === 'list') return n + b.items.join(' ').split(/\s+/).filter(Boolean).length;
         if (b.type === 'image') return n;
         return n + String(b.text || '').split(/\s+/).filter(Boolean).length;
     }, 0);
 }
 
-// What a block can be. `table` and `image` are authored or extracted; the rest
+// What a block can be. `table`, `image` and `page` are extracted or authored,
+// `video`, `question`, `case` and `exercise` are written by hand, and the rest
 // come straight from the book's prose.
-export const BLOCK_TYPES = ['heading', 'paragraph', 'list', 'image', 'table', 'note'];
+export const BLOCK_TYPES = [
+    'heading', 'paragraph', 'list', 'image', 'page', 'video',
+    'table', 'note', 'question', 'case', 'exercise',
+];
+
+// A multiple-choice question. `answer` is the index of the correct option, so
+// reordering the options in the editor cannot silently change which one is
+// right — the index moves with them.
+export const newQuestion = () => ({
+    type: 'question', text: '', options: ['', ''], answer: 0, explanation: '',
+});
+
+// A practice case, shaped like the ones in Online Exercises: the scenario is
+// given as separate statements rather than one paragraph, because that is how
+// a health worker meets a child — history, then signs, one at a time — and the
+// learning points are what they should carry to the next child.
+export const newCase = () => ({
+    type: 'case', title: '', narrative: [''], questions: [newQuestion()], learningPoints: [],
+});
+
+// A pointer to a real, graded exercise in Online Exercises. The section does
+// not copy the case: it names it, so a correction made to the exercise is the
+// one the learner meets here too.
+export const newExerciseLink = () => ({ type: 'exercise', exerciseId: '', note: '' });
+
+/**
+ * Turns whatever someone pasted for a video into something an <iframe> can
+ * show. YouTube and Vimeo watch links are the two that get pasted; anything
+ * else is handed back untouched and played as a file.
+ * @returns {{kind: 'embed'|'file', src: string}|null}
+ */
+export function videoSource(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return null;
+    const yt = raw.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/);
+    if (yt) return { kind: 'embed', src: `https://www.youtube.com/embed/${yt[1]}` };
+    const vimeo = raw.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (vimeo) return { kind: 'embed', src: `https://player.vimeo.com/video/${vimeo[1]}` };
+    return { kind: 'file', src: raw };
+}
 
 // A classification table row is coloured with the SAME vocabulary the protocol
 // engine and the exercises use, so a pink row in a course book means exactly
@@ -175,12 +357,17 @@ export { IMNCI_SEVERITIES, severityById } from '../constants';
  * @param {boolean} [withImages] also decode the embedded images. Off by
  *        default because it needs a canvas per image and is much slower.
  */
-export async function extractPdfPages(file, onProgress, withImages = false) {
+async function loadPdfjs() {
     const pdfjs = await import('pdfjs-dist');
     // Vite resolves this to a real asset URL at build time; without it pdfjs
     // tries to fetch a worker from a path that does not exist in the bundle.
     pdfjs.GlobalWorkerOptions.workerSrc = new URL(
         'pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+    return pdfjs;
+}
+
+export async function extractPdfPages(file, onProgress, withImages = false) {
+    const pdfjs = await loadPdfjs();
 
     const data = new Uint8Array(await file.arrayBuffer());
     const doc = await pdfjs.getDocument({ data }).promise;
@@ -218,6 +405,41 @@ export async function extractPdfPages(file, onProgress, withImages = false) {
  * placed back among the paragraphs it sat between, rather than all of them
  * being dumped at the end of the section.
  */
+// Renders whole pages to images.
+//
+// This is how the classification charts survive. They are drawn as vector
+// paths — roughly 7,800 of them in module 2 — so their cell text extracts but
+// the grid and the colour do not, and in IMNCI the colour is the clinical
+// meaning. Rebuilding every one of them by hand is not realistic, so the page
+// is captured as it was printed and shown on the See tab, with the extracted
+// prose still on Read.
+//
+// A picture of a page is a poor substitute for text and is deliberately NOT
+// how the Read tab works. It is a faithful record of a chart, nothing more.
+export async function renderPdfPages(file, pageNumbers, scale = 2) {
+    const pdfjs = await loadPdfjs();
+    const data = new Uint8Array(await file.arrayBuffer());
+    const doc = await pdfjs.getDocument({ data }).promise;
+
+    const out = [];
+    for (const n of pageNumbers) {
+        if (n < 1 || n > doc.numPages) continue;
+        const page = await doc.getPage(n);
+        // 2x so the chart is still legible when a learner zooms in on a phone.
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+        if (blob) out.push({ page: n, blob, width: canvas.width, height: canvas.height });
+    }
+    return out;
+}
+
 // Fetching a decoded image out of pdfjs, without the two ways it can hang.
 //
 // `objs.get(name, cb)` queues the callback and only fires it once that object
