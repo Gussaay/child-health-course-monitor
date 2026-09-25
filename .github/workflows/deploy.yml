@@ -148,8 +148,6 @@ jobs:
         run: npm run build
 
       - name: Create Web Update Manifests
-        env:
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           FIREBASE_URL="https://imnci-courses-monitor.web.app"
           ZIP_NAME="update-${{ env.BUILD_VERSION }}.zip"
@@ -168,13 +166,15 @@ jobs:
           # signing keystore. It also produced invalid JSON the moment a commit
           # message contained a double quote, which would have left every device
           # unable to parse the manifest.
+          # `notes` is deliberately empty. It used to carry $COMMIT_MESSAGE,
+          # which put the whole release description into the update dialog on
+          # the phone; the dialog only asks whether to restart now or later.
           jq -n \
             --arg version "$BUILD_VERSION" \
             --arg url "${FIREBASE_URL}/latest/${ZIP_NAME}" \
             --arg checksum "$CHECKSUM" \
-            --arg notes "$COMMIT_MESSAGE" \
             '{version: $version, url: $url, checksum: $checksum,
-              mandatory: false, notes: $notes, minNativeBuild: 1}' \
+              mandatory: false, notes: "", minNativeBuild: 1}' \
             > dist/latest/update.json
           cat dist/latest/update.json
 

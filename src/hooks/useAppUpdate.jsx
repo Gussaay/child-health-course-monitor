@@ -683,7 +683,10 @@ export function useAppUpdate() {
                   ? 'A required update has been downloaded. The app must restart to install it.'
                   : 'A new version has been downloaded. Restart now to install it, or choose Later and it will install by itself the next time you open the app.'}
               </p>
-              {ota.notes && <p className="mt-2 text-sm text-gray-500">{ota.notes}</p>}
+              {/* The manifest's `notes` is not shown. It carried the release
+                  description from the commit, which arrived on a phone as
+                  several paragraphs of developer shorthand in a dialog whose
+                  only question is "restart now or later?". */}
 
               {onDataEntryPage && (
                 <p className="mt-3 rounded-md bg-amber-50 p-2 text-sm text-amber-800">
