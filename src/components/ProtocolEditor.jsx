@@ -3,6 +3,11 @@ import { Card, PageHeader, Button, Spinner } from './CommonComponents';
 import { useDataCache } from '../DataContext';
 import { saveIMNCIProtocol } from '../data';
 import { notify, confirmDialog, promptDialog } from './dialogs';
+// The same four severities the online course books colour their classification
+// tables with, and that IMNCIRecordingForm compares against by value. Defined
+// once in constants.js so the protocol, the books and the exercises cannot
+// drift into three different spellings of "yellow".
+import { IMNCI_SEVERITIES } from './constants';
 import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X } from 'lucide-react';
 
 // --- Predefined Conditions Mapping for Dropdowns ---
@@ -477,7 +482,7 @@ export default function ProtocolEditor() {
         const newIndex = newData.categories[catKey].rules.length;
         newData.categories[catKey].rules.push({
             id: `rule_${Math.floor(Math.random() * 100000)}`, type: "ANY", conditions: [],
-            classification: { label: "New Classification", color: "bg-slate-500" }, treatments: []
+            classification: { label: "New Classification", color: IMNCI_SEVERITIES[3].protocolColor }, treatments: []
         });
         setEditorData(newData);
         setExpandedRules(prev => ({...prev, [`${catKey}_${newIndex}`]: true}));
@@ -817,10 +822,9 @@ export default function ProtocolEditor() {
                                                         <div>
                                                             <label className="text-[10px] font-bold text-slate-500 uppercase">Color</label>
                                                             <select value={rule.classification.color} onChange={(e) => handleClassificationChange(catKey, ruleIndex, 'color', e.target.value)} className="w-full text-xs p-1.5 border border-slate-300 rounded">
-                                                                <option value="bg-red-500">Red (Severe)</option>
-                                                                <option value="bg-yellow-400">Yellow (Moderate)</option>
-                                                                <option value="bg-green-500">Green (Mild)</option>
-                                                                <option value="bg-slate-500">Slate (Note)</option>
+                                                                {IMNCI_SEVERITIES.map((sev) => (
+                                                                    <option key={sev.id} value={sev.protocolColor}>{sev.label}</option>
+                                                                ))}
                                                             </select>
                                                         </div>
                                                         <div>

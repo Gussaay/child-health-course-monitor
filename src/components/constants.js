@@ -1440,3 +1440,59 @@ export function canonicalLocality(stateKey, name) {
     const hit = Object.keys(table).find((k) => normalise(k) === n);
     return hit ? table[hit] : null;
 }
+
+// =============================================================================
+// --- IMNCI CLASSIFICATION SEVERITY ---
+//
+// The one vocabulary shared by the protocol engine, the online course books and
+// the online exercises. In IMNCI the colour is not decoration: pink/red means
+// refer urgently, yellow means treat at this facility, green means care at
+// home. Three modules were each carrying their own spelling of that.
+//
+// `protocolColor` MUST keep these exact strings. IMNCIRecordingForm compares
+// against them directly — `cls.color === 'bg-red-500'` decides whether a
+// classification is shown and how severity is summarised — so they are load
+// bearing logic, not a theme. Change one and the clinical engine changes
+// behaviour silently.
+// =============================================================================
+
+export const IMNCI_SEVERITIES = [
+    {
+        id: 'severe',
+        label: 'Severe — urgent referral',
+        labelAr: 'شديد — إحالة عاجلة',
+        protocolColor: 'bg-red-500',
+        swatch: 'bg-red-500 text-white',
+        row: 'bg-rose-100 border-rose-300 text-rose-900',
+    },
+    {
+        id: 'moderate',
+        label: 'Moderate — treat at the facility',
+        labelAr: 'متوسط — علاج في المرفق',
+        protocolColor: 'bg-yellow-400',
+        swatch: 'bg-yellow-400 text-slate-900',
+        row: 'bg-amber-100 border-amber-300 text-amber-900',
+    },
+    {
+        id: 'mild',
+        label: 'Mild — home care',
+        labelAr: 'خفيف — رعاية منزلية',
+        protocolColor: 'bg-green-500',
+        swatch: 'bg-green-500 text-white',
+        row: 'bg-emerald-100 border-emerald-300 text-emerald-900',
+    },
+    {
+        id: 'note',
+        label: 'Note — no classification',
+        labelAr: 'ملاحظة',
+        protocolColor: 'bg-slate-500',
+        swatch: 'bg-slate-500 text-white',
+        row: 'bg-white border-slate-200 text-slate-800',
+    },
+];
+
+export const severityById = (id) =>
+    IMNCI_SEVERITIES.find((s) => s.id === id) || IMNCI_SEVERITIES[3];
+
+export const severityByProtocolColor = (color) =>
+    IMNCI_SEVERITIES.find((s) => s.protocolColor === color) || IMNCI_SEVERITIES[3];
