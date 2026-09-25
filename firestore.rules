@@ -160,6 +160,50 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // --- ONLINE COURSES (self-paced training) ---
+    //
+    // Distinct from /courses, which is a training EVENT with participants and
+    // dates. These are e-learning courses.
+    //
+    // Any signed-in user may read the catalogue and take a course; authoring is
+    // federal, because published material carries the programme's name.
+    // =========================================================================
+    match /onlineCourses/{courseId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isSubCourseEditor();
+    }
+
+    match /onlineCourseItems/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isSubCourseEditor();
+    }
+
+    // A learner's own progress, and nobody else's. Managers are deliberately
+    // not given read access here: how far someone has got through a course is
+    // not information the programme has asked to supervise, and the collection
+    // can always be opened later if it does.
+    match /onlineProgress/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // =========================================================================
+    // --- IMNCI CLINICAL PROTOCOLS ---
+    //
+    // The classification rules, treatments and dose tables the assessment form
+    // runs on. Every clinician's device reads them, so read is open to any
+    // signed-in user — without them the form classifies nothing at all.
+    //
+    // Writing them changes the clinical guidance shown at the bedside across
+    // the country, so it is federal only: isSubCourseEditor() is this file's
+    // existing helper for "federal manager or super user", and it deliberately
+    // excludes states_manager, which isManager() would admit.
+    // =========================================================================
+    match /imnciProtocols/{formType} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isSubCourseEditor();
+    }
+
+    // =========================================================================
     // --- SUPERVISION ASSESSMENTS ---
     //
     // Facility assessments carried out by federal, state and locality managers.

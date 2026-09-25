@@ -2036,6 +2036,203 @@ export const queueCertificateEmail = async (participant, link, language) => {
 };
 
 // ============================================================================
+// --- ONLINE COURSES (self-paced training) ---
+//
+// Two collections, not four. The source system used course / component /
+// module / section, but component was an unused grouping layer and `section`
+// actually held the content, so the tree here is course -> module -> section
+// and modules and sections share one collection distinguished by `kind`. One
+// query then loads a whole course instead of three.
+//
+// NOTE the name. `courses` in this app already means a training EVENT with
+// participants, facilitators and dates. These are e-learning courses and must
+// never be mixed with those.
+// ============================================================================
+
+export async function upsertOnlineCourse(payload) {
+    if (payload.id) {
+        const ref = doc(db, "onlineCourses", payload.id);
+        await executeOfflineSafeWrite(
+            fbSetDoc(ref, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true }),
+            `Online course: ${payload.title}`);
+        return payload.id;
+    }
+    const { id, ...rest } = payload;
+    const ref = doc(collection(db, "onlineCourses"));
+    await executeOfflineSafeWrite(
+        fbSetDoc(ref, { ...rest, createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp() }),
+        `Online course: ${payload.title}`);
+    return ref.id;
+}
+
+export async function listOnlineCourses(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "onlineCourses");
+        if (lastSync > 0) q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        const snap = await getData(q, sourceOptions);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching online courses:", error);
+        throw error;
+    }
+}
+
+export async function deleteOnlineCourse(courseId) {
+    await fbUpdateDoc(doc(db, "onlineCourses", courseId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    return true;
+}
+
+export async function upsertOnlineCourseItem(payload) {
+    if (!payload?.courseId || !payload?.kind) {
+        throw new Error("An online course item needs a courseId and a kind.");
+    }
+    if (payload.id) {
+        const ref = doc(db, "onlineCourseItems", payload.id);
+        await executeOfflineSafeWrite(
+            fbSetDoc(ref, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true }),
+            `Course item: ${payload.title}`);
+        return payload.id;
+    }
+    const { id, ...rest } = payload;
+    const ref = doc(collection(db, "onlineCourseItems"));
+    await executeOfflineSafeWrite(
+        fbSetDoc(ref, { ...rest, createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp() }),
+        `Course item: ${payload.title}`);
+    return ref.id;
+}
+
+export async function listOnlineCourseItems(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "onlineCourseItems");
+        if (lastSync > 0) q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        const snap = await getData(q, sourceOptions);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching online course items:", error);
+        throw error;
+    }
+}
+
+export async function deleteOnlineCourseItem(itemId) {
+    await fbUpdateDoc(doc(db, "onlineCourseItems", itemId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    return true;
+}
+
+// Awaited to completion rather than run through executeOfflineSafeWrite: an
+// import writes a hundred documents and the four-second timeout in that helper
+// would report success for a migration that had barely started.
+export async function bulkUpsertOnlineCourseContent({ course, items }) {
+    if (!isOnline()) {
+        throw new Error('You appear to be offline. Connect to the internet and import again — nothing was saved.');
+    }
+
+    const courseRef = course.id
+        ? doc(db, "onlineCourses", course.id)
+        : doc(collection(db, "onlineCourses"));
+    await setDoc(courseRef, {
+        ...course, id: courseRef.id, isDeleted: false,
+        createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    // Sections carry a legacy module key; it is swapped for the real Firestore
+    // id once the module it belongs to has been written.
+    const moduleIdByLegacyKey = {};
+    const modules = items.filter(i => i.kind === 'module');
+    const sections = items.filter(i => i.kind === 'section');
+
+    for (let i = 0; i < modules.length; i += 400) {
+        const batch = writeBatch(db);
+        modules.slice(i, i + 400).forEach((m) => {
+            const ref = doc(collection(db, "onlineCourseItems"));
+            moduleIdByLegacyKey[m.legacyKey] = ref.id;
+            batch.set(ref, {
+                ...m, id: ref.id, courseId: courseRef.id, isDeleted: false,
+                createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
+            });
+        });
+        await batch.commit();
+    }
+
+    let orphaned = 0;
+    for (let i = 0; i < sections.length; i += 400) {
+        const batch = writeBatch(db);
+        sections.slice(i, i + 400).forEach((sec) => {
+            const moduleId = moduleIdByLegacyKey[sec.legacyModuleKey] || null;
+            if (!moduleId) orphaned += 1;
+            const ref = doc(collection(db, "onlineCourseItems"));
+            batch.set(ref, {
+                ...sec, id: ref.id, courseId: courseRef.id, moduleId, isDeleted: false,
+                createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
+            });
+        });
+        await batch.commit();
+    }
+
+    return { courseId: courseRef.id, modules: modules.length, sections: sections.length, orphaned };
+}
+
+// One document per learner, holding every section they have finished. A
+// document per section would be tidier but would cost a read per section to
+// render a progress bar.
+export async function getOnlineProgress(uid, sourceOptions = {}) {
+    if (!uid) return null;
+    const snap = await fbGetDoc(doc(db, "onlineProgress", uid), sourceOptions);
+    return snap.exists() ? { id: snap.id, ...snap.data() } : { id: uid, completed: {} };
+}
+
+export async function setOnlineSectionComplete(uid, sectionId, done) {
+    if (!uid || !sectionId) return false;
+    await fbSetDoc(doc(db, "onlineProgress", uid), {
+        completed: { [sectionId]: done ? serverTimestamp() : deleteField() },
+        lastUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+}
+
+// ============================================================================
+// --- IMNCI CLINICAL PROTOCOLS ---
+//
+// One document per form type: 'child', 'infant', 'dosages_child',
+// 'dosages_infant'. These are the rules the assessment form classifies against
+// and the dose tables it resolves {{dose:...}} tags from, so the collection is
+// read by every clinician and written only from the Protocol Builder.
+// ============================================================================
+
+export async function saveIMNCIProtocol(formType, protocolData) {
+    if (!formType) throw new Error("A form type is required to save a protocol.");
+
+    // Deliberately NOT executeOfflineSafeWrite. That helper stops waiting after
+    // four seconds and reports `queued`, which would tell someone their clinical
+    // rules were saved when they may not have left the device. A protocol
+    // document is large and this is the one write where a false confirmation is
+    // worst: the author moves on believing the guidance is live.
+    if (!isOnline()) {
+        throw new Error('You appear to be offline. Connect to the internet and save again — nothing was saved.');
+    }
+
+    await fbSetDoc(doc(db, "imnciProtocols", formType), {
+        ...protocolData,
+        formType,
+        lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+// Returns an OBJECT keyed by form type, not an array, because every consumer
+// asks for one named protocol (protocols.child, protocols.dosages_infant).
+export async function getIMNCIProtocols(sourceOptions = {}) {
+    try {
+        const snapshot = await getData(collection(db, "imnciProtocols"), sourceOptions);
+        const protocols = {};
+        snapshot.docs.forEach(d => { protocols[d.id] = d.data(); });
+        return protocols;
+    } catch (error) {
+        console.error("Error fetching IMNCI protocols:", error);
+        throw error;
+    }
+}
+
+// ============================================================================
 // --- SUPERVISION ASSESSMENTS ---
 //
 // One document per facility assessment. The checklist itself is code

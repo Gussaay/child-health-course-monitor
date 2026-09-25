@@ -27,6 +27,9 @@ export const ALL_PERMISSIONS = {
     canManagePopulation: false,
     canViewSupervision: false,
     canManageSupervision: false,
+    canManageProtocols: false,
+    canViewOnlineCourses: false,
+    canManageOnlineCourses: false,
 };
 
 export const ALL_PERMISSION_KEYS = Object.keys(ALL_PERMISSIONS);
@@ -55,6 +58,9 @@ export const applyDerivedPermissions = (permissions) => {
     }
     if (basePermissions.canManageSupervision) {
         basePermissions.canViewSupervision = true;
+    }
+    if (basePermissions.canManageOnlineCourses) {
+        basePermissions.canViewOnlineCourses = true;
     }
     if (basePermissions.canUseFederalManagerAdvancedFeatures) {
         basePermissions.canApproveSubmissions = true;
@@ -111,7 +117,9 @@ export const mergeRolePermissions = (rolesArray, globalPermissionsMap) => {
     return applyDerivedPermissions(mergedPerms);
 };
 
-const BASE_PERMS = { ...ALL_PERMISSIONS };
+// Everyone who works in the programme may take the training; authoring is
+// granted separately to the federal roles above.
+const BASE_PERMS = { ...ALL_PERMISSIONS, canViewOnlineCourses: true };
 const COURSE_MGMT_STANDARD = { canViewCourse: true, canManageCourse: true };
 const COURSE_ADD_STANDARD = { canAddCourse: true }; // NEW PRESET
 
@@ -153,6 +161,9 @@ const SUPER_USER_PERMS = {
     canManagePopulation: true,
     canViewSupervision: true,
     canManageSupervision: true,
+    canManageProtocols: true,
+    canViewOnlineCourses: true,
+    canManageOnlineCourses: true,
     manageScope: 'federal', 
     manageTimePeriod: 'anytime' 
 };
@@ -172,6 +183,9 @@ const FEDERAL_MANAGER_PERMS = {
     canManagePopulation: true,
     canViewSupervision: true,
     canManageSupervision: true,
+    canManageProtocols: true,
+    canViewOnlineCourses: true,
+    canManageOnlineCourses: true,
     manageScope: 'federal', 
     manageTimePeriod: 'anytime' 
 };
@@ -240,5 +254,8 @@ export const PERMISSION_DESCRIPTIONS = {
     canManageSupplyChain: "Add, edit and delete essential supply items and their quantification parameters.",
     canManagePopulation: "Import and edit the yearly population targets used as denominators.",
     canViewSupervision: "View supervision assessments and their results.",
-    canManageSupervision: "Carry out and edit supervision assessments."
+    canManageSupervision: "Carry out and edit supervision assessments.",
+    canManageProtocols: "Edit the IMNCI clinical protocol: classification rules, treatments and dose tables.",
+    canViewOnlineCourses: "Take the self-paced online training courses.",
+    canManageOnlineCourses: "Create and edit online courses, modules and content."
 };

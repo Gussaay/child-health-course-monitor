@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -69,6 +69,7 @@ const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMe
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
 const SupplyManagementView = lazy(() => import('./components/SupplyManagementView'));
 const SupervisionView = lazy(() => import('./components/SupervisionView'));
+const OnlineCoursesView = lazy(() => import('./components/OnlineCoursesView'));
 const MeetingTrackerView = lazy(() => import('./components/MeetingTrackerView'));
 
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
@@ -315,13 +316,14 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', icon: Users, permission: permissions.canViewHumanResource },
         { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
-        { label: t('landing.modules.imci', 'IMCI Assessment'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
+        { label: t('landing.modules.imci', 'IMNCI Protocol'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
         { label: 'Project Tracker', view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: 'Meeting Tracker', view: 'meetings', icon: Users, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
         { label: t('landing.modules.supply', 'Supply Management'), view: 'supplyManagement', icon: Package, permission: permissions.canViewSupplyChain },
         { label: t('landing.modules.supervision', 'Supervision'), view: 'supervision', icon: ClipboardCheck, permission: permissions.canViewSupervision },
+        { label: t('landing.modules.online_courses', 'Online Courses'), view: 'onlineCourses', icon: BookOpen, permission: permissions.canViewOnlineCourses },
         { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
@@ -1437,6 +1439,7 @@ export default function App() {
  'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
             'supplyManagement': permissions.canViewSupplyChain,
             'supervision': permissions.canViewSupervision,
+            'onlineCourses': permissions.canViewOnlineCourses,
             'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
 
@@ -1465,9 +1468,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'downloads', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
@@ -1697,7 +1700,7 @@ export default function App() {
             case 'admin': return <AdminDashboard />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
-                return permissions.canViewCourse ? ( <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}><IMNCIRecordingForm /></Suspense> ) : null;
+                return permissions.canViewCourse ? ( <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}><IMNCIRecordingForm permissions={permissions} /></Suspense> ) : null;
 
             case 'humanResources': return <HumanResourcesPage
                 activeTab={activeHRTab} setActiveTab={setActiveHRTab}
@@ -1750,6 +1753,10 @@ export default function App() {
 
            case 'supervision':
     return permissions.canViewSupervision ? ( <Suspense fallback={<Spinner />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
+
+           case 'onlineCourses':
+    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<Spinner />}><OnlineCoursesView permissions={permissions} /></Suspense> ) : null;
+
 
            case 'projects':
     return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><ProjectTrackerView permissions={permissions} /></Suspense> ) : null;

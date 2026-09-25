@@ -236,6 +236,90 @@ describe('existing restrictions are preserved', () => {
 });
 
 // =============================================================================
+// Online courses. Anyone signed in may learn; only the federal level publishes.
+// =============================================================================
+describe('onlineCourses — everyone signed in learns, federal authors', () => {
+    const course = { title: 'IMNCI', isPublished: true };
+    const item = { courseId: 'c1', kind: 'section', title: 'Intro' };
+
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            await setDoc(doc(db, 'onlineCourses', 'c1'), course);
+            await setDoc(doc(db, 'onlineCourseItems', 'i1'), item);
+        });
+    });
+
+    it('lets any signed-in user read the catalogue and its content', async () => {
+        await assertSucceeds(getDocs(collection(as('plainUser'), 'onlineCourses')));
+        await assertSucceeds(getDocs(collection(as('plainUser'), 'onlineCourseItems')));
+    });
+
+    it('lets a federal manager and a super user author', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'onlineCourses', 'c2'), course));
+        await assertSucceeds(setDoc(doc(as('superUser'), 'onlineCourseItems', 'i2'), item));
+    });
+
+    it('does NOT let a states manager or a facilitator publish content', async () => {
+        await assertFails(setDoc(doc(as('statesManager'), 'onlineCourses', 'c3'), course));
+        await assertFails(setDoc(doc(as('facilitator'), 'onlineCourseItems', 'i3'), item));
+    });
+
+    it('does NOT let an anonymous visitor read the courses', async () => {
+        await assertFails(getDocs(collection(anonymous(), 'onlineCourses')));
+    });
+
+    // Progress is personal. One learner must not be able to read or rewrite
+    // another's record.
+    it('lets a learner read and write only their own progress', async () => {
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'onlineProgress', 'plainUser'), { completed: {} }));
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'onlineProgress', 'plainUser')));
+    });
+
+    it('does NOT let anyone touch another learner\'s progress', async () => {
+        await assertFails(getDoc(doc(as('plainUser'), 'onlineProgress', 'facilitator')));
+        await assertFails(setDoc(doc(as('plainUser'), 'onlineProgress', 'facilitator'), { completed: {} }));
+        await assertFails(getDoc(doc(as('superUser'), 'onlineProgress', 'plainUser')));
+    });
+});
+
+// =============================================================================
+// Clinical protocols. Every clinician reads them; only the federal level may
+// change the guidance they contain.
+// =============================================================================
+describe('imnciProtocols — everyone signed in reads, federal writes', () => {
+    const protocol = { formType: 'child', version: '1.0', categories: {} };
+
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'imnciProtocols', 'child'), protocol);
+        });
+    });
+
+    // The assessment form classifies nothing without these, so a plain
+    // clinician account has to be able to read them.
+    it('lets any signed-in user read the protocol', async () => {
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'imnciProtocols', 'child')));
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'imnciProtocols')));
+    });
+
+    it('lets a federal manager and a super user edit it', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'imnciProtocols', 'child'), protocol));
+        await assertSucceeds(setDoc(doc(as('superUser'), 'imnciProtocols', 'dosages_child'), protocol));
+    });
+
+    it('does NOT let a states manager or a facilitator change the guidance', async () => {
+        await assertFails(setDoc(doc(as('statesManager'), 'imnciProtocols', 'child'), protocol));
+        await assertFails(setDoc(doc(as('facilitator'), 'imnciProtocols', 'child'), protocol));
+    });
+
+    it('does NOT let an anonymous visitor read or write', async () => {
+        await assertFails(getDocs(collection(anonymous(), 'imnciProtocols')));
+        await assertFails(setDoc(doc(anonymous(), 'imnciProtocols', 'child'), protocol));
+    });
+});
+
+// =============================================================================
 // Supervision assessments.
 // =============================================================================
 describe('supervisionAssessments — supervising managers write, staff read', () => {

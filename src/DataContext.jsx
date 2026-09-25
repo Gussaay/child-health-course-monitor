@@ -27,6 +27,9 @@ import {
     listSupplyItems,
     listPopulationTargets,
     listSupervisionAssessments,
+    getIMNCIProtocols,
+    listOnlineCourses,
+    listOnlineCourseItems,
     fetchFacilitiesHistoryMultiDate, 
     listSnapshotsForFacility,
     getAboutTeamImages 
@@ -189,6 +192,9 @@ export const DataProvider = ({ children }) => {
         supplyItems: null,
         populationTargets: null,
         supervisionAssessments: null,
+        imnciProtocols: null,
+        onlineCourses: null,
+        onlineCourseItems: null,
         aboutTeamImages: null, 
     });
 
@@ -215,6 +221,9 @@ export const DataProvider = ({ children }) => {
         supplyItems: true,
         populationTargets: true,
         supervisionAssessments: true,
+        imnciProtocols: true,
+        onlineCourses: true,
+        onlineCourseItems: true,
         aboutTeamImages: true, 
     });
     
@@ -529,6 +538,9 @@ export const DataProvider = ({ children }) => {
         fetchSupplyItems: createFetcher('supplyItems', (opts, lastSync) => listSupplyItems(opts, lastSync)),
         fetchPopulationTargets: createFetcher('populationTargets', (opts, lastSync) => listPopulationTargets(opts, lastSync)),
         fetchSupervisionAssessments: createFetcher('supervisionAssessments', (opts, lastSync) => listSupervisionAssessments(opts, lastSync)),
+        fetchProtocols: createFetcher('imnciProtocols', (opts) => getIMNCIProtocols(opts)),
+        fetchOnlineCourses: createFetcher('onlineCourses', (opts, lastSync) => listOnlineCourses(opts, lastSync)),
+        fetchOnlineCourseItems: createFetcher('onlineCourseItems', (opts, lastSync) => listOnlineCourseItems(opts, lastSync)),
         
         fetchAboutTeamImages: createFetcher('aboutTeamImages', (opts) => getAboutTeamImages(opts)),
     }), [createFetcher]);
@@ -565,9 +577,14 @@ export const DataProvider = ({ children }) => {
         }
     }, []);
 
-    const value = { 
-        ...cache, 
-        ...fetchers, 
+    const value = {
+        ...cache,
+        ...fetchers,
+        // IMNCIRecordingForm reads `protocols.child` / `protocols.dosages_infant`,
+        // so the cache key is aliased rather than renamed: `imnciProtocols` keeps
+        // matching the Firestore collection, which is what every other key here
+        // does, while the clinical code keeps the name it already uses.
+        protocols: cache.imnciProtocols,
         isLoading,
         clearLocalCache,
         fetchFacilitiesHistoryMultiDate, 
