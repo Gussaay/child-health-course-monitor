@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
     parsePdfIntoSections, looksLikeHeading, countWords, tabContent, SECTION_TABS,
     newQuestion, newExerciseLink, videoSource, BLOCK_TYPES, contentsTitles,
-} from '../src/components/online-course/book';
+    blockHtml,
+} from '../src/components/imnci/book';
+import { sanitiseHtml } from '../src/components/imnci/shared';
 import {
     IMNCI_SEVERITIES, severityById, severityByProtocolColor,
 } from '../src/components/constants';
@@ -352,5 +354,132 @@ describe('video addresses', () => {
     it('treats a blank address as no video at all', () => {
         expect(videoSource('')).toBeNull();
         expect(videoSource(null)).toBeNull();
+    });
+});
+
+// =============================================================================
+// The rich text sanitiser.
+//
+// Course text is authored as HTML and rendered back with dangerouslySetInnerHTML
+// to every learner. An author account is trusted, but a compromised one must not
+// be able to put a script in front of a health worker, so this is pinned.
+// =============================================================================
+
+describe('sanitiseHtml', () => {
+    it('keeps the formatting the toolbar produces', () => {
+        const html = '<p><b>Bold</b> and <i>italic</i> and <u>underlined</u>.</p>';
+        expect(sanitiseHtml(html)).toBe(html);
+    });
+
+    it('keeps colour, font and alignment, which is the point of it', () => {
+        const out = sanitiseHtml('<p style="text-align: center"><span style="color: #be123c; font-size: 1.25rem">SEVERE</span></p>');
+        expect(out).toContain('text-align: center');
+        expect(out).toContain('color: #be123c');
+        expect(out).toContain('font-size: 1.25rem');
+    });
+
+    it('drops a script outright', () => {
+        expect(sanitiseHtml('<p>Hello</p><script>alert(1)</script>')).not.toContain('alert');
+    });
+
+    it('drops event handlers', () => {
+        const out = sanitiseHtml('<p onclick="steal()" onmouseover="steal()">Text</p>');
+        expect(out).not.toContain('onclick');
+        expect(out).not.toContain('onmouseover');
+        expect(out).toContain('Text');
+    });
+
+    it('drops a javascript: link but keeps the words', () => {
+        const out = sanitiseHtml('<a href="javascript:alert(1)">Click</a>');
+        expect(out).not.toContain('javascript:');
+        expect(out).toContain('Click');
+    });
+
+    it('survives the malformed-tag trick a regular expression misses', () => {
+        // <img/**/onerror=...> defeats a naive /<[^>]*>/ strip.
+        const out = sanitiseHtml('<img src=x onerror="alert(1)">');
+        expect(out).not.toContain('onerror');
+    });
+
+    it('refuses a style that can fetch something', () => {
+        const out = sanitiseHtml('<p style="background-image: url(http://evil/x); color: red">Hi</p>');
+        expect(out).not.toContain('url(');
+        expect(out).toContain('color: red');
+    });
+
+    it('refuses a fetching value even on a property it allows', () => {
+        expect(sanitiseHtml('<p style="border: 1px solid url(http://evil/x)">x</p>')).not.toContain('url(');
+        expect(sanitiseHtml('<p style="width: expression(alert(1))">x</p>')).not.toContain('expression');
+    });
+
+    it('keeps a classification chart whole', () => {
+        // The chart builder writes its colours and its spacing as inline style,
+        // because the chart has to carry its own meaning wherever it ends up.
+        // Stripping padding and width left the cells touching each other.
+        const chart = '<table style="width: 100%"><tr>'
+            + '<td style="background-color: #ffe4e6; color: #881337; padding: 6px">Stridor</td>'
+            + '</tr></table>';
+        const out = sanitiseHtml(chart);
+        expect(out).toContain('width: 100%');
+        expect(out).toContain('background-color: #ffe4e6');
+        expect(out).toContain('padding: 6px');
+        expect(out).toContain('Stridor');
+    });
+
+    it('unwraps a disallowed element rather than losing the text inside it', () => {
+        // Dropping the children with the wrapper would silently lose a whole
+        // paragraph because of one stray tag from a paste.
+        const out = sanitiseHtml('<marquee><p>Important guidance</p></marquee>');
+        expect(out).toContain('Important guidance');
+        expect(out).not.toContain('marquee');
+    });
+
+    it('makes every link safe to open', () => {
+        const out = sanitiseHtml('<a href="https://who.int">WHO</a>');
+        expect(out).toContain('rel="noreferrer noopener"');
+        expect(out).toContain('target="_blank"');
+    });
+
+    it('treats nothing as nothing', () => {
+        expect(sanitiseHtml('')).toBe('');
+        expect(sanitiseHtml(null)).toBe('');
+        expect(sanitiseHtml(undefined)).toBe('');
+    });
+});
+
+// =============================================================================
+// blockHtml
+//
+// The bug this pins: it used to decide "is this already HTML?" by looking for a
+// tag. Converted text with an ampersand in it has no tags, so it was escaped on
+// load, saved in the escaped form, and escaped AGAIN next time — "WHO & UNICEF"
+// drifted to "WHO &amp;amp; UNICEF", a little worse on every visit.
+// =============================================================================
+
+describe('blockHtml', () => {
+    it('escapes text that came from the PDF', () => {
+        expect(blockHtml({ type: 'paragraph', text: 'WHO & UNICEF' })).toBe('WHO &amp; UNICEF');
+    });
+
+    it('does NOT escape text that was written in the editor', () => {
+        const written = '<p>WHO &amp; UNICEF</p>';
+        expect(blockHtml({ type: 'rich', text: written })).toBe(written);
+    });
+
+    it('never escapes the same text twice', () => {
+        // Load, save, load again: the ampersand must not grow.
+        const fromPdf = { type: 'paragraph', text: 'WHO & UNICEF' };
+        const saved = { type: 'rich', text: blockHtml(fromPdf) };
+        expect(blockHtml(saved)).toBe('WHO &amp; UNICEF');
+        expect(blockHtml({ type: 'rich', text: blockHtml(saved) })).toBe('WHO &amp; UNICEF');
+    });
+
+    it('turns a converted list into one a rich editor can hold', () => {
+        expect(blockHtml({ type: 'list', items: ['first', 'second & third'] }))
+            .toBe('<ul><li>first</li><li>second &amp; third</li></ul>');
+    });
+
+    it('counts words without counting the markup', () => {
+        expect(countWords({ read: [{ type: 'rich', text: '<p><strong>one</strong> two three</p>' }] })).toBe(3);
     });
 });

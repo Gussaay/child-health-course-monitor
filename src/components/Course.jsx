@@ -28,7 +28,7 @@ import {
 
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
-import { CourseExercisesView } from './Online-exercise'; 
+import { CourseExercisesView } from './imnci'; 
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
     COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState,

@@ -22,7 +22,7 @@ import { useDataCache } from '../DataContext';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { ReportsView } from './ReportsView'; 
-import { ExerciseCourseReport } from './Online-exercise'; 
+import { ExerciseCourseReport } from './imnci'; 
 import { FinalReportManager } from './FinalReportManager';
 import { notify } from './dialogs';
 

@@ -16,7 +16,7 @@ import {
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC
 } from './constants.js';
-import { ParticipantExercisesModal } from './Online-exercise';
+import { ParticipantExercisesModal } from './imnci';
 import {
     importParticipants,
     bulkMigrateFromMappings,

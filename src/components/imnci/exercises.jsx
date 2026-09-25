@@ -1,4 +1,4 @@
-// src/components/Online-exercise/index.jsx
+// src/components/imnci/exercises.jsx
 //
 // The whole exercise engine in one file. Exercise CONTENT lives next door in
 // exercises.js — that is the only file you edit to add or change an exercise.
@@ -55,14 +55,14 @@ export {
 } from './exercises';
 
 // IMPORTANT: loaded lazily, NOT with a static import.
-// IMNCIRecordingForm imports DataContext at module scope. A static import here
+// The patient form imports DataContext at module scope. A static import here
 // pulls DataContext into Course.jsx's module graph through this file, which
 // leaves useDataCache() undefined by the time CourseManagementView renders
 // ("Cannot destructure property 'federalCoordinators' of 'useDataCache(...)'").
 // The dynamic import breaks that edge, and keeps ~2,400 lines of form out of the
 // Course chunk for anyone who never opens an exercise.
-const ChildForm  = lazy(() => import('../IMNCIRecordingForm').then(m => ({ default: m.ChildForm })));
-const InfantForm = lazy(() => import('../IMNCIRecordingForm').then(m => ({ default: m.InfantForm })));
+const ChildForm  = lazy(() => import('./form').then(m => ({ default: m.ChildForm })));
+const InfantForm = lazy(() => import('./form').then(m => ({ default: m.InfantForm })));
 
 // Labels for the feedback panel. Keys are ChildForm's own state field names.
 export const FIELD_LABELS = {

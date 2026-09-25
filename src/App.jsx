@@ -48,7 +48,7 @@ const ProgramTeamView = lazy(() => import('./components/ProgramTeamView.jsx'));
 const PublicTeamMemberProfileView = lazy(() => import('./components/ProgramTeamView.jsx').then(module => ({ default: module.PublicTeamMemberProfileView })));
 const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamView.jsx').then(module => ({ default: module.TeamMemberApplicationForm })));
 
-const IMNCIRecordingForm = lazy(() => import('./components/IMNCIRecordingForm'));
+const IMNCIRecordingForm = lazy(() => import('./components/imnci').then(m => ({ default: m.IMNCIRecordingForm })));
 
 const CertificateVerificationView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCertificateDownloadView })));
@@ -57,7 +57,7 @@ const PublicCourseCertificatesView = lazy(() => import('./components/Certificate
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
 const PublicParticipantRegistrationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicParticipantRegistrationView })));
-const PublicExerciseView = lazy(() => import('./components/Online-exercise').then(module => ({ default: module.PublicExerciseView })));
+const PublicExerciseView = lazy(() => import('./components/imnci').then(m => ({ default: m.PublicExerciseView })));
 const PublicCourseMonitoringView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseMonitoringView })));
 
 const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then(module => ({ default: module.CourseTestForm })));
@@ -69,7 +69,12 @@ const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMe
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
 const SupplyManagementView = lazy(() => import('./components/SupplyManagementView'));
 const SupervisionView = lazy(() => import('./components/SupervisionView'));
-const OnlineCoursesView = lazy(() => import('./components/online-course'));
+const OnlineCoursesView = lazy(() => import('./components/imnci').then(m => ({ default: m.OnlineCoursesView })));
+// The IMNCI screens share one load of the exercise definitions. Wrapping them
+// in the provider is what stops the course, the exercises and the patient form
+// each fetching their own copy, and what makes a case corrected in one of them
+// correct in the others without a reload.
+const ImnciProvider = lazy(() => import('./components/imnci').then(m => ({ default: m.ImnciProvider })));
 const MeetingTrackerView = lazy(() => import('./components/MeetingTrackerView'));
 
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
@@ -1700,7 +1705,7 @@ export default function App() {
             case 'admin': return <AdminDashboard />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
-                return permissions.canViewCourse ? ( <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}><IMNCIRecordingForm permissions={permissions} /></Suspense> ) : null;
+                return permissions.canViewCourse ? ( <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}><ImnciProvider><IMNCIRecordingForm permissions={permissions} /></ImnciProvider></Suspense> ) : null;
 
             case 'humanResources': return <HumanResourcesPage
                 activeTab={activeHRTab} setActiveTab={setActiveHRTab}
@@ -1755,7 +1760,7 @@ export default function App() {
     return permissions.canViewSupervision ? ( <Suspense fallback={<Spinner />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
 
            case 'onlineCourses':
-    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<Spinner />}><OnlineCoursesView permissions={permissions} /></Suspense> ) : null;
+    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<Spinner />}><ImnciProvider><OnlineCoursesView permissions={permissions} /></ImnciProvider></Suspense> ) : null;
 
 
            case 'projects':
@@ -1969,7 +1974,7 @@ case 'meetings':
                     mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );
                     break;
                 case 'onlineExercises':
-                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicExerciseView courseId={publicViewData.courseId} /></Suspense> );
+                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><ImnciProvider><PublicExerciseView courseId={publicViewData.courseId} /></ImnciProvider></Suspense> );
                     break;
                 default:
                     mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid report type.</div></Card>;

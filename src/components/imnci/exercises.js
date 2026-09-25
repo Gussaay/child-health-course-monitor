@@ -1,4 +1,4 @@
-// src/components/Online-exercise/exercises.js
+// src/components/imnci/exercises.js
 //
 // ============================================================================
 //  THIS IS THE ONLY FILE YOU EDIT TO ADD OR CHANGE AN EXERCISE.

@@ -1,4 +1,4 @@
-// src/components/online-course/book.js
+// src/components/imnci/book.js
 //
 // Turns an IMNCI module book into readable sections, so a learner reads the
 // text in the app instead of being handed a 95-page PDF and a page number.
@@ -290,8 +290,11 @@ export function countWords(section) {
     ];
     return all.reduce((n, b) => {
         if (b.type === 'list') return n + b.items.join(' ').split(/\s+/).filter(Boolean).length;
-        if (b.type === 'image') return n;
-        return n + String(b.text || '').split(/\s+/).filter(Boolean).length;
+        if (b.type === 'image' || b.type === 'page' || b.type === 'video') return n;
+        // Tags are stripped first: once text is written in the rich editor,
+        // counting the raw string counts <strong> as a word.
+        const words = String(b.text || '').replace(/<[^>]*>/g, ' ');
+        return n + words.split(/\s+/).filter(Boolean).length;
     }, 0);
 }
 
@@ -299,9 +302,39 @@ export function countWords(section) {
 // `video`, `question`, `case` and `exercise` are written by hand, and the rest
 // come straight from the book's prose.
 export const BLOCK_TYPES = [
-    'heading', 'paragraph', 'list', 'image', 'page', 'video',
-    'table', 'note', 'question', 'case', 'exercise',
+    'heading', 'paragraph', 'rich', 'list', 'image', 'page', 'video',
+    'table', 'note', 'question', 'exercise',
 ];
+
+// Which block types hold text the author writes, as opposed to something they
+// assemble from fields. These are the ones edited in place, in the rich editor.
+export const TEXT_BLOCKS = ['paragraph', 'rich', 'heading', 'note'];
+
+/**
+ * A block's text as HTML, ready for the rich editor.
+ *
+ * The converter produces plain paragraphs and `items` lists, because that is
+ * all a PDF gives it. The editor works in HTML, so a list is turned into one
+ * the first time somebody edits it and is saved back as rich text from then on
+ * — converted on demand rather than in a migration, so a book converted last
+ * week is not rewritten by a deploy.
+ */
+export function blockHtml(block) {
+    if (!block) return '';
+    if (block.type === 'list') {
+        const items = (block.items || []).map((i) => `<li>${escapeHtml(i)}</li>`).join('');
+        return items ? `<ul>${items}</ul>` : '';
+    }
+    const text = String(block.text || '');
+    // The TYPE says whether this is HTML, not the contents. Guessing by looking
+    // for a tag escaped text that merely contained an ampersand, saved the
+    // escaped form, and escaped it again next time — so "WHO & UNICEF" drifted
+    // to "WHO &amp;amp; UNICEF", a little worse on every visit to the editor.
+    return block.type === 'rich' ? text : escapeHtml(text);
+}
+
+const escapeHtml = (s) => String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // A multiple-choice question. `answer` is the index of the correct option, so
 // reordering the options in the editor cannot silently change which one is

@@ -1,4 +1,4 @@
-// src/components/online-course/index.jsx
+// src/components/imnci/courses.jsx
 //
 // Online Courses: self-paced training.
 //
@@ -16,13 +16,14 @@
 // in a module — and a section opens as its own page with four tabs: Read, See,
 // Practise, Test. Each tab is edited separately, so the person who writes the
 // questions is not editing around the person who is correcting the prose.
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     BookOpen, Plus, Pencil, Trash2, ArrowLeft, ArrowRight, Columns2,
     CheckCircle2, Circle, DownloadCloud, AlertTriangle, Wand2,
     ZoomIn, ZoomOut, BookOpenText, MonitorPlay, Stethoscope,
-    Lock, GraduationCap, Globe, Layers, Sparkles, Film, Table2, ImagePlus,
+    Lock, GraduationCap, Globe, Layers, Sparkles, Film,
+    Syringe, X, RefreshCw,
 } from 'lucide-react';
 
 import {
@@ -36,12 +37,18 @@ import { ref as storageRef, getDownloadURL, uploadBytes } from 'firebase/storage
 import {
     extractPdfPages, parsePdfIntoSections, countWords, renderPdfPages,
     SECTION_TABS, tabContent, newQuestion, newExerciseLink, videoSource,
+    blockHtml,
 } from './book';
+import { RichText, RichTextEditor, useImnci } from './shared';
 // Practice cases are not re-typed here. A section points at an exercise from
 // Online Exercises by its id, so a correction made to the case there is the one
 // the learner meets in the course as well.
-import { ONLINE_SUB_COURSE } from '../Online-exercise/exercises';
-import { ExerciseEditor, loadAllExercises } from '../Online-exercise';
+import { ExerciseManagerView } from './exercises.jsx';
+
+// The protocol is what a classification means; the course is where it is
+// taught. Someone writing the course needs to be able to correct the protocol
+// without leaving for another screen and finding their way back.
+const ProtocolEditor = lazy(() => import('./protocol'));
 import { IMNCI_SEVERITIES, severityById } from '../constants';
 import {
     upsertOnlineCourse, deleteOnlineCourse,
@@ -145,30 +152,6 @@ export function buildMigration(legacy, courseKey) {
 // An icon per tab. Practise is a stethoscope rather than a pencil: what is
 // being practised is examining a child, not writing.
 const TAB_ICONS = { read: BookOpenText, see: MonitorPlay, practise: Stethoscope };
-
-// Built-in and stored exercises, merged, loaded once and shared by every card
-// on the page. `refreshExercises` drops it after the builder saves, so a case
-// written a moment ago can be picked straight away.
-let exercisesPromise = null;
-const allExercises = () => {
-    if (!exercisesPromise) {
-        exercisesPromise = loadAllExercises(ONLINE_SUB_COURSE, { includeDrafts: true, force: true })
-            .catch((e) => { console.error('Could not load the exercises:', e); return []; });
-    }
-    return exercisesPromise;
-};
-const refreshExercises = () => { exercisesPromise = null; };
-
-function useExercises() {
-    const [list, setList] = useState(null);
-    const [tick, setTick] = useState(0);
-    useEffect(() => {
-        let alive = true;
-        allExercises().then((x) => { if (alive) setList(x); });
-        return () => { alive = false; };
-    }, [tick]);
-    return [list, () => { refreshExercises(); setTick((n) => n + 1); }];
-}
 
 function BookImage({ block }) {
     const { url, missing } = useAssetUrl(block.path);
@@ -293,9 +276,9 @@ function VideoBlock({ block }) {
 function ExerciseLinkBlock({ block }) {
     const { i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
-    const [list] = useExercises();
-    if (!list) return <div className="not-prose h-28 bg-slate-100 rounded-xl animate-pulse my-4" />;
-    const ex = list.find((x) => x.id === block.exerciseId);
+    const { exercises } = useImnci();
+    if (!exercises) return <div className="not-prose h-28 bg-slate-100 rounded-xl animate-pulse my-4" />;
+    const ex = exercises.find((x) => x.id === block.exerciseId);
     if (!ex) {
         return (
             <div className="not-prose p-3 border border-dashed border-amber-300 bg-amber-50 rounded text-xs text-amber-900">
@@ -347,7 +330,14 @@ function ContentBlocks({ blocks, scale = 1 }) {
                     );
                 }
                 if (b.type === 'heading') {
-                    return <h4 key={i} className="font-bold text-slate-900 mt-4">{b.text}</h4>;
+                    return (
+                        <h4 key={i} className="font-bold text-slate-900 mt-4">
+                            <RichText html={blockHtml(b)} className="inline" />
+                        </h4>
+                    );
+                }
+                if (b.type === 'rich') {
+                    return <RichText key={i} html={b.text} />;
                 }
                 if (b.type === 'image' || b.type === 'page') {
                     return <BookImage key={i} block={b} />;
@@ -382,9 +372,13 @@ function ContentBlocks({ blocks, scale = 1 }) {
                     return <ExerciseLinkBlock key={i} block={b} />;
                 }
                 if (b.type === 'note') {
-                    return <div key={i} className="p-3 bg-sky-50 border-s-4 border-sky-400 text-sky-900">{b.text}</div>;
+                    return (
+                        <div key={i} className="p-3 bg-sky-50 border-s-4 border-sky-400 text-sky-900">
+                            <RichText html={blockHtml(b)} />
+                        </div>
+                    );
                 }
-                return <p key={i}>{b.text}</p>;
+                return <RichText key={i} html={blockHtml(b)} />;
             })}
         </div>
     );
@@ -910,138 +904,107 @@ function ItemModal({ isOpen, onClose, item, courseId, kind, modules, onSaved }) 
 // against the book and building the practice cases are different jobs, often
 // done by different people, and neither should be able to lose the other's work
 // by saving a whole section at once.
-// What each tab is allowed to hold, and what the button for it says. A video
-// belongs on See and a case on Practise; offering every block type on every tab
-// is how a course stops making sense to the person reading it.
-const TAB_BLOCKS = {
-    read: [
-        { type: 'paragraph', label: 'Paragraph' },
-        { type: 'heading', label: 'Heading' },
-        { type: 'list', label: 'List' },
-        { type: 'note', label: 'Note' },
-    ],
-    see: [
-        { type: 'image', label: 'Image', Icon: ImagePlus },
-        { type: 'video', label: 'Video', Icon: Film },
-        { type: 'table', label: 'Chart', Icon: Table2 },
-        { type: 'note', label: 'Caption note' },
-    ],
-    practise: [
-        { type: 'exercise', label: 'Case', Icon: Stethoscope },
-        { type: 'question', label: 'Question' },
-        { type: 'note', label: 'Note' },
-    ],
-};
+// A section tab, written as one document.
+//
+// It used to be one editor per paragraph. With a converted book that is thirty
+// contentEditable elements on a page, each re-writing its own innerHTML on every
+// change, and typing in it crawled. It also made no sense as a writing surface:
+// a paragraph break is something you make by pressing Enter, not by pressing a
+// button called "add block".
+//
+// So the flowing content — text, lists, pictures, charts — is one document, and
+// only the things that are not prose keep a card of their own: a video, a
+// question, a link to a case, a captured book page.
+const STRUCTURED = ['video', 'question', 'exercise', 'page'];
 
-function BlockEditor({ isOpen, onClose, section, tab = 'read', onSaved }) {
-    const [blocks, setBlocks] = useState([]);
+function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
+    const [html, setHtml] = useState('');
+    const [extras, setExtras] = useState([]);
     const [title, setTitle] = useState('');
     const [saving, setSaving] = useState(false);
-    const [uploading, setUploading] = useState(null);
+    const [charting, setCharting] = useState(false);
     const meta = SECTION_TABS.find((t) => t.id === tab) || SECTION_TABS[0];
-    const [exercises, reloadExercises] = useExercises();
-    // Which block the case builder was opened from, so the new case can be
-    // selected into it when the builder saves.
-    const [buildingCase, setBuildingCase] = useState(null);
+    const { exercises } = useImnci();
+    const insertRef = useRef(null);
 
     useEffect(() => {
-        if (isOpen && section) {
-            // Deep copied: editing must not mutate what is on screen behind the
-            // dialog, so cancelling really does discard.
-            setBlocks(JSON.parse(JSON.stringify(tabContent(section, tab))));
-            setTitle(section.title || '');
-        }
-    }, [isOpen, section, tab]);
+        if (!section) return;
+        const content = tabContent(section, tab);
+        // Everything that can be expressed as text becomes one document; the
+        // rest keeps its card. Joined in the order it was already in, so a
+        // figure that sat between two paragraphs stays between them.
+        const doc = content
+            .filter((b) => !STRUCTURED.includes(b.type))
+            .map((b) => blockHtml(b))
+            .filter(Boolean)
+            .join('\n');
+        setHtml(doc);
+        setExtras(JSON.parse(JSON.stringify(content.filter((b) => STRUCTURED.includes(b.type)))));
+        setTitle(section.title || '');
+    }, [section, tab]);
 
-    const update = (i, patch) => setBlocks((p) => p.map((b, j) => (j === i ? { ...b, ...patch } : b)));
-    const remove = (i) => setBlocks((p) => p.filter((_, j) => j !== i));
-    const move = (i, dir) => setBlocks((p) => {
-        const j = i + dir;
-        if (j < 0 || j >= p.length) return p;
-        const copy = p.slice();
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-        return copy;
-    });
-    const add = (type) => setBlocks((p) => [...p, (
-        type === 'list' ? { type: 'list', items: [''] }
-            : type === 'table' ? { type: 'table', rows: [{ colour: 'note', cells: ['', '', ''] }] }
-                : type === 'question' ? newQuestion()
-                    : type === 'exercise' ? newExerciseLink()
-                        : type === 'video' ? { type: 'video', url: '', caption: '' }
-                            : type === 'image' ? { type: 'image', path: '', caption: '' }
-                                : { type, text: '' }
+    const updateExtra = (i, patch) => setExtras((p) => p.map((b, j) => (j === i ? { ...b, ...patch } : b)));
+    const removeExtra = (i) => setExtras((p) => p.filter((_, j) => j !== i));
+    const addExtra = (type) => setExtras((p) => [...p, (
+        type === 'question' ? newQuestion()
+            : type === 'exercise' ? newExerciseLink()
+                : { type: 'video', url: '', caption: '' }
     )]);
 
-    // The picture is uploaded when it is chosen, not when the section is saved:
-    // an author who picks a file, writes a caption and then loses the dialog
-    // should not also lose the upload.
-    const uploadImage = async (i, file) => {
-        if (!file || !section?.id) return;
-        setUploading(i);
+    // Uploads and hands back a URL, because a picture in the text goes straight
+    // into an <img> rather than resolving a storage path when it renders.
+    const uploadInline = async (file) => {
+        if (!file || !section?.id) return null;
         try {
             const clean = file.name.replace(/[^\w.-]+/g, '-');
             const path = `${ASSET_ROOT}/figures/${section.courseId}/${section.id}/${Date.now()}-${clean}`;
-            await uploadBytes(storageRef(storage, path), file, { contentType: file.type });
-            update(i, { path: path.slice(ASSET_ROOT.length + 1) });
+            const dest = storageRef(storage, path);
+            await uploadBytes(dest, file, { contentType: file.type });
+            return await getDownloadURL(dest);
         } catch (e) {
             console.error('Could not upload the image:', e);
             notify(`Could not upload that image. ${e?.message || ''}`.trim(), 'error');
-        } finally {
-            setUploading(null);
+            return null;
         }
     };
 
-    const addRow = (i) => update(i, { rows: [...blocks[i].rows, { colour: 'note', cells: blocks[i].rows[0].cells.map(() => '') }] });
-    const setCell = (i, ri, ci, v) => update(i, {
-        rows: blocks[i].rows.map((r, j) => (j === ri ? { ...r, cells: r.cells.map((c, k) => (k === ci ? v : c)) } : r)),
-    });
-    const setRowColour = (i, ri, colour) => update(i, {
-        rows: blocks[i].rows.map((r, j) => (j === ri ? { ...r, colour } : r)),
-    });
-    const addColumn = (i) => update(i, {
-        rows: blocks[i].rows.map((r) => ({ ...r, cells: [...r.cells, ''] })),
-    });
-
     const save = async () => {
-        if (!title.trim()) { notify('The section needs a title.', 'error'); return; }
         setSaving(true);
         try {
-            // Empty blocks are dropped here rather than saved and rendered as
-            // blank space the learner cannot explain.
-            const cleaned = blocks.filter((b) => (
-                b.type === 'list' ? b.items.some((i) => i.trim())
-                    : b.type === 'table' ? b.rows.some((r) => r.cells.some((c) => c.trim()))
-                        : b.type === 'image' || b.type === 'page' ? true
-                            : b.type === 'video' ? String(b.url || '').trim()
-                                : b.type === 'exercise' ? true
-                                    : String(b.text || '').trim()
+            const words = String(html).replace(/<[^>]*>/g, '').trim();
+            const body = words || /<img|<table/i.test(html)
+                ? [{ type: 'rich', text: html }]
+                : [];
+
+            const kept = extras.filter((b) => (
+                b.type === 'video' ? String(b.url || '').trim() : true
             ));
+
             // Caught here rather than saved and met by a learner: a question
             // with one answer to choose from is not a question, and a card that
-            // points at no exercise is a dead end.
-            const thinQuestion = (q) => (q.options || []).filter((o) => String(o).trim()).length < 2;
-            const problem = cleaned.find((b) => (
-                b.type === 'question' ? thinQuestion(b)
-                    : b.type === 'exercise' ? !b.exerciseId
-                        : false
+            // points at no case is a dead end.
+            const problem = kept.find((b) => (
+                b.type === 'question'
+                    ? (b.options || []).filter((o) => String(o).trim()).length < 2
+                    : b.type === 'exercise' ? !b.exerciseId : false
             ));
             if (problem) {
                 notify(problem.type === 'exercise'
-                    ? 'Choose which exercise the card points at.'
+                    ? 'Choose which case the card points at.'
                     : 'Each question needs at least two answers to choose from.', 'error');
                 setSaving(false);
                 return;
             }
+
             // Sections written before the tabs existed keep their text in
             // `blocks`. Saving the Read tab moves it across and empties the old
             // field, so a section is migrated the first time someone edits it
             // and nothing has to be rewritten in bulk.
-            const patch = { ...section, title: title.trim(), [tab]: cleaned };
+            const patch = { ...section, title: title.trim(), [tab]: [...body, ...kept] };
             if (tab === 'read' && section.blocks?.length) patch.blocks = [];
             await upsertOnlineCourseItem(patch);
             notify(`${meta.label} saved.`, 'success');
             onSaved();
-            onClose();
         } catch (e) {
             console.error('Could not save the section:', e);
             notify(`Could not save. ${e?.message || ''}`.trim(), 'error');
@@ -1053,181 +1016,245 @@ function BlockEditor({ isOpen, onClose, section, tab = 'read', onSaved }) {
     if (!section) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Edit ${meta.label} — ${section.title || 'section'}`}>
-            <div className="space-y-4">
-                <div className="text-xs text-slate-500 bg-slate-50 border rounded px-3 py-2">{meta.hint}</div>
-                <Input label="Section title" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <div className="space-y-4">
+            {/* Editing happens on the page the text is read on, at the width it
+                will be read at. It used to be a dialog, which meant writing a
+                paragraph in a box half the size of the page it appears on. */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-300 sticky top-2 z-20">
+                <span className="text-sm text-amber-900 font-semibold">
+                    Editing {meta.label}
+                </span>
+                <span className="flex gap-2">
+                    <Button variant="secondary" onClick={onCancel} disabled={saving}>Cancel</Button>
+                    <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                </span>
+            </div>
 
-                <div className="space-y-2 max-h-[26rem] overflow-y-auto pe-1">
-                    {blocks.length === 0 && (
-                        <div className="text-sm text-gray-500 p-4 border border-dashed rounded text-center">
-                            Nothing in {meta.label} yet. Add a block below.
+            <Input label="Section title" value={title} onChange={(e) => setTitle(e.target.value)} />
+
+            <RichTextEditor
+                value={html}
+                onChange={setHtml}
+                onInsertImage={uploadInline}
+                onInsertChart={() => setCharting(true)}
+                registerInsert={(fn) => { insertRef.current = fn; }}
+                placeholder={`Write the ${meta.label.toLowerCase()} text here. Press Enter for a new paragraph.`}
+                className="min-h-[24rem]"
+            />
+
+            <ChartBuilderModal
+                isOpen={charting}
+                onClose={() => setCharting(false)}
+                onInsert={(tableHtml) => { insertRef.current?.(tableHtml); setCharting(false); }}
+            />
+
+            {/* Everything that is not prose. A question is a set of fields, not
+                a paragraph, so it keeps a card rather than being typed into the
+                text as markup nobody can see. */}
+            <div className="space-y-2">
+                {extras.map((b, i) => (
+                    <div key={i} className="border rounded-lg p-3 bg-white space-y-2">
+                        <div className="flex items-center gap-2 text-xs">
+                            <span className="font-mono uppercase text-slate-500 flex-1">{b.type}</span>
+                            <button onClick={() => removeExtra(i)}
+                                className="px-1.5 py-0.5 border rounded text-red-600 hover:bg-red-50">
+                                <Trash2 size={12} />
+                            </button>
                         </div>
-                    )}
 
-                    {blocks.map((b, i) => (
-                        <div key={i} className="border rounded p-2 bg-white space-y-2">
-                            <div className="flex items-center gap-2 text-xs">
-                                <span className="font-mono uppercase text-slate-500 flex-1">{b.type}</span>
-                                <button onClick={() => move(i, -1)} disabled={i === 0}
-                                    className="px-1.5 py-0.5 border rounded disabled:opacity-30">↑</button>
-                                <button onClick={() => move(i, 1)} disabled={i === blocks.length - 1}
-                                    className="px-1.5 py-0.5 border rounded disabled:opacity-30">↓</button>
-                                <button onClick={() => remove(i)}
-                                    className="px-1.5 py-0.5 border rounded text-red-600 hover:bg-red-50">
-                                    <Trash2 size={12} />
-                                </button>
+                        {b.type === 'page' && (
+                            <div className="text-xs text-slate-500">
+                                Page {b.page} of the book, captured when it was converted.
+                                <BookImage block={b} />
                             </div>
+                        )}
 
-                            {(b.type === 'paragraph' || b.type === 'heading' || b.type === 'note') && (
-                                <Textarea rows={b.type === 'paragraph' ? 3 : 2} value={b.text || ''}
-                                    onChange={(e) => update(i, { text: e.target.value })} />
-                            )}
+                        {b.type === 'video' && (
+                            <div className="space-y-2">
+                                <Input label="Video address" value={b.url || ''}
+                                    placeholder="https://www.youtube.com/watch?v=… or a link to an MP4"
+                                    onChange={(e) => updateExtra(i, { url: e.target.value })} />
+                                <Input label="Caption" value={b.caption || ''}
+                                    onChange={(e) => updateExtra(i, { caption: e.target.value })} />
+                                {b.url && <VideoBlock block={b} />}
+                            </div>
+                        )}
 
-                            {b.type === 'list' && (
-                                <div className="space-y-1">
-                                    {b.items.map((it, j) => (
-                                        <div key={j} className="flex gap-1">
-                                            <input value={it} onChange={(e) => update(i, {
-                                                items: b.items.map((x, k) => (k === j ? e.target.value : x)),
-                                            })} className="flex-1 border rounded px-2 py-1 text-sm" />
-                                            <button onClick={() => update(i, { items: b.items.filter((_, k) => k !== j) })}
-                                                className="px-2 border rounded text-red-600">−</button>
-                                        </div>
-                                    ))}
-                                    <button onClick={() => update(i, { items: [...b.items, ''] })}
-                                        className="text-xs text-sky-700 font-semibold">+ add item</button>
-                                </div>
-                            )}
-
-                            {(b.type === 'image' || b.type === 'page') && (
-                                <div className="text-xs text-gray-600 space-y-2">
-                                    <div>
-                                        {b.page
-                                            ? `${b.type === 'page' ? 'Page' : 'Figure from page'} ${b.page}`
-                                            : 'Picture'}
-                                        {b.path ? '' : ' — nothing uploaded yet'}
-                                    </div>
-                                    {b.path && <BookImage block={b} />}
-                                    <input type="file" accept="image/*" disabled={uploading === i}
-                                        onChange={(e) => uploadImage(i, e.target.files?.[0])}
-                                        className="block w-full text-xs text-gray-600 file:me-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700" />
-                                    {uploading === i && <div className="text-sky-700">Uploading…</div>}
-                                    <Input label="Caption" value={b.caption || ''}
-                                        onChange={(e) => update(i, { caption: e.target.value })} />
-                                </div>
-                            )}
-
-                            {b.type === 'video' && (
-                                <div className="space-y-2">
-                                    <Input label="Video address" value={b.url || ''}
-                                        placeholder="https://www.youtube.com/watch?v=… or a link to an MP4"
-                                        onChange={(e) => update(i, { url: e.target.value })} />
-                                    <Input label="Caption" value={b.caption || ''}
-                                        onChange={(e) => update(i, { caption: e.target.value })} />
-                                    {b.url && <VideoBlock block={b} />}
-                                </div>
-                            )}
-
-                            {b.type === 'exercise' && (
-                                <div className="space-y-2">
-                                    <Select label="Which case" value={b.exerciseId || ''}
-                                        disabled={!exercises}
-                                        onChange={(e) => update(i, { exerciseId: e.target.value })}>
-                                        <option value="">
-                                            {exercises ? '— choose a case —' : 'Loading the cases…'}
+                        {b.type === 'exercise' && (
+                            <div className="space-y-2">
+                                <Select label="Which case" value={b.exerciseId || ''} disabled={!exercises}
+                                    onChange={(e) => updateExtra(i, { exerciseId: e.target.value })}>
+                                    <option value="">{exercises ? '— choose a case —' : 'Loading the cases…'}</option>
+                                    {(exercises || []).map((ex) => (
+                                        <option key={ex.id} value={ex.id}>
+                                            {ex.title}{ex.draft ? ' (draft)' : ''}
                                         </option>
-                                        {(exercises || []).map((ex) => (
-                                            <option key={ex.id} value={ex.id}>
-                                                {ex.title}{ex.draft ? ' (draft)' : ''}
-                                            </option>
-                                        ))}
-                                    </Select>
-                                    <button onClick={() => setBuildingCase({
-                                        at: i, known: new Set((exercises || []).map((x) => x.id)),
-                                    })}
-                                        className="inline-flex items-center gap-1.5 text-xs text-sky-700 font-semibold">
-                                        <Plus size={13} /> Write a new case
-                                    </button>
-                                    <Input label="Why it is here (optional)" value={b.note || ''}
-                                        onChange={(e) => update(i, { note: e.target.value })} />
-                                </div>
-                            )}
-
-                            {b.type === 'table' && (
-                                <div className="space-y-1">
-                                    {b.rows.map((row, ri) => (
-                                        <div key={ri} className="flex gap-1 items-start">
-                                            <select value={row.colour || 'note'}
-                                                onChange={(e) => setRowColour(i, ri, e.target.value)}
-                                                className="border rounded text-xs p-1 w-32 shrink-0">
-                                                {IMNCI_SEVERITIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                                            </select>
-                                            {row.cells.map((cell, ci) => (
-                                                <input key={ci} value={cell}
-                                                    onChange={(e) => setCell(i, ri, ci, e.target.value)}
-                                                    className="flex-1 border rounded px-2 py-1 text-sm" />
-                                            ))}
-                                            <button onClick={() => update(i, { rows: b.rows.filter((_, k) => k !== ri) })}
-                                                className="px-2 border rounded text-red-600 shrink-0">−</button>
-                                        </div>
                                     ))}
-                                    <div className="flex gap-3">
-                                        <button onClick={() => addRow(i)} className="text-xs text-sky-700 font-semibold">+ row</button>
-                                        <button onClick={() => addColumn(i)} className="text-xs text-sky-700 font-semibold">+ column</button>
+                                </Select>
+                                <p className="text-xs text-slate-500">
+                                    Cases are written in the case builder, from Manage mode.
+                                </p>
+                                <Input label="Why it is here (optional)" value={b.note || ''}
+                                    onChange={(e) => updateExtra(i, { note: e.target.value })} />
+                            </div>
+                        )}
+
+                        {b.type === 'question' && (
+                            <div className="space-y-2">
+                                <Textarea rows={2} value={b.text || ''} placeholder="The question"
+                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
+                                {(b.options || []).map((opt, oi) => (
+                                    <div key={oi} className="flex gap-2 items-center">
+                                        <input type="radio" name={`ans-${i}`} checked={(b.answer ?? 0) === oi}
+                                            onChange={() => updateExtra(i, { answer: oi })} title="The correct answer" />
+                                        <input value={opt} placeholder={`Answer ${String.fromCharCode(97 + oi)}`}
+                                            onChange={(e) => updateExtra(i, {
+                                                options: b.options.map((x, k) => (k === oi ? e.target.value : x)),
+                                            })} className="flex-1 border rounded px-2 py-1 text-sm" />
+                                        <button disabled={(b.options || []).length <= 2}
+                                            onClick={() => updateExtra(i, {
+                                                options: b.options.filter((_, k) => k !== oi),
+                                                answer: (b.answer ?? 0) > oi ? (b.answer ?? 0) - 1
+                                                    : Math.min(b.answer ?? 0, b.options.length - 2),
+                                            })} className="px-2 border rounded text-red-600 disabled:opacity-30">−</button>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                ))}
+                                <button onClick={() => updateExtra(i, { options: [...(b.options || []), ''] })}
+                                    className="text-xs text-sky-700 font-semibold">+ add answer</button>
+                                <Input label="Why (shown after answering)" value={b.explanation || ''}
+                                    onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <span className="text-xs text-gray-500 self-center">Add below the text:</span>
+                {tab === 'practise' && (
+                    <>
+                        <button onClick={() => addExtra('question')}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
+                            <Plus size={13} /> Question
+                        </button>
+                        <button onClick={() => addExtra('exercise')}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
+                            <Stethoscope size={13} /> Link a case
+                        </button>
+                    </>
+                )}
+                {tab !== 'practise' && (
+                    <button onClick={() => addExtra('video')}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
+                        <Film size={13} /> Video
+                    </button>
+                )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button variant="secondary" onClick={onCancel} disabled={saving}>Cancel</Button>
+                <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : `Save ${meta.label}`}</Button>
+            </div>
+        </div>
+    );
+}
+
+// Builds a classification chart and hands back the HTML for it, so it can be
+// dropped into the text where it belongs rather than living in a separate list
+// underneath. The colours are IMNCI_SEVERITIES, written as inline style so the
+// chart keeps its meaning wherever the HTML ends up.
+function ChartBuilderModal({ isOpen, onClose, onInsert }) {
+    const [rows, setRows] = useState([{ colour: 'note', cells: ['', '', ''] }]);
+    const [headers, setHeaders] = useState(['Signs', 'Classify as', 'Treatment']);
+
+    useEffect(() => {
+        if (isOpen) {
+            setRows([{ colour: 'note', cells: ['', '', ''] }]);
+            setHeaders(['Signs', 'Classify as', 'Treatment']);
+        }
+    }, [isOpen]);
+
+    const setCell = (ri, ci, v) => setRows((p) => p.map((r, i) => (
+        i === ri ? { ...r, cells: r.cells.map((c, k) => (k === ci ? v : c)) } : r)));
+    const addRow = () => setRows((p) => [...p, { colour: 'note', cells: headers.map(() => '') }]);
+    const addColumn = () => {
+        setHeaders((h) => [...h, '']);
+        setRows((p) => p.map((r) => ({ ...r, cells: [...r.cells, ''] })));
+    };
+
+    const build = () => {
+        const esc = (s) => String(s || '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const head = headers.some((h) => h.trim())
+            ? `<tr>${headers.map((h) => `<th style="background-color: #e2e8f0; padding: 6px">${esc(h)}</th>`).join('')}</tr>`
+            : '';
+        const body = rows.map((r) => {
+            const tone = CHART_TONES[r.colour] || CHART_TONES.note;
+            return `<tr>${r.cells.map((c) => (
+                `<td style="background-color: ${tone.bg}; color: ${tone.fg}; padding: 6px">${esc(c)}</td>`
+            )).join('')}</tr>`;
+        }).join('');
+        onInsert(`<table style="width: 100%">${head}${body}</table><p><br></p>`);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Build a classification chart">
+            <div className="space-y-3">
+                <p className="text-sm text-slate-600">
+                    The row colour is the classification colour — the same one the protocol and
+                    the exercises use — so a pink row here means at the bedside what it means here.
+                </p>
+
+                <div className="flex gap-1">
+                    <span className="w-32 shrink-0 text-xs text-slate-500 self-center">Headings</span>
+                    {headers.map((h, i) => (
+                        <input key={i} value={h} onChange={(e) => setHeaders(
+                            (p) => p.map((x, k) => (k === i ? e.target.value : x)))}
+                            className="flex-1 border rounded px-2 py-1 text-sm font-semibold" />
                     ))}
                 </div>
 
-                <div className="flex flex-wrap gap-2 pt-2 border-t">
-                    <span className="text-xs text-gray-500 self-center">Add:</span>
-                    {(TAB_BLOCKS[tab] || TAB_BLOCKS.read).map(({ type, label, Icon }) => (
-                        <button key={type} onClick={() => add(type)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                            {Icon ? <Icon size={13} /> : <Plus size={13} />}{label}
-                        </button>
-                    ))}
+                {rows.map((r, ri) => (
+                    <div key={ri} className="flex gap-1 items-start">
+                        <select value={r.colour}
+                            onChange={(e) => setRows((p) => p.map((x, i) => (
+                                i === ri ? { ...x, colour: e.target.value } : x)))}
+                            className="border rounded text-xs p-1 w-32 shrink-0">
+                            {IMNCI_SEVERITIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                        </select>
+                        {r.cells.map((c, ci) => (
+                            <input key={ci} value={c} onChange={(e) => setCell(ri, ci, e.target.value)}
+                                className="flex-1 border rounded px-2 py-1 text-sm" />
+                        ))}
+                        <button onClick={() => setRows((p) => p.filter((_, i) => i !== ri))}
+                            disabled={rows.length <= 1}
+                            className="px-2 border rounded text-red-600 shrink-0 disabled:opacity-30">−</button>
+                    </div>
+                ))}
+
+                <div className="flex gap-3">
+                    <button onClick={addRow} className="text-xs text-sky-700 font-semibold">+ row</button>
+                    <button onClick={addColumn} className="text-xs text-sky-700 font-semibold">+ column</button>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-                    <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : `Save ${meta.label}`}</Button>
+                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                    <Button onClick={build}>Insert the chart</Button>
                 </div>
             </div>
-
-            {/* The case builder from Online Exercises, unchanged. A case written
-                here is a real exercise: it appears in Online Exercises, it is
-                graded there, and correcting it there corrects it here. */}
-            {buildingCase && (
-                <div className="fixed inset-0 z-[60] bg-black/50 p-3 overflow-y-auto"
-                    role="dialog" aria-modal="true">
-                    <div className="mx-auto max-w-4xl bg-white rounded-xl p-4 my-4">
-                        <ExerciseEditor
-                            onCancel={() => setBuildingCase(null)}
-                            onSaved={async () => {
-                                const { at, known } = buildingCase;
-                                setBuildingCase(null);
-                                // Whichever id was not there before the builder
-                                // opened is the one just written, so it can be
-                                // selected without the author going to look for
-                                // it. Editing an existing case adds no id, and
-                                // the selection is then left alone.
-                                refreshExercises();
-                                const list = await allExercises();
-                                const fresh = list.find((x) => !known.has(x.id));
-                                if (fresh) update(at, { exerciseId: fresh.id });
-                                reloadExercises();
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
         </Modal>
     );
 }
+
+// The severity colours as plain values. The renderer uses Tailwind classes for
+// them, but a chart built here is stored as HTML that has to carry its own
+// colour, because it may be read anywhere the stylesheet is not.
+const CHART_TONES = {
+    severe: { bg: '#ffe4e6', fg: '#881337' },
+    moderate: { bg: '#fef3c7', fg: '#78350f' },
+    mild: { bg: '#d1fae5', fg: '#064e3b' },
+    note: { bg: '#ffffff', fg: '#0f172a' },
+};
 
 // =============================================================================
 // Main screen
@@ -1256,6 +1283,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
         try { localStorage.setItem('onlineCourseFontScale', String(clamped)); } catch { /* private mode */ }
     }, []);
     const { user } = useAuth();
+    const { refreshExercises } = useImnci();
 
     const {
         onlineCourses, fetchOnlineCourses,
@@ -1275,8 +1303,12 @@ export default function OnlineCoursesView({ permissions = {} }) {
     const [courseModal, setCourseModal] = useState(null);
     const [itemModal, setItemModal] = useState(null);
     const [importOpen, setImportOpen] = useState(false);
+    // The two builders the course author also needs. Opened over the course
+    // rather than navigated to, so going back does not lose where they were.
+    const [builder, setBuilder] = useState(null);
     const [convertOpen, setConvertOpen] = useState(false);
-    const [editingBlocks, setEditingBlocks] = useState(null);
+    // Which tab of the open section is being written, or null when reading.
+    const [editingTab, setEditingTab] = useState(null);
 
     useEffect(() => {
         if (!onlineCourses) fetchOnlineCourses(false);
@@ -1294,6 +1326,18 @@ export default function OnlineCoursesView({ permissions = {} }) {
     const reload = useCallback(() => {
         fetchOnlineCourses('full');
         fetchOnlineCourseItems('full');
+    }, [fetchOnlineCourses, fetchOnlineCourseItems]);
+
+    // A delta query against the server, skipping the one-hour cache. Cheap: it
+    // asks only for what changed since the last sync.
+    const [syncing, setSyncing] = useState(false);
+    const resync = useCallback(async () => {
+        setSyncing(true);
+        try {
+            await Promise.all([fetchOnlineCourses('sync'), fetchOnlineCourseItems('sync')]);
+        } finally {
+            setSyncing(false);
+        }
     }, [fetchOnlineCourses, fetchOnlineCourseItems]);
 
     const courses = useMemo(() => (onlineCourses || [])
@@ -1329,6 +1373,18 @@ export default function OnlineCoursesView({ permissions = {} }) {
     const doneCount = courseSections.filter((s) => progress.completed?.[s.id]).length;
 
     const openModule = modules.find((m) => m.id === openModuleId) || null;
+
+    // Opening a module that looks empty is exactly the moment to check whether
+    // it really is. Once per module, so a module that genuinely has no sections
+    // does not re-ask on every render.
+    const checkedEmpty = useRef(new Set());
+    useEffect(() => {
+        if (!openModuleId) return;
+        const secs = sectionsByModule[openModuleId] || [];
+        if (secs.length > 0 || checkedEmpty.current.has(openModuleId)) return;
+        checkedEmpty.current.add(openModuleId);
+        resync();
+    }, [openModuleId, sectionsByModule, resync]);
     const openSection = courseSections.find((s) => s.id === openSectionId) || null;
 
     // A section opens when the one before it has been marked complete, and a
@@ -1445,7 +1501,8 @@ export default function OnlineCoursesView({ permissions = {} }) {
                             const n = tabContent(openSection, t.id).length;
                             const active = sectionTab === t.id;
                             return (
-                                <button key={t.id} onClick={() => { setSectionTab(t.id); setCompare(false); }}
+                                <button key={t.id} disabled={!!editingTab && editingTab !== t.id}
+                                    onClick={() => { setSectionTab(t.id); setCompare(false); }}
                                     className={`relative flex items-center gap-2 px-5 py-3 text-sm font-semibold whitespace-nowrap transition-colors ${
                                         active ? 'text-sky-800 bg-white' : 'text-slate-500 hover:text-slate-700'}`}>
                                     <Icon size={15} />
@@ -1464,20 +1521,20 @@ export default function OnlineCoursesView({ permissions = {} }) {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <p className="text-xs text-slate-500">{meta.hint}</p>
                             <div className="flex items-center gap-1">
-                                {canCompare && (
+                                {isAdmin && !editingTab && (
+                                    <Button variant="secondary" className="px-2 py-1 h-auto"
+                                        onClick={() => setEditingTab(sectionTab)}>
+                                        <Pencil size={14} /> Edit {meta.label}
+                                    </Button>
+                                )}
+                                {canCompare && !editingTab && (
                                     <Button variant={compare ? 'primary' : 'secondary'} className="px-2 py-1 h-auto"
                                         onClick={() => setCompare(!compare)}
                                         title="Show the book page beside the converted text">
                                         <Columns2 size={14} /> Compare
                                     </Button>
                                 )}
-                                {isAdmin && (
-                                    <Button variant="secondary" className="px-2 py-1 h-auto"
-                                        onClick={() => setEditingBlocks({ section: openSection, tab: sectionTab })}>
-                                        <Pencil size={14} /> Edit {meta.label}
-                                    </Button>
-                                )}
-                                {sectionTab === 'read' && (
+                                {sectionTab === 'read' && !editingTab && (
                                     <>
                                         <Button variant="secondary" onClick={() => setScale(fontScale - 0.1)}
                                             disabled={fontScale <= 0.8} className="px-2 py-1 h-auto"><ZoomOut size={16} /></Button>
@@ -1492,7 +1549,13 @@ export default function OnlineCoursesView({ permissions = {} }) {
                             </div>
                         </div>
 
-                        {compare && canCompare ? (
+                        {editingTab ? (
+                            <SectionTabEditor
+                                section={openSection} tab={editingTab}
+                                onCancel={() => setEditingTab(null)}
+                                onSaved={() => { setEditingTab(null); reload(); }}
+                            />
+                        ) : compare && canCompare ? (
                             // Side by side on a wide screen, stacked on a phone: the
                             // point is to check one against the other, and on a small
                             // screen two narrow columns would defeat that.
@@ -1511,7 +1574,9 @@ export default function OnlineCoursesView({ permissions = {} }) {
                         ) : (
                             <div className="text-sm text-slate-500 py-12 text-center border border-dashed rounded-lg">
                                 Nothing in {meta.label} for this section yet.
-                                {isAdmin && <div className="mt-1 text-xs">Use Edit {meta.label} to add it.</div>}
+                                {isAdmin && (
+                                    <div className="mt-1 text-xs">Use Edit {meta.label}, above, to write it.</div>
+                                )}
                             </div>
                         )}
 
@@ -1560,10 +1625,6 @@ export default function OnlineCoursesView({ permissions = {} }) {
                     </div>
                 )}
 
-                <BlockEditor
-                    isOpen={!!editingBlocks} onClose={() => setEditingBlocks(null)}
-                    section={editingBlocks?.section} tab={editingBlocks?.tab} onSaved={reload}
-                />
             </div>
         );
     }
@@ -1608,9 +1669,16 @@ export default function OnlineCoursesView({ permissions = {} }) {
                     </div>
 
                     {secs.length === 0 ? (
-                        <div className="p-12 text-center text-slate-500 text-sm">
-                            No sections yet.
-                            {isAdmin && <div className="mt-1 text-xs">Convert the module book to create them.</div>}
+                        <div className="p-12 text-center text-slate-500 text-sm space-y-2">
+                            <div>{syncing ? 'Checking for sections…' : 'No sections yet.'}</div>
+                            {isAdmin && !syncing && (
+                                <div className="text-xs">Convert the module book to create them.</div>
+                            )}
+                            {!syncing && (
+                                <Button variant="secondary" onClick={resync}>
+                                    <RefreshCw size={15} /> Check again
+                                </Button>
+                            )}
                         </div>
                     ) : (
                         <ol className="divide-y">
@@ -1631,7 +1699,10 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                         <button className="flex-1 text-start min-w-0 disabled:cursor-not-allowed"
                                             disabled={locked}
                                             title={locked ? 'Finish the section before this one first' : undefined}
-                                            onClick={() => { setOpenSectionId(s.id); setSectionTab('read'); setCompare(false); }}>
+                                            onClick={() => {
+                                                setOpenSectionId(s.id); setSectionTab('read');
+                                                setCompare(false); setEditingTab(null);
+                                            }}>
                                             <div className={`font-medium truncate ${locked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</div>
                                             <div className="text-xs text-slate-500 flex gap-2 flex-wrap mt-0.5">
                                                 {locked ? <span>Finish the previous section first</span> : (<>
@@ -1648,7 +1719,11 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                                     const Icon = TAB_ICONS[t.id];
                                                     return (
                                                         <button key={t.id} title={`Edit ${t.label}`}
-                                                            onClick={() => setEditingBlocks({ section: s, tab: t.id })}
+                                                            onClick={() => {
+                                                                setOpenSectionId(s.id);
+                                                                setSectionTab(t.id);
+                                                                setEditingTab(t.id);
+                                                            }}
                                                             className="p-1.5 border rounded text-slate-500 hover:bg-slate-50 hover:text-sky-700">
                                                             <Icon size={14} />
                                                         </button>
@@ -1669,10 +1744,6 @@ export default function OnlineCoursesView({ permissions = {} }) {
                     isOpen={!!itemModal} onClose={() => setItemModal(null)}
                     item={itemModal?.item} kind={itemModal?.kind || 'section'}
                     courseId={openCourseId} modules={modules} onSaved={reload}
-                />
-                <BlockEditor
-                    isOpen={!!editingBlocks} onClose={() => setEditingBlocks(null)}
-                    section={editingBlocks?.section} tab={editingBlocks?.tab} onSaved={reload}
                 />
                 <ConvertBookModal
                     isOpen={convertOpen} onClose={() => setConvertOpen(false)}
@@ -1851,6 +1922,11 @@ export default function OnlineCoursesView({ permissions = {} }) {
                 subtitle={isArabic ? 'تدريب ذاتي' : 'Self-paced training'}
                 actions={
                     <div className="flex gap-2 items-center">
+                        <Button variant="secondary" onClick={resync} disabled={syncing}
+                            title="Look for anything added on another device">
+                            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+                            <span className="hidden sm:inline">{syncing ? 'Checking…' : 'Refresh'}</span>
+                        </Button>
                         {canManage && (
                             <div className="flex rounded-md overflow-hidden border border-slate-300">
                                 <button
@@ -1878,9 +1954,49 @@ export default function OnlineCoursesView({ permissions = {} }) {
             />
 
             {isAdmin && (
-                <div className="px-3 py-2 bg-amber-50 border border-amber-300 rounded text-sm text-amber-900">
-                    Manage mode. Learners do not see the editing controls below, and drafts are
-                    visible only here.
+                <div className="space-y-2">
+                    <div className="px-3 py-2 bg-amber-50 border border-amber-300 rounded text-sm text-amber-900">
+                        Manage mode. Learners do not see the editing controls below, and drafts are
+                        visible only here.
+                    </div>
+                    {/* The course, the cases and the protocol are one body of
+                        work, so the two other builders open from here rather
+                        than being somewhere else in the app. */}
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="secondary" onClick={() => setBuilder('exercises')}>
+                            <Stethoscope size={16} /> Case builder
+                        </Button>
+                        {permissions.canManageProtocols && (
+                            <Button variant="secondary" onClick={() => setBuilder('protocol')}>
+                                <Syringe size={16} /> Protocol builder
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {builder && (
+                // A fixed pane with ONE scrolling area inside it. The first
+                // version scrolled the backdrop as well as the panel, and the
+                // builder inside brought a third, so the page had three
+                // scrollbars and the builder's own heading slid under this one.
+                <div className="fixed inset-0 z-50 bg-black/50 flex flex-col p-2 sm:p-4" role="dialog" aria-modal="true">
+                    <div className="mx-auto w-full max-w-6xl bg-white rounded-xl flex flex-col min-h-0 flex-1 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
+                            <h2 className="font-bold text-slate-800">
+                                {builder === 'protocol' ? 'Protocol builder' : 'Case builder'}
+                            </h2>
+                            <button onClick={() => { setBuilder(null); refreshExercises(); }}
+                                className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title="Close">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                            <Suspense fallback={<Spinner />}>
+                                {builder === 'protocol' ? <ProtocolEditor /> : <ExerciseManagerView />}
+                            </Suspense>
+                        </div>
+                    </div>
                 </div>
             )}
 

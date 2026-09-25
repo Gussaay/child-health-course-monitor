@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Card, PageHeader, Button, Spinner } from './CommonComponents';
-import { useDataCache } from '../DataContext';
-import { saveIMNCIProtocol } from '../data';
-import { notify, confirmDialog, promptDialog } from './dialogs';
+import { Card, PageHeader, Button, Spinner } from '../CommonComponents';
+import { useDataCache } from '../../DataContext';
+import { saveIMNCIProtocol } from '../../data';
+import { notify, confirmDialog, promptDialog } from '../dialogs';
 // The same four severities the online course books colour their classification
-// tables with, and that IMNCIRecordingForm compares against by value. Defined
+// tables with, and that the patient form compares against by value. Defined
 // once in constants.js so the protocol, the books and the exercises cannot
 // drift into three different spellings of "yellow".
-import { IMNCI_SEVERITIES } from './constants';
+import { IMNCI_SEVERITIES } from '../constants';
 import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X } from 'lucide-react';
 
 // --- Predefined Conditions Mapping for Dropdowns ---

@@ -1,21 +1,21 @@
 import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, PageHeader, Button } from './CommonComponents'; 
+import { Card, PageHeader, Button } from '../CommonComponents'; 
 import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle, FileText, X, Check, Stethoscope, Users, ArrowLeft } from 'lucide-react';
-import zScoreData from './zscore_reference_data.json'; 
-import { STATE_LOCALITIES } from './constants'; 
+import zScoreData from '../zscore_reference_data.json'; 
+import { STATE_LOCALITIES } from '../constants'; 
 
 // --- Firebase & Context Imports ---
-import { db } from '../firebase';
+import { db } from '../../firebase';
 import { serverTimestamp } from 'firebase/firestore';
-import { useDataCache } from '../DataContext';
-import { notify } from './dialogs';
-import { saveIMNCIPatientRecord } from '../data';
+import { useDataCache } from '../../DataContext';
+import { notify } from '../dialogs';
+import { saveIMNCIPatientRecord } from '../../data';
 
 // The protocol behind every classification on this screen is edited here too,
 // so the two live in one module rather than in separate places that have to be
 // kept in step by whoever remembers.
-const ProtocolEditor = lazy(() => import('./ProtocolEditor'));
+const ProtocolEditor = lazy(() => import('./protocol'));
 
 // ============================================================================
 // DYNAMIC DOSE CALCULATOR ENGINE (Reads from Database)
