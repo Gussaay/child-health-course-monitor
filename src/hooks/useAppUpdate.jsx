@@ -619,8 +619,14 @@ export function useAppUpdate() {
         )}
 
         {nativeUpdatePrompt && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+            style={{
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)',
+              paddingTop: 'calc(env(safe-area-inset-top) + 1rem)',
+            }}
+          >
+            <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl my-auto max-h-full overflow-y-auto">
               <div className="flex items-start gap-3">
                 <Download className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
                 <div>
@@ -669,12 +675,20 @@ export function useAppUpdate() {
 
         {otaVisible && (
           <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="ota-title"
+            // Centred rather than pinned to the bottom, and clear of the phone's
+            // own navigation bar. Pinned to the bottom, the buttons sat under
+            // the app's bottom bar and the system bar below that, so "Restart"
+            // could not be reached at all on a short screen.
+            style={{
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)',
+              paddingTop: 'calc(env(safe-area-inset-top) + 1rem)',
+            }}
           >
-            <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+            <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl my-auto max-h-full overflow-y-auto">
               <h2 id="ota-title" className="text-lg font-semibold text-gray-900">
                 Update ready{ota.version ? ` (${ota.version})` : ''}
               </h2>
