@@ -2077,8 +2077,97 @@ export async function listOnlineCourses(sourceOptions = {}, lastSync = 0) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Deleting course content
+//
+// Two steps, on purpose. Deleting hides the thing and records who hid it and
+// when, so a section removed by mistake — or a whole course — can be put back.
+// Emptying the bin is the step that cannot be undone, and it is the only one
+// that touches Storage.
+//
+// The delete is recorded rather than just flagged because "who removed module
+// 2 and when" is a question the programme will eventually ask, and isDeleted
+// on its own cannot answer it.
+// ---------------------------------------------------------------------------
+
+const deletionStamp = () => ({
+    isDeleted: true,
+    deletedAt: serverTimestamp(),
+    deletedBy: firebaseAuth.currentUser?.email || firebaseAuth.currentUser?.uid || null,
+    lastUpdatedAt: serverTimestamp(),
+});
+
 export async function deleteOnlineCourse(courseId) {
-    await fbUpdateDoc(doc(db, "onlineCourses", courseId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    await fbUpdateDoc(doc(db, "onlineCourses", courseId), deletionStamp());
+    return true;
+}
+
+export async function restoreOnlineCourse(courseId) {
+    await fbUpdateDoc(doc(db, "onlineCourses", courseId), {
+        isDeleted: false, deletedAt: null, deletedBy: null, lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+export async function restoreOnlineCourseItem(itemId) {
+    await fbUpdateDoc(doc(db, "onlineCourseItems", itemId), {
+        isDeleted: false, deletedAt: null, deletedBy: null, lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+/**
+ * Everything in Storage that one section points at.
+ *
+ * Read from the section itself rather than by listing a folder: a captured page
+ * is shared by the two sections that meet on it, and listing the module's
+ * folder would delete a page the neighbouring section still shows.
+ */
+function assetPathsOf(item) {
+    const blocks = [...(item?.read || []), ...(item?.see || []), ...(item?.practise || []), ...(item?.blocks || [])];
+    const paths = blocks
+        .filter((b) => (b?.type === 'image' || b?.type === 'page') && b.path)
+        .map((b) => `online-courses/${String(b.path).replace(/^\/+/, '')}`);
+    return [...new Set(paths)];
+}
+
+/**
+ * Permanently removes one item and the pictures only it uses.
+ *
+ * @param {object} item     the whole document, not just its id — the pictures
+ *                          are listed inside it
+ * @param {string[]} keepPaths  paths another surviving item still points at
+ */
+export async function hardDeleteOnlineCourseItem(item, keepPaths = []) {
+    if (!item?.id) throw new Error('Which item?');
+    const keep = new Set(keepPaths);
+    for (const path of assetPathsOf(item)) {
+        if (keep.has(path)) continue;
+        try {
+            await deleteObject(ref(storage, path));
+        } catch (e) {
+            // A picture that is already gone must not stop the document going.
+            if (e?.code !== 'storage/object-not-found') {
+                console.warn('Could not remove', path, e?.message);
+            }
+        }
+    }
+    await fbDeleteDoc(doc(db, "onlineCourseItems", item.id));
+    return true;
+}
+
+/**
+ * Permanently removes a course and every item in it.
+ * @param {object} course
+ * @param {object[]} items  every item of that course, deleted or not
+ */
+export async function hardDeleteOnlineCourse(course, items = []) {
+    if (!course?.id) throw new Error('Which course?');
+    const mine = items.filter((i) => i.courseId === course.id);
+    for (const item of mine) {
+        await hardDeleteOnlineCourseItem(item);
+    }
+    await fbDeleteDoc(doc(db, "onlineCourses", course.id));
     return true;
 }
 
@@ -2114,7 +2203,7 @@ export async function listOnlineCourseItems(sourceOptions = {}, lastSync = 0) {
 }
 
 export async function deleteOnlineCourseItem(itemId) {
-    await fbUpdateDoc(doc(db, "onlineCourseItems", itemId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    await fbUpdateDoc(doc(db, "onlineCourseItems", itemId), deletionStamp());
     return true;
 }
 

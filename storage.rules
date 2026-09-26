@@ -53,11 +53,18 @@ service firebase.storage {
     // nothing but course documents and video, and nothing enormous.
     match /online-courses/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
+
+      // Create and update are limited by size and type. Delete is NOT, and
+      // cannot be: on a delete `request.resource` is null, so a rule that asks
+      // about its size denies every delete. That is what stopped the course
+      // bin removing a section's pictures when it was emptied.
+      allow create, update: if request.auth != null
         && request.resource.size < 200 * 1024 * 1024
         && (request.resource.contentType == 'application/pdf'
             || request.resource.contentType.matches('video/.*')
             || request.resource.contentType.matches('image/(png|jpe?g|webp)'));
+
+      allow delete: if request.auth != null;
     }
 
     match /{allPaths=**} {

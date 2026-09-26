@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     parsePdfIntoSections, looksLikeHeading, countWords, tabContent, SECTION_TABS,
     newQuestion, newExerciseLink, videoSource, BLOCK_TYPES, contentsTitles,
-    blockHtml,
+    blockHtml, fontStyle, richLine, dropEmptyTags,
 } from '../src/components/imnci/book';
 import { sanitiseHtml } from '../src/components/imnci/shared';
 import {
@@ -481,5 +481,131 @@ describe('blockHtml', () => {
 
     it('counts words without counting the markup', () => {
         expect(countWords({ read: [{ type: 'rich', text: '<p><strong>one</strong> two three</p>' }] })).toBe(3);
+    });
+});
+
+// =============================================================================
+// Keeping the book's formatting
+//
+// The books carry meaning in their typography: a lead-in is bold italic, and
+// "a classification in the pink row" has `pink row` set in bold in the middle
+// of the sentence. Throwing that away meant an author put it back by hand on
+// every paragraph of a 95-page book.
+// =============================================================================
+
+const run = (str, over = {}) => ({
+    str, x: 0, width: str.length * 6, size: 12,
+    bold: false, italic: false, mono: false, gap: true, ...over,
+});
+
+describe('fontStyle', () => {
+    it('reads bold and italic from the embedded font name', () => {
+        expect(fontStyle('Times New Roman,Bold')).toMatchObject({ bold: true, italic: false });
+        expect(fontStyle('Times New Roman,BoldItalic')).toMatchObject({ bold: true, italic: true });
+        expect(fontStyle('Times New Roman')).toMatchObject({ bold: false, italic: false });
+        expect(fontStyle('ABCDEE+Courier New')).toMatchObject({ mono: true });
+    });
+
+    it('is not fooled by a font with neither in its name', () => {
+        expect(fontStyle('ABCDEE+Calibri')).toEqual({ bold: false, italic: false, mono: false });
+        expect(fontStyle('')).toEqual({ bold: false, italic: false, mono: false });
+        expect(fontStyle(null)).toEqual({ bold: false, italic: false, mono: false });
+    });
+});
+
+describe('richLine', () => {
+    it('keeps bold in the middle of a sentence', () => {
+        const html = richLine([
+            run('A classification in the '),
+            run('pink row', { bold: true }),
+            run(' needs urgent attention'),
+        ], 12);
+        expect(html).toContain('<strong>pink row</strong>');
+        expect(html).toContain('A classification in the');
+    });
+
+    it('puts a space BETWEEN two differently-styled runs', () => {
+        // Without this the tags closed straight onto the next word and the
+        // page read "listed on the<strong>ASSESS".
+        const html = richLine([
+            run('listed on the'),
+            run('ASSESS & CLASSIFY', { bold: true, italic: true }),
+            run('chart'),
+        ], 12);
+        expect(html).not.toMatch(/the<(strong|em)/);
+        expect(html).toContain('&amp;');
+    });
+
+    it('writes a size only when it differs from the body', () => {
+        expect(richLine([run('body text')], 12)).not.toContain('font-size');
+        expect(richLine([run('A HEADING', { size: 14 })], 12)).toContain('font-size: 1.17em');
+    });
+
+    it('escapes the text it is given', () => {
+        expect(richLine([run('1 < 2 & 3 > 2')], 12)).toBe('1 &lt; 2 &amp; 3 &gt; 2');
+    });
+
+    it('drops a symbol-font glyph that carries no text', () => {
+        // Wingdings bullets arrive as private-use characters, which render as a
+        // blank or a box and used to leave an empty span in front of every item.
+        const html = richLine([run('\uF0A7', { mono: true }), run('PNEUMONIA', { bold: true })], 12);
+        expect(html).toBe('<strong>PNEUMONIA</strong>');
+    });
+});
+
+describe('dropEmptyTags', () => {
+    it('removes a tag left wrapping nothing', () => {
+        expect(dropEmptyTags('<span style="font-family: monospace"></span> <strong>x</strong>'))
+            .toBe('<strong>x</strong>');
+    });
+
+    it('keeps a tag that still has something in it', () => {
+        expect(dropEmptyTags('<strong>kept</strong>')).toBe('<strong>kept</strong>');
+    });
+
+    it('unwinds nested empties', () => {
+        expect(dropEmptyTags('<em><span></span></em>after')).toBe('after');
+    });
+});
+
+describe('a book read WITH its formatting', () => {
+    // The same shape extractPdfPages produces: plain lines for the structural
+    // decisions, and a matching rich entry per line for the text itself.
+    const page = (n, rows) => ({
+        page: n,
+        lines: rows.map((r) => r[0]),
+        rich: rows.map((r, i) => ({ html: r[1], y: 700 - i * 16, x: 63, size: 12, bold: false, bodySize: 12 })),
+        images: [],
+    });
+
+    const BOOK = [
+        page(1, [['INTRODUCTION', 'INTRODUCTION']]),
+        page(2, [
+            ['3.2 CLASSIFY COUGH', '3.2 CLASSIFY COUGH'],
+            ['A classification in the pink row needs urgent', 'A classification in the <strong>pink row</strong> needs urgent'],
+            ['attention.', 'attention.'],
+        ]),
+    ];
+
+    it('produces rich blocks that keep the bold', () => {
+        const { sections } = parsePdfIntoSections(BOOK);
+        expect(sections).toHaveLength(1);
+        const [first] = sections[0].read;
+        expect(first.type).toBe('rich');
+        expect(first.text).toContain('<strong>pink row</strong>');
+    });
+
+    it('still joins a sentence the PDF broke across two lines', () => {
+        const { sections } = parsePdfIntoSections(BOOK);
+        expect(sections[0].read[0].text).toContain('needs urgent attention.');
+    });
+
+    it('falls back to plain paragraphs when there is no formatting to read', () => {
+        // A scanned or unusual book gives no font information, and must still
+        // convert rather than producing nothing.
+        const plain = BOOK.map(({ page: n, lines }) => ({ page: n, lines, images: [] }));
+        const { sections } = parsePdfIntoSections(plain);
+        expect(sections[0].read[0].type).toBe('paragraph');
+        expect(sections[0].read[0].text).not.toContain('<strong>');
     });
 });

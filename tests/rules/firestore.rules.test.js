@@ -269,6 +269,20 @@ describe('onlineCourses — everyone signed in learns, federal authors', () => {
         await assertFails(getDocs(collection(anonymous(), 'onlineCourses')));
     });
 
+    // Emptying the course bin removes the document for good, so the rule that
+    // gates authoring has to gate this too — `write` covers delete, and this is
+    // what proves it does rather than assuming it.
+    it('lets the federal level delete content permanently', async () => {
+        await assertSucceeds(deleteDoc(doc(as('federalManager'), 'onlineCourseItems', 'i1')));
+        await assertSucceeds(deleteDoc(doc(as('superUser'), 'onlineCourses', 'c1')));
+    });
+
+    it('does NOT let anyone else delete content permanently', async () => {
+        await assertFails(deleteDoc(doc(as('statesManager'), 'onlineCourseItems', 'i1')));
+        await assertFails(deleteDoc(doc(as('facilitator'), 'onlineCourses', 'c1')));
+        await assertFails(deleteDoc(doc(as('plainUser'), 'onlineCourseItems', 'i1')));
+    });
+
     // Progress is personal. One learner must not be able to read or rewrite
     // another's record.
     it('lets a learner read and write only their own progress', async () => {

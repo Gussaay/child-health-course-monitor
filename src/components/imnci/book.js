@@ -27,6 +27,14 @@ const isTocLine = (s) => LEADERS.test(s);
 const isPageNumber = (s) => /^\d{1,3}$/.test(s.trim());
 const BULLET = /^[••▪·o\-–]\s+/;
 
+// The same bullet glyph, but allowing for the tags the rich extractor wraps
+// it in. The character class comes from BULLET itself so the two cannot
+// drift apart, and the opening tags are put back rather than dropped —
+// dropping them left a closing tag with nothing to close.
+const BULLET_CLASS = BULLET.source.slice(BULLET.source.indexOf('['), BULLET.source.indexOf(']') + 1);
+const BULLET_HTML = new RegExp(`^((?:<[^>]+>\\s*)*)${BULLET_CLASS}\\s*`);
+const stripBullet = (html) => dropEmptyTags(String(html).replace(BULLET_HTML, '$1'));
+
 // Letters only, in capitals. Used to compare a contents entry with the heading
 // it points at: the PDF loses spaces between words at random ("PURPOSEOF THIS
 // TRAINING COURSE"), so anything that counts spaces cannot match the two up.
@@ -164,9 +172,16 @@ export function parsePdfIntoSections(pages) {
     // the right section is a much smaller problem than that complexity.
     let imageIndex = 0;
 
-    pages.filter((pg) => pg.page >= firstContentPage).forEach(({ page, lines, images }) => {
-        (lines || []).forEach((raw) => {
+    pages.filter((pg) => pg.page >= firstContentPage).forEach(({ page, lines, rich, images }) => {
+        // The book's own formatting, where the extractor was able to read it.
+        // Without it — the unit tests feed plain strings — everything below
+        // falls back to plain paragraphs, which is what it always produced.
+        const styled = Array.isArray(rich) && rich.length === (lines || []).length ? rich : null;
+        let lastY = null;
+
+        (lines || []).forEach((raw, lineIndex) => {
             const line = String(raw).trim();
+            const fmt = styled ? styled[lineIndex] : null;
             if (!line || isPageNumber(line) || isTocLine(line)) return;
 
             // An unnumbered book: the line is a heading when the contents page
@@ -201,22 +216,71 @@ export function parsePdfIntoSections(pages) {
             if (!current) return;
             current.endPage = page;
 
+            // A gap noticeably bigger than the line spacing is a paragraph
+            // break the book expressed with white space rather than a marker.
+            const brokeByGap = !!fmt && lastY !== null && (lastY - fmt.y) > fmt.size * 1.8;
+            if (fmt) lastY = fmt.y;
+
             if (BULLET.test(line)) {
                 const text = line.replace(BULLET, '').trim();
+                const html = fmt ? stripBullet(fmt.html) : null;
                 const last = current.read[current.read.length - 1];
-                if (last && last.type === 'list') last.items.push(text);
-                else current.read.push({ type: 'list', items: [text] });
+                if (last && last.type === 'list') {
+                    last.items.push(text);
+                    if (last.html) last.html.push(html || escapeHtml(text));
+                } else {
+                    current.read.push({
+                        type: 'list', items: [text],
+                        html: styled ? [html || escapeHtml(text)] : null,
+                        // Where the item's TEXT starts, not the bullet. A line
+                        // that wraps is indented to here; the paragraph after
+                        // the list goes back to the margin.
+                        indent: fmt ? fmt.x : null,
+                    });
+                }
                 return;
             }
 
             const last = current.read[current.read.length - 1];
+
+            // A bullet that runs onto a second line has no marker on that line,
+            // so it arrived as a paragraph of its own: the list said "needs
+            // urgent attention and referral or admission for inpatient" and the
+            // word "care." began a new paragraph underneath it.
+            //
+            // Only attempted when the layout was actually read. Judging it from
+            // the words alone swallowed the paragraph that FOLLOWED a list
+            // whose last bullet happened to end without a full stop, which is
+            // how "Refer the child urgently." ended up inside a danger sign.
+            const lastItem = last?.type === 'list' ? last.items[last.items.length - 1] : null;
+            const wrapsTheBullet = lastItem && fmt && last.indent !== null
+                && !brokeByGap
+                && fmt.x >= last.indent - 2
+                && !/[.:;?!]$/.test(lastItem);
+            if (wrapsTheBullet) {
+                last.items[last.items.length - 1] += ` ${line}`;
+                if (last.html) {
+                    last.html[last.html.length - 1] += ` ${fmt ? fmt.html : escapeHtml(line)}`;
+                }
+                return;
+            }
+
             // PDFs break a sentence across lines with no marker, so a line that
             // continues an unfinished paragraph is joined to it rather than
-            // starting a new one.
-            if (last && last.type === 'paragraph' && !/[.:;?!]$/.test(last.text)) {
-                last.text += ' ' + line;
+            // starting a new one — unless the white space says otherwise.
+            const continues = last && last.type === 'paragraph'
+                && !brokeByGap
+                && !/[.:;?!]$/.test(last.plain);
+
+            if (continues) {
+                last.plain += ` ${line}`;
+                if (last.html !== null) last.html += ` ${fmt ? fmt.html : escapeHtml(line)}`;
             } else {
-                current.read.push({ type: 'paragraph', text: line });
+                current.read.push({
+                    type: 'paragraph',
+                    plain: line,
+                    html: styled ? (fmt ? fmt.html : escapeHtml(line)) : null,
+                });
             }
         });
 
@@ -237,6 +301,25 @@ export function parsePdfIntoSections(pages) {
             warnings.push(`${missed.length} topic(s) on the contents page were not found in the text: ${missed.join(', ')}.`);
         }
     }
+
+    // A section whose text was read with its formatting becomes rich blocks; one
+    // read as plain strings stays exactly as it was, which is what keeps the
+    // parser testable without a PDF.
+    sections.forEach((sec) => {
+        sec.read = sec.read.map((b) => {
+            if (b.type === 'paragraph') {
+                return b.html !== null
+                    ? { type: 'rich', text: `<p>${b.html}</p>` }
+                    : { type: 'paragraph', text: b.plain };
+            }
+            if (b.type === 'list') {
+                return b.html
+                    ? { type: 'rich', text: `<ul>${b.html.map((i) => `<li>${i}</li>`).join('')}</ul>` }
+                    : { type: 'list', items: b.items };
+            }
+            return b;
+        });
+    });
 
     const seen = new Map();
     sections.forEach((s) => {
@@ -336,6 +419,127 @@ export function blockHtml(block) {
 const escapeHtml = (s) => String(s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+// ---------------------------------------------------------------------------
+// Keeping the book's formatting
+//
+// The books carry meaning in their typography: a heading is 14pt bold, a
+// lead-in is bold italic, and "a classification in the pink row" has `pink row`
+// set in bold in the middle of the sentence. Extracting the characters and
+// throwing the rest away lost all of that, and an author then had to put it
+// back by hand on every paragraph of a 95-page book.
+//
+// pdfjs gives the real font name — "Times New Roman,Bold" — but only through
+// page.commonObjs, and only after getOperatorList() has run. It also renumbers
+// the font ids depending on which call happens first, so the operator list is
+// always fetched BEFORE the text content; read the other way round, the ids in
+// the text items do not match the ones in commonObjs and every run comes back
+// as regular.
+// ---------------------------------------------------------------------------
+
+/** Bold and italic, read from the embedded font's own name. */
+export function fontStyle(name) {
+    const n = String(name || '');
+    return {
+        bold: /bold|black|heavy|semibold|[-,]bd\b/i.test(n),
+        italic: /italic|oblique|[-,]it\b/i.test(n),
+        mono: /mono|courier/i.test(n),
+    };
+}
+
+const escapeAttr = (s) => String(s).replace(/"/g, '&quot;');
+
+/**
+ * One visual line as HTML, with its runs kept apart where they differ.
+ *
+ * Size is written relative to the page's body size rather than in points, so
+ * the text stays readable when the learner zooms: a 14pt heading in a 12pt book
+ * becomes 1.17em, not a fixed size that ignores the reading controls.
+ *
+ * @param {Array<{str,x,size,bold,italic,mono}>} runs  in reading order
+ * @param {number} bodySize  the most common size on the page
+ */
+export function richLine(runs, bodySize) {
+    const parts = [];
+    let open = null;
+    let buffer = '';
+
+    const sameStyle = (a, b) => a && b
+        && a.bold === b.bold && a.italic === b.italic && a.mono === b.mono
+        && Math.abs(a.size - b.size) < 0.6;
+
+    const flush = () => {
+        // \uE000-\uF8FF is the private use area: a symbol font's own glyph
+        // codes, which mean nothing as text and render as a blank or a box.
+        if (!open || !buffer.replace(/[\uE000-\uF8FF]/g, '').trim()) { buffer = ''; return; }
+        let html = escapeHtml(buffer).replace(/\s+/g, ' ');
+        if (open.bold) html = `<strong>${html}</strong>`;
+        if (open.italic) html = `<em>${html}</em>`;
+        const ratio = bodySize > 0 ? open.size / bodySize : 1;
+        // Only a difference worth seeing is written out. Every run carrying its
+        // own font-size, including the ones that match the body, produced HTML
+        // that was mostly span tags.
+        if (ratio > 1.08 || ratio < 0.92) {
+            html = `<span style="font-size: ${escapeAttr(ratio.toFixed(2))}em">${html}</span>`;
+        }
+        if (open.mono) html = `<span style="font-family: ui-monospace, monospace">${html}</span>`;
+        parts.push(html);
+        buffer = '';
+    };
+
+    runs.forEach((run) => {
+        if (!sameStyle(open, run)) {
+            flush();
+            // The space BETWEEN two differently-styled runs has to be emitted
+            // between the tags, not inside them. Without this, "listed on the"
+            // and a bold "ASSESS & CLASSIFY" ran together into
+            // "the<strong>ASSESS" and the words were joined on screen.
+            if (parts.length && run.gap && !/\s$/.test(run.str)) parts.push(' ');
+            open = run;
+        }
+        // A gap wider than a space means the PDF positioned the next run rather
+        // than writing a space, so one is put back.
+        const needsSpace = buffer && !/\s$/.test(buffer) && !/^\s/.test(run.str);
+        buffer += (needsSpace && run.gap ? ' ' : '') + run.str;
+    });
+    flush();
+
+    return dropEmptyTags(parts.join('').trim());
+}
+
+// Tags left wrapping nothing.
+//
+// A bullet in these books is often the letter "o" set in Wingdings, which is
+// why BULLET matches it. Stripping the glyph leaves the span that carried its
+// font behind with nothing inside — "<span style=...></span>" in front of every
+// list item. Runs of private-use characters, which are symbol fonts with no
+// Unicode meaning at all, leave the same hole.
+export function dropEmptyTags(html) {
+    let out = String(html);
+    let before;
+    do {
+        before = out;
+        out = out.replace(/<(strong|em|span)\b[^>]*>\s*<\/\1>/g, '');
+    } while (out !== before);
+    return out.replace(/\s{2,}/g, ' ').trim();
+}
+
+// The size most of the page is set in. Used as the baseline everything else is
+// measured against, so a book set in 10pt and one set in 12pt both come out
+// looking like themselves.
+function commonSize(items) {
+    const tally = new Map();
+    items.forEach((it) => {
+        if (!it.str.trim()) return;
+        const k = Math.round(it.size * 2) / 2;
+        tally.set(k, (tally.get(k) || 0) + it.str.trim().length);
+    });
+    let best = 12;
+    let most = 0;
+    tally.forEach((n, size) => { if (n > most) { most = n; best = size; } });
+    return best;
+}
+
+
 // A multiple-choice question. `answer` is the index of the correct option, so
 // reordering the options in the editor cannot silently change which one is
 // right — the index moves with them.
@@ -409,24 +613,76 @@ export async function extractPdfPages(file, onProgress, withImages = false) {
     for (let p = 1; p <= doc.numPages; p++) {
         if (onProgress) onProgress({ page: p, total: doc.numPages, phase: 'text' });
         const page = await doc.getPage(p);
+
+        // BEFORE getTextContent, always: this is what puts the real font names
+        // in commonObjs, and calling it the other way round renumbers the font
+        // ids so nothing resolves.
+        let ops = null;
+        try { ops = await page.getOperatorList(); } catch (e) {
+            console.warn(`Could not read the fonts on page ${p}:`, e?.message);
+        }
+
         const content = await page.getTextContent();
+        const fontName = (id) => {
+            try {
+                return page.commonObjs.has(id) ? (page.commonObjs.get(id)?.name || '') : '';
+            } catch { return ''; }
+        };
+
+        const styled = content.items
+            .filter((it) => it.str)
+            .map((it) => {
+                const { bold, italic, mono } = fontStyle(fontName(it.fontName));
+                return {
+                    str: it.str,
+                    x: it.transform[4],
+                    y: it.transform[5],
+                    width: it.width || 0,
+                    size: Math.abs(it.transform[0]) || it.height || 12,
+                    bold, italic, mono,
+                };
+            });
+
+        const bodySize = commonSize(styled);
+
         const byLine = new Map();
-        content.items.forEach((it) => {
-            if (!it.str || !it.str.trim()) return;
-            const y = Math.round(it.transform[5]);
+        styled.forEach((it) => {
+            if (!it.str.trim()) return;
+            const y = Math.round(it.y);
             if (!byLine.has(y)) byLine.set(y, []);
-            byLine.get(y).push({ x: it.transform[4], s: it.str });
+            byLine.get(y).push(it);
         });
-        const lines = [...byLine.entries()]
-            .sort((a, b) => b[0] - a[0])
-            .map(([, parts]) => parts.sort((a, b) => a.x - b.x).map((q) => q.s).join(' ').replace(/\s+/g, ' ').trim())
-            .filter(Boolean);
+
+        const ordered = [...byLine.entries()].sort((a, b) => b[0] - a[0]);
+        const lines = [];
+        const rich = [];
+        ordered.forEach(([y, parts]) => {
+            const runs = parts.sort((a, b) => a.x - b.x);
+            // A run that starts further right than the previous one ended was
+            // positioned, not spaced, so a space is put back between them.
+            runs.forEach((r, i) => {
+                const prev = runs[i - 1];
+                r.gap = !prev || (r.x - (prev.x + prev.width)) > prev.size * 0.12;
+            });
+            const plain = runs.map((q) => q.str).join(' ').replace(/\s+/g, ' ').trim();
+            if (!plain) return;
+            lines.push(plain);
+            rich.push({
+                html: richLine(runs, bodySize),
+                y,
+                x: runs[0].x,
+                size: Math.max(...runs.map((r) => r.size)),
+                bold: runs.every((r) => r.bold),
+                bodySize,
+            });
+        });
+
         let images = [];
         if (withImages) {
             if (onProgress) onProgress({ page: p, total: doc.numPages, phase: 'figures' });
-            images = await extractPageImages(pdfjs, page);
+            images = await extractPageImages(pdfjs, page, ops);
         }
-        pages.push({ page: p, lines, images });
+        pages.push({ page: p, lines, rich, images });
     }
     return pages;
 }
@@ -509,9 +765,11 @@ function getImageObject(page, name) {
     });
 }
 
-async function extractPageImages(pdfjs, page) {
+async function extractPageImages(pdfjs, page, prefetched = null) {
     const { OPS } = pdfjs;
-    const ops = await page.getOperatorList();
+    // Reused when the caller already has it. Fetching the operator list twice
+    // for the same page is the slowest thing in a conversion.
+    const ops = prefetched || await page.getOperatorList();
     const viewport = page.getViewport({ scale: 1 });
 
     let ctm = [1, 0, 0, 1, 0, 0];

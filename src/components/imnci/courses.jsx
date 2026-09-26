@@ -23,7 +23,7 @@ import {
     CheckCircle2, Circle, DownloadCloud, AlertTriangle, Wand2,
     ZoomIn, ZoomOut, BookOpenText, MonitorPlay, Stethoscope,
     Lock, GraduationCap, Globe, Layers, Sparkles, Film,
-    Syringe, X, RefreshCw,
+    Syringe, X, RefreshCw, RotateCcw,
 } from 'lucide-react';
 
 import {
@@ -51,8 +51,8 @@ import { ExerciseManagerView } from './exercises.jsx';
 const ProtocolEditor = lazy(() => import('./protocol'));
 import { IMNCI_SEVERITIES, severityById } from '../constants';
 import {
-    upsertOnlineCourse, deleteOnlineCourse,
-    upsertOnlineCourseItem, deleteOnlineCourseItem,
+    upsertOnlineCourse, deleteOnlineCourse, restoreOnlineCourse, hardDeleteOnlineCourse,
+    upsertOnlineCourseItem, deleteOnlineCourseItem, restoreOnlineCourseItem, hardDeleteOnlineCourseItem,
     bulkUpsertOnlineCourseContent,
     getOnlineProgress, setOnlineSectionComplete,
 } from '../../data';
@@ -1256,6 +1256,146 @@ const CHART_TONES = {
     note: { bg: '#ffffff', fg: '#0f172a' },
 };
 
+// What has been deleted, and the one place it can be got rid of for good.
+//
+// Deleting a course or a section hides it and records who and when. Nothing
+// leaves the database until somebody empties the bin here, which is also the
+// only place that removes the pictures from Storage. Two steps, because a
+// converted module is a day's work and "delete" is one click away from "edit"
+// in a list.
+function DeletedItems({ courses, items, onChanged }) {
+    const [busy, setBusy] = useState(null);
+
+    const deletedCourses = courses.filter((c) => c.isDeleted === true);
+    const deletedItems = items.filter((i) => i.isDeleted === true);
+
+    const when = (row) => {
+        const at = row.deletedAt?.toDate?.() || (row.deletedAt ? new Date(row.deletedAt) : null);
+        const who = row.deletedBy ? ` by ${row.deletedBy}` : '';
+        return at ? `${at.toLocaleDateString()} ${at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${who}`
+            : (row.deletedBy ? `by ${row.deletedBy}` : 'before this was recorded');
+    };
+
+    const restore = async (row) => {
+        setBusy(row.id);
+        try {
+            if (row.kind) await restoreOnlineCourseItem(row.id);
+            else await restoreOnlineCourse(row.id);
+            notify('Restored.', 'success');
+            onChanged();
+        } catch (e) {
+            console.error('Could not restore:', e);
+            notify(`Could not restore. ${e?.message || ''}`.trim(), 'error');
+        } finally { setBusy(null); }
+    };
+
+    const purgeItem = async (row) => {
+        const pictures = [...(row.read || []), ...(row.see || []), ...(row.practise || []), ...(row.blocks || [])]
+            .filter((b) => (b.type === 'image' || b.type === 'page') && b.path).length;
+
+        const ok = await confirmDialog(
+            `Permanently delete "${row.title}"?`
+            + (pictures ? ` Its ${pictures} picture${pictures === 1 ? '' : 's'} will be removed from storage too.` : '')
+            + ' This cannot be undone.',
+            { title: 'Delete for good', confirmLabel: 'Delete permanently', danger: true });
+        if (!ok) return;
+
+        setBusy(row.id);
+        try {
+            // Pictures a surviving section still points at are left alone: two
+            // sections that meet on one page of the book share its picture.
+            const keep = items
+                .filter((i) => i.id !== row.id && i.isDeleted !== true)
+                .flatMap((i) => [...(i.read || []), ...(i.see || []), ...(i.practise || []), ...(i.blocks || [])])
+                .filter((b) => (b.type === 'image' || b.type === 'page') && b.path)
+                .map((b) => `${ASSET_ROOT}/${String(b.path).replace(/^\/+/, '')}`);
+
+            await hardDeleteOnlineCourseItem(row, keep);
+            notify('Deleted permanently.', 'success');
+            onChanged();
+        } catch (e) {
+            console.error('Could not delete:', e);
+            notify(`Could not delete. ${e?.message || ''}`.trim(), 'error');
+        } finally { setBusy(null); }
+    };
+
+    const purgeCourse = async (course) => {
+        const mine = items.filter((i) => i.courseId === course.id);
+        const ok = await confirmDialog(
+            `Permanently delete "${course.title}" and everything in it?`
+            + ` That is ${mine.filter((i) => i.kind === 'module').length} modules and`
+            + ` ${mine.filter((i) => i.kind === 'section').length} sections, with their pictures.`
+            + ' This cannot be undone.',
+            { title: 'Delete the whole course', confirmLabel: 'Delete permanently', danger: true });
+        if (!ok) return;
+
+        setBusy(course.id);
+        try {
+            await hardDeleteOnlineCourse(course, mine);
+            notify('The course and everything in it was deleted.', 'success');
+            onChanged();
+        } catch (e) {
+            console.error('Could not delete the course:', e);
+            notify(`Could not delete. ${e?.message || ''}`.trim(), 'error');
+        } finally { setBusy(null); }
+    };
+
+    if (!deletedCourses.length && !deletedItems.length) {
+        return (
+            <Card><CardBody className="text-center text-slate-500 py-10 text-sm">
+                <Trash2 size={24} className="mx-auto mb-2 text-slate-300" />
+                Nothing has been deleted.
+            </CardBody></Card>
+        );
+    }
+
+    const row = (thing, label, onPurge) => (
+        <li key={thing.id} className="flex flex-wrap items-center gap-2 px-4 py-3">
+            <div className="min-w-0 flex-1">
+                <div className="font-medium text-slate-700 truncate">{thing.title || '(no title)'}</div>
+                <div className="text-xs text-slate-500">{label} · deleted {when(thing)}</div>
+            </div>
+            <Button variant="secondary" disabled={busy === thing.id} onClick={() => restore(thing)}>
+                <RotateCcw size={14} /> Restore
+            </Button>
+            <Button variant="danger" disabled={busy === thing.id} onClick={() => onPurge(thing)}>
+                <Trash2 size={14} /> Delete for good
+            </Button>
+        </li>
+    );
+
+    return (
+        <div className="space-y-3">
+            <div className="px-3 py-2 bg-slate-100 border border-slate-300 rounded text-sm text-slate-700">
+                Deleted content is kept here so it can be put back. Emptying it removes the
+                documents and their pictures from storage, and cannot be undone.
+            </div>
+
+            {deletedCourses.length > 0 && (
+                <Card>
+                    <div className="px-4 py-2 bg-rose-50 border-b border-rose-200 text-sm font-bold text-rose-900">
+                        Courses ({deletedCourses.length})
+                    </div>
+                    <ul className="divide-y">
+                        {deletedCourses.map((c) => row(c, 'course', purgeCourse))}
+                    </ul>
+                </Card>
+            )}
+
+            {deletedItems.length > 0 && (
+                <Card>
+                    <div className="px-4 py-2 bg-slate-50 border-b text-sm font-bold text-slate-700">
+                        Modules and sections ({deletedItems.length})
+                    </div>
+                    <ul className="divide-y max-h-[28rem] overflow-y-auto">
+                        {deletedItems.map((i) => row(i, i.kind, purgeItem))}
+                    </ul>
+                </Card>
+            )}
+        </div>
+    );
+}
+
 // =============================================================================
 // Main screen
 // =============================================================================
@@ -1306,6 +1446,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
     // The two builders the course author also needs. Opened over the course
     // rather than navigated to, so going back does not lose where they were.
     const [builder, setBuilder] = useState(null);
+    const [showBin, setShowBin] = useState(false);
     const [convertOpen, setConvertOpen] = useState(false);
     // Which tab of the open section is being written, or null when reading.
     const [editingTab, setEditingTab] = useState(null);
@@ -1348,6 +1489,16 @@ export default function OnlineCoursesView({ permissions = {} }) {
     [onlineCourses, canManage]);
 
     const items = useMemo(() => (onlineCourseItems || []).filter((i) => i.isDeleted !== true), [onlineCourseItems]);
+
+    // Everything, deleted or not. The bin needs what the rest of the screen
+    // filters out, and a permanent delete needs to know which pictures the
+    // surviving sections still point at.
+    const allItems = useMemo(() => onlineCourseItems || [], [onlineCourseItems]);
+    const allCourses = useMemo(() => onlineCourses || [], [onlineCourses]);
+    const deletedCount = useMemo(
+        () => allCourses.filter((c) => c.isDeleted === true).length
+            + allItems.filter((i) => i.isDeleted === true).length,
+        [allCourses, allItems]);
 
     const openCourse = courses.find((c) => c.id === openCourseId) || null;
 
@@ -1963,6 +2114,9 @@ export default function OnlineCoursesView({ permissions = {} }) {
                         work, so the two other builders open from here rather
                         than being somewhere else in the app. */}
                     <div className="flex flex-wrap gap-2">
+                        <Button variant={showBin ? 'primary' : 'secondary'} onClick={() => setShowBin(!showBin)}>
+                            <Trash2 size={16} /> Deleted{deletedCount ? ` (${deletedCount})` : ''}
+                        </Button>
                         <Button variant="secondary" onClick={() => setBuilder('exercises')}>
                             <Stethoscope size={16} /> Case builder
                         </Button>
@@ -2000,7 +2154,11 @@ export default function OnlineCoursesView({ permissions = {} }) {
                 </div>
             )}
 
-            {courses.length === 0 ? (
+            {isAdmin && showBin && (
+                <DeletedItems courses={allCourses} items={allItems} onChanged={reload} />
+            )}
+
+            {isAdmin && showBin ? null : courses.length === 0 ? (
                 <Card><CardBody className="text-center py-12 text-gray-500">
                     <BookOpen size={32} className="mx-auto mb-3 text-gray-400" />
                     <div className="font-medium text-gray-700">No courses yet</div>
