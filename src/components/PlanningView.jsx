@@ -1,16 +1,16 @@
 // src/components/PlanningView.jsx
-import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { amiriFontBase64 } from './AmiriFont.js'; 
-import { Card, CardBody, Button, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
+import { Card, CardBody, Button, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, Modal } from './CommonComponents';
 import { upsertMasterPlan, deleteMasterPlan, upsertOperationalPlan, deleteOperationalPlan } from '../data';
 import { useDataCache } from '../DataContext';
 import { 
     Plus, Edit, Trash2, TrendingUp, Target, ChevronDown, 
     ChevronUp, Calendar, Activity, FileSpreadsheet, CheckCircle2, 
-    AlertTriangle, Briefcase, Save, X, BarChart2, PieChart, Layers, ListFilter, FileText, Download, Upload, Users
+    AlertTriangle, Briefcase, Save, X, BarChart2, PieChart, Layers, ListFilter, FileText, Download, Upload, Users, Share2
 } from 'lucide-react';
 import { notify, confirmDialog } from './dialogs';
 
@@ -88,6 +88,330 @@ const DEFAULT_INTERVENTION = () => ({
     notes: '' 
 });
 
+// =============================================================================
+// Bulk upload
+//
+// The previous importer read the workbook by exact Arabic header string:
+// row['المحور'], row['الأساس'], and so on. A file from a state office whose
+// heading said "محور التدخل" rather than "المحور" matched nothing, and because
+// every field fell back — `|| AXIS_OPTIONS[0]`, `Number(...) || 0` — it
+// imported a page of zeros and said it had succeeded.
+//
+// So the columns are mapped, shown, and previewed before anything is written.
+// =============================================================================
+
+// Every field a row can carry, with the headings seen in the wild. Matching is
+// on letters only, so spacing and punctuation in a heading do not matter.
+export const PLAN_IMPORT_FIELDS = [
+    { key: 'axis', label: 'المحور', aliases: ['المحور', 'محور التدخل', 'axis', 'pillar'] },
+    { key: 'name', label: 'النشاط', required: true, aliases: ['النشاط', 'اسم النشاط', 'التدخل', 'activity', 'intervention'] },
+    { key: 'indicator', label: 'المؤشر', aliases: ['المؤشر', 'مؤشر الاداء', 'indicator'] },
+    { key: 'baseline', label: 'الأساس', numeric: true, aliases: ['الأساس', 'الاساس', 'خط الاساس', 'baseline'] },
+    { key: 'target', label: 'الهدف', numeric: true, aliases: ['الهدف', 'المستهدف', 'target'] },
+    { key: 'totalCost', label: 'التكلفة الإجمالية', numeric: true, aliases: ['التكلفة الإجمالية', 'التكلفة', 'الميزانية', 'cost', 'budget'] },
+    { key: 'q1', label: 'الربع الاول', boolean: true, aliases: ['الربع الاول', 'الربع الأول', 'ر1', 'q1'] },
+    { key: 'q2', label: 'الربع الثاني', boolean: true, aliases: ['الربع الثاني', 'ر2', 'q2'] },
+    { key: 'q3', label: 'الربع الثالث', boolean: true, aliases: ['الربع الثالث', 'ر3', 'q3'] },
+    { key: 'q4', label: 'الربع الرابع', boolean: true, aliases: ['الربع الرابع', 'ر4', 'q4'] },
+    // Funding was missing from the old template entirely, so a plan that went
+    // out to Excel and came back lost every source and figure on its new rows.
+    { key: 'govSource', label: 'مصدر التمويل الحكومي', aliases: ['مصدر التمويل الحكومي', 'المشروع الحكومي', 'gov source'] },
+    { key: 'govValue', label: 'قيمة التمويل الحكومي', numeric: true, aliases: ['قيمة التمويل الحكومي', 'الدعم الحكومي', 'gov value'] },
+    { key: 'extSource1', label: 'الشريك الأول', aliases: ['الشريك الأول', 'الشريك 1', 'partner 1'] },
+    { key: 'extValue1', label: 'دعم الشريك الأول', numeric: true, aliases: ['دعم الشريك الأول', 'قيمة الشريك 1', 'partner 1 value'] },
+    { key: 'extSource2', label: 'الشريك الثاني', aliases: ['الشريك الثاني', 'الشريك 2', 'partner 2'] },
+    { key: 'extValue2', label: 'دعم الشريك الثاني', numeric: true, aliases: ['دعم الشريك الثاني', 'قيمة الشريك 2', 'partner 2 value'] },
+    { key: 'extSource3', label: 'الشريك الثالث', aliases: ['الشريك الثالث', 'الشريك 3', 'partner 3'] },
+    { key: 'extValue3', label: 'دعم الشريك الثالث', numeric: true, aliases: ['دعم الشريك الثالث', 'قيمة الشريك 3', 'partner 3 value'] },
+    { key: 'notes', label: 'ملاحظات', aliases: ['ملاحظات', 'ملحوظات', 'notes', 'comment'] },
+    { key: 'id', label: 'المعرف (للتحديث)', aliases: ['ID (لا تقم بتعديله)', 'المعرف', 'id'] },
+];
+
+// Letters and digits only. Headings arrive with stray spaces, colons, line
+// breaks and Arabic diacritics, and none of that changes which column it is.
+const headerKey = (s) => String(s ?? '')
+    .replace(/[ً-ْـ]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .toLowerCase();
+
+/**
+ * Matches the workbook's headings to the fields, so the operator starts from a
+ * filled-in mapping rather than an empty one.
+ * @returns {Object<string,number>} field key -> column index
+ */
+export function guessPlanMapping(headers) {
+    const out = {};
+    const used = new Set();
+    PLAN_IMPORT_FIELDS.forEach((field) => {
+        const wanted = [field.label, ...(field.aliases || [])].map(headerKey);
+        const at = headers.findIndex((h, i) => !used.has(i) && wanted.includes(headerKey(h)));
+        if (at >= 0) { out[field.key] = at; used.add(at); }
+    });
+    return out;
+}
+
+const YES = ['نعم', 'yes', 'true', '1', 'y', 'x', '✓'];
+
+/** A number from a cell that may carry thousands separators or Arabic digits. */
+export function planNumber(raw) {
+    if (raw === null || raw === undefined || raw === '') return 0;
+    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : 0;
+    const western = String(raw)
+        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+        .replace(/[,\s٬]/g, '');
+    const n = parseFloat(western);
+    return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * One spreadsheet row as an intervention, plus anything wrong with it.
+ *
+ * Problems are reported rather than silently defaulted: a row whose target did
+ * not parse used to import as a target of zero, which reads on screen exactly
+ * like a target that really is zero.
+ */
+export function rowToIntervention(row, mapping, makeId) {
+    const problems = [];
+    const at = (key) => (mapping[key] === undefined || mapping[key] === null ? undefined : row[mapping[key]]);
+
+    const out = { id: at('id') ? String(at('id')).trim() : makeId() };
+
+    PLAN_IMPORT_FIELDS.forEach((field) => {
+        if (field.key === 'id') return;
+        const raw = at(field.key);
+        if (raw === undefined) { return; }
+
+        if (field.boolean) {
+            out[field.key] = YES.includes(String(raw).trim().toLowerCase());
+            return;
+        }
+        if (field.numeric) {
+            const text = String(raw ?? '').trim();
+            const value = planNumber(raw);
+            if (text && value === 0 && !/^[0٠]+([.,][0٠]+)?$/.test(text)) {
+                problems.push(`${field.label}: "${text}" ليس رقماً`);
+            }
+            out[field.key] = value;
+            return;
+        }
+        out[field.key] = String(raw ?? '').trim();
+    });
+
+    PLAN_IMPORT_FIELDS.filter((f) => f.required).forEach((f) => {
+        if (!String(out[f.key] || '').trim()) problems.push(`${f.label} مطلوب`);
+    });
+
+    return { intervention: out, problems };
+}
+
+function PlanImportModal({ isOpen, onClose, onImport, existing = [] }) {
+    const [page, setPage] = useState(0);
+    const [book, setBook] = useState(null);
+    const [sheetName, setSheetName] = useState('');
+    const [rows, setRows] = useState([]);
+    const [headers, setHeaders] = useState([]);
+    const [mapping, setMapping] = useState({});
+    const [error, setError] = useState('');
+    const [replace, setReplace] = useState(false);
+    const fileRef = useRef(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setPage(0); setBook(null); setSheetName(''); setRows([]);
+            setHeaders([]); setMapping({}); setError(''); setReplace(false);
+        }
+    }, [isOpen]);
+
+    const loadSheet = (wb, name) => {
+        const sheet = wb.Sheets[name];
+        const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, defval: '' });
+        if (grid.length < 2) {
+            setError('الورقة لا تحتوي على صف عناوين وصف بيانات على الأقل.');
+            return;
+        }
+        // The heading row is the first one with at least two filled cells. A
+        // workbook that opens with a merged title above the table is normal.
+        const headerAt = grid.findIndex((r) => r.filter((c) => String(c).trim()).length >= 2);
+        const head = grid[headerAt] || [];
+        setHeaders(head);
+        setRows(grid.slice(headerAt + 1).filter((r) => r.some((c) => String(c).trim())));
+        setMapping(guessPlanMapping(head));
+        setSheetName(name);
+        setError('');
+        setPage(1);
+    };
+
+    const handleFile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+                setBook(wb);
+                loadSheet(wb, wb.SheetNames[0]);
+            } catch (err) {
+                console.error('Could not read the workbook:', err);
+                setError(`تعذر قراءة الملف. ${err?.message || ''}`.trim());
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        e.target.value = '';
+    };
+
+    const parsed = useMemo(() => {
+        if (!rows.length) return [];
+        let n = 0;
+        return rows.map((r) => {
+            n += 1;
+            const { intervention, problems } = rowToIntervention(
+                r, mapping, () => `inv_${Date.now()}_${n}_${Math.floor(Math.random() * 1000)}`);
+            return { intervention, problems, rowNumber: n };
+        });
+    }, [rows, mapping]);
+
+    const badRows = parsed.filter((p) => p.problems.length);
+    const unmappedRequired = PLAN_IMPORT_FIELDS.filter(
+        (f) => f.required && (mapping[f.key] === undefined || mapping[f.key] === null));
+
+    const commit = () => {
+        if (unmappedRequired.length) return;
+        onImport(parsed.filter((p) => !p.problems.length).map((p) => p.intervention), replace);
+        onClose();
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="رفع الأنشطة من ملف Excel">
+            <div className="space-y-4" dir="rtl">
+                {error && (
+                    <div className="flex gap-2 bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-sm">
+                        <AlertTriangle size={18} className="shrink-0 mt-0.5" /><div>{error}</div>
+                    </div>
+                )}
+
+                {page === 0 && (
+                    <>
+                        <p className="text-sm text-gray-600">
+                            اختر ملف Excel يحتوي على الأنشطة. ستتمكن في الخطوة التالية من مطابقة
+                            أعمدة الملف مع حقول الخطة ومراجعة النتيجة قبل الحفظ.
+                        </p>
+                        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile}
+                            className="block w-full text-sm text-gray-600 file:ml-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
+                    </>
+                )}
+
+                {page === 1 && (
+                    <>
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="text-gray-500">الورقة:</span>
+                            <select value={sheetName} onChange={(e) => loadSheet(book, e.target.value)}
+                                className="border rounded px-2 py-1 text-sm font-bold">
+                                {(book?.SheetNames || []).map((n) => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                            <span className="text-gray-500">— {rows.length} صف</span>
+                        </div>
+
+                        <div className="border rounded max-h-64 overflow-y-auto divide-y">
+                            {PLAN_IMPORT_FIELDS.map((f) => {
+                                const missing = f.required && (mapping[f.key] === undefined || mapping[f.key] === null);
+                                return (
+                                    <div key={f.key} className={`flex items-center gap-2 px-3 py-2 text-sm ${missing ? 'bg-red-50' : ''}`}>
+                                        <span className="w-40 shrink-0 font-bold text-gray-700">
+                                            {f.label}{f.required && <span className="text-red-600"> *</span>}
+                                        </span>
+                                        <select
+                                            value={mapping[f.key] ?? ''}
+                                            onChange={(e) => setMapping((p) => ({
+                                                ...p, [f.key]: e.target.value === '' ? undefined : Number(e.target.value),
+                                            }))}
+                                            className="flex-1 border rounded px-2 py-1 text-sm">
+                                            <option value="">— لا يوجد —</option>
+                                            {headers.map((h, i) => (
+                                                <option key={i} value={i}>{String(h) || `عمود ${i + 1}`}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {unmappedRequired.length > 0 && (
+                            <div className="px-3 py-2 bg-red-50 border border-red-300 rounded text-sm text-red-800">
+                                يجب مطابقة: {unmappedRequired.map((f) => f.label).join('، ')}
+                            </div>
+                        )}
+
+                        {badRows.length > 0 && (
+                            <div className="px-3 py-2 bg-amber-50 border border-amber-300 rounded text-sm text-amber-900">
+                                <div className="font-bold mb-1">
+                                    {badRows.length} صف به مشكلة ولن يتم استيراده
+                                </div>
+                                <ul className="list-disc mr-5 space-y-0.5 max-h-28 overflow-y-auto">
+                                    {badRows.slice(0, 20).map((b) => (
+                                        <li key={b.rowNumber}>صف {b.rowNumber}: {b.problems.join('، ')}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        <div className="border rounded overflow-x-auto max-h-56">
+                            <table className="w-full text-xs text-right">
+                                <thead className="bg-slate-100 sticky top-0">
+                                    <tr>
+                                        <th className="p-2">#</th>
+                                        <th className="p-2">النشاط</th>
+                                        <th className="p-2">المحور</th>
+                                        <th className="p-2">الأساس</th>
+                                        <th className="p-2">الهدف</th>
+                                        <th className="p-2">التكلفة</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {parsed.slice(0, 40).map((p) => (
+                                        <tr key={p.rowNumber} className={p.problems.length ? 'bg-red-50/60' : ''}>
+                                            <td className="p-2 text-gray-400">{p.rowNumber}</td>
+                                            <td className="p-2">{p.intervention.name || '—'}</td>
+                                            <td className="p-2">{p.intervention.axis || '—'}</td>
+                                            <td className="p-2">{(p.intervention.baseline ?? 0).toLocaleString('en-US')}</td>
+                                            <td className="p-2">{(p.intervention.target ?? 0).toLocaleString('en-US')}</td>
+                                            <td className="p-2">{(p.intervention.totalCost ?? 0).toLocaleString('en-US')}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <label className="flex items-start gap-2 text-sm">
+                            <input type="checkbox" className="mt-1" checked={replace}
+                                onChange={(e) => setReplace(e.target.checked)} />
+                            <span>
+                                استبدال كل الأنشطة الحالية
+                                <span className="block text-xs text-gray-500">
+                                    بدون التحديد، تُضاف الصفوف الجديدة وتُحدَّث الصفوف التي تحمل نفس المعرف
+                                    {existing.length ? ` (${existing.length} نشاط حالياً)` : ''}.
+                                </span>
+                            </span>
+                        </label>
+                    </>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="secondary" onClick={onClose}>إلغاء</Button>
+                    {page === 1 && (
+                        <Button onClick={commit} disabled={!!unmappedRequired.length}>
+                            استيراد {parsed.length - badRows.length} نشاط
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </Modal>
+    );
+}
+
 // مكون مساعد للقوائم المنسدلة
 const SelectWithOther = ({ options, value, onChange, placeholder, otherLabel = 'اخرى', invalidMode = false }) => {
     const isOther = value !== '' && !options.includes(value);
@@ -147,6 +471,10 @@ export default function PlanningView({ permissions = {} }) {
     const [activeTab, setActiveTab] = useState('master'); 
     const [expandedPlanId, setExpandedPlanId] = useState(null);
     const [isEditingMatrix, setIsEditingMatrix] = useState(false); 
+    const [importOpen, setImportOpen] = useState(false);
+    // A plan id in the address opens that plan for editing, once. Kept in a ref
+    // so that closing the editor does not immediately reopen it.
+    const openedFromLink = useRef(false);
     const [isEditingOpPlan, setIsEditingOpPlan] = useState(false); 
     const [isEditingTracking, setIsEditingTracking] = useState(false);
     const [isDashboardCollapsed, setIsDashboardCollapsed] = useState(false);
@@ -470,6 +798,17 @@ export default function PlanningView({ permissions = {} }) {
             'الربع الثاني': inv.q2 ? 'نعم' : 'لا',
             'الربع الثالث': inv.q3 ? 'نعم' : 'لا',
             'الربع الرابع': inv.q4 ? 'نعم' : 'لا',
+            // Funding was missing from this template, so a plan that went out
+            // to Excel and came back lost every source and figure on the rows
+            // that were added while it was out there.
+            'مصدر التمويل الحكومي': inv.govSource || '',
+            'قيمة التمويل الحكومي': inv.govValue || 0,
+            'الشريك الأول': inv.extSource1 || '',
+            'دعم الشريك الأول': inv.extValue1 || 0,
+            'الشريك الثاني': inv.extSource2 || '',
+            'دعم الشريك الثاني': inv.extValue2 || 0,
+            'الشريك الثالث': inv.extSource3 || '',
+            'دعم الشريك الثالث': inv.extValue3 || 0,
             'ملاحظات': inv.notes || ''
         }));
         
@@ -486,6 +825,14 @@ export default function PlanningView({ permissions = {} }) {
                 'الربع الثاني': 'لا',
                 'الربع الثالث': 'لا',
                 'الربع الرابع': 'لا',
+                'مصدر التمويل الحكومي': '',
+                'قيمة التمويل الحكومي': 0,
+                'الشريك الأول': '',
+                'دعم الشريك الأول': 0,
+                'الشريك الثاني': '',
+                'دعم الشريك الثاني': 0,
+                'الشريك الثالث': '',
+                'دعم الشريك الثالث': 0,
                 'ملاحظات': ''
             });
         }
@@ -497,48 +844,20 @@ export default function PlanningView({ permissions = {} }) {
         XLSX.writeFile(wb, `Template_MasterPlan_${currentPlan.year}.xlsx`);
     };
 
-    const handleMasterPlanUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const bstr = evt.target.result;
-            const wb = XLSX.read(bstr, { type: 'binary' });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json(ws);
-
-            const updatedInvs = [...(currentPlan.interventions || [])];
-            
-            data.forEach(row => {
-                const rowId = row['ID (لا تقم بتعديله)'];
-                const existingIdx = updatedInvs.findIndex(i => i.id === rowId);
-                
-                const newInv = {
-                    id: rowId || `inv_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-                    axis: row['المحور'] || AXIS_OPTIONS[0],
-                    name: row['النشاط'] || '',
-                    indicator: row['المؤشر'] || '',
-                    baseline: Number(row['الأساس']) || 0,
-                    target: Number(row['الهدف']) || 0,
-                    totalCost: Number(row['التكلفة الإجمالية']) || 0,
-                    q1: row['الربع الاول'] === 'نعم',
-                    q2: row['الربع الثاني'] === 'نعم',
-                    q3: row['الربع الثالث'] === 'نعم',
-                    q4: row['الربع الرابع'] === 'نعم',
-                    notes: row['ملاحظات'] || ''
-                };
-
-                if (existingIdx >= 0) {
-                    updatedInvs[existingIdx] = { ...updatedInvs[existingIdx], ...newInv };
-                } else {
-                    updatedInvs.push({ ...DEFAULT_INTERVENTION(), ...newInv });
-                }
+    // Rows that arrived from the importer, already mapped and checked. An
+    // existing row is recognised by its id and updated in place, so a plan can
+    // go out to the states, come back filled in, and merge rather than double.
+    const applyImportedInterventions = (incoming, replaceAll) => {
+        setCurrentPlan((plan) => {
+            const current = replaceAll ? [] : [...(plan.interventions || [])];
+            incoming.forEach((row) => {
+                const at = current.findIndex((i) => i.id === row.id);
+                if (at >= 0) current[at] = { ...current[at], ...row };
+                else current.push({ ...DEFAULT_INTERVENTION(), ...row });
             });
-            setCurrentPlan({ ...currentPlan, interventions: updatedInvs });
-        };
-        reader.readAsBinaryString(file);
-        e.target.value = null; // Reset input
+            return { ...plan, interventions: current };
+        });
+        notify(`تم استيراد ${incoming.length} نشاط.`, 'success');
     };
 
     const downloadOpPlanTemplate = () => {
@@ -660,6 +979,57 @@ export default function PlanningView({ permissions = {} }) {
         fetchOperationalPlans(true);
         setIsEditingTracking(false);
     };
+
+    // Absolute, because it is going into WhatsApp.
+    const planShareLink = (planId) => {
+        const base = `${window.location.origin}${window.location.pathname}`;
+        return `${base}?view=planning&plan=${encodeURIComponent(planId)}`;
+    };
+
+    const sharePlan = async (plan) => {
+        const link = planShareLink(plan.id);
+        const title = `خطة ${plan.year} — ${plan.expectedOutcome || ''}`.trim();
+        try {
+            // The phone's own share sheet where there is one, so the link goes
+            // straight into WhatsApp rather than through a clipboard the
+            // operator then has to paste somewhere.
+            if (navigator.share) {
+                await navigator.share({ title, text: title, url: link });
+                return;
+            }
+            await navigator.clipboard.writeText(link);
+            notify('تم نسخ رابط الخطة. أرسله لأعضاء الفريق لتعبئتها.', 'success');
+        } catch (e) {
+            if (e?.name === 'AbortError') return;   // the operator closed the sheet
+            console.error('Could not share the plan:', e);
+            notify(`الرابط: ${link}`, 'info');
+        }
+    };
+
+    // A plan opened from a shared link.
+    //
+    // Runs once the plans are in hand, and only once: without the ref, closing
+    // the editor would drop straight back into it, because the id is still in
+    // the address bar. The id is then cleared from the address so a refresh
+    // does not reopen it either.
+    useEffect(() => {
+        if (openedFromLink.current || !rawPlans?.length) return;
+        const wanted = new URLSearchParams(window.location.search).get('plan');
+        if (!wanted) return;
+
+        openedFromLink.current = true;
+        const plan = rawPlans.find((x) => x.id === wanted && !x.isDeleted);
+        if (plan) {
+            setCurrentPlan(plan);
+            setIsEditingMatrix(true);
+        } else {
+            notify('الخطة المطلوبة غير موجودة أو تم حذفها.', 'error');
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete('plan');
+        window.history.replaceState({}, '', url.toString());
+    }, [rawPlans]);
 
     const openCreateMasterPlan = () => {
         setCurrentPlan({ 
@@ -1033,10 +1403,14 @@ export default function PlanningView({ permissions = {} }) {
                         <Button type="button" variant="secondary" onClick={downloadMasterPlanTemplate} className="flex-1 sm:flex-none">
                             <Download size={14} className="ml-1" /> تنزيل القالب
                         </Button>
-                        <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-bold transition-colors bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 h-9 px-3 flex-1 sm:flex-none">
+                        <Button type="button" variant="secondary" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none">
                             <Upload size={14} className="ml-1" /> رفع Excel
-                            <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleMasterPlanUpload} />
-                        </label>
+                        </Button>
+                        {currentPlan.id && (
+                            <Button type="button" variant="secondary" className="flex-1 sm:flex-none" onClick={() => sharePlan(currentPlan)}>
+                                <Share2 size={14} className="ml-1" /> مشاركة
+                            </Button>
+                        )}
                         <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingMatrix(false)}><X size={16} className="ml-1"/> إغلاق</Button>
                         <Button className="flex-1 sm:flex-none" onClick={handleSaveMasterPlan}><Save size={16} className="ml-1"/> حفظ المصفوفة</Button>
                     </div>
@@ -1056,7 +1430,7 @@ export default function PlanningView({ permissions = {} }) {
                         </FormGroup>
                     </div>
 
-                    <div className="bg-white border shadow-sm w-full relative overflow-x-auto rounded-t-lg">
+                    <div className="hidden lg:block bg-white border shadow-sm w-full relative overflow-x-auto rounded-t-lg">
                         <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[900px]">
                             <thead className="bg-slate-800 text-white font-bold">
                                 <tr>
@@ -1124,9 +1498,124 @@ export default function PlanningView({ permissions = {} }) {
                             </tbody>
                         </table>
                     </div>
-                    <div className="p-2 border border-t-0 border-slate-300 bg-slate-50 flex justify-center rounded-b-lg">
+                    <div className="hidden lg:flex p-2 border border-t-0 border-slate-300 bg-slate-50 justify-center rounded-b-lg">
                         <Button type="button" size="sm" variant="secondary" onClick={() => setCurrentPlan({...currentPlan, interventions: [...(currentPlan.interventions||[]), DEFAULT_INTERVENTION()]})}><Plus size={16} className="ml-1"/> إضافة نشاط جديد</Button>
                     </div>
+
+                    {/* The same plan, as cards, for a phone.
+                        The matrix is eleven columns and 900px wide at its
+                        narrowest, which on a phone is a horizontal scroll
+                        through a wall of inputs. A shared plan is meant to be
+                        filled in by team members wherever they are, so below
+                        the laptop width every activity becomes a card with its
+                        fields stacked and labelled. Both read and write the
+                        same state — this is a layout, not a second editor. */}
+                    <div className="lg:hidden space-y-3">
+                        {currentPlan.interventions?.map((inv, idx) => {
+                            const gap = calculateGap(inv);
+                            const totalSupport = (Number(inv.govValue) || 0) + (Number(inv.extValue1) || 0)
+                                + (Number(inv.extValue2) || 0) + (Number(inv.extValue3) || 0);
+                            const update = (field, val) => updateMasterPlanIntervention(idx, field, val);
+                            const quarters = [inv.q1 && 'ر1', inv.q2 && 'ر2', inv.q3 && 'ر3', inv.q4 && 'ر4']
+                                .filter(Boolean).join('، ');
+                            const field = "w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
+
+                            return (
+                                <div key={inv.id} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-white">
+                                        <span className="w-6 h-6 rounded-full bg-white/15 grid place-items-center text-xs font-bold shrink-0">
+                                            {idx + 1}
+                                        </span>
+                                        <span className="flex-1 text-xs font-bold truncate">
+                                            {inv.name || 'نشاط جديد'}
+                                        </span>
+                                        <button type="button" onClick={() => setCurrentPlan({ ...currentPlan, interventions: currentPlan.interventions.filter((x) => x.id !== inv.id) })}
+                                            className="p-1.5 rounded hover:bg-white/15 text-red-300" title="حذف النشاط">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+
+                                    <div className="p-3 space-y-3">
+                                        <label className="block">
+                                            <span className="block text-xs font-bold text-gray-600 mb-1">النشاط</span>
+                                            <textarea className={field} rows={2} value={inv.name}
+                                                onChange={(e) => update('name', e.target.value)} placeholder="نشاط..." />
+                                        </label>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <label className="block">
+                                                <span className="block text-xs font-bold text-gray-600 mb-1">المحور</span>
+                                                <select className={field} value={inv.axis} onChange={(e) => update('axis', e.target.value)}>
+                                                    {AXIS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                                                </select>
+                                            </label>
+                                            <label className="block">
+                                                <span className="block text-xs font-bold text-gray-600 mb-1">المؤشر</span>
+                                                <SelectWithOther options={INDICATOR_OPTIONS} value={inv.indicator}
+                                                    onChange={(val) => update('indicator', val)}
+                                                    placeholder="- اختر مؤشر -" otherLabel="اخرى حدد" />
+                                            </label>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <label className="block">
+                                                <span className="block text-xs font-bold text-gray-600 mb-1">الأساس</span>
+                                                <input type="number" inputMode="numeric" className={`${field} text-center`}
+                                                    value={inv.baseline} onChange={(e) => update('baseline', e.target.value)} />
+                                            </label>
+                                            <label className="block">
+                                                <span className="block text-xs font-bold text-gray-600 mb-1">الهدف</span>
+                                                <input type="number" inputMode="numeric" className={`${field} text-center font-bold`}
+                                                    value={inv.target} onChange={(e) => update('target', e.target.value)} />
+                                            </label>
+                                            <label className="block">
+                                                <span className="block text-xs font-bold text-gray-600 mb-1">التكلفة</span>
+                                                <input type="number" inputMode="numeric" className={`${field} text-center font-bold bg-gray-50`}
+                                                    value={inv.totalCost} onChange={(e) => update('totalCost', e.target.value)} />
+                                            </label>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button type="button" onClick={() => setScheduleModalIdx(idx)}
+                                                className="rounded-lg border border-green-300 bg-green-50 px-3 py-2.5 text-xs font-bold text-green-800 text-right">
+                                                <span className="block text-[10px] text-green-600 font-normal">الجدولة</span>
+                                                {quarters || '+ اختر الأرباع'}
+                                            </button>
+                                            <button type="button" onClick={() => setSupportModalIdx(idx)}
+                                                className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2.5 text-xs font-bold text-indigo-800 text-right">
+                                                <span className="block text-[10px] text-indigo-600 font-normal">مصادر التمويل</span>
+                                                {totalSupport > 0 ? totalSupport.toLocaleString('en-US') : '+ إضافة تمويل'}
+                                            </button>
+                                        </div>
+
+                                        <div className={`rounded-lg px-3 py-2 text-sm font-bold flex justify-between ${gap > 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                                            <span className="font-normal text-xs self-center">العجز (Gap)</span>
+                                            <span>{gap.toLocaleString('en-US')}</span>
+                                        </div>
+
+                                        <label className="block">
+                                            <span className="block text-xs font-bold text-gray-600 mb-1">ملاحظات</span>
+                                            <textarea className={field} rows={2} value={inv.notes || ''}
+                                                onChange={(e) => update('notes', e.target.value)} placeholder="ملاحظات..." />
+                                        </label>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        <Button type="button" variant="secondary" className="w-full justify-center border-dashed border-2 border-sky-300 text-sky-700"
+                            onClick={() => setCurrentPlan({ ...currentPlan, interventions: [...(currentPlan.interventions || []), DEFAULT_INTERVENTION()] })}>
+                            <Plus size={16} className="ml-1" /> إضافة نشاط جديد
+                        </Button>
+                    </div>
+
+
+                    <PlanImportModal
+                        isOpen={importOpen}
+                        onClose={() => setImportOpen(false)}
+                        onImport={applyImportedInterventions}
+                        existing={currentPlan.interventions || []}
+                    />
 
                     {/* Matrix Pop-ups */}
                     {scheduleModalIdx !== null && (
@@ -1644,6 +2133,7 @@ export default function PlanningView({ permissions = {} }) {
                                             <span className="font-bold text-base sm:text-lg text-gray-800">{plan.expectedOutcome}</span>
                                         </div>
                                         <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto w-full sm:w-auto justify-end">
+                                            <Button size="sm" variant="secondary" title="مشاركة رابط الخطة للتعبئة" onClick={(e) => { e.stopPropagation(); sharePlan(plan); }}><Share2 size={14}/></Button>
                                             <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setCurrentPlan(plan); setIsEditingMatrix(true); }}><Edit size={14}/></Button>
                                             <Button size="sm" variant="danger" onClick={async (e) => { e.stopPropagation(); if(await confirmDialog("حذف؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }}><Trash2 size={14}/></Button>
                                             {expandedPlanId === plan.id ? <ChevronUp size={20} className="text-gray-500"/> : <ChevronDown size={20} className="text-gray-500"/>}

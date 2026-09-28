@@ -1426,6 +1426,7 @@ export default function App() {
 
     const selectedFacilitator = useMemo(() => (allFacilitators || []).find(f => f.id === selectedFacilitatorId) || null, [allFacilitators, selectedFacilitatorId]);
 
+
     const navigate = useCallback((newView, state = {}) => {
         const viewPermissions = {
             'landing': true, 'dashboard': true, 'admin': permissions.canViewAdmin, 'imciForm': permissions.canViewCourse, 'humanResources': permissions.canViewHumanResource,
@@ -1479,6 +1480,22 @@ export default function App() {
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
+
+    // A shared in-app link, e.g. ?view=planning&plan=<id>.
+    //
+    // Not a public route: the recipient signs in as themselves and `navigate`
+    // applies the same permission check as any other way in, so sharing a link
+    // widens nothing. The screen it lands on reads the rest of the query for
+    // itself — this only gets them to the right screen.
+    const deepLinked = useRef(false);
+    useEffect(() => {
+        if (deepLinked.current || !user) return;
+        const wanted = new URLSearchParams(window.location.search).get('view');
+        if (!wanted) return;
+        deepLinked.current = true;
+        navigate(wanted);
+    }, [user, navigate]);
+
 
     const handleOpenCourse = useCallback((courseId) => { setSelectedCourseId(courseId); setLoading(false); navigate('participants', { courseId }); }, [navigate]);
 
