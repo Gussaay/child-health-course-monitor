@@ -16,7 +16,11 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
 import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport, listParticipantTestsForCourse } from '../data.js';
-import { EMONC_TEST_MODULES, getTestSections, computeSectionScores, findParticipantTest, alignSectionScores } from './CourseTestForm';
+import {
+    EMONC_TEST_MODULES, getTestSections, computeSectionScores, findParticipantTest,
+    alignSectionScores, getParticipantAssignedModule, isEencOnlySubCourse, EENC_ONLY_MODULE,
+    isEencOnlyCourse,
+} from './CourseTestForm';
 import { useAuth } from '../hooks/useAuth';
 import { useDataCache } from '../DataContext';
 import { db } from '../firebase';
@@ -373,25 +377,113 @@ const averageOf = (values) => {
 
 const fmtPartScore = (part) => (part ? `${part.score}/${part.total}` : '-');
 
+// The percentage over the parts this module actually has.
+//
+// A record's stored `percentage` was worked out over whatever question set was
+// put in front of the participant at the time. For an EENC-only participant
+// that was EENC plus fifteen neonatal questions they were never taught, so the
+// stored figure is a mark out of a paper they did not sit — which is how a
+// post-test of 10/12 on EENC appeared in the report as 37%.
+//
+// Summing the parts gives the same answer for anyone who sat the whole module,
+// because the parts are the whole paper; it differs only where the paper and
+// the course did not match.
+const percentFromParts = (parts, fallback) => {
+    if (!Array.isArray(parts) || parts.length === 0) return fallback;
+    const score = parts.reduce((sum, p) => sum + (Number(p?.score) || 0), 0);
+    const total = parts.reduce((sum, p) => sum + (Number(p?.total) || 0), 0);
+    return total > 0 ? (score / total) * 100 : fallback;
+};
+
+// How many of a part's questions this record actually answers.
+const answeredIn = (test, section) => {
+    if (!test || !section || !test.answers) return 0;
+    return section.questions.filter(
+        (q) => q.type === 'mc' && test.answers[q.id] !== undefined && test.answers[q.id] !== null
+    ).length;
+};
+
+// Did they sit this module's own subject at all? Judged across both tests,
+// because answering it in only one of them still means they sat it.
+const satModuleSubject = (tests, participantId, module, courseType) => {
+    const sections = getTestSections(courseType, module);
+    const subject = (sections || []).find((sec) => sec.key !== 'eenc');
+    if (!subject) return true;   // EENC has no other subject to sit
+
+    let sawAnswers = false;
+    for (const base of ['pre-test', 'post-test']) {
+        const test = findParticipantTest(tests, participantId, base, null, courseType);
+        // A record with no answers stored at all — a score typed in by hand,
+        // or a legacy import — says nothing either way. Treating its silence as
+        // proof they never sat the module would move genuine participants out
+        // of their own table, which is the opposite mistake.
+        if (!test || !test.answers || Object.keys(test.answers).length === 0) continue;
+        sawAnswers = true;
+        if (answeredIn(test, subject) > 0) return true;
+    }
+    return !sawAnswers;
+};
+
 // Each module table lists only the participants who sat that module's test.
-const buildEmoncModuleTestSummary = (course, participantsList, tests) => {
+export const buildEmoncModuleTestSummary = (course, participantsList, tests) => {
     if (!Array.isArray(tests) || tests.length === 0) return null;
     const courseType = course?.course_type;
-    const modules = EMONC_TEST_MODULES.map(module => {
+    // An EENC course has one module. Building the other two and letting them
+    // come out empty is not the same thing: a stray newborn record from the old
+    // test would have kept its table alive and put a Part 1: Newborn column
+    // back in the report.
+    const eencCourse = isEencOnlyCourse(course, participantsList);
+    const reportModules = eencCourse ? [EENC_ONLY_MODULE] : EMONC_TEST_MODULES;
+
+    const modules = reportModules.map(module => {
         const sections = getTestSections(courseType, module);
         const rows = participantsList.map(p => {
-            const pre = findParticipantTest(tests, p.id, 'pre-test', module, courseType);
-            const post = findParticipantTest(tests, p.id, 'post-test', module, courseType);
+            // The participant's own sub-course decides which table they belong
+            // in. Going by the record instead put every EENC-only participant
+            // under Emergency Newborn Care — older records carry no module, so
+            // they fall back to the default one — and the Newborn column then
+            // showed 0/15 for fifteen questions nobody had asked them.
+            // Narrow on purpose: it decides EENC-only against the rest, and
+            // nothing else. Excluding on any mismatch would also have hidden a
+            // participant who, for whatever reason in the data, sat a module
+            // other than the one their sub-course names — and hiding a real
+            // result is a worse fault than the one being fixed.
+            const assigned = getParticipantAssignedModule(p, course);
+            const eencOnly = eencCourse
+                || assigned === EENC_ONLY_MODULE
+                || isEencOnlySubCourse(p.imci_sub_type)
+                // The answers have the last word. A participant registered
+                // under Emergency Newborn Care who never answered one of its
+                // fifteen questions did not sit it, whatever the registration
+                // says, and listing them at 0/15 reads as a failure they never
+                // had the chance to avoid.
+                || (!satModuleSubject(tests, p.id, 'Emergency Newborn Care', courseType)
+                    && !satModuleSubject(tests, p.id, 'Emergency Maternal Care', courseType));
+            if (eencOnly !== (module === EENC_ONLY_MODULE)) return null;
+
+            // An EENC-only participant is looked up without a module.
+            //
+            // A record written before this existed carries no module field, and
+            // getTestRecordModule falls back to Emergency Newborn Care for
+            // those — so asking for the EENC module would find nothing, and the
+            // participant would drop out of the report altogether rather than
+            // move into the right table. They only ever sit one test per type,
+            // so there is nothing to disambiguate.
+            const lookupModule = eencOnly ? null : module;
+            const pre = findParticipantTest(tests, p.id, 'pre-test', lookupModule, courseType);
+            const post = findParticipantTest(tests, p.id, 'post-test', lookupModule, courseType);
             if (!pre && !post) return null;
-            const prePct = pre ? Number(pre.percentage) : null;
-            const postPct = post ? Number(post.percentage) : null;
+            const preParts = getStoredPartScores(pre, sections);
+            const postParts = getStoredPartScores(post, sections);
+            const prePct = pre ? percentFromParts(preParts, Number(pre.percentage)) : null;
+            const postPct = post ? percentFromParts(postParts, Number(post.percentage)) : null;
             const increase = (prePct > 0 && postPct > 0) ? ((postPct - prePct) / prePct) * 100 : null;
             return {
                 id: p.id, name: p.name, group: p.group,
                 prePct, postPct, increase,
                 category: getAvgImprovementCategory(prePct, postPct),
-                preParts: getStoredPartScores(pre, sections),
-                postParts: getStoredPartScores(post, sections)
+                preParts,
+                postParts
             };
         }).filter(Boolean).sort((a, b) => (b.increase ?? -1000) - (a.increase ?? -1000));
 
@@ -421,7 +513,7 @@ const buildEmoncModuleTestSummary = (course, participantsList, tests) => {
 
 // --- PDF EXPORT HELPER ---
 const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, tableData) => {
-    const { filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView, emoncTestSummary } = tableData;
+    const { filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView, emoncTestSummary, isEencCourse, showEmoncCaseParts } = tableData;
     const qualityProfiles = {
         print: { scale: 2, fileSuffix: '', imageType: 'image/jpeg', imageQuality: 0.95, imageFormat: 'JPEG', compression: 'MEDIUM' },
         screen: { scale: 1.5, fileSuffix: '', imageType: 'image/png', imageQuality: 1.0, imageFormat: 'PNG', compression: 'FAST' }
@@ -540,8 +632,10 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
             const head = [practicalTableHeaders];
             const body = filteredPracticalParticipants.map((p, index) => {
                 const row = [index + 1, p.name, p.total_cases_seen];
-                if (course.course_type === 'EmONC' || course.course_type === 'EENC') {
+                if (showEmoncCaseParts) {
                     row.push(fmtPct(p.eenc_score), fmtPct(p.maternal_score), fmtPct(p.neonatal_score), fmtPct(p.correctness_percentage));
+                } else if (isEencCourse) {
+                    row.push(fmtPct(p.eenc_score), fmtPct(p.correctness_percentage));
                 } else {
                     if (!isSharedView) row.push(getCaseCorrectnessName(p.correctness_percentage));
                     row.push(fmtPct(p.correctness_percentage));
@@ -1442,9 +1536,17 @@ export function CourseReportView({
     const showTestScoreColumns = hasTestScores && !useEmoncModuleTests;
     const showCaseColumns = hasCases;
     
+    // An EENC course is reported on EENC alone. The maternal and neonatal
+    // columns are not merely empty for it — they are about work the course never
+    // covered, and a blank or a zero in them reads as a failure.
+    const isEencCourse = isEencOnlyCourse(course, participants);
+    const showEmoncCaseParts = (course.course_type === 'EmONC' || course.course_type === 'EENC') && !isEencCourse;
+
     const practicalTableHeaders = ['#', 'Participant Name', 'Total Cases'];
-    if (course.course_type === 'EmONC' || course.course_type === 'EENC') {
+    if (showEmoncCaseParts) {
         practicalTableHeaders.push('EENC Score', 'Maternal Score', 'Neonatal Score', 'Overall Score');
+    } else if (isEencCourse) {
+        practicalTableHeaders.push('EENC Score', 'Overall Score');
     } else {
         if (!isSharedView) practicalTableHeaders.push('Practical Category');
         practicalTableHeaders.push('Overall Score');
@@ -1472,7 +1574,7 @@ export function CourseReportView({
         await new Promise(resolve => setTimeout(resolve, 100));
         const pdfTableData = {
             filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView, dailyCaseTableData, dailySkillTableData,
-            emoncTestSummary,
+            emoncTestSummary, isEencCourse, showEmoncCaseParts,
             groupsWithData, groupCaseTotals, grandTotalCasesCorrect, grandTotalCasesTotal, groupSkillTotals, grandTotalSkillsCorrect, grandTotalSkillsTotal
         };
         try {
@@ -2244,7 +2346,7 @@ export function CourseReportView({
                                                         <td className="p-3 font-semibold text-gray-800 min-w-[200px] whitespace-normal break-words">{p.name}</td>
                                                         <td className="p-3 text-center text-gray-700">{p.total_cases_seen}</td>
                                                         
-                                                        {(course.course_type === 'EmONC' || course.course_type === 'EENC') ? (
+                                                        {showEmoncCaseParts ? (
                                                             <>
                                                                 <td className="p-3 text-center">
                                                                     <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.eenc_score)}`}>{fmtPct(p.eenc_score)}</span>
@@ -2254,6 +2356,15 @@ export function CourseReportView({
                                                                 </td>
                                                                 <td className="p-3 text-center">
                                                                     <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.neonatal_score)}`}>{fmtPct(p.neonatal_score)}</span>
+                                                                </td>
+                                                                <td className="p-3 text-center">
+                                                                    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.correctness_percentage)}`}>{fmtPct(p.correctness_percentage)}</span>
+                                                                </td>
+                                                            </>
+                                                        ) : isEencCourse ? (
+                                                            <>
+                                                                <td className="p-3 text-center">
+                                                                    <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.eenc_score)}`}>{fmtPct(p.eenc_score)}</span>
                                                                 </td>
                                                                 <td className="p-3 text-center">
                                                                     <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.correctness_percentage)}`}>{fmtPct(p.correctness_percentage)}</span>

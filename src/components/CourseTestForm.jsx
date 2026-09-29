@@ -13,7 +13,7 @@ import {
     deleteParticipantTest,
     repairParticipantScoreFields
 } from '../data.js';
-import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X } from 'lucide-react'; 
+import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X, AlertTriangle } from 'lucide-react'; 
 import { notify, confirmDialog } from './dialogs';
 
 export const EENC_TEST_QUESTIONS = [
@@ -441,13 +441,72 @@ const normalizeTestTypeValue = (type) => {
 // A participant sits both, so results must be stored and looked up PER MODULE.
 // Before this, results were keyed only by participantId + testType, so once the
 // Newborn pre-test existed, the Maternal part was treated as "already solved".
-export const EMONC_TEST_MODULES = ['Emergency Newborn Care', 'Emergency Maternal Care'];
-const EMONC_DEFAULT_MODULE = EMONC_TEST_MODULES[0];
+// The EENC-only courses share one test, so they share one module rather than
+// having three that differ only in the name on the certificate. Which kind of
+// EENC course it was is still on the participant's own sub-course.
+export const EENC_ONLY_MODULE = 'EENC';
+
+const EMONC_TEST_MODULES_FULL = ['Emergency Newborn Care', 'Emergency Maternal Care'];
+
+/**
+ * Is this whole course an EENC course?
+ *
+ * Asked of the course rather than of each participant, because a report for an
+ * EENC course should have no maternal or newborn part in it anywhere — not
+ * even for somebody who, through the old test, happens to have a solved
+ * newborn record sitting in the database. Those answers were given to
+ * questions the course never covered, and putting them in the report invites
+ * exactly the reading that a 0/15 was a failure.
+ *
+ * @param {object} course
+ * @param {object[]} participants  used only when the course record itself does
+ *                                 not say, which older courses do not
+ */
+export const isEencOnlyCourse = (course, participants = []) => {
+    if (!course) return false;
+    if (course.course_type === 'EENC') return true;
+    if (!isEmoncCourseType(course.course_type)) return false;
+    if (isEencOnlySubCourse(course.imci_sub_type)) return true;
+
+    // What the course TEACHES, taken from its group assignments. This is the
+    // authoritative answer and it is asked on its own: a participant's
+    // imci_sub_type is registration data, filled in by whoever entered them,
+    // and it is routinely wrong. Weighing the two together meant one
+    // participant mistakenly registered as Emergency Newborn Care outvoted
+    // three groups that all plainly said EENC Orientation.
+    const taught = (course.facilitatorAssignments || [])
+        .map((a) => a.imci_sub_type)
+        .filter(Boolean);
+    if (taught.length > 0) return taught.every(isEencOnlySubCourse);
+
+    // No groups assigned yet. Then how the participants were registered is the
+    // only thing left to go on.
+    const registered = (participants || []).map((p) => p.imci_sub_type).filter(Boolean);
+    return registered.length > 0 && registered.every(isEencOnlySubCourse);
+};
+
+/**
+ * Is this sub-course EENC and nothing else?
+ *
+ * Matched on the name rather than listed, so a sub-course the programme adds
+ * later — 'EENC Refresher' — is covered without anyone remembering to come
+ * back here. The two full modules are named for their subject, not for EENC,
+ * so they cannot collide with this.
+ */
+export const isEencOnlySubCourse = (name) => {
+    const text = String(name || '').trim();
+    if (!text || EMONC_TEST_MODULES_FULL.includes(text)) return false;
+    return /^eenc\b/i.test(text);
+};
+
+export const EMONC_TEST_MODULES = [...EMONC_TEST_MODULES_FULL, EENC_ONLY_MODULE];
+const EMONC_DEFAULT_MODULE = EMONC_TEST_MODULES_FULL[0];
 const SSNB_TEST_MODULES = ['Portable warmer training', 'CPAP training', 'Kangaroo mother Care', 'Sepsis surveillance and management'];
 
 export const MODULE_SHORT_LABELS = {
     'Emergency Newborn Care': 'Newborn',
     'Emergency Maternal Care': 'Maternal / Obstetric',
+    [EENC_ONLY_MODULE]: 'EENC only',
 };
 
 const isEmoncCourseType = (courseType) => courseType === 'EmONC' || courseType === 'EENC';
@@ -463,7 +522,10 @@ const getSelectableModules = (courseType) => {
 const getSeparatelyStoredModules = (courseType) => (isEmoncCourseType(courseType) ? EMONC_TEST_MODULES : []);
 
 // Newborn keeps the plain 'pre-test' / 'post-test' type so existing records stay valid.
-const MODULE_TEST_TYPE_SUFFIX = { 'Emergency Maternal Care': 'maternal' };
+const MODULE_TEST_TYPE_SUFFIX = {
+    'Emergency Maternal Care': 'maternal',
+    [EENC_ONLY_MODULE]: 'eenc',
+};
 
 export const getStoredTestType = (baseType, module) => {
     const suffix = module ? MODULE_TEST_TYPE_SUFFIX[module] : null;
@@ -481,6 +543,7 @@ export const getTestRecordModule = (test, courseType) => {
     if (!test || !isEmoncCourseType(courseType)) return null;
     if (test.module && EMONC_TEST_MODULES.includes(test.module)) return test.module;
     if (typeof test.testType === 'string' && test.testType.endsWith('-maternal')) return 'Emergency Maternal Care';
+    if (typeof test.testType === 'string' && test.testType.endsWith('-eenc')) return EENC_ONLY_MODULE;
     // Older records have no module field: infer it from the question set that was answered.
     const answeredIds = Object.keys(test.answers || {});
     if (answeredIds.some(id => id.startsWith('mat_'))) return 'Emergency Maternal Care';
@@ -502,13 +565,14 @@ export const findParticipantTest = (tests, participantId, baseType, module, cour
 export const getParticipantAssignedModule = (participant, course) => {
     if (!participant) return null;
     // 1. The participant's own sub-course always wins.
+    if (isEencOnlySubCourse(participant.imci_sub_type)) return EENC_ONLY_MODULE;
     if (EMONC_TEST_MODULES.includes(participant.imci_sub_type)) return participant.imci_sub_type;
     // 2. Their group, but ONLY if the whole group teaches one module. A group whose facilitators
     //    cover both Newborn and Maternal says nothing about which test this participant takes,
     //    so it must not be used (that is what put everyone in the Newborn table).
     const groupModules = [...new Set((course?.facilitatorAssignments || [])
         .filter(a => a.group === participant.group)
-        .map(a => a.imci_sub_type)
+        .map(a => (isEencOnlySubCourse(a.imci_sub_type) ? EENC_ONLY_MODULE : a.imci_sub_type))
         .filter(m => EMONC_TEST_MODULES.includes(m)))];
     return groupModules.length === 1 ? groupModules[0] : null;
 };
@@ -570,6 +634,22 @@ const getQuestionNumberRange = (questions, fallbackFrom) => {
 // Part 2 is EENC, which both modules share and which is answered last.
 export const getTestSections = (courseType, emoncSubCourse) => {
     if (!isEmoncCourseType(courseType)) return null;
+
+    // An EENC-only course has no second part. Returning a single section keeps
+    // the per-part score cards honest: a breakdown that showed "Part 2:
+    // Newborn 0/18" for somebody who was never asked those questions is worse
+    // than showing no breakdown at all.
+    if (emoncSubCourse === EENC_ONLY_MODULE || isEencOnlySubCourse(emoncSubCourse)) {
+        return [{
+            key: 'eenc',
+            part: 1,
+            title: 'Early Essential Newborn Care (EENC)',
+            shortTitle: 'EENC',
+            questions: EENC_TEST_QUESTIONS,
+            ...getQuestionNumberRange(EENC_TEST_QUESTIONS, 1)
+        }];
+    }
+
     const isMaternal = emoncSubCourse === 'Emergency Maternal Care';
     const moduleQuestions = isMaternal ? EMONC_MATERNAL_QUESTIONS : EMONC_NEONATAL_QUESTIONS;
     const eencCount = EENC_TEST_QUESTIONS.length;
@@ -632,6 +712,93 @@ export const computeSectionScores = (sections, answers = {}, manualScores = {}) 
     });
 };
 
+// --- correcting results recorded before EENC-only had its own test -----------
+//
+// Until this was fixed, an EENC Orientation / TOT / Mentorship participant was
+// given EENC + neonatal questions, and scored out of the lot. Their EENC
+// answers are real and were really given; the neonatal ones were asked in
+// error and should never have counted against them.
+//
+// So the correction re-scores the record over the EENC questions ONLY, using
+// the answers already stored, and files it in the EENC slot. It does not
+// invent anything: no answer is changed, and a question they were never asked
+// is simply no longer counted.
+//
+// The original figures are kept on the record (`correctedFrom`) because this
+// is scored assessment data and somebody will ask what it said before.
+
+/** The EENC questions, scored from answers that were given for a longer test. */
+export function scoreEencOnly(answers = {}, manualScores = {}) {
+    let score = 0;
+    let total = 0;
+    EENC_TEST_QUESTIONS.forEach((q) => {
+        if (q.type === 'mc') {
+            total += 1;
+            if (answers?.[q.id] === q.correctAnswer) score += 1;
+        } else if (q.type === 'open') {
+            total += q.lines || 0;
+            const lines = manualScores?.[q.id];
+            if (Array.isArray(lines)) score += lines.reduce((acc, cur) => acc + (parseFloat(cur) || 0), 0);
+        }
+    });
+    return { score, total, percentage: total > 0 ? (score / total) * 100 : 0 };
+}
+
+/**
+ * Does this record need correcting, and what would it become?
+ *
+ * @returns {null|{before, after, patch}} null when the record is already right,
+ *          so running the correction twice changes nothing the second time.
+ */
+export function reviseEencOnlyTest(test, participant) {
+    if (!test || test.isDeleted === true || test.isDeleted === 'true') return null;
+    if (!isEmoncCourseType(test.courseType)) return null;
+
+    // Only the people who sat an EENC-only course.
+    if (!isEencOnlySubCourse(participant?.imci_sub_type)) return null;
+
+    // Already in the EENC slot: nothing to do.
+    const base = getBaseTestType(test.testType);
+    if (test.testType !== base && String(test.testType).endsWith('-eenc')) return null;
+    if (test.module === EENC_ONLY_MODULE) return null;
+
+    const rescored = scoreEencOnly(test.answers, test.manualScores);
+    const sections = getTestSections(test.courseType, EENC_ONLY_MODULE);
+
+    const before = {
+        testType: test.testType,
+        module: test.module || null,
+        score: test.score ?? null,
+        total: test.total ?? null,
+        percentage: test.percentage ?? null,
+    };
+
+    const after = {
+        testType: getStoredTestType(base, EENC_ONLY_MODULE),
+        module: EENC_ONLY_MODULE,
+        ...rescored,
+    };
+
+    return {
+        before,
+        after,
+        patch: {
+            ...test,
+            testType: after.testType,
+            baseTestType: base,
+            module: EENC_ONLY_MODULE,
+            score: rescored.score,
+            total: rescored.total,
+            percentage: rescored.percentage,
+            sectionScores: computeSectionScores(sections, test.answers, test.manualScores),
+            // Kept so the change is answerable, and reversible by hand.
+            correctedFrom: before,
+            correctedAt: new Date().toISOString(),
+            correctedReason: 'EENC-only course was scored on neonatal questions it never covered',
+        },
+    };
+}
+
 // Per-part score cards (Part 1 EENC / Part 2 Newborn or Maternal).
 const SectionScoreBreakdown = ({ sectionScores, compact = false }) => {
     if (!Array.isArray(sectionScores) || sectionScores.length === 0) return null;
@@ -686,12 +853,17 @@ const resolveTestConfig = (courseType, emoncSubCourse, ssnbSubCourse) => {
     }
 
     if (isEmoncCourseType(courseType)) {
-        const extraQuestions = emoncSubCourse === 'Emergency Maternal Care'
-            ? EMONC_MATERNAL_QUESTIONS
-            : EMONC_NEONATAL_QUESTIONS;
+        const eencOnly = emoncSubCourse === EENC_ONLY_MODULE || isEencOnlySubCourse(emoncSubCourse);
+        const extraQuestions = eencOnly
+            ? []
+            : emoncSubCourse === 'Emergency Maternal Care'
+                ? EMONC_MATERNAL_QUESTIONS
+                : EMONC_NEONATAL_QUESTIONS;
         return {
             testQuestions: [...EENC_TEST_QUESTIONS, ...extraQuestions],
-            testTitle: `EmONC Pre/Post Test - ${emoncSubCourse}`,
+            testTitle: eencOnly
+                ? 'EENC Pre/Post Test'
+                : `EmONC Pre/Post Test - ${emoncSubCourse}`,
             jobTitleOptions: JOB_TITLES_EMONC,
             isIccm: false,
             testSections: getTestSections(courseType, emoncSubCourse)
@@ -1285,6 +1457,133 @@ const FacilitySelectionModal = ({
         </Modal>
     );
 };
+
+// Corrects the results of this course's EENC-only participants, showing every
+// change before it makes any of them.
+//
+// Scoped to one course on purpose. A button that silently rewrites scored
+// assessment records across the whole database is not something anybody should
+// be able to press by accident, and the person running it knows which course
+// was mis-scored.
+function EencResultCorrection({ course, participants, participantTests, onSaveTest, onSaveParticipant }) {
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [done, setDone] = useState(null);
+
+    const byId = useMemo(
+        () => new Map((participants || []).map((p) => [p.id, p])),
+        [participants]);
+
+    const pending = useMemo(() => (participantTests || [])
+        .map((test) => {
+            const participant = byId.get(test.participantId);
+            const revision = reviseEencOnlyTest(test, participant);
+            return revision ? { test, participant, ...revision } : null;
+        })
+        .filter(Boolean), [participantTests, byId]);
+
+    if (!pending.length && !done) return null;
+
+    const apply = async () => {
+        setBusy(true);
+        let changed = 0;
+        try {
+            for (const item of pending) {
+                const { id: _ignored, ...record } = item.patch;
+                await onSaveTest({ ...record, id: item.test.id });
+                // The participant's own Pre/Post box shows the same figure, so
+                // leaving it behind would put two different scores for one test
+                // on two different screens.
+                if (onSaveParticipant && item.participant && item.patch.participantScoreField) {
+                    await onSaveParticipant({
+                        ...item.participant,
+                        [item.patch.participantScoreField]: Number(item.after.percentage.toFixed(1)),
+                    }, null);
+                }
+                changed += 1;
+            }
+            setDone(changed);
+            notify(`تم تصحيح ${changed} نتيجة.`, 'success');
+        } catch (e) {
+            console.error('Could not correct the EENC results:', e);
+            notify(`تعذر إكمال التصحيح. ${e?.message || ''}`.trim(), 'error');
+        } finally {
+            setBusy(false);
+            setOpen(false);
+        }
+    };
+
+    return (
+        <>
+            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex flex-wrap items-center gap-3">
+                <AlertTriangle size={18} className="text-amber-700 shrink-0" />
+                <div className="flex-1 text-sm text-amber-900">
+                    {done !== null ? (
+                        <>{done} result{done === 1 ? '' : 's'} corrected.</>
+                    ) : (
+                        <>
+                            <strong>{pending.length} result{pending.length === 1 ? '' : 's'}</strong> on this
+                            course were scored on neonatal questions the participants were never taught,
+                            because their sub-course is EENC only.
+                        </>
+                    )}
+                </div>
+                {done === null && (
+                    <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+                        Review and correct
+                    </Button>
+                )}
+            </div>
+
+            <Modal isOpen={open} onClose={() => setOpen(false)} title="Correct the EENC-only results">
+                <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                        Each result below is re-scored over the EENC questions only, using the answers
+                        already recorded. No answer is changed — the questions the participant was never
+                        asked simply stop counting against them. What each record said before is kept on
+                        it.
+                    </p>
+
+                    <div className="border rounded max-h-72 overflow-y-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-100 sticky top-0">
+                                <tr>
+                                    <th className="p-2">Participant</th>
+                                    <th className="p-2">Test</th>
+                                    <th className="p-2 text-center">Before</th>
+                                    <th className="p-2 text-center">After</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {pending.map((item) => (
+                                    <tr key={item.test.id}>
+                                        <td className="p-2">{item.participant?.name || item.test.participantId}</td>
+                                        <td className="p-2 text-xs text-gray-500">{item.before.testType}</td>
+                                        <td className="p-2 text-center text-gray-500">
+                                            {item.before.score}/{item.before.total}
+                                            {' '}({Number(item.before.percentage || 0).toFixed(0)}%)
+                                        </td>
+                                        <td className="p-2 text-center font-bold text-emerald-700">
+                                            {item.after.score}/{item.after.total}
+                                            {' '}({item.after.percentage.toFixed(0)}%)
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+                        <Button onClick={apply} disabled={busy}>
+                            {busy ? 'Correcting…' : `Correct ${pending.length} result${pending.length === 1 ? '' : 's'}`}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </>
+    );
+}
 
 export function CourseTestForm({ 
     course, 
@@ -1899,6 +2198,15 @@ export function CourseTestForm({
         return (
             <Card style={{ direction: 'ltr', textAlign: 'left' }}>
                 <div className="p-6">
+                    {canManageTests && (
+                        <EencResultCorrection
+                            course={course}
+                            participants={sortedParticipants}
+                            participantTests={participantTests}
+                            onSaveTest={onSaveTest}
+                            onSaveParticipant={onSaveParticipant}
+                        />
+                    )}
                     <TestScoresDashboard 
                         courseId={course.id}
                         courseType={courseType}
