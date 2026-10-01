@@ -95,7 +95,21 @@ export const storage = getStorage(firebaseApp);
 
 // Analytics throws in some WebViews. It must never crash start-up, because a
 // crash before notifyAppReady() makes Capgo roll the update back.
+//
+// The try/catch is not enough on its own: getAnalytics ALSO continues on a
+// promise of its own, which reaches for `window` after this call has returned.
+// jsdom has a window while the test runs, so the call succeeds — and then that
+// promise lands once the environment has been torn down, where there is no
+// window at all. The unhandled "window is not defined" failed a whole CI run
+// in which all 222 tests passed.
+//
+// So it is skipped under the test runner entirely. Analytics measures how the
+// app is used; there is nothing to measure in a test, and the only thing it can
+// do there is fail the run.
 export const analytics = (() => {
+  const underTest = typeof process !== 'undefined'
+    && (process.env?.VITEST || process.env?.NODE_ENV === 'test');
+  if (underTest || typeof window === 'undefined' || typeof document === 'undefined') return null;
   try {
     return getAnalytics(firebaseApp);
   } catch (e) {

@@ -23,6 +23,18 @@ export class ErrorBoundary extends React.Component {
 
     componentDidCatch(error, info) {
         console.error('[ErrorBoundary]', error, info?.componentStack);
+
+        // Recorded so the team sees a crash without waiting for somebody to
+        // describe it. Imported here rather than at the top of the file: this
+        // module has to be able to render even when the app's data layer is
+        // part of what is broken, and recordCrash never throws.
+        import('../data')
+            .then(({ recordCrash }) => recordCrash({
+                message: error?.message || String(error),
+                stack: `${error?.stack || ''}\n--- component stack ---${info?.componentStack || ''}`,
+                screen: this.props.screen || null,
+            }))
+            .catch(() => { /* already failing; nothing useful left to do */ });
     }
 
     handleReload = () => {

@@ -2202,6 +2202,72 @@ export async function listOnlineCourseItems(sourceOptions = {}, lastSync = 0) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// PROBLEM REPORTS
+//
+// What a person says went wrong, and what the app caught going wrong by itself.
+// Both land in one collection so the admin screen reads one list: a crash and
+// the report describing it are usually the same incident seen from two sides.
+//
+// Written straight through rather than via executeOfflineSafeWrite: that helper
+// reports "queued" as success after four seconds, and a report that silently
+// did not send is worse than one that failed loudly.
+// ---------------------------------------------------------------------------
+
+export async function submitProblemReport(report) {
+    const ref = doc(collection(db, "problemReports"));
+    await fbSetDoc(ref, {
+        ...report,
+        id: ref.id,
+        kind: report.kind || 'report',
+        status: 'new',
+        reporterUid: firebaseAuth.currentUser?.uid || null,
+        createdAt: serverTimestamp(),
+    });
+    return ref.id;
+}
+
+/**
+ * Records a crash the error boundary caught.
+ *
+ * Never throws. It runs from inside a failure, and a reporting call that threw
+ * would replace the screen the user was shown with a worse one.
+ */
+export async function recordCrash({ message, stack, screen }) {
+    try {
+        await submitProblemReport({
+            kind: 'crash',
+            what: String(message || 'Unknown error').slice(0, 300),
+            stack: String(stack || '').slice(0, 4000),
+            screen: screen || null,
+            appVersion: typeof window !== 'undefined' ? window.__APP_VERSION__ || null : null,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 300) : null,
+            online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+            reporterEmail: firebaseAuth.currentUser?.email || null,
+        });
+    } catch (e) {
+        console.warn('Could not record that crash:', e?.message);
+    }
+}
+
+export async function listProblemReports() {
+    const snap = await getDocs(query(
+        collection(db, "problemReports"), orderBy("createdAt", "desc"), limit(300)));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function setProblemReportStatus(reportId, status) {
+    await fbUpdateDoc(doc(db, "problemReports", reportId), {
+        status, lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+export async function deleteProblemReport(reportId) {
+    await fbDeleteDoc(doc(db, "problemReports", reportId));
+    return true;
+}
+
 export async function deleteOnlineCourseItem(itemId) {
     await fbUpdateDoc(doc(db, "onlineCourseItems", itemId), deletionStamp());
     return true;

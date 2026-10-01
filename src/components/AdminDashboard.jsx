@@ -1,5 +1,5 @@
 // src/components/AdminDashboard.jsx
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { Card, PageHeader, Button, Table, Spinner, Select, Checkbox, Toast, Input, FormGroup, Modal, CardBody, CardFooter } from './CommonComponents';
 import { db, auth } from '../firebase';
 import { collection, query, getDocs, doc, updateDoc, getDoc, setDoc, writeBatch, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -9,7 +9,11 @@ import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { STATE_LOCALITIES } from './constants';
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning } from 'lucide-react';
+
+// Lazy: the reports carry screenshots, and nobody opening Manage User Roles
+// should pay to download a screen they are not looking at.
+const ProblemReportsTab = lazy(() => import('./ProblemReports').then(m => ({ default: m.ProblemReportsTab })));
 import { listFederalCoordinators } from '../data';
 
 // --- NEW COMPONENT IMPORT ---
@@ -46,6 +50,8 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
         { key: 'roles', label: 'Manage User Roles', icon: Users },
         { key: 'permissions', label: 'Manage Role Permissions', icon: Shield },
         { key: 'notifications', label: 'Push Notifications', icon: Bell }, 
+        // What people reported, and what the app caught crashing by itself.
+        { key: 'problems', label: 'Problem Reports', icon: MessageSquareWarning },
     ];
 
     if (currentUserRoles.includes('super_user')) {
@@ -1321,6 +1327,9 @@ export function AdminDashboard() {
                 {activeTab === 'usage' && currentUserRoles.includes('super_user') && renderUsageTab()}
                 {activeTab === 'updates' && currentUserRoles.includes('super_user') && renderUpdatesTab()}
                 {activeTab === 'notifications' && <AdminNotificationSender preselectedUserId={notificationTargetId} />}
+                {activeTab === 'problems' && (
+                    <Suspense fallback={<Spinner />}><ProblemReportsTab /></Suspense>
+                )}
             </div>
 
             {/* PUSH HISTORICAL VERSION MODAL */}

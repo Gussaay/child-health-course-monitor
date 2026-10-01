@@ -85,6 +85,9 @@ const ClaudeChatPanel = lazy(() => import('./components/ClaudeAssistant').then(m
 // to fund it; the claude.ai connector does the same job on the subscriptions
 // the team already has. Flip this and the claudeChat export together.
 const CLAUDE_CHAT_ENABLED = false;
+
+// Reporting a problem from wherever it happened.
+const ReportProblemButton = lazy(() => import('./components/ProblemReports').then(m => ({ default: m.ReportProblemButton })));
 const MeetingTrackerView = lazy(() => import('./components/MeetingTrackerView'));
 
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
@@ -2253,6 +2256,13 @@ case 'meetings':
                                 <Sparkles size={20} />
                             </button>
                         )}
+
+                        {/* Reporting a problem, from wherever the problem is.
+                            A report sent from the screen it happened on knows
+                            which screen that was; one sent later does not. */}
+                        <Suspense fallback={null}>
+                            <ReportProblemButton user={user} currentView={view} />
+                        </Suspense>
 
                         <NotificationBell user={user} navigate={navigate} />
 

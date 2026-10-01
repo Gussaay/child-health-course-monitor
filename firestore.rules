@@ -257,6 +257,17 @@ service cloud.firestore {
     // only by the Cloud Function, which uses the admin SDK and bypasses these
     // rules, so nothing needs write access: a client that could write to its
     // own audit trail could also erase what it looked at.
+    // Anyone signed in may report a problem, and may create only a report that
+    // names them — a report attributed to somebody else is worse than no report.
+    // Reading them is for staff: a report carries a screenshot of whatever the
+    // person had on screen, which is as sensitive as the screen was.
+    match /problemReports/{reportId} {
+      allow create: if request.auth != null
+        && request.resource.data.reporterUid == request.auth.uid;
+      allow read: if request.auth != null && isStaff();
+      allow update, delete: if request.auth != null && isStaff();
+    }
+
     match /claudeAccessLog/{entryId} {
       allow read: if request.auth != null && isSuperUser();
       allow write: if false;
