@@ -37,6 +37,19 @@ describe('where an authorisation code may be sent', () => {
         expect(isAllowedRedirect('')).toBe(false);
         expect(isAllowedRedirect(null)).toBe(false);
     });
+
+    it('allows a loopback address, for a desktop client', () => {
+        // OAuth 2.1 permits this for native apps: a loopback address cannot be
+        // reached from anywhere else, and PKCE is mandatory here, so a code
+        // that leaks is still unusable. The port is whatever it picked.
+        expect(isAllowedRedirect('http://localhost:53123/callback')).toBe(true);
+        expect(isAllowedRedirect('http://127.0.0.1:8976/cb')).toBe(true);
+    });
+
+    it('does not let a lookalike host pretend to be loopback', () => {
+        expect(isAllowedRedirect('http://localhost.evil.test/cb')).toBe(false);
+        expect(isAllowedRedirect('http://127.0.0.1.evil.test/cb')).toBe(false);
+    });
 });
 
 describe('PKCE', () => {

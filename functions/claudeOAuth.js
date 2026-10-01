@@ -96,27 +96,47 @@ exports.claudeOAuth = onRequest({ cors: true }, async (req, res) => {
     // actually constrains where a code can go.
     if (path.endsWith("/register") && req.method === "POST") {
       const body = req.body || {};
-      const redirectUris = Array.isArray(body.redirect_uris) ? body.redirect_uris : [];
-      if (redirectUris.length === 0 || !redirectUris.every(isAllowedRedirect)) {
+      const asked = Array.isArray(body.redirect_uris) ? body.redirect_uris : [];
+
+      // Kept rather than rejected wholesale. A client that registers several
+      // callbacks — a web one and a loopback one for its desktop build — used
+      // to have the WHOLE registration refused because of the one we do not
+      // serve, which is how this first failed. Only the ones we allow are
+      // stored, and only a stored one can ever be redirected to.
+      const redirectUris = asked.filter(isAllowedRedirect);
+
+      if (redirectUris.length === 0) {
+        // Logged because a refusal nobody can see is a refusal nobody can fix.
+        // The URIs are the client's own, not anyone's personal data.
+        console.warn("[claudeOAuth] registration refused; no usable redirect_uri in",
+          JSON.stringify(asked).slice(0, 500));
         json(res, 400, {
           error: "invalid_redirect_uri",
-          error_description: "Redirect URIs must be https and belong to claude.ai.",
+          error_description:
+            "No usable redirect_uri. They must be https on claude.ai or claude.com, or a loopback address.",
         });
         return;
       }
+
       const clientId = randomId();
       await db.collection("claudeOAuthClients").doc(clientId).set({
         clientName: String(body.client_name || "MCP client").slice(0, 120),
         redirectUris,
         createdAt: FieldValue.serverTimestamp(),
       });
+      console.log("[claudeOAuth] registered", clientId, "for", redirectUris.join(", "));
+
       json(res, 201, {
         client_id: clientId,
+        // RFC 7591 names this, and some clients will not accept a registration
+        // response without it.
+        client_id_issued_at: Math.floor(Date.now() / 1000),
         client_name: body.client_name || "MCP client",
         redirect_uris: redirectUris,
         token_endpoint_auth_method: "none",
         grant_types: ["authorization_code", "refresh_token"],
         response_types: ["code"],
+        scope: "programme.read",
       });
       return;
     }

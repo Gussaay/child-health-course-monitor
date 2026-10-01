@@ -179,9 +179,18 @@ function assertReadable(name, access) {
 // authorisation code to whoever asked for it.
 const ALLOWED_REDIRECT_HOSTS = new Set(["claude.ai", "claude.com"]);
 
+// Loopback, for a desktop client. OAuth 2.1 allows this for native apps
+// precisely because a loopback address cannot be reached from anywhere else,
+// and PKCE is mandatory here, so a code that leaks is still unusable. The port
+// is deliberately not pinned: a native client picks a free one at run time.
+const isLoopback = (url) =>
+  (url.protocol === "http:" || url.protocol === "https:")
+  && (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]");
+
 const isAllowedRedirect = (uri) => {
   try {
     const url = new URL(uri);
+    if (isLoopback(url)) return true;
     if (url.protocol !== "https:") return false;
     return ALLOWED_REDIRECT_HOSTS.has(url.hostname)
       || url.hostname.endsWith(".claude.ai")
