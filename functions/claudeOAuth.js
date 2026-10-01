@@ -31,9 +31,18 @@ const { isAllowedRedirect, hash, verifyPkce } = require("./claudePolicy");
 // Where the team signs in. The consent screen lives in the app itself, so the
 // person sees their own familiar login rather than a page asking for their
 // password on a domain they do not recognise.
+// Everything is served from the app's own domain through Hosting rewrites
+// (see firebase.json), not from a cloudfunctions.net or run.app address.
+//
+// Three reasons. The URL of a 2nd-generation function is not guaranteed to keep
+// the shape you expect, and OAuth discovery fails silently when the issuer does
+// not match. The /.well-known documents have to sit at the ROOT of a domain,
+// which a function URL cannot offer. And the person being asked to approve the
+// connection stays on the one domain they already sign in to, instead of being
+// bounced through a googleapis address that looks like a phishing attempt.
 const APP_ORIGIN = "https://imnci-courses-monitor.web.app";
-const ISSUER = "https://us-central1-imnci-courses-monitor.cloudfunctions.net/claudeOAuth";
-const RESOURCE = "https://us-central1-imnci-courses-monitor.cloudfunctions.net/claudeMcp";
+const ISSUER = `${APP_ORIGIN}/oauth`;
+const RESOURCE = `${APP_ORIGIN}/mcp`;
 
 const AUTH_REQUEST_TTL_MS = 10 * 60 * 1000;   // long enough to sign in
 const CODE_TTL_MS = 60 * 1000;                // exchanged immediately
@@ -59,7 +68,7 @@ exports.claudeOAuthMetadata = onRequest({ cors: true }, (req, res) => {
     return;
   }
   json(res, 200, {
-    issuer: ISSUER,
+    issuer: APP_ORIGIN,
     authorization_endpoint: `${ISSUER}/authorize`,
     token_endpoint: `${ISSUER}/token`,
     registration_endpoint: `${ISSUER}/register`,

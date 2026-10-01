@@ -100,6 +100,10 @@
       }
     ],
     "rewrites": [
+      { "source": "/mcp", "function": { "functionId": "claudeMcp", "region": "us-central1" } },
+      { "source": "/oauth/**", "function": { "functionId": "claudeOAuth", "region": "us-central1" } },
+      { "source": "/.well-known/oauth-authorization-server", "function": { "functionId": "claudeOAuthMetadata", "region": "us-central1" } },
+      { "source": "/.well-known/oauth-protected-resource", "function": { "functionId": "claudeOAuthMetadata", "region": "us-central1" } },
       {
         "source": "**",
         "destination": "/index.html"

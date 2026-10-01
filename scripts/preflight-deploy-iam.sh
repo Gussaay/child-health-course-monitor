@@ -55,6 +55,11 @@ REQUIRED=(
 # Needed only when something is created rather than updated.
 ADVISORY=(
   "cloudfunctions.functions.create|roles/cloudfunctions.admin"
+  # Deploying a NEW public HTTPS function needs this, to grant allUsers the
+  # right to invoke it. Its absence is what failed the first deploy of the MCP
+  # endpoints after this script had already passed them — the whole point of
+  # this check is to catch that before the release gets that far.
+  "cloudfunctions.functions.setIamPolicy|roles/cloudfunctions.admin"
   "run.services.create|roles/run.admin"
   "run.services.setIamPolicy|roles/run.admin"
   "artifactregistry.repositories.get|roles/artifactregistry.admin"

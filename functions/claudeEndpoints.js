@@ -202,9 +202,11 @@ exports.claudeMcp = onRequest({ cors: false }, async (req, res) => {
     if (e.code === "unauthenticated") {
       // Tells the client where to authorise. Without this header a connector
       // has no way to discover the OAuth server and simply fails.
+      // The app's own domain, where Hosting serves the discovery documents at
+      // the root. A client that cannot find these simply fails to connect.
       res.set("WWW-Authenticate",
-        'Bearer resource_metadata="https://us-central1-imnci-courses-monitor.cloudfunctions.net/'
-        + 'claudeOAuthMetadata/.well-known/oauth-protected-resource"');
+        'Bearer resource_metadata='
+        + '"https://imnci-courses-monitor.web.app/.well-known/oauth-protected-resource"');
       res.status(401).json(rpcError(id, -32001, e.message));
       return;
     }
