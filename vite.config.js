@@ -31,7 +31,21 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/\.apk$/, /\.json$/, /^\/__\//],
+        // `/oauth/`, `/mcp` and `/.well-known/` are Cloud Functions behind
+        // Hosting rewrites, not pages of this app. Without them here the
+        // service worker answers those navigations with the cached index.html,
+        // so the OAuth endpoints appear to return the app instead of doing
+        // their job.
+        //
+        // `connect_claude` is the redirect the authorisation step lands on. It
+        // has to come from the network: the whole point of that page is that it
+        // is the version just deployed, and serving a precached shell is what
+        // made three rounds of fixes look as though they had never shipped.
+        navigateFallbackDenylist: [
+          /\.apk$/, /\.json$/, /^\/__\//,
+          /^\/oauth\//, /^\/mcp$/, /^\/\.well-known\//,
+          /[?&]connect_claude=/,
+        ],
 
         // Deletes caches left by older Workbox versions. Without this, old
         // precache entries stay on the device forever and can be served
