@@ -1881,7 +1881,11 @@ case 'meetings':
     const isCourseCertPagePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/course/certificates/');
     const isAttendancePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/attendance/course/');
 
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView;
+    // `connectClaudeId` is here because that page opens in a small OAuth popup
+    // window. Drawn with the full app chrome — header, navigation, bottom bar —
+    // the consent card is pushed below the fold of a 600px popup and the window
+    // looks empty, which is exactly how it was reported.
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!connectClaudeId;
 
     let mainContent;
 
@@ -1892,12 +1896,18 @@ case 'meetings':
     // route: a signed-out visitor falls through to the sign-in screen and comes
     // back here, because the whole point is that the connection is granted by a
     // known person rather than by whoever holds the link.
-    else if (connectClaudeId && user) {
+    // Not gated on `user`. Falling through to the ordinary app when nobody was
+    // signed in yet meant this window rendered the whole dashboard shell around
+    // a sign-in box, which in a popup reads as a blank page. The screen itself
+    // handles all three states — still checking, not signed in, signed in — so
+    // the popup always shows something that explains itself.
+    else if (connectClaudeId) {
         mainContent = (
-            <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
+            <Suspense fallback={<div className="min-h-screen grid place-items-center"><Spinner /></div>}>
                 <ConnectClaudeScreen
                     requestId={connectClaudeId}
                     user={user}
+                    authLoading={authLoading}
                     onDone={() => { setConnectClaudeId(null); window.history.replaceState({}, '', '/'); }}
                 />
             </Suspense>

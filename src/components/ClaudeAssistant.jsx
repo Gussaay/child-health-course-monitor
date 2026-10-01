@@ -33,17 +33,59 @@ const fn = (name) => httpsCallable(getFunctions(), name);
  * granted, because "connect an app" is the step where people click through
  * without reading and end up handing over more than they meant to.
  */
-export function ConnectClaudeScreen({ requestId, user, onDone }) {
+export function ConnectClaudeScreen({ requestId, user, authLoading = false, onDone }) {
     const [state, setState] = useState({ loading: true, error: '', client: null });
     const [granting, setGranting] = useState(false);
 
     useEffect(() => {
+        // Nothing can be read until we know who is asking: describeClaudeConnection
+        // is a callable and refuses an unauthenticated caller.
+        if (authLoading || !user) return undefined;
         let alive = true;
         fn('describeClaudeConnection')({ requestId })
             .then(({ data }) => { if (alive) setState({ loading: false, error: '', client: data }); })
             .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'That request could not be read.', client: null }); });
         return () => { alive = false; };
-    }, [requestId]);
+    }, [requestId, user, authLoading]);
+
+    if (authLoading) {
+        return <div className="min-h-screen grid place-items-center bg-slate-100"><Spinner /></div>;
+    }
+
+    // In the popup this window opened in, nobody may be signed in yet. Saying so
+    // beats the dashboard shell wrapped around a sign-in box, which is what it
+    // used to show and which reads as nothing at all.
+    if (!user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+                <Card className="w-full max-w-md">
+                    <CardBody className="space-y-4 text-center">
+                        <div className="mx-auto p-2.5 bg-sky-100 text-sky-700 rounded-lg w-fit">
+                            <Sparkles size={22} />
+                        </div>
+                        <h1 className="text-lg font-bold text-slate-800">Sign in to connect Claude</h1>
+                        <p className="text-sm text-slate-600">
+                            Claude is asking to read programme data as you. Sign in to the National
+                            Child Health Programme in this window, and you will be asked to approve it.
+                        </p>
+                        <Button className="w-full justify-center"
+                            onClick={() => {
+                                // Back here afterwards: the request id is carried
+                                // through so the approval can still be completed.
+                                const back = `${window.location.origin}/?connect_claude=${encodeURIComponent(requestId)}`;
+                                window.location.assign(back);
+                            }}>
+                            Sign in
+                        </Button>
+                        <p className="text-xs text-slate-400">
+                            If you are already signed in on this device, this window may just need
+                            reloading.
+                        </p>
+                    </CardBody>
+                </Card>
+            </div>
+        );
+    }
 
     const approve = async () => {
         setGranting(true);
