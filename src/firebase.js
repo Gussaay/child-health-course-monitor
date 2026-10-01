@@ -107,8 +107,9 @@ export const storage = getStorage(firebaseApp);
 // app is used; there is nothing to measure in a test, and the only thing it can
 // do there is fail the run.
 export const analytics = (() => {
-  const underTest = typeof process !== 'undefined'
-    && (process.env?.VITEST || process.env?.NODE_ENV === 'test');
+  // import.meta.env, not process.env: this file runs in a browser, where
+  // `process` does not exist at all — and the lint rules say so.
+  const underTest = import.meta.env?.MODE === 'test';
   if (underTest || typeof window === 'undefined' || typeof document === 'undefined') return null;
   try {
     return getAnalytics(firebaseApp);
