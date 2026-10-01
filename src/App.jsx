@@ -1901,6 +1901,16 @@ case 'meetings':
     // a sign-in box, which in a popup reads as a blank page. The screen itself
     // handles all three states — still checking, not signed in, signed in — so
     // the popup always shows something that explains itself.
+    else if (connectClaudeId && !user && !authLoading) {
+        // The real sign-in form, the same one every other signed-out route
+        // shows. The consent screen used to offer a button of its own that
+        // navigated to the address it was already on, so pressing it did
+        // nothing at all. Signing in here sets `user`, and the branch below
+        // then takes over with the request id still held in state.
+        mainContent = (
+            <SignInBox message="Sign in to let Claude read programme data as you." />
+        );
+    }
     else if (connectClaudeId) {
         mainContent = (
             <Suspense fallback={<div className="min-h-screen grid place-items-center"><Spinner /></div>}>
