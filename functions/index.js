@@ -306,3 +306,37 @@ exports.setUserRoles = onCall(async (request) => {
   await db.collection("users").doc(userId).set(update, { merge: true });
   return { success: true };
 });
+
+// ============================================================================
+// CLAUDE ACCESS
+// ============================================================================
+// Read-only programme data for the chat panel in the app and for the MCP server
+// the team connects from claude.ai. Both act as the person asking and apply the
+// same permissions the app applies; see claudeAccess.js.
+const claudeEndpoints = require("./claudeEndpoints");
+exports.claudeQuery = claudeEndpoints.claudeQuery;
+exports.claudeMcp = claudeEndpoints.claudeMcp;
+
+// The chat panel in the app — NOT DEPLOYED.
+//
+// It calls the Anthropic API, which is billed per question on an API account.
+// A Claude.ai subscription cannot drive it: they are separate products, and
+// there is no way to spend a subscription through the API.
+//
+// The MCP connector (claudeMcp + claudeOAuth below) does the same job on the
+// subscriptions the team already holds, which is why that is the live path.
+//
+// claudeChat.js is kept ready. To turn this on: set the key with
+//   firebase functions:secrets:set ANTHROPIC_API_KEY
+// and uncomment the line below. Exporting it WITHOUT the secret set fails the
+// whole functions deploy, not just this function — which is why it is off
+// rather than merely unused.
+//
+// exports.claudeChat = require("./claudeChat").claudeChat;
+
+// OAuth, so claude.ai can connect as the person using it.
+const claudeOAuth = require("./claudeOAuth");
+exports.claudeOAuth = claudeOAuth.claudeOAuth;
+exports.claudeOAuthMetadata = claudeOAuth.claudeOAuthMetadata;
+exports.approveClaudeConnection = claudeOAuth.approveClaudeConnection;
+exports.describeClaudeConnection = claudeOAuth.describeClaudeConnection;

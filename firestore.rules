@@ -76,7 +76,7 @@ service cloud.firestore {
     // or misspelled role fails closed instead of inheriting write access.
     function staffRoles() {
       return ['super_user', 'federal_manager', 'states_manager', 'locality_manager',
-              'federal_coordinator', 'facilitator', 'state_coordinator', 'course_coordinator'];
+              'federal_coordinator', 'facilitator', 'state_coordinator', 'course_coordinator', 'mentor'];
     }
 
     // The request.auth check is not redundant: without it an anonymous caller
@@ -90,8 +90,7 @@ service cloud.firestore {
 
     function hasStaffRole() {
       let doc = getUserDoc();
-      return (doc.roles != null && doc.roles.hasAny(staffRoles()))
-             || (doc.roles == null && doc.role in staffRoles());
+      return (doc.role in staffRoles()) || (doc.roles != null && doc.roles.hasAny(staffRoles()));
     }
 
     // Who may edit the sub-course catalogue. Deliberately NOT isManager():
@@ -252,6 +251,15 @@ service cloud.firestore {
     match /projects/{projectId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && isManager();
+    }
+
+    // Every read Claude makes on somebody's behalf is recorded here. Written
+    // only by the Cloud Function, which uses the admin SDK and bypasses these
+    // rules, so nothing needs write access: a client that could write to its
+    // own audit trail could also erase what it looked at.
+    match /claudeAccessLog/{entryId} {
+      allow read: if request.auth != null && isSuperUser();
+      allow write: if false;
     }
 
     match /masterPlans/{planId} {

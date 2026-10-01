@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -75,6 +75,16 @@ const OnlineCoursesView = lazy(() => import('./components/imnci').then(m => ({ d
 // each fetching their own copy, and what makes a case corrected in one of them
 // correct in the others without a reload.
 const ImnciProvider = lazy(() => import('./components/imnci').then(m => ({ default: m.ImnciProvider })));
+// Reaching programme data through Claude: the consent step for the claude.ai
+// connector, and the chat panel inside the app.
+const ConnectClaudeScreen = lazy(() => import('./components/ClaudeAssistant').then(m => ({ default: m.ConnectClaudeScreen })));
+const ClaudeChatPanel = lazy(() => import('./components/ClaudeAssistant').then(m => ({ default: m.ClaudeChatPanel })));
+
+// The chat panel needs an Anthropic API key, which is billed per question and
+// cannot be covered by a Claude subscription. Off until the programme decides
+// to fund it; the claude.ai connector does the same job on the subscriptions
+// the team already has. Flip this and the claudeChat export together.
+const CLAUDE_CHAT_ENABLED = false;
 const MeetingTrackerView = lazy(() => import('./components/MeetingTrackerView'));
 
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
@@ -734,6 +744,9 @@ export default function App() {
     const [itemToShare, setItemToShare] = useState(null);
     const [shareType, setShareType] = useState('course');
     
+    // Set when claude.ai sends somebody here to approve a connection.
+    const [connectClaudeId, setConnectClaudeId] = useState(null);
+    const [claudeChatOpen, setClaudeChatOpen] = useState(false);
     const [publicViewData, setPublicViewData] = useState(null);
     const [publicViewType, setPublicViewType] = useState(null); 
     const [publicViewLoading, setPublicViewLoading] = useState(false);
@@ -871,6 +884,13 @@ export default function App() {
 
             // Check if the current URL parameters match a generated shared Project Tracker link
             const searchParamsPath = new URLSearchParams(window.location.search);
+            // Somebody adding this server as a connector in claude.ai is sent
+            // here to approve it. Checked before every public route: this one
+            // needs them signed in, so it must not be mistaken for a shared
+            // link that does not.
+            const connectRequest = searchParamsPath.get('connect_claude');
+            if (connectRequest) { setConnectClaudeId(connectRequest); return; }
+
             const publicProjectsMatch = path.match(/^\/public\/projects\/?$/);
             const isSharedProjectQuery = searchParamsPath.get('view') === 'dashboard' || searchParamsPath.get('tab') === 'active' || searchParamsPath.get('tab') === 'completed' || searchParamsPath.has('project');
 
@@ -1865,6 +1885,21 @@ case 'meetings':
     if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
         mainContent = <SplashScreen />;
     }
+    // Approving the claude.ai connector. Deliberately NOT a minimal-UI public
+    // route: a signed-out visitor falls through to the sign-in screen and comes
+    // back here, because the whole point is that the connection is granted by a
+    // known person rather than by whoever holds the link.
+    else if (connectClaudeId && user) {
+        mainContent = (
+            <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
+                <ConnectClaudeScreen
+                    requestId={connectClaudeId}
+                    user={user}
+                    onDone={() => { setConnectClaudeId(null); window.history.replaceState({}, '', '/'); }}
+                />
+            </Suspense>
+        );
+    }
     else if (isPublicProjectsView) {
         mainContent = (
              <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
@@ -2202,6 +2237,23 @@ case 'meetings':
                     </div>
 
                     <div className="flex items-center justify-end gap-1.5 shrink-0">
+                        {/* The in-app chat is built but not switched on: it
+                            calls the Anthropic API, which is billed separately
+                            and cannot be paid for with a Claude subscription.
+                            The team asks their questions through the claude.ai
+                            connector instead, which costs them nothing extra.
+                            Turn this back on alongside the claudeChat export in
+                            functions/index.js. */}
+                        {CLAUDE_CHAT_ENABLED && permissions.canViewDashboard && (
+                            <button
+                                onClick={() => setClaudeChatOpen(true)}
+                                title="Ask about the data"
+                                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                            >
+                                <Sparkles size={20} />
+                            </button>
+                        )}
+
                         <NotificationBell user={user} navigate={navigate} />
 
                         {/* Update arrow. Red and pulsing when an update is
@@ -2505,6 +2557,12 @@ case 'meetings':
             )}
 
             <AppUpdateModals />
+
+            {claudeChatOpen && (
+                <Suspense fallback={null}>
+                    <ClaudeChatPanel isOpen onClose={() => setClaudeChatOpen(false)} />
+                </Suspense>
+            )}
 
         </div>
     );
