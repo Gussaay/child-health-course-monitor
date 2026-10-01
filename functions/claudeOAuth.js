@@ -62,7 +62,19 @@ exports.claudeOAuthMetadata = onRequest({ cors: true }, (req, res) => {
   if (path.includes("oauth-protected-resource")) {
     json(res, 200, {
       resource: RESOURCE,
-      authorization_servers: [ISSUER],
+      // The ROOT, not APP_ORIGIN + "/oauth".
+      //
+      // RFC 8414 requires the `issuer` in the metadata document to match the
+      // identifier the client used to find it, and for an identifier with a
+      // path the metadata lives at /.well-known/oauth-authorization-server/<path>
+      // — not at the root. Naming ".../oauth" here sent the client to a path no
+      // rewrite matches, where the SPA catch-all answered with index.html and a
+      // 200. Claude parsed that HTML as JSON and reported that it could not
+      // register, which is a long way from the actual cause.
+      //
+      // The endpoints stay under /oauth/. Only the identifier is the root, and
+      // that is what the document at the root declares.
+      authorization_servers: [APP_ORIGIN],
       bearer_methods_supported: ["header"],
     });
     return;
