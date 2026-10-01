@@ -23,6 +23,11 @@ const crypto = require("node:crypto");
 const { onRequest, HttpsError, onCall } = require("firebase-functions/v2/https");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 
+// Where a code may be sent, how a token is stored, and whether the client
+// proves it started the flow. Kept in claudePolicy.js so the parts where a
+// mistake is a vulnerability can be tested without this runtime installed.
+const { isAllowedRedirect, hash, verifyPkce } = require("./claudePolicy");
+
 // Where the team signs in. The consent screen lives in the app itself, so the
 // person sees their own familiar login rather than a page asking for their
 // password on a domain they do not recognise.
@@ -35,34 +40,7 @@ const CODE_TTL_MS = 60 * 1000;                // exchanged immediately
 const ACCESS_TTL_MS = 60 * 60 * 1000;         // an hour
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-// Only these may be redirected to. An open redirect here hands somebody else's
-// authorisation code to whoever asked for it.
-const ALLOWED_REDIRECT_HOSTS = new Set(["claude.ai", "claude.com"]);
-
-const isAllowedRedirect = (uri) => {
-  try {
-    const url = new URL(uri);
-    if (url.protocol !== "https:") return false;
-    return ALLOWED_REDIRECT_HOSTS.has(url.hostname)
-      || url.hostname.endsWith(".claude.ai")
-      || url.hostname.endsWith(".claude.com");
-  } catch { return false; }
-};
-
 const randomId = () => crypto.randomBytes(32).toString("base64url");
-
-// Stored hashed. A leaked database read must not hand somebody a working token,
-// and nothing here ever needs the original back.
-const hash = (value) => crypto.createHash("sha256").update(String(value)).digest("hex");
-
-const verifyPkce = (verifier, challenge) => {
-  const computed = crypto.createHash("sha256").update(String(verifier)).digest("base64url");
-  // Fixed-time compare: the lengths are equal by construction, and a plain ===
-  // on a secret is a timing oracle.
-  const a = Buffer.from(computed);
-  const b = Buffer.from(String(challenge));
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-};
 
 const json = (res, status, body) => res.status(status).json(body);
 
@@ -319,6 +297,3 @@ exports.describeClaudeConnection = onCall(async (request) => {
 });
 
 module.exports.uidForAccessToken = uidForAccessToken;
-module.exports.isAllowedRedirect = isAllowedRedirect;
-module.exports.verifyPkce = verifyPkce;
-module.exports.hash = hash;

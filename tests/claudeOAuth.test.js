@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import crypto from 'node:crypto';
-import { isAllowedRedirect, verifyPkce, hash } from '../functions/claudeOAuth.js';
+import { isAllowedRedirect, verifyPkce, hash } from '../functions/claudePolicy.js';
 
 // =============================================================================
 // The three pieces of the OAuth flow where a bug is a vulnerability rather than

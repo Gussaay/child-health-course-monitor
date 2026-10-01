@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     COLLECTIONS, NEVER, catalogueFor, assertReadable, MAX_ROWS,
-} from '../functions/claudeAccess.js';
+} from '../functions/claudePolicy.js';
 
 // =============================================================================
 // The gate between programme data and a model's context.
