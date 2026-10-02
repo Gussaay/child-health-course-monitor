@@ -121,7 +121,8 @@ import {
     getUnitMeetingById,
     upsertUnitMeeting,
     getPendingSyncQueue,
-    clearPendingSyncQueue
+    clearPendingSyncQueue,
+    getCachedCourse, getCachedParticipants,
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
@@ -978,7 +979,11 @@ export default function App() {
                 setPublicMonitorLoading(true);
                 const fetchData = async () => {
                     try {
-                        const [courseData, participantData] = await Promise.all([ getCourseById(courseId, 'server'), listAllParticipantsForCourse(courseId, { source: 'server' }) ]);
+                        // Cached for the session. These links are opened and reopened all
+                        // day on a phone at a clinic, and the course and its roster do
+                        // not change between openings — re-downloading both every time
+                        // is what made the page slow to appear on a weak connection.
+                        const [courseData, participantData] = await Promise.all([ getCachedCourse(courseId), getCachedParticipants(courseId) ]);
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.'); 
                         const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
@@ -1025,7 +1030,10 @@ export default function App() {
                 setPublicTestLoading(true);
                 const fetchData = async () => {
                     try {
-                        const [courseData, participantData, testData] = await Promise.all([ getCourseById(courseId, 'server'), listAllParticipantsForCourse(courseId, { source: 'server' }), listParticipantTestsForCourse(courseId, { source: 'server' }) ]);
+                        // The course and roster come from the session cache; the tests do
+                        // not, because a participant sitting a test needs to see whether
+                        // their own result has already been recorded.
+                        const [courseData, participantData, testData] = await Promise.all([ getCachedCourse(courseId), getCachedParticipants(courseId), listParticipantTestsForCourse(courseId, { source: 'server' }) ]);
                         if (!courseData) throw new Error('Course not found.'); if (!participantData) throw new Error('Participants not found.');
                         if (!['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(courseData.course_type)) { throw new Error('Test forms are only available for selected courses.'); }
                         const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");

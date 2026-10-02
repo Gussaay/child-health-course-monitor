@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, Spinner } from "../CommonComponents";
 import { listObservationsForParticipant, listCasesForParticipant, upsertCaseAndObservations, deleteCaseAndObservations } from '../../data.js';
-import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, MATERNAL_CHECKLIST_GROUPS, groupChecklists, calcPct, fmtPct, pctBgClass } from '../constants.js';
+import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, MATERNAL_CHECKLIST_GROUPS, groupChecklists, participantsForModule, calcPct, fmtPct, pctBgClass } from '../constants.js';
 import { notify, confirmDialog } from '../dialogs';
 
 const generateHash = (buffer) => Object.keys(buffer).sort().map(k => `${k}:${buffer[k]}`).join('|');
@@ -10,6 +10,7 @@ const generateHash = (buffer) => Object.keys(buffer).sort().map(k => `${k}:${buf
 // --- EENC MAPPING (Shared) ---
 const MAP_EENC_BREATHING = {
     title: "Early Essential Newborn Care (Breathing)",
+    shortTitle: "Breathing",
     domains: Object.keys(SKILLS_EENC_BREATHING).reduce((acc, key) => {
         acc[EENC_DOMAIN_LABEL_BREATHING[key]] = SKILLS_EENC_BREATHING[key].map(item => item.text);
         return acc;
@@ -17,7 +18,8 @@ const MAP_EENC_BREATHING = {
 };
 
 const MAP_EENC_NOT_BREATHING = {
-    title: "Early Essential Newborn Care (Not Breathing)",
+    title: "Early Essential Newborn Care (Basic Resuscitation)",
+    shortTitle: "Basic resuscitation",
     domains: Object.keys(SKILLS_EENC_NOT_BREATHING).reduce((acc, key) => {
         acc[EENC_DOMAIN_LABEL_NOT_BREATHING[key]] = SKILLS_EENC_NOT_BREATHING[key].map(item => item.text);
         return acc;
@@ -497,10 +499,12 @@ export const MATERNAL_CHECKLISTS = {
 function ActionToggle({ currentValue, onClick }) {
     const options = [['Done', 1, 'bg-green-600 border-green-600'], ['Not Done', 0, 'bg-red-600 border-red-600'], ['N/A', -1, 'bg-gray-500 border-gray-500']];
     return (
-        <div className="relative z-0 inline-flex shadow-sm rounded-md flex-shrink-0">
+        // Fills the row on a phone, inline on a laptop, with a 40px touch
+        // target — the smallest that can be hit reliably at a bedside.
+        <div className="relative z-0 flex w-full sm:inline-flex sm:w-auto shadow-sm rounded-md flex-shrink-0">
             {options.map(([label, value, activeClass], idx) => {
                 const isSelected = currentValue === value;
-                const baseClass = "relative inline-flex items-center justify-center px-3 py-1 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
+                const baseClass = "relative flex-1 sm:flex-none inline-flex items-center justify-center px-2 sm:px-3 min-h-[40px] py-1 text-xs sm:text-sm font-medium whitespace-nowrap focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
                 const activeState = isSelected ? `${activeClass} text-white` : "bg-white text-gray-700 hover:bg-gray-50";
                 let roundedClass = "";
                 if (idx === 0) roundedClass = "rounded-l-md";
@@ -696,7 +700,20 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                         {isPublicView && participants && (
                             <FormGroup label="Select participant" className="sm:col-span-2">
                                 <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)} disabled={!!editingCase}>
-                                    {participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
+                                    {(() => {
+                                        const { own, others } = participantsForModule(participants, course, 'maternal');
+                                        const row = (p) => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>;
+                                        // Only grouped when there is something to
+                                        // separate. One heading over the whole list
+                                        // tells the observer nothing.
+                                        if (!others.length) return own.map(row);
+                                        return (
+                                            <>
+                                                <optgroup label="Maternal stream">{own.map(row)}</optgroup>
+                                                <optgroup label="Other participants">{others.map(row)}</optgroup>
+                                            </>
+                                        );
+                                    })()}
                                 </Select>
                             </FormGroup>
                         )}
@@ -705,7 +722,7 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                                 {groupChecklists(MATERNAL_CHECKLISTS, MATERNAL_CHECKLIST_GROUPS).map(({ label, items }) => (
                                     <optgroup key={label} label={label}>
                                         {items.map(([key, data]) => (
-                                            <option key={key} value={key}>{data.title}</option>
+                                            <option key={key} value={key}>{data.shortTitle || data.title}</option>
                                         ))}
                                     </optgroup>
                                 ))}

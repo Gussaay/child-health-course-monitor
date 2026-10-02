@@ -32,7 +32,7 @@ import { CourseExercisesView } from './imnci';
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
     COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState,
-    hasMentorshipForm
+    hasMentorshipForm, subCourseOfGroup
 } from './constants.js';
 import { 
     Users, Share2, UserPlus, CheckCircle, 
@@ -374,6 +374,33 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     const [group, setGroup] = useState('Group A');
     const isFederal = useMemo(() => isFederalCourse(course), [course]);
 
+    // THE GROUPS THIS COURSE ACTUALLY HAS, each labelled with the part it sits.
+    //
+    // This used to offer A, B, C and D always, with nothing to say what any of
+    // them meant. On an EmONC course Group A is the maternal part and Group B
+    // the newborn part — the course says so when it is set up — and a
+    // participant picking blind landed in the wrong one, which is how people
+    // ended up in the maternal group and then absent from the newborn
+    // observer's list. Showing the sub-course beside the letter makes the
+    // choice answerable, and offering only the assigned groups stops anyone
+    // registering into a group that does not exist.
+    const groupOptions = useMemo(() => {
+        const assigned = [...new Set((course?.facilitatorAssignments || [])
+            .map((a) => a?.group).filter(Boolean))].sort();
+        const letters = assigned.length ? assigned : ['Group A', 'Group B', 'Group C', 'Group D'];
+        return letters.map((g) => {
+            const sub = subCourseOfGroup(course, g);
+            return { value: g, label: sub ? `${g} — ${sub}` : g };
+        });
+    }, [course]);
+
+    // Keep the selection on a group that is really offered.
+    useEffect(() => {
+        if (groupOptions.length && !groupOptions.some((o) => o.value === group)) {
+            setGroup(groupOptions[0].value);
+        }
+    }, [groupOptions, group]);
+
     const courseStates = useMemo(
         () => course?.states || (course?.state ? String(course.state).split(',').map(s => s.trim()).filter(Boolean) : []),
         [course]
@@ -446,6 +473,12 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                 phone: phone.trim(),
                 job_title: jobTitle,
                 group: group,
+                // Recorded from the group, not asked for. Registration never
+                // set imci_sub_type at all, so every public registration
+                // arrived with a blank sub-course and the reports, certificates
+                // and monitoring pickers each had to guess at it separately.
+                ...(subCourseOfGroup(course, group)
+                    ? { imci_sub_type: subCourseOfGroup(course, group) } : {}),
                 state: regState,
                 locality: regLocality,
                 center_name: facilityName, 
@@ -541,10 +574,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
                     <FormGroup label="Group">
                         <Select disabled={isSaving} value={group} onChange={e => setGroup(e.target.value)}>
-                            <option>Group A</option>
-                            <option>Group B</option>
-                            <option>Group C</option>
-                            <option>Group D</option>
+                            {groupOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </Select>
                     </FormGroup>
 

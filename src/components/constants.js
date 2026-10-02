@@ -332,12 +332,13 @@ export const EENC_DOMAINS_NOT_BREATHING = Object.keys(SKILLS_EENC_NOT_BREATHING)
 
 export const NEONATAL_CHECKLIST_GROUPS = [
     {
-        label: "At birth — resuscitation",
+        label: "Early Essential Newborn Care",
+        keys: ['eenc_breathing', 'eenc_not_breathing'],
+    },
+    {
+        label: "Resuscitation",
         keys: [
-            'eenc_breathing',
-            'eenc_not_breathing',
             'resuscitation_non_breathing',
-            'advanced_resuscitation',
             'advanced_chest_compression',
             'advanced_oropharyngeal_airway',
             'advanced_intubation',
@@ -345,7 +346,7 @@ export const NEONATAL_CHECKLIST_GROUPS = [
     },
     {
         label: "Assessment & examination",
-        keys: ['neonatal_assessment', 'newborn_exam'],
+        keys: ['newborn_exam'],
     },
     {
         label: "Emergencies",
@@ -376,7 +377,107 @@ export const NEONATAL_CHECKLIST_GROUPS = [
     },
 ];
 
+
+// Who this module's checklists apply to.
+//
+// An EmONC course runs two streams, and a participant belongs to one of them.
+// Listing everybody meant an observer on the newborn stream could file a case
+// against somebody who never sat that part, and the score then counted against
+// a module they were never taught.
+//
+// Their GROUP decides it, because that is where the course says what each
+// stream is, and their own record is only consulted when the group is silent. A
+// participant nobody has assigned yet is shown rather than hidden: an observer
+// who cannot find the person in front of them will pick the nearest name, which
+// is worse than one extra row.
+const streamOfSubCourse = (sub) => {
+    const t = String(sub || '').toLowerCase();
+    if (!t) return null;
+    if (t.includes('matern') || t.includes('obstetric')) return 'maternal';
+    if (t.includes('newborn') || t.includes('neonat') || t.includes('eenc')) return 'neonatal';
+    return null;
+};
+
+/**
+ * What sub-course a group is taking, according to the course setup.
+ *
+ * A course is built by assigning each group a sub-course — Group A Emergency
+ * Maternal Care, Group B Emergency Newborn Care — and that assignment is the
+ * authoritative answer, not anything on the participant record.
+ *
+ * Null when the course does not say, or says more than one thing: a group whose
+ * facilitators cover both streams tells us nothing about which part a
+ * participant in it is sitting, and guessing would be worse than admitting it.
+ *
+ * @param {object} course  a course, with facilitatorAssignments
+ * @param {string} group   e.g. 'Group A'
+ * @returns {string|null}  the sub-course name
+ */
+export const subCourseOfGroup = (course, group) => {
+    if (!group) return null;
+    const named = [...new Set((course?.facilitatorAssignments || [])
+        .filter((a) => a?.group === group)
+        .map((a) => a?.imci_sub_type)
+        .filter(Boolean))];
+    return named.length === 1 ? named[0] : null;
+};
+
+/**
+ * This module's own participants first, then everybody else.
+ *
+ * Returns TWO lists rather than one, and that is the whole point. Filtering to
+ * one list emptied the picker completely on a real course: every participant
+ * there resolved to the maternal stream, so the newborn observer was left with
+ * a dropdown containing nothing and no way to record anything at all.
+ *
+ * imci_sub_type is registration data. We already know it is unreliable — it is
+ * what put EENC-orientation participants under Emergency Newborn Care in the
+ * reports. Hiding people on the strength of it means a wrong field stops an
+ * observer working, at a bedside, with a baby in front of them. So it ORDERS
+ * the list instead: the people this module is for are grouped at the top, and
+ * nobody is unreachable.
+ *
+ * @returns {{own: object[], others: object[]}}
+ */
+export const participantsForModule = (participants, course, moduleType) => {
+    const wanted = moduleType === 'maternal' ? 'maternal' : 'neonatal';
+
+    // The GROUP decides, and the participant's own record is only the fallback.
+    //
+    // That order matters and it was the wrong way round. A course is set up by
+    // assigning each group a sub-course — Group A maternal, Group B newborn —
+    // and that assignment is what the course actually is. A participant's
+    // imci_sub_type is typed in at registration and is routinely wrong; it is
+    // what put EENC-orientation participants under Emergency Newborn Care in
+    // the reports. Reading it first meant a newborn group whose members were
+    // registered as maternal produced an empty picker for the newborn observer.
+    const streamFor = (p) => (
+        streamOfSubCourse(subCourseOfGroup(course, p.group))
+        || streamOfSubCourse(p.imci_sub_type)
+    );
+
+    const own = [];
+    const others = [];
+    (participants || []).forEach((p) => {
+        const stream = streamFor(p);
+        // Unassigned counts as this module's: nothing says otherwise, and the
+        // observer in front of them is the better judge.
+        if (stream === wanted || stream === null) own.push(p);
+        else others.push(p);
+    });
+
+    return { own, others };
+};
+
 export const MATERNAL_CHECKLIST_GROUPS = [
+    // The EENC pair sits in BOTH parts: the baby is born at a maternal case,
+    // and the person conducting the delivery is assessed on it. Named once in
+    // the heading rather than repeated in each option, which is what made the
+    // list long enough to need scrolling on a phone.
+    {
+        label: "Early Essential Newborn Care",
+        keys: ['eenc_breathing', 'eenc_not_breathing'],
+    },
     {
         label: "Normal labour & delivery",
         keys: ['labour_check', 'placenta'],

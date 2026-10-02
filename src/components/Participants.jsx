@@ -14,7 +14,8 @@ import {
     Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
 } from "./CommonComponents";
 import {
-    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC,
+    subCourseOfGroup
 } from './constants.js';
 import { ParticipantExercisesModal } from './imnci';
 import {
@@ -3186,6 +3187,13 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             let p = {
                 ...(initialData || {}), 
                 name: name.trim(), group, state, locality,
+                // Recorded here, for every package, rather than inside the
+                // IMNCI branch below. The group lookup above already runs for
+                // all of them, but only the IMNCI, iCCM and CPCM branches wrote
+                // the result — so an EmONC participant was saved with no
+                // sub-course at all, and the maternal/newborn monitoring pickers
+                // had nothing on the record to go by.
+                ...(finalImciSubType ? { imci_sub_type: finalImciSubType } : {}),
                 center_name: isProgramManagement ? 'N/A' : center.trim(),
                 facilityId: (isIccm || isCpcm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
                 job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null,
@@ -3388,10 +3396,19 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <FormGroup label="المجموعة (Group)">
                                 <Select disabled={isSaving} value={group} onChange={(e) => setGroup(e.target.value)}>
-                                    <option value="Group A">المجموعة أ (Group A)</option>
-                                    <option value="Group B">المجموعة ب (Group B)</option>
-                                    <option value="Group C">المجموعة ج (Group C)</option>
-                                    <option value="Group D">المجموعة د (Group D)</option>
+                                    {[
+                                        ['Group A', 'المجموعة أ (Group A)'],
+                                        ['Group B', 'المجموعة ب (Group B)'],
+                                        ['Group C', 'المجموعة ج (Group C)'],
+                                        ['Group D', 'المجموعة د (Group D)'],
+                                    ].map(([value, label]) => {
+                                        // The sub-course comes from the group, so say which
+                                        // one each group is: on an EmONC course picking
+                                        // Group A instead of Group B is the difference
+                                        // between the maternal and the newborn part.
+                                        const sub = subCourseOfGroup(course, value);
+                                        return <option key={value} value={value}>{sub ? `${label} — ${sub}` : label}</option>;
+                                    })}
                                 </Select>
                             </FormGroup>
 

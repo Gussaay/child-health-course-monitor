@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, Spinner } from "../CommonComponents";
 import { listObservationsForParticipant, listCasesForParticipant, upsertCaseAndObservations, deleteCaseAndObservations } from '../../data.js';
-import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, SKILLS_EMONC_NEONATAL, NEONATAL_CHECKLIST_GROUPS, groupChecklists, calcPct, fmtPct, pctBgClass } from '../constants.js';
+import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, NEONATAL_CHECKLIST_GROUPS, groupChecklists, participantsForModule, calcPct, fmtPct, pctBgClass } from '../constants.js';
 import { notify, confirmDialog } from '../dialogs';
 
 // --- SCORING SCALE ---
@@ -21,6 +21,7 @@ const generateHash = (buffer) => Object.keys(buffer).sort().map(k => `${k}:${buf
 // --- EENC MAPPING (Shared) ---
 const MAP_EENC_BREATHING = {
     title: "Early Essential Newborn Care (Breathing)",
+    shortTitle: "Breathing",
     domains: Object.keys(SKILLS_EENC_BREATHING).reduce((acc, key) => {
         acc[EENC_DOMAIN_LABEL_BREATHING[key]] = SKILLS_EENC_BREATHING[key].map(item => item.text);
         return acc;
@@ -31,6 +32,7 @@ const MAP_EENC_NOT_BREATHING = {
     // Renamed, not rewritten: this is the EENC sequence as taught. The fuller
     // resuscitation flow is a separate checklist below.
     title: "Early Essential Newborn Care (Basic Resuscitation)",
+    shortTitle: "Basic resuscitation",
     domains: Object.keys(SKILLS_EENC_NOT_BREATHING).reduce((acc, key) => {
         acc[EENC_DOMAIN_LABEL_NOT_BREATHING[key]] = SKILLS_EENC_NOT_BREATHING[key].map(item => item.text);
         return acc;
@@ -40,14 +42,6 @@ const MAP_EENC_NOT_BREATHING = {
 export const NEONATAL_CHECKLISTS = {
     eenc_breathing: MAP_EENC_BREATHING,
     eenc_not_breathing: MAP_EENC_NOT_BREATHING,
-    neonatal_assessment: {
-        title: "Initial Neonatal Assessment",
-        domains: { "Assessment": SKILLS_EMONC_NEONATAL.assessment.map(i => i.text) }
-    },
-    advanced_resuscitation: {
-        title: "Advanced Neonatal Resuscitation",
-        domains: { "Resuscitation & Management": SKILLS_EMONC_NEONATAL.resuscitation.map(i => i.text) }
-    },
     // --- Resuscitation of a non-breathing baby ------------------------------
     //
     // From the programme's own "Resuscitation of Non-Breathing Baby" checklist.
@@ -57,7 +51,8 @@ export const NEONATAL_CHECKLISTS = {
     // drugs. They are assessed on different days, by different people, and a
     // score against one is not a score against the other.
     resuscitation_non_breathing: {
-        title: "Resuscitation of a Non-Breathing Baby (full sequence)",
+        title: "Advanced Newborn Resuscitation (full sequence)",
+        shortTitle: "Advanced resuscitation — full sequence",
         domains: {
             "Pre-birth preparations": [
                 "1. Check room temperature and turn off fans",
@@ -131,6 +126,7 @@ export const NEONATAL_CHECKLISTS = {
     // that says neither.
     advanced_chest_compression: {
         title: "Advanced — Synchronised Chest Compression with Ambu Bag",
+        shortTitle: "Chest compression with Ambu bag",
         domains: {
             "Before starting": [
                 "1. Confirms PPV has been given for 30 seconds with visible chest rise",
@@ -159,6 +155,7 @@ export const NEONATAL_CHECKLISTS = {
 
     advanced_oropharyngeal_airway: {
         title: "Advanced — Oropharyngeal Airway Insertion",
+        shortTitle: "Oropharyngeal airway insertion",
         domains: {
             "Preparation": [
                 "1. Checks that the baby is not gagging",
@@ -186,6 +183,7 @@ export const NEONATAL_CHECKLISTS = {
 
     advanced_intubation: {
         title: "Advanced — Endotracheal Intubation (ETT)",
+        shortTitle: "Endotracheal intubation (ETT)",
         domains: {
             "Preparation": [
                 "1. Identifies the correct indication for intubation",
@@ -215,6 +213,7 @@ export const NEONATAL_CHECKLISTS = {
 
     newborn_exam: {
         title: "Newborn Examination (Competency Checklist)",
+        shortTitle: "Newborn examination",
         domains: {
             "1. Know the baby": ["1. Reviews the antenatal and birth history: preterm, membranes ruptured more than 18 hours, maternal fever, difficult birth or asphyxia, known anomaly.", "2. States gestational age, birth weight, and Apgar score at 1, 5 and 10 minutes."],
             "2. Prepare": ["1. Washes hands. Warm room, no draught. Warm flat surface, good light.", "2. Greets the mother, explains what will be done, keeps her beside the baby.", "3. Keeps the baby covered between parts. Handles the baby as little as possible."],
@@ -440,10 +439,15 @@ function ActionToggle({ currentValue, onClick }) {
         ['N/A', SCORE_NA, 'bg-gray-500 border-gray-500']
     ];
     return (
-        <div className="relative z-0 inline-flex shadow-sm rounded-md flex-shrink-0">
+        // Fills the row on a phone and sits inline on a laptop. Four buttons at
+        // their natural width overflowed a narrow screen, so "N/A" sat off the
+        // edge — and an observer at a bedside, scoring on a phone, could not
+        // reach the option they needed. The touch target is 40px high, which is
+        // the smallest that can be hit reliably while holding a baby.
+        <div className="relative z-0 flex w-full sm:inline-flex sm:w-auto shadow-sm rounded-md flex-shrink-0">
             {options.map(([label, value, activeClass], idx) => {
                 const isSelected = currentValue === value;
-                const baseClass = "relative inline-flex items-center justify-center px-2.5 py-1 text-sm font-medium whitespace-nowrap focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
+                const baseClass = "relative flex-1 sm:flex-none inline-flex items-center justify-center px-2 sm:px-2.5 min-h-[40px] py-1 text-xs sm:text-sm font-medium whitespace-nowrap focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
                 const activeState = isSelected ? `${activeClass} text-white` : "bg-white text-gray-700 hover:bg-gray-50";
                 let roundedClass = "";
                 if (idx === 0) roundedClass = "rounded-l-md";
@@ -643,7 +647,20 @@ export function NeonatalEmergencyMonitoring({ course, participant, participants,
                         {isPublicView && participants && (
                             <FormGroup label="Select participant" className="sm:col-span-2">
                                 <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)} disabled={!!editingCase}>
-                                    {participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
+                                    {(() => {
+                                        const { own, others } = participantsForModule(participants, course, 'neonatal');
+                                        const row = (p) => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>;
+                                        // Only grouped when there is something to
+                                        // separate. One heading over the whole list
+                                        // tells the observer nothing.
+                                        if (!others.length) return own.map(row);
+                                        return (
+                                            <>
+                                                <optgroup label="Newborn stream">{own.map(row)}</optgroup>
+                                                <optgroup label="Other participants">{others.map(row)}</optgroup>
+                                            </>
+                                        );
+                                    })()}
                                 </Select>
                             </FormGroup>
                         )}
@@ -652,7 +669,7 @@ export function NeonatalEmergencyMonitoring({ course, participant, participants,
                                 {groupChecklists(NEONATAL_CHECKLISTS, NEONATAL_CHECKLIST_GROUPS).map(({ label, items }) => (
                                     <optgroup key={label} label={label}>
                                         {items.map(([key, data]) => (
-                                            <option key={key} value={key}>{data.title}</option>
+                                            <option key={key} value={key}>{data.shortTitle || data.title}</option>
                                         ))}
                                     </optgroup>
                                 ))}
