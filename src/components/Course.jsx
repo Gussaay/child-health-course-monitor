@@ -3107,6 +3107,19 @@ const getModuleFromUrl = () => {
     return 'maternal';
 };
 
+// Did the link actually NAME a module, or are we only falling back to maternal?
+//
+// The two are not the same thing, and treating them alike is what let a link
+// sent to the maternal observers open the newborn checklists. A link that names
+// its module is locked to it: the person holding it was given one job, and the
+// entry they make is filed under that module.
+const urlNamesModule = () => {
+    try {
+        const raw = (new URLSearchParams(window.location.search).get('module') || '').toLowerCase();
+        return /neonat|newborn|matern|obstetric/.test(raw);
+    } catch (e) { return false; }
+};
+
 export function PublicCourseMonitoringView({ course, allParticipants }) {
     const [selectedParticipantId, setSelectedParticipantId] = useState(
         allParticipants && allParticipants.length > 0 ? allParticipants[0].id : null
@@ -3115,6 +3128,8 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
     // observer opens straight onto the right checklists. Anything unrecognised
     // (or a link with no module at all) falls back to maternal, as before.
     const [emoncModule, setEmoncModule] = useState(() => getModuleFromUrl());
+    // Locked when the link named one, so the switch is not offered at all.
+    const moduleLocked = useMemo(() => urlNamesModule(), []);
     
     const currentParticipant = allParticipants?.find(p => p.id === selectedParticipantId);
 
@@ -3166,7 +3181,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                                       participants={allParticipants}
                                       onChangeParticipant={setSelectedParticipantId}
                                       onCancel={() => {}} 
-                                      switchModule={setEmoncModule}
+                                      switchModule={moduleLocked ? null : setEmoncModule}
                                       isPublicView={true}
                                   />
                              ) : (
@@ -3176,7 +3191,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                                       participants={allParticipants}
                                       onChangeParticipant={setSelectedParticipantId}
                                       onCancel={() => {}} 
-                                      switchModule={setEmoncModule}
+                                      switchModule={moduleLocked ? null : setEmoncModule}
                                       isPublicView={true}
                                   />
                              )

@@ -316,6 +316,110 @@ export const EENC_DOMAIN_LABEL_BREATHING = { pre_birth: "Pre-birth preparations"
 export const EENC_DOMAINS_BREATHING = Object.keys(SKILLS_EENC_BREATHING);
 export const EENC_DOMAIN_LABEL_NOT_BREATHING = { pre_birth: "Pre-birth preparations", eenc_initial: "Initial EENC Steps (40 sec)", if_not_breathing: "If baby not crying or not breathing", resuscitation: "Resuscitation", if_breathing_starts: "If baby starts breathing well", post_resuscitation: "Post-resuscitation care", if_not_breathing_after_10_min: "If baby not breathing after 10 minutes" };
 export const EENC_DOMAINS_NOT_BREATHING = Object.keys(SKILLS_EENC_NOT_BREATHING);
+
+// ============================================================================
+// GROUPING
+//
+// The neonatal list has grown past thirty checklists, and picking one meant
+// reading the lot. They are grouped by what the observer is actually there to
+// watch, and rendered as <optgroup>, which every browser draws with the group
+// name and a rule between groups.
+//
+// A checklist missing from these lists still appears, under "Other", rather
+// than vanishing from the picker — losing a checklist because somebody forgot
+// to add it to a group would be a far worse fault than an untidy menu.
+// ============================================================================
+
+export const NEONATAL_CHECKLIST_GROUPS = [
+    {
+        label: "At birth — resuscitation",
+        keys: [
+            'eenc_breathing',
+            'eenc_not_breathing',
+            'resuscitation_non_breathing',
+            'advanced_resuscitation',
+            'advanced_chest_compression',
+            'advanced_oropharyngeal_airway',
+            'advanced_intubation',
+        ],
+    },
+    {
+        label: "Assessment & examination",
+        keys: ['neonatal_assessment', 'newborn_exam'],
+    },
+    {
+        label: "Emergencies",
+        keys: ['shock', 'hypoglycaemia', 'seizures', 'referral_transport'],
+    },
+    {
+        label: "Care & feeding",
+        keys: ['kmc', 'phototherapy', 'exchange_transfusion'],
+    },
+    {
+        label: "Breathing support",
+        keys: ['cpap_initiation', 'cpap_nasal_injury'],
+    },
+    {
+        label: "Vascular access",
+        keys: ['uvc', 'uac', 'picc', 'io_access'],
+    },
+    {
+        label: "Procedures",
+        keys: [
+            'needle_thoracotomy', 'chest_tube', 'lumbar_puncture',
+            'urinary_catheterisation', 'suprapubic_aspiration',
+        ],
+    },
+    {
+        label: "Safety & infection",
+        keys: ['safe_medication', 'blood_culture'],
+    },
+];
+
+export const MATERNAL_CHECKLIST_GROUPS = [
+    {
+        label: "Normal labour & delivery",
+        keys: ['labour_check', 'placenta'],
+    },
+    {
+        label: "Assisted delivery",
+        keys: ['forceps', 'vacuum', 'breech', 'shoulder_dystocia'],
+    },
+    {
+        label: "Haemorrhage",
+        keys: ['mva', 'aorta', 'bimanual'],
+    },
+    {
+        label: "Emergencies",
+        keys: ['adult_resuscitation'],
+    },
+];
+
+/**
+ * The picker's contents: the groups in order, then anything not in a group.
+ *
+ * @param {object} checklists  MATERNAL_CHECKLISTS or NEONATAL_CHECKLISTS
+ * @param {Array}  groups      the matching GROUPS list
+ * @returns {Array<{label: string, items: Array<[string, object]>}>}
+ */
+export const groupChecklists = (checklists, groups) => {
+    const placed = new Set();
+    const out = [];
+
+    groups.forEach(({ label, keys }) => {
+        const items = keys
+            .filter((k) => checklists[k])
+            .map((k) => { placed.add(k); return [k, checklists[k]]; });
+        if (items.length) out.push({ label, items });
+    });
+
+    const leftover = Object.entries(checklists).filter(([k]) => !placed.has(k));
+    if (leftover.length) out.push({ label: "Other", items: leftover });
+
+    return out;
+};
+
+
 export const SKILLS_ETAT = { triage: ["Triage Assessment", "Assigns Triage Category"], airway_breathing: ["Positions Airway", "Suctions", "Gives Oxygen", "Bag-Mask Ventilation"], circulation: ["Inserts IV/IO", "Gives IV fluids", "Checks blood sugar"], coma: ["Positions unresponsive child", "Gives IV fluids"], convulsion: ["Positions convulsing child", "Gives Diazepam"], dehydration: ["Assesses dehydration", "Gives IV fluids", "Reassesses"] };
 export const ETAT_DOMAIN_LABEL = { triage: "Triage", airway_breathing: "Airway and Breathing", circulation: "Circulation", coma: "Coma", convulsion: "Convulsion", dehydration: "Dehydration (Severe)" };
 export const ETAT_DOMAINS = Object.keys(SKILLS_ETAT);

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, Spinner } from "../CommonComponents";
 import { listObservationsForParticipant, listCasesForParticipant, upsertCaseAndObservations, deleteCaseAndObservations } from '../../data.js';
-import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, calcPct, fmtPct, pctBgClass } from '../constants.js';
+import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, MATERNAL_CHECKLIST_GROUPS, groupChecklists, calcPct, fmtPct, pctBgClass } from '../constants.js';
 import { notify, confirmDialog } from '../dialogs';
 
 const generateHash = (buffer) => Object.keys(buffer).sort().map(k => `${k}:${buffer[k]}`).join('|');
@@ -668,25 +668,29 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
 
             <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Case Setup Configuration" size="lg">
                 <div className="p-4">
-                    {/* --- NATIVE BUTTON TOGGLE (BULLETPROOF) --- */}
-                    <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
-                        <button 
-                            type="button"
-                            className="flex-1 py-2 px-4 rounded-md font-bold text-sm shadow bg-white text-purple-700 border border-purple-200"
-                        >
+                    {/* Only where there is somewhere to switch TO — see the
+                        matching note in NeonatalEmergencyMonitoring. */}
+                    {switchModule ? (
+                        <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
+                            <button
+                                type="button"
+                                className="flex-1 py-2 px-4 rounded-md font-bold text-sm shadow bg-white text-purple-700 border border-purple-200"
+                            >
+                                Maternal Emergencies
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); switchModule('neonatal'); }}
+                                className="flex-1 py-2 px-4 rounded-md font-medium text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                Neonatal Emergencies
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="mb-6 px-3 py-2 rounded-lg bg-purple-50 border border-purple-200 text-sm font-bold text-purple-800 text-center">
                             Maternal Emergencies
-                        </button>
-                        <button 
-                            type="button"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                if (switchModule) switchModule('neonatal');
-                            }}
-                            className="flex-1 py-2 px-4 rounded-md font-medium text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                            Neonatal Emergencies
-                        </button>
-                    </div>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {isPublicView && participants && (
@@ -698,8 +702,12 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                         )}
                         <FormGroup label="Select Maternal Form / Checklist" className="sm:col-span-2">
                             <Select value={scenario} onChange={(e) => { setScenario(e.target.value); setBuffer({}); }} disabled={!!editingCase}>
-                                {Object.entries(MATERNAL_CHECKLISTS).map(([key, data]) => (
-                                    <option key={key} value={key}>{data.title}</option>
+                                {groupChecklists(MATERNAL_CHECKLISTS, MATERNAL_CHECKLIST_GROUPS).map(({ label, items }) => (
+                                    <optgroup key={label} label={label}>
+                                        {items.map(([key, data]) => (
+                                            <option key={key} value={key}>{data.title}</option>
+                                        ))}
+                                    </optgroup>
                                 ))}
                             </Select>
                         </FormGroup>

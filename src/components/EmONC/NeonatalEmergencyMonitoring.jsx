@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, Spinner } from "../CommonComponents";
 import { listObservationsForParticipant, listCasesForParticipant, upsertCaseAndObservations, deleteCaseAndObservations } from '../../data.js';
-import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, SKILLS_EMONC_NEONATAL, calcPct, fmtPct, pctBgClass } from '../constants.js';
+import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, SKILLS_EMONC_NEONATAL, NEONATAL_CHECKLIST_GROUPS, groupChecklists, calcPct, fmtPct, pctBgClass } from '../constants.js';
 import { notify, confirmDialog } from '../dialogs';
 
 // --- SCORING SCALE ---
@@ -28,7 +28,9 @@ const MAP_EENC_BREATHING = {
 };
 
 const MAP_EENC_NOT_BREATHING = {
-    title: "Early Essential Newborn Care (Not Breathing)",
+    // Renamed, not rewritten: this is the EENC sequence as taught. The fuller
+    // resuscitation flow is a separate checklist below.
+    title: "Early Essential Newborn Care (Basic Resuscitation)",
     domains: Object.keys(SKILLS_EENC_NOT_BREATHING).reduce((acc, key) => {
         acc[EENC_DOMAIN_LABEL_NOT_BREATHING[key]] = SKILLS_EENC_NOT_BREATHING[key].map(item => item.text);
         return acc;
@@ -46,6 +48,171 @@ export const NEONATAL_CHECKLISTS = {
         title: "Advanced Neonatal Resuscitation",
         domains: { "Resuscitation & Management": SKILLS_EMONC_NEONATAL.resuscitation.map(i => i.text) }
     },
+    // --- Resuscitation of a non-breathing baby ------------------------------
+    //
+    // From the programme's own "Resuscitation of Non-Breathing Baby" checklist.
+    // Separate from the EENC basic resuscitation list above rather than
+    // replacing it: that one is the forty-second EENC sequence every birth
+    // attendant is taught, this one carries on into chest compressions and
+    // drugs. They are assessed on different days, by different people, and a
+    // score against one is not a score against the other.
+    resuscitation_non_breathing: {
+        title: "Resuscitation of a Non-Breathing Baby (full sequence)",
+        domains: {
+            "Pre-birth preparations": [
+                "1. Check room temperature and turn off fans",
+                "2. Tell the mother (and her support person) what is going to be done, and provide continual emotional support and reassurance",
+                "3. ASK: expected gestational age, whether the amniotic fluid contains meconium, any additional risk factors, and the umbilical cord management plan",
+                "4. Wash hands (first of two hand washings)",
+                "5. Prepare two dry clean cloths — one on the mother's abdomen for drying, the second beside it for covering the baby after drying",
+                "6. Prepare the newborn resuscitation area",
+                "7. Check that bag and mask are functional",
+                "8. Wash hands (second of two hand washings)",
+                "9. Put on two pairs of clean gloves",
+                "10. Put forceps and cord clamp in easy-to-use order"
+            ],
+            "Five initial steps — warm, dry, position, stimulate, clear airway (40 seconds)": [
+                "1. Call out the time of birth (hour, minute, second)",
+                "2. Start drying within 5 seconds of birth",
+                "3. Dry the baby thoroughly — eyes, face, head, front, back, arms and legs",
+                "4. Stimulate the baby by gently rubbing the head, body, arms and legs",
+                "5. Suction only if the airway is blocked and the baby is completely not breathing",
+                "6. Remove the wet cloth",
+                "7. Put the baby in direct skin-to-skin contact with the mother",
+                "8. Cover the baby's body with a cloth and the head with a hat"
+            ],
+            "If not crying or not breathing — bag and mask within the golden minute": [
+                "1. Call for help",
+                "2. Remove the outer pair of gloves",
+                "3. Quickly clamp and cut the cord",
+                "4. Move the baby to the resuscitation area",
+                "5. Cover the baby quickly during and after transfer",
+                "6. Position the head correctly to open the airway",
+                "7. Apply the face mask firmly over the baby's chin, mouth and nose",
+                "8. Gain chest rise within 1 minute of birth",
+                "9. Squeeze the bag to give 30–50 breaths per minute, maintaining good chest rise throughout"
+            ],
+            "If the chest is not rising — MR SOPA": [
+                "1. Mask adjustment, Reposition the head, Suction the mouth, Open the mouth, Pressure increase, Alternative airway (oropharyngeal tube, laryngeal mask, endotracheal tube)"
+            ],
+            "If no cry after 30 seconds of effective ventilation and heart rate under 60 — chest compressions": [
+                "1. Call for additional help if necessary — four or more providers may be needed",
+                "2. Assign roles (ventilator / compressor)",
+                "3. Place the baby on a firm flat surface, back supported, neck slightly extended",
+                "4. Intubate or insert a laryngeal mask",
+                "5. Increase oxygen to 100% and check the pulse oximeter signal and cardiac monitor",
+                "6. Ask an assistant to place a servo-controlled temperature sensor and adjust the radiant warmer to keep the baby at 36.5–37.5 °C",
+                "7. Ask a team member to prepare for umbilical venous catheter insertion and epinephrine administration",
+                "8. Compress one third of the antero-posterior diameter of the chest",
+                "9. Allow full chest recoil, keeping the thumbs on the chest",
+                "10. Count aloud: One-and-Two-and-Three-and-Breathe-and",
+                "11. Maintain 3 compressions to 1 breath (90 compressions + 30 breaths = 120 events per minute)",
+                "12. Compression and ventilation are NOT given at the same time",
+                "13. Continue for a full 60 seconds before pausing",
+                "14. Check the heart rate correctly (monitor, or count beats in 6 seconds × 10)",
+                "15. If heart rate 60 or above: stop compressions and return to giving PPV at 40–60 breaths per minute",
+                "16. If heart rate under 60 despite 60 seconds of effective ventilation and good compressions: give epinephrine and obtain emergency vascular access"
+            ],
+            "If the baby starts breathing well": [
+                "1. Stop ventilation and monitor every 15 minutes — temperature, oxygen saturation, perfusion",
+                "2. Return the baby to skin-to-skin contact and cover the baby"
+            ],
+            "If not breathing after 20 minutes of effective ventilation": [
+                "1. If the heart rate remains undetectable after 20 minutes of resuscitation in which all steps were performed adequately and reversible causes excluded, discontinuation is reasonable"
+            ]
+        }
+    },
+
+    // --- The three advanced procedures --------------------------------------
+    //
+    // Each is scored on its own because each is taught and signed off on its
+    // own. Rolling them into one list would mean a trainee competent at chest
+    // compressions but not yet at intubation carries a single blended score
+    // that says neither.
+    advanced_chest_compression: {
+        title: "Advanced — Synchronised Chest Compression with Ambu Bag",
+        domains: {
+            "Before starting": [
+                "1. Confirms PPV has been given for 30 seconds with visible chest rise",
+                "2. Confirms heart rate is less than 60 bpm before starting compressions",
+                "3. Calls for additional help if necessary; assigns roles (ventilator / compressor)",
+                "4. Places baby on a firm flat surface, back supported, neck slightly extended",
+                "5. Increases oxygen to 100% and checks the pulse oximeter signal"
+            ],
+            "Technique": [
+                "6. Locates the lower third of the sternum, just below the internipple line",
+                "7. Uses the two-thumb technique, hands encircling the chest, fingers supporting the back",
+                "8. Compresses one third of the antero-posterior diameter of the chest",
+                "9. Allows full chest recoil; keeps thumbs on the chest",
+                "10. Counts aloud: One-and-Two-and-Three-and-Breathe-and",
+                "11. Maintains 3 compressions to 1 breath (90 compressions + 30 breaths = 120 events per minute)",
+                "12. Compression and ventilation are NOT given at the same time"
+            ],
+            "Reassessment": [
+                "13. Continues for a full 60 seconds before pausing",
+                "14. Checks heart rate correctly (monitor, or count beats in 6 seconds × 10)",
+                "15. If heart rate 60 or above: stops compressions, continues PPV at 40–60 per minute",
+                "16. If heart rate under 60: rechecks ventilation and compressions, considers intubation, gives epinephrine, calls for vascular access"
+            ]
+        }
+    },
+
+    advanced_oropharyngeal_airway: {
+        title: "Advanced — Oropharyngeal Airway Insertion",
+        domains: {
+            "Preparation": [
+                "1. Checks that the baby is not gagging",
+                "2. Washes hands and wears gloves",
+                "3. Positions the baby with the neck slightly extended on a firm surface",
+                "4. Selects the correct size by measuring from the lips to the angle of the jaw"
+            ],
+            "Insertion": [
+                "5. Opens the mouth and depresses the tongue with a depressor or blade",
+                "6. Inserts the airway following the curve of the tongue, concave side down",
+                "7. Does NOT rotate the airway 180°",
+                "8. Does not force against resistance",
+                "9. Advances until the flange rests on the lips"
+            ],
+            "After insertion": [
+                "10. Reapplies the mask and resumes PPV",
+                "11. Confirms chest rise and improvement in heart rate and SpO₂",
+                "12. States the next action if the chest still does not rise",
+                "13. Monitors continuously and suctions only if needed",
+                "14. Removes the airway when the baby is breathing well or a definitive airway is placed",
+                "15. Documents the procedure"
+            ]
+        }
+    },
+
+    advanced_intubation: {
+        title: "Advanced — Endotracheal Intubation (ETT)",
+        domains: {
+            "Preparation": [
+                "1. Identifies the correct indication for intubation",
+                "2. Prepares and checks equipment",
+                "3. Selects the correct ETT and blade size for the weight",
+                "4. Measures the correct ETT depth",
+                "5. Pre-oxygenates with 100% oxygen",
+                "6. Positions the baby correctly"
+            ],
+            "The attempt": [
+                "7. Performs laryngoscopy correctly — left hand, no levering",
+                "8. Visualises the vocal cords",
+                "9. Inserts the ETT smoothly from the side",
+                "10. Stops the attempt at 20 seconds and bags the baby",
+                "11. Does not exceed 3 attempts"
+            ],
+            "Confirmation and after-care": [
+                "12. Confirms placement clinically — chest rise and air entry",
+                "13. Uses a CO₂ detector, or requests an X-ray",
+                "14. Secures the ETT correctly without traction",
+                "15. Initiates ventilation appropriately",
+                "16. Provides post-intubation care and monitoring",
+                "17. Documents the procedure fully"
+            ]
+        }
+    },
+
     newborn_exam: {
         title: "Newborn Examination (Competency Checklist)",
         domains: {
@@ -445,25 +612,32 @@ export function NeonatalEmergencyMonitoring({ course, participant, participants,
 
             <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Case Setup Configuration" size="lg">
                 <div className="p-4">
-                    {/* --- NATIVE BUTTON TOGGLE (BULLETPROOF) --- */}
-                    <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
-                        <button 
-                            type="button"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                if (switchModule) switchModule('maternal');
-                            }}
-                            className="flex-1 py-2 px-4 rounded-md font-medium text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                            Maternal Emergencies
-                        </button>
-                        <button 
-                            type="button"
-                            className="flex-1 py-2 px-4 rounded-md font-bold text-sm shadow bg-white text-teal-700 border border-teal-200"
-                        >
+                    {/* Only where there is somewhere to switch TO. A link sent
+                        to the newborn observers names its module, so Course.jsx
+                        passes no switchModule and the other side is not offered
+                        — showing a dead tab beside the live one is how a
+                        maternal observer ended up filing newborn cases. */}
+                    {switchModule ? (
+                        <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
+                            <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); switchModule('maternal'); }}
+                                className="flex-1 py-2 px-4 rounded-md font-medium text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                Maternal Emergencies
+                            </button>
+                            <button
+                                type="button"
+                                className="flex-1 py-2 px-4 rounded-md font-bold text-sm shadow bg-white text-teal-700 border border-teal-200"
+                            >
+                                Neonatal Emergencies
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="mb-6 px-3 py-2 rounded-lg bg-teal-50 border border-teal-200 text-sm font-bold text-teal-800 text-center">
                             Neonatal Emergencies
-                        </button>
-                    </div>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {isPublicView && participants && (
@@ -475,8 +649,12 @@ export function NeonatalEmergencyMonitoring({ course, participant, participants,
                         )}
                         <FormGroup label="Select Neonatal Form / Checklist" className="sm:col-span-2">
                             <Select value={scenario} onChange={(e) => { setScenario(e.target.value); setBuffer({}); }} disabled={!!editingCase}>
-                                {Object.entries(NEONATAL_CHECKLISTS).map(([key, data]) => (
-                                    <option key={key} value={key}>{data.title}</option>
+                                {groupChecklists(NEONATAL_CHECKLISTS, NEONATAL_CHECKLIST_GROUPS).map(({ label, items }) => (
+                                    <optgroup key={label} label={label}>
+                                        {items.map(([key, data]) => (
+                                            <option key={key} value={key}>{data.title}</option>
+                                        ))}
+                                    </optgroup>
                                 ))}
                             </Select>
                         </FormGroup>
