@@ -27,6 +27,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { validateUpload, safeFileName, MAX_UPLOAD_BYTES } from './utils/uploadValidation';
+import { CERT_APPROVAL_FIELD, certificateApprovalSnapshot } from './components/constants.js';
 
 // --- USAGE TRACKING VARIABLES ---
 let currentUser = null;
@@ -1230,6 +1231,80 @@ export async function deleteCourse(courseId, userIdentifier = 'Unknown') {
 }
 
 // --- CERTIFICATE APPROVAL FUNCTIONS ---
+
+// Firestore commits at most 500 writes in one batch, and a federal course can
+// carry more participants than that.
+const BATCH_LIMIT = 450;
+
+const commitInChunks = async (items, write) => {
+    for (let i = 0; i < items.length; i += BATCH_LIMIT) {
+        const batch = writeBatch(db);
+        items.slice(i, i + BATCH_LIMIT).forEach((item) => write(batch, item));
+        await batch.commit();
+    }
+};
+
+/**
+ * Record, against each participant, the name and sub-course that were approved.
+ *
+ * This is what makes a later alteration detectable. Without it the course flag
+ * says "approved" and nothing says approved *as what*, so a name corrected
+ * after sign-off prints under somebody else's signature.
+ *
+ * @param {object} course         the approved course
+ * @param {Array}  participants   its participants
+ * @param {string} approvedBy     who approved, for the record
+ */
+export async function recordCertificateApprovals(course, participants, approvedBy = '') {
+    if (!course?.id) throw new Error("A course is required.");
+    const live = (participants || []).filter((p) => p?.id && !p.isDeleted);
+    if (!live.length) return 0;
+
+    await commitInChunks(live, (batch, p) => {
+        batch.update(doc(db, "participants", p.id), {
+            [CERT_APPROVAL_FIELD]: certificateApprovalSnapshot(p, course, approvedBy),
+            lastUpdatedAt: serverTimestamp(),
+        });
+    });
+    return live.length;
+}
+
+/**
+ * Approve one participant's certificate again, after their details changed.
+ *
+ * Deliberately per participant: the rest of the course was signed off against
+ * details that have not moved, and revoking all of it to fix one spelling would
+ * stop certificates that are perfectly good.
+ */
+export async function approveParticipantCertificate(participant, course, approvedBy = '') {
+    if (!participant?.id) throw new Error("A participant is required.");
+    if (!course?.id) throw new Error("A course is required.");
+    await updateDoc(doc(db, "participants", participant.id), {
+        [CERT_APPROVAL_FIELD]: certificateApprovalSnapshot(participant, course, approvedBy),
+        lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+/**
+ * Forget what was approved, for a whole course.
+ *
+ * Runs when approval is revoked. Leaving the snapshots behind would mean a
+ * course re-approved later carried comparisons against an older signing, so a
+ * name changed in between would never show as needing approval.
+ */
+export async function clearCertificateApprovals(courseId) {
+    if (!courseId) throw new Error("Course ID is required.");
+    const snap = await getDocs(query(collection(db, "participants"), where("courseId", "==", courseId)));
+    const refs = snap.docs.map((d) => d.ref);
+    if (!refs.length) return 0;
+
+    await commitInChunks(refs, (batch, ref) => {
+        batch.update(ref, { [CERT_APPROVAL_FIELD]: deleteField() });
+    });
+    return refs.length;
+}
+
 export async function approveCourseCertificates(courseId, managerName, signatureUrl = null) {
     if (!courseId || !managerName) {
         throw new Error("Course ID and Manager Name are required.");
@@ -1654,6 +1729,139 @@ export async function getFinalReportByCourseId(courseId, sourceOptions = {}) {
     }
     return null;
 }
+// ============================================================================
+// THE FINAL REPORT'S TWO PDFs
+//
+// The final report carries an attached PDF, and now a SIGNED copy of it beside
+// it. The signed one is the document that actually gets filed: the report is
+// printed, signed by the director and the manager, scanned, and that scan is
+// what anybody later asks to see.
+//
+// Both go through here. Uploading used to be done only by App.jsx's save
+// handler, so the same Save button inside the report view wrote the File object
+// straight into Firestore — the editor's own fallback path never uploaded
+// anything. One function for both means that cannot happen again, and it is
+// also what makes the quick attach button and the editor agree: they write the
+// same two fields on the same document.
+// ============================================================================
+
+/** The two PDF slots, and the field each one is stored in. */
+export const FINAL_REPORT_PDF_SLOTS = {
+    report: { field: 'pdfUrl', label: 'Final report PDF' },
+    signed: { field: 'signedPdfUrl', label: 'Signed final report' },
+};
+
+/**
+ * Attach (or replace) one of the final report's PDFs, without opening the editor.
+ *
+ * Creates the final report document if the course has not got one yet, so the
+ * signed scan can be filed before anybody has written the report up — which is
+ * the order it usually happens in.
+ *
+ * @param {string} courseId
+ * @param {File}   file            the PDF
+ * @param {'report'|'signed'} slot which document this is
+ * @param {string} userIdentifier  for the edit history
+ * @returns {Promise<object>}      the saved final report
+ */
+export async function attachFinalReportPdf(courseId, file, slot = 'report', userIdentifier = 'Unknown User') {
+    const target = FINAL_REPORT_PDF_SLOTS[slot];
+    if (!courseId) throw new Error("Course ID is required.");
+    if (!file) throw new Error("No file was chosen.");
+    if (!target) throw new Error(`Unknown PDF slot '${slot}'.`);
+
+    const existing = await getFinalReportByCourseId(courseId, { source: 'server' }).catch(() => null);
+    const url = await uploadFile(file);
+
+    // The old file is deleted only after the new one is safely stored, so a
+    // failed upload never leaves the report with nothing attached.
+    const previous = existing?.[target.field];
+    if (previous) await deleteFile(previous).catch((e) => console.warn('[FinalReport] old PDF not removed', e));
+
+    await upsertFinalReport({
+        ...(existing?.id ? { id: existing.id } : {}),
+        courseId,
+        [target.field]: url,
+    }, userIdentifier);
+
+    return await getFinalReportByCourseId(courseId, { source: 'server' });
+}
+
+/** Remove one of the PDFs. */
+export async function removeFinalReportPdf(courseId, slot = 'report', userIdentifier = 'Unknown User') {
+    const target = FINAL_REPORT_PDF_SLOTS[slot];
+    if (!target) throw new Error(`Unknown PDF slot '${slot}'.`);
+
+    const existing = await getFinalReportByCourseId(courseId, { source: 'server' }).catch(() => null);
+    if (!existing?.id) return null;
+
+    if (existing[target.field]) {
+        await deleteFile(existing[target.field]).catch((e) => console.warn('[FinalReport] PDF not removed', e));
+    }
+    await upsertFinalReport({ id: existing.id, courseId, [target.field]: null }, userIdentifier);
+    return await getFinalReportByCourseId(courseId, { source: 'server' });
+}
+
+/**
+ * Save the final report, uploading whatever files came with it.
+ *
+ * Takes the editor's payload — which holds File objects, not URLs — and returns
+ * the saved report. Both save paths call this, so neither can forget to upload.
+ */
+export async function saveFinalReportWithFiles(reportData, userIdentifier = 'Unknown User') {
+    const uploadSlot = async (file, keptUrl, previousUrl) => {
+        if (file) {
+            const url = await uploadFile(file);
+            if (previousUrl) await deleteFile(previousUrl).catch(() => {});
+            return url;
+        }
+        // Not replaced: keep whatever the editor still shows, and delete the
+        // old file if the editor cleared it.
+        if (!keptUrl && previousUrl) await deleteFile(previousUrl).catch(() => {});
+        return keptUrl || null;
+    };
+
+    const existing = reportData.id
+        ? await getFinalReportByCourseId(reportData.courseId, { source: 'server' }).catch(() => null)
+        : null;
+
+    const pdfUrl = await uploadSlot(reportData.pdfFile, reportData.existingPdfUrl, existing?.pdfUrl);
+    const signedPdfUrl = await uploadSlot(reportData.signedPdfFile, reportData.existingSignedPdfUrl, existing?.signedPdfUrl);
+
+    // Gallery images: three fixed slots.
+    const galleryImageUrls = [];
+    const originals = reportData.originalGalleryUrls || [];
+    const kept = reportData.finalGalleryUrls || [];
+    const files = reportData.galleryImageFiles || {};
+    for (let i = 0; i < 3; i++) {
+        if (files[i]) {
+            const url = await uploadFile(files[i]);
+            if (originals[i]) await deleteFile(originals[i]).catch(() => {});
+            galleryImageUrls.push(url);
+        } else if (kept[i]) {
+            galleryImageUrls.push(kept[i]);
+        } else if (originals[i]) {
+            await deleteFile(originals[i]).catch(() => {});
+        }
+    }
+
+    await upsertFinalReport({
+        ...(reportData.id ? { id: reportData.id } : {}),
+        courseId: reportData.courseId,
+        summary: reportData.summary,
+        recommendations: reportData.recommendations,
+        potentialFacilitators: reportData.potentialFacilitators,
+        participantsForFollowUp: reportData.participantsForFollowUp,
+        annexFacilitators: reportData.annexFacilitators,
+        groupedParticipants: reportData.groupedParticipants,
+        pdfUrl,
+        signedPdfUrl,
+        galleryImageUrls,
+    }, userIdentifier);
+
+    return await getFinalReportByCourseId(reportData.courseId, { source: 'server' });
+}
+
 export async function listFinalReport(sourceOptions = {}) {
     try {
         const querySnapshot = await getDocs(collection(db, "finalReports"), sourceOptions);

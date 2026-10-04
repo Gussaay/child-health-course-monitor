@@ -107,7 +107,7 @@ import {
 
 import {
     listAllDataForCourse, deleteFacilitator,
-    upsertFinalReport, getFinalReportByCourseId, uploadFile, deleteFile,
+    upsertFinalReport, getFinalReportByCourseId, saveFinalReportWithFiles, uploadFile, deleteFile,
     getCourseById, getParticipantById, updateCourseSharingSettings, updateParticipantSharingSettings,
     listPendingFacilitatorSubmissions, approveFacilitatorSubmission, rejectFacilitatorSubmission,
     saveParticipantAndSubmitFacilityUpdate,
@@ -1530,10 +1530,21 @@ export default function App() {
 
     const handleOpenCourse = useCallback((courseId) => { setSelectedCourseId(courseId); setLoading(false); navigate('participants', { courseId }); }, [navigate]);
 
+    // OPEN THE REPORT FIRST, THEN FETCH IT.
+    //
+    // This used to await every read before navigating, so clicking Report left
+    // you on the course list with nothing happening — several seconds of what
+    // looks exactly like a dead button, and people click it again. The report
+    // page now opens at once and shows its own loading state until the data
+    // lands (CourseReportView renders a skeleton while participants is null).
     const handleOpenCourseReport = useCallback(async (courseId) => {
         setSelectedCourseId(courseId);
-        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { navigate('courseReport', { courseId }); return; }
-        if (courseDetailsLoading) { setToast({ show: true, message: 'Report data is still loading, please wait...', type: 'info' }); return; }
+        navigate('courseReport', { courseId });
+
+        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) return;
+        // Already being fetched by another path; its result lands in the same
+        // cache entry and the open page picks it up.
+        if (courseDetailsLoading) return;
         setLoading(true); setCourseDetailsLoading(true); 
         try {
             const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
@@ -1570,10 +1581,15 @@ export default function App() {
             const activeFinalReport = (finalFinalReport && finalFinalReport.isDeleted !== true && finalFinalReport.isDeleted !== "true") ? finalFinalReport : null;
             
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests } }));
-            navigate('courseReport', { courseId });
         } catch (error) { 
             console.error("Error loading course report data:", error); 
             setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' }); 
+            // The page is already open, so it must be told the load finished and
+            // failed — otherwise it spins for ever on an error nobody can see.
+            setCourseDetailsCache(prev => ({
+                ...prev,
+                [courseId]: { participants: [], allObs: [], allCases: [], finalReport: null, participantTests: [], loadFailed: true }
+            }));
         } finally { 
             setLoading(false); setCourseDetailsLoading(false); 
         }
@@ -1671,26 +1687,26 @@ export default function App() {
         }
     }, [permissions, allCourses, navigate]);
 
+    // The uploads live in saveFinalReportWithFiles, which the report view's own
+    // save path calls too. They used to be written out here only, so the Save
+    // button inside the report view wrote File objects straight into Firestore
+    // and the attached PDF was silently lost. One function, both callers.
+    //
+    // It also carries the signed copy of the report, which this handler had no
+    // notion of at all.
     const handleSaveFinalReport = useCallback(async (reportData) => {
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         setLoading(true);
         try {
-            let pdfUrl = reportData.existingPdfUrl || null;
-            if (reportData.pdfFile) { if (pdfUrl) await deleteFile(pdfUrl); pdfUrl = await uploadFile(reportData.pdfFile); }
-            const finalUrlsToSave = []; const originalUrls = reportData.originalGalleryUrls || []; const finalUrlsFromEditor = reportData.finalGalleryUrls || []; const filesToUpload = reportData.galleryImageFiles || {};
-            for (let i = 0; i < 3; i++) {
-                const originalUrl = originalUrls[i]; const finalUrl = finalUrlsFromEditor[i]; const newFile = filesToUpload[i];
-                if (newFile) { if (originalUrl) await deleteFile(originalUrl); const uploadedUrl = await uploadFile(newFile); finalUrlsToSave.push(finalUrl); }
-                else if (finalUrl) { finalUrlsToSave.push(finalUrl); } else if (originalUrl && !finalUrl) { await deleteFile(originalUrl); }
-            }
-            const payload = { id: reportData.id, courseId: reportData.courseId, summary: reportData.summary, recommendations: reportData.recommendations, potentialFacilitators: reportData.participantsForFollowUp, pdfUrl: pdfUrl, galleryImageUrls: finalUrlsToSave, participantsForFollowUp: reportData.participantsForFollowUp };
-            await upsertFinalReport(payload);
-            const savedReport = await getFinalReportByCourseId(reportData.courseId, { source: 'server' });
+            const currentUserIdentifier = user?.displayName || user?.email || 'Unknown User';
+            const savedReport = await saveFinalReportWithFiles(reportData, currentUserIdentifier);
             setCourseDetailsCache(prev => ({ ...prev, [reportData.courseId]: { ...prev[reportData.courseId], finalReport: savedReport } }));
             setToast({ show: true, message: 'Final report saved successfully.', type: 'success' });
-        } catch (error) { console.error("Error saving final report:", error); setToast({ show: true, message: `Error saving final report: ${error.message}`, type: 'error' }); } 
-        finally { setLoading(false); }
-    }, [permissions]);
+        } catch (error) {
+            console.error("Error saving final report:", error);
+            setToast({ show: true, message: `Error saving final report: ${error.message}`, type: 'error' });
+        } finally { setLoading(false); }
+    }, [permissions, user]);
 
     const handleEditFinalReport = useCallback(async (courseId) => {
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
@@ -1841,7 +1857,7 @@ case 'meetings':
                 />
             ) : null;
 
-            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
+            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm 

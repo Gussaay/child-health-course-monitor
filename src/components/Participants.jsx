@@ -15,7 +15,7 @@ import {
 } from "./CommonComponents";
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC,
-    subCourseOfGroup
+    subCourseOfGroup, certificateApprovalState, staleCertificateParticipants, isWithinCoursePeriod
 } from './constants.js';
 import { ParticipantExercisesModal } from './imnci';
 import {
@@ -1886,6 +1886,12 @@ export function ParticipantsView({
 
     const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
 
+    // Whose certificates are held because their details moved after sign-off.
+    const heldCertificates = useMemo(
+        () => staleCertificateParticipants(participants, localCourseData),
+        [participants, localCourseData]
+    );
+
     const [groupFilter, setGroupFilter] = useState([]);
     const [jobTitleFilter, setJobTitleFilter] = useState([]);
     const [facilityFilter, setFacilityFilter] = useState([]);
@@ -2265,6 +2271,16 @@ export function ParticipantsView({
     };
 
     const handleGenerateSingleCert = async (p, participantSubCourse, language) => {
+        // Approval was given for a name and a sub-course. Once either changes,
+        // what this would print is not what anybody signed.
+        if (certificateApprovalState(p, localCourseData).state === 'stale') {
+            setToast({
+                show: true, type: 'error',
+                message: `${p.name}'s details changed after this course was approved. ` +
+                    `The Federal Program Manager must approve this certificate again.`
+            });
+            return;
+        }
         cancelDownloadRef.current = false;
         setProcessingRowId(p.id);
         setIsProcessing(true);
@@ -2303,14 +2319,39 @@ export function ParticipantsView({
             setToast({ show: true, message: "No participants available for bulk certificate download.", type: 'warning' });
             return;
         }
-        
+
+        // Anyone altered since approval is left out of the batch rather than
+        // stopping it: the rest of the course was signed off against details
+        // that have not moved, and holding all of them back over one correction
+        // would be worse than printing the ones that are still good.
+        const held = staleCertificateParticipants(filtered, localCourseData);
+        const printable = filtered.filter((p) => !held.some((h) => h.id === p.id));
+
+        if (printable.length === 0) {
+            setToast({
+                show: true, type: 'error',
+                message: 'Every certificate in this selection is waiting to be approved again.'
+            });
+            return;
+        }
+
+        const heldList = held.slice(0, 10).map((h) => `• ${h.name}`).join('\n');
+        const heldMore = held.length > 10 ? `\n… and ${held.length - 10} more` : '';
+
+        if (held.length > 0 && !await confirmDialog(
+            `${held.length} certificate(s) will be left out because those participants' `
+            + `details changed after the course was approved:\n\n`
+            + heldList + heldMore
+            + `\n\nDownload the remaining ${printable.length}?`
+        )) return;
+
         cancelDownloadRef.current = false;
         setIsBulkCertLoading(true);
         setIsProcessing(true);
-        setDownloadProgress({ current: 0, total: filtered.length }); 
+        setDownloadProgress({ current: 0, total: printable.length }); 
 
         try {
-             await generateAllCertificatesPdf(localCourseData, filtered, federalProgramManagerName, language, (current, total) => {
+             await generateAllCertificatesPdf(localCourseData, printable, federalProgramManagerName, language, (current, total) => {
                  if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
                  setDownloadProgress({ current, total });
              }, facilitators, federalCoordinators);
@@ -2597,6 +2638,27 @@ export function ParticipantsView({
                         {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate Template'}
                     </Button>
 
+                    {/* Said here rather than discovered at the download: the
+                        facilitator can see which names are held and get them
+                        corrected or re-approved before handing anything out. */}
+                    {localApprovalStatus && heldCertificates.length > 0 && (
+                        <div className="p-3 bg-amber-50 border border-amber-300 rounded text-sm space-y-2">
+                            <div className="flex items-center gap-2 text-amber-900 font-semibold">
+                                <Lock className="w-4 h-4 shrink-0" />
+                                {heldCertificates.length} certificate{heldCertificates.length === 1 ? '' : 's'} need re-approval
+                            </div>
+                            <p className="text-amber-800 text-xs">
+                                These participants&rsquo; names or sub-courses changed after the course was
+                                approved, so their certificates are held until the Federal Program Manager
+                                approves them again.
+                            </p>
+                            <ul className="text-xs text-amber-900 list-disc ps-5 space-y-0.5">
+                                {heldCertificates.slice(0, 8).map((h) => <li key={h.id}>{h.name}</li>)}
+                                {heldCertificates.length > 8 && <li>and {heldCertificates.length - 8} more</li>}
+                            </ul>
+                        </div>
+                    )}
+
                     {localApprovalStatus ? (
                         <>
                             <Button variant="primary" className="w-full justify-start" onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'bulk' }); }} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading}>
@@ -2679,6 +2741,9 @@ export function ParticipantsView({
                             const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                             const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                             const isCertApproved = localApprovalStatus === true;
+                            // Signed off, then altered: the certificate is held
+                            // until it is approved again.
+                            const certAwaiting = certificateApprovalState(p, localCourseData).state === 'stale';
 
                             let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
                             const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
@@ -2689,6 +2754,12 @@ export function ParticipantsView({
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">{p.name}</span>
+                                                {certAwaiting && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wider"
+                                                        title="Name or sub-course changed after this course was approved">
+                                                        Re-approve
+                                                    </span>
+                                                )}
                                             </div>
                                             <span className="text-[11px] font-medium text-slate-500">{p.job_title}</span>
                                         </div>
@@ -2769,6 +2840,7 @@ export function ParticipantsView({
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const isCertApproved = localApprovalStatus === true;
+                    const certAwaiting = certificateApprovalState(p, localCourseData).state === 'stale';
                     const isExpanded = expandedParticipantId === p.id;
                     let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
 
@@ -2784,8 +2856,13 @@ export function ParticipantsView({
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
                                     <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}</p>
-                                    <div className="flex items-center gap-2 mt-2">
+                                    <div className="flex flex-wrap items-center gap-2 mt-2">
                                         <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">Group: {p.group}</span>
+                                        {certAwaiting && (
+                                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-amber-100 rounded text-amber-800">
+                                                Certificate needs re-approval
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="text-gray-400">
@@ -3184,6 +3261,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
             const currentFacilityType = selectedFacility?.['نوع_المؤسسةالصحية'] || initialData?.facility_type || 'no data';
 
+            const signedApproval = initialData?.certificateApproval;
+            const approvalFollowsName = (signedApproval && isWithinCoursePeriod(course)
+                && name.trim() !== signedApproval.name)
+                ? { ...signedApproval, name: name.trim() }
+                : null;
+
             let p = {
                 ...(initialData || {}), 
                 name: name.trim(), group, state, locality,
@@ -3194,6 +3277,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 // sub-course at all, and the maternal/newborn monitoring pickers
                 // had nothing on the record to go by.
                 ...(finalImciSubType ? { imci_sub_type: finalImciSubType } : {}),
+                // A name corrected while the course is still running does not
+                // withdraw the certificate approval, so the approval record has
+                // to move with it. Without this the certificate would turn
+                // stale the day the course ended, over a correction that was
+                // deliberately allowed while it was running.
+                ...(approvalFollowsName ? { certificateApproval: approvalFollowsName } : {}),
                 center_name: isProgramManagement ? 'N/A' : center.trim(),
                 facilityId: (isIccm || isCpcm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
                 job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null,

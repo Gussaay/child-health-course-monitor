@@ -1701,3 +1701,151 @@ export const severityById = (id) =>
 
 export const severityByProtocolColor = (color) =>
     IMNCI_SEVERITIES.find((s) => s.protocolColor === color) || IMNCI_SEVERITIES[3];
+
+// ============================================================================
+// CERTIFICATE APPROVAL — WHAT WAS SIGNED
+//
+// Approval is granted per course: the manager looks at the signatories, says
+// yes, and every participant on that course can then download a certificate.
+// That was the whole of it, which left a hole. A participant's name could be
+// corrected, or their sub-course changed, after the course was signed off — and
+// the certificate quietly started printing the new details under an approval
+// that was given for the old ones. Nobody signed the certificate that came out.
+//
+// So approval now records WHAT it approved, participant by participant: the
+// name and the sub-course as they stood at that moment. A certificate whose
+// name or sub-course no longer matches what was signed is stale, and has to be
+// approved again before it will print — only that participant, not the course.
+//
+// Only those two fields. A corrected phone number or facility does not appear
+// on a certificate, and stopping a certificate over one would be noise.
+// ============================================================================
+
+/**
+ * Whether the course is still running today.
+ *
+ * start_date plus course_duration days, the same arithmetic the course list and
+ * App.jsx already use to decide whether a course is active. A course with no
+ * start date or no duration is not running.
+ */
+export const isWithinCoursePeriod = (course, now = new Date()) => {
+    if (!course?.start_date || !course?.course_duration || course.course_duration <= 0) return false;
+
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
+    const start = new Date(course.start_date);
+    if (Number.isNaN(start.getTime())) return false;
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + course.course_duration);
+
+    return today >= start && today < end;
+};
+
+/**
+ * The sub-course a certificate prints for a participant.
+ *
+ * Their own record first, then their group's assignment, then the course
+ * director's. Note this is deliberately NOT the order used by
+ * participantsForModule: that decides which skills checklist applies and the
+ * group is authoritative there, whereas this is the line of text printed on a
+ * certificate, where what the participant's own record says has always won.
+ * Changing it would silently reissue certificates with different wording.
+ */
+export const certificateSubCourseOf = (course, participant) => {
+    if (participant?.imci_sub_type) return participant.imci_sub_type;
+    const byGroup = (course?.facilitatorAssignments || [])
+        .find((a) => a?.group === participant?.group)?.imci_sub_type;
+    return byGroup || course?.director_imci_sub_type || null;
+};
+
+// Two values that would print identically. Spacing and case are not changes
+// worth withdrawing a signature over; blank, missing and null are all "nothing".
+const samePrintedText = (a, b) => {
+    const norm = (v) => String(v ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+    return norm(a) === norm(b);
+};
+
+/** What a participant's certificate approval snapshot is called on their record. */
+export const CERT_APPROVAL_FIELD = 'certificateApproval';
+
+/**
+ * Whether this participant's certificate may be issued.
+ *
+ *   pending   the course is not approved — nobody can download anything
+ *   approved  signed off, and still matches what was signed
+ *   stale     altered since it was signed; needs approving again
+ *
+ * `changed` names the fields that moved, for showing the approver exactly what
+ * they are being asked to sign this time.
+ *
+ * A participant with no snapshot counts as approved, not stale. Courses signed
+ * off before any of this existed have no record of what was approved, and there
+ * is nothing to compare against — treating that absence as an alteration would
+ * freeze every certificate already issued, for a change nobody made. Those
+ * courses gain a snapshot the next time they are approved.
+ *
+ * @returns {{state: 'pending'|'approved'|'stale', changed: string[],
+ *            signedName: string, signedSubCourse: string, unrecorded: boolean}}
+ */
+export const certificateApprovalState = (participant, course) => {
+    const nothing = { changed: [], signedName: '', signedSubCourse: '', unrecorded: false };
+
+    if (!course?.isCertificateApproved) return { ...nothing, state: 'pending' };
+
+    const signed = participant?.[CERT_APPROVAL_FIELD];
+    if (!signed || (!signed.name && !signed.subCourse)) {
+        return { ...nothing, state: 'approved', unrecorded: true };
+    }
+
+    // A NAME CORRECTED WHILE THE COURSE IS STILL RUNNING IS NOT AN ALTERATION.
+    //
+    // Certificates are often approved on the first day or two, and names go on
+    // being fixed all week — a misspelling, a missing middle name, a participant
+    // who registered themselves in a hurry. Holding those certificates back and
+    // asking the manager to sign each one again is make-work: the course has not
+    // finished, nothing has been handed out, and the correction is the register
+    // being completed rather than the record being changed after the fact.
+    //
+    // Once the course is over, the same edit is exactly what this guards against.
+    // The sub-course is never exempt: moving somebody between the maternal and
+    // newborn parts changes what the certificate says they were trained in, and
+    // that is worth a signature whenever it happens.
+    const duringCourse = isWithinCoursePeriod(course);
+
+    const changed = [];
+    if (!duringCourse && !samePrintedText(signed.name, participant?.name)) changed.push('name');
+    if (!samePrintedText(signed.subCourse, certificateSubCourseOf(course, participant))) {
+        changed.push('subCourse');
+    }
+
+    return {
+        state: changed.length ? 'stale' : 'approved',
+        changed,
+        signedName: signed.name || '',
+        signedSubCourse: signed.subCourse || '',
+        unrecorded: false,
+    };
+};
+
+/** The participants whose certificates are waiting to be approved again. */
+export const staleCertificateParticipants = (participants, course) =>
+    (participants || []).filter(
+        (p) => !p.isDeleted && certificateApprovalState(p, course).state === 'stale'
+    );
+
+/**
+ * What to write on a participant's record when their certificate is approved.
+ *
+ * Built here rather than at each call site so the snapshot and the comparison
+ * can never read different fields — the fault that would make a certificate
+ * look stale forever, or never.
+ */
+export const certificateApprovalSnapshot = (participant, course, approvedBy = '') => ({
+    name: participant?.name || '',
+    subCourse: certificateSubCourseOf(course, participant) || '',
+    at: new Date().toISOString(),
+    by: approvedBy || '',
+});

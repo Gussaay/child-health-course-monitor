@@ -154,6 +154,47 @@ describe('public flows still work', () => {
         await assertSucceeds(getDoc(doc(anonymous(), 'participants', 'p1')));
     });
 
+    it('still lets the public monitoring and test links update a participant', async () => {
+        // Participant writes are deliberately open: the public registration,
+        // monitoring and test links all write here unsigned.
+        await assertSucceeds(updateDoc(doc(anonymous(), 'participants', 'p1'), {
+            post_test_score: 88,
+        }));
+    });
+
+    // =========================================================================
+    // certificateApproval records what a manager signed when they approved this
+    // participant's certificate, and the app compares it against the current
+    // name and sub-course to decide whether the certificate still has an
+    // approval behind it. If anybody could write the field they could approve
+    // their own certificate, and the check would be decorative.
+    // =========================================================================
+    it('refuses to let an anonymous visitor approve a certificate', async () => {
+        await assertFails(updateDoc(doc(anonymous(), 'participants', 'p1'), {
+            certificateApproval: { name: 'Test', subCourse: 'x', at: '2026-01-01', by: 'me' },
+        }));
+    });
+
+    it('refuses a plain signed-up account too', async () => {
+        // Sign-up is open to the public, so being signed in proves nothing.
+        await assertFails(updateDoc(doc(as('plainUser'), 'participants', 'p1'), {
+            certificateApproval: { name: 'Test', subCourse: 'x', at: '2026-01-01', by: 'me' },
+        }));
+    });
+
+    it('refuses an anonymous visitor smuggling it in beside a legitimate field', async () => {
+        await assertFails(updateDoc(doc(anonymous(), 'participants', 'p1'), {
+            post_test_score: 90,
+            certificateApproval: { name: 'Test', subCourse: 'x', at: '2026-01-01', by: 'me' },
+        }));
+    });
+
+    it('lets a manager approve a certificate', async () => {
+        await assertSucceeds(updateDoc(doc(as('federalManager'), 'participants', 'p1'), {
+            certificateApproval: { name: 'Test', subCourse: 'x', at: '2026-01-01', by: 'pm' },
+        }));
+    });
+
     it('lets an anonymous visitor read any course', async () => {
         await assertSucceeds(getDoc(doc(anonymous(), 'courses', 'publicCourse')));
         await assertSucceeds(getDoc(doc(anonymous(), 'courses', 'privateCourse')));

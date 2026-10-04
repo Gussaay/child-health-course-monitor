@@ -14,10 +14,13 @@ import {
     Button, Card, EmptyState, PageHeader, 
     Spinner, Table, Modal, CardBody, CardFooter, FormGroup, Select, Input
 } from './CommonComponents'; 
-import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X } from 'lucide-react'; 
+import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X, AlertTriangle } from 'lucide-react'; 
 
 // Data & Firebase
-import { STATE_LOCALITIES } from './constants'; 
+import {
+    STATE_LOCALITIES, certificateApprovalState, certificateSubCourseOf,
+    staleCertificateParticipants
+} from './constants'; 
 import { db } from '../firebase'; 
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField } from 'firebase/firestore'; 
 import { useDataCache } from '../DataContext';
@@ -27,6 +30,9 @@ import {
     listAllParticipantsForCourse, 
     listFederalCoordinators, 
     unapproveCourseCertificates, 
+    recordCertificateApprovals,
+    approveParticipantCertificate,
+    clearCertificateApprovals,
     uploadFile 
 } from '../data.js';
 import { notify, confirmDialog } from './dialogs';
@@ -1666,6 +1672,211 @@ export const generateAllCertificatesPdf = async (inputCourse, participants, fede
 // CUSTOMIZER: small stable sub-components (declared outside so inputs keep focus)
 // -----------------------------------------------------------------------------
 
+// =============================================================================
+// DOWNLOADS THAT OUTLIVE THE PAGE THAT STARTED THEM
+//
+// Generating certificates takes about a second each, so a group of forty is a
+// minute of waiting. That used to run inside the participants screen, with the
+// progress shown in a modal belonging to it — so leaving the page took the
+// progress away with it, and there was no way to tell whether the download was
+// still going or had died. People waited, gave up, navigated back, and started
+// it again.
+//
+// The work now lives here, outside the React tree: a module-level queue that
+// nothing unmounts. Components start a job and subscribe to its progress; the
+// banner that shows it is mounted once by App.jsx, above the routed views, so
+// it stays put while you go and do something else. Closing the tab still stops
+// it — this is a running promise, not a service worker — but moving around the
+// app no longer does.
+// =============================================================================
+
+let jobCounter = 0;
+const downloadJobs = new Map();
+const downloadListeners = new Set();
+
+const announceJobs = () => {
+    const snapshot = [...downloadJobs.values()].map((j) => ({ ...j }));
+    downloadListeners.forEach((fn) => { try { fn(snapshot); } catch (e) { console.warn(e); } });
+};
+
+/** Watch the queue. Called immediately with the current state. */
+export const subscribeCertificateDownloads = (fn) => {
+    downloadListeners.add(fn);
+    fn([...downloadJobs.values()].map((j) => ({ ...j })));
+    return () => downloadListeners.delete(fn);
+};
+
+/** Ask a job to stop. It stops between certificates, not mid-render. */
+export const cancelCertificateDownload = (id) => {
+    const job = downloadJobs.get(id);
+    if (!job || job.status !== 'running') return;
+    job.cancelled = true;
+    job.status = 'stopping';
+    announceJobs();
+};
+
+/** Clear a finished job from the banner. */
+export const dismissCertificateDownload = (id) => {
+    const job = downloadJobs.get(id);
+    if (job && job.status === 'running') return;
+    downloadJobs.delete(id);
+    announceJobs();
+};
+
+const CANCELLED = 'CANCELLED_BY_USER';
+
+/**
+ * Start a certificate download and return its id.
+ *
+ * Returns straight away: the work runs on its own and reports through the
+ * subscription. Nothing here touches component state, which is the whole point
+ * — a caller that unmounts a moment later changes nothing.
+ *
+ * @param {object}  spec
+ * @param {'single'|'bulk'} spec.kind
+ * @param {object}  spec.course
+ * @param {object}  [spec.participant]        for 'single'
+ * @param {string}  [spec.participantSubCourse]
+ * @param {Array}   [spec.participants]       for 'bulk'
+ * @param {string}  spec.language             'en' | 'ar'
+ * @param {string}  [spec.managerName]
+ * @param {Array}   [spec.facilitators]
+ * @param {Array}   [spec.coordinators]
+ * @returns {string} the job id
+ */
+export const startCertificateDownload = (spec) => {
+    const id = `cert-${++jobCounter}`;
+    const isBulk = spec.kind === 'bulk';
+
+    const job = {
+        id,
+        kind: spec.kind,
+        label: isBulk
+            ? `${(spec.participants || []).length} certificates`
+            : (spec.participant?.name || 'Certificate'),
+        language: spec.language,
+        current: 0,
+        total: isBulk ? (spec.participants || []).length : 1,
+        status: 'running',
+        cancelled: false,
+        error: '',
+    };
+    downloadJobs.set(id, job);
+    announceJobs();
+
+    const bail = () => { if (job.cancelled) throw new Error(CANCELLED); };
+
+    const run = async () => {
+        if (isBulk) {
+            await generateAllCertificatesPdf(
+                spec.course, spec.participants, spec.managerName, spec.language,
+                (current, total) => {
+                    bail();
+                    job.current = current;
+                    job.total = total;
+                    announceJobs();
+                },
+                spec.facilitators, spec.coordinators
+            );
+            return;
+        }
+
+        const canvas = await generateCertificatePdf(
+            spec.course, spec.participant, spec.managerName,
+            spec.participantSubCourse, spec.language, spec.facilitators, spec.coordinators
+        );
+        bail();
+        if (!canvas) throw new Error('The certificate could not be drawn.');
+
+        const doc = new jsPDF('landscape', 'mm', 'a4');
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 297, 210);
+        const safeName = String(spec.participant?.name || 'Certificate').replace(/\s+/g, '_');
+        await saveAndOpenPdf(doc, `Certificate_${safeName}_${spec.course?.course_type || ''}.pdf`);
+        job.current = 1;
+    };
+
+    run()
+        .then(() => { job.status = 'done'; })
+        .catch((err) => {
+            if (err?.message === CANCELLED) {
+                job.status = 'cancelled';
+            } else {
+                console.error('[Certificate] download failed', err);
+                job.status = 'failed';
+                job.error = err?.message || 'Unknown error';
+            }
+        })
+        .finally(() => {
+            announceJobs();
+            // A finished job stays on screen briefly so the result is seen,
+            // then clears itself. A failure stays until it is dismissed, since
+            // that is the one people need to read.
+            if (job.status !== 'failed') {
+                setTimeout(() => { downloadJobs.delete(id); announceJobs(); }, 6000);
+            }
+        });
+
+    return id;
+};
+
+/**
+ * The progress banner. App.jsx mounts exactly one, outside the routed views, so
+ * it survives navigation — which is the only reason it is a separate component
+ * rather than part of the participants screen.
+ */
+export const CertificateDownloadBanner = () => {
+    const [jobs, setJobs] = useState([]);
+    useEffect(() => subscribeCertificateDownloads(setJobs), []);
+
+    if (jobs.length === 0) return null;
+
+    return (
+        <div className="fixed bottom-4 inset-x-3 sm:inset-x-auto sm:end-4 sm:w-80 z-[60] space-y-2 print-hide">
+            {jobs.map((job) => {
+                const pct = job.total > 0 ? Math.round((job.current / job.total) * 100) : 0;
+                const done = job.status === 'done';
+                const failed = job.status === 'failed';
+                const stopped = job.status === 'cancelled';
+                return (
+                    <div key={job.id} className={`rounded-lg shadow-lg border p-3 text-sm bg-white ${
+                        failed ? 'border-red-300' : done ? 'border-green-300' : 'border-slate-300'}`}>
+                        <div className="flex items-start gap-2">
+                            {done ? <CheckCircle size={16} className="text-green-600 shrink-0 mt-0.5" />
+                                : failed ? <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
+                                    : <Download size={16} className="text-sky-600 shrink-0 mt-0.5" />}
+                            <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-slate-800 break-words">{job.label}</div>
+                                <div className="text-xs text-slate-500">
+                                    {done ? 'Downloaded'
+                                        : failed ? job.error
+                                            : stopped ? 'Stopped'
+                                                : job.status === 'stopping' ? 'Stopping…'
+                                                    : job.kind === 'bulk'
+                                                        ? `Preparing ${job.current} of ${job.total}`
+                                                        : 'Preparing the certificate…'}
+                                </div>
+                            </div>
+                            {job.status === 'running' ? (
+                                <button type="button" onClick={() => cancelCertificateDownload(job.id)}
+                                    className="text-xs text-red-600 hover:underline shrink-0">Stop</button>
+                            ) : (
+                                <button type="button" onClick={() => dismissCertificateDownload(job.id)}
+                                    className="text-slate-400 hover:text-slate-600 shrink-0"><X size={14} /></button>
+                            )}
+                        </div>
+
+                        {job.kind === 'bulk' && !done && !failed && !stopped && (
+                            <div className="mt-2 h-1.5 bg-slate-200 rounded overflow-hidden">
+                                <div className="h-full bg-sky-600 transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 const AssetUploader = ({ label, fieldKey, value, uploading, onPick, onClear, height = 'h-12' }) => (
     <div className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50">
         <span className="text-xs font-semibold text-gray-700">{label}</span>
@@ -2323,11 +2534,9 @@ const SAMPLE_PARTICIPANT = {
     ar: { id: 'preview', name: 'أحمد محمد علي حسن' }
 };
 
-const subCourseFor = (course, participant) => {
-    if (participant?.imci_sub_type) return participant.imci_sub_type;
-    const byGroup = course?.facilitatorAssignments?.find(a => a.group === participant?.group)?.imci_sub_type;
-    return byGroup || course?.director_imci_sub_type || null;
-};
+// Kept as a local name; the rule itself lives in constants.js so the approval
+// snapshot and the printed certificate cannot drift apart.
+const subCourseFor = (course, participant) => certificateSubCourseOf(course, participant);
 
 export function CertificatePreviewModal({ course, federalProgramManagerName = '', onClose, defaultLanguage = 'en', note = '' }) {
     const [language, setLanguage] = useState(defaultLanguage);
@@ -4372,6 +4581,15 @@ export function PublicCertificateDownloadView({ participantId }) {
                 const c = await getCourseById(p.courseId, 'server');
                 if (!c) throw new Error("Course not found.");
                 if (!c.isCertificateApproved) throw new Error("Certificates for this course are not yet approved or have been revoked.");
+                // Approval was given for a particular name and sub-course. If
+                // either has been changed since, this certificate has not been
+                // signed in the form it would now print.
+                if (certificateApprovalState(p, c).state === 'stale') {
+                    throw new Error(
+                        "This certificate is waiting to be approved again, because the participant's " +
+                        "details were changed after the course was approved. Please contact the course director."
+                    );
+                }
                 setData({ participant: p, course: c });
             } catch(e) { setError(e.message); }
             finally { setLoading(false); }
@@ -4432,7 +4650,13 @@ export function PublicCourseCertificatesView({ courseId }) {
                 if (!c) throw new Error("Course not found.");
                 if (!c.isCertificateApproved) throw new Error("Certificates for this course are not yet approved or have been revoked.");
                 const parts = await listAllParticipantsForCourse(courseId, { source: 'server' });
-                const activeParts = parts.filter(p => !p.isDeleted);
+                // Anyone altered since approval is listed but not downloadable:
+                // removing them from the page entirely would look like a lost
+                // record to the person looking for their own name.
+                const activeParts = parts.filter(p => !p.isDeleted).map(p => ({
+                    ...p,
+                    awaitingReapproval: certificateApprovalState(p, c).state === 'stale',
+                }));
                 setData({ course: c, participants: activeParts });
             } catch(e) { setError(e.message); }
             finally { setLoading(false); }
@@ -4441,6 +4665,10 @@ export function PublicCourseCertificatesView({ courseId }) {
     }, [courseId]);
 
     const handleDownload = async (p, lang) => {
+        if (p.awaitingReapproval) {
+            notify("This certificate is waiting to be approved again and cannot be downloaded yet.");
+            return;
+        }
         setDownloadingId(p.id);
         try {
             const managerName = data.course.approvedByManagerName || "Federal Program Manager";
@@ -4459,7 +4687,7 @@ export function PublicCourseCertificatesView({ courseId }) {
     if (error) return <EmptyState message={error} />;
 
     return (
-        <Card className="p-6">
+        <Card className="p-4 sm:p-6">
             <PageHeader title="Course Certificates" subtitle={`${data.course.course_type} - ${data.course.state} / ${data.course.locality}`} />
             
             <div className="bg-sky-50 text-sky-800 p-4 rounded-lg text-sm border border-sky-100 mb-6 flex items-start">
@@ -4467,23 +4695,56 @@ export function PublicCourseCertificatesView({ courseId }) {
                 <p>Welcome. You can download certificates for any active participant from this course using the buttons below.</p>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+            <div className="hidden sm:block overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <Table headers={["Participant Name", "Job Title", "Download Action"]}>
                     {data.participants.map(p => (
                         <tr key={p.id} className="hover:bg-sky-50/50 transition-colors">
                             <td className="p-4 font-bold text-gray-800">{p.name}</td>
                             <td className="p-4 text-gray-600 font-medium">{p.job_title}</td>
-                            <td className="p-4 text-right flex justify-end gap-2">
-                                <Button size="sm" onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId}>
-                                    {downloadingId === p.id ? <Spinner size="sm" /> : 'English'}
-                                </Button>
-                                <Button size="sm" variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId}>
-                                    {downloadingId === p.id ? <Spinner size="sm" /> : 'عربي'}
-                                </Button>
+                            <td className="p-4 text-right">
+                                {p.awaitingReapproval ? (
+                                    <span className="text-xs font-semibold text-amber-700">Awaiting re-approval</span>
+                                ) : (
+                                    <div className="flex justify-end gap-2">
+                                        <Button size="sm" onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId}>
+                                            {downloadingId === p.id ? <Spinner size="sm" /> : 'English'}
+                                        </Button>
+                                        <Button size="sm" variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId}>
+                                            {downloadingId === p.id ? <Spinner size="sm" /> : 'عربي'}
+                                        </Button>
+                                    </div>
+                                )}
                             </td>
                         </tr>
                     ))}
                 </Table>
+            </div>
+
+            {/* A phone gets a card each: the three-column table put the download
+                buttons off the right-hand edge, and this page is opened on a
+                phone more often than anywhere else. */}
+            <div className="grid gap-3 sm:hidden">
+                {data.participants.map(p => (
+                    <div key={p.id} className="rounded-lg border border-gray-200 shadow-sm p-3 bg-white">
+                        <div className="font-bold text-gray-800 break-words">{p.name}</div>
+                        <div className="text-xs text-gray-500 mb-2 break-words">{p.job_title}</div>
+                        {p.awaitingReapproval ? (
+                            <div className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                                Awaiting re-approval — the details on this certificate changed after the course
+                                was approved.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId} className="w-full justify-center">
+                                    {downloadingId === p.id ? <Spinner size="sm" /> : 'English'}
+                                </Button>
+                                <Button variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId} className="w-full justify-center">
+                                    {downloadingId === p.id ? <Spinner size="sm" /> : 'عربي'}
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                ))}
             </div>
         </Card>
     );
@@ -4630,6 +4891,137 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit,
 // -----------------------------------------------------------------------------
 // SEPARATED CERTIFICATE APPROVALS VIEW
 // -----------------------------------------------------------------------------
+/**
+ * The participants on one course whose certificate details changed after it was
+ * signed off, and the manager's chance to sign them again.
+ *
+ * Participants are loaded when this opens rather than with the course list: the
+ * approvals screen shows every course in the programme, and reading every
+ * participant of every one of them to find the handful that changed would cost
+ * thousands of reads to render a table.
+ */
+const CertificateChangesModal = ({ course, managerName, onClose, onDone, setToast }) => {
+    const [state, setState] = React.useState({ loading: true, error: '', stale: [] });
+    const [busyId, setBusyId] = React.useState(null);
+
+    const load = React.useCallback(async () => {
+        setState((s) => ({ ...s, loading: true, error: '' }));
+        try {
+            const parts = await listAllParticipantsForCourse(course.id, { source: 'server' });
+            setState({ loading: false, error: '', stale: staleCertificateParticipants(parts, course) });
+        } catch (err) {
+            setState({ loading: false, error: err.message || 'The participants could not be read.', stale: [] });
+        }
+    }, [course]);
+
+    React.useEffect(() => { load(); }, [load]);
+
+    const approveOne = async (p) => {
+        setBusyId(p.id);
+        try {
+            await approveParticipantCertificate(p, course, managerName);
+            setState((s) => ({ ...s, stale: s.stale.filter((x) => x.id !== p.id) }));
+            setToast({ show: true, message: `${p.name}'s certificate approved.`, type: 'success' });
+            onDone?.();
+        } catch (err) {
+            setToast({ show: true, message: err.message, type: 'error' });
+        } finally { setBusyId(null); }
+    };
+
+    const approveAll = async () => {
+        if (!await confirmDialog(
+            `Approve all ${state.stale.length} changed certificate(s) for this course?`
+            + `
+
+You are signing the details as they now stand.`
+        )) return;
+        setBusyId('all');
+        try {
+            await recordCertificateApprovals(course, state.stale, managerName);
+            setToast({ show: true, message: `${state.stale.length} certificate(s) approved.`, type: 'success' });
+            setState((s) => ({ ...s, stale: [] }));
+            onDone?.();
+        } catch (err) {
+            setToast({ show: true, message: err.message, type: 'error' });
+        } finally { setBusyId(null); }
+    };
+
+    return (
+        <Modal isOpen onClose={onClose} title="Changes since approval" size="lg">
+            <CardBody className="p-4 sm:p-6 space-y-4">
+                <p className="text-sm text-slate-600">
+                    A certificate prints the participant&rsquo;s name and sub-course. Where either has
+                    changed since this course was approved, the certificate is held back until it is
+                    approved again &mdash; only for that participant.
+                </p>
+
+                {state.loading && <div className="flex justify-center p-6"><Spinner /></div>}
+
+                {!!state.error && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">{state.error}</div>
+                )}
+
+                {!state.loading && !state.error && state.stale.length === 0 && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded text-sm text-green-800 flex items-center gap-2">
+                        <CheckCircle size={16} className="shrink-0" />
+                        Nothing has changed since this course was approved.
+                    </div>
+                )}
+
+                {state.stale.map((p) => {
+                    const info = certificateApprovalState(p, course);
+                    const now = certificateSubCourseOf(course, p) || '—';
+                    return (
+                        <div key={p.id} className="border border-amber-300 bg-amber-50/60 rounded-lg p-3 space-y-2">
+                            <div className="font-bold text-slate-800 break-words">{p.name}</div>
+
+                            <div className="text-xs space-y-1">
+                                {info.changed.includes('name') && (
+                                    <div className="flex flex-col sm:flex-row sm:gap-2">
+                                        <span className="font-semibold text-slate-500 w-24 shrink-0">Name</span>
+                                        <span className="break-words">
+                                            <span className="line-through text-slate-500">{info.signedName || '—'}</span>
+                                            {' → '}
+                                            <strong className="text-slate-900">{p.name}</strong>
+                                        </span>
+                                    </div>
+                                )}
+                                {info.changed.includes('subCourse') && (
+                                    <div className="flex flex-col sm:flex-row sm:gap-2">
+                                        <span className="font-semibold text-slate-500 w-24 shrink-0">Sub-course</span>
+                                        <span className="break-words">
+                                            <span className="line-through text-slate-500">{info.signedSubCourse || '—'}</span>
+                                            {' → '}
+                                            <strong className="text-slate-900">{now}</strong>
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <Button
+                                variant="success"
+                                onClick={() => approveOne(p)}
+                                disabled={!!busyId}
+                                className="w-full sm:w-auto justify-center text-xs"
+                            >
+                                {busyId === p.id ? <Spinner size="sm" /> : 'Approve this certificate'}
+                            </Button>
+                        </div>
+                    );
+                })}
+            </CardBody>
+            <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
+                <Button variant="secondary" onClick={onClose} disabled={!!busyId} className="w-full sm:w-auto justify-center">Close</Button>
+                {state.stale.length > 1 && (
+                    <Button variant="success" onClick={approveAll} disabled={!!busyId} className="w-full sm:w-auto justify-center">
+                        {busyId === 'all' ? <Spinner size="sm" /> : `Approve all ${state.stale.length}`}
+                    </Button>
+                )}
+            </CardFooter>
+        </Modal>
+    );
+};
+
 export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole, canUseFederalManagerAdvancedFeatures, singleCourseMode = false, title = 'Certificate Approvals' }) => {
     const { fetchCourses } = useDataCache(); 
     const [managerName, setManagerName] = React.useState('');
@@ -4646,6 +5038,8 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     const [templateDocs, setTemplateDocs] = React.useState({});
     const [templatesBusy, setTemplatesBusy] = React.useState(false);
     const [courseToPreview, setCourseToPreview] = React.useState(null);
+    // The course whose post-approval changes are being reviewed.
+    const [courseToReview, setCourseToReview] = React.useState(null);
 
     const reloadTemplates = React.useCallback(async () => {
         try {
@@ -4786,7 +5180,36 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 lastUpdatedAt: serverTimestamp() // FORCE TIMESTAMP UPDATE
             });
             
-            setToast({ show: true, message: "Certificates Approved Successfully.", type: 'success' });
+            // Record what was approved, participant by participant. Until this
+            // existed the course flag said "approved" and nothing said approved
+            // as WHAT, so a name corrected afterwards printed under a signature
+            // nobody had given for it.
+            let signedCount = 0;
+            try {
+                const parts = await listAllParticipantsForCourse(courseToApprove.id, { source: 'server' });
+                signedCount = await recordCertificateApprovals(
+                    { ...courseToApprove, ...approvalPayload }, parts, managerName);
+            } catch (err) {
+                // The course is approved either way — say plainly that the
+                // per-participant record did not get written, because without
+                // it a later alteration will go unnoticed.
+                console.warn('[Certificate] Could not record what was approved.', err);
+                setToast({
+                    show: true,
+                    type: 'info',
+                    message: 'Approved, but the per-participant record failed to save. ' +
+                        'Approve again to enable change tracking.'
+                });
+                await fetchCourses(true);
+                setCourseToApprove(null);
+                return;
+            }
+
+            setToast({
+                show: true,
+                message: `Certificates approved for ${signedCount} participant${signedCount === 1 ? '' : 's'}.`,
+                type: 'success'
+            });
             await fetchCourses(true); 
             setCourseToApprove(null);
         } catch (err) {
@@ -4811,6 +5234,15 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 }));
 
                 await unapproveCourseCertificates(course.id);
+
+                // Forget what was signed too. A snapshot left behind would be
+                // compared against the NEXT approval, so a name changed in
+                // between would never show up as needing one.
+                try {
+                    await clearCertificateApprovals(course.id);
+                } catch (err) {
+                    console.warn('[Certificate] Could not clear the approval records.', err);
+                }
 
                 // "Destamped" has to mean the images are gone, not merely unused.
                 // unapproveCourseCertificates only clears the manager signature, so
@@ -4905,6 +5337,138 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         finally { setIsProcessing(false); setUploadContext({ course: null, assetType: null }); fileInputRef.current.value = ""; }
     };
 
+    // Everything each row needs, resolved once and shared by the table and the
+    // cards below so the two layouts can never show different things.
+    const rows = React.useMemo(() => courses.map(c => {
+        const hasCustomTemplate = !!(c.customCertificate && Object.keys(c.customCertificate).length > 0);
+        return {
+            c,
+            isApproved: c.isCertificateApproved === true,
+            canModify: c.isCertificateApproved === true
+                && (!c.approvedByManagerName || c.approvedByManagerName === managerName || isFederalProgramManager),
+            hasCustomTemplate,
+            // Customised certificates are sealed by hand after printing, so a
+            // digital stamp is both unnecessary and one more sensitive image
+            // stored for no reason.
+            isCustomized: hasCustomTemplate,
+            // Resolved per row so the 3rd/4th signature uploads appear only on
+            // the courses that actually print them.
+            rowSig: resolveCertificateSignatories(effective(c), managerName),
+            hasTypeTemplate: !!(c.course_type && templateDocs[courseTypeTemplateId(c.course_type)]),
+            hasGeneralTemplate: !!templateDocs[GENERAL_TEMPLATE_ID],
+        };
+    }), [courses, managerName, isFederalProgramManager, effective, templateDocs]);
+
+    const StatusPill = ({ approved }) => (
+        <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+            approved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+            {approved ? 'Ready' : 'Pending'}
+        </span>
+    );
+
+    const TemplateBadges = ({ row }) => (
+        <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+            {row.hasCustomTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-sky-600">Course changes</span>}
+            {row.hasTypeTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600">Type template</span>}
+            {!row.hasTypeTemplate && row.hasGeneralTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500">General template</span>}
+        </div>
+    );
+
+    // One course's actions, laid out either inline (the table) or as grid cells
+    // that fill their width (the cards on a narrow screen).
+    const RowActions = ({ row, block = false }) => {
+        const { c, rowSig } = row;
+        const btn = block
+            ? 'w-full justify-center px-2 py-2 text-[11px] whitespace-nowrap flex items-center gap-1'
+            : 'px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1';
+        const kill = block
+            ? 'shrink-0 px-2 py-2 text-[11px] rounded border border-red-200 text-red-600 hover:bg-red-50'
+            : 'px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50';
+        // In the grid each cell is one action, so an upload and its remove
+        // button have to travel together inside a single cell.
+        const Pair = ({ children }) => (block ? <div className="flex gap-1">{children}</div> : <>{children}</>);
+
+        const uploaded = (has) => (has ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : '');
+
+        return (
+            <>
+                <Button onClick={() => openCourseDesigner(c)} disabled={isProcessing} variant="secondary" className={`${btn} border-gray-300`}>
+                    <Settings size={12} /> Customize
+                </Button>
+
+                <Button onClick={() => setCourseToPreview(c)} disabled={isProcessing} variant="secondary" className={`${btn} border-gray-300`} title="See the real certificate">
+                    <Eye size={12} /> Preview
+                </Button>
+
+                {row.isApproved ? (
+                    <Button onClick={() => handleUnapprove(c)} disabled={!row.canModify || isProcessing} variant="danger" className={btn}>Revoke</Button>
+                ) : (
+                    <Button onClick={() => setCourseToApprove(c)} disabled={isProcessing} variant="success" className={`${btn} font-bold bg-green-600 text-white hover:bg-green-700 border-transparent`}>Approve</Button>
+                )}
+
+                {/* Only meaningful once something has been signed. */}
+                {row.isApproved && (
+                    <Button onClick={() => setCourseToReview(c)} disabled={isProcessing} variant="secondary" className={`${btn} border-amber-300 text-amber-800 hover:bg-amber-50`} title="Participants altered since approval">
+                        <RefreshCw size={12} /> Changes
+                    </Button>
+                )}
+
+                <Pair>
+                    <Button onClick={() => triggerUpload(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} variant={c.approvedByManagerSignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(c.approvedByManagerSignatureUrl)} ${block ? 'flex-1' : ''}`}>
+                        {c.approvedByManagerSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} PM Signature
+                    </Button>
+                    {c.approvedByManagerSignatureUrl && (
+                        <button type="button" title="Remove PM signature image" onClick={() => removeAsset(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} className={kill}>&times;</button>
+                    )}
+                </Pair>
+
+                <Pair>
+                    <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={c.approvedDirectorSignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(c.approvedDirectorSignatureUrl)} ${block ? 'flex-1' : ''}`}>
+                        {c.approvedDirectorSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} Dir Signature
+                    </Button>
+                    {c.approvedDirectorSignatureUrl && (
+                        <button type="button" title="Remove director signature image" onClick={() => removeAsset(c, 'directorSignature')} disabled={isProcessing} className={kill}>&times;</button>
+                    )}
+                </Pair>
+
+                {rowSig.thirdPartyEnabled && (
+                    <Pair>
+                        <Button onClick={() => triggerUpload(c, 'thirdSignature')} disabled={isProcessing} variant={rowSig.thirdPartySignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(rowSig.thirdPartySignatureUrl)} ${block ? 'flex-1' : ''}`}>
+                            {rowSig.thirdPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} 3rd Signature
+                        </Button>
+                        {rowSig.thirdPartySignatureUrl && (
+                            <button type="button" title="Remove third signature image" onClick={() => removeAsset(c, 'thirdSignature')} disabled={isProcessing} className={kill}>&times;</button>
+                        )}
+                    </Pair>
+                )}
+
+                {rowSig.fourthPartyEnabled && (
+                    <Pair>
+                        <Button onClick={() => triggerUpload(c, 'fourthSignature')} disabled={isProcessing} variant={rowSig.fourthPartySignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(rowSig.fourthPartySignatureUrl)} ${block ? 'flex-1' : ''}`}>
+                            {rowSig.fourthPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} 4th Signature
+                        </Button>
+                        {rowSig.fourthPartySignatureUrl && (
+                            <button type="button" title="Remove fourth signature image" onClick={() => removeAsset(c, 'fourthSignature')} disabled={isProcessing} className={kill}>&times;</button>
+                        )}
+                    </Pair>
+                )}
+
+                {(!row.isCustomized || c.approvedProgramStampUrl) && (
+                    <Pair>
+                        {!row.isCustomized && (
+                            <Button onClick={() => triggerUpload(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} variant={c.approvedProgramStampUrl ? "success" : "secondary"} className={`${btn} ${uploaded(c.approvedProgramStampUrl)} ${block ? 'flex-1' : ''}`}>
+                                {c.approvedProgramStampUrl ? <CheckCircle size={12} /> : <Stamp size={12} />} Stamp
+                            </Button>
+                        )}
+                        {c.approvedProgramStampUrl && (
+                            <button type="button" title="Remove stamp image" onClick={() => removeAsset(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} className={kill}>&times;</button>
+                        )}
+                    </Pair>
+                )}
+            </>
+        );
+    };
+
     if (loadingApprovals && courses.length === 0) return <div className="flex justify-center p-8"><Spinner /></div>;
 
     return (
@@ -4919,6 +5483,16 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                     federalProgramManagerName={managerName}
                     onClose={() => setCourseToPreview(null)}
                     note={courseToPreview.isCertificateApproved ? '' : 'Not approved yet — participants cannot download this until it is approved.'}
+                />
+            )}
+
+            {courseToReview && (
+                <CertificateChangesModal
+                    course={courseToReview}
+                    managerName={managerName}
+                    setToast={setToast}
+                    onClose={() => setCourseToReview(null)}
+                    onDone={() => fetchCourses(true)}
                 />
             )}
 
@@ -4939,7 +5513,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
 
 
             <Modal isOpen={!!courseToApprove} onClose={() => setCourseToApprove(null)} title="Confirm Approval">
-                <CardBody className="p-6 space-y-4">
+                <CardBody className="p-4 sm:p-6 space-y-4">
                     <p className="text-sm text-gray-600">These are the exact signatories that will be printed on every certificate for this course, in both languages.</p>
 
                     <div className="space-y-3 bg-gray-50 border rounded-lg p-4">
@@ -5021,9 +5595,9 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                         <Eye size={14} /> Preview the certificate before approving
                     </button>
                 </CardBody>
-                <CardFooter className="flex justify-end gap-2">
-                    <Button variant="secondary" onClick={() => setCourseToApprove(null)} disabled={isProcessing}>Cancel</Button>
-                    <Button variant="success" onClick={executeApprove} disabled={isProcessing}>
+                <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
+                    <Button variant="secondary" onClick={() => setCourseToApprove(null)} disabled={isProcessing} className="w-full sm:w-auto justify-center">Cancel</Button>
+                    <Button variant="success" onClick={executeApprove} disabled={isProcessing} className="w-full sm:w-auto justify-center">
                         {isProcessing ? <Spinner size="sm" /> : 'Confirm & Approve'}
                     </Button>
                 </CardFooter>
@@ -5046,130 +5620,81 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 )}
 
                 {!singleCourseMode && (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
                         <FormGroup label="State"><Select value={filterState} onChange={e => setFilterState(e.target.value)}>{states.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
                         <FormGroup label="Course Type"><Select value={filterCourseType} onChange={e => setFilterCourseType(e.target.value)}>{courseTypes.map(c => <option key={c} value={c}>{c}</option>)}</Select></FormGroup>
                         <FormGroup label="Status"><Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}><option value="All">All</option><option value="Approved">Approved</option><option value="Pending">Pending</option></Select></FormGroup>
                     </div>
                 )}
 
-                <div className="overflow-hidden rounded-xl border border-slate-300 shadow-sm bg-white">
-                    <table className="w-full text-left border-collapse text-sm table-fixed">
+                {/* THE COURSE LIST, TWICE.
+                    This was one fixed-layout table with up to eleven buttons in a
+                    flex-nowrap row. On a phone that is a table far wider than the
+                    screen, and the actions sat off the right-hand edge where
+                    nothing could reach them — on the screen where a manager is
+                    most likely to be approving something while away from a desk.
+                    The table stays for wide screens, where scanning rows is what
+                    it is good at, and a card per course serves narrow ones. */}
+                <div className="hidden lg:block overflow-x-auto rounded-xl border border-slate-300 shadow-sm bg-white">
+                    <table className="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600">
-                                <th className="p-3 font-semibold border-b border-slate-300 w-[18%]">Course</th>
-                                <th className="p-3 font-semibold border-b border-slate-300 w-[18%]">Location & Date</th>
-                                <th className="p-3 font-semibold border-b border-slate-300 w-[8%]">Status</th>
-                                <th className="p-3 font-semibold border-b border-slate-300 w-[56%] text-right">Actions</th>
+                                <th className="p-3 font-semibold border-b border-slate-300">Course</th>
+                                <th className="p-3 font-semibold border-b border-slate-300">Location & Date</th>
+                                <th className="p-3 font-semibold border-b border-slate-300">Status</th>
+                                <th className="p-3 font-semibold border-b border-slate-300 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {courses.map(c => {
-                                const isApproved = c.isCertificateApproved === true;
-                                const canModify = isApproved && (!c.approvedByManagerName || c.approvedByManagerName === managerName || isFederalProgramManager);
-                                const hasCustomTemplate = !!(c.customCertificate && Object.keys(c.customCertificate).length > 0);
-                                const isCustomized = hasCustomTemplate;
-                                // Resolve the row's signatories so the 3rd/4th upload
-                                // buttons appear only for courses that actually use them.
-                                const rowSig = resolveCertificateSignatories(effective(c), managerName);
-                                const hasTypeTemplate = !!(c.course_type && templateDocs[courseTypeTemplateId(c.course_type)]);
-                                const hasGeneralTemplate = !!templateDocs[GENERAL_TEMPLATE_ID];
-                                
-                                return (
-                                    <tr key={c.id} className={`transition-colors hover:bg-gray-50 group ${isApproved ? "bg-green-50/20" : ""}`}>
-                                        <td className="p-3 align-middle border-b border-slate-200">
-                                            <div className="font-bold text-sky-700 truncate" title={c.course_type}>{c.course_type}</div>
-                                            <div className="flex flex-wrap gap-1 mt-0.5">
-                                                {hasCustomTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-sky-600">Course changes</span>}
-                                                {hasTypeTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600">Type template</span>}
-                                                {!hasTypeTemplate && hasGeneralTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500">General template</span>}
-                                            </div>
-                                        </td>
-                                        <td className="p-3 align-middle border-b border-slate-200 overflow-hidden">
-                                            <div className="font-semibold text-gray-800 truncate" title={`${c.state} - ${c.locality}`}>{c.state} - {c.locality}</div>
-                                            <div className="text-[10px] text-gray-500 whitespace-nowrap">{c.start_date}</div>
-                                        </td>
-                                        <td className="p-3 align-middle border-b border-slate-200">
-                                            {isApproved ? (
-                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-800">
-                                                    Ready
-                                                </span>
-                                            ) : (
-                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800">
-                                                    Pending
-                                                </span>
-                                            )}
-                                        </td>
-                                        
-                                        <td className="p-3 align-middle border-b border-slate-200 text-right">
-                                            <div className="flex flex-nowrap items-center justify-end gap-1">
-                                                
-                                                <Button onClick={() => openCourseDesigner(c)} disabled={isProcessing} variant="secondary" className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 border-gray-300">
-                                                    <Settings size={12} /> Customize
-                                                </Button>
-
-                                                <Button onClick={() => setCourseToPreview(c)} disabled={isProcessing} variant="secondary" className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 border-gray-300" title="See the real certificate">
-                                                    <Eye size={12} /> Preview
-                                                </Button>
-
-                                                {isApproved ? (
-                                                    <Button onClick={() => handleUnapprove(c)} disabled={!canModify || isProcessing} variant="danger" className="px-2 py-1 text-[10px] whitespace-nowrap">Revoke</Button>
-                                                ) : (
-                                                    <Button onClick={() => setCourseToApprove(c)} disabled={isProcessing} variant="success" className="px-2 py-1 text-[10px] whitespace-nowrap font-bold bg-green-600 text-white hover:bg-green-700 border-transparent">Approve</Button>
-                                                )}
-
-                                                <Button onClick={() => triggerUpload(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} variant={c.approvedByManagerSignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedByManagerSignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
-                                                    {c.approvedByManagerSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} PM Signature
-                                                </Button>
-                                                {c.approvedByManagerSignatureUrl && (
-                                                    <button type="button" title="Remove PM signature image" onClick={() => removeAsset(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
-                                                )}
-
-                                                <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={c.approvedDirectorSignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedDirectorSignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
-                                                    {c.approvedDirectorSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} Dir Signature
-                                                </Button>
-                                                {c.approvedDirectorSignatureUrl && (
-                                                    <button type="button" title="Remove director signature image" onClick={() => removeAsset(c, 'directorSignature')} disabled={isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
-                                                )}
-
-                                                {rowSig.thirdPartyEnabled && (
-                                                    <Button onClick={() => triggerUpload(c, 'thirdSignature')} disabled={isProcessing} variant={rowSig.thirdPartySignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${rowSig.thirdPartySignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
-                                                        {rowSig.thirdPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} 3rd Signature
-                                                    </Button>
-                                                )}
-                                                {rowSig.thirdPartyEnabled && rowSig.thirdPartySignatureUrl && (
-                                                    <button type="button" title="Remove third signature image" onClick={() => removeAsset(c, 'thirdSignature')} disabled={isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
-                                                )}
-
-                                                {rowSig.fourthPartyEnabled && (
-                                                    <Button onClick={() => triggerUpload(c, 'fourthSignature')} disabled={isProcessing} variant={rowSig.fourthPartySignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${rowSig.fourthPartySignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
-                                                        {rowSig.fourthPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} 4th Signature
-                                                    </Button>
-                                                )}
-                                                {rowSig.fourthPartyEnabled && rowSig.fourthPartySignatureUrl && (
-                                                    <button type="button" title="Remove fourth signature image" onClick={() => removeAsset(c, 'fourthSignature')} disabled={isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
-                                                )}
-
-                                                {/* The stamp action disappears once the certificate has been
-                                                    customised: those courses are sealed by hand after printing,
-                                                    so a digital stamp is both unnecessary and one more sensitive
-                                                    image stored for no reason. */}
-                                                {!isCustomized && (
-                                                    <Button onClick={() => triggerUpload(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} variant={c.approvedProgramStampUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedProgramStampUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
-                                                        {c.approvedProgramStampUrl ? <CheckCircle size={12} /> : <Stamp size={12} />} Stamp
-                                                    </Button>
-                                                )}
-                                                {c.approvedProgramStampUrl && (
-                                                    <button type="button" title="Remove stamp image" onClick={() => removeAsset(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} className="px-1.5 py-1 text-[10px] rounded border border-red-200 text-red-600 hover:bg-red-50">×</button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                            {rows.map(r => (
+                                <tr key={r.c.id} className={`transition-colors hover:bg-gray-50 ${r.isApproved ? "bg-green-50/20" : ""}`}>
+                                    <td className="p-3 align-top border-b border-slate-200">
+                                        <div className="font-bold text-sky-700">{r.c.course_type}</div>
+                                        <TemplateBadges row={r} />
+                                    </td>
+                                    <td className="p-3 align-top border-b border-slate-200">
+                                        <div className="font-semibold text-gray-800">{r.c.state} - {r.c.locality}</div>
+                                        <div className="text-[10px] text-gray-500 whitespace-nowrap">{r.c.start_date}</div>
+                                    </td>
+                                    <td className="p-3 align-top border-b border-slate-200">
+                                        <StatusPill approved={r.isApproved} />
+                                    </td>
+                                    <td className="p-3 align-top border-b border-slate-200">
+                                        <div className="flex flex-wrap items-center justify-end gap-1">
+                                            <RowActions row={r} />
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
+
+                <div className="grid gap-3 lg:hidden">
+                    {rows.map(r => (
+                        <div key={r.c.id} className={`rounded-xl border shadow-sm p-3 ${r.isApproved ? 'border-green-300 bg-green-50/30' : 'border-slate-300 bg-white'}`}>
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <div className="font-bold text-sky-700 break-words">{r.c.course_type}</div>
+                                    <div className="text-sm font-semibold text-gray-800 break-words">{r.c.state} - {r.c.locality}</div>
+                                    <div className="text-[11px] text-gray-500">{r.c.start_date}</div>
+                                    <TemplateBadges row={r} />
+                                </div>
+                                <StatusPill approved={r.isApproved} />
+                            </div>
+
+                            {/* Two per row at phone width, so each target is wide
+                                enough to hit and the labels are not truncated. */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+                                <RowActions row={r} block />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {rows.length === 0 && (
+                    <div className="p-6 text-center text-sm text-gray-500">No courses match the current filters.</div>
+                )}
             </Card>
         </>
     );

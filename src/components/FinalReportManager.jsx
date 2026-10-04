@@ -238,6 +238,12 @@ export function FinalReportManager({
     const [potentialFacilitators, setPotentialFacilitators] = useState([]);
     const [pdfFile, setPdfFile] = useState(null);
     const [existingPdfUrl, setExistingPdfUrl] = useState(null);
+    // The signed scan: the report printed, signed and scanned back in. Kept
+    // separate from the report PDF because they are two different documents and
+    // the signed one is what gets filed.
+    const [signedPdfFile, setSignedPdfFile] = useState(null);
+    const [existingSignedPdfUrl, setExistingSignedPdfUrl] = useState(null);
+    const [signedFileName, setSignedFileName] = useState(null);
     const [fileName, setFileName] = useState(null);
     const [galleryImageFiles, setGalleryImageFiles] = useState({});
     const [galleryImageUrls, setGalleryImageUrls] = useState(Array(3).fill(null));
@@ -285,6 +291,8 @@ export function FinalReportManager({
             setPotentialFacilitators(initialData.potentialFacilitators || []);
             setExistingPdfUrl(initialData.pdfUrl || null);
             setFileName(initialData.pdfUrl ? 'Existing PDF' : null);
+            setExistingSignedPdfUrl(initialData.signedPdfUrl || null);
+            setSignedFileName(initialData.signedPdfUrl ? 'Existing signed PDF' : null);
             
             const existingImages = initialData.galleryImageUrls || [];
             const urls = Array(3).fill(null);
@@ -301,6 +309,9 @@ export function FinalReportManager({
             setPotentialFacilitators([]);
             setPdfFile(null);
             setExistingPdfUrl(null);
+            setSignedPdfFile(null);
+            setExistingSignedPdfUrl(null);
+            setSignedFileName(null);
             setFileName(null);
             setGalleryImageUrls(Array(3).fill(null));
             setGalleryImageFiles({});
@@ -356,6 +367,8 @@ export function FinalReportManager({
             potentialFacilitators: finalPotentialFacilitators,
             pdfFile,
             existingPdfUrl: existingPdfUrl,
+            signedPdfFile,
+            existingSignedPdfUrl: existingSignedPdfUrl,
             originalGalleryUrls: initialData?.galleryImageUrls || [],
             finalGalleryUrls: galleryImageUrls,
             galleryImageFiles: galleryImageFiles,
@@ -400,6 +413,17 @@ export function FinalReportManager({
             setExistingPdfUrl(null);
         } else {
             setFileName(null);
+        }
+    };
+
+    const handleSignedFileUpload = (event) => {
+        const file = event.target.files[0];
+        setSignedPdfFile(file);
+        if (file) {
+            setSignedFileName(file.name);
+            setExistingSignedPdfUrl(null);
+        } else {
+            setSignedFileName(null);
         }
     };
     
@@ -511,19 +535,45 @@ export function FinalReportManager({
                         ))}
                     </div>
 
-                    <h3 className="text-xl font-bold mb-2">Final Report PDF</h3>
+                    <h3 className="text-xl font-bold mb-2">Report documents</h3>
+                    <p className="text-sm text-gray-500 mb-3">
+                        The report itself, and the signed copy that gets filed. Either can also be
+                        attached straight from the course report screen without opening this editor.
+                    </p>
                     <Table headers={['Document', 'Actions']}>
                         <tbody>
                             <tr>
-                                <td className="p-2 border">{existingPdfUrl ? <div className="flex items-center gap-2"><PdfIcon className="text-blue-500 w-6 h-6" /><span>Final Report.pdf</span></div> : <span className="text-gray-500">No PDF uploaded</span>}</td>
+                                <td className="p-2 border align-top">
+                                    <div className="font-semibold text-sm">Final report PDF</div>
+                                    {existingPdfUrl
+                                        ? <div className="flex items-center gap-2 mt-1"><PdfIcon className="text-blue-500 w-5 h-5" /><span className="text-xs">Attached</span></div>
+                                        : <span className="text-gray-500 text-xs">Not attached</span>}
+                                </td>
                                 <td className="p-2 border">
                                     {existingPdfUrl ? (
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-wrap gap-2">
                                             <a href={existingPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">View</Button></a>
                                             <Button variant="primary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : 'Download'}</Button>
                                             <Button variant="danger" onClick={() => { setExistingPdfUrl(null); setPdfFile(null); setFileName(null); }}>Delete</Button>
                                         </div>
-                                    ) : ( <div className="flex gap-2 items-center"><input type="file" accept=".pdf" onChange={handleFileUpload} />{fileName && <p className="text-sm text-gray-500">File selected: {fileName}</p>}</div> )}
+                                    ) : ( <div className="flex flex-col sm:flex-row sm:items-center gap-2"><input type="file" accept=".pdf" onChange={handleFileUpload} />{fileName && <p className="text-sm text-gray-500 break-all">File selected: {fileName}</p>}</div> )}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="p-2 border align-top">
+                                    <div className="font-semibold text-sm">Signed final report</div>
+                                    {existingSignedPdfUrl
+                                        ? <div className="flex items-center gap-2 mt-1"><PdfIcon className="text-emerald-600 w-5 h-5" /><span className="text-xs">Signed copy attached</span></div>
+                                        : <span className="text-gray-500 text-xs">Not attached</span>}
+                                </td>
+                                <td className="p-2 border">
+                                    {existingSignedPdfUrl ? (
+                                        <div className="flex flex-wrap gap-2">
+                                            <a href={existingSignedPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">View</Button></a>
+                                            <Button variant="primary" onClick={() => handleForceDownload(existingSignedPdfUrl, `Final_Report_Signed_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : 'Download'}</Button>
+                                            <Button variant="danger" onClick={() => { setExistingSignedPdfUrl(null); setSignedPdfFile(null); setSignedFileName(null); }}>Delete</Button>
+                                        </div>
+                                    ) : ( <div className="flex flex-col sm:flex-row sm:items-center gap-2"><input type="file" accept=".pdf" onChange={handleSignedFileUpload} />{signedFileName && <p className="text-sm text-gray-500 break-all">File selected: {signedFileName}</p>}</div> )}
                                 </td>
                             </tr>
                         </tbody>
@@ -586,7 +636,29 @@ export function FinalReportManager({
                     <h3 className="text-xl font-bold mb-2 text-gray-800">Course Gallery</h3>
                     {finalGalleryUrls.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-3 gap-4">{finalGalleryUrls.map((url, index) => (<a key={index} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={`Gallery item ${index + 1}`} className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow" /></a>))}</div>) : (<p className="text-gray-500">No images were added to the gallery.</p>)}
                 </div>
-                {existingPdfUrl && (<div><h3 className="text-xl font-bold mb-2 text-gray-800">Final Report Document</h3><div className="border rounded-lg p-4 flex items-center justify-between"><a href={existingPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2 font-semibold"><PdfIcon className="text-blue-500 w-6 h-6" /><span>View Uploaded PDF</span></a><Button variant="secondary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : 'Download'}</Button></div></div>)}
+                {(existingPdfUrl || existingSignedPdfUrl) && (
+                    <div>
+                        <h3 className="text-xl font-bold mb-2 text-gray-800">Report documents</h3>
+                        <div className="space-y-2">
+                            {existingPdfUrl && (
+                                <div className="border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <a href={existingPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2 font-semibold">
+                                        <PdfIcon className="text-blue-500 w-6 h-6" /><span>Final report PDF</span>
+                                    </a>
+                                    <Button variant="secondary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading} className="w-full sm:w-auto justify-center">{isDownloading ? <Spinner/> : 'Download'}</Button>
+                                </div>
+                            )}
+                            {existingSignedPdfUrl && (
+                                <div className="border border-emerald-300 bg-emerald-50/40 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <a href={existingSignedPdfUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-800 hover:underline flex items-center gap-2 font-semibold">
+                                        <PdfIcon className="text-emerald-600 w-6 h-6" /><span>Signed final report</span>
+                                    </a>
+                                    <Button variant="secondary" onClick={() => handleForceDownload(existingSignedPdfUrl, `Final_Report_Signed_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading} className="w-full sm:w-auto justify-center">{isDownloading ? <Spinner/> : 'Download'}</Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
                 
                 <AnnexSection 
                     groupedParticipants={finalGroupedParticipants} 

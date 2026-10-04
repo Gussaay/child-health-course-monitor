@@ -15,7 +15,8 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
-import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport, listParticipantTestsForCourse } from '../data.js';
+import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport, listParticipantTestsForCourse,
+    attachFinalReportPdf, removeFinalReportPdf, saveFinalReportWithFiles } from '../data.js';
 import {
     EMONC_TEST_MODULES, getTestSections, computeSectionScores, findParticipantTest,
     alignSectionScores, getParticipantAssignedModule, isEencOnlySubCourse, EENC_ONLY_MODULE,
@@ -1014,23 +1015,187 @@ const generateExerciseReportPdf = async (course, quality, onSuccess, onError, re
     }
 };
 
+/**
+ * Attach the report PDF and its signed copy without opening the editor.
+ *
+ * The signed scan usually arrives days after the report is written, often from
+ * somebody who is not going to open a form with twenty fields in it. These two
+ * buttons write the same two fields on the same final report document that the
+ * editor does, so whichever route is used the other sees it — and the report
+ * document is created if the course has not got one yet, because the signed
+ * copy often turns up before anybody has written the report up.
+ */
+const FinalReportDocuments = ({ course, finalReport, onChanged, setToast }) => {
+    const { user } = useAuth();
+    const who = user?.displayName || user?.email || 'Unknown';
+    const [busy, setBusy] = useState(null);
+    const reportInput = useRef(null);
+    const signedInput = useRef(null);
+
+    const say = (message, type = 'success') =>
+        (setToast ? setToast({ show: true, message, type }) : notify(message, type));
+
+    const attach = async (slot, file) => {
+        if (!file) return;
+        if (file.type && file.type !== 'application/pdf') {
+            say('That is not a PDF file.', 'error');
+            return;
+        }
+        setBusy(slot);
+        try {
+            const saved = await attachFinalReportPdf(course.id, file, slot, who);
+            // Handed straight back up so the Final Report tab shows it at once,
+            // rather than after a reload.
+            onChanged?.(saved);
+            say(slot === 'signed' ? 'Signed report attached.' : 'Report PDF attached.');
+        } catch (err) {
+            say(`Upload failed: ${err.message}`, 'error');
+        } finally {
+            setBusy(null);
+            if (reportInput.current) reportInput.current.value = '';
+            if (signedInput.current) signedInput.current.value = '';
+        }
+    };
+
+    const detach = async (slot) => {
+        setBusy(slot);
+        try {
+            const saved = await removeFinalReportPdf(course.id, slot, who);
+            onChanged?.(saved);
+            say('Removed.', 'info');
+        } catch (err) {
+            say(`Could not remove it: ${err.message}`, 'error');
+        } finally { setBusy(null); }
+    };
+
+    const Slot = ({ slot, label, url, inputRef, accent }) => (
+        <div className={`rounded-lg border p-3 ${url ? accent : 'border-slate-300 bg-white'}`}>
+            <div className="flex items-center gap-2">
+                <PdfIcon className={`w-5 h-5 ${url ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <span className="font-semibold text-sm">{label}</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5 mb-2">{url ? 'Attached' : 'Not attached'}</p>
+
+            <input ref={inputRef} type="file" accept="application/pdf,.pdf" className="hidden"
+                onChange={(e) => attach(slot, e.target.files?.[0])} />
+
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+                {url && (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="contents">
+                        <Button variant="secondary" className="w-full sm:w-auto text-xs justify-center">View</Button>
+                    </a>
+                )}
+                <Button variant={url ? 'secondary' : 'primary'} disabled={busy === slot}
+                    onClick={() => inputRef.current?.click()}
+                    className="w-full sm:w-auto text-xs justify-center">
+                    {busy === slot ? <Spinner size="sm" /> : (url ? 'Replace' : 'Upload PDF')}
+                </Button>
+                {url && (
+                    <Button variant="danger" disabled={busy === slot} onClick={() => detach(slot)}
+                        className="w-full sm:w-auto text-xs justify-center">Remove</Button>
+                )}
+            </div>
+        </div>
+    );
+
+    return (
+        <Card>
+            <div className="p-4">
+                <h3 className="text-lg font-bold">Report documents</h3>
+                <p className="text-sm text-slate-500 mb-3">
+                    Attached here or in the Final Report editor — both write the same document, so
+                    whatever is attached shows up in the final report straight away.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <Slot slot="report" label="Final report PDF" url={finalReport?.pdfUrl}
+                        inputRef={reportInput} accent="border-blue-300 bg-blue-50/40" />
+                    <Slot slot="signed" label="Signed final report" url={finalReport?.signedPdfUrl}
+                        inputRef={signedInput} accent="border-emerald-300 bg-emerald-50/40" />
+                </div>
+            </div>
+        </Card>
+    );
+};
+
 // --- MAIN COMPONENT: CourseReportView ---
-export function CourseReportView({ 
+/**
+ * THE PAGE OPENS BEFORE ITS DATA ARRIVES, so it has to be able to say so.
+ *
+ * Clicking Report used to await every read before navigating, which left the
+ * course list sitting there for several seconds looking exactly like a dead
+ * button. The page now opens at once, and this is what it shows until the data
+ * lands.
+ *
+ * A wrapper rather than an early return inside the body: every figure in the
+ * report is derived through useMemo from participants, observations and cases,
+ * and returning early from the middle of that list would change the number of
+ * hooks between renders. It also means the page cannot render the report with
+ * empty inputs, which would look like a finished report full of zeros — read as
+ * "this course has no data" rather than "not loaded yet".
+ */
+export function CourseReportView({ isLoadingData = false, loadFailed = false, onRetry, ...props }) {
+    if (!isLoadingData && !loadFailed) return <CourseReportBody {...props} />;
+
+    const { course, onBack, isSharedView = false } = props;
+    return (
+        <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
+            <PageHeader
+                title="Course Report"
+                subtitle={`${course?.course_type || ''} - ${course?.state || ''}`}
+                actions={!isSharedView && onBack ? <Button onClick={onBack} className="w-full sm:w-auto mt-4 sm:mt-0">Back to List</Button> : null}
+            />
+            <Card>
+                <div className="p-10 flex flex-col items-center gap-4 text-center">
+                    {loadFailed ? (
+                        <>
+                            <p className="font-semibold text-slate-700">The report data could not be loaded.</p>
+                            <p className="text-sm text-slate-500">Check the connection and try again.</p>
+                            {onRetry && <Button onClick={onRetry}>Try again</Button>}
+                        </>
+                    ) : (
+                        <>
+                            <Spinner />
+                            <p className="text-sm text-slate-500">
+                                Loading participants, observations and cases for this course&hellip;
+                            </p>
+                        </>
+                    )}
+                </div>
+            </Card>
+        </div>
+    );
+}
+
+function CourseReportBody({ 
     course, onBack, participants: rawParticipants, allObs: rawObs, allCases: rawCases, finalReportData, onEditFinalReport, 
     onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast, allHealthFacilities: rawFacilities,
-    onSaveFinalReport
+    onSaveFinalReport, onFinalReportChanged
 }) {
     const [activeTab, setActiveTab] = useState('full-course-report');
     // Computed inside ExerciseCourseReport and handed up, so the PDF uses
     // exactly the figures on screen rather than recalculating them.
     const [exerciseReportData, setExerciseReportData] = useState(null);
+
     
     // --- APPLY SOFT DELETE FILTERS ---
     const participants = useMemo(() => (rawParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true"), [rawParticipants]);
     const allObs = useMemo(() => (rawObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true"), [rawObs]);
     const allCases = useMemo(() => (rawCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCases]);
     const allHealthFacilities = useMemo(() => (rawFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilities]);
-    const activeFinalReport = (finalReportData && finalReportData.isDeleted !== true && finalReportData.isDeleted !== "true") ? finalReportData : null;
+    // The parent's copy, plus whatever has been attached since this page opened.
+    // Attaching a PDF hands the saved report straight back, so the Final Report
+    // tab shows it immediately instead of after a reload.
+    const [justSavedReport, setJustSavedReport] = useState(null);
+    const incoming = justSavedReport || finalReportData;
+    const activeFinalReport = (incoming && incoming.isDeleted !== true && incoming.isDeleted !== "true") ? incoming : null;
+
+    const noteFinalReport = (saved) => {
+        setJustSavedReport(saved);
+        onFinalReportChanged?.(saved);
+    };
+
+    // A different course, or the parent caught up: stop holding the local copy.
+    useEffect(() => { setJustSavedReport(null); }, [course?.id, finalReportData]);
 
 
     const [subTypeFilter, setSubTypeFilter] = useState('All');
@@ -1772,7 +1937,13 @@ export function CourseReportView({
 
             {/* TAB CONTENT: FINAL REPORT MANAGER */}
             {activeTab === 'final-report' && isFederalManager && !isSharedView && (
-                <div className="w-full max-w-full min-w-0 mt-4">
+                <div className="w-full max-w-full min-w-0 mt-4 flex flex-col gap-4">
+                    <FinalReportDocuments
+                        course={course}
+                        finalReport={activeFinalReport}
+                        onChanged={noteFinalReport}
+                        setToast={setToast}
+                    />
                     <FinalReportManager 
                         course={course} 
                         participants={participants} 
@@ -1782,9 +1953,14 @@ export function CourseReportView({
                                 if (onSaveFinalReport) {
                                     await onSaveFinalReport(data);
                                 } else {
-                                    // Fallback: Save directly if the prop wasn't passed down properly
+                                    // This path used to write the payload straight to
+                                    // Firestore, File objects and all — so saving from
+                                    // inside the report view silently dropped the PDF.
+                                    // saveFinalReportWithFiles is the same function the
+                                    // parent's handler uses, so neither can forget.
                                     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
-                                    await upsertFinalReport(data, currentUserIdentifier);
+                                    const saved = await saveFinalReportWithFiles(data, currentUserIdentifier);
+                                    noteFinalReport(saved);
                                     notify("Final report saved successfully.", "success");
                                     setActiveTab('full-course-report'); // Return to main tab
                                 }

@@ -461,7 +461,20 @@ service cloud.firestore {
     match /participants/{participantId} {
       allow read: if true;
       allow create: if true;
-      allow update: if true;
+
+      // Open, as before — public registration writes here, and so do the
+      // public monitoring and test links, none of them signed in.
+      //
+      // With ONE exception. certificateApproval records what a manager signed
+      // when they approved this participant's certificate, and the app compares
+      // it against the current name and sub-course to decide whether the
+      // certificate still has an approval behind it. An open rule would let
+      // anybody write that field and approve their own certificate, which would
+      // make the whole check decorative. Only staff may touch it.
+      allow update: if isStaff()
+                    || !request.resource.data.diff(resource.data)
+                            .affectedKeys().hasAny(['certificateApproval']);
+
       allow delete: if isStaff();
     }
 
