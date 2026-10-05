@@ -17,6 +17,7 @@ import MotherInterviewsTab from './MotherInterviewsTab';
 import VisitReportDashboardTab from './VisitReportDashboardTab';
 import FacilityInformationDashboardTab from './FacilityInformationDashboardTab';
 import IPCDashboardTab from './IPCDashboardTab';  // <-- ADDED
+import DashboardPresenter from './DashboardPresenter';
 
 import { IMNCI_FORM_STRUCTURE, calculateScores, rehydrateDraftData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS } from './IMNCSkillsAssessmentForm.jsx';
 import { PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS, NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS } from './EENCSkillsAssessmentForm.jsx';
@@ -104,6 +105,8 @@ const MentorshipDashboard = ({
     };
     
     const recalcCacheRef = useRef({});
+    // The tab content whose charts become slides in presentation mode.
+    const presentationRef = useRef(null);
 
     const checkDateFilter = useCallback((dateString, dateFilt, customStart, customEnd) => {
         if (!dateString) return false;
@@ -955,6 +958,9 @@ const MentorshipDashboard = ({
                         {scopeTitle}
                     </span>
                 </h3>
+                <div className="shrink-0">
+                    <DashboardPresenter containerRef={presentationRef} deckTitle={serviceTitle} deckSubtitle={scopeTitle} />
+                </div>
             </div>
             
             {/* 2. RESPONSIVE FILTERS */}
@@ -1021,7 +1027,7 @@ const MentorshipDashboard = ({
                 </div>
             )}
 
-            <div>
+            <div ref={presentationRef}>
                 {activeService !== 'IPC' ? (
                     <>
                         {activeTab === 'admin' && canEditStatus && (

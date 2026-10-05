@@ -1,5 +1,5 @@
 // MentorshipDashboardShared.jsx
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import { Line, Bar } from 'react-chartjs-2';
 import {
@@ -203,10 +203,23 @@ const calculateAverage = (scores) => {
     return sum / validScores.length;
 };
 
-export const CopyImageButton = ({ targetRef, title }) => {
+export const CopyImageButton = ({ targetRef, title, kind = 'chart' }) => {
     const { t, i18n } = useTranslation();
     const [isCopying, setIsCopying] = useState(false);
     const isAr = i18n.language?.startsWith('ar');
+
+    // Every card that can be copied as an image is also a slide in the
+    // dashboard's presentation mode (DashboardPresenter).
+    useEffect(() => {
+        const node = targetRef?.current;
+        if (!node) return undefined;
+        node.setAttribute('data-present-slide', title || '');
+        node.setAttribute('data-present-kind', kind);
+        return () => {
+            node.removeAttribute('data-present-slide');
+            node.removeAttribute('data-present-kind');
+        };
+    }, [targetRef, title, kind]);
 
     const handleCopy = async () => {
         if (!targetRef.current) return;
@@ -298,7 +311,7 @@ export const KpiCard = ({ title, value, unit = '', scoreValue = null, trend = nu
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 border-t-4 border-t-sky-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full relative group">
             <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyImageButton targetRef={cardRef} title={t(title)} />
+                <CopyImageButton targetRef={cardRef} title={t(title)} kind="kpi" />
             </div>
             <h4 className="text-xs sm:text-sm font-bold text-slate-500 mb-2 sm:mb-3 text-center uppercase tracking-wider break-words w-full px-2 sm:px-4" title={t(title)}>
                 {t(title)}
@@ -710,7 +723,9 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
                 if (value === null || value === undefined) return;
                 
                 const text = `${value}${dataKey === 'count' ? '' : '%'}`;
-                ctx.font = 'bold 12px "Inter", sans-serif';
+                // Follows the axis text, which presentation mode enlarges.
+                const size = chart.options.scales?.y?.ticks?.font?.size || 12;
+                ctx.font = `bold ${size}px "Inter", sans-serif`;
                 ctx.fillStyle = '#334155'; 
                 ctx.textBaseline = 'middle';
                 
