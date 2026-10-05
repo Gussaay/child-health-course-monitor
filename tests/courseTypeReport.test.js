@@ -46,6 +46,12 @@ describe('filterCourses', () => {
         expect(filterCourses(courses, { subType: 'Refresher' }).map((c) => c.id)).toEqual(['c1']);
     });
 
+    it('filters by month, inclusive at both ends', () => {
+        expect(filterCourses(courses, { dateFrom: '2025-02', dateTo: '2025-06' }).map((c) => c.id)).toEqual(['c1', 'c2']);
+        expect(filterCourses(courses, { dateTo: '2024-11' }).map((c) => c.id)).toEqual(['c3']);
+        expect(buildFilterOptions(courses).months).toEqual(['2025-06', '2025-02', '2025-01', '2024-11']);
+    });
+
     it('offers localities only within the chosen state', () => {
         expect(buildFilterOptions(courses, { state: 'Gezira' }).localities).toEqual([ALL, 'Medani']);
         expect(buildFilterOptions(courses).states).toEqual([ALL, 'Gezira', 'Khartoum']);
@@ -107,6 +113,14 @@ describe('buildCourseTypeReport', () => {
         const refresher = report.breakdowns.bySubType.find((r) => r.key === 'Refresher');
         expect(refresher.participants).toBe(1);
         expect(report.breakdowns.byCourse.map((c) => c.id)).toEqual(['c2', 'c1', 'c3']);
+    });
+
+    it('summarises participant results as overall figures', () => {
+        expect(report.participantSummary).toMatchObject({
+            total: 4, practicalAssessed: 2, avgPracticalScore: 75, practicalPassRate: 50,
+            withBothTests: 3, improvedRate: 100,
+        });
+        expect(report.participantSummary.avgIncrease).toBeCloseTo((60 + 10 + 75) / 3, 5);
     });
 
     it('computes investment and lists new IMNCI facilities, telling hospitals apart', () => {

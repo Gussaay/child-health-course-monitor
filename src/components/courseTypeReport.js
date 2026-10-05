@@ -51,7 +51,10 @@ export const buildFilterOptions = (courses, { state = ALL } = {}) => {
     const subTypes = new Set();
     const projects = new Set();
     const partners = new Set();
+    const months = new Set();
     (courses || []).forEach((c) => {
+        const month = courseDate(c).slice(0, 7);
+        if (/^\d{4}-\d{2}$/.test(month)) months.add(month);
         const cStates = getCourseStates(c);
         cStates.forEach((s) => states.add(s));
         if (state === ALL || cStates.includes(state)) getCourseLocalities(c).forEach((l) => localities.add(l));
@@ -66,12 +69,22 @@ export const buildFilterOptions = (courses, { state = ALL } = {}) => {
         subTypes: sorted(subTypes),
         projects: sorted(projects),
         partners: sorted(partners),
+        // Newest first: the recent months are the ones people pick.
+        months: Array.from(months).sort().reverse(),
     };
+};
+
+/** "2025-03" -> "Mar 2025" */
+export const formatMonth = (month) => {
+    const [y, m] = String(month).split('-').map(Number);
+    if (!y || !m) return String(month);
+    return new Date(y, m - 1, 1).toLocaleString('en', { month: 'short', year: 'numeric' });
 };
 
 /**
  * The courses that pass the filters. State and locality are the course's own
- * location; dates compare against the start date (inclusive, YYYY-MM-DD).
+ * location; dates compare against the start date, inclusive, at whatever
+ * precision the filter gives (a month "YYYY-MM" or a day "YYYY-MM-DD").
  */
 export const filterCourses = (courses, filters = {}) => {
     const { state = ALL, locality = ALL, subType = ALL, project = ALL, partner = ALL, dateFrom = '', dateTo = '' } = filters;
@@ -83,8 +96,8 @@ export const filterCourses = (courses, filters = {}) => {
         if (project !== ALL && c.course_project !== project) return false;
         if (partner !== ALL && c.funded_by !== partner) return false;
         const d = courseDate(c);
-        if (dateFrom && (!d || d < dateFrom)) return false;
-        if (dateTo && (!d || d > dateTo)) return false;
+        if (dateFrom && (!d || d.slice(0, dateFrom.length) < dateFrom)) return false;
+        if (dateTo && (!d || d.slice(0, dateTo.length) > dateTo)) return false;
         return true;
     });
 };
@@ -304,6 +317,26 @@ export const buildCourseTypeReport = ({ courses = [], participants = [], observa
         };
     });
 
+    // --- Participant results, as overall figures ---
+    const assessed = participantsWithStats.filter((p) => p.total_skills_recorded > 0);
+    const partAverage = (key, totalKey) => {
+        const list = participantsWithStats.filter((p) => p[totalKey] > 0);
+        return list.length ? average(list.map((p) => p[key])) : null;
+    };
+    const withBoth = participantsWithStats.filter((p) => p.increase !== null);
+    const participantSummary = {
+        total: participantsWithStats.length,
+        practicalAssessed: assessed.length,
+        avgPracticalScore: assessed.length ? average(assessed.map((p) => p.correctness_percentage)) : null,
+        practicalPassRate: assessed.length ? calcPct(assessed.filter((p) => p.correctness_percentage >= 90).length, assessed.length) : null,
+        avgEencScore: partAverage('eenc_score', 'eenc_total'),
+        avgMaternalScore: partAverage('maternal_score', 'maternal_total'),
+        avgNeonatalScore: partAverage('neonatal_score', 'neonatal_total'),
+        withBothTests: withBoth.length,
+        avgIncrease: withBoth.length ? average(withBoth.map((p) => p.increase)) : null,
+        improvedRate: withBoth.length ? calcPct(withBoth.filter((p) => p.increase > 0).length, withBoth.length) : null,
+    };
+
     // --- Overall KPIs ---
     let totalCases = 0, correctCases = 0, totalSkills = 0, correctSkills = 0;
     participantsWithStats.forEach((p) => {
@@ -520,7 +553,7 @@ export const buildCourseTypeReport = ({ courses = [], participants = [], observa
         preTestStats, postTestStats, totalImprovement, hasTestScores,
         improvementDistribution, practicalDistribution,
         groups, groupPerformance, days, dailyPerformance, dailyCases, dailySkills,
-        participantsWithStats,
+        participantsWithStats, participantSummary,
         breakdowns: { byCourse, byState, byLocality, bySubType, byProject, byPartner, byYear },
         hasCases: totalCases > 0,
         hasSkills: totalSkills > 0,

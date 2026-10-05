@@ -11,7 +11,7 @@
 // The card itself is shown, not a copy: it is lifted to fill the screen with
 // CSS and everything else on the page is hidden. Charts stay live (tooltips,
 // crisp at any resolution) and Chart.js resizes them to the screen on its own.
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Chart } from 'chart.js';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +21,7 @@ const PRESENTING_CLASS = 'mdp-presenting';
 const ACTIVE_ATTR = 'data-present-active';
 const ANCESTOR_ATTR = 'data-present-ancestor';
 const GROW_ATTR = 'data-present-grow';
+const CHARTBOX_ATTR = 'data-present-chartbox';
 const AUTO_ADVANCE_OPTIONS = [0, 10, 20, 30, 60];
 const CONTROLS_IDLE_MS = 2500;
 
@@ -46,6 +47,13 @@ html.${PRESENTING_CLASS} [${ACTIVE_ATTR}][data-present-kind="kpi"] { align-conte
 html.${PRESENTING_CLASS} [${ACTIVE_ATTR}] [${GROW_ATTR}] {
     flex: 1 1 0 !important; min-height: 0 !important; height: auto !important; max-height: none !important;
     display: flex !important; flex-direction: column !important;
+}
+/* The box Chart.js draws into. On a tall screen (a phone held upright, a
+   portrait monitor) filling all the height turned every chart into a narrow
+   strip, so a chart is never taller than about 60% of its width; it is
+   centred in whatever height is left. */
+html.${PRESENTING_CLASS} [${ACTIVE_ATTR}] [${CHARTBOX_ATTR}] {
+    max-height: min(100%, 56vw) !important; margin-block: auto !important; width: 100% !important;
 }
 html.${PRESENTING_CLASS} [${ACTIVE_ATTR}] .exclude-from-export { display: none !important; }
 html.${PRESENTING_CLASS} [${ACTIVE_ATTR}] h3, html.${PRESENTING_CLASS} [${ACTIVE_ATTR}] h4 {
@@ -101,6 +109,7 @@ const markAncestors = (el, on) => {
 const markGrowPath = (slideEl) => {
     const marked = [];
     slideEl.querySelectorAll('canvas').forEach((canvas) => {
+        canvas.parentElement?.setAttribute(CHARTBOX_ATTR, '');
         let node = canvas.parentElement;
         while (node && node !== slideEl) {
             if (!node.hasAttribute(GROW_ATTR)) { node.setAttribute(GROW_ATTR, ''); marked.push(node); }
@@ -192,6 +201,41 @@ const ICONS = {
     grid: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
 };
 
+// Wait for a tab's cards to render: until the number of slides on the page
+// stops changing (charts mount a little after their tab does).
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+const waitForSlides = async (container, timeoutMs = 3000) => {
+    await nextFrame(); await nextFrame();
+    const startedAt = Date.now();
+    let last = -1;
+    let stable = 0;
+    while (Date.now() - startedAt < timeoutMs) {
+        const count = collectSlides(container).length;
+        stable = count === last && count > 0 ? stable + 1 : 0;
+        if (stable >= 2) break;
+        last = count;
+        await new Promise((r) => setTimeout(r, 150));
+    }
+};
+
+// Slides are remembered by tab, title and position rather than by element:
+// the element is gone as soon as its tab is switched away.
+const describeSlides = (slides, section, sectionLabel) => {
+    const seenTitles = {};
+    return slides.map((s) => {
+        const occurrence = seenTitles[s.title] = (seenTitles[s.title] ?? -1) + 1;
+        return {
+            key: `${section ?? ''}::${s.title}::${occurrence}`,
+            section, sectionLabel, title: s.title, kind: s.kind, hasChart: s.hasChart, occurrence,
+        };
+    });
+};
+
+const findSlideElement = (container, slide) => {
+    const matches = collectSlides(container).filter((s) => s.title === slide.title);
+    return (matches[slide.occurrence] || matches[0])?.el || null;
+};
+
 /**
  * "Present" button plus the presentation itself.
  *
@@ -199,44 +243,101 @@ const ICONS = {
  * @param {React.RefObject<HTMLElement>} props.containerRef  the dashboard area whose cards become slides
  * @param {string} props.deckTitle    shown in the corner of every slide (service)
  * @param {string} [props.deckSubtitle]  e.g. the filters in force
+ * @param {{id: string, label: string}[]} [props.sections]  the dashboard's tabs, so one
+ *        presentation can take slides from several of them
+ * @param {string} [props.activeSection]  the tab on screen
+ * @param {(id: string) => void} [props.onSelectSection]  switches the dashboard's tab
  */
-export default function DashboardPresenter({ containerRef, deckTitle, deckSubtitle }) {
+export default function DashboardPresenter({ containerRef, deckTitle, deckSubtitle, sections = [], activeSection, onSelectSection }) {
     const { t, i18n } = useTranslation();
     const isAr = i18n.language?.startsWith('ar');
+    const hasSections = sections.length > 1 && !!onSelectSection;
 
     const [setupOpen, setSetupOpen] = useState(false);
+    const [scanning, setScanning] = useState(false);
+    const [includedSections, setIncludedSections] = useState([]);
     const [candidates, setCandidates] = useState([]);
     const [selected, setSelected] = useState(new Set());
+    const [startKey, setStartKey] = useState('');
     const [autoAdvance, setAutoAdvance] = useState(0);
 
     const [deck, setDeck] = useState(null); // slides being presented, or null
     const [index, setIndex] = useState(0);
+    const [slideMissing, setSlideMissing] = useState(false);
     const [playing, setPlaying] = useState(false);
     const [blackout, setBlackout] = useState(false);
     const [showGrid, setShowGrid] = useState(false);
     const [controlsVisible, setControlsVisible] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const enteredFullscreen = useRef(false);
+    const lockedOrientation = useRef(false);
     const touchStart = useRef(null);
+    const sectionRef = useRef(activeSection);
+    const homeSection = useRef(activeSection);
+    sectionRef.current = activeSection;
+
+    const showSection = useCallback(async (id) => {
+        if (!hasSections || !id || sectionRef.current === id) return;
+        onSelectSection(id);
+        sectionRef.current = id;
+        await waitForSlides(containerRef.current);
+    }, [hasSections, onSelectSection, containerRef]);
 
     // --- Setup ---
-    const openSetup = () => {
-        const found = collectSlides(containerRef.current);
+    const sectionLabel = (id) => sections.find((s) => s.id === id)?.label || '';
+
+    // Visits each chosen tab in turn and lists its cards, then goes back to
+    // the tab the user was on.
+    const scan = async (sectionIds) => {
+        setScanning(true);
+        const home = sectionRef.current;
+        const found = [];
+        try {
+            if (!hasSections) {
+                found.push(...describeSlides(collectSlides(containerRef.current), null, ''));
+            } else {
+                for (const id of sectionIds) {
+                    await showSection(id);
+                    found.push(...describeSlides(collectSlides(containerRef.current), id, sectionLabel(id)));
+                }
+                await showSection(home);
+            }
+        } finally {
+            setScanning(false);
+        }
         setCandidates(found);
-        setSelected(new Set(found.map((_, i) => i)));
-        setSetupOpen(true);
+        setSelected(new Set(found.map((c) => c.key)));
+        setStartKey(found[0]?.key || '');
     };
 
-    const toggleSelected = (i) => setSelected((prev) => {
+    const openSetup = () => {
+        const initial = hasSections ? [activeSection] : [];
+        setIncludedSections(initial);
+        setSetupOpen(true);
+        scan(initial);
+    };
+
+    const toggleSection = (id) => {
+        const next = includedSections.includes(id)
+            ? includedSections.filter((s) => s !== id)
+            : sections.map((s) => s.id).filter((s) => s === id || includedSections.includes(s));
+        setIncludedSections(next);
+        scan(next);
+    };
+
+    const toggleSelected = (key) => setSelected((prev) => {
         const next = new Set(prev);
-        if (next.has(i)) next.delete(i); else next.add(i);
+        if (next.has(key)) next.delete(key); else next.add(key);
         return next;
     });
 
-    const start = async (fromIndex = 0, selection = selected) => {
-        const slides = candidates.filter((_, i) => selection.has(i));
-        if (!slides.length) return;
+    const deckSlides = candidates.filter((c) => selected.has(c.key));
+    const effectiveStartKey = deckSlides.some((c) => c.key === startKey) ? startKey : deckSlides[0]?.key;
+
+    const start = async () => {
+        if (!deckSlides.length) return;
         setSetupOpen(false);
+        homeSection.current = sectionRef.current;
         // Must be asked for inside the click; a browser without it (iOS Safari)
         // still gets the full-window view.
         try {
@@ -245,64 +346,93 @@ export default function DashboardPresenter({ containerRef, deckTitle, deckSubtit
                 enteredFullscreen.current = true;
             }
         } catch { /* full-window view only */ }
-        setIndex(fromIndex);
+        // A phone held upright squeezes every chart into a tall, narrow strip.
+        // Turning to landscape is only possible in full screen, so it is asked
+        // for and quietly skipped where the device says no.
+        try {
+            if (window.matchMedia?.('(pointer: coarse)').matches && screen.orientation?.lock) {
+                await screen.orientation.lock('landscape');
+                lockedOrientation.current = true;
+            }
+        } catch { /* stays as it is */ }
+        setIndex(Math.max(0, deckSlides.findIndex((c) => c.key === effectiveStartKey)));
         setPlaying(autoAdvance > 0);
         setBlackout(false);
         setShowGrid(false);
-        setDeck(slides);
+        setDeck(deckSlides);
     };
 
     const stop = useCallback(() => {
         setDeck(null);
         setPlaying(false);
+        if (lockedOrientation.current) {
+            try { screen.orientation?.unlock?.(); } catch { /* nothing to undo */ }
+            lockedOrientation.current = false;
+        }
         if (enteredFullscreen.current && document.fullscreenElement) {
             document.exitFullscreen?.().catch(() => {});
         }
         enteredFullscreen.current = false;
     }, []);
 
+    // The page is hidden for the whole show, not slide by slide, so moving
+    // between tabs never flashes the dashboard; the presenter's tab is put back after.
+    useEffect(() => {
+        if (!deck) return undefined;
+        const html = document.documentElement;
+        html.classList.add(PRESENTING_CLASS);
+        return () => {
+            html.classList.remove(PRESENTING_CLASS);
+            const home = homeSection.current;
+            if (hasSections && home && sectionRef.current !== home) onSelectSection(home);
+        };
+    }, [deck, hasSections, onSelectSection]);
+
     // --- Apply the current slide to the page ---
     useEffect(() => {
         if (!deck) return undefined;
         const slide = deck[index];
-        let el = slide?.el;
-        // The dashboard may have re-rendered underneath: find the card again by title.
-        if (el && !el.isConnected) {
-            const again = collectSlides(containerRef.current).find((s) => s.title === slide.title);
-            el = again?.el;
-        }
-        if (!el) return undefined;
+        let cancelled = false;
+        let undo = null;
+        setSlideMissing(false);
 
-        const html = document.documentElement;
-        html.classList.add(PRESENTING_CLASS);
-        el.setAttribute(ACTIVE_ATTR, '');
-        // A KPI row's container is not a card of its own, so it is tagged here
-        // and untagged again after; a card keeps the kind CopyImageButton gave it.
-        const addedKind = !el.hasAttribute('data-present-kind');
-        if (addedKind) el.setAttribute('data-present-kind', slide.kind);
-        const sizes = rememberChartSizes(el);
-        markAncestors(el, true);
-        const grown = markGrowPath(el);
-        el.scrollTop = 0;
-        // Chart.js listens for its box resizing; nudge anything that does not.
-        let enlarged = [];
-        const raf = requestAnimationFrame(() => {
-            window.dispatchEvent(new Event('resize'));
-            enlarged = enlargeCharts(el);
-        });
+        (async () => {
+            if (slide.section) await showSection(slide.section);
+            if (cancelled) return;
+            const el = findSlideElement(containerRef.current, slide);
+            if (!el) { setSlideMissing(true); return; }
 
-        return () => {
-            cancelAnimationFrame(raf);
-            restoreCharts(enlarged);
-            el.removeAttribute(ACTIVE_ATTR);
-            if (addedKind) el.removeAttribute('data-present-kind');
-            markAncestors(el, false);
-            grown.forEach((n) => n.removeAttribute(GROW_ATTR));
-            html.classList.remove(PRESENTING_CLASS);
-            sizes.forEach(({ chart, width, height }) => { if (chart.canvas) chart.resize(width, height); });
-            requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
-        };
-    }, [deck, index, containerRef]);
+            el.setAttribute(ACTIVE_ATTR, '');
+            // A KPI row's container is not a card of its own, so it is tagged here
+            // and untagged again after; a card keeps the kind CopyImageButton gave it.
+            const addedKind = !el.hasAttribute('data-present-kind');
+            if (addedKind) el.setAttribute('data-present-kind', slide.kind);
+            const sizes = rememberChartSizes(el);
+            markAncestors(el, true);
+            const grown = markGrowPath(el);
+            el.scrollTop = 0;
+            // Chart.js listens for its box resizing; nudge anything that does not.
+            let enlarged = [];
+            const raf = requestAnimationFrame(() => {
+                window.dispatchEvent(new Event('resize'));
+                enlarged = enlargeCharts(el);
+            });
+
+            undo = () => {
+                cancelAnimationFrame(raf);
+                restoreCharts(enlarged);
+                el.removeAttribute(ACTIVE_ATTR);
+                if (addedKind) el.removeAttribute('data-present-kind');
+                markAncestors(el, false);
+                grown.forEach((n) => { n.removeAttribute(GROW_ATTR); n.removeAttribute(CHARTBOX_ATTR); });
+                sizes.forEach(({ chart, width, height }) => { if (chart.canvas) chart.resize(width, height); });
+                requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+            };
+        })();
+
+        return () => { cancelled = true; undo?.(); };
+    }, [deck, index, containerRef, showSection]);
+
 
     const go = useCallback((delta) => {
         if (!deck) return;
@@ -400,12 +530,22 @@ export default function DashboardPresenter({ containerRef, deckTitle, deckSubtit
     };
 
     const progress = deck ? ((index + 1) / deck.length) * 100 : 0;
-    const chartCount = useMemo(() => candidates.filter((c) => c.hasChart).length, [candidates]);
 
     const btn = 'p-2 rounded-lg text-white/90 hover:text-white hover:bg-white/15 disabled:opacity-30 disabled:hover:bg-transparent transition-colors';
 
     const overlay = deck && createPortal(
         <div className="mdp-overlay" dir={isAr ? 'rtl' : 'ltr'}>
+            {/* Behind the slide: covers the page while a tab is switching. */}
+            <div className="fixed inset-0 bg-white z-[2147482999] flex items-center justify-center">
+                {slideMissing ? (
+                    <div className="text-center text-slate-500 px-6">
+                        <div className="text-lg font-bold text-slate-700 mb-1">{deck[index]?.title}</div>
+                        {t('This chart is not on the dashboard any more (the data or filters may have changed).')}
+                    </div>
+                ) : (
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-600" />
+                )}
+            </div>
             <div className="fixed top-0 inset-x-0 z-[2147483001] flex items-center justify-between px-[4vw] py-3 pointer-events-none">
                 <div className="min-w-0">
                     <div className="text-sm sm:text-base font-extrabold text-slate-800 truncate">{deckTitle}</div>
@@ -451,7 +591,7 @@ export default function DashboardPresenter({ containerRef, deckTitle, deckSubtit
                                     onClick={() => { setIndex(i); setShowGrid(false); setBlackout(false); }}
                                     className={`w-full text-start p-4 rounded-xl border-2 transition-colors ${i === index ? 'border-sky-400 bg-sky-500/20' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
                                 >
-                                    <div className="text-sky-300 text-xs font-bold mb-1">{i + 1} · {s.kind === 'kpi' ? t('Key figures') : s.hasChart ? t('Chart') : t('Table')}</div>
+                                    <div className="text-sky-300 text-xs font-bold mb-1">{i + 1} · {s.sectionLabel ? `${s.sectionLabel} · ` : ''}{s.kind === 'kpi' ? t('Key figures') : s.hasChart ? t('Chart') : t('Table')}</div>
                                     <div className="text-white font-semibold text-sm line-clamp-2">{s.title || t('Untitled')}</div>
                                 </button>
                             </li>
@@ -478,60 +618,97 @@ export default function DashboardPresenter({ containerRef, deckTitle, deckSubtit
 
             <Modal isOpen={setupOpen} onClose={() => setSetupOpen(false)} title={t('Present dashboard')}>
                 <div className="p-4 sm:p-6 space-y-4" dir={isAr ? 'rtl' : 'ltr'}>
-                    {candidates.length === 0 ? (
-                        <p className="text-slate-600">{t('There are no charts on this tab to present. Wait for the data to load, or switch tabs.')}</p>
-                    ) : (
-                        <>
-                            <p className="text-sm text-slate-600">
-                                {t('Each chart is shown full screen, one at a time. Slides come from the tab you are on')} ({candidates.length} {t('slides')}, {chartCount} {t('charts')}).
-                            </p>
-                            <div className="flex flex-wrap gap-3 items-center justify-between">
-                                <div className="flex gap-3 text-sm">
-                                    <button type="button" className="text-sky-700 font-semibold hover:underline" onClick={() => setSelected(new Set(candidates.map((_, i) => i)))}>{t('Select all')}</button>
-                                    <button type="button" className="text-sky-700 font-semibold hover:underline" onClick={() => setSelected(new Set(candidates.map((c, i) => (c.hasChart ? i : -1)).filter((i) => i >= 0)))}>{t('Charts only')}</button>
-                                    <button type="button" className="text-sky-700 font-semibold hover:underline" onClick={() => setSelected(new Set())}>{t('Clear')}</button>
-                                </div>
-                                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                    {t('Auto-advance')}
-                                    <select value={autoAdvance} onChange={(e) => setAutoAdvance(Number(e.target.value))} className="border border-slate-300 rounded-md p-1.5 text-sm">
-                                        {AUTO_ADVANCE_OPTIONS.map((s) => <option key={s} value={s}>{s === 0 ? t('Off') : `${s} ${t('seconds')}`}</option>)}
-                                    </select>
-                                </label>
-                            </div>
-                            <ol className="max-h-[45vh] overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
-                                {candidates.map((c, i) => (
-                                    <li key={i} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50">
-                                        <input type="checkbox" checked={selected.has(i)} onChange={() => toggleSelected(i)} className="h-4 w-4 accent-sky-600" id={`mdp-slide-${i}`} />
-                                        <label htmlFor={`mdp-slide-${i}`} className="flex-1 text-sm cursor-pointer min-w-0">
-                                            <span className="text-slate-400 font-semibold me-2">{i + 1}.</span>
-                                            <span className="font-semibold text-slate-800">{c.title || t('Untitled')}</span>
-                                            <span className="ms-2 text-[11px] font-bold uppercase text-slate-400">{c.kind === 'kpi' ? t('Key figures') : c.hasChart ? t('Chart') : t('Table')}</span>
-                                        </label>
-                                        <button type="button" className="text-xs font-bold text-sky-700 hover:underline shrink-0" onClick={() => {
-                                            const selection = new Set(selected).add(i);
-                                            setSelected(selection);
-                                            start(candidates.filter((_, j) => selection.has(j)).indexOf(c), selection);
-                                        }}>
-                                            {t('Start here')}
-                                        </button>
-                                    </li>
+                    {/* Start first: everything is selected already, so one click presents. */}
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                        <label className="flex-1 min-w-0 flex flex-col gap-1 text-sm font-semibold text-slate-700">
+                            {t('Start from')}
+                            <select
+                                value={effectiveStartKey || ''}
+                                onChange={(e) => setStartKey(e.target.value)}
+                                disabled={scanning || deckSlides.length === 0}
+                                className="border border-slate-300 rounded-md p-2 text-sm bg-white w-full"
+                            >
+                                {deckSlides.map((c, i) => (
+                                    <option key={c.key} value={c.key}>
+                                        {i + 1}. {c.sectionLabel ? `${c.sectionLabel} — ` : ''}{c.title || t('Untitled')}
+                                    </option>
                                 ))}
-                            </ol>
-                            <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 leading-relaxed">
-                                <strong>{t('Controls')}:</strong> {t('→ / Space / Page Down: next')} · {t('← / Page Up: previous')} · {t('G: all slides')} · {t('B: black screen')} · {t('F: full screen')} · {t('Esc: end')}. {t('Presentation clickers work too. On a phone or tablet, swipe.')}
-                            </div>
-                        </>
-                    )}
-                    <div className="flex justify-end gap-3 pt-2 border-t border-slate-200">
-                        <button type="button" onClick={() => setSetupOpen(false)} className="px-4 py-2 text-slate-600 font-bold text-sm">{t('Cancel')}</button>
+                            </select>
+                        </label>
                         <button
                             type="button"
-                            onClick={() => start(0)}
-                            disabled={selected.size === 0}
-                            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-bold text-sm shadow-sm flex items-center gap-2"
+                            onClick={start}
+                            disabled={scanning || deckSlides.length === 0}
+                            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2 shrink-0"
                         >
-                            <Icon d={ICONS.play} className="w-4 h-4" /> {t('Start presentation')} ({selected.size})
+                            <Icon d={ICONS.play} className="w-4 h-4" /> {t('Start presentation')} ({deckSlides.length})
                         </button>
+                    </div>
+
+                    {hasSections && (
+                        <div>
+                            <div className="text-sm font-semibold text-slate-700 mb-2">{t('Present from these tabs')}</div>
+                            <div className="flex flex-wrap gap-2">
+                                {sections.map((s) => {
+                                    const on = includedSections.includes(s.id);
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            disabled={scanning || (on && includedSections.length === 1)}
+                                            onClick={() => toggleSection(s.id)}
+                                            className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors disabled:cursor-not-allowed ${on ? 'bg-sky-600 border-sky-600 text-white' : 'bg-white border-slate-300 text-slate-600 hover:border-sky-400'}`}
+                                        >
+                                            {on ? '✓ ' : ''}{s.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-3 items-center justify-between">
+                        <div className="flex gap-3 text-sm">
+                            <button type="button" className="text-sky-700 font-semibold hover:underline" onClick={() => setSelected(new Set(candidates.map((c) => c.key)))}>{t('Select all')}</button>
+                            <button type="button" className="text-sky-700 font-semibold hover:underline" onClick={() => setSelected(new Set(candidates.filter((c) => c.hasChart).map((c) => c.key)))}>{t('Charts only')}</button>
+                            <button type="button" className="text-sky-700 font-semibold hover:underline" onClick={() => setSelected(new Set())}>{t('Clear')}</button>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                            {t('Auto-advance')}
+                            <select value={autoAdvance} onChange={(e) => setAutoAdvance(Number(e.target.value))} className="border border-slate-300 rounded-md p-1.5 text-sm">
+                                {AUTO_ADVANCE_OPTIONS.map((s) => <option key={s} value={s}>{s === 0 ? t('Off') : `${s} ${t('seconds')}`}</option>)}
+                            </select>
+                        </label>
+                    </div>
+
+                    {scanning ? (
+                        <div className="flex items-center justify-center gap-3 p-6 text-sky-700 text-sm font-semibold">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-sky-600" />
+                            {t('Collecting charts…')}
+                        </div>
+                    ) : candidates.length === 0 ? (
+                        <p className="text-slate-600 text-sm">{t('There are no charts to present. Wait for the data to load, or choose another tab.')}</p>
+                    ) : (
+                        <ol className="max-h-[40vh] overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+                            {candidates.map((c, i) => (
+                                <li key={c.key} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50">
+                                    <input type="checkbox" checked={selected.has(c.key)} onChange={() => toggleSelected(c.key)} className="h-4 w-4 accent-sky-600" id={`mdp-slide-${i}`} />
+                                    <label htmlFor={`mdp-slide-${i}`} className="flex-1 text-sm cursor-pointer min-w-0">
+                                        <span className="text-slate-400 font-semibold me-2">{i + 1}.</span>
+                                        {c.sectionLabel && <span className="text-sky-700 font-semibold me-1">{c.sectionLabel} —</span>}
+                                        <span className="font-semibold text-slate-800">{c.title || t('Untitled')}</span>
+                                        <span className="ms-2 text-[11px] font-bold uppercase text-slate-400">{c.kind === 'kpi' ? t('Key figures') : c.hasChart ? t('Chart') : t('Table')}</span>
+                                    </label>
+                                </li>
+                            ))}
+                        </ol>
+                    )}
+
+                    <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 leading-relaxed">
+                        <strong>{t('Controls')}:</strong> {t('→ / Space / Page Down: next')} · {t('← / Page Up: previous')} · {t('G: all slides')} · {t('B: black screen')} · {t('F: full screen')} · {t('Esc: end')}. {t('Presentation clickers work too. On a phone or tablet, swipe.')}
+                    </div>
+                    <div className="flex justify-end pt-2 border-t border-slate-200">
+                        <button type="button" onClick={() => setSetupOpen(false)} className="px-4 py-2 text-slate-600 font-bold text-sm">{t('Cancel')}</button>
                     </div>
                 </div>
             </Modal>
