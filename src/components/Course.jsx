@@ -55,6 +55,7 @@ import {
 } from './CertificateGenerator';
 import { notify, confirmDialog } from './dialogs';
 
+const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
 const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
 const MentorshipMonitoringView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.MentorshipMonitoringView })));
@@ -1547,6 +1548,9 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     // State for the new Migration Modal
     const [showMigrationModal, setShowMigrationModal] = useState(false);
 
+    // The comprehensive report for the active course type, shown in place of the course list.
+    const [showTypeReport, setShowTypeReport] = useState(false);
+
     useEffect(() => {
         fetchFederalCoordinators();
         fetchStateCoordinators();
@@ -1563,10 +1567,10 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     }, [activeCoursesTab, fetchCourses, fetchParticipants]);
 
     useEffect(() => {
-        if (activeCoursesTab === 'dashboard' && (!healthFacilities || healthFacilities.length === 0)) {
+        if ((activeCoursesTab === 'dashboard' || showTypeReport) && (!healthFacilities || healthFacilities.length === 0)) {
             fetchHealthFacilities();
         }
-    }, [activeCoursesTab, healthFacilities, fetchHealthFacilities]);
+    }, [activeCoursesTab, showTypeReport, healthFacilities, fetchHealthFacilities]);
 
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
     const [courseToEdit, setCourseToEdit] = useState(null);
@@ -1631,6 +1635,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         setFilterLocality('All');
         setFilterSubCourse('All');
         setFilterProject('All');
+        setShowTypeReport(false);
     }, [activeCourseType]);
 
     useEffect(() => {
@@ -1657,6 +1662,21 @@ const [emoncModule, setEmoncModule] = useState('maternal');
             return stateMatch && localityMatch && subCourseMatch && projectMatch;
         });
     }, [coursesForActiveType, filterState, filterLocality, filterSubCourse, filterProject, userStates, userLocalities, manageLocation]);
+
+    // Every course of the active type the user may see, before the list filters:
+    // the comprehensive report applies its own.
+    const typeReportCourses = useMemo(() => {
+        return coursesForActiveType.filter(c => {
+            if (c.inRecycleBin || c.isDeleted === true || c.isDeleted === "true") return false;
+            if (manageLocation === 'user_state' || manageLocation === 'user_locality') {
+                if (!userStates || userStates.length === 0 || !userStates.includes(c.state)) return false;
+            }
+            if (manageLocation === 'user_locality') {
+                if (!userLocalities || userLocalities.length === 0 || !userLocalities.includes(c.locality)) return false;
+            }
+            return true;
+        });
+    }, [coursesForActiveType, userStates, userLocalities, manageLocation]);
 
     const dashboardCourses = useMemo(() => {
         return (allCourses || []).filter(c => {
@@ -2117,6 +2137,18 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     <>
                         {!activeCourseType ? (
                             <Landing active={activeCourseType} onPick={(t) => setActiveCourseType(t)} />
+                        ) : showTypeReport ? (
+                            <Suspense fallback={<Spinner />}>
+                                <CourseTypeReportView
+                                    courseType={activeCourseType}
+                                    courses={typeReportCourses}
+                                    participants={dashboardParticipants}
+                                    healthFacilities={healthFacilities || []}
+                                    initialFilters={{ state: filterState, locality: filterLocality, subType: filterSubCourse, project: filterProject }}
+                                    onOpenCourseReport={onOpenReport}
+                                    onBack={() => setShowTypeReport(false)}
+                                />
+                            </Suspense>
                         ) : (
                             <div>
                                 <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
@@ -2131,7 +2163,10 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                             </Button>
                                         )}
                                     </div>
-                                    <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>Change Course Package</Button>
+                                    <div className="flex gap-2">
+                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="bg-indigo-600 text-white hover:bg-indigo-700"><ClipboardList size={14} className="mr-1"/> Comprehensive {activeCourseType} Report</Button>
+                                        <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>Change Course Package</Button>
+                                    </div>
                                 </div>
                                 
                                 <Card className="p-4 mb-4 bg-gray-50">
