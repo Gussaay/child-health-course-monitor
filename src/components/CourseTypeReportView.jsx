@@ -21,7 +21,7 @@ import { isEencOnlyCourse } from './CourseTestForm';
 import { notify } from './dialogs';
 import {
     ALL, buildFilterOptions, filterCourses, filterParticipants, buildCourseTypeReport,
-    mergeEmoncModuleSummaries,
+    mergeEmoncModuleSummaries, formatMonth,
 } from './courseTypeReport';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ChartDataLabels);
@@ -88,7 +88,6 @@ const BREAKDOWNS = [
     { key: 'byYear', label: 'Year' },
 ];
 
-const PAGE_SIZE = 50;
 
 // --- Small presentational pieces ---
 const Kpi = ({ label, value, className = 'bg-gray-100', valueClass = 'text-sky-700' }) => (
@@ -123,6 +122,22 @@ const FilterSelect = ({ label, value, onChange, options, disabled }) => (
             className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-2 focus:ring-sky-500 disabled:bg-gray-100"
         >
             {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+    </div>
+);
+
+// Months that have courses, picked from a list rather than typed.
+const MonthSelect = ({ label, value, onChange, months }) => (
+    <div className="flex flex-col gap-1">
+        <label className="font-semibold text-gray-700 text-sm">{label}</label>
+        <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={months.length === 0}
+            className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-2 focus:ring-sky-500 disabled:bg-gray-100"
+        >
+            <option value="">Any</option>
+            {months.map((m) => <option key={m} value={m}>{formatMonth(m)}</option>)}
         </select>
     </div>
 );
@@ -254,32 +269,8 @@ export default function CourseTypeReportView({
     const showEmoncParts = isEmoncType && courses.some((c) => !isEencOnlyCourse(c, participants.filter((p) => p.courseId === c.id)));
     const showEencOnly = isEmoncType && !showEmoncParts;
 
-    // --- Participant tables: filters and paging ---
-    const [practicalFilter, setPracticalFilter] = useState(ALL);
-    const [writtenFilter, setWrittenFilter] = useState(ALL);
-    const [search, setSearch] = useState('');
-    const [practicalPage, setPracticalPage] = useState(1);
-    const [writtenPage, setWrittenPage] = useState(1);
     const [breakdownKey, setBreakdownKey] = useState('byState');
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
-
-    useEffect(() => { setPracticalPage(1); setWrittenPage(1); }, [filters, practicalFilter, writtenFilter, search]);
-
-    const searchMatch = (p) => {
-        if (!search.trim()) return true;
-        const q = search.trim().toLowerCase();
-        return [p.name, p.center_name, p.courseState, p.courseLocality, p.job_title].some((v) => String(v || '').toLowerCase().includes(q));
-    };
-    const practicalRows = useMemo(() => report.participantsWithStats
-        .filter((p) => practicalFilter === ALL || p.practicalCategory === practicalFilter)
-        .filter(searchMatch)
-        .sort((a, b) => (b.total_skills_recorded ? b.correctness_percentage : -1) - (a.total_skills_recorded ? a.correctness_percentage : -1)),
-    [report, practicalFilter, search]); // eslint-disable-line react-hooks/exhaustive-deps
-    const writtenRows = useMemo(() => report.participantsWithStats
-        .filter((p) => writtenFilter === ALL || p.improvementCategory === writtenFilter)
-        .filter(searchMatch)
-        .sort((a, b) => (b.increase ?? -1000) - (a.increase ?? -1000)),
-    [report, writtenFilter, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // --- Charts ---
     const { groups, groupPerformance, days, dailyPerformance, breakdowns } = report;
@@ -315,8 +306,8 @@ export default function CourseTypeReportView({
         filters.subType !== ALL && `Sub-course: ${filters.subType}`,
         filters.project !== ALL && `Project: ${filters.project}`,
         filters.partner !== ALL && `Funded by: ${filters.partner}`,
-        filters.dateFrom && `From: ${filters.dateFrom}`,
-        filters.dateTo && `To: ${filters.dateTo}`,
+        filters.dateFrom && `From: ${formatMonth(filters.dateFrom)}`,
+        filters.dateTo && `To: ${formatMonth(filters.dateTo)}`,
     ].filter(Boolean).join(' | ') || 'All courses';
 
     // --- PDF export ---
@@ -388,10 +379,9 @@ export default function CourseTypeReportView({
             ]]);
 
             if (coverage.coursesWithSnapshot > 0) {
-                heading(`Coverage (PHC only) - ${coverage.coursesWithSnapshot} course(s) with baseline`);
-                table(['Level / Name', 'Total PHCs', 'w/ IMNCI Before', 'Coverage Before', 'New PHCs', 'Coverage After', 'Increase'], [
-                    ...coverage.localityCoverage.map((l) => [`Locality: ${l.name}`, l.totalPhc, l.phcWithImnciBefore, fmtPct(l.covBefore), l.newPhc, fmtPct(l.covAfter), `+${l.increase.toFixed(2)}%`]),
-                    ...coverage.stateCoverage.map((s) => [`State: ${s.name}`, s.totalPhc, s.phcWithImnciBefore, fmtPct(s.covBefore), s.newPhc, fmtPct(s.covAfter), `+${s.increase.toFixed(2)}%`]),
+                heading(`State Coverage Increase (PHC only) - total new PHCs: ${coverage.totalNewPhc}`);
+                table(['State', 'Total PHCs', 'w/ IMNCI Before', 'Coverage Before', 'New PHCs', 'Coverage After', 'Increase'], [
+                    ...coverage.stateCoverage.map((s) => [s.name, s.totalPhc, s.phcWithImnciBefore, fmtPct(s.covBefore), s.newPhc, fmtPct(s.covAfter), `+${s.increase.toFixed(2)}%`]),
                 ]);
             }
 
@@ -419,21 +409,16 @@ export default function CourseTypeReportView({
                 });
             }
 
-            if (report.newImciFacilities.length) {
-                heading('Facilities with New IMNCI Service Introduction');
-                table(['Facility', 'Locality', 'State', 'Type', 'Course Date(s)'], report.newImciFacilities.map((f) => [f.name, f.locality, f.state, f.isHospital ? 'Hospital' : 'PHC', f.courseDates.join(', ')]));
-            }
-
-            if (report.hasSkills) {
-                heading('Practical Performance by Participant');
-                table(['#', 'Name', 'State', 'Course Date', 'Sub-course', 'Cases', 'Skills', 'Score', 'Category'],
-                    practicalRows.map((p, i) => [i + 1, p.name, p.courseState, p.courseDate, p.subType, p.total_cases_seen, p.total_skills_recorded,
-                        p.total_skills_recorded ? fmtPct(p.correctness_percentage) : 'N/A', p.practicalCategory]));
-            }
-            if (report.hasTestScores) {
-                heading('Written Test Improvement by Participant');
-                table(['#', 'Name', 'State', 'Course Date', 'Sub-course', 'Pre-Test', 'Post-Test', '% Increase', 'Category'],
-                    writtenRows.map((p, i) => [i + 1, p.name, p.courseState, p.courseDate, p.subType, fmtPct(p.pre), fmtPct(p.post), fmtPct(p.increase), p.improvementCategory]));
+            const ps = report.participantSummary;
+            if (report.hasSkills || report.hasTestScores) {
+                heading('Participant Results (overall)');
+                table(['Participants', 'Practical Assessed', 'Avg Practical Score', 'Scored 90%+', 'With Pre & Post', 'Avg % Increase', 'Improved'], [[
+                    ps.total, ps.practicalAssessed, fmtPct(ps.avgPracticalScore), fmtPct(ps.practicalPassRate),
+                    ps.withBothTests, fmtPct(ps.avgIncrease), fmtPct(ps.improvedRate),
+                ]]);
+                const dist = (d) => Object.entries(d).map(([k, v]) => `${k}: ${v}`).join('   ');
+                if (report.hasSkills) { doc.setFontSize(9); doc.text(`Practical categories - ${dist(report.practicalDistribution)}`, margin, y); y += 6; }
+                if (report.hasTestScores) { doc.setFontSize(9); doc.text(`Improvement categories - ${dist(report.improvementDistribution)}`, margin, y); y += 8; }
             }
 
             const safeType = String(courseType || 'Courses').replace(/[^\w-]+/g, '_');
@@ -447,18 +432,7 @@ export default function CourseTypeReportView({
     };
 
     const { summary, overall, investment, coverage } = report;
-    const pageOf = (rows, page) => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-    const Pager = ({ rows, page, setPage }) => {
-        const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-        if (pages <= 1) return null;
-        return (
-            <div className="flex items-center justify-end gap-2 mt-2 text-sm">
-                <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Prev</Button>
-                <span>Page {page} of {pages}</span>
-                <Button variant="secondary" disabled={page >= pages} onClick={() => setPage(page + 1)}>Next</Button>
-            </div>
-        );
-    };
+
 
     return (
         <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
@@ -489,14 +463,10 @@ export default function CourseTypeReportView({
                         <FilterSelect label="Sub-course" value={filters.subType} onChange={(v) => setFilter('subType', v)} options={filterOptions.subTypes} />
                         <FilterSelect label="Project" value={filters.project} onChange={(v) => setFilter('project', v)} options={filterOptions.projects} />
                         <FilterSelect label="Funded by" value={filters.partner} onChange={(v) => setFilter('partner', v)} options={filterOptions.partners} />
-                        <div className="flex flex-col gap-1">
-                            <label className="font-semibold text-gray-700 text-sm">Start date from</label>
-                            <input type="date" value={filters.dateFrom} max={filters.dateTo || undefined} onChange={(e) => setFilter('dateFrom', e.target.value)} className="border border-gray-300 rounded-md p-2 w-full text-sm" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <label className="font-semibold text-gray-700 text-sm">Start date to</label>
-                            <input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={(e) => setFilter('dateTo', e.target.value)} className="border border-gray-300 rounded-md p-2 w-full text-sm" />
-                        </div>
+                        <MonthSelect label="From month" value={filters.dateFrom} onChange={(v) => setFilter('dateFrom', v)}
+                            months={filterOptions.months.filter((m) => !filters.dateTo || m <= filters.dateTo)} />
+                        <MonthSelect label="To month" value={filters.dateTo} onChange={(v) => setFilter('dateTo', v)}
+                            months={filterOptions.months.filter((m) => !filters.dateFrom || m >= filters.dateFrom)} />
                     </div>
                 </div>
             </Card>
@@ -624,36 +594,14 @@ export default function CourseTypeReportView({
                         >
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                                 <Kpi label="Total new PHCs introducing IMNCI" value={coverage.totalNewPhc} className="bg-green-50 border border-green-100" valueClass="text-green-800" />
-                                {coverage.stateCoverage.map((s) => (
-                                    <Kpi key={s.name} label={`State Increase (${s.name})`} value={<>{s.newPhc} <span className="text-sm text-green-600">(+{s.increase.toFixed(2)}%)</span></>} className="bg-indigo-50 border border-indigo-100" valueClass="text-indigo-800" />
-                                ))}
                             </div>
-                            <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
-                                {coverage.localityCoverage.map((l) => (
-                                    <tr key={`loc-${l.name}`}>
-                                        <td className="font-semibold">Locality: {l.name}</td><td>{l.totalPhc}</td><td>{l.phcWithImnciBefore}</td>
-                                        <td>{fmtPct(l.covBefore)}</td><td>{l.newPhc}</td><td className="font-bold text-sky-700">{fmtPct(l.covAfter)}</td>
-                                        <td className="font-bold text-green-600">+{l.increase.toFixed(2)}%</td>
-                                    </tr>
-                                ))}
+                            <h4 className="font-semibold text-gray-700 mt-2">State Coverage Increase</h4>
+                            <Table headers={['State', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
                                 {coverage.stateCoverage.map((s) => (
-                                    <tr key={`state-${s.name}`} className="bg-gray-50">
-                                        <td className="font-semibold">State: {s.name}</td><td>{s.totalPhc}</td><td>{s.phcWithImnciBefore}</td>
+                                    <tr key={`state-${s.name}`}>
+                                        <td className="font-semibold">{s.name}</td><td>{s.totalPhc}</td><td>{s.phcWithImnciBefore}</td>
                                         <td>{fmtPct(s.covBefore)}</td><td>{s.newPhc}</td><td className="font-bold text-sky-700">{fmtPct(s.covAfter)}</td>
                                         <td className="font-bold text-green-600">+{s.increase.toFixed(2)}%</td>
-                                    </tr>
-                                ))}
-                            </Table>
-                        </Section>
-                    )}
-
-                    {report.newImciFacilities.length > 0 && (
-                        <Section title="Facilities with New IMNCI Service Introduction" subtitle="Hospitals are listed for reference but are not counted in PHC coverage.">
-                            <Table headers={['Facility Name', 'Locality', 'State', 'Type', 'Course Date(s)']}>
-                                {report.newImciFacilities.map((f, i) => (
-                                    <tr key={`${f.name}-${i}`}>
-                                        <td className="font-semibold">{f.name}</td><td>{f.locality}</td><td>{f.state}</td>
-                                        <td>{f.isHospital ? 'Hospital' : 'PHC'}</td><td>{f.courseDates.join(', ')}</td>
                                     </tr>
                                 ))}
                             </Table>
@@ -744,60 +692,35 @@ export default function CourseTypeReportView({
                     ))}
 
                     {/* Participant results */}
-                    <Section title="Participant Results" subtitle={`${report.participantsWithStats.length} participants across all filtered courses.`}>
-                        <input
-                            type="search" value={search} onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search by name, facility, state, locality or job title…"
-                            className="border border-gray-300 rounded-md p-2 w-full md:w-1/2 text-sm mb-4"
-                        />
-
+                    <Section title="Participant Results" subtitle={`Overall figures for ${report.participantSummary.total} participants across all filtered courses.`}>
                         {report.hasSkills && (
-                            <div className="mb-8">
-                                <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
-                                    <h4 className="text-lg font-bold text-sky-800">Practical Case Performance</h4>
-                                    <select value={practicalFilter} onChange={(e) => setPracticalFilter(e.target.value)} className="border border-gray-300 rounded-md p-1.5 text-sm">
-                                        {[ALL, ...Object.keys(report.practicalDistribution)].map((o) => <option key={o} value={o}>{o}</option>)}
-                                    </select>
+                            <div className="mb-6">
+                                <h4 className="text-lg font-bold text-sky-800 mb-2">Practical Case Performance</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                    <Kpi label="Participants Assessed" value={`${report.participantSummary.practicalAssessed} / ${report.participantSummary.total}`} />
+                                    <Kpi label="Avg. Practical Score" value={fmtPct(report.participantSummary.avgPracticalScore)} className={scoreClass(report.participantSummary.avgPracticalScore)} valueClass="" />
+                                    <Kpi label="Scored 90% or More" value={fmtPct(report.participantSummary.practicalPassRate)} />
+                                    {showEmoncParts ? (
+                                        <Kpi label="Avg. EENC / Maternal / Neonatal" value={<span className="text-lg">{fmtPct(report.participantSummary.avgEencScore)} / {fmtPct(report.participantSummary.avgMaternalScore)} / {fmtPct(report.participantSummary.avgNeonatalScore)}</span>} />
+                                    ) : showEencOnly ? (
+                                        <Kpi label="Avg. EENC Score" value={fmtPct(report.participantSummary.avgEencScore)} />
+                                    ) : (
+                                        <Kpi label="Avg. Skills / Participant" value={fmtNum(overall.avgSkillsPerParticipant)} />
+                                    )}
                                 </div>
-                                <div className="mb-2"><DistributionBar distribution={report.practicalDistribution} /></div>
-                                <Table headers={['#', 'Participant', 'State', 'Course Date', 'Sub-course', 'Total Cases',
-                                    ...(showEmoncParts ? ['EENC', 'Maternal', 'Neonatal'] : showEencOnly ? ['EENC'] : []), 'Overall Score', 'Category']}>
-                                    {pageOf(practicalRows, practicalPage).map((p, i) => (
-                                        <tr key={p.id}>
-                                            <td>{(practicalPage - 1) * PAGE_SIZE + i + 1}</td>
-                                            <td className="font-semibold">{p.name}</td><td>{p.courseState}</td><td className="whitespace-nowrap">{p.courseDate}</td><td>{p.subType || '-'}</td>
-                                            <td className="text-center">{p.total_cases_seen}</td>
-                                            {(showEmoncParts || showEencOnly) && <td>{p.eenc_total ? fmtPct(p.eenc_score) : 'N/A'}</td>}
-                                            {showEmoncParts && <td>{p.maternal_total ? fmtPct(p.maternal_score) : 'N/A'}</td>}
-                                            {showEmoncParts && <td>{p.neonatal_total ? fmtPct(p.neonatal_score) : 'N/A'}</td>}
-                                            <td className={p.total_skills_recorded ? scoreClass(p.correctness_percentage) : scoreClass(NaN)}>{p.total_skills_recorded ? fmtPct(p.correctness_percentage) : 'N/A'}</td>
-                                            <td><span className={`px-2 py-0.5 rounded-full text-xs font-bold ${CATEGORY_CLASSES[p.practicalCategory]}`}>{p.practicalCategory}</span></td>
-                                        </tr>
-                                    ))}
-                                </Table>
-                                <Pager rows={practicalRows} page={practicalPage} setPage={setPracticalPage} />
+                                <DistributionBar distribution={report.practicalDistribution} />
                             </div>
                         )}
 
                         {report.hasTestScores && (
                             <div>
-                                <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
-                                    <h4 className="text-lg font-bold text-indigo-800">Written Test Improvement</h4>
-                                    <select value={writtenFilter} onChange={(e) => setWrittenFilter(e.target.value)} className="border border-gray-300 rounded-md p-1.5 text-sm">
-                                        {[ALL, ...Object.keys(report.improvementDistribution)].map((o) => <option key={o} value={o}>{o}</option>)}
-                                    </select>
+                                <h4 className="text-lg font-bold text-indigo-800 mb-2">Written Test Improvement</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
+                                    <Kpi label="With Pre- and Post-Test" value={`${report.participantSummary.withBothTests} / ${report.participantSummary.total}`} />
+                                    <Kpi label="Avg. % Increase per Participant" value={fmtPct(report.participantSummary.avgIncrease)} className={scoreClass(report.participantSummary.avgIncrease, 'improvement')} valueClass="" />
+                                    <Kpi label="Participants Who Improved" value={fmtPct(report.participantSummary.improvedRate)} />
                                 </div>
-                                <Table headers={['#', 'Participant', 'State', 'Course Date', 'Sub-course', 'Pre-Test', 'Post-Test', '% Increase', 'Average Improvement']}>
-                                    {pageOf(writtenRows, writtenPage).map((p, i) => (
-                                        <tr key={p.id}>
-                                            <td>{(writtenPage - 1) * PAGE_SIZE + i + 1}</td>
-                                            <td className="font-semibold">{p.name}</td><td>{p.courseState}</td><td className="whitespace-nowrap">{p.courseDate}</td><td>{p.subType || '-'}</td>
-                                            <td>{fmtPct(p.pre)}</td><td>{fmtPct(p.post)}</td><td>{fmtPct(p.increase)}</td>
-                                            <td><span className={`px-2 py-0.5 rounded-full text-xs font-bold ${CATEGORY_CLASSES[p.improvementCategory]}`}>{p.improvementCategory}</span></td>
-                                        </tr>
-                                    ))}
-                                </Table>
-                                <Pager rows={writtenRows} page={writtenPage} setPage={setWrittenPage} />
+                                <DistributionBar distribution={report.improvementDistribution} />
                             </div>
                         )}
 

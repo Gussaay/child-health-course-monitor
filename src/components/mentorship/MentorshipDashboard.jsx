@@ -885,6 +885,14 @@ const MentorshipDashboard = ({
     const serviceTitle = t(SERVICE_TITLES[activeService] || activeService);
     const activeTab = activeService === 'IMNCI' ? activeImnciTab : activeEencTab;
     const setActiveTabFunc = activeService === 'IMNCI' ? setActiveImnciTab : setActiveEencTab;
+    // The tabs a presentation can take slides from (IPC has its own inner tabs, so none).
+    const presenterSections = activeService === 'IPC' ? [] : [
+        { id: 'skills', label: t('tab.skills') },
+        { id: 'mothers', label: t('tab.mothers') },
+        { id: 'visit_reports', label: t('tab.visit_reports') },
+        { id: 'facility_info', label: t('Facility Information') || 'Facility Information' },
+        ...(canEditStatus ? [{ id: 'admin', label: t('tab.admin') }] : []),
+    ];
 
     const FilterControls = (
         <div className="flex flex-row flex-wrap gap-4 w-full">
@@ -959,7 +967,14 @@ const MentorshipDashboard = ({
                     </span>
                 </h3>
                 <div className="shrink-0">
-                    <DashboardPresenter containerRef={presentationRef} deckTitle={serviceTitle} deckSubtitle={scopeTitle} />
+                    <DashboardPresenter
+                        containerRef={presentationRef}
+                        deckTitle={serviceTitle}
+                        deckSubtitle={scopeTitle}
+                        sections={presenterSections}
+                        activeSection={activeTab}
+                        onSelectSection={setActiveTabFunc}
+                    />
                 </div>
             </div>
             
