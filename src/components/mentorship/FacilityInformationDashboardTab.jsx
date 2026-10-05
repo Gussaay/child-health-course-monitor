@@ -202,7 +202,9 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
                 if (value === null || value === undefined) return;
 
                 const text = `${value.toFixed(1)}%`;
-                ctx.font = 'bold 12px "Inter", sans-serif';
+                // Follows the axis text, which presentation mode enlarges.
+                const size = chart.options.scales?.x?.ticks?.font?.size || 12;
+                ctx.font = `bold ${size}px "Inter", sans-serif`;
                 ctx.fillStyle = '#334155';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
