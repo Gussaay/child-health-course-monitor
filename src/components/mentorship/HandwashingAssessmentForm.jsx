@@ -5,6 +5,7 @@ import { Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 import { useStandardNames } from '../../hooks/useNameRegistry';
+import { hasRecordedProject } from '../../utils/visitProject';
 const INDICATIONS = [
     { id: 'bef_pat', label: 'قبل التلامس مع المريض' },
     { id: 'bef_asep', label: 'قبل إجراء تنظيف أو مانع للتلوث' },
@@ -222,9 +223,13 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
             status: 'complete',
             mentorEmail: user?.email || 'unknown',
             mentorName: user?.displayName || 'Unknown Mentor',
-            project: canonicalProject(facility?.project_name || facility?.['المشروع']) || 'N/A'
+            // An edited visit keeps the project it was made under; a new one
+            // takes the facility's current project.
+            project: hasRecordedProject(existingSessionData)
+                ? existingSessionData.project
+                : (canonicalProject(facility?.project_name || facility?.['المشروع']) || 'N/A')
         };
-    }, [facility, healthWorkerName, healthWorkerJobTitle, user, canonicalProject]);
+    }, [facility, healthWorkerName, healthWorkerJobTitle, user, canonicalProject, existingSessionData]);
 
     // حفظ موحّد: يُستخدم للحفظ التلقائي وللحفظ النهائي على نفس السجل
     const persistSession = useCallback(async (opps, { silent }) => {
