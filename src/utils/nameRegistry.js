@@ -100,12 +100,15 @@ export const tidyName = (value) => String(value ?? '').replace(/\s+/g, ' ').trim
 
 /**
  * Registry entries, merged with extra official names (e.g. the Partners
- * page), without duplicates. Entries: { name, aliases: string[] }.
+ * page), without duplicates. Entries: { name, aliases: string[], deleted? }.
+ *
+ * A deleted name stays in the list, marked, so the same name coming back
+ * from the Partners page (or one of its old spellings) is not offered again.
  */
 export const mergeRegistryEntries = (entries = [], extraNames = []) => {
     const byKey = new Map();
     const out = [];
-    const add = (name, aliases = []) => {
+    const add = (name, aliases = [], deleted = false) => {
         const clean = tidyName(name);
         if (!clean) return;
         const key = normalizeKey(clean);
@@ -115,6 +118,7 @@ export const mergeRegistryEntries = (entries = [], extraNames = []) => {
             out.push(entry);
             byKey.set(key, entry);
         }
+        if (deleted) entry.deleted = true;
         aliases.forEach((a) => {
             const alias = tidyName(a);
             const aliasKey = normalizeKey(alias);
@@ -123,7 +127,7 @@ export const mergeRegistryEntries = (entries = [], extraNames = []) => {
             if (!byKey.has(aliasKey)) byKey.set(aliasKey, entry);
         });
     };
-    (entries || []).forEach((e) => add(e?.name, e?.aliases || []));
+    (entries || []).forEach((e) => add(e?.name, e?.aliases || [], e?.deleted === true));
     (extraNames || []).forEach((n) => {
         if (!byKey.has(normalizeKey(n))) add(n);
     });
@@ -144,7 +148,7 @@ export const mergeRegistryEntries = (entries = [], extraNames = []) => {
 export const buildCanonicalizer = (entries = [], observedValues = []) => {
     const map = new Map();
     (entries || []).forEach((e) => {
-        if (!e?.name) return;
+        if (!e?.name || e.deleted) return;
         map.set(normalizeKey(e.name), tidyName(e.name));
         (e.aliases || []).forEach((a) => { if (!map.has(normalizeKey(a))) map.set(normalizeKey(a), tidyName(e.name)); });
     });
@@ -205,7 +209,10 @@ export const groupVariants = (values, entries = [], threshold = 0.8) => {
         groups.get(root).push(item);
     });
     return [...groups.values()].map((variants) => {
-        variants.sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+        // Most used first; on a tie, the spelling that is capitalised ("Model of
+        // Care" over "model of care") makes the better suggestion.
+        const capitalised = (v) => (/^\p{Lu}/u.test(tidyName(v.value)) ? 1 : 0);
+        variants.sort((a, b) => b.count - a.count || capitalised(b) - capitalised(a) || a.value.localeCompare(b.value));
         const known = variants.find((v) => registryKeys.has(normalizeKey(v.value)));
         return {
             suggested: known ? canonical(known.value) : tidyName(variants[0].value),
@@ -241,4 +248,102 @@ export const applyMappingsToRegistry = (entries = [], mappings = []) => {
     const moved = [...renamed.entries()].map(([e, to]) => ({ name: to, aliases: [e.name, ...(e.aliases || [])] }));
     const added = [...grouped.entries()].map(([name, aliases]) => ({ name, aliases }));
     return mergeRegistryEntries([...kept, ...moved, ...added]);
+};
+
+/** The names in use (not deleted). */
+export const activeEntries = (entries = []) => (entries || []).filter((e) => e && !e.deleted);
+
+/** Every key (name and spellings) of a set of entries. */
+const keysOf = (entries) => new Set((entries || []).flatMap((e) => [e.name, ...(e.aliases || [])]).map(normalizeKey));
+
+/**
+ * Turns the choices made in the standardization tool into the new name list
+ * and the facility changes. Nothing is mapped unless a choice says so.
+ *
+ * @param {object} args
+ * @param {{name: string, aliases?: string[], deleted?: boolean}[]} args.entries  the current list
+ * @param {string[]} args.values  every spelling recorded on facilities
+ * @param {Record<string, {type: 'keep'|'rename'|'merge'|'delete', to?: string}>} [args.officialActions]
+ *        per official name: rename it, merge it into another official name, or delete it
+ * @param {Record<string, string[]>} [args.removedAliases]  per official name, spellings to detach
+ * @param {Record<string, {type: 'leave'|'map'|'official'|'clear', to?: string}>} [args.spellingActions]
+ *        per recorded spelling not yet in the list: map it to an official name, make
+ *        it (or a corrected form of it) official, or clear it from the facilities
+ * @returns {{entries: object[], rewrites: {from: string, to: string}[]}}
+ */
+export const planStandardization = ({ entries = [], values = [], officialActions = {}, removedAliases = {}, spellingActions = {} }) => {
+    let list = mergeRegistryEntries(entries).map((e) => ({ ...e, aliases: [...(e.aliases || [])] }));
+    const findActive = (name) => list.find((e) => !e.deleted && (normalizeKey(e.name) === normalizeKey(name)
+        || e.aliases.some((a) => normalizeKey(a) === normalizeKey(name))));
+    // What an official name is called after the choices above it: renames and merges chain.
+    const renamedTo = new Map();
+    const finalName = (name) => {
+        let current = tidyName(name);
+        for (let i = 0; i < 10 && renamedTo.has(normalizeKey(current)); i++) current = renamedTo.get(normalizeKey(current));
+        return current;
+    };
+
+    // 1. Spellings detached from an official name become unmapped again.
+    Object.entries(removedAliases || {}).forEach(([name, aliases]) => {
+        const entry = findActive(name);
+        if (!entry) return;
+        const drop = new Set((aliases || []).map(normalizeKey));
+        entry.aliases = entry.aliases.filter((a) => !drop.has(normalizeKey(a)));
+    });
+
+    // 2. Rename, merge and delete official names.
+    Object.entries(officialActions || {}).forEach(([name, action]) => {
+        const entry = list.find((e) => !e.deleted && normalizeKey(e.name) === normalizeKey(name));
+        if (!entry || !action || action.type === 'keep') return;
+        if (action.type === 'delete') {
+            entry.deleted = true;
+            return;
+        }
+        const to = tidyName(action.to);
+        if (!to || normalizeKey(to) === normalizeKey(entry.name) && to === entry.name) return;
+        const target = list.find((e) => e !== entry && !e.deleted && normalizeKey(e.name) === normalizeKey(finalName(to)));
+        if (action.type === 'merge' || target) {
+            if (!target) return;
+            target.aliases.push(entry.name, ...entry.aliases);
+            list = list.filter((e) => e !== entry);
+            renamedTo.set(normalizeKey(entry.name), target.name);
+        } else {
+            entry.aliases.push(entry.name);
+            renamedTo.set(normalizeKey(entry.name), to);
+            entry.name = to;
+        }
+    });
+
+    // 3. Spellings not yet in the list.
+    const cleared = new Set();
+    // New official names first, so spellings can be mapped onto them in the same save.
+    const ordered = Object.entries(spellingActions || {})
+        .sort(([, a], [, b]) => (a?.type === 'official' ? 0 : 1) - (b?.type === 'official' ? 0 : 1));
+    ordered.forEach(([raw, action]) => {
+        if (!action || action.type === 'leave') return;
+        if (action.type === 'clear') { cleared.add(raw); return; }
+        const to = tidyName(action.type === 'official' ? (action.to || raw) : finalName(action.to));
+        if (!to) return;
+        const existing = findActive(to);
+        if (existing) {
+            existing.aliases.push(raw);
+        } else if (action.type === 'official') {
+            list.push({ name: to, aliases: [raw] });
+        }
+    });
+
+    const finalEntries = mergeRegistryEntries(list);
+    const canonical = buildCanonicalizer(finalEntries);
+    const deletedKeys = keysOf(finalEntries.filter((e) => e.deleted));
+    const activeKeys = keysOf(activeEntries(finalEntries));
+    const rewrites = [];
+    [...new Set(values || [])].forEach((raw) => {
+        if (typeof raw !== 'string' || !tidyName(raw)) return;
+        const key = normalizeKey(raw);
+        let to;
+        if (cleared.has(raw) || (deletedKeys.has(key) && !activeKeys.has(key))) to = '';
+        else to = canonical(raw);
+        if (to !== raw) rewrites.push({ from: raw, to });
+    });
+    return { entries: finalEntries, rewrites };
 };
