@@ -916,6 +916,27 @@ export async function incrementCoordinatorApplicationOpenCount() {
     const docRef = doc(db, 'appSettings', 'coordinatorApplication');
     await setDoc(docRef, { openCount: increment(1) }, { merge: true });
 }
+// --- Standard project and organization names (see utils/nameRegistry.js) ---
+// Kept in appSettings because that collection is readable by the public
+// facility form and writable by staff, which is exactly who needs each side.
+export async function getNameRegistry(sourceOptions = {}) {
+    const snap = await getDoc(doc(db, 'appSettings', 'nameRegistry'), sourceOptions);
+    const data = snap.exists() ? snap.data() : {};
+    return {
+        projects: Array.isArray(data.projects) ? data.projects : [],
+        organizations: Array.isArray(data.organizations) ? data.organizations : [],
+    };
+}
+export async function saveNameRegistry(kind, entries, userIdentifier = 'Unknown') {
+    if (!['projects', 'organizations'].includes(kind)) throw new Error(`Unknown name list: ${kind}`);
+    const payload = {
+        [kind]: entries.map((e) => ({ name: e.name, aliases: e.aliases || [] })),
+        lastUpdatedAt: serverTimestamp(),
+        lastUpdatedBy: userIdentifier,
+    };
+    await setDoc(doc(db, 'appSettings', 'nameRegistry'), payload, { merge: true });
+}
+
 export async function submitCoordinatorApplication(payload) {
     const submissionsRef = collection(db, 'coordinatorSubmissions');
     await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });

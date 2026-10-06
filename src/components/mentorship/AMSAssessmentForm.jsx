@@ -6,6 +6,7 @@ import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
+import { useStandardNames } from '../../hooks/useNameRegistry';
 // --- Local ActionToggle with logical RTL support ---
 function ActionToggle({ options, currentValue, onClick, name }) {
     return (
@@ -309,6 +310,8 @@ const StickyOverallScore = ({ totalScore, maxScore = 210 }) => {
 };
 
 const AMSAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToast, existingSessionData, onSaveOverride = null }, ref) => {
+    // Saved under the project's standard name, as every dashboard shows it.
+    const { canonicalize: canonicalProject } = useStandardNames('projects');
     
     const [formData, setFormData] = useState({});
     const [scores, setScores] = useState({ total: 0, sections: {} });
@@ -401,7 +404,7 @@ const AMSAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToa
                 visitNumber: 1,
                 mentorEmail: user?.email || 'unknown',
                 mentorName: user?.displayName || 'Unknown Mentor',
-                project: facility?.project_name || facility?.['المشروع'] || 'N/A'
+                project: canonicalProject(facility?.project_name || facility?.['المشروع']) || 'N/A'
             };
 
             const savedId = await (onSaveOverride || saveMentorshipSession)(payload, existingSessionData?.id);

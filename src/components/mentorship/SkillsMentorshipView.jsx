@@ -65,6 +65,7 @@ import {
     SaveStatusModal 
 } from '../FacilityForms.jsx';
 import { confirmDialog } from '../dialogs';
+import { useStandardNames } from '../../hooks/useNameRegistry';
 
 // --- IPC form tabs (all three IPC forms save with serviceType 'IPC') ---
 const IPC_LIST_TABS = [
@@ -2515,6 +2516,14 @@ const SkillsMentorshipView = ({
         return map;
     }, [localHealthFacilities]);
 
+    // Every project is shown by its standard name, so "share", "Share " and
+    // "SHARE" are one project in the records, filters and dashboard.
+    const observedProjects = useMemo(
+        () => (localHealthFacilities || []).map((f) => f?.project_name).filter(Boolean),
+        [localHealthFacilities],
+    );
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedProjects);
+
     // --- CRITICAL: Normalize IPC service type in processedSubmissions ---
     const processedSubmissions = useMemo(() => {
         const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
@@ -2526,7 +2535,7 @@ const SkillsMentorshipView = ({
 
         let mappedData = filteredData.map(sub => {
             const fac = facilityMap.get(sub.facilityId);
-            const projectInfo = fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || sub.project || 'N/A';
+            const projectInfo = canonicalProject(fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || sub.project) || 'N/A';
             
             const rawState = sub.state || fac?.['الولاية'] || 'N/A';
             const rawLocality = sub.locality || fac?.['المحلية'] || 'N/A';
@@ -2577,7 +2586,7 @@ const SkillsMentorshipView = ({
         }
 
         return mappedData;
-    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email]);
+    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email, canonicalProject]);
 
     const ipcFormCounts = useMemo(() => {
         const counts = { ipc: 0, ams: 0, handwashing: 0 };
@@ -2730,7 +2739,7 @@ const SkillsMentorshipView = ({
         
         const mapReport = (rep, serviceType) => {
             const fac = facilityMap.get(rep.facilityId || rep.fullData?.facilityId);
-            const projectInfo = rep.project || rep.fullData?.project || fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || 'N/A';
+            const projectInfo = canonicalProject(rep.project || rep.fullData?.project || fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة']) || 'N/A';
             
             const rawState = rep.state || rep.fullData?.state || fac?.['الولاية'] || 'N/A';
             const rawLocality = rep.locality || rep.fullData?.locality || fac?.['المحلية'] || 'N/A';
@@ -2780,7 +2789,7 @@ const SkillsMentorshipView = ({
         }
 
         return allReports;
-    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email]);
+    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email, canonicalProject]);
     
     // --- LIFTED VISIT REPORTS FILTERING TO TOP LEVEL ---
     const filteredVisitReports = useMemo(() => {

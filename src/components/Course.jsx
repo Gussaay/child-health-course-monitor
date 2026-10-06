@@ -54,6 +54,8 @@ import {
     CertificateApprovalsView 
 } from './CertificateGenerator';
 import { notify, confirmDialog } from './dialogs';
+import { useStandardNames } from '../hooks/useNameRegistry';
+import { canonicalOptions } from '../utils/nameRegistry';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
@@ -1620,15 +1622,16 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         return ['All', ...Array.from(subCourses).sort()];
     }, [coursesForActiveType]);
 
-    const filterProjectOptions = useMemo(() => {
-        const projects = new Set();
-        coursesForActiveType.forEach(c => {
-            if (c.course_project) {
-                projects.add(c.course_project);
-            }
-        });
-        return ['All', ...Array.from(projects).sort()];
-    }, [coursesForActiveType]);
+    // Projects by their standard names (utils/nameRegistry.js).
+    const observedCourseProjects = useMemo(
+        () => coursesForActiveType.map(c => c.course_project).filter(Boolean),
+        [coursesForActiveType],
+    );
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedCourseProjects);
+    const filterProjectOptions = useMemo(
+        () => ['All', ...canonicalOptions(canonicalProject, observedCourseProjects)],
+        [canonicalProject, observedCourseProjects],
+    );
 
     useEffect(() => {
         setFilterState('All');
@@ -1657,11 +1660,11 @@ const [emoncModule, setEmoncModule] = useState('maternal');
             const localityMatch = filterLocality === 'All' || c.locality === filterLocality;
             const subCourseMatch = filterSubCourse === 'All' || 
                 (c.facilitatorAssignments && c.facilitatorAssignments.some(a => a.imci_sub_type === filterSubCourse));
-            const projectMatch = filterProject === 'All' || c.course_project === filterProject;
+            const projectMatch = filterProject === 'All' || canonicalProject(c.course_project) === filterProject;
 
             return stateMatch && localityMatch && subCourseMatch && projectMatch;
         });
-    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse, filterProject, userStates, userLocalities, manageLocation]);
+    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse, filterProject, userStates, userLocalities, manageLocation, canonicalProject]);
 
     // Every course of the active type the user may see, before the list filters:
     // the comprehensive report applies its own.
