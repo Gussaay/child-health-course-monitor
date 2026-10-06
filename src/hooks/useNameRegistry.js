@@ -7,7 +7,7 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { getNameRegistry, saveNameRegistry } from '../data.js';
 import { useDataCache } from '../DataContext';
 import { useAuth } from './useAuth';
-import { buildCanonicalizer, canonicalOptions, mergeRegistryEntries, tidyName, normalizeKey } from '../utils/nameRegistry';
+import { buildCanonicalizer, canonicalOptions, mergeRegistryEntries, tidyName, normalizeKey, activeEntries } from '../utils/nameRegistry';
 
 let store = { registry: { projects: [], organizations: [] }, loaded: false };
 let loading = null;
@@ -78,18 +78,26 @@ export function useStandardNames(kind, observedValues = []) {
             : list.flatMap((f) => f.projects || []).filter(Boolean);
     }, [funders, kind]);
 
-    const entries = useMemo(
+    // Every name, including deleted ones (kept so they are not re-offered).
+    const allEntries = useMemo(
         () => mergeRegistryEntries(registry[kind] || [], partnerNames),
         [registry, kind, partnerNames],
     );
+    const entries = useMemo(() => activeEntries(allEntries), [allEntries]);
+    const deletedKeys = useMemo(() => new Set(
+        allEntries.filter((e) => e.deleted).flatMap((e) => [e.name, ...(e.aliases || [])]).map(normalizeKey),
+    ), [allEntries]);
     const observedKey = observedValues.join('\u0001');
     const canonicalize = useMemo(
-        () => buildCanonicalizer(entries, observedValues),
+        () => buildCanonicalizer(allEntries, observedValues),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [entries, observedKey],
+        [allEntries, observedKey],
     );
     const names = useMemo(() => entries.map((e) => e.name), [entries]);
-    const options = useMemo(() => canonicalOptions(canonicalize, observedValues, names), [canonicalize, names, observedKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    const options = useMemo(
+        () => canonicalOptions(canonicalize, observedValues, names).filter((o) => !deletedKeys.has(normalizeKey(o))),
+        [canonicalize, names, observedKey, deletedKeys], // eslint-disable-line react-hooks/exhaustive-deps
+    );
 
     const addName = (name) => {
         const clean = tidyName(name);
@@ -97,7 +105,14 @@ export function useStandardNames(kind, observedValues = []) {
         const existing = entries.find((e) => normalizeKey(e.name) === normalizeKey(clean)
             || (e.aliases || []).some((a) => normalizeKey(a) === normalizeKey(clean)));
         if (existing) return existing.name;
-        const next = mergeRegistryEntries([...(store.registry[kind] || []), { name: clean, aliases: [] }]);
+        // A name deleted earlier and typed again is brought back rather than
+        // staying hidden behind its deleted entry.
+        const current = (store.registry[kind] || []).map((e) => (
+            e.deleted && [e.name, ...(e.aliases || [])].some((n) => normalizeKey(n) === normalizeKey(clean))
+                ? { name: e.name, aliases: e.aliases || [] }
+                : e
+        ));
+        const next = mergeRegistryEntries([...current, { name: clean, aliases: [] }]);
         // Shown at once on this device; saved for everyone when the user may
         // (staff). A public submitter's new name still reaches the record, and
         // a manager can standardize it later.
@@ -109,5 +124,5 @@ export function useStandardNames(kind, observedValues = []) {
         return clean;
     };
 
-    return { entries, names, canonicalize, options, addName };
+    return { entries, allEntries, names, canonicalize, options, addName };
 }

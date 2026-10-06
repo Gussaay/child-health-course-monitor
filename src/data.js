@@ -932,7 +932,7 @@ export async function getNameRegistry(sourceOptions = {}) {
 export async function saveNameRegistry(kind, entries, userIdentifier = 'Unknown') {
     if (!['projects', 'organizations'].includes(kind)) throw new Error(`Unknown name list: ${kind}`);
     const payload = {
-        [kind]: entries.map((e) => ({ name: e.name, aliases: e.aliases || [] })),
+        [kind]: entries.map((e) => ({ name: e.name, aliases: e.aliases || [], ...(e.deleted ? { deleted: true } : {}) })),
         lastUpdatedAt: serverTimestamp(),
         lastUpdatedBy: userIdentifier,
     };
