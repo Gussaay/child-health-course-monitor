@@ -52,6 +52,15 @@ export default defineConfig({
         // instead of the new build.
         cleanupOutdatedCaches: true,
 
+        // A new service worker takes over as soon as it has downloaded, instead
+        // of waiting for every tab to close. A browser stuck on a broken
+        // release (see app-chunks below) could otherwise never receive the fix:
+        // its page is blank, so the "Restart and install" prompt cannot show.
+        // Nothing is reloaded by this — main.jsx offers the restart itself when
+        // the new worker takes control.
+        skipWaiting: true,
+        clientsClaim: true,
+
         // PRECACHE THE SHELL ONLY.
         //
         // This used to glob every built file with a 12 MiB per-file ceiling,
@@ -83,12 +92,28 @@ export default defineConfig({
             // Route chunks and shared vendor chunks: serve from cache, refresh
             // in the background. This is what makes the app work offline
             // without paying for everything up front.
+            //
+            // Only real scripts and styles are kept. After a release, a chunk
+            // from the previous build no longer exists, and Hosting used to
+            // answer that request with index.html and a 200. That page was
+            // stored under the chunk's name, so the next start loaded HTML as
+            // code and showed a white screen. The cache was renamed so copies
+            // poisoned that way are never read again.
             urlPattern: ({ url }) => url.pathname.startsWith('/assets/'),
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'app-chunks',
+              cacheName: 'app-chunks-v2',
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 24 * 60 * 60 },
-              cacheableResponse: { statuses: [0, 200] },
+              cacheableResponse: { statuses: [200] },
+              plugins: [
+                {
+                  cacheWillUpdate: async ({ response }) => {
+                    if (!response || response.status !== 200) return null;
+                    const type = response.headers.get('content-type') || '';
+                    return type.includes('text/html') ? null : response;
+                  },
+                },
+              ],
             },
           },
           {
