@@ -85,3 +85,28 @@ export class ErrorBoundary extends React.Component {
 }
 
 export default ErrorBoundary;
+
+/**
+ * For small optional pieces of the page frame (a header button): if one fails
+ * to load or render, it is left out rather than taking the whole app down.
+ * Errors outside the main view's ErrorBoundary unmount everything, which is a
+ * white screen.
+ */
+export class QuietBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { failed: false };
+    }
+
+    static getDerivedStateFromError() {
+        return { failed: true };
+    }
+
+    componentDidCatch(error) {
+        console.warn('[QuietBoundary] left out a failed part of the page:', error?.message || error);
+    }
+
+    render() {
+        return this.state.failed ? null : this.props.children;
+    }
+}

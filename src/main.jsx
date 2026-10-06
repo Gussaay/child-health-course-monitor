@@ -34,6 +34,56 @@ if (previousVersion !== APP_VERSION) {
 }
 
 // =========================================================================
+// RECOVERY FROM A STALE BUILD
+// -------------------------------------------------------------------------
+// Each release renames the code files. A page still running the previous
+// release asks for the old names, which no longer exist, and the screen it
+// was opening fails to load. Worse, until this fix the service worker stored
+// the reply (Hosting's index.html) under the script's name, so every later
+// start loaded HTML as code and showed a white screen.
+//
+// When a script fails to load, drop the saved scripts and start again on the
+// current release. Once per two minutes at most, so a page that is genuinely
+// broken, or offline, does not reload forever.
+// =========================================================================
+const CHUNK_CACHES = ['app-chunks', 'app-chunks-v2'];
+const RECOVERY_KEY = 'stale_build_recovery_at';
+
+const isChunkLoadError = (reason) => {
+  const text = String(reason?.message || reason || '');
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Expected a JavaScript-or-Wasm module script/i.test(text);
+};
+
+async function recoverFromStaleBuild(reason) {
+  try {
+    const last = Number(sessionStorage.getItem(RECOVERY_KEY) || 0);
+    if (Date.now() - last < 2 * 60 * 1000) return;
+    if (navigator.onLine === false) return;
+    sessionStorage.setItem(RECOVERY_KEY, String(Date.now()));
+  } catch { /* storage unavailable: still try once */ }
+  console.warn('♻️ A script from an older release could not be loaded; reloading on the current one.', reason);
+  try {
+    if ('caches' in window) await Promise.allSettled(CHUNK_CACHES.map((name) => caches.delete(name)));
+    const reg = await navigator.serviceWorker?.getRegistration?.();
+    await reg?.update?.().catch(() => {});
+  } catch { /* reload regardless */ }
+  window.location.reload();
+}
+
+// Vite raises this when a lazily loaded screen's file cannot be fetched.
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  recoverFromStaleBuild(event.payload);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  if (isChunkLoadError(event.reason)) recoverFromStaleBuild(event.reason);
+});
+
+// The cache before the fix may hold HTML saved under script names; it is no
+// longer read, so free the space.
+if ('caches' in window) caches.delete('app-chunks').catch(() => {});
+
+// =========================================================================
 // PLATFORM SETUP
 // =========================================================================
 if (IS_NATIVE) {
@@ -59,6 +109,18 @@ if (IS_NATIVE) {
 } else {
   // Web only. vite.config MUST use VitePWA({ registerType: 'prompt' }) —
   // with 'autoUpdate' the plugin reloads by itself and the popup never shows.
+  //
+  // The service worker now takes over as soon as a new release has
+  // downloaded (skipWaiting), so there is usually no "waiting" worker for
+  // onNeedRefresh to report. The same popup is offered when the new worker
+  // takes control instead; the page keeps running until the user restarts.
+  const hadController = !!navigator.serviceWorker?.controller;
+  navigator.serviceWorker?.addEventListener('controllerchange', () => {
+    if (!hadController) return; // first install, not an update
+    console.log('⬇️ New web version installed.');
+    offerWebUpdate(() => window.location.reload());
+  });
+
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {

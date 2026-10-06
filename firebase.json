@@ -105,7 +105,7 @@
       { "source": "/.well-known/oauth-authorization-server", "function": { "functionId": "claudeOAuthMetadata", "region": "us-central1" } },
       { "source": "/.well-known/oauth-protected-resource", "function": { "functionId": "claudeOAuthMetadata", "region": "us-central1" } },
       {
-        "source": "**",
+        "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
         "destination": "/index.html"
       }
     ]
