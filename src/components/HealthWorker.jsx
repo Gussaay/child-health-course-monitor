@@ -11,6 +11,7 @@ import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES } from './constants';
 import { Download, Eye, Users, CheckCircle, AlertCircle, RefreshCw, BookOpen, FileText } from 'lucide-react';
 
+import { useStandardNames } from '../hooks/useNameRegistry';
 // Export Helpers
 const exportToExcel = (tableData, headers, fileName) => {
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + '\n' + tableData.map(row => row.join(',')).join('\n');
@@ -90,6 +91,13 @@ export function HealthWorkerView({ permissions, userStates }) {
         }
     };
 
+    // Projects by their standard names (utils/nameRegistry.js).
+    const observedProjects = useMemo(
+        () => (healthFacilities || []).map(f => f?.project_name).filter(Boolean),
+        [healthFacilities],
+    );
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedProjects);
+
     // --- Data Processing & Merging ---
     const allHealthWorkers = useMemo(() => {
         const safeParticipants = participants || [];
@@ -105,10 +113,10 @@ export function HealthWorkerView({ permissions, userStates }) {
         const getProject = (f) => {
             if (!f) return 'N/A';
             const proj = f.project_name || f.project || f.Project || f.projectName || f['اسم المشروع'];
-            if (proj && typeof proj === 'string' && proj.trim()) return proj.trim();
+            if (proj && typeof proj === 'string' && proj.trim()) return canonicalProject(proj);
             if (Array.isArray(proj)) {
                 const valid = proj.filter(p => typeof p === 'string' && p.trim());
-                if (valid.length > 0) return valid[0].trim();
+                if (valid.length > 0) return canonicalProject(valid[0]);
             }
             return 'N/A';
         };
@@ -184,7 +192,7 @@ export function HealthWorkerView({ permissions, userStates }) {
         });
 
         return workers;
-    }, [participants, healthFacilities, courses, permissions, userStates]);
+    }, [participants, healthFacilities, courses, permissions, userStates, canonicalProject]);
 
     // --- Dynamic Dropdown Options ---
     const availableStates = useMemo(() => ['All', ...Object.keys(STATE_LOCALITIES).sort()], []);

@@ -13,6 +13,9 @@ import { Capacitor } from '@capacitor/core';
 import { PdfIcon } from './CommonComponents';
 import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity } from 'lucide-react';
 
+import NameStandardizationModal from './NameStandardizationModal.jsx';
+import { useStandardNames } from '../hooks/useNameRegistry';
+import { canonicalOptions } from '../utils/nameRegistry';
 import LocationMapModal from './ChildHealthServicesMap.jsx';
 import FacilityHistoryView, { AggregateHistoryDashboard } from './FacilityHistoryView.jsx'; 
 import { UpdateDashboard } from './UpdateDashboard.jsx'; 
@@ -525,7 +528,7 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
 
 const MappingRow = React.memo(({ field, headers, selectedValue, onMappingChange }) => ( <div className="flex items-center"><label className="w-1/2 font-medium text-sm capitalize">{field.label}{field.key === 'اسم_المؤسسة' && '*'}</label><Select value={selectedValue || ''} onChange={(e) => onMappingChange(field.key, e.target.value)} className="flex-1"><option value="">-- Select Excel Column --</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}</Select></div> ));
 
-const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, filteredData, cleanupConfig, projectNames = [] }) => {
+const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, filteredData, cleanupConfig, projectNames = [], canonicalProject = (v) => v }) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [error, setError] = useState('');
     const [excelData, setExcelData] = useState([]);
@@ -594,7 +597,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         let dataToDownload = filteredData || [];
         if (uploadState) dataToDownload = dataToDownload.filter(f => f['الولاية'] === uploadState);
         if (uploadLocality) dataToDownload = dataToDownload.filter(f => f['المحلية'] === uploadLocality);
-        if (uploadProject) dataToDownload = dataToDownload.filter(f => f['project_name'] === uploadProject);
+        if (uploadProject) dataToDownload = dataToDownload.filter(f => canonicalProject(f['project_name']) === uploadProject);
 
         if (dataToDownload && dataToDownload.length > 0) {
             downloadFileName = `Update_Template_For_${fileName}`;
@@ -1166,6 +1169,7 @@ const ChildHealthServicesView = ({
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
     const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
+    const [isNameStandardizationOpen, setIsNameStandardizationOpen] = useState(false);
     const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : '');
     const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : '');
     const [facilityTypeFilter, setFacilityTypeFilter] = useState('');
@@ -1261,12 +1265,14 @@ const ChildHealthServicesView = ({
 
     const handleFixMismatch = (facility) => { setIsMismatchModalOpen(false); handleOpenMapModal(facility); };
 
-    const projectNames = useMemo(() => {
-        if (!scopedFacilities) return [];
-        const names = new Set();
-        scopedFacilities.forEach(f => { if (f.project_name) { names.add(f.project_name); } });
-        return Array.from(names).sort();
-    }, [scopedFacilities]);
+    // Projects by their standard names (see utils/nameRegistry.js), so the
+    // filter offers SHARE once rather than "share", "Share " and "SHARE".
+    const observedProjects = useMemo(
+        () => (scopedFacilities || []).map(f => f.project_name).filter(Boolean),
+        [scopedFacilities],
+    );
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedProjects);
+    const projectNames = useMemo(() => canonicalOptions(canonicalProject, observedProjects), [canonicalProject, observedProjects]);
 
     const CLEANABLE_FIELDS_CONFIG = useMemo(() => ({
         'الولاية': { label: 'State', standardValues: Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)), isStaffField: false },
@@ -1486,7 +1492,7 @@ const ChildHealthServicesView = ({
             }
             
             if (facilityTypeFilter && f['نوع_المؤسسةالصحية'] !== facilityTypeFilter) return false;
-            if (projectFilter && f.project_name !== projectFilter) return false;
+            if (projectFilter && canonicalProject(f.project_name) !== projectFilter) return false;
             if (functioningFilter && functioningFilter !== 'NOT_SET' && f['هل_المؤسسة_تعمل'] !== functioningFilter) return false;
             if (functioningFilter === 'NOT_SET' && (f['هل_المؤسسة_تعمل'] != null && f['هل_المؤسسة_تعمل'] !== '')) return false;
             if (searchQuery) { const lowerQuery = searchQuery.toLowerCase(); if (!String(f['اسم_المؤسسة'] || '').toLowerCase().includes(lowerQuery)) return false; }
@@ -1514,7 +1520,7 @@ const ChildHealthServicesView = ({
         });
 
         return filtered;
-    }, [ scopedFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, permissions.manageScope, hasManuallySelected, eencServiceTypeFilter ]);
+    }, [ scopedFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, permissions.manageScope, hasManuallySelected, eencServiceTypeFilter, canonicalProject ]);
 
     useEffect(() => { setCurrentPage(1); }, [filteredFacilities]);
     
@@ -2017,6 +2023,7 @@ const ChildHealthServicesView = ({
                         <div className="flex flex-wrap gap-2">
                              {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>Find Duplicates</Button> )}
                              {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>Clean Data</Button> )}
+                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>Standardize Projects &amp; Organizations</Button> )}
                         </div>
                     </div>
 
@@ -2254,6 +2261,7 @@ const ChildHealthServicesView = ({
                 filteredData={filteredFacilities || []}
                 cleanupConfig={CLEANABLE_FIELDS_CONFIG}
                 projectNames={projectNames}
+                canonicalProject={canonicalProject}
             />
             <DuplicateFinderModal
                 isOpen={isDuplicateModalOpen}
@@ -2273,6 +2281,15 @@ const ChildHealthServicesView = ({
                 setToast={setToast}
                 cleanupConfig={CLEANABLE_FIELDS_CONFIG}
             />
+            {isNameStandardizationOpen && (
+                <NameStandardizationModal
+                    isOpen={isNameStandardizationOpen}
+                    onClose={() => setIsNameStandardizationOpen(false)}
+                    facilities={scopedFacilities || []}
+                    onComplete={() => { setIsNameStandardizationOpen(false); fetchHealthFacilities({}, true); }}
+                    setToast={setToast}
+                />
+            )}
             <LocationMapModal
                 isOpen={isMapModalOpen}
                 onClose={() => setIsMapModalOpen(false)}

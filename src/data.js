@@ -12,6 +12,7 @@ import {
     writeBatch as fbWriteBatch, 
     updateDoc as fbUpdateDoc,
     getDoc as fbGetDoc,
+    getDocFromCache,
     increment, 
     serverTimestamp,
     orderBy,
@@ -28,6 +29,7 @@ import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { validateUpload, safeFileName, MAX_UPLOAD_BYTES } from './utils/uploadValidation';
 import { CERT_APPROVAL_FIELD, certificateApprovalSnapshot } from './components/constants.js';
+import { projectAtTime, projectOfFacility, visitTimeOf, hasRecordedProject } from './utils/visitProject.js';
 
 // --- USAGE TRACKING VARIABLES ---
 let currentUser = null;
@@ -916,6 +918,27 @@ export async function incrementCoordinatorApplicationOpenCount() {
     const docRef = doc(db, 'appSettings', 'coordinatorApplication');
     await setDoc(docRef, { openCount: increment(1) }, { merge: true });
 }
+// --- Standard project and organization names (see utils/nameRegistry.js) ---
+// Kept in appSettings because that collection is readable by the public
+// facility form and writable by staff, which is exactly who needs each side.
+export async function getNameRegistry(sourceOptions = {}) {
+    const snap = await getDoc(doc(db, 'appSettings', 'nameRegistry'), sourceOptions);
+    const data = snap.exists() ? snap.data() : {};
+    return {
+        projects: Array.isArray(data.projects) ? data.projects : [],
+        organizations: Array.isArray(data.organizations) ? data.organizations : [],
+    };
+}
+export async function saveNameRegistry(kind, entries, userIdentifier = 'Unknown') {
+    if (!['projects', 'organizations'].includes(kind)) throw new Error(`Unknown name list: ${kind}`);
+    const payload = {
+        [kind]: entries.map((e) => ({ name: e.name, aliases: e.aliases || [] })),
+        lastUpdatedAt: serverTimestamp(),
+        lastUpdatedBy: userIdentifier,
+    };
+    await setDoc(doc(db, 'appSettings', 'nameRegistry'), payload, { merge: true });
+}
+
 export async function submitCoordinatorApplication(payload) {
     const submissionsRef = collection(db, 'coordinatorSubmissions');
     await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
@@ -1884,8 +1907,113 @@ export async function deleteFinalReport(reportId) {
     }
 }
 
+// --- The project a visit belongs to (see utils/visitProject.js) ---
+// A visit keeps the project that covered its facility on the visit date, so
+// moving a facility to a new project does not move its earlier visits.
+
+const facilityHistoryCache = new Map(); // facilityId -> { at, facility, snapshots }
+const HISTORY_TTL_MS = 5 * 60 * 1000;
+const RECENT_VISIT_MS = 3 * 24 * 60 * 60 * 1000;
+const settleWithin = (promise, ms) => Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve(undefined), ms))]);
+
+async function getFacilityHistory(facilityId, { withSnapshots }) {
+    const cached = facilityHistoryCache.get(facilityId);
+    if (cached && Date.now() - cached.at < HISTORY_TTL_MS && (!withSnapshots || cached.snapshots)) return cached;
+    let facility = cached?.facility ?? null;
+    if (!facility) {
+        // The device's copy first: a mentor saving offline must not wait on the network.
+        const ref = doc(db, "healthFacilities", facilityId);
+        for (const read of [() => getDocFromCache(ref), () => getDoc(ref)]) {
+            try {
+                const snap = await read();
+                if (snap.exists()) { facility = snap.data(); break; }
+            } catch { /* not cached, or offline */ }
+        }
+    }
+    let snapshots = cached?.snapshots ?? null;
+    if (withSnapshots && !snapshots) {
+        try {
+            snapshots = await listSnapshotsForFacility(facilityId, { source: 'server' });
+        } catch {
+            try { snapshots = await listSnapshotsForFacility(facilityId, { source: 'cache' }); } catch { snapshots = null; }
+        }
+    }
+    const entry = { at: Date.now(), facility, snapshots };
+    facilityHistoryCache.set(facilityId, entry);
+    return entry;
+}
+
+/** The project covering a facility at a moment (ms); '' for none. */
+export async function resolveFacilityProjectAt(facilityId, visitTime) {
+    if (!facilityId) return '';
+    // A visit being saved now (or nearly) belongs to the facility's current
+    // project; only a back-dated or imported visit needs the history.
+    const recent = visitTime === null || visitTime === undefined || Date.now() - visitTime < RECENT_VISIT_MS;
+    const { facility, snapshots } = await getFacilityHistory(facilityId, { withSnapshots: !recent });
+    return recent ? projectOfFacility(facility) : projectAtTime(snapshots || [], facility, visitTime);
+}
+
+// Records the project on a visit being created. An edit never changes it:
+// the visit stays with the project it was made under. If the facility cannot
+// be read in time (offline), the visit is saved without one and shows the
+// facility's project until "Assign projects to past visits" gives it its own.
+async function withVisitProject(payload, isNew) {
+    if (!isNew || !payload?.facilityId || hasRecordedProject(payload)) return payload;
+    try {
+        const project = await settleWithin(resolveFacilityProjectAt(payload.facilityId, visitTimeOf(payload)), 4000);
+        if (project === undefined) return payload;
+        return { ...payload, project: project || 'N/A' };
+    } catch {
+        return payload;
+    }
+}
+
+/**
+ * Gives past visits that recorded no project the one that covered their
+ * facility on the visit date, from the facility's history.
+ *
+ * @param {{collection: string, id: string, facilityId: string, visitTime: number|null}[]} visits
+ * @param {(done: number, total: number) => void} [onProgress]
+ * @returns {Promise<{updated: number, byProject: Record<string, number>}>}
+ */
+export async function assignProjectsToPastVisits(visits, onProgress) {
+    const allowed = new Set(['skillMentorship', 'imnciVisitReports', 'eencVisitReports']);
+    const todo = (visits || []).filter((v) => v?.id && v.facilityId && allowed.has(v.collection));
+    const byFacility = new Map();
+    todo.forEach((v) => {
+        if (!byFacility.has(v.facilityId)) byFacility.set(v.facilityId, []);
+        byFacility.get(v.facilityId).push(v);
+    });
+
+    const updates = [];
+    const byProject = {};
+    for (const [facilityId, list] of byFacility) {
+        facilityHistoryCache.delete(facilityId); // always the full, fresh history here
+        const { facility, snapshots } = await getFacilityHistory(facilityId, { withSnapshots: true });
+        list.forEach((v) => {
+            const project = projectAtTime(snapshots || [], facility, v.visitTime) || 'N/A';
+            updates.push({ ref: doc(db, v.collection, v.id), project });
+            byProject[project] = (byProject[project] || 0) + 1;
+        });
+    }
+
+    const BATCH = 400;
+    for (let i = 0; i < updates.length; i += BATCH) {
+        const batch = writeBatch(db);
+        updates.slice(i, i + BATCH).forEach(({ ref, project }) => batch.update(ref, {
+            project,
+            projectAssignedFrom: 'facility history',
+            lastUpdatedAt: serverTimestamp(),
+        }));
+        await batch.commit();
+        onProgress?.(Math.min(i + BATCH, updates.length), updates.length);
+    }
+    return { updated: updates.length, byProject };
+}
+
 export async function saveMentorshipSession(payload, sessionId = null, externalBatch = null) {
     try {
+        payload = await withVisitProject(payload, !sessionId);
         const sessionData = {
             ...payload,
             lastUpdatedAt: serverTimestamp(),
@@ -1979,6 +2107,7 @@ export async function deleteMentorshipSession(sessionId) {
 
 export async function saveIMNCIVisitReport(payload, reportId = null) {
     try {
+        payload = await withVisitProject(payload, !reportId);
         const sessionData = {
             ...payload,
             lastUpdatedAt: serverTimestamp(),
@@ -2017,6 +2146,7 @@ export async function deleteIMNCIVisitReport(reportId) {
 
 export async function saveEENCVisitReport(payload, reportId = null) {
     try {
+        payload = await withVisitProject(payload, !reportId);
         const sessionData = {
             ...payload,
             lastUpdatedAt: serverTimestamp(),

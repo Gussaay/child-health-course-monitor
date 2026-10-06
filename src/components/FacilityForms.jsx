@@ -20,6 +20,7 @@ import {
     STATE_LOCALITIES
 } from "./constants.js";
 import { notify } from './dialogs';
+import StandardNameSelect from './StandardNameSelect';
 
 const SERVICE_LABELS = {
     'imnci_staff': 'العلاج المتكامل (IMNCI)',
@@ -760,7 +761,7 @@ export const SharedFacilityFields = ({ formData, pendingData, handleChange, hand
                                 </Select>
                             </FormGroup>
                             {formData.staff_incentives === 'Yes' && (
-                                <div className="animate-fade-in"><FormGroup label={<>ما هي المنظمة المقدم للحوافز؟ <PendingBadge fieldKey="staff_incentives_organization" pendingData={pendingData} currentData={formData} /></>}><Input type="text" name="staff_incentives_organization" value={formData.staff_incentives_organization || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup></div>
+                                <div className="animate-fade-in"><FormGroup label={<>ما هي المنظمة المقدم للحوافز؟ <PendingBadge fieldKey="staff_incentives_organization" pendingData={pendingData} currentData={formData} /></>}><StandardNameSelect kind="organizations" facilityField="staff_incentives_organization" value={formData.staff_incentives_organization || ''} onChange={(v) => handleChange({ target: { name: 'staff_incentives_organization', value: v } })} disabled={isReadOnly} /></FormGroup></div>
                             )}
                         </div>
                         <div className="p-5 bg-gray-50/50 border border-gray-100 rounded-xl space-y-4">
@@ -772,7 +773,7 @@ export const SharedFacilityFields = ({ formData, pendingData, handleChange, hand
                                 </Select>
                             </FormGroup>
                             {formData.project_participation === 'Yes' && (
-                                <div className="animate-fade-in"><FormGroup label={<>ما هو اسم المشروع؟ <PendingBadge fieldKey="project_name" pendingData={pendingData} currentData={formData} /></>}><Input type="text" name="project_name" value={formData.project_name || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup></div>
+                                <div className="animate-fade-in"><FormGroup label={<>ما هو اسم المشروع؟ <PendingBadge fieldKey="project_name" pendingData={pendingData} currentData={formData} /></>}><StandardNameSelect kind="projects" facilityField="project_name" value={formData.project_name || ''} onChange={(v) => handleChange({ target: { name: 'project_name', value: v } })} disabled={isReadOnly} /></FormGroup></div>
                             )}
                         </div>
                     </div>

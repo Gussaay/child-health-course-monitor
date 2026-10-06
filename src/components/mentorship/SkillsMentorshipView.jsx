@@ -17,7 +17,8 @@ import {
     deleteEENCVisitReport,
     listMentorshipSessions, 
     listIMNCIVisitReports,
-    listEENCVisitReports    
+    listEENCVisitReports,
+    assignProjectsToPastVisits
 } from '../../data';
 
 import {
@@ -65,6 +66,8 @@ import {
     SaveStatusModal 
 } from '../FacilityForms.jsx';
 import { confirmDialog } from '../dialogs';
+import { useStandardNames } from '../../hooks/useNameRegistry';
+import { hasRecordedProject, projectOfVisit, visitTimeOf } from '../../utils/visitProject';
 
 // --- IPC form tabs (all three IPC forms save with serviceType 'IPC') ---
 const IPC_LIST_TABS = [
@@ -2515,6 +2518,14 @@ const SkillsMentorshipView = ({
         return map;
     }, [localHealthFacilities]);
 
+    // Every project is shown by its standard name, so "share", "Share " and
+    // "SHARE" are one project in the records, filters and dashboard.
+    const observedProjects = useMemo(
+        () => (localHealthFacilities || []).map((f) => f?.project_name).filter(Boolean),
+        [localHealthFacilities],
+    );
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedProjects);
+
     // --- CRITICAL: Normalize IPC service type in processedSubmissions ---
     const processedSubmissions = useMemo(() => {
         const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
@@ -2526,7 +2537,13 @@ const SkillsMentorshipView = ({
 
         let mappedData = filteredData.map(sub => {
             const fac = facilityMap.get(sub.facilityId);
-            const projectInfo = fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || sub.project || 'N/A';
+            // The project the visit was made under, not the facility's current
+            // one: a facility moving to a new project keeps its earlier visits
+            // with the old project. Visits that recorded none fall back to
+            // the facility until "Assign projects to past visits" is run.
+            const projectInfo = canonicalProject(hasRecordedProject(sub)
+                ? projectOfVisit(sub, fac)
+                : (fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'])) || 'N/A';
             
             const rawState = sub.state || fac?.['الولاية'] || 'N/A';
             const rawLocality = sub.locality || fac?.['المحلية'] || 'N/A';
@@ -2577,7 +2594,7 @@ const SkillsMentorshipView = ({
         }
 
         return mappedData;
-    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email]);
+    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email, canonicalProject]);
 
     const ipcFormCounts = useMemo(() => {
         const counts = { ipc: 0, ams: 0, handwashing: 0 };
@@ -2730,7 +2747,10 @@ const SkillsMentorshipView = ({
         
         const mapReport = (rep, serviceType) => {
             const fac = facilityMap.get(rep.facilityId || rep.fullData?.facilityId);
-            const projectInfo = rep.project || rep.fullData?.project || fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || 'N/A';
+            // As for sessions: the project recorded with the visit decides.
+            const projectInfo = canonicalProject(hasRecordedProject(rep)
+                ? projectOfVisit(rep, fac)
+                : (fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'])) || 'N/A';
             
             const rawState = rep.state || rep.fullData?.state || fac?.['الولاية'] || 'N/A';
             const rawLocality = rep.locality || rep.fullData?.locality || fac?.['المحلية'] || 'N/A';
@@ -2780,7 +2800,7 @@ const SkillsMentorshipView = ({
         }
 
         return allReports;
-    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email]);
+    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email, canonicalProject]);
     
     // --- LIFTED VISIT REPORTS FILTERING TO TOP LEVEL ---
     const filteredVisitReports = useMemo(() => {
@@ -3005,6 +3025,58 @@ const SkillsMentorshipView = ({
     };
 
     // --- Handle Previewing Facility Data Migration (Super User Only) ---
+    // --- Projects of past visits ---
+    // Visits saved before each visit recorded its own project show the
+    // facility's CURRENT project, so they would move if the facility changed
+    // project. This gives each of them the project that covered the facility
+    // on its visit date, from the facility's history, once and for all.
+    const canAssignVisitProjects = !publicDashboardMode && !publicSubmissionMode && (
+        permissions?.canUseSuperUserAdvancedFeatures || permissions?.canUseFederalManagerAdvancedFeatures
+        || ['super_user', 'federal_manager'].includes(permissions?.role)
+    );
+    const visitsWithoutProject = useMemo(() => {
+        if (!canAssignVisitProjects) return [];
+        const live = (r) => r && r.isDeleted !== true && r.isDeleted !== 'true' && r.facilityId && !hasRecordedProject(r);
+        const pick = (list, collectionName) => (list || []).filter(live).map((r) => ({
+            collection: collectionName, id: r.id, facilityId: r.facilityId, visitTime: visitTimeOf(r),
+        }));
+        return [
+            ...pick(skillMentorshipSubmissions, 'skillMentorship'),
+            ...pick(imnciVisitReports, 'imnciVisitReports'),
+            ...pick(eencVisitReports, 'eencVisitReports'),
+        ];
+    }, [canAssignVisitProjects, skillMentorshipSubmissions, imnciVisitReports, eencVisitReports]);
+    const [isAssigningProjects, setIsAssigningProjects] = useState(false);
+
+    const handleAssignVisitProjects = async () => {
+        const n = visitsWithoutProject.length;
+        if (!n) return;
+        const ok = await confirmDialog(
+            `${n} past visit(s) have no project of their own and currently show their facility's current project. ` +
+            `Give each the project that covered its facility on the visit date (from the facility's history)? ` +
+            `After this, changing a facility's project only affects later visits.`
+        );
+        if (!ok) return;
+        setIsAssigningProjects(true);
+        try {
+            const { updated, byProject } = await assignProjectsToPastVisits(visitsWithoutProject, (done, total) => {
+                setToast?.({ show: true, type: 'info', message: `Assigning projects to past visits… ${done}/${total}` });
+            });
+            const summary = Object.entries(byProject).sort((a, b) => b[1] - a[1]).map(([p, c]) => `${p}: ${c}`).join(', ');
+            setToast?.({ show: true, type: 'success', message: `${updated} visit(s) now keep their own project (${summary}).` });
+            await Promise.all([
+                fetchSkillMentorshipSubmissions?.(true),
+                fetchIMNCIVisitReports?.(true),
+                fetchEENCVisitReports?.(true),
+            ]);
+        } catch (e) {
+            console.error('Assigning projects to past visits failed', e);
+            setToast?.({ show: true, type: 'error', message: `Could not assign projects: ${e.message}` });
+        } finally {
+            setIsAssigningProjects(false);
+        }
+    };
+
     const handlePrepareMigration = () => {
         // Use filteredVisitReports to reduce load and apply user's current filters
         const candidates = filteredVisitReports.filter(r => !r.fullData?.essential_tools);
@@ -4456,6 +4528,13 @@ const SkillsMentorshipView = ({
 
                                         {activeTab === 'skills_list' && canBulkUploadMentorships && selectedSubmissionIds.length === 0 && canManageMentorship && (
                                             <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button>
+                                        )}
+
+                                        {(activeTab === 'skills_list' || activeTab === 'visit_reports') && canAssignVisitProjects && visitsWithoutProject.length > 0 && (
+                                            <Button variant="secondary" onClick={handleAssignVisitProjects} disabled={isAssigningProjects}
+                                                title="Give each past visit the project that covered its facility on the visit date">
+                                                {isAssigningProjects ? 'Assigning projects…' : `Assign projects to past visits (${visitsWithoutProject.length})`}
+                                            </Button>
                                         )}
                                     </div>
                                 </div>

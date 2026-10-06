@@ -8,6 +8,8 @@ import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES, getLocalizedStateName, getLocalizedLocalityName } from "./constants.js";
 import SudanMap from '../SudanMap';
 
+import { useStandardNames } from '../hooks/useNameRegistry';
+import { canonicalOptions } from '../utils/nameRegistry';
 // --- HELPER COMPONENTS ---
 
 const mapCoordinates = {
@@ -203,7 +205,10 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     const equipmentTableRef = useRef(null); 
     const scnuListTableRef = useRef(null); 
     
-    const projectOptions = useMemo(() => [...new Set(activeFacilities.filter(f => f.project_name?.trim()).map(f => f.project_name.trim()))].sort(), [activeFacilities]);
+    // Projects by their standard names, so spelling variants are one option.
+    const observedProjects = useMemo(() => activeFacilities.map(f => f.project_name).filter(Boolean), [activeFacilities]);
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedProjects);
+    const projectOptions = useMemo(() => canonicalOptions(canonicalProject, observedProjects), [canonicalProject, observedProjects]);
 
     const locationFilteredFacilities = useMemo(() => {
         return activeFacilities.filter(f => {
@@ -211,12 +216,12 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
-            if (projectFilter && f.project_name !== projectFilter) return false;
+            if (projectFilter && canonicalProject(f.project_name) !== projectFilter) return false;
             if (equipmentFilter && (Number(f[equipmentFilter]) || 0) === 0) return false;
 
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, canonicalProject]); 
 
     const targetLevel = neonatalLevelFilter || (showPlanningMap ? 'primary' : 'secondary');
 
@@ -937,7 +942,10 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
     
     const isLocalityView = !!stateFilter; 
-    const projectOptions = useMemo(() => [...new Set(activeFacilities.map(f => f.project_name?.trim()).filter(Boolean))].sort(), [activeFacilities]);
+    // Projects by their standard names, so spelling variants are one option.
+    const observedProjects = useMemo(() => activeFacilities.map(f => f.project_name).filter(Boolean), [activeFacilities]);
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedProjects);
+    const projectOptions = useMemo(() => canonicalOptions(canonicalProject, observedProjects), [canonicalProject, observedProjects]);
 
     const isEmONCFacility = useCallback((f) => ['BEmONC', 'CEmONC'].includes(f['eenc_service_type']), []);
     const isEmONCFunctional = useCallback((f) => isEmONCFacility(f) && f['هل_المؤسسة_تعمل'] === 'Yes', [isEmONCFacility]);
@@ -949,11 +957,11 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
-            if (projectFilter && f.project_name !== projectFilter) return false;
+            if (projectFilter && canonicalProject(f.project_name) !== projectFilter) return false;
             if (equipmentFilter) { const val = f[equipmentFilter]; if (val !== 'Yes' && (Number(val) || 0) === 0) return false; } 
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, canonicalProject]); 
 
     const kpiData = useMemo(() => {
         const totalEmONC = locationFilteredFacilities.filter(isEmONCFacility).length;
@@ -1237,7 +1245,10 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
         }
     }, [activeFacilities, fetchHealthFacilities]);
 
-    const projectOptions = useMemo(() => [...new Set(activeFacilities.map(f => f.project_name?.trim()).filter(Boolean))].sort(), [activeFacilities]);
+    // Projects by their standard names, so spelling variants are one option.
+    const observedProjects = useMemo(() => activeFacilities.map(f => f.project_name).filter(Boolean), [activeFacilities]);
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedProjects);
+    const projectOptions = useMemo(() => canonicalOptions(canonicalProject, observedProjects), [canonicalProject, observedProjects]);
 
     const locationFilteredFacilities = useMemo(() => {
         return activeFacilities.filter(f => {
@@ -1245,11 +1256,11 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
-            if (projectFilter && f.project_name !== projectFilter) return false;
+            if (projectFilter && canonicalProject(f.project_name) !== projectFilter) return false;
             if (equipmentFilter && f[equipmentFilter] !== 'Yes') return false; 
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, canonicalProject]); 
 
     const functioningPhcs = useMemo(() => locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية'])), [locationFilteredFacilities]);
     const imnciInPhcs = useMemo(() => functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'), [functioningPhcs]);
@@ -1593,7 +1604,10 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
     const equipmentTableRef = useRef(null);
     
     const isLocalityView = !!stateFilter; 
-    const projectOptions = useMemo(() => [...new Set(activeFacilities.map(f => f.project_name?.trim()).filter(Boolean))].sort(), [activeFacilities]);
+    // Projects by their standard names, so spelling variants are one option.
+    const observedProjects = useMemo(() => activeFacilities.map(f => f.project_name).filter(Boolean), [activeFacilities]);
+    const { canonicalize: canonicalProject } = useStandardNames('projects', observedProjects);
+    const projectOptions = useMemo(() => canonicalOptions(canonicalProject, observedProjects), [canonicalProject, observedProjects]);
 
     const isTargetFacility = useCallback((f) => ['مستشفى', 'مستشفى ريفي'].includes(f['نوع_المؤسسةالصحية']) || f.eenc_service_type === 'pediatric', []);
     const hasETAT = useCallback((f) => isTargetFacility(f) && f.etat_has_service === 'Yes', [isTargetFacility]);
@@ -1606,10 +1620,10 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
-            if (projectFilter && f.project_name !== projectFilter) return false;
+            if (projectFilter && canonicalProject(f.project_name) !== projectFilter) return false;
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, canonicalProject]); 
 
     const kpiData = useMemo(() => {
         const totalTarget = locationFilteredFacilities.filter(isTargetFacility).length;

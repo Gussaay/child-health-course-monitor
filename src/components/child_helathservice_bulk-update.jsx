@@ -24,6 +24,8 @@ import {
     Modal, Spinner, Input, PdfIcon
 } from './CommonComponents';
 
+import { useStandardNames } from '../hooks/useNameRegistry';
+import { canonicalOptions } from '../utils/nameRegistry';
 // --- CONSTANTS ---
 const LOCALITY_EN_TO_AR_MAP = Object.values(STATE_LOCALITIES).flatMap(s => s.localities).reduce((acc, loc) => {
     acc[loc.en] = loc.ar;
@@ -339,16 +341,17 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
     }, []);
 
     // --- SYNCHRONOUSLY DERIVE PROJECTS FROM CACHE ---
-    const allProjectOptions = useMemo(() => {
-        if (!healthFacilities) return [];
-        const names = new Set();
-        healthFacilities.forEach(f => {
-            if (f.project_name && f.project_name.trim() !== '') {
-                names.add(f.project_name.trim());
-            }
-        });
-        return Array.from(names).sort();
-    }, [healthFacilities]);
+    // Offered by their standard names (utils/nameRegistry.js); a record still
+    // holding an old spelling shows it until it is changed.
+    const observedProjects = useMemo(
+        () => (healthFacilities || []).map(f => f.project_name).filter(Boolean),
+        [healthFacilities],
+    );
+    const { canonicalize: canonicalProject, names: officialProjects } = useStandardNames('projects', observedProjects);
+    const allProjectOptions = useMemo(
+        () => canonicalOptions(canonicalProject, observedProjects, officialProjects),
+        [canonicalProject, observedProjects, officialProjects],
+    );
 
     // --- CONFIG ---
     const BULK_VIEW_CONFIG = useMemo(() => ({
@@ -519,7 +522,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             if (localProjectFilter && localProjectFilter !== 'All' && filtered.length > 0) {
                 filtered = filtered.filter(f => {
                     const proj = updates[f.id]?.project_name ?? f.project_name;
-                    return proj === localProjectFilter;
+                    return canonicalProject(proj) === localProjectFilter;
                 });
             }
 
@@ -539,7 +542,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
 
         return () => clearTimeout(timerId);
 
-    }, [healthFacilities, currentFilters.facilityType, currentFilters.functioning, config, searchTerm, ownershipFilter, updates, localStateFilter, localLocalityFilter, localProjectFilter, selectedServiceTypes, activeService]);
+    }, [healthFacilities, currentFilters.facilityType, currentFilters.functioning, config, searchTerm, ownershipFilter, updates, localStateFilter, localLocalityFilter, localProjectFilter, selectedServiceTypes, activeService, canonicalProject]);
 
 
     const handleInputChange = (id, field, value) => {
@@ -1125,7 +1128,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                                 {col.type === 'select' ? (
                                                     <Select value={val ?? ''} onChange={(e) => handleInputChange(f.id, col.key, e.target.value)} className={`text-[10px] py-0 px-1 h-7 w-full border rounded-sm focus:ring-1 focus:ring-sky-500 ${selectColorClass}`}>
                                                         <option value="">-</option>
-                                                        {col.options.map(opt => (
+                                                        {[...col.options, ...(val && !col.options.includes(val) ? [val] : [])].map(opt => (
                                                             <option key={opt} value={opt}>
                                                                 {opt === 'Yes' ? 'نعم' : (opt === 'No' ? 'لا' : (opt === 'Planned' ? 'مخططة' : opt))}
                                                             </option>
