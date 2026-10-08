@@ -32,7 +32,7 @@ import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
 
 // --- Import Certificate Generators ---
-import { generateCertificatePdf, generateAllCertificatesPdf, generateBlankCertificatePdf } from './CertificateGenerator';
+import { generateBlankCertificatePdf, startCertificateDownload } from './CertificateGenerator';
 import { confirmDialog } from './dialogs';
 
 
@@ -128,39 +128,6 @@ const CertificateLanguageModal = ({ isOpen, onClose, onConfirm, title }) => {
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
                     <Button variant="primary" onClick={() => onConfirm(language)}>Continue</Button>
-                </div>
-            </div>
-        </Modal>
-    );
-};
-
-const DownloadProgressModal = ({ isOpen, progress, isSingle, onCancel }) => {
-    if (!isOpen) return null;
-    const percent = isSingle ? 100 : (progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0);
-
-    return (
-        <Modal isOpen={isOpen} onClose={null} title={isSingle ? "Generating Certificate" : "Generating Bulk Certificates"}>
-            <div className="p-6 text-center space-y-4">
-                <Spinner size="lg" className="mx-auto" />
-                <h4 className="text-lg font-semibold text-gray-800">
-                    {isSingle ? "Please wait, rendering PDF..." : `Processing ${progress.current} of ${progress.total} certificates`}
-                </h4>
-                
-                {!isSingle && progress.total > 0 && (
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4 overflow-hidden">
-                        <div 
-                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
-                            style={{ width: `${percent}%` }}
-                        ></div>
-                    </div>
-                )}
-                
-                {!isSingle && <p className="text-sm font-medium text-gray-500">{percent}% Complete</p>}
-                
-                <div className="mt-8 pt-4 border-t flex justify-center">
-                    <Button variant="secondary" onClick={onCancel} className="text-red-600 hover:bg-red-50 border-red-200">
-                        <X className="w-4 h-4 mr-2" /> Cancel Download
-                    </Button>
                 </div>
             </div>
         </Modal>
@@ -1865,11 +1832,7 @@ export function ParticipantsView({
     const [expandedParticipantId, setExpandedParticipantId] = useState(null);
 
     const [isBulkEditing, setIsBulkEditing] = useState(false); 
-    const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
-    const [isGeneratingCert, setIsGeneratingCert] = useState(false); 
     const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
-    const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
-    const cancelDownloadRef = useRef(false);
     
     const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
     const [certActionModal, setCertActionModal] = useState({ isOpen: false, data: null });
@@ -2270,48 +2233,38 @@ export function ParticipantsView({
         }
     };
 
-    const handleGenerateSingleCert = async (p, participantSubCourse, language) => {
+    // HANDED OFF, NOT AWAITED.
+    //
+    // Generating a certificate takes about a second, a group of forty takes a
+    // minute, and this used to run inside this component with the progress in a
+    // modal belonging to it — so leaving the participants screen took the
+    // progress indicator away and there was no way to tell whether the download
+    // was still going. The work now runs in the module-level queue in
+    // CertificateGenerator, and the banner App.jsx mounts reports on it from
+    // wherever you happen to be.
+    const handleGenerateSingleCert = (p, participantSubCourse, language) => {
         // Approval was given for a name and a sub-course. Once either changes,
         // what this would print is not what anybody signed.
         if (certificateApprovalState(p, localCourseData).state === 'stale') {
             setToast({
                 show: true, type: 'error',
-                message: `${p.name}'s details changed after this course was approved. ` +
-                    `The Federal Program Manager must approve this certificate again.`
+                message: `${p.name}'s details changed after this course was approved. `
+                    + `The Federal Program Manager must approve this certificate again.`
             });
             return;
         }
-        cancelDownloadRef.current = false;
-        setProcessingRowId(p.id);
-        setIsProcessing(true);
-        setIsGeneratingCert(true);
-        setDownloadProgress({ current: 0, total: 1 });
-        
-        try {
-            const canvas = await generateCertificatePdf(localCourseData, p, federalProgramManagerName, participantSubCourse, language, facilitators, federalCoordinators);
-            
-            if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
-            
-            if (canvas) {
-                const doc = new jsPDF('landscape', 'mm', 'a4');
-                const imgWidth = 297;
-                const imgHeight = 210;
-                const imgData = canvas.toDataURL('image/png');
-                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                doc.save(`Certificate_${p.name.replace(/ /g, '_')}_${course.course_type}.pdf`);
-                setToast({ show: true, message: 'Certificate downloaded successfully!', type: 'success' });
-            }
-        } catch (err) {
-            if (err.message === "CANCELLED_BY_USER") {
-                setToast({ show: true, message: "Download cancelled.", type: 'info' });
-            } else {
-                setToast({ show: true, message: `Failed to generate certificate: ${err.message}`, type: 'error' });
-            }
-        } finally {
-            setProcessingRowId(null);
-            setIsProcessing(false);
-            setIsGeneratingCert(false);
-        }
+
+        startCertificateDownload({
+            kind: 'single',
+            course: localCourseData,
+            participant: p,
+            participantSubCourse,
+            language,
+            managerName: federalProgramManagerName,
+            facilitators,
+            coordinators: federalCoordinators,
+        });
+        setToast({ show: true, message: 'Preparing the certificate — you can carry on working.', type: 'info' });
     };
 
     const handleBulkCertificateDownload = async (language) => {
@@ -2335,8 +2288,8 @@ export function ParticipantsView({
             return;
         }
 
-        const heldList = held.slice(0, 10).map((h) => `• ${h.name}`).join('\n');
-        const heldMore = held.length > 10 ? `\n… and ${held.length - 10} more` : '';
+        const heldList = held.slice(0, 10).map((h) => `\u2022 ${h.name}`).join('\n');
+        const heldMore = held.length > 10 ? `\n\u2026 and ${held.length - 10} more` : '';
 
         if (held.length > 0 && !await confirmDialog(
             `${held.length} certificate(s) will be left out because those participants' `
@@ -2345,28 +2298,21 @@ export function ParticipantsView({
             + `\n\nDownload the remaining ${printable.length}?`
         )) return;
 
-        cancelDownloadRef.current = false;
-        setIsBulkCertLoading(true);
-        setIsProcessing(true);
-        setDownloadProgress({ current: 0, total: printable.length }); 
-
-        try {
-             await generateAllCertificatesPdf(localCourseData, printable, federalProgramManagerName, language, (current, total) => {
-                 if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
-                 setDownloadProgress({ current, total });
-             }, facilitators, federalCoordinators);
-             setToast({ show: true, message: "Bulk certificates downloaded successfully!", type: 'success' });
-        } catch(error) {
-            if (error.message === "CANCELLED_BY_USER") {
-                setToast({ show: true, message: "Bulk download cancelled.", type: 'info' });
-            } else {
-                setToast({ show: true, message: "Failed to generate bulk certificates. See console.", type: 'error' });
-            }
-        } finally {
-            setIsBulkCertLoading(false);
-            setIsProcessing(false);
-            setDownloadProgress({ current: 0, total: 0 });
-        }
+        // Same hand-off as the single download: the queue owns it from here, so
+        // the batch keeps going while you look at something else.
+        startCertificateDownload({
+            kind: 'bulk',
+            course: localCourseData,
+            participants: printable,
+            language,
+            managerName: federalProgramManagerName,
+            facilitators,
+            coordinators: federalCoordinators,
+        });
+        setToast({
+            show: true, type: 'info',
+            message: `Preparing ${printable.length} certificates — you can carry on working.`
+        });
     };
 
     const handleDesignCertificate = async (language) => {
@@ -2475,16 +2421,6 @@ export function ParticipantsView({
                 }
             />
             
-            <DownloadProgressModal 
-                isOpen={isGeneratingCert || isBulkCertLoading}
-                isSingle={isGeneratingCert}
-                progress={downloadProgress}
-                onCancel={() => { 
-                    cancelDownloadRef.current = true; 
-                    setIsGeneratingCert(false); 
-                    setIsBulkCertLoading(false); 
-                }}
-            />
             
             <ParticipantCertificateActionModal
                 isOpen={certActionModal.isOpen}
@@ -2661,7 +2597,7 @@ export function ParticipantsView({
 
                     {localApprovalStatus ? (
                         <>
-                            <Button variant="primary" className="w-full justify-start" onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'bulk' }); }} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading}>
+                            <Button variant="primary" className="w-full justify-start" onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'bulk' }); }} disabled={isProcessing || filtered.length === 0 || isCacheLoading}>
                                 Download Filtered Certificates
                             </Button>
                             <Button variant="secondary" className="w-full justify-start border-sky-600 text-sky-700 hover:bg-sky-50" onClick={() => { setIsCertManagementModalOpen(false); handleShareCoursePublicPage(); }} disabled={isProcessing}>

@@ -53,6 +53,7 @@ const IMNCIRecordingForm = lazy(() => import('./components/imnci').then(m => ({ 
 const CertificateVerificationView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCertificateDownloadView })));
 const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
+const CertificateDownloadBanner = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateDownloadBanner })));
 
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
@@ -2182,6 +2183,14 @@ case 'meetings':
                     }
                 }
             `}</style>
+
+            {/* MOUNTED ONCE, ABOVE THE ROUTED VIEWS.
+                Certificate generation runs in a module-level queue so it is not
+                interrupted by navigation; this is the only thing that reports on
+                it, so it has to live somewhere that navigation does not unmount.
+                Lazy, because nothing on the sign-in screen needs the certificate
+                code and it pulls in jsPDF and html2canvas. */}
+            <Suspense fallback={null}><CertificateDownloadBanner /></Suspense>
 
             <div className="fixed top-0 start-0 w-full z-[100005] flex flex-col">
                 {isOffline && (

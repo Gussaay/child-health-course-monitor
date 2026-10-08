@@ -4,6 +4,7 @@ import {
     certificateApprovalSnapshot,
     certificateSubCourseOf,
     staleCertificateParticipants,
+    isWithinCoursePeriod,
 } from '../src/components/constants.js';
 
 // =============================================================================
@@ -146,5 +147,76 @@ describe('certificateApprovalSnapshot', () => {
     it('writes strings, never undefined, so Firestore accepts it', () => {
         const snap = certificateApprovalSnapshot({}, {}, undefined);
         expect(snap).toEqual({ name: '', subCourse: '', at: snap.at, by: '' });
+    });
+});
+
+// =============================================================================
+// A NAME CORRECTED WHILE THE COURSE IS STILL RUNNING IS NOT AN ALTERATION.
+//
+// Certificates get approved on the first day or two, and names go on being
+// fixed all week. Holding those back and asking for a fresh signature on each
+// one is make-work: nothing has been handed out yet and the correction is the
+// register being completed, not the record being changed after the fact.
+// =============================================================================
+
+const dayOffset = (days) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+};
+
+describe('isWithinCoursePeriod', () => {
+    it('counts the start day and the last day, but not the day after', () => {
+        expect(isWithinCoursePeriod({ start_date: dayOffset(0), course_duration: 5 })).toBe(true);
+        expect(isWithinCoursePeriod({ start_date: dayOffset(-4), course_duration: 5 })).toBe(true);
+        expect(isWithinCoursePeriod({ start_date: dayOffset(-5), course_duration: 5 })).toBe(false);
+        expect(isWithinCoursePeriod({ start_date: dayOffset(1), course_duration: 5 })).toBe(false);
+    });
+
+    it('says no when the course does not say when it runs', () => {
+        expect(isWithinCoursePeriod({ start_date: dayOffset(0) })).toBe(false);
+        expect(isWithinCoursePeriod({ course_duration: 5 })).toBe(false);
+        expect(isWithinCoursePeriod({ start_date: 'not a date', course_duration: 5 })).toBe(false);
+        expect(isWithinCoursePeriod(null)).toBe(false);
+    });
+});
+
+describe('a name corrected during the course', () => {
+    const running = {
+        id: 'c2',
+        isCertificateApproved: true,
+        start_date: dayOffset(-1),
+        course_duration: 6,
+        facilitatorAssignments: [{ group: 'Group A', imci_sub_type: 'Emergency Maternal Care' }],
+    };
+    const finished = { ...running, start_date: dayOffset(-30), course_duration: 6 };
+
+    it('does not hold the certificate while the course is still on', () => {
+        const p = { ...signed({ id: 1, name: 'Ahmd' }, running), name: 'Ahmed Mohamed' };
+        expect(certificateApprovalState(p, running).state).toBe('approved');
+    });
+
+    it('holds the same edit once the course is over', () => {
+        const p = { ...signed({ id: 1, name: 'Ahmd' }, finished), name: 'Ahmed Mohamed' };
+        const result = certificateApprovalState(p, finished);
+        expect(result.state).toBe('stale');
+        expect(result.changed).toEqual(['name']);
+    });
+
+    it('still holds a sub-course change made during the course', () => {
+        // Moving somebody between the maternal and newborn parts changes what
+        // the certificate says they were trained in. That is worth a signature
+        // whenever it happens.
+        const p = signed({ id: 1, name: 'A', imci_sub_type: 'Emergency Maternal Care' }, running);
+        const moved = { ...p, imci_sub_type: 'Emergency Newborn Care' };
+        const result = certificateApprovalState(moved, running);
+        expect(result.state).toBe('stale');
+        expect(result.changed).toEqual(['subCourse']);
+    });
+
+    it('reports only the sub-course when both moved during the course', () => {
+        const p = signed({ id: 1, name: 'A', imci_sub_type: 'Emergency Maternal Care' }, running);
+        const both = { ...p, name: 'B', imci_sub_type: 'Emergency Newborn Care' };
+        expect(certificateApprovalState(both, running).changed).toEqual(['subCourse']);
     });
 });
