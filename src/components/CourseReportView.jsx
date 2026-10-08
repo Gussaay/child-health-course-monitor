@@ -28,7 +28,7 @@ import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { ReportsView } from './ReportsView'; 
 import { ExerciseCourseReport } from './imnci'; 
-import { FinalReportManager } from './FinalReportManager';
+import { FinalReportManager, SignAndStampModal } from './FinalReportManager';
 import { notify } from './dialogs';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
@@ -1016,10 +1016,12 @@ const generateExerciseReportPdf = async (course, quality, onSuccess, onError, re
 };
 
 /**
- * Attach the report PDF and its signed copy without opening the editor.
+ * Attach the report PDF and sign it, without opening the editor.
  *
- * The signed scan usually arrives days after the report is written, often from
- * somebody who is not going to open a form with twenty fields in it. These two
+ * The signed copy is no longer a scan: signatures and the stamp are placed on
+ * the report's first page in the app (SignAndStampModal). Signing usually
+ * happens days after the report is written, often by somebody who is not going
+ * to open a form with twenty fields in it. These two
  * buttons write the same two fields on the same final report document that the
  * editor does, so whichever route is used the other sees it — and the report
  * document is created if the course has not got one yet, because the signed
@@ -1068,13 +1070,30 @@ const FinalReportDocuments = ({ course, finalReport, onChanged, setToast }) => {
         } finally { setBusy(null); }
     };
 
+    // The signed copy is not uploaded: it is signed and stamped in the app from
+    // the report PDF, then filed exactly as an upload would be.
+    const [signerOpen, setSignerOpen] = useState(false);
+    const reportUrl = finalReport?.pdfUrl || null;
+    const fileSigned = async (file) => {
+        setBusy('signed');
+        try {
+            const saved = await attachFinalReportPdf(course.id, file, 'signed', who);
+            onChanged?.(saved);
+            say('Signed report saved.');
+        } finally {
+            setBusy(null);
+        }
+    };
+
     const Slot = ({ slot, label, url, inputRef, accent }) => (
         <div className={`rounded-lg border p-3 ${url ? accent : 'border-slate-300 bg-white'}`}>
             <div className="flex items-center gap-2">
                 <PdfIcon className={`w-5 h-5 ${url ? 'text-emerald-600' : 'text-slate-400'}`} />
                 <span className="font-semibold text-sm">{label}</span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 mb-2">{url ? 'Attached' : 'Not attached'}</p>
+            <p className="text-xs text-slate-500 mt-0.5 mb-2">
+                {url ? 'Attached' : (slot === 'signed' && !reportUrl ? 'Attach the final report PDF first, then sign it here' : 'Not attached')}
+            </p>
 
             <input ref={inputRef} type="file" accept="application/pdf,.pdf" className="hidden"
                 onChange={(e) => attach(slot, e.target.files?.[0])} />
@@ -1085,11 +1104,20 @@ const FinalReportDocuments = ({ course, finalReport, onChanged, setToast }) => {
                         <Button variant="secondary" className="w-full sm:w-auto text-xs justify-center">View</Button>
                     </a>
                 )}
-                <Button variant={url ? 'secondary' : 'primary'} disabled={busy === slot}
-                    onClick={() => inputRef.current?.click()}
-                    className="w-full sm:w-auto text-xs justify-center">
-                    {busy === slot ? <Spinner size="sm" /> : (url ? 'Replace' : 'Upload PDF')}
-                </Button>
+                {slot === 'signed' ? (
+                    <Button variant={url ? 'secondary' : 'primary'} disabled={busy === slot || !reportUrl}
+                        onClick={() => setSignerOpen(true)}
+                        title={reportUrl ? undefined : 'Attach the final report PDF first'}
+                        className="w-full sm:w-auto text-xs justify-center">
+                        {busy === slot ? <Spinner size="sm" /> : (url ? 'Sign again' : 'Sign & stamp')}
+                    </Button>
+                ) : (
+                    <Button variant={url ? 'secondary' : 'primary'} disabled={busy === slot}
+                        onClick={() => inputRef.current?.click()}
+                        className="w-full sm:w-auto text-xs justify-center">
+                        {busy === slot ? <Spinner size="sm" /> : (url ? 'Replace' : 'Upload PDF')}
+                    </Button>
+                )}
                 {url && (
                     <Button variant="danger" disabled={busy === slot} onClick={() => detach(slot)}
                         className="w-full sm:w-auto text-xs justify-center">Remove</Button>
@@ -1112,6 +1140,8 @@ const FinalReportDocuments = ({ course, finalReport, onChanged, setToast }) => {
                     <Slot slot="signed" label="Signed final report" url={finalReport?.signedPdfUrl}
                         inputRef={signedInput} accent="border-emerald-300 bg-emerald-50/40" />
                 </div>
+                <SignAndStampModal isOpen={signerOpen} onClose={() => setSignerOpen(false)}
+                    source={reportUrl} course={course} onSigned={fileSigned} />
             </div>
         </Card>
     );

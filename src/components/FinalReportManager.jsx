@@ -1,7 +1,7 @@
 // src/components/FinalReportManager.jsx
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Button, Card, FormGroup, Input, PageHeader, PdfIcon, Select, Table, Textarea, Spinner } from './CommonComponents';
-import { Copy, Image as ImageIcon, Users, BookOpen } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Button, Card, FormGroup, Input, Modal, PageHeader, PdfIcon, Select, Table, Textarea, Spinner } from './CommonComponents';
+import { Copy, Image as ImageIcon, Users, BookOpen, PenLine, Stamp, X } from 'lucide-react';
 import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES } from './constants';
 import { notify } from './dialogs';
@@ -222,7 +222,451 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
     );
 };
 
-export function FinalReportManager({ 
+// ============================================================================
+// SIGN AND STAMP IN THE APP
+//
+// The signed copy used to be the report printed, signed, stamped and scanned
+// back in. Now the signatures and the stamp are placed on the first page here
+// and written into the report PDF itself, so the rest of the document stays
+// real text instead of a scan. Every page after the first is untouched.
+//
+// Positions are kept in PDF points of the page as displayed (pdfjs viewport at
+// scale 1), and converted with the viewport's own convertToPdfPoint, which takes
+// care of pages whose media box does not start at 0,0 and of rotated pages.
+// ============================================================================
+
+const loadPdfjs = async () => {
+    const pdfjs = await import('pdfjs-dist');
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+    return pdfjs;
+};
+
+/** The report PDF as bytes, whether it is a File still in the editor or a stored URL. */
+const pdfBytesOf = async (source) => {
+    if (!source) throw new Error('There is no report PDF to sign.');
+    if (typeof source !== 'string') return new Uint8Array(await source.arrayBuffer());
+    const response = await fetch(source);
+    if (!response.ok) throw new Error(`Could not open the report PDF (${response.status}).`);
+    return new Uint8Array(await response.arrayBuffer());
+};
+
+const loadImage = (src) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('That image could not be read.'));
+    img.src = src;
+});
+
+/**
+ * Any image (data URL, stored URL or File) as a PNG data URL no bigger than
+ * 1200px, optionally with its white paper made transparent so a scanned stamp
+ * or signature sits on the page like ink rather than as a white box.
+ */
+const toInkPng = async (input, { clearWhite = false } = {}) => {
+    let src = input;
+    let revoke = null;
+    if (typeof input !== 'string') {
+        src = revoke = URL.createObjectURL(input);
+    } else if (!input.startsWith('data:')) {
+        // Fetched into a blob first so the canvas is not tainted.
+        const blob = await (await fetch(input)).blob();
+        src = revoke = URL.createObjectURL(blob);
+    }
+    try {
+        const img = await loadImage(src);
+        const fit = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * fit));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * fit));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        if (clearWhite) {
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const px = data.data;
+            for (let i = 0; i < px.length; i += 4) {
+                const lightest = Math.min(px[i], px[i + 1], px[i + 2]);
+                // Paper goes fully clear; the anti-aliased edge fades with it.
+                if (lightest > 225) px[i + 3] = 0;
+                else if (lightest > 180) px[i + 3] = Math.round(px[i + 3] * (225 - lightest) / 45);
+            }
+            ctx.putImageData(data, 0, 0);
+        }
+        return { src: canvas.toDataURL('image/png'), aspect: canvas.height / canvas.width };
+    } finally {
+        if (revoke) URL.revokeObjectURL(revoke);
+    }
+};
+
+/** A finger or mouse signature pad. Hands back a trimmed transparent PNG. */
+const SignaturePad = ({ onDone, onCancel }) => {
+    const canvasRef = useRef(null);
+    const drawing = useRef(false);
+    const [hasInk, setHasInk] = useState(false);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = canvas.clientWidth * ratio;
+        canvas.height = canvas.clientHeight * ratio;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(ratio, ratio);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#0b2a6f';
+    }, []);
+
+    const point = (e) => {
+        const r = canvasRef.current.getBoundingClientRect();
+        return [e.clientX - r.left, e.clientY - r.top];
+    };
+    const down = (e) => {
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* keeps drawing without capture */ }
+        drawing.current = true;
+        const ctx = canvasRef.current.getContext('2d');
+        ctx.beginPath();
+        ctx.moveTo(...point(e));
+    };
+    const move = (e) => {
+        if (!drawing.current) return;
+        const ctx = canvasRef.current.getContext('2d');
+        ctx.lineTo(...point(e));
+        ctx.stroke();
+        setHasInk(true);
+    };
+    const up = () => { drawing.current = false; };
+
+    const clear = () => {
+        const canvas = canvasRef.current;
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        setHasInk(false);
+    };
+
+    const done = () => {
+        const canvas = canvasRef.current;
+        const { data, width, height } = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+        let minX = width, minY = height, maxX = -1, maxY = -1;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (data[(y * width + x) * 4 + 3]) {
+                    if (x < minX) minX = x; if (x > maxX) maxX = x;
+                    if (y < minY) minY = y; if (y > maxY) maxY = y;
+                }
+            }
+        }
+        if (maxX < 0) return;
+        const pad = 6;
+        minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+        maxX = Math.min(width - 1, maxX + pad); maxY = Math.min(height - 1, maxY + pad);
+        const out = document.createElement('canvas');
+        out.width = maxX - minX + 1;
+        out.height = maxY - minY + 1;
+        out.getContext('2d').drawImage(canvas, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+        onDone({ src: out.toDataURL('image/png'), aspect: out.height / out.width });
+    };
+
+    return (
+        <div className="border rounded-lg p-3 bg-slate-50">
+            <p className="text-sm font-semibold mb-2">Sign in the box</p>
+            <canvas ref={canvasRef}
+                className="w-full h-40 bg-white border border-dashed border-slate-400 rounded cursor-crosshair"
+                style={{ touchAction: 'none' }}
+                onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} />
+            <div className="flex flex-wrap gap-2 mt-2 justify-end">
+                <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+                <Button variant="secondary" size="sm" onClick={clear} disabled={!hasInk}>Clear</Button>
+                <Button size="sm" onClick={done} disabled={!hasInk}>Place on page</Button>
+            </div>
+        </div>
+    );
+};
+
+/**
+ * Place signatures and a stamp on the first page of the report PDF and produce
+ * the signed copy.
+ *
+ * @param source   the unsigned report: a File or a stored URL
+ * @param course   for the signatures and stamp already approved for certificates
+ * @param onSigned async (file: File) => void, given the signed PDF
+ */
+export function SignAndStampModal({ isOpen, onClose, source, course, onSigned }) {
+    const canvasRef = useRef(null);
+    const pdfBytes = useRef(null);
+    const pageVp = useRef(null);
+    const drag = useRef(null);
+    const [pageSize, setPageSize] = useState(null);
+    const [displayWidth, setDisplayWidth] = useState(0);
+    const [items, setItems] = useState([]);
+    const [selected, setSelected] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
+    const [padOpen, setPadOpen] = useState(false);
+    const [clearWhite, setClearWhite] = useState(true);
+    const uploadKind = useRef('signature');
+    const uploadInput = useRef(null);
+
+    // Signatures and the stamp already approved on this course for its
+    // certificates. Only real images — the disk cache leaves `__present` flags.
+    const courseAssets = useMemo(() => [
+        { key: 'approvedDirectorSignatureUrl', label: "Course director's signature", kind: 'signature' },
+        { key: 'approvedByManagerSignatureUrl', label: "Programme manager's signature", kind: 'signature' },
+        { key: 'approvedProgramStampUrl', label: 'Programme stamp', kind: 'stamp' },
+    ].filter(a => typeof course?.[a.key] === 'string' && course[a.key]), [course]);
+
+    // Load and draw page one whenever the modal opens.
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        let cancelled = false;
+        setItems([]); setSelected(null); setError(null); setPadOpen(false); setPageSize(null);
+        setLoading(true);
+        (async () => {
+            try {
+                const bytes = await pdfBytesOf(source);
+                if (cancelled) return;
+                pdfBytes.current = bytes;
+                const pdfjs = await loadPdfjs();
+                // pdfjs takes ownership of the buffer it is given, so it gets a copy.
+                const doc = await pdfjs.getDocument({ data: bytes.slice() }).promise;
+                const page = await doc.getPage(1);
+                const vp = page.getViewport({ scale: 1 });
+                pageVp.current = { viewport: vp, rotation: page.rotate || 0 };
+                const canvas = canvasRef.current;
+                if (cancelled || !canvas) return;
+                // Rendered sharp enough for a phone zoom or a retina screen.
+                const renderScale = Math.min(3, Math.max(1.5, (window.devicePixelRatio || 1) * 1.25));
+                const renderVp = page.getViewport({ scale: renderScale });
+                canvas.width = Math.round(renderVp.width);
+                canvas.height = Math.round(renderVp.height);
+                // Ready as soon as the size is known: pdfjs finishes its render
+                // on an animation frame, which never comes in a background tab.
+                setPageSize({ width: vp.width, height: vp.height });
+                setLoading(false);
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: renderVp }).promise;
+            } catch (e) {
+                console.error('[SignAndStamp] could not load the report', e);
+                if (!cancelled) setError(e.message || 'Could not open the report PDF.');
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isOpen, source]);
+
+    // Track the displayed width so overlays line up at any screen size.
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !pageSize) return undefined;
+        const measure = () => setDisplayWidth(canvas.getBoundingClientRect().width);
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(canvas);
+        return () => ro.disconnect();
+    }, [pageSize]);
+
+    const scale = pageSize && displayWidth ? displayWidth / pageSize.width : 0;
+
+    const addItem = useCallback(({ src, aspect }, kind, label) => {
+        if (!pageSize) return;
+        setItems(prev => {
+            const count = prev.filter(i => i.kind === kind).length;
+            const w = kind === 'stamp' ? Math.min(120, pageSize.width * 0.22) : Math.min(150, pageSize.width * 0.28);
+            const h = w * aspect;
+            // Signatures across the foot of the page left to right; stamps to the right.
+            const x = kind === 'stamp'
+                ? pageSize.width - w - 50 - count * 20
+                : 50 + count * (w + 20);
+            const y = pageSize.height - h - 70 - (kind === 'stamp' ? 20 : 0);
+            const item = {
+                id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                kind, label, src, aspect,
+                w, h,
+                x: Math.max(0, Math.min(pageSize.width - w, x)),
+                y: Math.max(0, Math.min(pageSize.height - h, y)),
+            };
+            setSelected(item.id);
+            return [...prev, item];
+        });
+    }, [pageSize]);
+
+    const addCourseAsset = async (asset) => {
+        try {
+            addItem(await toInkPng(course[asset.key], { clearWhite }), asset.kind, asset.label);
+        } catch (e) {
+            setError(e.message);
+        }
+    };
+
+    const pickUpload = (kind) => {
+        uploadKind.current = kind;
+        uploadInput.current?.click();
+    };
+    const onUpload = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('image/')) { setError('Choose an image file (PNG or JPG).'); return; }
+        try {
+            const kind = uploadKind.current;
+            addItem(await toInkPng(file, { clearWhite }), kind, kind === 'stamp' ? 'Stamp' : 'Signature');
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    // Dragging and resizing, in page points.
+    const startDrag = (e, item, mode) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelected(item.id);
+        drag.current = { id: item.id, mode, startX: e.clientX, startY: e.clientY, orig: { ...item } };
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* moves still bubble to the page */ }
+    };
+    const onDrag = (e) => {
+        const d = drag.current;
+        if (!d || !scale || !pageSize) return;
+        const dx = (e.clientX - d.startX) / scale;
+        const dy = (e.clientY - d.startY) / scale;
+        setItems(prev => prev.map(it => {
+            if (it.id !== d.id) return it;
+            if (d.mode === 'move') {
+                return {
+                    ...it,
+                    x: Math.max(0, Math.min(pageSize.width - it.w, d.orig.x + dx)),
+                    y: Math.max(0, Math.min(pageSize.height - it.h, d.orig.y + dy)),
+                };
+            }
+            const w = Math.max(30, Math.min(pageSize.width - d.orig.x, d.orig.w + dx));
+            const h = w * it.aspect;
+            if (d.orig.y + h > pageSize.height) return it;
+            return { ...it, w, h };
+        }));
+    };
+    const endDrag = () => { drag.current = null; };
+
+    const removeItem = (id) => setItems(prev => prev.filter(i => i.id !== id));
+
+    const apply = async () => {
+        if (!items.length) return;
+        setSaving(true);
+        setError(null);
+        try {
+            const { PDFDocument, degrees } = await import('pdf-lib');
+            const pdf = await PDFDocument.load(pdfBytes.current, { ignoreEncryption: true });
+            const page = pdf.getPage(0);
+            const { viewport, rotation } = pageVp.current;
+            for (const item of items) {
+                const png = await pdf.embedPng(item.src);
+                // The image's bottom-left corner as seen on screen, in PDF space.
+                const [x, y] = viewport.convertToPdfPoint(item.x, item.y + item.h);
+                page.drawImage(png, { x, y, width: item.w, height: item.h, rotate: degrees(rotation) });
+            }
+            pdf.setModificationDate(new Date());
+            const bytes = await pdf.save();
+            const name = `Final_Report_Signed_${course?.course_type || 'Course'}_${course?.state || ''}.pdf`
+                .replace(/[^\w.-]+/g, '_');
+            await onSigned(new File([bytes], name, { type: 'application/pdf' }));
+            onClose();
+        } catch (e) {
+            console.error('[SignAndStamp] could not sign', e);
+            setError(e.message || 'Could not sign the report.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={saving ? undefined : onClose} title="Sign and stamp the final report">
+            <div className="space-y-3">
+                <p className="text-sm text-slate-600">
+                    Add signatures and the stamp, drag them into place on the first page, then save.
+                    The signed copy is saved as the course's signed final report.
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setPadOpen(true)} disabled={!pageSize || padOpen}>
+                        <PenLine className="w-4 h-4 mr-1" /> Draw signature
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => pickUpload('signature')} disabled={!pageSize}>
+                        <ImageIcon className="w-4 h-4 mr-1" /> Signature image
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => pickUpload('stamp')} disabled={!pageSize}>
+                        <Stamp className="w-4 h-4 mr-1" /> Stamp image
+                    </Button>
+                    <input ref={uploadInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onUpload} />
+                </div>
+
+                {courseAssets.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-slate-500">Already on this course:</span>
+                        {courseAssets.map(a => (
+                            <Button key={a.key} size="sm" variant="secondary" disabled={!pageSize} onClick={() => addCourseAsset(a)}
+                                className="text-xs">
+                                + {a.label}
+                            </Button>
+                        ))}
+                    </div>
+                )}
+
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                    <input type="checkbox" checked={clearWhite} onChange={(e) => setClearWhite(e.target.checked)} />
+                    Make the white background of added images transparent
+                </label>
+
+                {padOpen && (
+                    <SignaturePad
+                        onCancel={() => setPadOpen(false)}
+                        onDone={(img) => { addItem(img, 'signature', 'Signature'); setPadOpen(false); }} />
+                )}
+
+                {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
+
+                <div className="relative border shadow-sm bg-slate-100 select-none"
+                    onPointerDown={() => setSelected(null)}
+                    onPointerMove={onDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
+                    {loading && (
+                        <div className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Spinner /> Opening the report…</div>
+                    )}
+                    <canvas ref={canvasRef} className={`block w-full h-auto bg-white ${pageSize ? '' : 'hidden'}`} />
+                    {scale > 0 && items.map(item => (
+                        <div key={item.id}
+                            className={`absolute cursor-move ${selected === item.id ? 'outline outline-2 outline-blue-500' : 'hover:outline hover:outline-1 hover:outline-blue-300'}`}
+                            style={{ left: item.x * scale, top: item.y * scale, width: item.w * scale, height: item.h * scale, touchAction: 'none' }}
+                            onPointerDown={(e) => startDrag(e, item, 'move')}
+                            title={`${item.label} — drag to move`}>
+                            <img src={item.src} alt={item.label} draggable={false} className="w-full h-full pointer-events-none" />
+                            {selected === item.id && (
+                                <>
+                                    <button type="button" aria-label={`Remove ${item.label}`}
+                                        className="absolute -top-3 -right-3 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow"
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onClick={() => removeItem(item.id)}>
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                    <span aria-label="Resize"
+                                        className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-600 border-2 border-white rounded-sm cursor-nwse-resize"
+                                        style={{ touchAction: 'none' }}
+                                        onPointerDown={(e) => startDrag(e, item, 'resize')} />
+                                </>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                {pageSize && <p className="text-xs text-slate-500">Page 1 only — the rest of the report is kept as it is. Drag the blue corner to resize.</p>}
+
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+                    <Button onClick={apply} disabled={!items.length || saving || loading}>
+                        {saving ? <Spinner /> : 'Save signed report'}
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+}
+
+export function FinalReportManager({
     course, participants, onCancel, onSave, initialData, 
     canUseFederalManagerAdvancedFeatures
 }) {
@@ -416,15 +860,14 @@ export function FinalReportManager({
         }
     };
 
-    const handleSignedFileUpload = (event) => {
-        const file = event.target.files[0];
+    // The signed copy is made here from the report PDF, not uploaded; it is
+    // stored with the rest of the report on Save.
+    const [signerOpen, setSignerOpen] = useState(false);
+    const reportSource = pdfFile || existingPdfUrl;
+    const handleSigned = async (file) => {
         setSignedPdfFile(file);
-        if (file) {
-            setSignedFileName(file.name);
-            setExistingSignedPdfUrl(null);
-        } else {
-            setSignedFileName(null);
-        }
+        setSignedFileName(file.name);
+        setExistingSignedPdfUrl(null);
     };
     
     const handleGalleryImageUpload = (e, index) => {
@@ -537,8 +980,9 @@ export function FinalReportManager({
 
                     <h3 className="text-xl font-bold mb-2">Report documents</h3>
                     <p className="text-sm text-gray-500 mb-3">
-                        The report itself, and the signed copy that gets filed. Either can also be
-                        attached straight from the course report screen without opening this editor.
+                        The report itself, and the signed copy that gets filed. The signed copy is made
+                        in the app: signatures and the stamp are placed on the report's first page. Both
+                        can also be done from the course report screen without opening this editor.
                     </p>
                     <Table headers={['Document', 'Actions']}>
                         <tbody>
@@ -573,11 +1017,22 @@ export function FinalReportManager({
                                             <Button variant="primary" onClick={() => handleForceDownload(existingSignedPdfUrl, `Final_Report_Signed_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : 'Download'}</Button>
                                             <Button variant="danger" onClick={() => { setExistingSignedPdfUrl(null); setSignedPdfFile(null); setSignedFileName(null); }}>Delete</Button>
                                         </div>
-                                    ) : ( <div className="flex flex-col sm:flex-row sm:items-center gap-2"><input type="file" accept=".pdf" onChange={handleSignedFileUpload} />{signedFileName && <p className="text-sm text-gray-500 break-all">File selected: {signedFileName}</p>}</div> )}
+                                    ) : (
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                            <Button variant="primary" onClick={() => setSignerOpen(true)} disabled={!reportSource}>
+                                                <PenLine className="w-4 h-4 mr-1" /> {signedPdfFile ? 'Sign again' : 'Sign & stamp'}
+                                            </Button>
+                                            {signedPdfFile
+                                                ? <p className="text-sm text-emerald-700">Signed — saved with the report.</p>
+                                                : !reportSource && <p className="text-xs text-gray-500">Attach the final report PDF first.</p>}
+                                        </div>
+                                    )}
                                 </td>
                             </tr>
                         </tbody>
                     </Table>
+                    <SignAndStampModal isOpen={signerOpen} onClose={() => setSignerOpen(false)}
+                        source={reportSource} course={course} onSigned={handleSigned} />
 
                     <AnnexSection 
                         groupedParticipants={currentGroupedParticipants} 

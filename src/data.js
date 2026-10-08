@@ -1756,9 +1756,9 @@ export async function getFinalReportByCourseId(courseId, sourceOptions = {}) {
 // THE FINAL REPORT'S TWO PDFs
 //
 // The final report carries an attached PDF, and now a SIGNED copy of it beside
-// it. The signed one is the document that actually gets filed: the report is
-// printed, signed by the director and the manager, scanned, and that scan is
-// what anybody later asks to see.
+// it. The signed one is the document that actually gets filed: the director's
+// and manager's signatures and the stamp are placed on the report's first page
+// in the app (SignAndStampModal), and that copy is what anybody later asks to see.
 //
 // Both go through here. Uploading used to be done only by App.jsx's save
 // handler, so the same Save button inside the report view wrote the File object
