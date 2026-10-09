@@ -1812,6 +1812,23 @@ export async function attachFinalReportPdf(courseId, file, slot = 'report', user
     return await getFinalReportByCourseId(courseId, { source: 'server' });
 }
 
+/**
+ * Write part of the final report — the summary and recommendations captured
+ * from an uploaded PDF, or one recommendation's status from the dashboard —
+ * without opening the editor. Reads the report fresh first, so a change made
+ * on another device is built on, not overwritten.
+ *
+ * @param {object|function} patch the fields to write, or (existing) => fields
+ * @returns {Promise<object>} the saved final report
+ */
+export async function updateFinalReportContent(courseId, patch, userIdentifier = 'Unknown User') {
+    if (!courseId) throw new Error("Course ID is required.");
+    const existing = await getFinalReportByCourseId(courseId, { source: 'server' }).catch(() => null);
+    const fields = typeof patch === 'function' ? patch(existing) : patch;
+    await upsertFinalReport({ ...(existing?.id ? { id: existing.id } : {}), courseId, ...fields }, userIdentifier);
+    return await getFinalReportByCourseId(courseId, { source: 'server' });
+}
+
 /** Remove one of the PDFs. */
 export async function removeFinalReportPdf(courseId, slot = 'report', userIdentifier = 'Unknown User') {
     const target = FINAL_REPORT_PDF_SLOTS[slot];
@@ -1895,7 +1912,6 @@ export async function saveFinalReportWithFiles(reportData, userIdentifier = 'Unk
 /** A final report without its roster snapshots and edit history: what the shared cache keeps. */
 export const lightFinalReport = (report) => {
     if (!report) return report;
-    // eslint-disable-next-line no-unused-vars
     const { groupedParticipants, annexFacilitators, editHistory, ...light } = report;
     return light;
 };

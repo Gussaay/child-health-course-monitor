@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { STATE_LOCALITIES } from './constants';
 import { notify, promptDialog, confirmDialog } from './dialogs';
 import { createPortal } from 'react-dom';
-import { attachFinalReportPdf, removeFinalReportPdf, getFinalReportByCourseId, lightFinalReport } from '../data';
+import { attachFinalReportPdf, removeFinalReportPdf, getFinalReportByCourseId, lightFinalReport, updateFinalReportContent } from '../data';
 import html2canvas from 'html2canvas'; // <-- Added proper import
 
 // --- Shared Utility: Copy as Image ---
@@ -793,6 +793,376 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
 }
 
 // ============================================================================
+// CAPTURING THE SUMMARY AND RECOMMENDATIONS FROM THE REPORT PDF
+//
+// A report is written in Word and uploaded as a PDF, so its summary and
+// recommendations already exist — typing them into the form again is the step
+// nobody does. When a report PDF is uploaded its text is read here, in the
+// browser, and the Summary and Recommendations sections are found by their
+// headings (English or Arabic). What is found is shown for a quick check
+// before it is saved: headings differ from report to report, so it is a
+// pre-filled form, never a silent write.
+//
+// A scanned PDF has no text to read; that is said plainly and nothing is filled.
+// ============================================================================
+
+const ARABIC_RE = /[؀-ۿ]/;
+const SECTION_HEADINGS = {
+    summary: [
+        /^(executive|course|training|brief)?\s*summary\b/i, /^overview\b/i, /^abstract\b/i,
+        /^(ال)?ملخص/, /^(ال)?خلاصة/,
+    ],
+    recommendations: [
+        /^(key|main|general|major)?\s*recommendations?\b/i, /^(the\s+)?way\s+forward\b/i,
+        /^next\s+steps\b/i, /^action\s+(points|plan|items)\b/i,
+        /^(ال)?توصيات/,
+    ],
+};
+// Headings that END a section: whatever comes after the recommendations.
+const OTHER_HEADINGS = [
+    /^(background|introduction|objectives?|methodology|methods|results?|findings|achievements?|challenges?|constraints|lessons\s+learn(ed|t)|conclusions?|annex(es)?|appendi(x|ces)|participants|facilitators|attendance|pre[-\s]?test|post[-\s]?test|evaluation|budget|acknowledge?ments?|table\s+of\s+contents|contents|course\s+(objectives|methodology|organi[sz]ation|management|evaluation|results))\b/i,
+    /^(ال)?(مقدمة|أهداف|اهداف|منهجية|نتائج|تحديات|خاتمة|ملاحق|ملحق|مشاركين|ميسرين|دروس المستفادة|الدروس المستفادة|تقييم|الميزانية)/,
+];
+const NUMBERING_RE = /^\s*(?:[IVX]+\.|\d+(?:\.\d+)*[.)]?|[A-Za-z][.)]|[٠-٩]+[.)\-]?|[•▪●○■□➢►✓✔*\-–])\s*/;
+const BULLET_RE = /^\s*(?:[•▪●○■□➢►✓✔*\-–]|\(?\d{1,2}[.)]|\(?[a-z][.)]|\(?[٠-٩]{1,2}[.)\-]|\(?[ivx]{1,4}[.)])\s+/i;
+
+const headingText = (t) => t.replace(NUMBERING_RE, '').replace(/[:：\s]+$/, '').trim();
+
+/** The PDF's text as lines (and wide-gap cells, for tables), top to bottom. */
+const readPdfLines = async (data, maxPages = 40) => {
+    const pdfjs = await loadPdfjs();
+    const doc = await pdfjs.getDocument({ data }).promise;
+    const lines = [];
+    for (let n = 1; n <= Math.min(doc.numPages, maxPages); n++) {
+        const page = await doc.getPage(n);
+        const { items } = await page.getTextContent();
+        const rows = [];
+        for (const it of items) {
+            if (!it.str || !it.str.trim()) continue;
+            const [a, b, c, d, x, y] = it.transform;
+            const size = Math.hypot(c, d) || Math.hypot(a, b) || it.height || 10;
+            let row = rows.find(r => Math.abs(r.y - y) < Math.max(2, Math.min(r.size, size) * 0.45));
+            if (!row) rows.push(row = { y, size, items: [] });
+            // NFKC: many PDFs store Arabic as presentation forms (ﺍﻟﺘﻮﺻﻴﺎﺕ) and
+            // Latin with ligatures (ﬁ); this turns both back into plain letters.
+            row.items.push({ x, w: it.width || 0, str: it.str.normalize('NFKC') });
+            row.size = Math.max(row.size, size);
+        }
+        rows.sort((p, q) => q.y - p.y);
+        for (const r of rows) {
+            const rtl = ARABIC_RE.test(r.items.map(i => i.str).join(''));
+            r.items.sort((p, q) => (rtl ? q.x - p.x : p.x - q.x));
+            const cells = [];
+            let cur = null, prevEnd = null;
+            for (const it of r.items) {
+                const gap = prevEnd == null ? 0 : (rtl ? prevEnd - (it.x + it.w) : it.x - prevEnd);
+                if (!cur || gap > r.size * 2.5) {
+                    cur = { text: it.str };
+                    cells.push(cur);
+                } else {
+                    const needsSpace = gap > r.size * 0.15 && !/\s$/.test(cur.text) && !/^\s/.test(it.str);
+                    cur.text += (needsSpace ? ' ' : '') + it.str;
+                }
+                prevEnd = rtl ? it.x : it.x + it.w;
+            }
+            const cellTexts = cells.map(cl => {
+                const t = cl.text.replace(/\s+/g, ' ').trim();
+                // Some writers store an Arabic line's closing full stop first.
+                return rtl ? t.replace(/^([.،,:;!؟?]+)\s*(.+)$/, '$2$1') : t;
+            }).filter(Boolean);
+            if (cellTexts.length) lines.push({ page: n, y: r.y, size: r.size, text: cellTexts.join('  '), cells: cellTexts });
+        }
+    }
+    return lines;
+};
+
+const isPageClutter = (t) => /^(page\s*)?\d+(\s*(of|\/)\s*\d+)?$/i.test(t) || /^صفحة\s*\d+/.test(t);
+
+/** Where each section starts and ends. */
+const findSection = (lines, kind, bodySize) => {
+    const own = SECTION_HEADINGS[kind];
+    const others = [...OTHER_HEADINGS, ...Object.entries(SECTION_HEADINGS).filter(([k]) => k !== kind).flatMap(([, v]) => v)];
+    const start = lines.findIndex(l => {
+        const h = headingText(l.text);
+        return h.length <= 70 && own.some(re => re.test(h));
+    });
+    if (start < 0) return null;
+    // "Summary: the course was…" — content on the heading's own line.
+    const inline = lines[start].text.split(/[:：]/).slice(1).join(':').trim();
+    const body = inline.length > 15 ? [{ ...lines[start], text: inline, cells: [inline] }] : [];
+    for (let i = start + 1; i < lines.length; i++) {
+        const l = lines[i];
+        const h = headingText(l.text);
+        const looksLikeHeading = h.length <= 70 && h.split(/\s+/).length <= 9 && !/[.;,،]$/.test(h)
+            && (others.some(re => re.test(h)) || l.size > bodySize * 1.2);
+        if (looksLikeHeading && body.length) break;
+        if (looksLikeHeading) continue; // a sub-title straight under the heading
+        if (isPageClutter(l.text)) continue;
+        body.push(l);
+    }
+    return body;
+};
+
+const paragraphsOf = (lines) => {
+    const out = [];
+    let prev = null;
+    for (const l of lines) {
+        const gap = prev && prev.page === l.page ? prev.y - l.y : 0;
+        if (!prev || gap > l.size * 1.9) out.push(l.text);
+        else out[out.length - 1] += (ARABIC_RE.test(l.text) ? ' ' : ' ') + l.text;
+        prev = l;
+    }
+    return out.map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
+};
+
+const RESPONSIBLE_RE = /[(\[–\-,]?\s*(?:responsible|responsibility|by|lead|المسؤول|الجهة المسؤولة|المسئول)\s*[:\-–]\s*([^)\]]+)[)\]]?\s*$/i;
+
+const splitRecommendations = (lines) => {
+    if (!lines.length) return [];
+    // A table: a header row naming the recommendation and who is responsible.
+    const headerIdx = lines.findIndex(l => l.cells.length >= 2
+        && l.cells.some(c => /recommend|توصي/i.test(c)));
+    if (headerIdx >= 0) {
+        const head = lines[headerIdx].cells;
+        const recCol = head.findIndex(c => /recommend|توصي/i.test(c));
+        const respCol = head.findIndex(c => /responsib|by whom|lead|المسؤول|الجهة|المسئول/i.test(c));
+        const out = [];
+        for (const l of lines.slice(headerIdx + 1)) {
+            let cells = l.cells;
+            // The number column, when the table has one.
+            if (cells.length > head.length - 1 && /^\d{1,2}[.)]?$/.test(cells[0]) && !/^\d/.test(head[0] || '')) cells = cells.slice(1);
+            if (cells.length >= 2) {
+                out.push({
+                    recommendation: cells[Math.min(recCol, cells.length - 1)] || cells[0],
+                    responsible: respCol >= 0 ? (cells[respCol] || '') : '',
+                });
+            } else if (out.length) {
+                out[out.length - 1].recommendation += ` ${cells[0]}`;
+            }
+        }
+        if (out.length) return out;
+    }
+    // A list: bullets or numbers start an item, other lines continue it.
+    const hasBullets = lines.some(l => BULLET_RE.test(l.text));
+    const items = [];
+    if (hasBullets) {
+        for (const l of lines) {
+            if (BULLET_RE.test(l.text) || !items.length) items.push(l.text.replace(BULLET_RE, ''));
+            else items[items.length - 1] += ` ${l.text}`;
+        }
+    } else {
+        // Plain paragraphs: one recommendation per paragraph.
+        items.push(...paragraphsOf(lines));
+    }
+    return items.map(t => {
+        const text = t.replace(/\s+/g, ' ').trim();
+        const m = text.match(RESPONSIBLE_RE);
+        return m
+            ? { recommendation: text.slice(0, m.index).replace(/[\s,;–\-]+$/, ''), responsible: m[1].trim() }
+            : { recommendation: text, responsible: '' };
+    });
+};
+
+/**
+ * Find the summary and recommendations in a report PDF.
+ * @param source a File or a stored URL
+ * @returns {{ summary: string, recommendations: object[], noText: boolean }}
+ */
+export const captureReportContent = async (source) => {
+    const bytes = await pdfBytesOf(source);
+    const lines = await readPdfLines(bytes);
+    const textChars = lines.reduce((n, l) => n + l.text.length, 0);
+    if (textChars < 40) return { summary: '', recommendations: [], noText: true };
+
+    const sizes = lines.map(l => l.size).sort((a, b) => a - b);
+    const bodySize = sizes[Math.floor(sizes.length / 2)] || 10;
+
+    const summaryLines = findSection(lines, 'summary', bodySize) || [];
+    const recLines = findSection(lines, 'recommendations', bodySize) || [];
+
+    const summary = paragraphsOf(summaryLines).join('\n\n').slice(0, 4000);
+    const recommendations = splitRecommendations(recLines)
+        .filter(r => r.recommendation && r.recommendation.length >= 8)
+        .slice(0, 40)
+        .map(r => ({ ...r, status: 'pending', theme: autoTheme(r.recommendation) }));
+    return { summary, recommendations, noText: false };
+};
+
+// --- Recommendation themes --------------------------------------------------
+// The thread that links one course's recommendations to another's. Each
+// recommendation gets a theme from its wording (English or Arabic); the person
+// checking can change it, and a theme set by hand is kept.
+export const RECOMMENDATION_THEMES = [
+    { id: 'supplies', label: 'Drugs, supplies & equipment', re: /\bdrugs?\b|medicine|medication|suppl(y|ies)|stock|equipment|\bkits?\b|\bors\b|zinc|amoxicillin|commodit|registers?|chart\s*booklet|job\s*aids?|thermometer|weighing|timers?|أدوية|دواء|الإمداد|معدات|أجهزة|مستلزمات|مخزون/i },
+    { id: 'training', label: 'Training & capacity building', re: /train|refresher|capacity|module|curricul|facilitators?|\btot\b|mentor|on[-\s]job|تدريب|دورة|دورات|بناء القدرات|تنشيط|ميسر/i },
+    { id: 'supervision', label: 'Supervision & follow-up', re: /supervis|follow[-\s]?up|monitor|visits?|coach|إشراف|اشراف|متابعة|زيارة|زيارات|رصد/i },
+    { id: 'staffing', label: 'Staffing & retention', re: /\bstaff|human\s+resources?|\bhr\b|retention|incentive|recruit|deploy|workforce|turnover|الكوادر|كوادر|الموارد البشرية|حوافز|تعيين|توظيف/i },
+    { id: 'facility', label: 'Health facilities & services', re: /\bfacility\b|\bfacilities\b|health\s+cent|clinic|hospital|service\s+delivery|infrastructure|\bwater\b|electric|المرفق|المرافق|المركز الصحي|المراكز الصحية|مستشفى|البنية التحتية/i },
+    { id: 'data', label: 'Data, reporting & HMIS', re: /\bdata\b|reporting|\bhmis\b|dhis|record\s*keeping|documentation|indicators?|بيانات|التقارير|التبليغ|التسجيل|مؤشرات/i },
+    { id: 'logistics', label: 'Course logistics & organisation', re: /venue|logistic|transport|accommodation|\bhall\b|schedul|timing|catering|per\s*diem|stationery|المكان|القاعة|الترحيل|المواصلات|السكن|الجدول الزمني|النثريات/i },
+    { id: 'funding', label: 'Funding & partners', re: /fund|budget|partners?|donors?|unicef|\bwho\b|financ|تمويل|ميزانية|الشركاء|المانحين|يونيسف/i },
+    { id: 'community', label: 'Community & caregivers', re: /communit|caregivers?|mothers?|households?|awareness|c[-\s]?imci|\biccm\b|المجتمع|الأمهات|الامهات|توعية|الأسر/i },
+    { id: 'coordination', label: 'Coordination & policy', re: /coordinat|policy|policies|ministry|\bsmoh\b|\bfmoh\b|guidelines?|protocols?|integrat|تنسيق|سياسات|الوزارة|وزارة|موجهات|بروتوكول|دمج/i },
+];
+export const OTHER_THEME = { id: 'other', label: 'Other' };
+const THEME_BY_ID = Object.fromEntries([...RECOMMENDATION_THEMES, OTHER_THEME].map(t => [t.id, t]));
+
+/**
+ * The theme a recommendation's wording points to most. On a tie, the one
+ * named first wins: a recommendation leads with what it asks for ("follow up
+ * the trainees after the course" is follow-up, not training).
+ */
+export const autoTheme = (text) => {
+    const s = String(text || '');
+    let best = OTHER_THEME.id, score = 0, first = Infinity;
+    for (const t of RECOMMENDATION_THEMES) {
+        const re = new RegExp(t.re.source, 'gi');
+        const hits = [...s.matchAll(re)];
+        if (!hits.length) continue;
+        const at = hits[0].index;
+        if (hits.length > score || (hits.length === score && at < first)) { best = t.id; score = hits.length; first = at; }
+    }
+    return best;
+};
+export const themeOf = (rec) => (rec?.theme && THEME_BY_ID[rec.theme] ? rec.theme : autoTheme(rec?.recommendation));
+export const themeLabel = (id) => THEME_BY_ID[id]?.label || 'Other';
+
+const REC_STATUSES = [['pending', 'Pending'], ['in-progress', 'In progress'], ['completed', 'Completed']];
+
+/**
+ * Check what was found in the PDF, then save it. Also the place to type them
+ * in when the PDF had nothing to find.
+ *
+ * @param capture  { summary, recommendations, noText } from captureReportContent
+ * @param existing the report's current summary and recommendations
+ * @param onApply  async ({ summary, recommendations }) => void
+ */
+export function CaptureReportContentModal({ isOpen, onClose, capture, existing, onApply }) {
+    const [summary, setSummary] = useState('');
+    const [recs, setRecs] = useState([]);
+    const [replaceSummary, setReplaceSummary] = useState(true);
+    const [recMode, setRecMode] = useState('replace');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
+
+    const hadSummary = !!existing?.summary?.trim();
+    const hadRecs = (existing?.recommendations || []).filter(r => r?.recommendation).length;
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setSummary(capture?.summary || '');
+        setRecs((capture?.recommendations || []).map(r => ({ ...r })));
+        setReplaceSummary(!hadSummary || !!capture?.summary);
+        setRecMode(hadRecs ? 'add' : 'replace');
+        setError(null);
+    }, [isOpen, capture]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const setRec = (i, patch) => setRecs(prev => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+    const apply = async () => {
+        setSaving(true);
+        setError(null);
+        try {
+            const clean = recs.filter(r => r.recommendation?.trim()).map(r => ({
+                recommendation: r.recommendation.trim(),
+                responsible: (r.responsible || '').trim(),
+                status: r.status || 'pending',
+                theme: r.theme || autoTheme(r.recommendation),
+            }));
+            await onApply({
+                summary: replaceSummary ? summary.trim() : (existing?.summary || ''),
+                recommendations: recMode === 'add'
+                    ? [...(existing?.recommendations || []).filter(r => r?.recommendation), ...clean]
+                    : clean,
+            });
+            onClose();
+        } catch (e) {
+            setError(e.message || 'Could not save.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const found = (capture?.summary ? 1 : 0) + (capture?.recommendations?.length || 0);
+    return createPortal(
+        <Modal isOpen={isOpen} onClose={saving ? undefined : onClose} title="Summary and recommendations from the report">
+            <div className="space-y-4">
+                <p className={`text-sm rounded p-2 ${capture?.noText ? 'bg-amber-50 text-amber-800' : found ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-50 text-slate-600'}`}>
+                    {capture?.noText
+                        ? 'This PDF has no text to read (it looks scanned), so nothing could be captured. You can type the summary and recommendations here.'
+                        : found
+                            ? `Found ${capture.summary ? 'the summary' : 'no summary'} and ${capture.recommendations.length} recommendation${capture.recommendations.length === 1 ? '' : 's'} in the PDF. Check them, then save.`
+                            : 'No Summary or Recommendations heading was found in the PDF. You can type them here.'}
+                </p>
+
+                <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                        <h4 className="font-semibold text-sm">Course summary</h4>
+                        {hadSummary && (
+                            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                                <input type="checkbox" checked={replaceSummary} onChange={e => setReplaceSummary(e.target.checked)} />
+                                Replace the summary already saved
+                            </label>
+                        )}
+                    </div>
+                    <Textarea rows="5" value={summary} onChange={e => setSummary(e.target.value)} disabled={hadSummary && !replaceSummary}
+                        placeholder="The course summary" dir="auto" />
+                </div>
+
+                <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                        <h4 className="font-semibold text-sm">Recommendations ({recs.length})</h4>
+                        {hadRecs > 0 && (
+                            <Select value={recMode} onChange={e => setRecMode(e.target.value)} className="text-xs w-auto">
+                                <option value="add">Add to the {hadRecs} already saved</option>
+                                <option value="replace">Replace the {hadRecs} already saved</option>
+                            </Select>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                        {recs.map((r, i) => (
+                            <div key={i} className="border rounded-lg p-2 bg-white space-y-2">
+                                <div className="flex gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <Textarea rows="2" value={r.recommendation} dir="auto"
+                                            onChange={e => setRec(i, { recommendation: e.target.value })} />
+                                    </div>
+                                    <button type="button" aria-label="Remove" className="text-red-600 hover:text-red-800 self-start p-1"
+                                        onClick={() => setRecs(prev => prev.filter((_, j) => j !== i))}><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <Input value={r.responsible || ''} placeholder="Responsible" dir="auto"
+                                        onChange={e => setRec(i, { responsible: e.target.value })} />
+                                    <Select value={r.theme || autoTheme(r.recommendation)} onChange={e => setRec(i, { theme: e.target.value })}>
+                                        {[...RECOMMENDATION_THEMES, OTHER_THEME].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                    </Select>
+                                    <Select value={r.status || 'pending'} onChange={e => setRec(i, { status: e.target.value })}>
+                                        {REC_STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                                    </Select>
+                                </div>
+                            </div>
+                        ))}
+                        <Button variant="secondary" className="text-xs"
+                            onClick={() => setRecs(prev => [...prev, { recommendation: '', responsible: '', status: 'pending', theme: '' }])}>
+                            Add a recommendation
+                        </Button>
+                    </div>
+                </div>
+
+                {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="secondary" onClick={onClose} disabled={saving}>Skip</Button>
+                    <Button onClick={apply} disabled={saving || (!summary.trim() && !recs.some(r => r.recommendation?.trim()))}>
+                        {saving ? <Spinner /> : 'Save to the final report'}
+                    </Button>
+                </div>
+            </div>
+        </Modal>,
+        document.body
+    );
+}
+
+// ============================================================================
 // THE ONE REPORT DOCUMENT
 //
 // A course has one final report document to show: the signed copy once there
@@ -955,10 +1325,29 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
     const who = user?.displayName || user?.email || 'Unknown';
     const [busy, setBusy] = useState(null);
     const [signerOpen, setSignerOpen] = useState(false);
+    const [captured, setCaptured] = useState(null);
     const reportInput = useRef(null);
 
     const reportUrl = finalReport?.pdfUrl || null;
     const signedUrl = finalReport?.signedPdfUrl || null;
+
+    // Read the summary and recommendations out of the report PDF and show
+    // them for checking. From the File just chosen when there is one, so
+    // nothing is downloaded again.
+    const capture = async (source) => {
+        setBusy('capture');
+        try {
+            setCaptured(await captureReportContent(source));
+        } catch (err) {
+            console.error('[FinalReport] capture failed', err);
+            say(`Could not read the PDF: ${err.message}`, 'error');
+        } finally { setBusy(null); }
+    };
+
+    const saveCaptured = async ({ summary, recommendations }) => {
+        onChanged?.(await updateFinalReportContent(course.id, { summary, recommendations }, who));
+        say('Summary and recommendations saved to the final report.', 'success');
+    };
 
     const attachReport = async (file) => {
         if (!file) return;
@@ -967,8 +1356,10 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
             return;
         }
         setBusy('report');
+        let attached = false;
         try {
             onChanged?.(await attachFinalReportPdf(course.id, file, 'report', who));
+            attached = true;
             say(signedUrl ? 'Report PDF replaced. Edit the signature to sign the new one.' : 'Report PDF attached.', 'success');
         } catch (err) {
             say(`Upload failed: ${err.message}`, 'error');
@@ -976,6 +1367,7 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
             setBusy(null);
             if (reportInput.current) reportInput.current.value = '';
         }
+        if (attached) await capture(file);
     };
 
     // Filed with the layout that made it, so the signature can be edited.
@@ -1039,10 +1431,18 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
                         {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />Sign &amp; stamp</>}
                     </Button>
                 ))}
+                {reportUrl && (
+                    <Button variant="secondary" disabled={!!busy || !ready} onClick={() => capture(reportUrl)} className={btn}
+                        title="Read the summary and recommendations from the report PDF">
+                        {busy === 'capture' ? <><Spinner size="sm" /> Reading the PDF…</> : 'Capture summary & recommendations'}
+                    </Button>
+                )}
                 {(reportUrl || signedUrl) && (
                     <Button variant="danger" disabled={!!busy || !ready} onClick={removeReport} className={btn}>Remove report</Button>
                 )}
             </ReportDocumentCard>
+            <CaptureReportContentModal isOpen={!!captured} onClose={() => setCaptured(null)}
+                capture={captured} existing={finalReport} onApply={saveCaptured} />
             <SignAndStampModal isOpen={signerOpen} onClose={() => setSignerOpen(false)}
                 source={reportUrl} course={course} onSigned={fileSigned}
                 initialLayout={signedUrl ? finalReport?.signatureLayout : null} signerName={user?.displayName || ''} />
@@ -1143,6 +1543,12 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
     const [search, setSearch] = useState('');
     const [manageCourse, setManageCourse] = useState(null);
     const [expanded, setExpanded] = useState({});
+    const [matrixBy, setMatrixBy] = useState('state');
+    const [matrixScope, setMatrixScope] = useState('open');
+    const [cell, setCell] = useState(null);
+    const [savingKey, setSavingKey] = useState(null);
+    const { user } = useAuth();
+    const { mergeIntoCache } = useDataCache();
 
     const states = useMemo(() => ['All', ...[...new Set(courses.map(c => c.state).filter(Boolean))].sort()], [courses]);
     const years = useMemo(() => ['All', ...[...new Set(courses.map(c => courseDateOf(c)?.getFullYear()).filter(Boolean))].sort((a, b) => b - a).map(String)], [courses]);
@@ -1172,10 +1578,87 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
         pending: rows.reduce((n, r) => n + r.status.pending, 0),
     }), [rows]);
 
-    const recommendations = useMemo(() => rows.flatMap(({ course, report }) =>
-        (report?.recommendations || []).filter(r => r?.recommendation).map((r, i) => ({ ...r, course, key: `${course.id}_${i}` })))
-        .filter(r => recFilter === 'all' || (recFilter === 'open' ? r.status !== 'completed' : r.status === recFilter)),
-    [rows, recFilter]);
+    // Every recommendation of every course in the filters, each knowing its
+    // course, its place in that course's list, and its theme: the theme is
+    // what links one course's recommendation to another's.
+    const allRecs = useMemo(() => rows.flatMap(({ course, report }) =>
+        (report?.recommendations || [])
+            .map((r, index) => ({ ...r, index, course, theme: themeOf(r), key: `${course.id}_${index}` }))
+            .filter(r => r.recommendation)), [rows]);
+    const isOpenRec = (r) => r.status !== 'completed';
+    const recommendations = useMemo(() => allRecs
+        .filter(r => recFilter === 'all' || (recFilter === 'open' ? isOpenRec(r) : r.status === recFilter)),
+    [allRecs, recFilter]);
+
+    // Change one recommendation's status or theme, on its own report.
+    const updateRec = async (rec, patch) => {
+        setSavingKey(rec.key);
+        try {
+            const saved = await updateFinalReportContent(rec.course.id, (existing) => {
+                const list = [...(existing?.recommendations || [])];
+                let i = rec.index;
+                if (list[i]?.recommendation !== rec.recommendation) i = list.findIndex(x => x?.recommendation === rec.recommendation);
+                if (i < 0) throw new Error('That recommendation has changed since this page loaded. Refresh and try again.');
+                list[i] = { ...list[i], ...patch };
+                return { recommendations: list };
+            }, user?.displayName || user?.email || 'Unknown');
+            mergeIntoCache?.('finalReports', lightFinalReport(saved));
+            onReportChanged?.(saved);
+        } catch (e) {
+            notify(`Could not save: ${e.message}`, 'error');
+        } finally { setSavingKey(null); }
+    };
+
+    // The matrix: themes down the side, states / years / courses across.
+    const colKeyOf = (r) => (matrixBy === 'state' ? (r.course.state || '—')
+        : matrixBy === 'year' ? String(courseDateOf(r.course)?.getFullYear() || '—')
+        : r.course.id);
+    const colLabelOf = (key) => {
+        if (matrixBy !== 'course') return key;
+        const c = courses.find(x => x.id === key);
+        return c ? `${courseLabelOf(c)}${courseDateOf(c) ? ` (${courseDateOf(c).toLocaleDateString()})` : ''}` : key;
+    };
+    const matrix = useMemo(() => {
+        const scoped = allRecs.filter(r => matrixScope === 'all' || isOpenRec(r));
+        const cols = [...new Set(scoped.map(colKeyOf))]
+            .sort((a, b) => (matrixBy === 'year' ? b.localeCompare(a) : colLabelOf(a).localeCompare(colLabelOf(b))));
+        const themes = [...RECOMMENDATION_THEMES, OTHER_THEME].filter(t => scoped.some(r => r.theme === t.id));
+        const cells = {};
+        scoped.forEach(r => {
+            const k = `${r.theme}|${colKeyOf(r)}`;
+            const c = cells[k] || (cells[k] = { total: 0, open: 0 });
+            c.total += 1;
+            if (isOpenRec(r)) c.open += 1;
+        });
+        const maxOpen = Math.max(1, ...Object.values(cells).map(c => c.open));
+        return { scoped, cols, themes, cells, maxOpen };
+    }, [allRecs, matrixBy, matrixScope, courses]); // eslint-disable-line react-hooks/exhaustive-deps
+    const cellRecs = cell
+        ? matrix.scoped.filter(r => (cell.theme == null || r.theme === cell.theme) && (cell.col == null || colKeyOf(r) === cell.col))
+        : [];
+    const countText = (recs) => (matrixScope === 'open' ? recs.length : `${recs.filter(isOpenRec).length}/${recs.length}`);
+
+    const recRow = (r) => (
+        <tr key={r.key}>
+            <td className="p-2 border text-sm whitespace-nowrap">{courseLabelOf(r.course)}<div className="text-xs text-slate-500">{courseDateOf(r.course)?.toLocaleDateString()}</div></td>
+            <td className="p-2 border text-sm" dir="auto">{r.recommendation}</td>
+            <td className="p-2 border text-sm" dir="auto">{r.responsible || '—'}</td>
+            <td className="p-2 border text-sm">
+                <select value={r.theme} disabled={savingKey === r.key} onChange={e => updateRec(r, { theme: e.target.value })}
+                    className="border border-gray-300 rounded px-1 py-0.5 text-xs max-w-[11rem]">
+                    {[...RECOMMENDATION_THEMES, OTHER_THEME].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+            </td>
+            <td className="p-2 border text-sm whitespace-nowrap">
+                <select value={r.status || ''} disabled={savingKey === r.key} onChange={e => updateRec(r, { status: e.target.value })}
+                    className={`rounded px-1 py-0.5 text-xs font-semibold border-0 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>
+                    {!r.status && <option value="">Not set</option>}
+                    {REC_STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+                {savingKey === r.key && <Spinner size="sm" />}
+            </td>
+        </tr>
+    );
 
     const facilitators = useMemo(() => rows.flatMap(({ course, report }) =>
         (report?.potentialFacilitators || []).filter(f => f?.participant_id || f?.participant_name)
@@ -1233,6 +1716,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
 
                     <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
                         {tab('courses', 'Courses', rows.length)}
+                        {tab('matrix', 'Recommendations matrix')}
                         {tab('recommendations', 'Recommendations', recommendations.length)}
                         {tab('facilitators', 'Potential facilitators', facilitators.length)}
                     </div>
@@ -1311,16 +1795,94 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                     <Button key={v} variant={recFilter === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => setRecFilter(v)}>{l}</Button>
                                 ))}
                             </div>
-                            <Table headers={['Course', 'Recommendation', 'Responsible', 'Status']}>
-                                {recommendations.length ? recommendations.map(r => (
-                                    <tr key={r.key}>
-                                        <td className="p-2 border text-sm whitespace-nowrap">{courseLabelOf(r.course)}<div className="text-xs text-slate-500">{courseDateOf(r.course)?.toLocaleDateString()}</div></td>
-                                        <td className="p-2 border text-sm">{r.recommendation}</td>
-                                        <td className="p-2 border text-sm">{r.responsible || '—'}</td>
-                                        <td className="p-2 border text-sm"><span className={`text-xs font-semibold rounded px-1.5 py-0.5 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>{recStatusLabel(r.status)}</span></td>
-                                    </tr>
-                                )) : <tr><td colSpan="4" className="p-4 text-center text-sm text-slate-500">No recommendations in these filters.</td></tr>}
+                            <Table headers={['Course', 'Recommendation', 'Responsible', 'Theme', 'Status']}>
+                                {recommendations.length ? recommendations.map(recRow)
+                                    : <tr><td colSpan="5" className="p-4 text-center text-sm text-slate-500">No recommendations in these filters.</td></tr>}
                             </Table>
+                        </div>
+                    )}
+
+                    {view === 'matrix' && (
+                        <div className="space-y-3">
+                            <p className="text-sm text-slate-500">
+                                Every course's recommendations, linked by theme. Click a cell, a theme or a column
+                                to see the recommendations behind it, and update their status there.
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm text-slate-600">Across:</span>
+                                {[['state', 'State'], ['year', 'Year'], ['course', 'Course']].map(([v, l]) => (
+                                    <Button key={v} variant={matrixBy === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => { setMatrixBy(v); setCell(null); }}>{l}</Button>
+                                ))}
+                                <span className="text-sm text-slate-600 ml-2">Show:</span>
+                                {[['open', 'Pending only'], ['all', 'All (pending / total)']].map(([v, l]) => (
+                                    <Button key={v} variant={matrixScope === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => { setMatrixScope(v); setCell(null); }}>{l}</Button>
+                                ))}
+                            </div>
+                            {matrix.themes.length === 0 ? (
+                                <p className="text-center text-sm text-slate-500 p-6">No recommendations in these filters.</p>
+                            ) : (
+                                <div className="overflow-x-auto border rounded-lg">
+                                    <table className="text-sm border-collapse min-w-full">
+                                        <thead>
+                                            <tr className="bg-slate-100">
+                                                <th className="p-2 border text-left sticky left-0 bg-slate-100 z-10 min-w-[12rem]">Theme</th>
+                                                {matrix.cols.map(col => (
+                                                    <th key={col} className="p-2 border text-xs font-semibold align-bottom">
+                                                        <button type="button" className="hover:underline max-w-[9rem] text-left" onClick={() => setCell({ theme: null, col })}>{colLabelOf(col)}</button>
+                                                    </th>
+                                                ))}
+                                                <th className="p-2 border text-xs font-semibold bg-slate-200">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {matrix.themes.map(t => (
+                                                <tr key={t.id}>
+                                                    <th className="p-2 border text-left font-medium sticky left-0 bg-white z-10">
+                                                        <button type="button" className="hover:underline text-left" onClick={() => setCell({ theme: t.id, col: null })}>{t.label}</button>
+                                                    </th>
+                                                    {matrix.cols.map(col => {
+                                                        const c = matrix.cells[`${t.id}|${col}`];
+                                                        const active = cell?.theme === t.id && cell?.col === col;
+                                                        const shade = c?.open ? `rgba(220, 38, 38, ${0.12 + 0.55 * (c.open / matrix.maxOpen)})` : c ? 'rgba(16, 185, 129, 0.15)' : undefined;
+                                                        return (
+                                                            <td key={col} className={`p-0 border text-center ${active ? 'outline outline-2 outline-blue-600' : ''}`} style={{ background: shade }}>
+                                                                {c ? (
+                                                                    <button type="button" className="w-full px-2 py-2 font-semibold" onClick={() => setCell({ theme: t.id, col })}
+                                                                        title={`${c.open} pending of ${c.total}`}>
+                                                                        {matrixScope === 'open' ? c.open : `${c.open}/${c.total}`}
+                                                                    </button>
+                                                                ) : <span className="text-slate-300">·</span>}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    <td className="p-2 border text-center font-semibold bg-slate-50">{countText(matrix.scoped.filter(r => r.theme === t.id))}</td>
+                                                </tr>
+                                            ))}
+                                            <tr className="bg-slate-50 font-semibold">
+                                                <th className="p-2 border text-left sticky left-0 bg-slate-50 z-10">Total</th>
+                                                {matrix.cols.map(col => (
+                                                    <td key={col} className="p-2 border text-center">{countText(matrix.scoped.filter(r => colKeyOf(r) === col))}</td>
+                                                ))}
+                                                <td className="p-2 border text-center bg-slate-200">{countText(matrix.scoped)}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            {cell && (
+                                <div className="border rounded-lg p-3 bg-slate-50/60">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h4 className="font-semibold text-sm">
+                                            {cell.theme ? themeLabel(cell.theme) : 'All themes'} · {cell.col ? colLabelOf(cell.col) : `every ${matrixBy}`}
+                                            <span className="text-slate-500 font-normal"> ({cellRecs.length} recommendation{cellRecs.length === 1 ? '' : 's'})</span>
+                                        </h4>
+                                        <Button variant="secondary" className="text-xs" onClick={() => setCell(null)}>Close</Button>
+                                    </div>
+                                    <Table headers={['Course', 'Recommendation', 'Responsible', 'Theme', 'Status']}>
+                                        {cellRecs.map(recRow)}
+                                    </Table>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -1539,12 +2101,28 @@ export function FinalReportManager({
     };
     const removePotentialFacilitator = (index) => setPotentialFacilitators(potentialFacilitators.filter((_, i) => i !== index));
 
+    // The summary and recommendations are read out of the chosen PDF and
+    // offered for the form, so they are not typed in twice.
+    const [editorCapture, setEditorCapture] = useState(null);
+    const [capturing, setCapturing] = useState(false);
+    const captureInto = async (source) => {
+        setCapturing(true);
+        try { setEditorCapture(await captureReportContent(source)); }
+        catch (err) { notify(`Could not read the PDF: ${err.message}`, 'error'); }
+        finally { setCapturing(false); }
+    };
+    const applyEditorCapture = async ({ summary: s, recommendations: recs }) => {
+        setSummary(s);
+        setRecommendations(recs.length ? recs : [{ recommendation: '', responsible: '', status: '' }]);
+    };
+
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         setPdfFile(file);
         if (file) {
             setFileName(file.name);
             setExistingPdfUrl(null);
+            captureInto(file);
         } else {
             setFileName(null);
         }
@@ -1613,16 +2191,24 @@ export function FinalReportManager({
                     <FormGroup label="Course Summary"><Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows="5" /></FormGroup>
                     
                     <h3 className="text-xl font-bold mb-2">Course Recommendations</h3>
-                    <Table headers={['Recommendation', 'Responsible', 'Status', 'Actions']}>
+                    {(pdfFile || existingPdfUrl) && (
+                        <Button variant="secondary" className="text-xs" disabled={capturing} onClick={() => captureInto(pdfFile || existingPdfUrl)}>
+                            {capturing ? <><Spinner size="sm" /> Reading the PDF…</> : 'Fill summary & recommendations from the report PDF'}
+                        </Button>
+                    )}
+                    <CaptureReportContentModal isOpen={!!editorCapture} onClose={() => setEditorCapture(null)} capture={editorCapture}
+                        existing={{ summary, recommendations }} onApply={applyEditorCapture} />
+                    <Table headers={['Recommendation', 'Responsible', 'Theme', 'Status', 'Actions']}>
                         {recommendations.map((rec, index) => (
                             <tr key={index}>
                                 <td className="p-2 border"><Input value={rec.recommendation} onChange={(e) => updateRecommendation(index, 'recommendation', e.target.value)} /></td>
                                 <td className="p-2 border"><Input value={rec.responsible} onChange={(e) => updateRecommendation(index, 'responsible', e.target.value)} /></td>
+                                <td className="p-2 border"><Select value={themeOf(rec)} onChange={(e) => updateRecommendation(index, 'theme', e.target.value)}>{[...RECOMMENDATION_THEMES, OTHER_THEME].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</Select></td>
                                 <td className="p-2 border"><Select value={rec.status} onChange={(e) => updateRecommendation(index, 'status', e.target.value)}><option value="">Select Status</option><option value="pending">Pending</option><option value="in-progress">In Progress</option><option value="completed">Completed</option></Select></td>
                                 <td className="p-2 border"><Button variant="danger" onClick={() => removeRecommendation(index)}>Remove</Button></td>
                             </tr>
                         ))}
-                        <tr><td colSpan="4" className="p-2 border-t"><Button variant="secondary" onClick={addRecommendation}>Add Recommendation</Button></td></tr>
+                        <tr><td colSpan="5" className="p-2 border-t"><Button variant="secondary" onClick={addRecommendation}>Add Recommendation</Button></td></tr>
                     </Table>
 
                     <h3 className="text-xl font-bold mb-2">Potential Facilitators</h3>
@@ -1765,7 +2351,7 @@ export function FinalReportManager({
             <div className="space-y-8 mt-6 p-6">
                 <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Summary</h3><p className="text-gray-700 whitespace-pre-wrap">{finalSummary}</p></div>
                 
-                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Recommendations</h3><Table headers={['#', 'Recommendation', 'Responsible', 'Status']}>{finalRecommendations.length > 0 ? (finalRecommendations.map((rec, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{rec.recommendation}</td><td className="p-2 border">{rec.responsible}</td><td className="p-2 border capitalize">{rec.status}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">No recommendations were made.</td></tr>)}</Table></div>
+                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Recommendations</h3><Table headers={['#', 'Recommendation', 'Responsible', 'Theme', 'Status']}>{finalRecommendations.length > 0 ? (finalRecommendations.map((rec, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{rec.recommendation}</td><td className="p-2 border">{rec.responsible}</td><td className="p-2 border">{themeLabel(themeOf(rec))}</td><td className="p-2 border capitalize">{rec.status}</td></tr>))) : (<tr><td colSpan="5" className="p-4 text-center text-gray-500">No recommendations were made.</td></tr>)}</Table></div>
                 
                 <div>
                     <h3 className="text-xl font-bold mb-2 text-gray-800">Potential Facilitators</h3>
