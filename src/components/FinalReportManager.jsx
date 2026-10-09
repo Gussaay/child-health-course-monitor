@@ -1,10 +1,14 @@
 // src/components/FinalReportManager.jsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button, Card, FormGroup, Input, Modal, PageHeader, PdfIcon, Select, Table, Textarea, Spinner } from './CommonComponents';
-import { Copy, Image as ImageIcon, Users, BookOpen, PenLine, Stamp, X } from 'lucide-react';
+import { Copy, Image as ImageIcon, Users, BookOpen, PenLine, Stamp, X, Type, Share2, Trash2, Download, Eye } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { useDataCache } from '../DataContext';
+import { useAuth } from '../hooks/useAuth';
 import { STATE_LOCALITIES } from './constants';
-import { notify } from './dialogs';
+import { notify, promptDialog, confirmDialog } from './dialogs';
+import { createPortal } from 'react-dom';
+import { attachFinalReportPdf, removeFinalReportPdf, getFinalReportByCourseId } from '../data';
 import html2canvas from 'html2canvas'; // <-- Added proper import
 
 // --- Shared Utility: Copy as Image ---
@@ -275,7 +279,7 @@ const toInkPng = async (input, { clearWhite = false } = {}) => {
     }
     try {
         const img = await loadImage(src);
-        const fit = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+        const fit = Math.min(1, 800 / Math.max(img.naturalWidth, img.naturalHeight));
         const canvas = document.createElement('canvas');
         canvas.width = Math.max(1, Math.round(img.naturalWidth * fit));
         canvas.height = Math.max(1, Math.round(img.naturalHeight * fit));
@@ -297,6 +301,61 @@ const toInkPng = async (input, { clearWhite = false } = {}) => {
         if (revoke) URL.revokeObjectURL(revoke);
     }
 };
+
+const todayIso = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const formatDate = (iso) => {
+    const [y, m, d] = String(iso || '').split('-');
+    return y && m && d ? `${d}/${m}/${y}` : (iso || '');
+};
+
+/**
+ * The "Approved by" block, drawn to a transparent PNG rather than written as
+ * PDF text: that way an Arabic name shapes correctly without embedding a font.
+ */
+const renderApprovalText = ({ name, date }) => {
+    const lines = [
+        { text: `Approved by: ${name?.trim() || '________________'}`, font: 'bold 34px Arial, sans-serif' },
+        { text: `Date: ${formatDate(date) || '__/__/____'}`, font: '30px Arial, sans-serif' },
+    ];
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const pad = 8, lineH = 46;
+    const width = Math.ceil(Math.max(...lines.map(l => { ctx.font = l.font; return ctx.measureText(l.text).width; }))) + pad * 2;
+    canvas.width = width;
+    canvas.height = lines.length * lineH + pad;
+    lines.forEach((l, i) => {
+        ctx.font = l.font;
+        ctx.fillStyle = '#0b2a6f';
+        ctx.textBaseline = 'top';
+        ctx.fillText(l.text, pad, pad + i * lineH);
+    });
+    return { src: canvas.toDataURL('image/png'), aspect: canvas.height / canvas.width, pxW: canvas.width };
+};
+
+/**
+ * An item as kept on the final report so the signature can be edited later:
+ * images re-encoded as WebP to keep the document small (they are turned back
+ * into PNG when signing), text blocks kept as text and redrawn.
+ */
+const compactItem = async (item) => {
+    const { id, ...rest } = item;
+    if (item.kind === 'text') {
+        const { src, ...text } = rest;
+        return text;
+    }
+    const img = await loadImage(item.src);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    const webp = canvas.toDataURL('image/webp', 0.85);
+    return { ...rest, src: webp.startsWith('data:image/webp') ? webp : item.src };
+};
+
+const newItemId = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
 /** A finger or mouse signature pad. Hands back a trimmed transparent PNG. */
 const SignaturePad = ({ onDone, onCancel }) => {
@@ -386,11 +445,14 @@ const SignaturePad = ({ onDone, onCancel }) => {
  * Place signatures and a stamp on the first page of the report PDF and produce
  * the signed copy.
  *
- * @param source   the unsigned report: a File or a stored URL
- * @param course   for the signatures and stamp already approved for certificates
- * @param onSigned async (file: File) => void, given the signed PDF
+ * @param source        the unsigned report: a File or a stored URL
+ * @param course        for the signatures and stamp already approved for certificates
+ * @param initialLayout the layout of the current signed copy, to edit it
+ * @param signerName    the default name for the "Approved by" block
+ * @param onSigned      async (file: File, layout) => void, given the signed PDF
+ *                      and the layout to keep with it
  */
-export function SignAndStampModal({ isOpen, onClose, source, course, onSigned }) {
+export function SignAndStampModal({ isOpen, onClose, source, course, initialLayout, signerName, onSigned }) {
     const canvasRef = useRef(null);
     const pdfBytes = useRef(null);
     const pageVp = useRef(null);
@@ -406,6 +468,11 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
     const [clearWhite, setClearWhite] = useState(true);
     const uploadKind = useRef('signature');
     const uploadInput = useRef(null);
+    // Read when the modal opens, not a dependency: a re-render of the parent
+    // must not throw away placements being edited.
+    const layoutRef = useRef(initialLayout);
+    layoutRef.current = initialLayout;
+    const isEdit = !!initialLayout?.items?.length;
 
     // Signatures and the stamp already approved on this course for its
     // certificates. Only real images — the disk cache leaves `__present` flags.
@@ -442,6 +509,13 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
                 // Ready as soon as the size is known: pdfjs finishes its render
                 // on an animation frame, which never comes in a background tab.
                 setPageSize({ width: vp.width, height: vp.height });
+                // Editing: put back what the current signed copy has on it.
+                const saved = (layoutRef.current?.items || []).map(it => ({
+                    ...it,
+                    id: newItemId(),
+                    ...(it.kind === 'text' ? renderApprovalText(it) : {}),
+                }));
+                setItems(saved);
                 setLoading(false);
                 await page.render({ canvasContext: canvas.getContext('2d'), viewport: renderVp }).promise;
             } catch (e) {
@@ -467,20 +541,25 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
 
     const scale = pageSize && displayWidth ? displayWidth / pageSize.width : 0;
 
-    const addItem = useCallback(({ src, aspect }, kind, label) => {
+    const addItem = useCallback(({ src, aspect, pxW }, kind, label, extra = {}) => {
         if (!pageSize) return;
         setItems(prev => {
             const count = prev.filter(i => i.kind === kind).length;
-            const w = kind === 'stamp' ? Math.min(120, pageSize.width * 0.22) : Math.min(150, pageSize.width * 0.28);
+            const w = kind === 'stamp' ? Math.min(120, pageSize.width * 0.22)
+                : kind === 'text' ? Math.min(170, pageSize.width * 0.3)
+                : Math.min(150, pageSize.width * 0.28);
             const h = w * aspect;
-            // Signatures across the foot of the page left to right; stamps to the right.
+            // Signatures across the foot of the page left to right, the
+            // approval text under them, stamps to the right.
             const x = kind === 'stamp'
                 ? pageSize.width - w - 50 - count * 20
                 : 50 + count * (w + 20);
-            const y = pageSize.height - h - 70 - (kind === 'stamp' ? 20 : 0);
+            const y = kind === 'text'
+                ? pageSize.height - h - 40 - count * (h + 6)
+                : pageSize.height - h - 70 - (kind === 'stamp' ? 20 : 0);
             const item = {
-                id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-                kind, label, src, aspect,
+                id: newItemId(),
+                kind, label, src, aspect, ...(pxW ? { pxW } : {}), ...extra,
                 w, h,
                 x: Math.max(0, Math.min(pageSize.width - w, x)),
                 y: Math.max(0, Math.min(pageSize.height - h, y)),
@@ -547,6 +626,22 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
 
     const removeItem = (id) => setItems(prev => prev.filter(i => i.id !== id));
 
+    const addApproval = () => {
+        const data = { name: signerName || '', date: todayIso() };
+        addItem(renderApprovalText(data), 'text', 'Approved by', data);
+    };
+
+    // Editing the approval text redraws it at the same type size, so a longer
+    // name makes the block wider rather than the letters smaller.
+    const updateText = (id, patch) => setItems(prev => prev.map(it => {
+        if (it.id !== id) return it;
+        const next = { ...it, ...patch };
+        const drawn = renderApprovalText(next);
+        const w = it.pxW ? it.w * (drawn.pxW / it.pxW) : it.w;
+        return { ...next, ...drawn, w, h: w * drawn.aspect };
+    }));
+    const selectedItem = items.find(i => i.id === selected);
+
     const apply = async () => {
         if (!items.length) return;
         setSaving(true);
@@ -557,7 +652,9 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
             const page = pdf.getPage(0);
             const { viewport, rotation } = pageVp.current;
             for (const item of items) {
-                const png = await pdf.embedPng(item.src);
+                // Restored images may be WebP; the PDF needs PNG.
+                const pngSrc = item.src.startsWith('data:image/png') ? item.src : (await toInkPng(item.src)).src;
+                const png = await pdf.embedPng(pngSrc);
                 // The image's bottom-left corner as seen on screen, in PDF space.
                 const [x, y] = viewport.convertToPdfPoint(item.x, item.y + item.h);
                 page.drawImage(png, { x, y, width: item.w, height: item.h, rotate: degrees(rotation) });
@@ -566,7 +663,13 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
             const bytes = await pdf.save();
             const name = `Final_Report_Signed_${course?.course_type || 'Course'}_${course?.state || ''}.pdf`
                 .replace(/[^\w.-]+/g, '_');
-            await onSigned(new File([bytes], name, { type: 'application/pdf' }));
+            const layout = {
+                items: await Promise.all(items.map(compactItem)),
+                // Which report this was signed on, to notice if it is replaced.
+                reportUrl: typeof source === 'string' ? source : null,
+                signedAt: new Date().toISOString(),
+            };
+            await onSigned(new File([bytes], name, { type: 'application/pdf' }), layout);
             onClose();
         } catch (e) {
             console.error('[SignAndStamp] could not sign', e);
@@ -576,12 +679,15 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
         }
     };
 
-    return (
-        <Modal isOpen={isOpen} onClose={saving ? undefined : onClose} title="Sign and stamp the final report">
+    // Portalled to <body>: opened from inside another dialog, a click on this
+    // one must not count as a click outside that one and close it.
+    return createPortal(
+        <Modal isOpen={isOpen} onClose={saving ? undefined : onClose}
+            title={isEdit ? 'Edit the signature' : 'Sign and stamp the final report'}>
             <div className="space-y-3">
                 <p className="text-sm text-slate-600">
-                    Add signatures and the stamp, drag them into place on the first page, then save.
-                    The signed copy is saved as the course's signed final report.
+                    Add signatures, the stamp and who approved it, drag them into place on the first
+                    page, then save. Tap an item to change or remove it.
                 </p>
 
                 <div className="flex flex-wrap gap-2">
@@ -593,6 +699,9 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => pickUpload('stamp')} disabled={!pageSize}>
                         <Stamp className="w-4 h-4 mr-1" /> Stamp image
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={addApproval} disabled={!pageSize}>
+                        <Type className="w-4 h-4 mr-1" /> Approved by + date
                     </Button>
                     <input ref={uploadInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onUpload} />
                 </div>
@@ -618,6 +727,22 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
                     <SignaturePad
                         onCancel={() => setPadOpen(false)}
                         onDone={(img) => { addItem(img, 'signature', 'Signature'); setPadOpen(false); }} />
+                )}
+
+                {selectedItem?.kind === 'text' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-end border rounded-lg p-3 bg-blue-50/50">
+                        <label className="text-xs font-semibold text-slate-600">Approved by
+                            <input type="text" value={selectedItem.name || ''} placeholder="Name"
+                                onChange={(e) => updateText(selectedItem.id, { name: e.target.value })}
+                                className="mt-1 w-full border rounded px-2 py-1.5 text-sm font-normal" />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">Date
+                            <input type="date" value={selectedItem.date || ''}
+                                onChange={(e) => updateText(selectedItem.id, { date: e.target.value })}
+                                className="mt-1 w-full border rounded px-2 py-1.5 text-sm font-normal" />
+                        </label>
+                        <Button size="sm" variant="secondary" onClick={() => updateText(selectedItem.id, { date: todayIso() })}>Today</Button>
+                    </div>
                 )}
 
                 {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
@@ -662,13 +787,310 @@ export function SignAndStampModal({ isOpen, onClose, source, course, onSigned })
                     </Button>
                 </div>
             </div>
+        </Modal>,
+        document.body
+    );
+}
+
+// ============================================================================
+// THE ONE REPORT DOCUMENT
+//
+// A course has one final report document to show: the signed copy once there
+// is one, the unsigned report until then. Showing both side by side invited
+// people to send the unsigned one.
+// ============================================================================
+
+/** The document to show, and what to call it. */
+export const currentReportDocument = (report, course) => {
+    const signed = !!report?.signedPdfUrl;
+    const url = signed ? report.signedPdfUrl : report?.pdfUrl;
+    if (!url) return null;
+    const fileName = `Final_Report${signed ? '_Signed' : ''}_${course?.course_type || 'Course'}_${course?.state || ''}.pdf`
+        .replace(/[^\w.-]+/g, '_');
+    return { url, signed, fileName };
+};
+
+const fetchPdfFile = async (url, fileName) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Network response was not ok.');
+    return new File([await response.blob()], fileName, { type: 'application/pdf' });
+};
+
+/** Save the PDF to the device. */
+export const downloadReportPdf = async (url, fileName) => {
+    if (Capacitor.isNativePlatform()) {
+        const { downloadAndOpenFile } = await import('../utils/fileDownloader');
+        await downloadAndOpenFile(url, fileName, { onError: (e) => notify(e.message, 'error') });
+        return;
+    }
+    try {
+        const blobUrl = URL.createObjectURL(await fetchPdfFile(url, fileName));
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    } catch (error) {
+        console.error('Download failed:', error);
+        window.open(url, '_blank');
+    }
+};
+
+/**
+ * Share the PDF itself where the device can (phones, most browsers), else a
+ * link to it, else copy that link.
+ */
+export const shareReportPdf = async (url, fileName, title = 'Final report') => {
+    const cancelled = (e) => e?.name === 'AbortError';
+    if (navigator.share && navigator.canShare) {
+        try {
+            const file = await fetchPdfFile(url, fileName);
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title });
+                return;
+            }
+        } catch (e) {
+            if (cancelled(e)) return;
+            console.warn('[Share] file share failed, sharing the link', e);
+        }
+    }
+    if (navigator.share) {
+        try { await navigator.share({ title, url }); return; } catch (e) { if (cancelled(e)) return; }
+    }
+    try {
+        await navigator.clipboard.writeText(url);
+        notify('Link to the report copied — paste it to share.', 'success');
+    } catch {
+        await promptDialog('Copy this link to share the report:', { defaultValue: url, title: 'Share' });
+    }
+};
+
+/**
+ * The report document with View, Download and Share. `children` adds the
+ * managing buttons where the user may change it.
+ */
+export function ReportDocumentCard({ report, course, children }) {
+    const [busy, setBusy] = useState(null);
+    const docInfo = currentReportDocument(report, course);
+    const layout = report?.signatureLayout;
+    const approval = layout?.items?.find(i => i.kind === 'text');
+    const stale = docInfo?.signed && layout?.reportUrl && report?.pdfUrl && layout.reportUrl !== report.pdfUrl;
+
+    const run = (what, fn) => async () => {
+        setBusy(what);
+        try { await fn(); } finally { setBusy(null); }
+    };
+
+    return (
+        <div className={`rounded-lg border p-4 ${docInfo?.signed ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-300 bg-white'}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2 min-w-0">
+                    <PdfIcon className={`w-6 h-6 shrink-0 ${docInfo?.signed ? 'text-emerald-600' : docInfo ? 'text-blue-500' : 'text-slate-400'}`} />
+                    <div className="min-w-0">
+                        <div className={`font-semibold ${docInfo?.signed ? 'text-emerald-800' : 'text-slate-800'}`}>
+                            {docInfo ? (docInfo.signed ? 'Signed final report' : 'Final report PDF') : 'No report PDF attached'}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                            {!docInfo ? 'Attach the final report PDF, then sign it here.'
+                                : !docInfo.signed ? 'Not signed yet'
+                                : approval ? `Approved by ${approval.name || '—'} · ${formatDate(approval.date)}`
+                                : 'Signed in the app'}
+                        </div>
+                        {stale && (
+                            <div className="text-xs text-amber-700 mt-1">
+                                The report PDF was replaced after it was signed — edit the signature to sign the new one.
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {docInfo && (
+                    <div className="grid grid-cols-3 sm:flex gap-2 shrink-0">
+                        <a href={docInfo.url} target="_blank" rel="noopener noreferrer" className="contents">
+                            <Button variant="secondary" className="justify-center text-sm"><Eye className="w-4 h-4 mr-1" />View</Button>
+                        </a>
+                        <Button variant="secondary" className="justify-center text-sm" disabled={!!busy}
+                            onClick={run('download', () => downloadReportPdf(docInfo.url, docInfo.fileName))}>
+                            {busy === 'download' ? <Spinner size="sm" /> : <><Download className="w-4 h-4 mr-1" />Download</>}
+                        </Button>
+                        <Button variant="secondary" className="justify-center text-sm" disabled={!!busy}
+                            onClick={run('share', () => shareReportPdf(docInfo.url, docInfo.fileName,
+                                `Final report — ${course?.course_type || ''} ${course?.state || ''}`.trim()))}>
+                            {busy === 'share' ? <Spinner size="sm" /> : <><Share2 className="w-4 h-4 mr-1" />Share</>}
+                        </Button>
+                    </div>
+                )}
+            </div>
+            {children && <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-200">{children}</div>}
+        </div>
+    );
+}
+
+/**
+ * The report document with everything that can be done to it: attach or
+ * replace the report PDF, sign and stamp it, edit or delete the signature,
+ * remove it — plus View, Download and Share from the card.
+ *
+ * Used on the course report screen and in the course list's Final report
+ * popup. Both write the same fields on the same final report document as the
+ * editor, so whichever route is used the others see it, and the document is
+ * created if the course has not got one yet.
+ *
+ * @param finalReport the course's final report (or null)
+ * @param onChanged   given the saved report after every change
+ * @param say         (message, type) => void, for the result
+ */
+export function ReportDocumentManager({ course, finalReport, onChanged, say = notify }) {
+    const { user } = useAuth();
+    const who = user?.displayName || user?.email || 'Unknown';
+    const [busy, setBusy] = useState(null);
+    const [signerOpen, setSignerOpen] = useState(false);
+    const reportInput = useRef(null);
+
+    const reportUrl = finalReport?.pdfUrl || null;
+    const signedUrl = finalReport?.signedPdfUrl || null;
+
+    const attachReport = async (file) => {
+        if (!file) return;
+        if (file.type && file.type !== 'application/pdf') {
+            say('That is not a PDF file.', 'error');
+            return;
+        }
+        setBusy('report');
+        try {
+            onChanged?.(await attachFinalReportPdf(course.id, file, 'report', who));
+            say(signedUrl ? 'Report PDF replaced. Edit the signature to sign the new one.' : 'Report PDF attached.', 'success');
+        } catch (err) {
+            say(`Upload failed: ${err.message}`, 'error');
+        } finally {
+            setBusy(null);
+            if (reportInput.current) reportInput.current.value = '';
+        }
+    };
+
+    // Filed with the layout that made it, so the signature can be edited.
+    const fileSigned = async (file, layout) => {
+        setBusy('signed');
+        try {
+            onChanged?.(await attachFinalReportPdf(course.id, file, 'signed', who, { signatureLayout: layout }));
+            say('Signed report saved.', 'success');
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    const deleteSignature = async () => {
+        if (!await confirmDialog('Delete the signature? The unsigned report PDF is kept.', { danger: true, confirmLabel: 'Delete signature' })) return;
+        setBusy('signed');
+        try {
+            onChanged?.(await removeFinalReportPdf(course.id, 'signed', who));
+            say('Signature deleted.', 'info');
+        } catch (err) {
+            say(`Could not delete it: ${err.message}`, 'error');
+        } finally { setBusy(null); }
+    };
+
+    // The report goes with its signed copy: a signed copy of a report that is
+    // no longer there could not be edited.
+    const removeReport = async () => {
+        const message = signedUrl
+            ? 'Remove the final report PDF? Its signed copy is removed too.'
+            : 'Remove the final report PDF?';
+        if (!await confirmDialog(message, { danger: true, confirmLabel: 'Remove' })) return;
+        setBusy('report');
+        try {
+            if (signedUrl) await removeFinalReportPdf(course.id, 'signed', who);
+            onChanged?.(await removeFinalReportPdf(course.id, 'report', who));
+            say('Removed.', 'info');
+        } catch (err) {
+            say(`Could not remove it: ${err.message}`, 'error');
+        } finally { setBusy(null); }
+    };
+
+    const btn = 'text-xs justify-center';
+    return (
+        <>
+            <input ref={reportInput} type="file" accept="application/pdf,.pdf" className="hidden"
+                onChange={(e) => attachReport(e.target.files?.[0])} />
+            <ReportDocumentCard report={finalReport} course={course}>
+                <Button variant={reportUrl ? 'secondary' : 'primary'} disabled={!!busy}
+                    onClick={() => reportInput.current?.click()} className={btn}>
+                    {busy === 'report' ? <Spinner size="sm" /> : (reportUrl ? 'Replace report PDF' : 'Add report PDF')}
+                </Button>
+                {reportUrl && (signedUrl ? (
+                    <>
+                        <Button variant="primary" disabled={!!busy} onClick={() => setSignerOpen(true)} className={btn}>
+                            {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />Edit signature</>}
+                        </Button>
+                        <Button variant="danger" disabled={!!busy} onClick={deleteSignature} className={btn}>Delete signature</Button>
+                    </>
+                ) : (
+                    <Button variant="primary" disabled={!!busy} onClick={() => setSignerOpen(true)} className={btn}>
+                        {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />Sign &amp; stamp</>}
+                    </Button>
+                ))}
+                {(reportUrl || signedUrl) && (
+                    <Button variant="danger" disabled={!!busy} onClick={removeReport} className={btn}>Remove report</Button>
+                )}
+            </ReportDocumentCard>
+            <SignAndStampModal isOpen={signerOpen} onClose={() => setSignerOpen(false)}
+                source={reportUrl} course={course} onSigned={fileSigned}
+                initialLayout={signedUrl ? finalReport?.signatureLayout : null} signerName={user?.displayName || ''} />
+        </>
+    );
+}
+
+/**
+ * The course list's Final report popup: add, sign, download and share the
+ * report document without opening the course. Federal managers and super
+ * users only — the caller decides who sees the button.
+ */
+export function FinalReportQuickModal({ course, isOpen, onClose, onOpenFullReport }) {
+    const [report, setReport] = useState(undefined);
+    const [loadError, setLoadError] = useState(null);
+
+    useEffect(() => {
+        if (!isOpen || !course?.id) return undefined;
+        let cancelled = false;
+        setReport(undefined);
+        setLoadError(null);
+        // From the server: the signed copy is often added from another device.
+        getFinalReportByCourseId(course.id, { source: 'server' })
+            .catch(() => getFinalReportByCourseId(course.id))
+            .then(r => { if (!cancelled) setReport(r || null); })
+            .catch(e => { if (!cancelled) setLoadError(e.message || 'Could not load the final report.'); });
+        return () => { cancelled = true; };
+    }, [isOpen, course?.id]);
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`Final report — ${course?.course_type || ''} ${course?.state ? `(${course.state})` : ''}`}>
+            <div className="space-y-4">
+                {loadError ? (
+                    <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{loadError}</div>
+                ) : report === undefined ? (
+                    <div className="flex items-center justify-center gap-2 p-8 text-sm text-slate-500"><Spinner /> Loading the final report…</div>
+                ) : (
+                    <ReportDocumentManager course={course} finalReport={report} onChanged={setReport} />
+                )}
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-3 border-t">
+                    {onOpenFullReport ? (
+                        <Button variant="secondary" onClick={() => { onClose(); onOpenFullReport(course.id); }} className="justify-center">
+                            {report?.summary ? 'Open the full final report' : 'Write the final report (summary, recommendations…)'}
+                        </Button>
+                    ) : <span />}
+                    <Button variant="secondary" onClick={onClose} className="justify-center">Close</Button>
+                </div>
+            </div>
         </Modal>
     );
 }
 
 export function FinalReportManager({
     course, participants, onCancel, onSave, initialData, 
-    canUseFederalManagerAdvancedFeatures
+    canUseFederalManagerAdvancedFeatures,
+    // Off where the report document card already sits above this view.
+    showDocument = true
 }) {
     const { facilitators } = useDataCache();
     const facilitatorsList = facilitators || [];
@@ -688,6 +1110,10 @@ export function FinalReportManager({
     const [signedPdfFile, setSignedPdfFile] = useState(null);
     const [existingSignedPdfUrl, setExistingSignedPdfUrl] = useState(null);
     const [signedFileName, setSignedFileName] = useState(null);
+    // How the signed copy was laid out, so the signature can be edited.
+    const [signatureLayout, setSignatureLayout] = useState(null);
+    const { user } = useAuth();
+    const signerName = user?.displayName || '';
     const [fileName, setFileName] = useState(null);
     const [galleryImageFiles, setGalleryImageFiles] = useState({});
     const [galleryImageUrls, setGalleryImageUrls] = useState(Array(3).fill(null));
@@ -737,6 +1163,7 @@ export function FinalReportManager({
             setFileName(initialData.pdfUrl ? 'Existing PDF' : null);
             setExistingSignedPdfUrl(initialData.signedPdfUrl || null);
             setSignedFileName(initialData.signedPdfUrl ? 'Existing signed PDF' : null);
+            setSignatureLayout(initialData.signatureLayout || null);
             
             const existingImages = initialData.galleryImageUrls || [];
             const urls = Array(3).fill(null);
@@ -756,6 +1183,7 @@ export function FinalReportManager({
             setSignedPdfFile(null);
             setExistingSignedPdfUrl(null);
             setSignedFileName(null);
+            setSignatureLayout(null);
             setFileName(null);
             setGalleryImageUrls(Array(3).fill(null));
             setGalleryImageFiles({});
@@ -813,6 +1241,7 @@ export function FinalReportManager({
             existingPdfUrl: existingPdfUrl,
             signedPdfFile,
             existingSignedPdfUrl: existingSignedPdfUrl,
+            signatureLayout,
             originalGalleryUrls: initialData?.galleryImageUrls || [],
             finalGalleryUrls: galleryImageUrls,
             galleryImageFiles: galleryImageFiles,
@@ -864,10 +1293,17 @@ export function FinalReportManager({
     // stored with the rest of the report on Save.
     const [signerOpen, setSignerOpen] = useState(false);
     const reportSource = pdfFile || existingPdfUrl;
-    const handleSigned = async (file) => {
+    const handleSigned = async (file, layout) => {
         setSignedPdfFile(file);
         setSignedFileName(file.name);
         setExistingSignedPdfUrl(null);
+        setSignatureLayout(layout);
+    };
+    const deleteSignature = () => {
+        setExistingSignedPdfUrl(null);
+        setSignedPdfFile(null);
+        setSignedFileName(null);
+        setSignatureLayout(null);
     };
     
     const handleGalleryImageUpload = (e, index) => {
@@ -1011,28 +1447,36 @@ export function FinalReportManager({
                                         : <span className="text-gray-500 text-xs">Not attached</span>}
                                 </td>
                                 <td className="p-2 border">
-                                    {existingSignedPdfUrl ? (
-                                        <div className="flex flex-wrap gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {existingSignedPdfUrl && (
                                             <a href={existingSignedPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">View</Button></a>
-                                            <Button variant="primary" onClick={() => handleForceDownload(existingSignedPdfUrl, `Final_Report_Signed_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : 'Download'}</Button>
-                                            <Button variant="danger" onClick={() => { setExistingSignedPdfUrl(null); setSignedPdfFile(null); setSignedFileName(null); }}>Delete</Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                            <Button variant="primary" onClick={() => setSignerOpen(true)} disabled={!reportSource}>
-                                                <PenLine className="w-4 h-4 mr-1" /> {signedPdfFile ? 'Sign again' : 'Sign & stamp'}
-                                            </Button>
-                                            {signedPdfFile
-                                                ? <p className="text-sm text-emerald-700">Signed — saved with the report.</p>
-                                                : !reportSource && <p className="text-xs text-gray-500">Attach the final report PDF first.</p>}
-                                        </div>
-                                    )}
+                                        )}
+                                        {(existingSignedPdfUrl || signedPdfFile) ? (
+                                            <>
+                                                <Button variant="primary" onClick={() => setSignerOpen(true)} disabled={!reportSource}>
+                                                    <PenLine className="w-4 h-4 mr-1" /> Edit signature
+                                                </Button>
+                                                <Button variant="danger" onClick={deleteSignature}>
+                                                    <Trash2 className="w-4 h-4 mr-1" /> Delete signature
+                                                </Button>
+                                                {signedPdfFile && <p className="text-sm text-emerald-700">Signed — saved with the report.</p>}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Button variant="primary" onClick={() => setSignerOpen(true)} disabled={!reportSource}>
+                                                    <PenLine className="w-4 h-4 mr-1" /> Sign & stamp
+                                                </Button>
+                                                {!reportSource && <p className="text-xs text-gray-500">Attach the final report PDF first.</p>}
+                                            </>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
                     </Table>
                     <SignAndStampModal isOpen={signerOpen} onClose={() => setSignerOpen(false)}
-                        source={reportSource} course={course} onSigned={handleSigned} />
+                        source={reportSource} course={course} onSigned={handleSigned}
+                        initialLayout={signatureLayout} signerName={signerName} />
 
                     <AnnexSection 
                         groupedParticipants={currentGroupedParticipants} 
@@ -1091,27 +1535,10 @@ export function FinalReportManager({
                     <h3 className="text-xl font-bold mb-2 text-gray-800">Course Gallery</h3>
                     {finalGalleryUrls.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-3 gap-4">{finalGalleryUrls.map((url, index) => (<a key={index} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={`Gallery item ${index + 1}`} className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow" /></a>))}</div>) : (<p className="text-gray-500">No images were added to the gallery.</p>)}
                 </div>
-                {(existingPdfUrl || existingSignedPdfUrl) && (
+                {showDocument && (initialData?.pdfUrl || initialData?.signedPdfUrl) && (
                     <div>
-                        <h3 className="text-xl font-bold mb-2 text-gray-800">Report documents</h3>
-                        <div className="space-y-2">
-                            {existingPdfUrl && (
-                                <div className="border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                    <a href={existingPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2 font-semibold">
-                                        <PdfIcon className="text-blue-500 w-6 h-6" /><span>Final report PDF</span>
-                                    </a>
-                                    <Button variant="secondary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading} className="w-full sm:w-auto justify-center">{isDownloading ? <Spinner/> : 'Download'}</Button>
-                                </div>
-                            )}
-                            {existingSignedPdfUrl && (
-                                <div className="border border-emerald-300 bg-emerald-50/40 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                    <a href={existingSignedPdfUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-800 hover:underline flex items-center gap-2 font-semibold">
-                                        <PdfIcon className="text-emerald-600 w-6 h-6" /><span>Signed final report</span>
-                                    </a>
-                                    <Button variant="secondary" onClick={() => handleForceDownload(existingSignedPdfUrl, `Final_Report_Signed_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading} className="w-full sm:w-auto justify-center">{isDownloading ? <Spinner/> : 'Download'}</Button>
-                                </div>
-                            )}
-                        </div>
+                        <h3 className="text-xl font-bold mb-2 text-gray-800">Report document</h3>
+                        <ReportDocumentCard report={initialData} course={course} />
                     </div>
                 )}
                 

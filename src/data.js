@@ -1787,7 +1787,7 @@ export const FINAL_REPORT_PDF_SLOTS = {
  * @param {string} userIdentifier  for the edit history
  * @returns {Promise<object>}      the saved final report
  */
-export async function attachFinalReportPdf(courseId, file, slot = 'report', userIdentifier = 'Unknown User') {
+export async function attachFinalReportPdf(courseId, file, slot = 'report', userIdentifier = 'Unknown User', extraFields = {}) {
     const target = FINAL_REPORT_PDF_SLOTS[slot];
     if (!courseId) throw new Error("Course ID is required.");
     if (!file) throw new Error("No file was chosen.");
@@ -1805,6 +1805,8 @@ export async function attachFinalReportPdf(courseId, file, slot = 'report', user
         ...(existing?.id ? { id: existing.id } : {}),
         courseId,
         [target.field]: url,
+        // e.g. the signature layout that made the signed copy, so it can be edited.
+        ...extraFields,
     }, userIdentifier);
 
     return await getFinalReportByCourseId(courseId, { source: 'server' });
@@ -1821,7 +1823,11 @@ export async function removeFinalReportPdf(courseId, slot = 'report', userIdenti
     if (existing[target.field]) {
         await deleteFile(existing[target.field]).catch((e) => console.warn('[FinalReport] PDF not removed', e));
     }
-    await upsertFinalReport({ id: existing.id, courseId, [target.field]: null }, userIdentifier);
+    await upsertFinalReport({
+        id: existing.id, courseId, [target.field]: null,
+        // Deleting the signature deletes how it was laid out too.
+        ...(slot === 'signed' ? { signatureLayout: null } : {}),
+    }, userIdentifier);
     return await getFinalReportByCourseId(courseId, { source: 'server' });
 }
 
@@ -1879,6 +1885,7 @@ export async function saveFinalReportWithFiles(reportData, userIdentifier = 'Unk
         groupedParticipants: reportData.groupedParticipants,
         pdfUrl,
         signedPdfUrl,
+        signatureLayout: signedPdfUrl ? (reportData.signatureLayout || null) : null,
         galleryImageUrls,
     }, userIdentifier);
 

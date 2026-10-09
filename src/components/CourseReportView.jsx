@@ -16,7 +16,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
 import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport, listParticipantTestsForCourse,
-    attachFinalReportPdf, removeFinalReportPdf, saveFinalReportWithFiles } from '../data.js';
+    saveFinalReportWithFiles } from '../data.js';
 import {
     EMONC_TEST_MODULES, getTestSections, computeSectionScores, findParticipantTest,
     alignSectionScores, getParticipantAssignedModule, isEencOnlySubCourse, EENC_ONLY_MODULE,
@@ -28,7 +28,7 @@ import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { ReportsView } from './ReportsView'; 
 import { ExerciseCourseReport } from './imnci'; 
-import { FinalReportManager, SignAndStampModal } from './FinalReportManager';
+import { FinalReportManager, ReportDocumentManager } from './FinalReportManager';
 import { notify } from './dialogs';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
@@ -1016,132 +1016,31 @@ const generateExerciseReportPdf = async (course, quality, onSuccess, onError, re
 };
 
 /**
- * Attach the report PDF and sign it, without opening the editor.
+ * The final report document, managed without opening the editor.
  *
- * The signed copy is no longer a scan: signatures and the stamp are placed on
- * the report's first page in the app (SignAndStampModal). Signing usually
- * happens days after the report is written, often by somebody who is not going
- * to open a form with twenty fields in it. These two
- * buttons write the same two fields on the same final report document that the
- * editor does, so whichever route is used the other sees it — and the report
- * document is created if the course has not got one yet, because the signed
- * copy often turns up before anybody has written the report up.
+ * One document is shown: the signed copy once there is one, the report until
+ * then. The signed copy is not a scan: signatures, the stamp and an "Approved
+ * by" line are placed on the report's first page in the app
+ * (SignAndStampModal), and how they were placed is kept so the signature can be
+ * edited or deleted later. Signing usually happens days after the report is
+ * written, often by somebody who is not going to open a form with twenty fields
+ * in it. These buttons write the same fields on the same final report document
+ * that the editor does, so whichever route is used the other sees it — and the
+ * report document is created if the course has not got one yet.
  */
 const FinalReportDocuments = ({ course, finalReport, onChanged, setToast }) => {
-    const { user } = useAuth();
-    const who = user?.displayName || user?.email || 'Unknown';
-    const [busy, setBusy] = useState(null);
-    const reportInput = useRef(null);
-    const signedInput = useRef(null);
-
     const say = (message, type = 'success') =>
         (setToast ? setToast({ show: true, message, type }) : notify(message, type));
-
-    const attach = async (slot, file) => {
-        if (!file) return;
-        if (file.type && file.type !== 'application/pdf') {
-            say('That is not a PDF file.', 'error');
-            return;
-        }
-        setBusy(slot);
-        try {
-            const saved = await attachFinalReportPdf(course.id, file, slot, who);
-            // Handed straight back up so the Final Report tab shows it at once,
-            // rather than after a reload.
-            onChanged?.(saved);
-            say(slot === 'signed' ? 'Signed report attached.' : 'Report PDF attached.');
-        } catch (err) {
-            say(`Upload failed: ${err.message}`, 'error');
-        } finally {
-            setBusy(null);
-            if (reportInput.current) reportInput.current.value = '';
-            if (signedInput.current) signedInput.current.value = '';
-        }
-    };
-
-    const detach = async (slot) => {
-        setBusy(slot);
-        try {
-            const saved = await removeFinalReportPdf(course.id, slot, who);
-            onChanged?.(saved);
-            say('Removed.', 'info');
-        } catch (err) {
-            say(`Could not remove it: ${err.message}`, 'error');
-        } finally { setBusy(null); }
-    };
-
-    // The signed copy is not uploaded: it is signed and stamped in the app from
-    // the report PDF, then filed exactly as an upload would be.
-    const [signerOpen, setSignerOpen] = useState(false);
-    const reportUrl = finalReport?.pdfUrl || null;
-    const fileSigned = async (file) => {
-        setBusy('signed');
-        try {
-            const saved = await attachFinalReportPdf(course.id, file, 'signed', who);
-            onChanged?.(saved);
-            say('Signed report saved.');
-        } finally {
-            setBusy(null);
-        }
-    };
-
-    const Slot = ({ slot, label, url, inputRef, accent }) => (
-        <div className={`rounded-lg border p-3 ${url ? accent : 'border-slate-300 bg-white'}`}>
-            <div className="flex items-center gap-2">
-                <PdfIcon className={`w-5 h-5 ${url ? 'text-emerald-600' : 'text-slate-400'}`} />
-                <span className="font-semibold text-sm">{label}</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5 mb-2">
-                {url ? 'Attached' : (slot === 'signed' && !reportUrl ? 'Attach the final report PDF first, then sign it here' : 'Not attached')}
-            </p>
-
-            <input ref={inputRef} type="file" accept="application/pdf,.pdf" className="hidden"
-                onChange={(e) => attach(slot, e.target.files?.[0])} />
-
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-                {url && (
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="contents">
-                        <Button variant="secondary" className="w-full sm:w-auto text-xs justify-center">View</Button>
-                    </a>
-                )}
-                {slot === 'signed' ? (
-                    <Button variant={url ? 'secondary' : 'primary'} disabled={busy === slot || !reportUrl}
-                        onClick={() => setSignerOpen(true)}
-                        title={reportUrl ? undefined : 'Attach the final report PDF first'}
-                        className="w-full sm:w-auto text-xs justify-center">
-                        {busy === slot ? <Spinner size="sm" /> : (url ? 'Sign again' : 'Sign & stamp')}
-                    </Button>
-                ) : (
-                    <Button variant={url ? 'secondary' : 'primary'} disabled={busy === slot}
-                        onClick={() => inputRef.current?.click()}
-                        className="w-full sm:w-auto text-xs justify-center">
-                        {busy === slot ? <Spinner size="sm" /> : (url ? 'Replace' : 'Upload PDF')}
-                    </Button>
-                )}
-                {url && (
-                    <Button variant="danger" disabled={busy === slot} onClick={() => detach(slot)}
-                        className="w-full sm:w-auto text-xs justify-center">Remove</Button>
-                )}
-            </div>
-        </div>
-    );
 
     return (
         <Card>
             <div className="p-4">
-                <h3 className="text-lg font-bold">Report documents</h3>
+                <h3 className="text-lg font-bold">Report document</h3>
                 <p className="text-sm text-slate-500 mb-3">
-                    Attached here or in the Final Report editor — both write the same document, so
-                    whatever is attached shows up in the final report straight away.
+                    Attach the final report PDF, then sign and stamp it here. Once signed, the signed
+                    copy is the one shown and shared.
                 </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                    <Slot slot="report" label="Final report PDF" url={finalReport?.pdfUrl}
-                        inputRef={reportInput} accent="border-blue-300 bg-blue-50/40" />
-                    <Slot slot="signed" label="Signed final report" url={finalReport?.signedPdfUrl}
-                        inputRef={signedInput} accent="border-emerald-300 bg-emerald-50/40" />
-                </div>
-                <SignAndStampModal isOpen={signerOpen} onClose={() => setSignerOpen(false)}
-                    source={reportUrl} course={course} onSigned={fileSigned} />
+                <ReportDocumentManager course={course} finalReport={finalReport} onChanged={onChanged} say={say} />
             </div>
         </Card>
     );
@@ -1975,7 +1874,8 @@ function CourseReportBody({
                         setToast={setToast}
                     />
                     <FinalReportManager 
-                        course={course} 
+                        course={course}
+                        showDocument={false}
                         participants={participants} 
                         onCancel={() => setActiveTab('full-course-report')} 
                         onSave={async (data) => {

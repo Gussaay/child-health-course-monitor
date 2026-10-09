@@ -29,6 +29,8 @@ import {
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import { CourseExercisesView } from './imnci'; 
+// Lazy: the popup brings the PDF signing code with it.
+const FinalReportQuickModal = React.lazy(() => import('./FinalReportManager').then(m => ({ default: m.FinalReportQuickModal })));
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
     COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState,
@@ -875,11 +877,14 @@ const formatLocation = (locationStr) => {
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities, onAddFinalReport, canManageFinalReport,
+    // Federal managers and super users: the Final report popup (add, sign, download, share).
+    canManageFinalReportDocument,
     onOpenAttendanceManager, isProcessing 
 }) {
     const [shareModalCourse, setShareModalCourse] = useState(null);
     const [qrShareData, setQrShareData] = useState(null);
     const [reportModalCourse, setReportModalCourse] = useState(null);
+    const [finalReportCourse, setFinalReportCourse] = useState(null);
      
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
     const [expandedId, setExpandedId] = useState(null);
@@ -1021,6 +1026,11 @@ export function CoursesTable({
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
                                                 <FileText size={12} /> Reports
                                             </Button>
+                                            {canManageFinalReportDocument && (
+                                                <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
+                                                    <FileSignature size={12} /> Final report
+                                                </Button>
+                                            )}
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
                                                 <Share2 size={12} /> Share
                                             </Button>
@@ -1091,6 +1101,11 @@ export function CoursesTable({
                                     <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
                                         <FileText size={16} /> Reports
                                     </Button>
+                                    {canManageFinalReportDocument && (
+                                        <Button variant="secondary" className="w-full flex justify-center items-center gap-2 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
+                                            <FileSignature size={16} /> Final report
+                                        </Button>
+                                    )}
                                     <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
                                         <Share2 size={16} /> Share
                                     </Button>
@@ -1282,6 +1297,13 @@ export function CoursesTable({
                     title={qrShareData?.title || ''}
                 />
                 </>
+            )}
+
+            {finalReportCourse && (
+                <Suspense fallback={null}>
+                    <FinalReportQuickModal isOpen course={finalReportCourse} onClose={() => setFinalReportCourse(null)}
+                        onOpenFullReport={canManageFinalReport ? onAddFinalReport : undefined} />
+                </Suspense>
             )}
 
             {reportModalCourse && (
@@ -2187,6 +2209,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                     onOpenReport={onOpenReport} onOpenTestForm={handleOpenTestForm} onOpenAttendanceManager={onOpenAttendanceManager} 
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse} canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
                                     userStates={userStates} userLocalities={userLocalities} onAddFinalReport={onAddFinalReport} canManageFinalReport={canUseFederalManagerAdvancedFeatures}
+                                    canManageFinalReportDocument={canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures}
                                     isProcessing={isProcessing}
                                 />
                             </div>
