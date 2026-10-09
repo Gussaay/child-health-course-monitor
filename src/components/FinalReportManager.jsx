@@ -1,6 +1,6 @@
 // src/components/FinalReportManager.jsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Button, Card, FormGroup, Input, Modal, PageHeader, PdfIcon, Select, Table, Textarea, Spinner } from './CommonComponents';
+import { Button, Card, FormGroup, Input, Modal, PageHeader, PdfIcon, Select, Table, Textarea, Spinner, finalReportStatus, FinalReportStatusBadges } from './CommonComponents';
 import { Copy, Image as ImageIcon, Users, BookOpen, PenLine, Stamp, X, Type, Share2, Trash2, Download, Eye } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { useDataCache } from '../DataContext';
@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { STATE_LOCALITIES } from './constants';
 import { notify, promptDialog, confirmDialog } from './dialogs';
 import { createPortal } from 'react-dom';
-import { attachFinalReportPdf, removeFinalReportPdf, getFinalReportByCourseId } from '../data';
+import { attachFinalReportPdf, removeFinalReportPdf, getFinalReportByCourseId, lightFinalReport } from '../data';
 import html2canvas from 'html2canvas'; // <-- Added proper import
 
 // --- Shared Utility: Copy as Image ---
@@ -940,9 +940,18 @@ export function ReportDocumentCard({ report, course, children }) {
  * @param finalReport the course's final report (or null)
  * @param onChanged   given the saved report after every change
  * @param say         (message, type) => void, for the result
+ * @param ready       false while only a cached copy is shown: the buttons that
+ *                    change the report wait for the fresh one
  */
-export function ReportDocumentManager({ course, finalReport, onChanged, say = notify }) {
+export function ReportDocumentManager({ course, finalReport, onChanged: notifyChanged, say = notify, ready = true }) {
     const { user } = useAuth();
+    const { mergeIntoCache } = useDataCache();
+    // Every change also goes into the shared cache, so the course list's labels
+    // and the Final Reports dashboard show it without fetching.
+    const onChanged = (saved) => {
+        notifyChanged?.(saved);
+        if (saved?.id) mergeIntoCache?.('finalReports', lightFinalReport(saved));
+    };
     const who = user?.displayName || user?.email || 'Unknown';
     const [busy, setBusy] = useState(null);
     const [signerOpen, setSignerOpen] = useState(false);
@@ -1014,24 +1023,24 @@ export function ReportDocumentManager({ course, finalReport, onChanged, say = no
             <input ref={reportInput} type="file" accept="application/pdf,.pdf" className="hidden"
                 onChange={(e) => attachReport(e.target.files?.[0])} />
             <ReportDocumentCard report={finalReport} course={course}>
-                <Button variant={reportUrl ? 'secondary' : 'primary'} disabled={!!busy}
+                <Button variant={reportUrl ? 'secondary' : 'primary'} disabled={!!busy || !ready}
                     onClick={() => reportInput.current?.click()} className={btn}>
                     {busy === 'report' ? <Spinner size="sm" /> : (reportUrl ? 'Replace report PDF' : 'Add report PDF')}
                 </Button>
                 {reportUrl && (signedUrl ? (
                     <>
-                        <Button variant="primary" disabled={!!busy} onClick={() => setSignerOpen(true)} className={btn}>
+                        <Button variant="primary" disabled={!!busy || !ready} onClick={() => setSignerOpen(true)} className={btn}>
                             {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />Edit signature</>}
                         </Button>
-                        <Button variant="danger" disabled={!!busy} onClick={deleteSignature} className={btn}>Delete signature</Button>
+                        <Button variant="danger" disabled={!!busy || !ready} onClick={deleteSignature} className={btn}>Delete signature</Button>
                     </>
                 ) : (
-                    <Button variant="primary" disabled={!!busy} onClick={() => setSignerOpen(true)} className={btn}>
+                    <Button variant="primary" disabled={!!busy || !ready} onClick={() => setSignerOpen(true)} className={btn}>
                         {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />Sign &amp; stamp</>}
                     </Button>
                 ))}
                 {(reportUrl || signedUrl) && (
-                    <Button variant="danger" disabled={!!busy} onClick={removeReport} className={btn}>Remove report</Button>
+                    <Button variant="danger" disabled={!!busy || !ready} onClick={removeReport} className={btn}>Remove report</Button>
                 )}
             </ReportDocumentCard>
             <SignAndStampModal isOpen={signerOpen} onClose={() => setSignerOpen(false)}
@@ -1046,32 +1055,44 @@ export function ReportDocumentManager({ course, finalReport, onChanged, say = no
  * report document without opening the course. Federal managers and super
  * users only — the caller decides who sees the button.
  */
-export function FinalReportQuickModal({ course, isOpen, onClose, onOpenFullReport }) {
+export function FinalReportQuickModal({ course, isOpen, onClose, onOpenFullReport, onReportChanged }) {
+    const { finalReports } = useDataCache();
     const [report, setReport] = useState(undefined);
+    const [fresh, setFresh] = useState(false);
     const [loadError, setLoadError] = useState(null);
 
     useEffect(() => {
         if (!isOpen || !course?.id) return undefined;
         let cancelled = false;
-        setReport(undefined);
+        // The cached copy shows at once, so View, Download and Share work
+        // straight away; this one report is then read fresh from the server (the
+        // signed copy is often added from another device) before it is changed.
+        const cached = (finalReports || []).find(r => r.courseId === course.id && r.isDeleted !== true);
+        setReport(cached !== undefined ? cached : (finalReports ? null : undefined));
+        setFresh(false);
         setLoadError(null);
-        // From the server: the signed copy is often added from another device.
         getFinalReportByCourseId(course.id, { source: 'server' })
             .catch(() => getFinalReportByCourseId(course.id))
-            .then(r => { if (!cancelled) setReport(r || null); })
+            .then(r => { if (!cancelled) { setReport(r || null); setFresh(true); } })
             .catch(e => { if (!cancelled) setLoadError(e.message || 'Could not load the final report.'); });
         return () => { cancelled = true; };
-    }, [isOpen, course?.id]);
+    }, [isOpen, course?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- the cache is read once per open
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Final report — ${course?.course_type || ''} ${course?.state ? `(${course.state})` : ''}`}>
             <div className="space-y-4">
-                {loadError ? (
+                {loadError && report === undefined ? (
                     <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{loadError}</div>
                 ) : report === undefined ? (
                     <div className="flex items-center justify-center gap-2 p-8 text-sm text-slate-500"><Spinner /> Loading the final report…</div>
                 ) : (
-                    <ReportDocumentManager course={course} finalReport={report} onChanged={setReport} />
+                    <>
+                        <ReportDocumentManager course={course} finalReport={report} ready={fresh}
+                            onChanged={(saved) => { setReport(saved); onReportChanged?.(saved); }} />
+                        {!fresh && (loadError
+                            ? <p className="text-xs text-amber-700">Could not reach the server — showing the saved copy. Changes need a connection.</p>
+                            : <p className="text-xs text-slate-500 flex items-center gap-1"><Spinner size="sm" /> Checking for the latest version…</p>)}
+                    </>
                 )}
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-3 border-t">
                     {onOpenFullReport ? (
@@ -1083,6 +1104,246 @@ export function FinalReportQuickModal({ course, isOpen, onClose, onOpenFullRepor
                 </div>
             </div>
         </Modal>
+    );
+}
+
+// ============================================================================
+// FINAL REPORTS DASHBOARD
+//
+// Every course of the package with its final report: whether it is uploaded
+// and signed, the summary, the recommendations and the potential facilitators,
+// in one place. Federal managers and super users only — the caller decides.
+// ============================================================================
+
+const REC_STATUS_STYLE = {
+    completed: 'bg-emerald-100 text-emerald-800',
+    'in-progress': 'bg-blue-100 text-blue-800',
+    pending: 'bg-amber-100 text-amber-800',
+};
+const recStatusLabel = (s) => (s === 'in-progress' ? 'In progress' : s ? s[0].toUpperCase() + s.slice(1) : 'Not set');
+
+const courseDateOf = (c) => {
+    const d = c?.start_date ? new Date(c.start_date) : null;
+    return d && !isNaN(d) ? d : null;
+};
+const courseLabelOf = (c) => `${c.state || '—'}${c.locality ? ` - ${c.locality}` : ''}`;
+
+/**
+ * @param courses         the courses of the package (already location-filtered)
+ * @param reportsByCourse { [courseId]: finalReport }
+ * @param onReportChanged (saved) => void, after a change in the popup
+ * @param onOpenFullReport (courseId) => void, to write the narrative report
+ */
+export function FinalReportsDashboard({ courseType, courses, reportsByCourse, loading, onReportChanged, onOpenFullReport }) {
+    const [view, setView] = useState('courses');
+    const [stateFilter, setStateFilter] = useState('All');
+    const [yearFilter, setYearFilter] = useState('All');
+    const [docFilter, setDocFilter] = useState('All');
+    const [recFilter, setRecFilter] = useState('open');
+    const [search, setSearch] = useState('');
+    const [manageCourse, setManageCourse] = useState(null);
+    const [expanded, setExpanded] = useState({});
+
+    const states = useMemo(() => ['All', ...[...new Set(courses.map(c => c.state).filter(Boolean))].sort()], [courses]);
+    const years = useMemo(() => ['All', ...[...new Set(courses.map(c => courseDateOf(c)?.getFullYear()).filter(Boolean))].sort((a, b) => b - a).map(String)], [courses]);
+
+    // Courses in the filters, newest first, each with its report and status.
+    const rows = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return courses
+            .filter(c => stateFilter === 'All' || c.state === stateFilter)
+            .filter(c => yearFilter === 'All' || String(courseDateOf(c)?.getFullYear()) === yearFilter)
+            .map(c => ({ course: c, report: reportsByCourse[c.id] || null, status: finalReportStatus(reportsByCourse[c.id]) }))
+            .filter(({ status }) => docFilter === 'All'
+                || (docFilter === 'none' && !status.uploaded)
+                || (docFilter === 'unsigned' && status.uploaded && !status.signed)
+                || (docFilter === 'signed' && status.signed)
+                || (docFilter === 'pending' && status.pending > 0))
+            .filter(({ course, report }) => !q || [course.state, course.locality, course.director, report?.summary]
+                .some(v => String(v || '').toLowerCase().includes(q)))
+            .sort((a, b) => (courseDateOf(b.course)?.getTime() || 0) - (courseDateOf(a.course)?.getTime() || 0));
+    }, [courses, reportsByCourse, stateFilter, yearFilter, docFilter, search]);
+
+    const kpis = useMemo(() => ({
+        courses: rows.length,
+        uploaded: rows.filter(r => r.status.uploaded).length,
+        signed: rows.filter(r => r.status.signed).length,
+        withPending: rows.filter(r => r.status.pending > 0).length,
+        pending: rows.reduce((n, r) => n + r.status.pending, 0),
+    }), [rows]);
+
+    const recommendations = useMemo(() => rows.flatMap(({ course, report }) =>
+        (report?.recommendations || []).filter(r => r?.recommendation).map((r, i) => ({ ...r, course, key: `${course.id}_${i}` })))
+        .filter(r => recFilter === 'all' || (recFilter === 'open' ? r.status !== 'completed' : r.status === recFilter)),
+    [rows, recFilter]);
+
+    const facilitators = useMemo(() => rows.flatMap(({ course, report }) =>
+        (report?.potentialFacilitators || []).filter(f => f?.participant_id || f?.participant_name)
+            .map((f, i) => ({ ...f, course, key: `${course.id}_${i}` }))), [rows]);
+
+    const pct = (n) => (kpis.courses ? Math.round((n / kpis.courses) * 100) : 0);
+    const Tile = ({ label, value, sub, tone }) => (
+        <div className={`rounded-lg border p-3 bg-white ${tone || ''}`}>
+            <div className="text-xs text-slate-500">{label}</div>
+            <div className="text-2xl font-bold text-slate-800">{value}</div>
+            {sub && <div className="text-xs text-slate-500">{sub}</div>}
+        </div>
+    );
+    const tab = (id, label, count) => (
+        <Button variant="tab" isActive={view === id} onClick={() => setView(id)}>
+            {label}{count != null && <span className="ml-1.5 text-xs bg-slate-200 text-slate-700 rounded-full px-1.5">{count}</span>}
+        </Button>
+    );
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <h2 className="text-2xl font-bold text-gray-800">{courseType ? `${courseType} ` : ''}Final Reports Dashboard</h2>
+                <p className="text-sm text-gray-500">Final report documents, summaries, recommendations and potential facilitators for each course.</p>
+            </div>
+
+            <Card className="bg-gray-50 border border-gray-200 p-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <FormGroup label="State"><Select value={stateFilter} onChange={e => setStateFilter(e.target.value)}>{states.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
+                    <FormGroup label="Year"><Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>{years.map(y => <option key={y} value={y}>{y}</option>)}</Select></FormGroup>
+                    <FormGroup label="Final report">
+                        <Select value={docFilter} onChange={e => setDocFilter(e.target.value)}>
+                            <option value="All">All courses</option>
+                            <option value="none">No report uploaded</option>
+                            <option value="unsigned">Uploaded, not signed</option>
+                            <option value="signed">Signed</option>
+                            <option value="pending">Has pending recommendations</option>
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="Search"><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="State, locality, director, summary…" /></FormGroup>
+                </div>
+            </Card>
+
+            {loading ? (
+                <div className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Spinner /> Loading final reports…</div>
+            ) : (
+                <>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <Tile label="Courses" value={kpis.courses} />
+                        <Tile label="Report uploaded" value={kpis.uploaded} sub={`${pct(kpis.uploaded)}% of courses`} />
+                        <Tile label="Signed" value={kpis.signed} sub={`${pct(kpis.signed)}% of courses`} />
+                        <Tile label="Courses with pending recommendations" value={kpis.withPending} />
+                        <Tile label="Pending recommendations" value={kpis.pending} tone={kpis.pending ? 'border-red-200' : ''} />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
+                        {tab('courses', 'Courses', rows.length)}
+                        {tab('recommendations', 'Recommendations', recommendations.length)}
+                        {tab('facilitators', 'Potential facilitators', facilitators.length)}
+                    </div>
+
+                    {view === 'courses' && (
+                        <div className="space-y-3">
+                            {rows.length === 0 && <p className="text-center text-sm text-slate-500 p-6">No courses match these filters.</p>}
+                            {rows.map(({ course, report, status }) => {
+                                const open = !!expanded[course.id];
+                                const recs = (report?.recommendations || []).filter(r => r?.recommendation);
+                                const facs = (report?.potentialFacilitators || []).filter(f => f?.participant_id || f?.participant_name);
+                                return (
+                                    <div key={course.id} className="border rounded-lg bg-white">
+                                        <div className="p-3 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                            <button type="button" className="text-left min-w-0" onClick={() => setExpanded(e => ({ ...e, [course.id]: !open }))}>
+                                                <div className="font-semibold text-slate-800">{courseLabelOf(course)}</div>
+                                                <div className="text-xs text-slate-500">
+                                                    {courseDateOf(course)?.toLocaleDateString() || 'No start date'}
+                                                    {course.director ? ` · Director: ${course.director}` : ''}
+                                                </div>
+                                                <FinalReportStatusBadges report={report} className="mt-1" />
+                                            </button>
+                                            <div className="flex gap-2 shrink-0">
+                                                <Button variant="secondary" className="text-xs" onClick={() => setExpanded(e => ({ ...e, [course.id]: !open }))}>
+                                                    {open ? 'Hide details' : 'Details'}
+                                                </Button>
+                                                <Button className="text-xs" onClick={() => setManageCourse(course)}>
+                                                    <PenLine className="w-4 h-4 mr-1" />{status.uploaded ? 'Manage' : 'Add report'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        {open && (
+                                            <div className="border-t p-3 space-y-4 bg-slate-50/50">
+                                                {status.uploaded && <ReportDocumentCard report={report} course={course} />}
+                                                <div>
+                                                    <h4 className="font-semibold text-sm mb-1">Summary</h4>
+                                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{report?.summary || <span className="text-slate-400">No summary written.</span>}</p>
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-sm mb-1">Recommendations</h4>
+                                                    {recs.length ? (
+                                                        <ul className="space-y-1">
+                                                            {recs.map((r, i) => (
+                                                                <li key={i} className="text-sm flex flex-wrap items-start gap-2">
+                                                                    <span className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>{recStatusLabel(r.status)}</span>
+                                                                    <span className="flex-1 min-w-0">{r.recommendation}{r.responsible && <span className="text-slate-500"> — {r.responsible}</span>}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : <p className="text-sm text-slate-400">No recommendations.</p>}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-sm mb-1">Potential facilitators</h4>
+                                                    {facs.length
+                                                        ? <p className="text-sm text-slate-700">{facs.map(f => f.participant_name || 'N/A').join(', ')}</p>
+                                                        : <p className="text-sm text-slate-400">None identified.</p>}
+                                                </div>
+                                                {onOpenFullReport && (
+                                                    <Button variant="secondary" className="text-xs" onClick={() => onOpenFullReport(course.id)}>
+                                                        {report?.summary ? 'Open the full final report' : 'Write the final report'}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {view === 'recommendations' && (
+                        <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm text-slate-600">Show:</span>
+                                {[['open', 'Pending (not completed)'], ['all', 'All'], ['pending', 'Pending'], ['in-progress', 'In progress'], ['completed', 'Completed']].map(([v, l]) => (
+                                    <Button key={v} variant={recFilter === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => setRecFilter(v)}>{l}</Button>
+                                ))}
+                            </div>
+                            <Table headers={['Course', 'Recommendation', 'Responsible', 'Status']}>
+                                {recommendations.length ? recommendations.map(r => (
+                                    <tr key={r.key}>
+                                        <td className="p-2 border text-sm whitespace-nowrap">{courseLabelOf(r.course)}<div className="text-xs text-slate-500">{courseDateOf(r.course)?.toLocaleDateString()}</div></td>
+                                        <td className="p-2 border text-sm">{r.recommendation}</td>
+                                        <td className="p-2 border text-sm">{r.responsible || '—'}</td>
+                                        <td className="p-2 border text-sm"><span className={`text-xs font-semibold rounded px-1.5 py-0.5 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>{recStatusLabel(r.status)}</span></td>
+                                    </tr>
+                                )) : <tr><td colSpan="4" className="p-4 text-center text-sm text-slate-500">No recommendations in these filters.</td></tr>}
+                            </Table>
+                        </div>
+                    )}
+
+                    {view === 'facilitators' && (
+                        <Table headers={['#', 'Potential facilitator', 'Course', 'Course date']}>
+                            {facilitators.length ? facilitators.map((f, i) => (
+                                <tr key={f.key}>
+                                    <td className="p-2 border text-sm">{i + 1}</td>
+                                    <td className="p-2 border text-sm font-semibold">{f.participant_name || 'N/A'}</td>
+                                    <td className="p-2 border text-sm">{courseLabelOf(f.course)}</td>
+                                    <td className="p-2 border text-sm">{courseDateOf(f.course)?.toLocaleDateString() || '—'}</td>
+                                </tr>
+                            )) : <tr><td colSpan="4" className="p-4 text-center text-sm text-slate-500">No potential facilitators in these filters.</td></tr>}
+                        </Table>
+                    )}
+                </>
+            )}
+
+            {manageCourse && (
+                <FinalReportQuickModal isOpen course={manageCourse} onClose={() => setManageCourse(null)}
+                    onReportChanged={onReportChanged} onOpenFullReport={onOpenFullReport} />
+            )}
+        </div>
     );
 }
 

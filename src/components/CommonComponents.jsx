@@ -351,3 +351,36 @@ export function Toast({ message, type, onClose }) {
         </div>
     );
 }
+// --- Final report status ---------------------------------------------------
+// Whether a course's final report is uploaded, signed, and how many of its
+// recommendations are still open. Used by the course list's labels and by the
+// Final Reports dashboard, so both count the same way.
+export const finalReportStatus = (report) => {
+    const recs = (report?.recommendations || []).filter(r => r?.recommendation);
+    return {
+        uploaded: !!(report?.pdfUrl || report?.signedPdfUrl),
+        signed: !!report?.signedPdfUrl,
+        hasReport: !!report,
+        recommendations: recs.length,
+        // Anything not marked completed is still pending.
+        pending: recs.filter(r => r.status !== 'completed').length,
+    };
+};
+
+export function FinalReportStatusBadges({ report, className = '' }) {
+    const s = finalReportStatus(report);
+    const pill = 'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap';
+    return (
+        <div className={`flex flex-wrap gap-1 ${className}`}>
+            {s.uploaded
+                ? <span className={`${pill} bg-blue-50 text-blue-700 border-blue-200`}>Report uploaded</span>
+                : <span className={`${pill} bg-slate-50 text-slate-500 border-slate-200`}>No report</span>}
+            {s.uploaded && (s.signed
+                ? <span className={`${pill} bg-emerald-50 text-emerald-700 border-emerald-200`}>Signed</span>
+                : <span className={`${pill} bg-amber-50 text-amber-700 border-amber-200`}>Not signed</span>)}
+            {s.pending > 0
+                ? <span className={`${pill} bg-red-50 text-red-700 border-red-200`}>{s.pending} pending recommendation{s.pending === 1 ? '' : 's'}</span>
+                : s.recommendations > 0 && <span className={`${pill} bg-emerald-50 text-emerald-700 border-emerald-200`}>Recommendations done</span>}
+        </div>
+    );
+}

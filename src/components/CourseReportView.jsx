@@ -16,7 +16,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
 import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport, listParticipantTestsForCourse,
-    saveFinalReportWithFiles } from '../data.js';
+    saveFinalReportWithFiles, lightFinalReport } from '../data.js';
 import {
     EMONC_TEST_MODULES, getTestSections, computeSectionScores, findParticipantTest,
     alignSectionScores, getParticipantAssignedModule, isEencOnlySubCourse, EENC_ONLY_MODULE,
@@ -1121,6 +1121,8 @@ function CourseReportBody({
     const noteFinalReport = (saved) => {
         setJustSavedReport(saved);
         onFinalReportChanged?.(saved);
+        // Into the shared cache too, so the course list and dashboards show it.
+        if (saved?.id) dataCache.mergeIntoCache?.('finalReports', lightFinalReport(saved));
     };
 
     // A different course, or the parent caught up: stop holding the local copy.

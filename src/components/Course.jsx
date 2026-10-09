@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
-    Select, Spinner, Table, CourseIcon, Modal, CardBody, CardFooter, Toast 
+    Select, Spinner, Table, CourseIcon, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges 
 } from './CommonComponents'; 
 
 // --- Firebase Imports ---
@@ -31,6 +31,7 @@ import { CourseTestForm } from './CourseTestForm';
 import { CourseExercisesView } from './imnci'; 
 // Lazy: the popup brings the PDF signing code with it.
 const FinalReportQuickModal = React.lazy(() => import('./FinalReportManager').then(m => ({ default: m.FinalReportQuickModal })));
+const FinalReportsDashboard = React.lazy(() => import('./FinalReportManager').then(m => ({ default: m.FinalReportsDashboard })));
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
     COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState,
@@ -879,6 +880,8 @@ export function CoursesTable({
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities, onAddFinalReport, canManageFinalReport,
     // Federal managers and super users: the Final report popup (add, sign, download, share).
     canManageFinalReportDocument,
+    // { [courseId]: finalReport } for the status labels; null hides them.
+    finalReportsByCourse,
     onOpenAttendanceManager, isProcessing 
 }) {
     const [shareModalCourse, setShareModalCourse] = useState(null);
@@ -996,6 +999,7 @@ export function CoursesTable({
                                             <span className="text-[11px] font-medium text-slate-500 truncate max-w-[250px]" title={subcourses}>
                                                 {subcourses}
                                             </span>
+                                            {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-1" />}
                                         </div>
                                     </td>
 
@@ -1084,6 +1088,7 @@ export function CoursesTable({
                                         )}
                                         {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold">(Deletion Pending)</span>}
                                     </div>
+                                    {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-2" />}
                                 </div>
                                 <div className="text-gray-400">
                                     <svg className={`w-6 h-6 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -1558,7 +1563,8 @@ export function CourseManagementView({
         fetchCourses,
         participants: globalParticipants, 
         fetchParticipants,
-        healthFacilities, fetchHealthFacilities, isLoading
+        healthFacilities, fetchHealthFacilities, isLoading,
+        finalReports, fetchFinalReports
     } = useDataCache();
 
     const { user } = useAuth();
@@ -1795,9 +1801,25 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         canUseSuperUserAdvancedFeatures ||
         (canUseFederalManagerAdvancedFeatures && currentUserRole === 'super_user');
 
+    // Final reports, for the course list's status labels and the Final Reports
+    // dashboard. Federal managers and super users only. They come from the
+    // shared cache: memory, then the device, then only the reports changed
+    // since the last sync. Changes made in the app are merged in as they happen.
+    const canSeeFinalReports = !!(canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures);
+    useEffect(() => { if (canSeeFinalReports) fetchFinalReports(); }, [canSeeFinalReports, fetchFinalReports]);
+    const finalReportsByCourse = useMemo(() => {
+        if (!canSeeFinalReports || !finalReports) return null;
+        const map = {};
+        finalReports.forEach(r => { if (r.courseId && r.isDeleted !== true) map[r.courseId] = r; });
+        return map;
+    }, [canSeeFinalReports, finalReports]);
+
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        try { await fetchCourses(true); await fetchParticipants(true); } finally { setIsRefreshing(false); }
+        try {
+            // 'sync': straight to the server, but only for what changed.
+            await Promise.all([fetchCourses(true), fetchParticipants(true), canSeeFinalReports ? fetchFinalReports('sync') : null]);
+        } finally { setIsRefreshing(false); }
     };
 
     const handleOpenCourse = (id) => {
@@ -2058,7 +2080,18 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         }
     };
 
-    const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'deleted-courses', 'course-approvals', 'certificate-approvals'];
+    const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'final-reports', 'deleted-courses', 'course-approvals', 'certificate-approvals'];
+
+    // The dashboards show the course package picked on the Courses tab.
+    // Memoised: these feed big dashboards, and new arrays every render would
+    // make them recompute on every keystroke elsewhere on the page.
+    const packageCourses = useMemo(() => (activeCourseType ? dashboardCourses.filter(c => c.course_type === activeCourseType) : dashboardCourses), [dashboardCourses, activeCourseType]);
+    const packageParticipants = useMemo(() => {
+        if (!activeCourseType) return dashboardParticipants;
+        const ids = new Set(packageCourses.map(c => c.id));
+        return dashboardParticipants.filter(p => ids.has(p.courseId));
+    }, [dashboardParticipants, packageCourses, activeCourseType]);
+    const finalReportCourses = useMemo(() => packageCourses.filter(c => c.approvalStatus !== 'rejected'), [packageCourses]);
     const isGlobalView = globalTabs.includes(activeCoursesTab);
 
     return (
@@ -2079,7 +2112,13 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 
                 {isGlobalView && (
                     <>
-                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>Courses Dashboard</Button>
+                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>{activeCourseType ? `${activeCourseType} Dashboard` : 'Courses Dashboard'}</Button>
+
+                        {canSeeFinalReports && (
+                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'final-reports'} onClick={() => { setActiveCoursesTab('final-reports'); onSetSelectedParticipantId(null); }}>
+                                Final Reports
+                            </Button>
+                        )}
 
                         {canUseFederalManagerAdvancedFeatures && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'course-approvals'} onClick={() => { setActiveCoursesTab('course-approvals'); onSetSelectedParticipantId(null); }}>
@@ -2209,7 +2248,8 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                     onOpenReport={onOpenReport} onOpenTestForm={handleOpenTestForm} onOpenAttendanceManager={onOpenAttendanceManager} 
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse} canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
                                     userStates={userStates} userLocalities={userLocalities} onAddFinalReport={onAddFinalReport} canManageFinalReport={canUseFederalManagerAdvancedFeatures}
-                                    canManageFinalReportDocument={canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures}
+                                    canManageFinalReportDocument={canSeeFinalReports}
+                                    finalReportsByCourse={finalReportsByCourse}
                                     isProcessing={isProcessing}
                                 />
                             </div>
@@ -2223,11 +2263,26 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                             <div className="flex justify-center p-8"><Spinner /></div>
                         ) : (
                             <CompiledReportView 
-                                allCourses={dashboardCourses} 
-                                allParticipants={dashboardParticipants} 
+                                allCourses={packageCourses} 
+                                allParticipants={packageParticipants} 
                                 allHealthFacilities={healthFacilities || []} 
+                                courseType={activeCourseType || null}
                             />
                         )}
+                    </div>
+                )}
+
+                {activeCoursesTab === 'final-reports' && canSeeFinalReports && (
+                    <div className="mt-4">
+                        <Suspense fallback={<div className="flex justify-center p-8"><Spinner /></div>}>
+                            <FinalReportsDashboard
+                                courseType={activeCourseType || null}
+                                courses={finalReportCourses}
+                                reportsByCourse={finalReportsByCourse || {}}
+                                loading={!finalReports}
+                                onOpenFullReport={canUseFederalManagerAdvancedFeatures ? onAddFinalReport : undefined}
+                            />
+                        </Suspense>
                     </div>
                 )}
 

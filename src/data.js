@@ -1892,10 +1892,32 @@ export async function saveFinalReportWithFiles(reportData, userIdentifier = 'Unk
     return await getFinalReportByCourseId(reportData.courseId, { source: 'server' });
 }
 
-export async function listFinalReport(sourceOptions = {}) {
+/** A final report without its roster snapshots and edit history: what the shared cache keeps. */
+export const lightFinalReport = (report) => {
+    if (!report) return report;
+    // eslint-disable-next-line no-unused-vars
+    const { groupedParticipants, annexFacilitators, editHistory, ...light } = report;
+    return light;
+};
+
+/**
+ * Final reports for the shared cache (the course list's labels and the Final
+ * Reports dashboard). With `lastSync`, only reports changed since then: every
+ * write and the soft delete stamp lastUpdatedAt.
+ *
+ * Light on purpose: the roster snapshots (groupedParticipants,
+ * annexFacilitators) and the edit history are left out — they are most of a
+ * report's size and only the report screen needs them, which reads the full
+ * document with getFinalReportByCourseId.
+ */
+export async function listFinalReport(sourceOptions = {}, lastSync = 0) {
     try {
-        const querySnapshot = await getDocs(collection(db, "finalReports"), sourceOptions);
-        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        let q = collection(db, "finalReports");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const querySnapshot = await getData(q, sourceOptions);
+        return querySnapshot.docs.map(d => lightFinalReport({ id: d.id, ...d.data() }));
     } catch (error) {
         console.error("Error fetching final reports:", error);
         throw error;

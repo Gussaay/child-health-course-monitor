@@ -39,9 +39,12 @@ const getScoreColorClass = (value, type = 'percentage') => {
 const fmtPct = (value) => (isNaN(value) || value === null ? 'N/A' : `+${Number(value).toFixed(2)}%`);
 const fmtCurrency = (value) => (isNaN(value) || value === null ? '$0' : `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
 
-export default function CompiledReportView({ allCourses, allParticipants, allHealthFacilities = [] }) {
+// courseType: the course package picked on the Courses page. When given, the
+// dashboard is that package's only, and the Course Type filter is not offered.
+export default function CompiledReportView({ allCourses, allParticipants, allHealthFacilities = [], courseType = null }) {
     // --- State ---
-    const [filterType, setFilterType] = useState('All'); 
+    const [filterType, setFilterType] = useState(courseType || 'All'); 
+    useEffect(() => { setFilterType(courseType || 'All'); setFilterSubType('All'); }, [courseType]);
     const [filterSubType, setFilterSubType] = useState('All');
     const [filterState, setFilterState] = useState('All');
     const [yearFilter, setYearFilter] = useState('All');
@@ -559,7 +562,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-center border-b border-gray-200 pb-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-800">Courses Dashboard</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">{courseType ? `${courseType} Courses Dashboard` : 'Courses Dashboard'}</h2>
                     <p className="text-sm text-gray-500">
                         Consolidated performance, coverage, and investment overview.
                     </p>
@@ -572,11 +575,13 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
             {/* Row 1: Filters */}
             <Card className="bg-gray-50 border border-gray-200">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <FormGroup label="Course Type">
-                        <Select value={filterType} onChange={e => { setFilterType(e.target.value); setFilterSubType('All'); }}>
-                            {courseTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                        </Select>
-                    </FormGroup>
+                    {!courseType && (
+                        <FormGroup label="Course Type">
+                            <Select value={filterType} onChange={e => { setFilterType(e.target.value); setFilterSubType('All'); }}>
+                                {courseTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                            </Select>
+                        </FormGroup>
+                    )}
                     <FormGroup label="Sub-Type">
                         <Select value={filterSubType} onChange={e => setFilterSubType(e.target.value)} disabled={filterType === 'All'}>
                             <option value="All">All Sub-Types</option>

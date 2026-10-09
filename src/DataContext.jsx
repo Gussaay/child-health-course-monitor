@@ -30,6 +30,7 @@ import {
     getIMNCIProtocols,
     listOnlineCourses,
     listOnlineCourseItems,
+    listFinalReport,
     fetchFacilitiesHistoryMultiDate, 
     listSnapshotsForFacility,
     getAboutTeamImages 
@@ -107,6 +108,18 @@ const stripSignaturesForDisk = (data) => {
                 if (cc[k]) { cc[`${k}__present`] = true; cc[k] = null; ccChanged = true; }
             });
             if (ccChanged) { copy.customCertificate = cc; changed = true; }
+        }
+
+        // A final report's signature layout carries the signature and stamp
+        // images it was signed with. The layout stays (positions, the
+        // "Approved by" text); the images do not go to disk. Editing a
+        // signature reads the report fresh from the server anyway.
+        if (copy.signatureLayout?.items?.some(i => i?.src)) {
+            copy.signatureLayout = {
+                ...copy.signatureLayout,
+                items: copy.signatureLayout.items.map(i => (i?.src ? { ...i, src: null, src__present: true } : i)),
+            };
+            changed = true;
         }
 
         return changed ? copy : item;
@@ -196,6 +209,7 @@ export const DataProvider = ({ children }) => {
         onlineCourses: null,
         onlineCourseItems: null,
         aboutTeamImages: null, 
+        finalReports: null,
     });
 
     const [isLoading, setIsLoading] = useState({
@@ -225,6 +239,7 @@ export const DataProvider = ({ children }) => {
         onlineCourses: true,
         onlineCourseItems: true,
         aboutTeamImages: true, 
+        finalReports: true,
     });
     
     const [lastFacilitiesFetchTime, setLastFacilitiesFetchTime] = useState({}); 
@@ -543,7 +558,24 @@ export const DataProvider = ({ children }) => {
         fetchOnlineCourseItems: createFetcher('onlineCourseItems', (opts, lastSync) => listOnlineCourseItems(opts, lastSync)),
         
         fetchAboutTeamImages: createFetcher('aboutTeamImages', (opts) => getAboutTeamImages(opts)),
+        // Light copies (no roster snapshots), delta-synced like the rest.
+        fetchFinalReports: createFetcher('finalReports', (opts, lastSync) => listFinalReport(opts, lastSync)),
     }), [createFetcher]);
+
+    // Put documents the app has just saved straight into the cache (memory and
+    // disk), so the screens showing them update without a fetch. The next delta
+    // sync brings the same documents back and simply overwrites them.
+    const mergeIntoCache = useCallback(async (key, items) => {
+        const list = (Array.isArray(items) ? items : [items]).filter(i => i && i.id);
+        if (!list.length) return;
+        const current = Array.isArray(cacheRef.current[key]) ? cacheRef.current[key] : [];
+        const map = new Map(current.map(i => [i.id, i]));
+        list.forEach(i => map.set(i.id, { ...(map.get(i.id) || {}), ...i }));
+        const merged = Array.from(map.values());
+        cacheRef.current = { ...cacheRef.current, [key]: merged };
+        setCache(prev => ({ ...prev, [key]: merged }));
+        try { await setLocalData(`cache_${key}`, stripSignaturesForDisk(merged)); } catch (e) { console.warn('IDB write failed for', key, e); }
+    }, []);
 
     useEffect(() => {
         if (!user) {
@@ -587,6 +619,7 @@ export const DataProvider = ({ children }) => {
         protocols: cache.imnciProtocols,
         isLoading,
         clearLocalCache,
+        mergeIntoCache,
         fetchFacilitiesHistoryMultiDate, 
         listSnapshotsForFacility
     };

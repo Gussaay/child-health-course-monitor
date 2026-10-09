@@ -108,7 +108,7 @@ import {
 
 import {
     listAllDataForCourse, deleteFacilitator,
-    upsertFinalReport, getFinalReportByCourseId, saveFinalReportWithFiles, uploadFile, deleteFile,
+    upsertFinalReport, getFinalReportByCourseId, saveFinalReportWithFiles, lightFinalReport, uploadFile, deleteFile,
     getCourseById, getParticipantById, updateCourseSharingSettings, updateParticipantSharingSettings,
     listPendingFacilitatorSubmissions, approveFacilitatorSubmission, rejectFacilitatorSubmission,
     saveParticipantAndSubmitFacilityUpdate,
@@ -659,7 +659,8 @@ export default function App() {
         courses: rawCourses, facilitators: rawFacilitators,
         funders, federalCoordinators, stateCoordinators, localityCoordinators, healthFacilities, participantTests, 
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
-        fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests
+        fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests,
+        mergeIntoCache
     } = useDataCache();
 
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
@@ -1702,12 +1703,14 @@ export default function App() {
             const currentUserIdentifier = user?.displayName || user?.email || 'Unknown User';
             const savedReport = await saveFinalReportWithFiles(reportData, currentUserIdentifier);
             setCourseDetailsCache(prev => ({ ...prev, [reportData.courseId]: { ...prev[reportData.courseId], finalReport: savedReport } }));
+            // Into the shared cache too, so the course list and dashboards show it without a fetch.
+            if (savedReport?.id) mergeIntoCache('finalReports', lightFinalReport(savedReport));
             setToast({ show: true, message: 'Final report saved successfully.', type: 'success' });
         } catch (error) {
             console.error("Error saving final report:", error);
             setToast({ show: true, message: `Error saving final report: ${error.message}`, type: 'error' });
         } finally { setLoading(false); }
-    }, [permissions, user]);
+    }, [permissions, user, mergeIntoCache]);
 
     const handleEditFinalReport = useCallback(async (courseId) => {
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
