@@ -1997,12 +1997,12 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     };
 
     const handlePermanentDelete = async (courseId) => { 
-        if (await confirmDialog("Are you sure? This will permanently delete the course and cannot be undone.")) {
+        if (await confirmDialog("Delete this course? It and its participants are hidden everywhere. A federal manager can remove it for good from Deleted Items.")) {
             setIsProcessing(true);
             try {
                 await deleteCourse(courseId, currentUserIdentifier);
                 await fetchCourses(true); 
-                setToast({ show: true, message: 'Course permanently deleted.', type: 'success' });
+                setToast({ show: true, message: 'Course deleted. It is now in Deleted Items.', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Deletion failed: ${error.message}`, type: 'error' });
             } finally {

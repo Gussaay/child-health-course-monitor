@@ -30,6 +30,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { validateUpload, safeFileName, MAX_UPLOAD_BYTES } from './utils/uploadValidation';
 import { CERT_APPROVAL_FIELD, certificateApprovalSnapshot } from './components/constants.js';
 import { projectAtTime, projectOfFacility, visitTimeOf, hasRecordedProject } from './utils/visitProject.js';
+import { recycleBinType, recordTitle } from './utils/recycleBin.js';
 import { DuplicatePhoneError, findPhoneConflict, duplicatePhoneMessage, normalizePhone, isSoftDeleted, validateReaddRequest } from './utils/participantDuplicates.js';
 
 // --- USAGE TRACKING VARIABLES ---
@@ -1536,28 +1537,49 @@ export async function listDeletedParticipantsForCourse(courseId) {
 }
 
 /**
- * Remove a soft-deleted participant permanently, with the observations and
- * cases recorded against them. Refuses an active participant: hard delete is
- * only for records that were already deleted.
- *
- * @returns {string} the id removed, so the caller can drop it from its cache
+ * Soft-deleted records of one type, newest first. Capped, because a type like
+ * observations can hold thousands; the screen says when the cap is reached.
  */
-export async function hardDeleteParticipant(participantId) {
-    if (!participantId) throw new Error("Participant ID is required.");
-    const ref = doc(db, "participants", participantId);
+export const RECYCLE_BIN_PAGE = 300;
+export async function listSoftDeletedRecords(collectionName, max = RECYCLE_BIN_PAGE) {
+    if (!recycleBinType(collectionName)) throw new Error(`Unknown record type: ${collectionName}`);
+    const q = query(collection(db, collectionName), where("isDeleted", "in", [true, "true"]), limit(max));
+    const snap = await getDocs(q, { source: navigator.onLine ? 'server' : 'cache' });
+    const millis = (r) => r.lastUpdatedAt?.toMillis?.() ?? 0;
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => millis(b) - millis(a));
+}
+
+/**
+ * Permanently delete one soft-deleted record, and the records that belong to
+ * it (see RECYCLE_BIN_TYPES). Refuses a record that is not deleted: this is
+ * for emptying the bin, not a second way to delete live data.
+ *
+ * @returns {Object<string, string[]>} ids removed, by DataContext cache key,
+ *          so the caller can trim exactly those from its caches
+ */
+export async function permanentlyDeleteRecord(collectionName, id) {
+    const type = recycleBinType(collectionName);
+    if (!type) throw new Error(`Unknown record type: ${collectionName}`);
+    if (!id) throw new Error("Which record?");
+    const ref = doc(db, collectionName, id);
     const snap = await getDoc(ref);
-    if (!snap.exists()) return participantId;
+    if (!snap.exists()) return type.cacheKey ? { [type.cacheKey]: [id] } : {};
     if (!isSoftDeleted(snap.data())) {
-        throw new Error("This participant is still active. Delete them from the participants list first; only deleted participants can be removed permanently.");
+        throw new Error(`"${recordTitle({ id, ...snap.data() })}" is not deleted. Delete it from its own screen first; only deleted records can be removed permanently.`);
     }
 
-    const [oSnap, cSnap] = await Promise.all([
-        getDocs(query(collection(db, "observations"), where("participant_id", "==", participantId))),
-        getDocs(query(collection(db, "cases"), where("participant_id", "==", participantId))),
-    ]);
-    const refs = [...oSnap.docs.map(d => d.ref), ...cSnap.docs.map(d => d.ref), ref];
+    const refs = [];
+    const removed = type.cacheKey ? { [type.cacheKey]: [id] } : {};
+    for (const child of type.children || []) {
+        const childSnap = await getDocs(query(collection(db, child.collection), where(child.field, "==", id)));
+        childSnap.docs.forEach(d => refs.push(d.ref));
+        if (child.cacheKey && childSnap.docs.length) {
+            removed[child.cacheKey] = [...(removed[child.cacheKey] || []), ...childSnap.docs.map(d => d.id)];
+        }
+    }
+    refs.push(ref);
     await commitInChunks(refs, (batch, r) => batch.delete(r));
-    return participantId;
+    return removed;
 }
 
 export const PARTICIPANT_READD_COLLECTION = "participantReaddRequests";
@@ -1622,8 +1644,8 @@ export async function listParticipantReaddRequests(courseId, status = 'pending')
  * Approve a re-add request: permanently remove the deleted record that holds
  * the phone number, then add the participant from the request.
  *
- * @returns {{ removedId: string|null, participant: object }} so the caller can
- *          update its cache incrementally
+ * @returns {{ removed: Object<string, string[]>, participant: object }} so the
+ *          caller can update its caches incrementally
  */
 export async function approveParticipantReadd(request, approvedBy = 'Unknown') {
     if (!request?.id) throw new Error("Request is required.");
@@ -1640,13 +1662,13 @@ export async function approveParticipantReadd(request, approvedBy = 'Unknown') {
     const otherConflict = await findCoursePhoneConflict(current.courseId, phone, current.existingParticipantId);
     if (otherConflict) throw new DuplicatePhoneError(otherConflict, phone);
 
-    let removedId = null;
+    let removed = {};
     const oldSnap = await getDoc(doc(db, "participants", current.existingParticipantId));
     if (oldSnap.exists()) {
         if (!isSoftDeleted(oldSnap.data())) {
             throw new Error(`"${oldSnap.data().name || 'The old participant'}" has been restored and is active in this course again, so this request cannot be approved. Reject it instead.`);
         }
-        removedId = await hardDeleteParticipant(current.existingParticipantId);
+        removed = await permanentlyDeleteRecord("participants", current.existingParticipantId);
     }
 
     const participantPayload = {
@@ -1669,7 +1691,7 @@ export async function approveParticipantReadd(request, approvedBy = 'Unknown') {
         newParticipantId: newId,
         lastUpdatedAt: serverTimestamp(),
     });
-    return { removedId, participant: { ...participantPayload, id: newId } };
+    return { removed, participant: { ...participantPayload, id: newId } };
 }
 
 export async function rejectParticipantReadd(requestId, rejectedBy = 'Unknown', note = '') {

@@ -2131,8 +2131,10 @@ export function ParticipantsView({
 
     // Hard deletes and approvals change the participants cache by id only, so
     // the rest of the cache is left as it is (no full re-download).
-    const applyParticipantCacheChange = async ({ removedIds = [], added = null } = {}) => {
-        if (removedIds.length && removeFromCache) await removeFromCache('participants', removedIds);
+    const applyParticipantCacheChange = async ({ removed = {}, added = null } = {}) => {
+        if (removeFromCache) {
+            for (const [key, ids] of Object.entries(removed)) await removeFromCache(key, ids);
+        }
         if (added && mergeIntoCache) await mergeIntoCache('participants', added);
         if (onBatchUpdate) onBatchUpdate();
     };
@@ -2144,9 +2146,9 @@ export function ParticipantsView({
         });
 
         if (finalFederalPerm) {
-            const { removedId, participant } = await approveParticipantReadd({ id: requestId }, currentUserIdentifier);
+            const { removed, participant } = await approveParticipantReadd({ id: requestId }, currentUserIdentifier);
             if (facilityUpdateData) await submitFacilityDataForApproval(facilityUpdateData, currentUserIdentifier);
-            await applyParticipantCacheChange({ removedIds: removedId ? [removedId] : [], added: participant });
+            await applyParticipantCacheChange({ removed, added: participant });
             setToast({ show: true, message: `${participant.name || 'Participant'} was added again.`, type: 'success' });
         } else {
             setToast({ show: true, message: 'Request sent. The participant will be added once a federal manager approves it.', type: 'success' });

@@ -18,7 +18,7 @@ import { Modal, Button, FormGroup, Select, Textarea, Spinner } from './CommonCom
 import { READD_REASONS, readdReasonLabel, validateReaddRequest } from '../utils/participantDuplicates.js';
 import {
     listDeletedParticipantsForCourse,
-    hardDeleteParticipant,
+    permanentlyDeleteRecord,
     listParticipantReaddRequests,
     approveParticipantReadd,
     rejectParticipantReadd,
@@ -125,9 +125,9 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
         if (!ok) return;
         setBusyId(p.id);
         try {
-            const removedId = await hardDeleteParticipant(p.id);
-            setDeleted((list) => list.filter((d) => d.id !== removedId));
-            await onChanged?.({ removedIds: [removedId] });
+            const removed = await permanentlyDeleteRecord('participants', p.id);
+            setDeleted((list) => list.filter((d) => d.id !== p.id));
+            await onChanged?.({ removed });
         } catch (error) {
             await alertDialog(error.message, { title: 'Could not delete participant' });
         } finally {
@@ -138,10 +138,10 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
     const handleApprove = async (r) => {
         setBusyId(r.id);
         try {
-            const { removedId, participant } = await approveParticipantReadd(r, currentUser);
+            const { removed, participant } = await approveParticipantReadd(r, currentUser);
             setRequests((list) => list.filter((x) => x.id !== r.id));
-            if (removedId) setDeleted((list) => list.filter((d) => d.id !== removedId));
-            await onChanged?.({ removedIds: removedId ? [removedId] : [], added: participant });
+            setDeleted((list) => list.filter((d) => d.id !== r.existingParticipantId));
+            await onChanged?.({ removed, added: participant });
         } catch (error) {
             await alertDialog(error.message, { title: 'Could not approve the request' });
         } finally {

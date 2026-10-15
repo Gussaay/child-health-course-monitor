@@ -709,3 +709,33 @@ describe('only a super user may grant super_user', () => {
         }));
     });
 });
+
+// Deleted Items (src/components/DeletedItemsView.jsx) lets a federal manager
+// remove soft-deleted records of every type for good. Each of those
+// collections must actually let them.
+describe('Deleted Items: federal managers can delete every soft-deleted type', () => {
+    const collections = [
+        'courses', 'participants', 'participantTests', 'cases', 'observations', 'finalReports',
+        'facilitators', 'federalCoordinators', 'stateCoordinators', 'localityCoordinators', 'coordinators', 'funders',
+        'skillMentorship', 'imnciVisitReports', 'eencVisitReports', 'imnciPatientRecords', 'supervisionAssessments',
+        'projects', 'masterPlans', 'operationalPlans', 'unitMeetings', 'populationTargets', 'supplyItems',
+        'exerciseAttempts', 'exerciseDefinitions',
+    ];
+
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            for (const name of collections) {
+                await setDoc(doc(db, name, 'gone1'), { isDeleted: true, courseId: 'publicCourse' });
+                await setDoc(doc(db, name, 'gone2'), { isDeleted: true, courseId: 'publicCourse' });
+            }
+        });
+    });
+
+    for (const name of collections) {
+        it(`${name}`, async () => {
+            await assertSucceeds(deleteDoc(doc(as('federalManager'), name, 'gone1')));
+            await assertSucceeds(deleteDoc(doc(as('superUser'), name, 'gone2')));
+        });
+    }
+});

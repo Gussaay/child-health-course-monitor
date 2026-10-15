@@ -1312,7 +1312,7 @@ function DeletedItems({ courses, items, onChanged }) {
 
             await hardDeleteOnlineCourseItem(row, keep);
             notify('Deleted permanently.', 'success');
-            onChanged();
+            onChanged({ onlineCourseItems: [row.id] });
         } catch (e) {
             console.error('Could not delete:', e);
             notify(`Could not delete. ${e?.message || ''}`.trim(), 'error');
@@ -1333,7 +1333,7 @@ function DeletedItems({ courses, items, onChanged }) {
         try {
             await hardDeleteOnlineCourse(course, mine);
             notify('The course and everything in it was deleted.', 'success');
-            onChanged();
+            onChanged({ onlineCourses: [course.id], onlineCourseItems: mine.map((i) => i.id) });
         } catch (e) {
             console.error('Could not delete the course:', e);
             notify(`Could not delete. ${e?.message || ''}`.trim(), 'error');
@@ -1427,7 +1427,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
 
     const {
         onlineCourses, fetchOnlineCourses,
-        onlineCourseItems, fetchOnlineCourseItems, isLoading,
+        onlineCourseItems, fetchOnlineCourseItems, isLoading, removeFromCache,
     } = useDataCache();
 
     // Three levels, one open thing at each. An accordion of every module and
@@ -1480,6 +1480,16 @@ export default function OnlineCoursesView({ permissions = {} }) {
             setSyncing(false);
         }
     }, [fetchOnlineCourses, fetchOnlineCourseItems]);
+
+    // The bin either restores something (a soft change the delta sync picks up)
+    // or deletes it for good, in which case exactly those ids leave the cache.
+    const handleBinChanged = useCallback(async (removed) => {
+        if (removed) {
+            for (const [key, ids] of Object.entries(removed)) await removeFromCache(key, ids);
+        } else {
+            await resync();
+        }
+    }, [removeFromCache, resync]);
 
     const courses = useMemo(() => (onlineCourses || [])
         .filter((c) => c.isDeleted !== true)
@@ -1592,14 +1602,14 @@ export default function OnlineCoursesView({ permissions = {} }) {
     const removeCourse = async (course) => {
         if (!await confirmDialog(`Delete "${course.title}" and hide all its content?`,
             { title: 'Delete course', confirmLabel: 'Delete', danger: true })) return;
-        try { await deleteOnlineCourse(course.id); notify('Course deleted.', 'success'); reload(); }
+        try { await deleteOnlineCourse(course.id); notify('Course deleted.', 'success'); resync(); }
         catch (e) { console.error(e); notify('Could not delete the course.', 'error'); }
     };
 
     const removeItem = async (item) => {
         if (!await confirmDialog(`Delete "${item.title}"?`,
             { title: `Delete ${item.kind}`, confirmLabel: 'Delete', danger: true })) return;
-        try { await deleteOnlineCourseItem(item.id); notify('Deleted.', 'success'); reload(); }
+        try { await deleteOnlineCourseItem(item.id); notify('Deleted.', 'success'); resync(); }
         catch (e) { console.error(e); notify('Could not delete.', 'error'); }
     };
 
@@ -2155,7 +2165,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
             )}
 
             {isAdmin && showBin && (
-                <DeletedItems courses={allCourses} items={allItems} onChanged={reload} />
+                <DeletedItems courses={allCourses} items={allItems} onChanged={handleBinChanged} />
             )}
 
             {isAdmin && showBin ? null : courses.length === 0 ? (
