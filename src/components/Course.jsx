@@ -56,11 +56,12 @@ import {
     PublicCourseCertificatesView, 
     CertificateApprovalsView 
 } from './CertificateGenerator';
-import { notify, confirmDialog } from './dialogs';
+import { notify, confirmDialog, alertDialog } from './dialogs';
 import { useStandardNames } from '../hooks/useNameRegistry';
 import { canonicalOptions } from '../utils/nameRegistry';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
+const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
 const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
 const MentorshipMonitoringView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.MentorshipMonitoringView })));
@@ -465,12 +466,13 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
     const handleSave = async () => {
         setError('');
-        if (!name.trim()) return setError('Name is required');
-        if (!phone.trim()) return setError('Phone is required');
-        if (!jobTitle) return setError('Job Title is required');
-        if (!regState) return setError('State is required');
-        if (!regLocality) return setError('Locality is required');
-        if (!facilityId) return setError('Please select a valid Facility from the list'); 
+        const showError = (msg) => { setError(msg); alertDialog(msg, { title: 'Registration not saved' }); };
+        if (!name.trim()) return showError('Name is required. Enter your full name.');
+        if (!phone.trim()) return showError('Phone is required. Enter your phone number.');
+        if (!jobTitle) return showError('Job Title is required. Choose your job title from the list.');
+        if (!regState) return showError('State is required. Choose your state.');
+        if (!regLocality) return showError('Locality is required. Choose your locality.');
+        if (!facilityId) return showError('Facility is required. Choose your facility from the list.'); 
 
         setIsSaving(true);
         try {
@@ -545,7 +547,13 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
             if (onSuccess) onSuccess(participantData);
             onClose();
         } catch (err) {
-            setError(err.message);
+            // Someone registering themselves cannot ask for a re-add approval,
+            // so a clash with a deleted record sends them to the organisers.
+            const message = err?.code === 'DUPLICATE_PHONE' && err.isDeleted
+                ? `Phone number ${err.phone} was already registered in this course. Please contact the course coordinator to be added again.`
+                : err.message;
+            setError(message);
+            alertDialog(message, { title: 'Registration not saved' });
         } finally {
             setIsSaving(false);
         }
@@ -1967,7 +1975,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
             setCourseToEdit(null);
             setToast({ show: true, message: 'Course saved successfully!', type: 'success' });
         } catch (error) {
-            setToast({ show: true, message: `Failed to save course: ${error.message}`, type: 'error' });
+            await alertDialog(`The course was not saved: ${error.message}`, { title: 'Could not save course' });
         } finally {
             setIsProcessing(false);
         }
@@ -1990,12 +1998,12 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     };
 
     const handlePermanentDelete = async (courseId) => { 
-        if (await confirmDialog("Are you sure? This will permanently delete the course and cannot be undone.")) {
+        if (await confirmDialog("Delete this course? It and its participants are hidden everywhere. A federal manager can remove it for good from Deleted Items.")) {
             setIsProcessing(true);
             try {
                 await deleteCourse(courseId, currentUserIdentifier);
                 await fetchCourses(true); 
-                setToast({ show: true, message: 'Course permanently deleted.', type: 'success' });
+                setToast({ show: true, message: 'Course deleted. It is now in Deleted Items.', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Deletion failed: ${error.message}`, type: 'error' });
             } finally {
@@ -2139,7 +2147,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
                         {canAccessRecycleBin && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'deleted-courses'} onClick={() => { setActiveCoursesTab('deleted-courses'); onSetSelectedParticipantId(null); }}>
-                                Deleted Courses
+                                Deleted Items
                                  {allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length > 0 && (
                                      <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded-full">{allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length}</span>
                                  )}
@@ -2326,7 +2334,17 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     )
                 )}
 
-                {activeCoursesTab === 'deleted-courses' && <DeletedCoursesView courses={allCourses.filter(c => c.inRecycleBin || c.deletionRequested)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />}
+                {activeCoursesTab === 'deleted-courses' && (
+                    <>
+                        <DeletedCoursesView courses={allCourses.filter(c => c.inRecycleBin || c.deletionRequested)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />
+                        <div className="mt-8 border-t border-gray-200 pt-6">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Deleted course records</h3>
+                            <Suspense fallback={<Spinner />}>
+                                <DeletedItemsPanel types={['courses', 'participants', 'participantTests', 'cases', 'observations', 'finalReports', 'exerciseAttempts', 'exerciseDefinitions']} />
+                            </Suspense>
+                        </div>
+                    </>
+                )}
                 
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
                     <CourseForm 
@@ -2372,6 +2390,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         canEditDeleteParticipantInactiveCourse={canEditDeleteInactiveCourse}
         canManageCertificates={canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures}
         canUseSuperUserAdvancedFeatures={canUseSuperUserAdvancedFeatures}
+        canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
     />
 )}
 
@@ -2920,14 +2939,14 @@ export function CourseForm({
 
         if (missingFields.length > 0) {
             const errorMsg = 'الرجاء إكمال الحقول الإلزامية التالية:\n- ' + missingFields.join('\n- ');
-            notify(errorMsg); // This triggers the requested popup
+            alertDialog(errorMsg, { title: 'تعذر حفظ الدورة (Course not saved)' });
             setError('الرجاء إكمال الحقول الإلزامية التالية: ' + missingFields.join('، '));
             return;
         }
 
         if (!courseType) {
             const typeError = 'تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.';
-            notify(typeError);
+            alertDialog(typeError, { title: 'تعذر حفظ الدورة (Course not saved)' });
             setError(typeError);
             return;
         }
@@ -2998,7 +3017,9 @@ export function CourseForm({
         try {
             await onSave(payload);
         } catch(e) {
-            setError(e.message || "حدث خطأ أثناء حفظ الدورة.");
+            const message = e.message || "حدث خطأ أثناء حفظ الدورة.";
+            setError(message);
+            alertDialog(message, { title: 'تعذر حفظ الدورة (Course not saved)' });
             setIsSaving(false);
         }
     };

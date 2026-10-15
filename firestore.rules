@@ -104,6 +104,15 @@ service cloud.firestore {
              (doc.roles != null && 'federal_manager' in doc.roles);
     }
 
+    // Federal managers and super users: who may permanently delete a
+    // participant and approve adding one again.
+    function isFederalApprover() {
+      let doc = getUserDoc();
+      return request.auth != null && (isSuperUser() ||
+             doc.role == 'federal_manager' ||
+             (doc.roles != null && 'federal_manager' in doc.roles));
+    }
+
     // The fields that decide what a person can do. A user must never write
     // these on their own document — that is the whole point of this file's one
     // change. Cloud Functions use the Admin SDK, which bypasses rules entirely,
@@ -475,7 +484,18 @@ service cloud.firestore {
                     || !request.resource.data.diff(resource.data)
                             .affectedKeys().hasAny(['certificateApproval']);
 
-      allow delete: if isStaff();
+      // Deleting in the app is a soft delete (isDeleted). Removing the
+      // document for good frees the phone number for a re-add, so it is kept
+      // to the people who approve re-adds.
+      allow delete: if isFederalApprover();
+    }
+
+    // A request to add a participant again whose phone number belongs to a
+    // deleted record in the same course. Staff ask; a federal manager decides.
+    match /participantReaddRequests/{requestId} {
+      allow read: if isStaff();
+      allow create: if isStaff() && request.resource.data.status == 'pending';
+      allow update, delete: if isFederalApprover();
     }
 
     match /observations/{observationId} {

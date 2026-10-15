@@ -12,7 +12,7 @@
 // handle a yes/no service list, an "available vs need" equipment count and an
 // IPC present/action grid without a bespoke screen for each one.
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Save, ArrowLeft } from 'lucide-react';
 
@@ -666,6 +666,9 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
 // Main screen
 // =============================================================================
 
+const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
+const DELETED_TAB = '__deleted';
+
 export default function SupervisionView({ permissions = {} }) {
     const { i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
@@ -676,6 +679,8 @@ export default function SupervisionView({ permissions = {} }) {
     const [checklistId, setChecklistId] = useState(SUPERVISION_CHECKLISTS[0].id);
     const [editing, setEditing] = useState(null);
     const [stateFilter, setStateFilter] = useState('all');
+    const [showDeleted, setShowDeleted] = useState(false);
+    const canEmptyBin = !!permissions.canUseFederalManagerAdvancedFeatures;
 
     useEffect(() => {
         if (!supervisionAssessments) fetchSupervisionAssessments(false);
@@ -701,7 +706,8 @@ export default function SupervisionView({ permissions = {} }) {
         try {
             await deleteSupervisionAssessment(row.id);
             notify('Assessment deleted.', 'success');
-            reload();
+            // A soft delete stamps lastUpdatedAt, so the delta sync is enough.
+            fetchSupervisionAssessments('sync');
         } catch (error) {
             console.error('Failed to delete assessment:', error);
             notify('Could not delete the assessment.', 'error');
@@ -738,13 +744,26 @@ export default function SupervisionView({ permissions = {} }) {
             <Card>
                 <CardBody className="space-y-4">
                     <Tabs
-                        tabs={SUPERVISION_CHECKLISTS.map((c) => ({
-                            id: c.id,
-                            label: `${c.service} · ${isArabic ? c.titleAr : c.title}`,
-                        }))}
-                        activeTab={checklistId}
-                        onTabChange={setChecklistId}
+                        tabs={[
+                            ...SUPERVISION_CHECKLISTS.map((c) => ({
+                                id: c.id,
+                                label: `${c.service} · ${isArabic ? c.titleAr : c.title}`,
+                            })),
+                            ...(canEmptyBin ? [{ id: DELETED_TAB, label: 'Deleted Items' }] : []),
+                        ]}
+                        activeTab={showDeleted ? DELETED_TAB : checklistId}
+                        onTabChange={(id) => {
+                            if (id === DELETED_TAB) { setShowDeleted(true); return; }
+                            setShowDeleted(false);
+                            setChecklistId(id);
+                        }}
                     />
+
+                    {showDeleted && canEmptyBin ? (
+                        <Suspense fallback={<Spinner />}>
+                            <DeletedItemsPanel types={['supervisionAssessments']} />
+                        </Suspense>
+                    ) : (<>
 
                     <div className="w-56">
                         <Select label="State" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
@@ -796,6 +815,7 @@ export default function SupervisionView({ permissions = {} }) {
                             ))}
                         </Table>
                     )}
+                    </>)}
                 </CardBody>
             </Card>
         </div>

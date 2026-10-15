@@ -18,6 +18,7 @@ import { notify, confirmDialog } from './dialogs';
 // they are maintained here rather than in a screen of their own. Lazy because
 // the import path pulls in the spreadsheet parser.
 const PopulationManagementView = lazy(() => import('./PopulationView'));
+const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 
 // --- الثوابت الأساسية والقوائم ---
 const AXIS_OPTIONS = ['الحاكمية', 'بناء القدرات', 'تقديم الخدمات', 'نظام المعلومات', 'الإمداد', 'التمويل'];
@@ -2082,7 +2083,8 @@ export default function PlanningView({ permissions = {} }) {
                         { id: 'monthly', label: 'الخطط الشهرية', icon: Calendar },
                         { id: 'weekly', label: 'التشغيلية الأسبوعية', icon: FileSpreadsheet },
                         { id: 'evaluation', label: 'التقييم', icon: Activity },
-                        { id: 'population', label: 'السكان المستهدفون', icon: Users }
+                        { id: 'population', label: 'السكان المستهدفون', icon: Users },
+                        { id: 'deleted', label: 'المحذوفات (Deleted Items)', icon: Trash2 }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -2250,6 +2252,14 @@ export default function PlanningView({ permissions = {} }) {
             )}
 
             {/* --- Evaluation Dashboard --- */}
+            {activeTab === 'deleted' && (
+                <div className="pt-4">
+                    <Suspense fallback={<Spinner />}>
+                        <DeletedItemsPanel types={['masterPlans', 'operationalPlans', 'populationTargets']} />
+                    </Suspense>
+                </div>
+            )}
+
             {activeTab === 'population' && (
                 <Suspense fallback={<div className="p-8 flex justify-center"><Spinner /></div>}>
                     <PopulationManagementView permissions={permissions} />

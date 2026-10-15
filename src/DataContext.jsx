@@ -174,6 +174,18 @@ const getLocalData = async (key) => {
         });
     } catch (e) { console.warn('IDB get error', e); return null; }
 };
+// Every stored key that starts with `prefix` (the per-filter facility caches).
+const listLocalKeys = async (prefix) => {
+    try {
+        const db = await initDB();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction('apiData', 'readonly');
+            const req = tx.objectStore('apiData').getAllKeys();
+            req.onsuccess = () => resolve((req.result || []).filter(k => typeof k === 'string' && k.startsWith(prefix)));
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) { console.warn('IDB keys error', e); return []; }
+};
 // ============================================================================
 
 export const DataProvider = ({ children }) => {
@@ -577,6 +589,58 @@ export const DataProvider = ({ children }) => {
         try { await setLocalData(`cache_${key}`, stripSignaturesForDisk(merged)); } catch (e) { console.warn('IDB write failed for', key, e); }
     }, []);
 
+    // The other half of mergeIntoCache: drop documents that were deleted for
+    // good. A hard delete leaves nothing behind for the delta sync to pick up,
+    // so without this the removed record would sit in memory and IndexedDB
+    // until a full re-download. Only the given ids are touched; nothing is
+    // re-fetched.
+    const removeFromCache = useCallback(async (key, ids) => {
+        const drop = new Set((Array.isArray(ids) ? ids : [ids]).filter(Boolean));
+        if (!drop.size) return;
+
+        // Health facilities are cached once per filter, in memory and on disk,
+        // so every stored filter copy is trimmed, including ones this session
+        // has not opened yet.
+        if (key === 'healthFacilities') {
+            const prefix = `cache_${key}_`;
+            Object.entries(facilitiesFilterCacheRef.current).forEach(([filterKey, list]) => {
+                if (Array.isArray(list)) facilitiesFilterCacheRef.current[filterKey] = list.filter(i => !drop.has(i?.id));
+            });
+            const shown = cacheRef.current.healthFacilities;
+            if (Array.isArray(shown)) {
+                const kept = shown.filter(i => !drop.has(i?.id));
+                cacheRef.current = { ...cacheRef.current, healthFacilities: kept };
+                setCache(prev => ({ ...prev, healthFacilities: kept }));
+            }
+            try {
+                const keys = await listLocalKeys(prefix);
+                for (const storeKey of keys) {
+                    const stored = await getLocalData(storeKey);
+                    if (!Array.isArray(stored)) continue;
+                    const kept = stored.filter(i => !drop.has(i?.id));
+                    if (kept.length !== stored.length) await setLocalData(storeKey, kept);
+                }
+            } catch (e) { console.warn('IDB trim failed for', key, e); }
+            return;
+        }
+
+        const current = Array.isArray(cacheRef.current[key]) ? cacheRef.current[key] : null;
+        let source = current;
+        if (!source) {
+            // Not loaded this session: trim the disk copy so it does not come
+            // back the next time this screen opens.
+            source = await getLocalData(`cache_${key}`);
+            if (!Array.isArray(source)) return;
+        }
+        const kept = source.filter(i => !drop.has(i?.id));
+        if (kept.length === source.length) return;
+        if (current) {
+            cacheRef.current = { ...cacheRef.current, [key]: kept };
+            setCache(prev => ({ ...prev, [key]: kept }));
+        }
+        try { await setLocalData(`cache_${key}`, stripSignaturesForDisk(kept)); } catch (e) { console.warn('IDB write failed for', key, e); }
+    }, []);
+
     useEffect(() => {
         if (!user) {
             setLastFacilitiesFetchTime({});
@@ -620,6 +684,7 @@ export const DataProvider = ({ children }) => {
         isLoading,
         clearLocalCache,
         mergeIntoCache,
+        removeFromCache,
         fetchFacilitiesHistoryMultiDate, 
         listSnapshotsForFacility
     };

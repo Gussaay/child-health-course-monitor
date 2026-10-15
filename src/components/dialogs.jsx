@@ -51,6 +51,22 @@ export function confirmDialog(message, options = {}) {
 }
 
 /**
+ * Shows a message in a popup with a single OK button, and waits until it is
+ * dismissed. For errors the user must read and act on, where a toast that
+ * disappears on its own is too easy to miss.
+ * @param {string} message
+ * @param {{title?: string, confirmLabel?: string, danger?: boolean}} [options]
+ * @returns {Promise<void>}
+ */
+export function alertDialog(message, options = {}) {
+    const text = String(message ?? '');
+    if (!text) return Promise.resolve();
+    // eslint-disable-next-line no-alert -- last-resort fallback before DialogHost mounts
+    if (!host) { window.alert(text); return Promise.resolve(); }
+    return host.pushConfirm(text, { title: 'Error', confirmLabel: 'OK', danger: true, ...options, hideCancel: true }).then(() => undefined);
+}
+
+/**
  * Asks the user for one value. Replacement for prompt() — it returns a promise.
  * @param {string} message
  * @param {{defaultValue?: string, inputType?: string, title?: string, confirmLabel?: string}} [options]
@@ -117,6 +133,7 @@ function ConfirmDialog({ request, onAnswer }) {
         confirmLabel = 'Confirm',
         cancelLabel = 'Cancel',
         danger = false,
+        hideCancel = false,
     } = request.options;
 
     return (
@@ -131,13 +148,15 @@ function ConfirmDialog({ request, onAnswer }) {
                 </h2>
                 <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{request.message}</p>
                 <div className="mt-5 flex justify-end gap-2">
-                    <button
-                        type="button"
-                        onClick={() => onAnswer(false)}
-                        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                        {cancelLabel}
-                    </button>
+                    {!hideCancel && (
+                        <button
+                            type="button"
+                            onClick={() => onAnswer(false)}
+                            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            {cancelLabel}
+                        </button>
+                    )}
                     <button
                         type="button"
                         ref={confirmRef}

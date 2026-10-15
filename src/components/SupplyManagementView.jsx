@@ -9,7 +9,7 @@
 // parameters live with the item can be reviewed and corrected by the person who
 // knows the commodity; parameters entered during a forecast run cannot.
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Package, Upload, Download, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
@@ -835,6 +835,8 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
 // Main view
 // =============================================================================
 
+const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
+
 export default function SupplyManagementView({ permissions = {} }) {
     const { i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
@@ -938,10 +940,19 @@ export default function SupplyManagementView({ permissions = {} }) {
                         tabs={[
                             { id: 'list', label: isArabic ? 'القائمة الأساسية' : 'Essential list' },
                             { id: 'quantification', label: isArabic ? 'التقدير الكمي' : 'Quantification' },
+                            ...(permissions.canUseFederalManagerAdvancedFeatures
+                                ? [{ id: 'deleted', label: isArabic ? 'المحذوفات' : 'Deleted Items' }]
+                                : []),
                         ]}
                         activeTab={section}
                         onTabChange={setSection}
                     />
+
+                    {section === 'deleted' && permissions.canUseFederalManagerAdvancedFeatures ? (
+                        <Suspense fallback={<Spinner />}>
+                            <DeletedItemsPanel types={['supplyItems']} />
+                        </Suspense>
+                    ) : (<>
 
                     <Tabs
                         tabs={SUPPLY_CATEGORIES.map((c) => ({
@@ -1074,6 +1085,7 @@ export default function SupplyManagementView({ permissions = {} }) {
                             ))}
                         </Table>
                     )}
+                    </>)}
                 </CardBody>
             </Card>
 

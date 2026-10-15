@@ -26,14 +26,19 @@ import {
     saveParticipantAndSubmitFacilityUpdate,
     deleteParticipant,
     saveFacilitySnapshot,
-    listPendingFacilitySubmissions
+    listPendingFacilitySubmissions,
+    requestParticipantReadd,
+    approveParticipantReadd,
+    listParticipantReaddRequests,
+    submitFacilityDataForApproval
 } from '../data.js';
+import { ReaddRequestModal, DeletedParticipantsModal } from './ParticipantReadd';
 import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
 
 // --- Import Certificate Generators ---
 import { generateBlankCertificatePdf, startCertificateDownload } from './CertificateGenerator';
-import { confirmDialog } from './dialogs';
+import { confirmDialog, alertDialog } from './dialogs';
 
 
 // ====================================================================
@@ -1214,7 +1219,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
             onClose();
         } catch (error) {
             setError(error.message || 'An error occurred during import.');
-            setToast({ show: true, message: `Import failed: ${error.message}`, type: 'error' });
+            alertDialog(`Import failed. Fix the problem below and import again.\n\n${error.message}`, { title: 'Could not import participants' });
         } finally {
             setIsImporting(false);
         }
@@ -1723,7 +1728,7 @@ export function ParticipantsView({
     isCourseActive, canAddParticipant, canAddMonitoring,
     canEditDeleteParticipantActiveCourse, canEditDeleteParticipantInactiveCourse,
     canImportParticipants, canCleanParticipantData, canBulkChangeParticipants, canBulkMigrateParticipants,
-    canManageCertificates, canUseSuperUserAdvancedFeatures
+    canManageCertificates, canUseSuperUserAdvancedFeatures, canUseFederalManagerAdvancedFeatures
 }) {
     const { user } = useAuth();
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
@@ -1731,6 +1736,9 @@ export function ParticipantsView({
     // --- PERMISSION STATES ---
     const [finalAdvancedPerm, setFinalAdvancedPerm] = useState(!!canUseSuperUserAdvancedFeatures);
     const [finalCertPerm, setFinalCertPerm] = useState(!!canManageCertificates);
+    // Federal managers (and super users) review deleted participants and
+    // approve re-add requests.
+    const [finalFederalPerm, setFinalFederalPerm] = useState(!!(canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures));
 
     // --- ONLINE EXERCISES ---
     const [exerciseModalParticipant, setExerciseModalParticipant] = useState(null);
@@ -1738,6 +1746,7 @@ export function ParticipantsView({
     useEffect(() => {
         setFinalAdvancedPerm(!!canUseSuperUserAdvancedFeatures);
         setFinalCertPerm(!!canManageCertificates);
+        setFinalFederalPerm(!!(canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures));
 
         if (user && user.uid) {
             getDoc(doc(db, 'users', user.uid)).then(snap => {
@@ -1746,12 +1755,13 @@ export function ParticipantsView({
                     const userPerms = data.permissions || {};
                     setFinalAdvancedPerm(prev => prev || !!userPerms.canUseSuperUserAdvancedFeatures);
                     setFinalCertPerm(prev => prev || !!userPerms.canManageCertificates);
+                    setFinalFederalPerm(prev => prev || !!userPerms.canUseFederalManagerAdvancedFeatures || !!userPerms.canUseSuperUserAdvancedFeatures);
                 }
             }).catch(err => console.error(err));
         }
-    }, [user, canUseSuperUserAdvancedFeatures, canManageCertificates]);
+    }, [user, canUseSuperUserAdvancedFeatures, canManageCertificates, canUseFederalManagerAdvancedFeatures]);
 
-    const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, facilitators, fetchFacilitators, isLoading, healthFacilities, fetchHealthFacilities } = useDataCache();
+    const { mergeIntoCache, removeFromCache, fetchParticipants, federalCoordinators, fetchFederalCoordinators, facilitators, fetchFacilitators, isLoading, healthFacilities, fetchHealthFacilities } = useDataCache();
     const isCacheLoading = isLoading?.federalCoordinators === true || isLoading?.courses === true || isLoading?.facilitators === true;
 
     // Load HealthFacilities immediately if we are viewing courses that require facility mapping.
@@ -1828,6 +1838,11 @@ export function ParticipantsView({
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingRowId, setProcessingRowId] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+    // A phone clash with a deleted participant opens the re-add popup.
+    const [readdModal, setReaddModal] = useState({ isOpen: false, existing: null, participantData: null, facilityUpdateData: null });
+    const [isDeletedModalOpen, setIsDeletedModalOpen] = useState(false);
+    const [pendingReaddCount, setPendingReaddCount] = useState(0);
     
     const [expandedParticipantId, setExpandedParticipantId] = useState(null);
 
@@ -2096,12 +2111,50 @@ export function ParticipantsView({
                 if (onBatchUpdate) onBatchUpdate();
                 setToast({ show: true, message: 'Participant deleted successfully.', type: 'success' });
             } catch (error) {
-                setToast({ show: true, message: `Failed to delete participant: ${error.message}`, type: 'error' });
+                await alertDialog(`The participant was not deleted: ${error.message}`, { title: 'Could not delete participant' });
             } finally {
                 setProcessingRowId(null);
                 setIsProcessing(false);
             }
         }
+    };
+
+    const refreshPendingReaddCount = useCallback(async () => {
+        if (!finalFederalPerm || !course?.id || !navigator.onLine) return;
+        try {
+            const reqs = await listParticipantReaddRequests(course.id, 'pending');
+            setPendingReaddCount(reqs.length);
+        } catch (e) { console.warn('Could not count re-add requests', e); }
+    }, [finalFederalPerm, course?.id]);
+
+    useEffect(() => { refreshPendingReaddCount(); }, [refreshPendingReaddCount]);
+
+    // Hard deletes and approvals change the participants cache by id only, so
+    // the rest of the cache is left as it is (no full re-download).
+    const applyParticipantCacheChange = async ({ removed = {}, added = null } = {}) => {
+        if (removeFromCache) {
+            for (const [key, ids] of Object.entries(removed)) await removeFromCache(key, ids);
+        }
+        if (added && mergeIntoCache) await mergeIntoCache('participants', added);
+        if (onBatchUpdate) onBatchUpdate();
+    };
+
+    const handleSubmitReadd = async ({ reason, note }) => {
+        const { existing, participantData, facilityUpdateData } = readdModal;
+        const requestId = await requestParticipantReadd({
+            course, existing, participantData, reason, note, requestedBy: currentUserIdentifier,
+        });
+
+        if (finalFederalPerm) {
+            const { removed, participant } = await approveParticipantReadd({ id: requestId }, currentUserIdentifier);
+            if (facilityUpdateData) await submitFacilityDataForApproval(facilityUpdateData, currentUserIdentifier);
+            await applyParticipantCacheChange({ removed, added: participant });
+            setToast({ show: true, message: `${participant.name || 'Participant'} was added again.`, type: 'success' });
+        } else {
+            setToast({ show: true, message: 'Request sent. The participant will be added once a federal manager approves it.', type: 'success' });
+        }
+        setReaddModal({ isOpen: false, existing: null, participantData: null, facilityUpdateData: null });
+        setActiveScreen('list');
     };
 
     const handleSaveParticipant = async (participantData, facilityUpdateData) => {
@@ -2124,7 +2177,16 @@ export function ParticipantsView({
             setActiveScreen('list');
             setToast({ show: true, message: facilityUpdateData ? 'Participant saved and facility update submitted.' : 'Participant saved successfully.', type: 'success' });
         } catch (error) {
-            setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
+            if (error?.code === 'DUPLICATE_PHONE' && error.canRequestReadd) {
+                setReaddModal({
+                    isOpen: true,
+                    existing: error.existing,
+                    participantData: { ...participantData, courseId: course.id, createdBy: currentUserIdentifier, updatedBy: currentUserIdentifier },
+                    facilityUpdateData,
+                });
+            } else {
+                await alertDialog(error?.message || 'The participant could not be saved.', { title: 'Could not save participant' });
+            }
         } finally {
             setIsProcessing(false);
         }
@@ -2156,7 +2218,7 @@ export function ParticipantsView({
             setToast({ show: true, message: 'Data updated successfully.', type: 'success' });
         } catch (err) {
             console.error("Advanced save failed", err);
-            setToast({ show: true, message: `Operation failed: ${err.message}`, type: 'error' });
+            alertDialog(`The changes were not saved.\n\n${err.message}`, { title: 'Could not save participants' });
         } finally {
             setIsProcessing(false);
         }
@@ -2183,10 +2245,8 @@ export function ParticipantsView({
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
             if (setLocalToast) setToast({ show: true, message: `Successfully imported ${participantsToImport.length} participants.`, type: 'success' });
-        } catch (error) {
-            if (setLocalToast) setToast({ show: true, message: `Error during import: ${error.message}`, type: 'error' });
-            throw error;
         } finally {
+            // Errors reach the import modal, which shows them in a popup.
             setIsProcessing(false);
         }
     };
@@ -2357,12 +2417,22 @@ export function ParticipantsView({
 
     if (activeScreen === 'form') {
         return (
-            <ParticipantForm 
-                course={course} 
-                initialData={editingParticipant} 
-                onCancel={() => setActiveScreen('list')} 
-                onSave={handleSaveParticipant} 
-            />
+            <>
+                <ReaddRequestModal
+                    isOpen={readdModal.isOpen}
+                    onClose={() => setReaddModal({ isOpen: false, existing: null, participantData: null, facilityUpdateData: null })}
+                    existing={readdModal.existing}
+                    participantData={readdModal.participantData}
+                    canApproveDirectly={finalFederalPerm}
+                    onSubmit={handleSubmitReadd}
+                />
+                <ParticipantForm 
+                    course={course} 
+                    initialData={editingParticipant} 
+                    onCancel={() => setActiveScreen('list')} 
+                    onSave={handleSaveParticipant} 
+                />
+            </>
         );
     }
 
@@ -2539,6 +2609,16 @@ export function ParticipantsView({
                 </div>
             </Modal>
 
+            {finalFederalPerm && (
+                <DeletedParticipantsModal
+                    isOpen={isDeletedModalOpen}
+                    onClose={() => { setIsDeletedModalOpen(false); refreshPendingReaddCount(); }}
+                    course={course}
+                    currentUser={currentUserIdentifier}
+                    onChanged={applyParticipantCacheChange}
+                />
+            )}
+
             <Modal isOpen={isAdvancedActionsModalOpen} onClose={() => setIsAdvancedActionsModalOpen(false)} title="Advanced User Actions">
                 <div className="p-4 flex flex-col gap-3">
                     <p className="text-sm text-gray-600 mb-2">Select an advanced action to perform on this course's data.</p>
@@ -2627,6 +2707,17 @@ export function ParticipantsView({
                         {canAddParticipant && (
                             <Button onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>
                                 Add Participant
+                            </Button>
+                        )}
+
+                        {finalFederalPerm && (
+                            <Button variant="secondary" onClick={() => setIsDeletedModalOpen(true)} disabled={isProcessing}>
+                                Deleted Participants
+                                {pendingReaddCount > 0 && (
+                                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5" title="Re-add requests waiting for approval">
+                                        {pendingReaddCount}
+                                    </span>
+                                )}
                             </Button>
                         )}
 
@@ -3157,19 +3248,26 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         return 'كوادر';
      }, [job, otherJobTitle]);
 
+    // Errors open in a popup as well as above the form: the inline box sits at
+    // the top of a long form and is easy to miss after pressing Save.
+    const showError = (msg) => {
+        setError(msg);
+        alertDialog(msg, { title: 'تعذر حفظ المشارك (Participant not saved)' });
+    };
+
     const submit = async () => { 
         setError('');
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
 
-        if (!name.trim()) { setError('اسم المشارك مطلوب.'); return; }
-        if (!state) { setError('الولاية مطلوبة.'); return; }
-        if (!locality) { setError('المحلية مطلوبة.'); return; }
+        if (!name.trim()) { showError('اسم المشارك مطلوب.'); return; }
+        if (!state) { showError('الولاية مطلوبة.'); return; }
+        if (!locality) { showError('المحلية مطلوبة.'); return; }
         
-        if (!isProgramManagement && !center.trim()) { setError((isIccm || isCpcm) ? 'اسم القرية مطلوب.' : 'اسم المؤسسة الصحية مطلوب.'); return; }
-        if (isProgramManagement && !department.trim()) { setError('اسم الإدارة مطلوب.'); return; }
+        if (!isProgramManagement && !center.trim()) { showError((isIccm || isCpcm) ? 'اسم القرية مطلوب.' : 'اسم المؤسسة الصحية مطلوب.'); return; }
+        if (isProgramManagement && !department.trim()) { showError('اسم الإدارة مطلوب.'); return; }
 
-        if (!finalJobTitle) { setError('المسمى الوظيفي مطلوب.'); return; }
-        if (!phone.trim()) { setError('رقم الهاتف مطلوب.'); return; }
+        if (!finalJobTitle) { showError('المسمى الوظيفي مطلوب.'); return; }
+        if (!phone.trim()) { showError('رقم الهاتف مطلوب.'); return; }
 
         setIsSaving(true);
         try {
@@ -3278,7 +3376,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     p = { ...p, imci_sub_type: finalImciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
                 }
             } else if (isEtat) {
-                if (!hospitalTypeEtat) { setError('نوع المستشفى مطلوب لـ ETAT.'); setIsSaving(false); return; }
+                if (!hospitalTypeEtat) { showError('نوع المستشفى مطلوب لـ ETAT.'); setIsSaving(false); return; }
                 p = { 
                     ...p, hospital_type: hospitalTypeEtat, 
                     trained_etat_before: parseBool(trainedEtat), 
@@ -3290,8 +3388,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
                 };
             } else if (isEenc || isSsnc) {
-                if (!hospitalTypeEenc) { setError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
-                if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
+                if (!hospitalTypeEenc) { showError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
+                if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { showError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
                 p = { 
                     ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, 
                     trained_eenc_before: parseBool(trainedEENC), 
@@ -3385,7 +3483,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
             await onSave(p, facilityUpdatePayload, oldFacilityUpdatePayload);
         } catch (error) {
-            setError(error.message || 'An error occurred while saving.');
+            showError(error.message || 'An error occurred while saving.');
         } finally {
             setIsSaving(false);
         }

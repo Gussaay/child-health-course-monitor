@@ -560,6 +560,27 @@ describe('a self-registered account cannot write programme data', () => {
         await assertFails(deleteDoc(doc(as('plainUser'), 'participants', 'p1')));
     });
 
+    // Permanent delete frees a phone number for a re-add, so it belongs to
+    // the people who approve re-adds, not to every staff member.
+    it('lets only federal managers and super users permanently delete a participant', async () => {
+        await assertFails(deleteDoc(doc(as('facilitator'), 'participants', 'p1')));
+        await assertFails(deleteDoc(doc(as('statesManager'), 'participants', 'p1')));
+        await assertSucceeds(deleteDoc(doc(as('federalManager'), 'participants', 'p1')));
+    });
+
+    it('lets staff ask to re-add a participant and only federal managers decide', async () => {
+        const body = { courseId: 'c1', phone: '0900000000', status: 'pending' };
+        await assertFails(setDoc(doc(anonymous(), 'participantReaddRequests', 'r0'), body));
+        await assertFails(setDoc(doc(as('plainUser'), 'participantReaddRequests', 'r0'), body));
+        await assertFails(setDoc(doc(as('facilitator'), 'participantReaddRequests', 'r0'), { ...body, status: 'approved' }));
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'participantReaddRequests', 'r1'), body));
+        await assertSucceeds(getDoc(doc(as('facilitator'), 'participantReaddRequests', 'r1')));
+        await assertFails(updateDoc(doc(as('facilitator'), 'participantReaddRequests', 'r1'), { status: 'approved' }));
+        await assertFails(updateDoc(doc(as('statesManager'), 'participantReaddRequests', 'r1'), { status: 'approved' }));
+        await assertSucceeds(updateDoc(doc(as('federalManager'), 'participantReaddRequests', 'r1'), { status: 'approved' }));
+        await assertSucceeds(updateDoc(doc(as('superUser'), 'participantReaddRequests', 'r1'), { status: 'rejected' }));
+    });
+
     it('does NOT let a plain user reconfigure the application', async () => {
         await assertFails(updateDoc(doc(as('plainUser'), 'appSettings', 'facilitatorApplication'), {
             isActive: false,
@@ -687,4 +708,34 @@ describe('only a super user may grant super_user', () => {
             assignedState: 'Khartoum',
         }));
     });
+});
+
+// Deleted Items (src/components/DeletedItemsView.jsx) lets a federal manager
+// remove soft-deleted records of every type for good. Each of those
+// collections must actually let them.
+describe('Deleted Items: federal managers can delete every soft-deleted type', () => {
+    const collections = [
+        'courses', 'participants', 'participantTests', 'cases', 'observations', 'finalReports',
+        'facilitators', 'federalCoordinators', 'stateCoordinators', 'localityCoordinators', 'coordinators', 'funders',
+        'skillMentorship', 'imnciVisitReports', 'eencVisitReports', 'imnciPatientRecords', 'supervisionAssessments',
+        'projects', 'masterPlans', 'operationalPlans', 'unitMeetings', 'populationTargets', 'supplyItems',
+        'exerciseAttempts', 'exerciseDefinitions',
+    ];
+
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            for (const name of collections) {
+                await setDoc(doc(db, name, 'gone1'), { isDeleted: true, courseId: 'publicCourse' });
+                await setDoc(doc(db, name, 'gone2'), { isDeleted: true, courseId: 'publicCourse' });
+            }
+        });
+    });
+
+    for (const name of collections) {
+        it(`${name}`, async () => {
+            await assertSucceeds(deleteDoc(doc(as('federalManager'), name, 'gone1')));
+            await assertSucceeds(deleteDoc(doc(as('superUser'), name, 'gone2')));
+        });
+    }
 });

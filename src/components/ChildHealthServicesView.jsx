@@ -837,7 +837,7 @@ const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted
     const handleDeleteSelected = async () => {
         const idsToDelete = []; duplicateGroups.forEach(group => { if (selectedGroups[group.key]) group.duplicates.forEach(d => idsToDelete.push(d.id)); });
         if (idsToDelete.length === 0) { notify("No duplicates selected for deletion."); return; }
-        if (await confirmDialog(`Are you sure you want to permanently delete ${idsToDelete.length} duplicate records?`)) { try { await deleteFacilitiesBatch(idsToDelete); notify(`${idsToDelete.length} duplicates deleted successfully.`); onDuplicatesDeleted(); onClose(); } catch (error) { notify(`Failed to delete duplicates: ${error.message}`); } }
+        if (await confirmDialog(`Are you sure you want to permanently delete ${idsToDelete.length} duplicate records?`)) { try { await deleteFacilitiesBatch(idsToDelete); notify(`${idsToDelete.length} duplicates deleted successfully.`); onDuplicatesDeleted(idsToDelete); onClose(); } catch (error) { notify(`Failed to delete duplicates: ${error.message}`); } }
     };
     const totalDuplicates = duplicateGroups.reduce((acc, group) => acc + group.duplicates.length, 0);
     return (<Modal isOpen={isOpen} onClose={onClose} title="Find & Fix Duplicates"><div className="p-4">{isLoading && <div className="text-center"><Spinner /></div>}{!isLoading && duplicateGroups.length === 0 && <div className="text-center p-4"><EmptyState message="No duplicate facilities found." /></div>}{!isLoading && duplicateGroups.length > 0 && (<div><p className="mb-4 text-sm text-gray-700">Found <strong>{totalDuplicates}</strong> duplicate records across <strong>{duplicateGroups.length}</strong> groups. Uncheck any group you do not want to clean up.</p><div className="space-y-4 max-h-96 overflow-y-auto p-2 border rounded">{duplicateGroups.map(group => (<div key={group.key} className="p-3 border rounded-md bg-gray-50"><div className="flex items-center justify-between mb-2"><h4 className="font-bold text-gray-800">{group.original['اسم_المؤسسة']}<span className="text-sm font-normal text-gray-500 ml-2">({group.original['الولاية']} / {group.original['المحلية']})</span></h4><label className="flex items-center gap-2 cursor-pointer">
@@ -1129,6 +1129,7 @@ const ChildHealthServicesView = ({
     const { 
         healthFacilities, 
         fetchHealthFacilities, 
+        removeFromCache,
         isLoading,
         fetchPendingFacilitatorSubmissions,
         fetchPendingFederalSubmissions,
@@ -1639,7 +1640,8 @@ const ChildHealthServicesView = ({
                 if (permissions.canApproveSubmissions) {
                     await deleteHealthFacility(facilityId);
                     setToast({ show: true, message: 'Facility deleted.', type: 'success' });
-                    await fetchHealthFacilities({}, true);
+                    // Only this facility leaves the cache; no full re-download.
+                    await removeFromCache('healthFacilities', [facilityId]);
                 } else {
                     const updaterIdentifier = user.displayName ? `${user.displayName} (${user.email})` : user.email;
                     const payload = { ...facility, _action: 'DELETE', updated_by: updaterIdentifier, 'اخر تحديث': new Date().toISOString(), };
@@ -1680,6 +1682,7 @@ const ChildHealthServicesView = ({
                  if (!targetId) throw new Error("Missing facility ID for deletion.");
                  
                  await deleteHealthFacility(targetId);
+                 await removeFromCache('healthFacilities', [targetId]);
                  
                  // --- FIX 4: Prevent mapping undefined IDs into rejectFacilitySubmission ---
                  const idsToClean = (cleanSubmissionData._mergedSubmissionIds || [cleanSubmissionData.submissionId]).filter(Boolean);
@@ -1697,7 +1700,7 @@ const ChildHealthServicesView = ({
             setSubmissionForReview(null);
             setComparisonFacilities([]);
             refreshSubmissions(true);
-            await fetchHealthFacilities({}, true);
+            if (cleanSubmissionData._action !== 'DELETE') await fetchHealthFacilities({}, true);
         } catch (error) {
              setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
         }
@@ -2267,8 +2270,8 @@ const ChildHealthServicesView = ({
                 isOpen={isDuplicateModalOpen}
                 onClose={() => setIsDuplicateModalOpen(false)}
                 facilities={filteredFacilities || []}
-                onDuplicatesDeleted={() => {
-                    fetchHealthFacilities({}, true);
+                onDuplicatesDeleted={(ids) => {
+                    removeFromCache('healthFacilities', ids);
                 }}
             />
             <DataCleanupModal

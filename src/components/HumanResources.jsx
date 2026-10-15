@@ -1,14 +1,17 @@
 // src/components/HumanResources.jsx
-import React from 'react';
-import { Button, Card, CardBody } from './CommonComponents';
+import React, { Suspense, lazy } from 'react';
+import { Button, Card, CardBody, Spinner } from './CommonComponents';
 import { FacilitatorsView } from './Facilitator';
 import { ProgramTeamView } from './ProgramTeamView';
 import { PartnersPage } from './PartnersPage';
 import { HealthWorkerView } from './HealthWorker';
-import { Users, Briefcase, Handshake, Stethoscope, ArrowLeft } from 'lucide-react'; // ADDED ICON IMPORTS
+import { Users, Briefcase, Handshake, Stethoscope, ArrowLeft, Trash2 } from 'lucide-react'; // ADDED ICON IMPORTS
+
+const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
+const HR_DELETED_TYPES = ['facilitators', 'federalCoordinators', 'stateCoordinators', 'localityCoordinators', 'coordinators', 'funders'];
 
 // --- Main Navigation Menu Component ---
-const HumanResourcesMenu = ({ onAction }) => {
+const HumanResourcesMenu = ({ onAction, canEmptyBin }) => {
     const menuItems = [
         { 
             id: 'healthWorkers', 
@@ -46,6 +49,15 @@ const HumanResourcesMenu = ({ onAction }) => {
             border: 'hover:border-amber-400', 
             shadow: 'hover:shadow-amber-100' 
         },
+        ...(canEmptyBin ? [{
+            id: 'deletedItems',
+            label: 'Deleted Items',
+            icon: Trash2,
+            color: 'text-red-600',
+            bg: 'bg-red-100',
+            border: 'hover:border-red-400',
+            shadow: 'hover:shadow-red-100'
+        }] : []),
     ];
 
     return (
@@ -98,7 +110,7 @@ export function HumanResourcesPage({
         <Card>
             <CardBody>
                 {currentTab === 'menu' ? (
-                    <HumanResourcesMenu onAction={setActiveTab} />
+                    <HumanResourcesMenu onAction={setActiveTab} canEmptyBin={!!permissions?.canUseFederalManagerAdvancedFeatures} />
                 ) : (
                     <div>
                         {/* BACK BUTTON TO RETURN TO MAIN NAV */}
@@ -133,6 +145,12 @@ export function HumanResourcesPage({
                         
                         {currentTab === 'partnersPage' && (
                             <PartnersPage permissions={permissions} userStates={userStates} />
+                        )}
+
+                        {currentTab === 'deletedItems' && permissions?.canUseFederalManagerAdvancedFeatures && (
+                            <Suspense fallback={<Spinner />}>
+                                <DeletedItemsPanel types={HR_DELETED_TYPES} />
+                            </Suspense>
                         )}
                     </div>
                 )}
