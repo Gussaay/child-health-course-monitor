@@ -1,8 +1,8 @@
 // src/utils/recycleBin.js
 //
-// Every record type the app soft-deletes (isDeleted: true), in one list, so a
-// federal manager can see deleted records of any kind and remove them for
-// good from one screen.
+// Every record type the app soft-deletes (isDeleted: true), in one list. Each
+// page shows its own types in a "Deleted Items" tab (DeletedItemsPanel), where
+// a federal manager can remove them for good.
 //
 //   collection  the Firestore collection
 //   cacheKey    the DataContext cache that mirrors it, if any. A permanent

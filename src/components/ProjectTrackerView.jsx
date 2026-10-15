@@ -1,5 +1,5 @@
 // src/components/ProjectTrackerView.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
 import { upsertProject, deleteProject } from '../data';
 import { useDataCache } from '../DataContext';
@@ -24,6 +24,8 @@ const PROGRAM_UNITS_DATA = [
 ];
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Completed'];
+
+const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 
 // Reusable Share Modal Component
 function ShareLinkModal({ isOpen, onClose, title, link }) {
@@ -454,9 +456,19 @@ export default function ProjectTrackerView({ permissions }) {
                 >
                     <Edit className="w-4 h-4 mr-2" /> Data Entry
                 </Button>
+                <Button 
+                    variant={viewMode === 'deleted' ? 'primary' : 'ghost'} 
+                    onClick={() => setViewMode('deleted')}
+                >
+                    Deleted Items
+                </Button>
             </div>
 
-            {viewMode === 'dashboard' ? (
+            {viewMode === 'deleted' ? (
+                <Suspense fallback={<Spinner />}>
+                    <DeletedItemsPanel types={['projects']} />
+                </Suspense>
+            ) : viewMode === 'dashboard' ? (
                 <div className="space-y-6">
                     <div className="flex gap-4 border-b border-gray-200">
                         <button 

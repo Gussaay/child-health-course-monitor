@@ -30,7 +30,6 @@ if (typeof window !== 'undefined') {
 
 // --- Lazy Load View Components ---
 const DashboardView = lazy(() => import('./components/DashboardView'));
-const DeletedItemsView = lazy(() => import('./components/DeletedItemsView'));
 const CourseReportView = lazy(() => import('./components/CourseReportView.jsx').then(module => ({ default: module.CourseReportView })));
 const FinalReportManager = lazy(() => import('./components/FinalReportManager.jsx').then(module => ({ default: module.FinalReportManager })));
 const ObservationView = lazy(() => import('./components/MonitoringView').then(module => ({ default: module.ObservationView })));
@@ -346,7 +345,6 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.supervision', 'Supervision'), view: 'supervision', icon: ClipboardCheck, permission: permissions.canViewSupervision },
         { label: t('landing.modules.online_courses', 'Online Courses'), view: 'onlineCourses', icon: BookOpen, permission: permissions.canViewOnlineCourses },
         { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
-        { label: 'Deleted Items', view: 'deletedItems', icon: Trash2, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
     ];
@@ -1481,7 +1479,6 @@ export default function App() {
             'supplyManagement': permissions.canViewSupplyChain,
             'supervision': permissions.canViewSupervision,
             'onlineCourses': permissions.canViewOnlineCourses,
-            'deletedItems': permissions.canUseFederalManagerAdvancedFeatures,
             'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
 
@@ -1510,9 +1507,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'deletedItems', 'downloads', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'deletedItems', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
@@ -1837,8 +1834,6 @@ export default function App() {
            case 'projects':
     return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><ProjectTrackerView permissions={permissions} /></Suspense> ) : null;
 
-            case 'deletedItems':
-                return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><DeletedItemsView /></Suspense> ) : null;
 case 'meetings':
     return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><MeetingTrackerView permissions={permissions} /></Suspense> ) : null;
 

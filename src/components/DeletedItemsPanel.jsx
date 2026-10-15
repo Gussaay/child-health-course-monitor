@@ -1,14 +1,16 @@
-// src/components/DeletedItemsView.jsx
+// src/components/DeletedItemsPanel.jsx
 //
-// One place for federal managers to see deleted records of every type and
-// remove them for good. Deleting anywhere else in the app only hides a record
-// (isDeleted: true); this screen is where it actually goes.
+// The "Deleted" tab each page shows to federal managers: the records of that
+// page's types that were deleted (deleting only hides a record, isDeleted:
+// true), with a way to remove them for good.
+//
+//   <DeletedItemsPanel types={['projects']} />
 //
 // A permanent delete trims exactly the removed ids from the local caches
 // (removeFromCache); nothing is re-downloaded.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trash2, RefreshCw } from 'lucide-react';
-import { Card, PageHeader, Button, FormGroup, Select, Spinner } from './CommonComponents';
+import { Button, FormGroup, Select, Spinner } from './CommonComponents';
 import { RECYCLE_BIN_TYPES, recordTitle, recordSubtitle, mergeRemovals } from '../utils/recycleBin.js';
 import { listSoftDeletedRecords, permanentlyDeleteRecord, RECYCLE_BIN_PAGE } from '../data.js';
 import { useDataCache } from '../DataContext';
@@ -19,19 +21,27 @@ const formatWhen = (ts) => {
     return ms ? new Date(ms).toLocaleString() : '';
 };
 
-const GROUPS = Array.from(new Set(RECYCLE_BIN_TYPES.map((t) => t.group)));
-
-export default function DeletedItemsView() {
+/**
+ * @param {string[]} types      the collections this page deletes, from RECYCLE_BIN_TYPES
+ * @param {string}  [note]      an extra line under the controls
+ * @param {Function} [onDeleted] called with the removals after a permanent delete
+ */
+export default function DeletedItemsPanel({ types, note, onDeleted }) {
     const { removeFromCache } = useDataCache();
-    const [type, setType] = useState(RECYCLE_BIN_TYPES[0].collection);
+    const available = useMemo(
+        () => RECYCLE_BIN_TYPES.filter((t) => !types || types.includes(t.collection)),
+        [types]
+    );
+    const [type, setType] = useState(available[0]?.collection);
     const [rows, setRows] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selected, setSelected] = useState(() => new Set());
     const [busy, setBusy] = useState(false);
 
-    const typeInfo = useMemo(() => RECYCLE_BIN_TYPES.find((t) => t.collection === type), [type]);
+    const typeInfo = useMemo(() => available.find((t) => t.collection === type), [available, type]);
 
     const load = useCallback(async () => {
+        if (!type) return;
         setIsLoading(true);
         setSelected(new Set());
         try {
@@ -80,6 +90,7 @@ export default function DeletedItemsView() {
             }
         }
         for (const [key, keyIds] of Object.entries(removed)) await removeFromCache(key, keyIds);
+        if (done.length) onDeleted?.(removed);
         setRows((list) => list.filter((r) => !done.includes(r.id)));
         setSelected(new Set());
         setBusy(false);
@@ -92,24 +103,20 @@ export default function DeletedItemsView() {
     };
 
     return (
-        <Card>
-            <PageHeader
-                title="Deleted Items"
-                subtitle="Records deleted anywhere in the app are only hidden. Remove them here for good."
-            />
-            <div className="p-4 space-y-4">
+        <div className="space-y-4" dir="ltr">
+                <p className="text-sm text-gray-600">
+                    Deleting only hides a record. Delete it here permanently to remove it for good.
+                </p>
                 <div className="flex flex-wrap items-end gap-3">
-                    <FormGroup label="Record type">
-                        <Select value={type} onChange={(e) => setType(e.target.value)} disabled={busy}>
-                            {GROUPS.map((g) => (
-                                <optgroup key={g} label={g}>
-                                    {RECYCLE_BIN_TYPES.filter((t) => t.group === g).map((t) => (
-                                        <option key={t.collection} value={t.collection}>{t.label}</option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </Select>
-                    </FormGroup>
+                    {available.length > 1 && (
+                        <FormGroup label="Record type">
+                            <Select value={type} onChange={(e) => setType(e.target.value)} disabled={busy}>
+                                {available.map((t) => (
+                                    <option key={t.collection} value={t.collection}>{t.label}</option>
+                                ))}
+                            </Select>
+                        </FormGroup>
+                    )}
                     <Button variant="secondary" onClick={load} disabled={busy || isLoading}>
                         <RefreshCw className="w-4 h-4 mr-1" /> Refresh
                     </Button>
@@ -118,9 +125,7 @@ export default function DeletedItemsView() {
                     </Button>
                 </div>
 
-                <p className="text-xs text-gray-500">
-                    Online course content has its own bin under Online Courses, which also removes its pictures.
-                </p>
+                {note && <p className="text-xs text-gray-500">{note}</p>}
 
                 {isLoading ? (
                     <div className="flex justify-center p-8"><Spinner /></div>
@@ -159,7 +164,6 @@ export default function DeletedItemsView() {
                         </ul>
                     </>
                 )}
-            </div>
-        </Card>
+        </div>
     );
 }

@@ -61,6 +61,7 @@ import { useStandardNames } from '../hooks/useNameRegistry';
 import { canonicalOptions } from '../utils/nameRegistry';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
+const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
 const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
 const MentorshipMonitoringView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.MentorshipMonitoringView })));
@@ -2146,7 +2147,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
                         {canAccessRecycleBin && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'deleted-courses'} onClick={() => { setActiveCoursesTab('deleted-courses'); onSetSelectedParticipantId(null); }}>
-                                Deleted Courses
+                                Deleted Items
                                  {allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length > 0 && (
                                      <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded-full">{allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length}</span>
                                  )}
@@ -2333,7 +2334,17 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     )
                 )}
 
-                {activeCoursesTab === 'deleted-courses' && <DeletedCoursesView courses={allCourses.filter(c => c.inRecycleBin || c.deletionRequested)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />}
+                {activeCoursesTab === 'deleted-courses' && (
+                    <>
+                        <DeletedCoursesView courses={allCourses.filter(c => c.inRecycleBin || c.deletionRequested)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />
+                        <div className="mt-8 border-t border-gray-200 pt-6">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Deleted course records</h3>
+                            <Suspense fallback={<Spinner />}>
+                                <DeletedItemsPanel types={['courses', 'participants', 'participantTests', 'cases', 'observations', 'finalReports', 'exerciseAttempts', 'exerciseDefinitions']} />
+                            </Suspense>
+                        </div>
+                    </>
+                )}
                 
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
                     <CourseForm 

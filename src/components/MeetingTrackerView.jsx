@@ -1,5 +1,5 @@
 // src/components/MeetingTrackerView.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Capacitor } from '@capacitor/core';
@@ -45,6 +45,8 @@ const getStatusDetails = (attended, totalSessions) => {
     if (percentage >= 50) return { text: 'Poor', textAr: 'ضعيف', class: 'bg-orange-100 text-orange-800' };
     return { text: 'Not Accepted', textAr: 'غير مقبول', class: 'bg-red-100 text-red-800' };
 };
+
+const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 
 export default function MeetingTrackerView({ permissions }) {
     const { 
@@ -137,9 +139,16 @@ export default function MeetingTrackerView({ permissions }) {
                 <Button variant={viewMode === 'entry' ? 'primary' : 'ghost'} onClick={() => { setViewMode('entry'); setSelectedMeetingId(''); setActiveMeeting(null); }}>
                     <Edit className="w-4 h-4 mr-2" /> Data Entry
                 </Button>
+                <Button variant={viewMode === 'deleted' ? 'primary' : 'ghost'} onClick={() => setViewMode('deleted')}>
+                    Deleted Items
+                </Button>
             </div>
 
-            {viewMode === 'dashboard' ? (
+            {viewMode === 'deleted' ? (
+                <Suspense fallback={<Spinner />}>
+                    <DeletedItemsPanel types={['unitMeetings']} />
+                </Suspense>
+            ) : viewMode === 'dashboard' ? (
                 <Card>
                     <CardBody className="p-6">
                         <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">

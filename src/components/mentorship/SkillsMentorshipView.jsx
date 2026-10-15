@@ -48,6 +48,7 @@ import ETATSkillsAssessmentForm from './ETATSkillsAssessmentForm';
 import EENCMothersForm from './EENCMothersForm';
 
 // --- Lazy load Visit Reports ---
+const DeletedItemsPanel = lazy(() => import('../DeletedItemsPanel.jsx'));
 const IMNCIVisitReport = lazy(() =>
   import('./VisitReports.jsx').then(module => ({ default: module.IMNCIVisitReport }))
 );
@@ -4382,10 +4383,22 @@ const SkillsMentorshipView = ({
                                         </button>
                                     </>
                                 )}
+                                {permissions?.canUseFederalManagerAdvancedFeatures && (
+                                    <button
+                                        onClick={() => setActiveTab('deleted')}
+                                        className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
+                                            activeTab === 'deleted'
+                                                ? 'border-b-2 border-sky-500 text-sky-600'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                        }`}
+                                    >
+                                        Deleted Items
+                                    </button>
+                                )}
                             </div>
                         )}
 
-                        {activeTab !== 'dashboard' && !publicDashboardMode && (
+                        {activeTab !== 'dashboard' && activeTab !== 'deleted' && !publicDashboardMode && (
                             <>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                                     
@@ -4542,6 +4555,12 @@ const SkillsMentorshipView = ({
                         )}
 
                         <div>
+                            {activeTab === 'deleted' && !publicDashboardMode && permissions?.canUseFederalManagerAdvancedFeatures && (
+                                <Suspense fallback={<Spinner />}>
+                                    <DeletedItemsPanel types={['skillMentorship', 'imnciVisitReports', 'eencVisitReports', 'imnciPatientRecords']} />
+                                </Suspense>
+                            )}
+
                             {activeTab === 'skills_list' && !publicDashboardMode && (
                                 <MentorshipSubmissionsTable
                                     submissions={filteredSubmissions}
