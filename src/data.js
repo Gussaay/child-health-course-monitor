@@ -30,6 +30,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { validateUpload, safeFileName, MAX_UPLOAD_BYTES } from './utils/uploadValidation';
 import { CERT_APPROVAL_FIELD, certificateApprovalSnapshot } from './components/constants.js';
 import { projectAtTime, projectOfFacility, visitTimeOf, hasRecordedProject } from './utils/visitProject.js';
+import { DuplicatePhoneError, findPhoneConflict, duplicatePhoneMessage, normalizePhone, isSoftDeleted, validateReaddRequest } from './utils/participantDuplicates.js';
 
 // --- USAGE TRACKING VARIABLES ---
 let currentUser = null;
@@ -1364,37 +1365,36 @@ export async function unapproveCourseCertificates(courseId) {
 }
 // -------------------------------------
 
+// Every participant in this course already holding `phone`, deleted ones
+// included. No limit(1): with one deleted and one active match, limit(1) could
+// return the deleted one and report the wrong clash.
+async function findCoursePhoneConflict(courseId, phone, selfId) {
+    const q = query(collection(db, "participants"), where("courseId", "==", courseId), where("phone", "==", phone));
+    let snapshot;
+    try {
+        snapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' });
+    } catch {
+        return null;
+    }
+    return findPhoneConflict(snapshot.docs.map(d => ({ id: d.id, ...d.data() })), selfId);
+}
+
 export async function upsertParticipant(payload) {
     if (payload.id) {
         const participantRef = doc(db, "participants", payload.id);
         if (payload.phone && payload.courseId) {
-            const q = query(collection(db, "participants"), where("courseId", "==", payload.courseId), where("phone", "==", payload.phone), limit(1));
-            let snapshot;
-            try {
-                snapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' }); 
-            } catch (e) {
-                snapshot = { empty: true };
-            }
-            if (!snapshot.empty) {
-                const existingDoc = snapshot.docs[0];
-                if (existingDoc.id !== payload.id) throw new Error(`A participant with phone number '${payload.phone}' already exists in this course.`);
-            }
+            const conflict = await findCoursePhoneConflict(payload.courseId, payload.phone, payload.id);
+            if (conflict) throw new DuplicatePhoneError(conflict, payload.phone, { isEdit: true });
         }
         const writePromise = setDoc(participantRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true }); 
         await executeOfflineSafeWrite(writePromise, `Participant: ${payload.name}`);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        if (!dataToSave.phone || !dataToSave.courseId) throw new Error("Phone number and Course ID are required to check for duplicates.");
-        const q = query(collection(db, "participants"), where("courseId", "==", dataToSave.courseId), where("phone", "==", dataToSave.phone), limit(1));
-        
-        let snapshot;
-        try {
-            snapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' }); 
-        } catch (e) {
-            snapshot = { empty: true };
-        }
-        if (!snapshot.empty) throw new Error(`A participant with phone number '${dataToSave.phone}' already exists in this course.`);
+        if (!dataToSave.courseId) throw new Error("This participant is not linked to a course. Open the course first, then add the participant from its Participants tab.");
+        if (!dataToSave.phone) throw new Error("Phone number is required. Enter the participant's phone number and save again.");
+        const conflict = await findCoursePhoneConflict(dataToSave.courseId, dataToSave.phone);
+        if (conflict) throw new DuplicatePhoneError(conflict, dataToSave.phone);
         
         const newParticipantRef = doc(collection(db, "participants"));
         const writePromise = setDoc(newParticipantRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() }); 
@@ -1426,25 +1426,23 @@ export async function importParticipants(participants) {
     
     const existingParticipantsQuery = query(collection(db, "participants"), where("courseId", "==", courseId));
     const existingSnapshot = await getDocs(existingParticipantsQuery); 
-    const existingPhones = new Map(existingSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return data.phone ? [data.phone, doc.id] : [null, doc.id];
-    }));
+    const byPhone = new Map();
+    existingSnapshot.docs.forEach(d => {
+        const data = { id: d.id, ...d.data() };
+        const phone = normalizePhone(data.phone);
+        if (!phone) return;
+        byPhone.set(phone, [...(byPhone.get(phone) || []), data]);
+    });
 
     for (const participant of participants) {
-        if (!participant.phone) throw new Error(`Participant '${participant.name || 'N/A'}' is missing a phone number.`);
+        if (!participant.phone) throw new Error(`Participant '${participant.name || 'N/A'}' is missing a phone number. Fill in the phone column for this row and import again.`);
         const cleanPhone = String(participant.phone).trim();
-        if (phoneCourseSet.has(cleanPhone)) throw new Error(`Duplicate phone number '${cleanPhone}' (for ${participant.name}) found within the import file.`);
+        if (phoneCourseSet.has(cleanPhone)) throw new Error(`Duplicate phone number '${cleanPhone}' (for ${participant.name}) appears more than once in the import file. Keep one row per phone number and import again.`);
         
-        const existingDocId = existingPhones.get(cleanPhone);
-        if (existingDocId) {
-            if (participant.id && participant.id === existingDocId) {
-                // Update correct participant
-            } else if (participant.id) {
-                throw new Error(`Phone number '${cleanPhone}' (for ${participant.name}) already belongs to another participant in this course.`);
-            } else {
-                throw new Error(`Participant '${participant.name}' has a phone number ('${cleanPhone}') that already exists in this course.`);
-            }
+        const conflict = findPhoneConflict(byPhone.get(cleanPhone), participant.id);
+        if (conflict) {
+            const message = duplicatePhoneMessage(conflict, cleanPhone, { isEdit: !!participant.id });
+            throw new Error(`Row for '${participant.name || 'N/A'}': ${message}${conflict.isDeleted && !participant.id ? '\n\nRemove this row from the file and add the participant from the Add Participant form, which sends the request for approval.' : ''}`);
         }
         phoneCourseSet.add(cleanPhone); 
 
@@ -1518,6 +1516,171 @@ export async function deleteParticipant(participantId) {
     cSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
     
     await batch.commit();
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Deleted participants and re-add requests
+//
+// Deleting a participant is a soft delete, so their phone number stays taken
+// in that course. A federal manager can see those records, remove one for good
+// (which frees the number), and approve a request to add the person again.
+// ---------------------------------------------------------------------------
+
+/** Soft-deleted participants of one course, read from the server. */
+export async function listDeletedParticipantsForCourse(courseId) {
+    if (!courseId) return [];
+    const q = query(collection(db, "participants"), where("courseId", "==", courseId), where("isDeleted", "==", true));
+    const snap = await getDocs(q, { source: navigator.onLine ? 'server' : 'cache' });
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Remove a soft-deleted participant permanently, with the observations and
+ * cases recorded against them. Refuses an active participant: hard delete is
+ * only for records that were already deleted.
+ *
+ * @returns {string} the id removed, so the caller can drop it from its cache
+ */
+export async function hardDeleteParticipant(participantId) {
+    if (!participantId) throw new Error("Participant ID is required.");
+    const ref = doc(db, "participants", participantId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return participantId;
+    if (!isSoftDeleted(snap.data())) {
+        throw new Error("This participant is still active. Delete them from the participants list first; only deleted participants can be removed permanently.");
+    }
+
+    const [oSnap, cSnap] = await Promise.all([
+        getDocs(query(collection(db, "observations"), where("participant_id", "==", participantId))),
+        getDocs(query(collection(db, "cases"), where("participant_id", "==", participantId))),
+    ]);
+    const refs = [...oSnap.docs.map(d => d.ref), ...cSnap.docs.map(d => d.ref), ref];
+    await commitInChunks(refs, (batch, r) => batch.delete(r));
+    return participantId;
+}
+
+export const PARTICIPANT_READD_COLLECTION = "participantReaddRequests";
+
+/**
+ * Ask a federal manager to let a participant whose phone number belongs to a
+ * deleted record in this course be added again.
+ */
+export async function requestParticipantReadd({ course, existing, participantData, reason, note = '', requestedBy = 'Unknown' }) {
+    if (!course?.id) throw new Error("Course is required.");
+    if (!existing?.id) throw new Error("The deleted participant this request replaces is missing.");
+    const invalid = validateReaddRequest({ reason, note });
+    if (invalid) throw new Error(invalid);
+
+    const { id: _ignored, ...rest } = participantData || {};
+    const cleanData = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
+    const request = {
+        courseId: course.id,
+        courseLabel: [course.course_type, course.state, course.locality].filter(Boolean).join(' - '),
+        phone: cleanData.phone || existing.phone || '',
+        name: cleanData.name || '',
+        existingParticipantId: existing.id,
+        existingParticipantName: existing.name || '',
+        participantData: { ...cleanData, courseId: course.id },
+        reason,
+        note: String(note || '').trim(),
+        status: 'pending',
+        requestedBy,
+        requestedByUid: firebaseAuth.currentUser?.uid || null,
+        requestedAt: serverTimestamp(),
+        lastUpdatedAt: serverTimestamp(),
+    };
+    const ref = await addDoc(collection(db, PARTICIPANT_READD_COLLECTION), request);
+
+    // Tell the managers, the same way a new course does. A failure here must
+    // not lose the request, which is already saved.
+    try {
+        await addDoc(collection(db, 'notifications'), {
+            title: 'Participant re-add needs approval',
+            message: `${requestedBy} asked to add ${request.name || 'a participant'} (${request.phone}) again to ${request.courseLabel}.`,
+            targetUser: 'managers_and_super_users',
+            createdAt: serverTimestamp(),
+            deliveredTo: [], readBy: [], deletedBy: [],
+            status: 'active',
+            actionView: 'courses',
+            actionParams: JSON.stringify({ courseId: course.id }),
+        });
+    } catch (e) {
+        console.warn("Could not create re-add notification", e);
+    }
+    return ref.id;
+}
+
+export async function listParticipantReaddRequests(courseId, status = 'pending') {
+    if (!courseId) return [];
+    const q = query(collection(db, PARTICIPANT_READD_COLLECTION), where("courseId", "==", courseId), where("status", "==", status));
+    const snap = await getDocs(q, { source: navigator.onLine ? 'server' : 'cache' });
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Approve a re-add request: permanently remove the deleted record that holds
+ * the phone number, then add the participant from the request.
+ *
+ * @returns {{ removedId: string|null, participant: object }} so the caller can
+ *          update its cache incrementally
+ */
+export async function approveParticipantReadd(request, approvedBy = 'Unknown') {
+    if (!request?.id) throw new Error("Request is required.");
+    const reqRef = doc(db, PARTICIPANT_READD_COLLECTION, request.id);
+    const reqSnap = await getDoc(reqRef);
+    if (!reqSnap.exists()) throw new Error("This request no longer exists.");
+    const current = { id: reqSnap.id, ...reqSnap.data() };
+    if (current.status !== 'pending') throw new Error(`This request was already ${current.status}.`);
+
+    // Check before removing anything: if somebody else took the number in the
+    // meantime, the old record must not be lost for a participant who then
+    // cannot be added.
+    const phone = current.participantData?.phone || current.phone;
+    const otherConflict = await findCoursePhoneConflict(current.courseId, phone, current.existingParticipantId);
+    if (otherConflict) throw new DuplicatePhoneError(otherConflict, phone);
+
+    let removedId = null;
+    const oldSnap = await getDoc(doc(db, "participants", current.existingParticipantId));
+    if (oldSnap.exists()) {
+        if (!isSoftDeleted(oldSnap.data())) {
+            throw new Error(`"${oldSnap.data().name || 'The old participant'}" has been restored and is active in this course again, so this request cannot be approved. Reject it instead.`);
+        }
+        removedId = await hardDeleteParticipant(current.existingParticipantId);
+    }
+
+    const participantPayload = {
+        ...current.participantData,
+        courseId: current.courseId,
+        isDeleted: false,
+        readdReason: current.reason,
+        readdNote: current.note || '',
+        readdRequestId: current.id,
+        readdApprovedBy: approvedBy,
+        createdBy: current.requestedBy,
+        updatedBy: approvedBy,
+    };
+    const newId = await upsertParticipant(participantPayload);
+
+    await updateDoc(reqRef, {
+        status: 'approved',
+        decidedBy: approvedBy,
+        decidedAt: serverTimestamp(),
+        newParticipantId: newId,
+        lastUpdatedAt: serverTimestamp(),
+    });
+    return { removedId, participant: { ...participantPayload, id: newId } };
+}
+
+export async function rejectParticipantReadd(requestId, rejectedBy = 'Unknown', note = '') {
+    if (!requestId) throw new Error("Request is required.");
+    await updateDoc(doc(db, PARTICIPANT_READD_COLLECTION, requestId), {
+        status: 'rejected',
+        decidedBy: rejectedBy,
+        decisionNote: String(note || '').trim(),
+        decidedAt: serverTimestamp(),
+        lastUpdatedAt: serverTimestamp(),
+    });
     return true;
 }
 

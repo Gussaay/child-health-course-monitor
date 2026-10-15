@@ -577,6 +577,22 @@ export const DataProvider = ({ children }) => {
         try { await setLocalData(`cache_${key}`, stripSignaturesForDisk(merged)); } catch (e) { console.warn('IDB write failed for', key, e); }
     }, []);
 
+    // The other half of mergeIntoCache: drop documents that were deleted for
+    // good. A hard delete leaves nothing behind for the delta sync to pick up,
+    // so without this the removed record would sit in memory and IndexedDB
+    // until a full re-download. Only the given ids are touched.
+    const removeFromCache = useCallback(async (key, ids) => {
+        const drop = new Set((Array.isArray(ids) ? ids : [ids]).filter(Boolean));
+        if (!drop.size) return;
+        const current = Array.isArray(cacheRef.current[key]) ? cacheRef.current[key] : null;
+        if (!current) return;
+        const kept = current.filter(i => !drop.has(i?.id));
+        if (kept.length === current.length) return;
+        cacheRef.current = { ...cacheRef.current, [key]: kept };
+        setCache(prev => ({ ...prev, [key]: kept }));
+        try { await setLocalData(`cache_${key}`, stripSignaturesForDisk(kept)); } catch (e) { console.warn('IDB write failed for', key, e); }
+    }, []);
+
     useEffect(() => {
         if (!user) {
             setLastFacilitiesFetchTime({});
@@ -620,6 +636,7 @@ export const DataProvider = ({ children }) => {
         isLoading,
         clearLocalCache,
         mergeIntoCache,
+        removeFromCache,
         fetchFacilitiesHistoryMultiDate, 
         listSnapshotsForFacility
     };
