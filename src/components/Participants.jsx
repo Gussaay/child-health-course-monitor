@@ -38,7 +38,7 @@ import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
 
 // --- Import Certificate Generators ---
-import { generateBlankCertificatePdf, startCertificateDownload } from './CertificateGenerator';
+import { generateBlankCertificatePdf, startCertificateDownload, certificatePdfBase64 } from './CertificateGenerator';
 import { confirmDialog, alertDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
 
@@ -147,7 +147,7 @@ const certificateLink = (participantId, lang) => {
     return `${publicBaseUrl()}/public/certificate/download/${participantId}?lang=${lang}`;
 };
 
-const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = false, setToast }) => {
+const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = false, setToast, course, managerName, facilitators, coordinators }) => {
     const { t } = useTranslation();
     const [language, setLanguage] = useState('en');
     const [isSending, setIsSending] = useState(false);
@@ -166,9 +166,23 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
         const total = participants.length;
         setProgress({ current: 0, total, errors: 0, failures: [] });
 
-        let results = [];
+        // Certificates changed since approval are not sent: what would be
+        // attached is not what was signed.
+        const held = participants.filter((p) => course && certificateApprovalState(p, course).state === 'stale');
+        const sendable = participants.filter((p) => !held.includes(p));
+        const makePdf = course
+            ? (p) => certificatePdfBase64(course, p, managerName, language, facilitators, coordinators)
+            : null;
+
+        let results = held.map((p) => ({
+            id: p.id, name: p.name, ok: false,
+            error: t('participants_page.email.held', 'Details changed after approval; the certificate must be approved again.'),
+        }));
         try {
-            results = await sendCertificateEmails(participants, language);
+            results = results.concat(await sendCertificateEmails(sendable, language, {
+                makePdf,
+                onProgress: (current) => setProgress((prev) => ({ ...prev, current: held.length + current })),
+            }));
         } catch (error) {
             results = participants.map((p) => ({ id: p.id, name: p.name, ok: false, error: error?.message || 'Sending failed.' }));
         }
@@ -195,8 +209,8 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
                     <>
                         <p className="text-sm text-gray-600">
                             {isBulk 
-                                ? t('participants_page.email.intro_bulk', 'You are about to send certificate download links to {{count}} participants via email.', { count: participants.length }) 
-                                : t('participants_page.email.intro_single', 'Send certificate download link to {{name}} via email.', { name: participants[0]?.name })
+                                ? t('participants_page.email.intro_bulk_pdf', 'You are about to email {{count}} participants their certificate as a PDF attachment. Keep this window open while they are sent.', { count: participants.length }) 
+                                : t('participants_page.email.intro_single_pdf', 'Email {{name}} their certificate as a PDF attachment.', { name: participants[0]?.name })
                             }
                         </p>
                         {isBulk && (
@@ -2556,7 +2570,7 @@ export function ParticipantsView({
             
             <ShareCertificateModal isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} participantName={shareTarget.name} participantId={shareTarget.id} />
             <ShareCoursePageModal isOpen={sharePageModalOpen} onClose={() => setSharePageModalOpen(false)} courseId={course.id} courseName={course.course_type} />
-            <EmailCertificateModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} participants={emailTargets} isBulk={isBulkEmail} setToast={setToast} />
+            <EmailCertificateModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} participants={emailTargets} isBulk={isBulkEmail} setToast={setToast} course={localCourseData} managerName={federalProgramManagerName} facilitators={facilitators} coordinators={federalCoordinators} />
 
             <Modal 
                 isOpen={syncPreviewModal.isOpen} 

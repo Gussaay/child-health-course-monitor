@@ -1419,6 +1419,9 @@ const resources = {
         email: {
           success: "Successfully queued emails for {{count}} participants.",
           sent: "Emails sent to {{count}} participants.",
+          held: "Details changed after approval; the certificate must be approved again.",
+          intro_bulk_pdf: "You are about to email {{count}} participants their certificate as a PDF attachment. Keep this window open while they are sent.",
+          intro_single_pdf: "Email {{name}} their certificate as a PDF attachment.",
           partial: "Queued emails. {{count}} failed (missing email or error).",
           failed: "Failed to send emails. Check if participants have email addresses.",
           title_bulk: "Email All Certificates",
@@ -8322,6 +8325,9 @@ const resources = {
         },
         email: {
           sent: "تم إرسال البريد الإلكتروني إلى {{count}} مشارك.",
+          held: "تغيّرت البيانات بعد الاعتماد؛ يجب اعتماد الشهادة مرة أخرى.",
+          intro_bulk_pdf: "سيتم إرسال الشهادة كملف PDF مرفق بالبريد الإلكتروني إلى {{count}} مشارك. أبقِ هذه النافذة مفتوحة أثناء الإرسال.",
+          intro_single_pdf: "إرسال الشهادة إلى {{name}} كملف PDF مرفق بالبريد الإلكتروني.",
           success: "تمت جدولة رسائل البريد الإلكتروني لـ {{count}} مشارك بنجاح.",
           partial: "تمت جدولة الرسائل. فشل {{count}} (بريد إلكتروني مفقود أو خطأ).",
           failed: "فشل إرسال الرسائل. تحقق من وجود عناوين بريد إلكتروني للمشاركين.",

@@ -2620,37 +2620,55 @@ export const queueCertificateEmail = async (participant, link, language) => {
 
 // Sends certificate emails through the sendCertificateEmails Cloud Function,
 // which mails them straight away and reports each failure with its reason.
-// Until that function is deployed (it needs the SMTP_PASSWORD secret), the
-// old route is used: the email is queued for the Trigger Email extension.
-// Returns [{ id, name, ok, queued?, error? }] in the order given.
+// `makePdf(participant)` returns the certificate as base64 (or null); when it
+// gives one, the PDF goes in the email as an attachment, with the download
+// link kept as a backup. Emails go one at a time so each request stays small.
+// Until the function is deployed the old route is used: the email is queued
+// for the Trigger Email extension, with the link only.
+// Returns [{ id, name, ok, queued?, attached?, error? }] in the order given.
 const FUNCTION_MISSING = ['functions/not-found', 'functions/internal', 'functions/unavailable'];
 
-export async function sendCertificateEmails(participants = [], language = 'en') {
+export async function sendCertificateEmails(participants = [], language = 'en', { makePdf = null, onProgress = null } = {}) {
     const lang = language === 'ar' ? 'ar' : 'en';
     const list = participants.filter(Boolean);
     const results = [];
-    const call = httpsCallable(getFunctions(db.app), 'sendCertificateEmails');
+    const call = httpsCallable(getFunctions(db.app), 'sendCertificateEmails', { timeout: 120000 });
+    let useQueue = false;
 
-    for (let i = 0; i < list.length; i += 100) {
-        const chunk = list.slice(i, i + 100);
-        try {
-            const res = await call({ participantIds: chunk.map((p) => p.id), lang });
-            results.push(...(res?.data?.results || []));
-        } catch (error) {
-            if (!FUNCTION_MISSING.includes(error?.code)) {
-                const reason = error?.message || 'Sending failed.';
-                chunk.forEach((p) => results.push({ id: p.id, name: p.name, ok: false, error: reason }));
-                continue;
+    for (let i = 0; i < list.length; i += 1) {
+        const p = list[i];
+        if (onProgress) onProgress(i + 1, list.length);
+        if (!p.email) { results.push({ id: p.id, name: p.name, ok: false, error: 'No email address saved.' }); continue; }
+
+        if (!useQueue) {
+            let pdf = null;
+            if (makePdf) {
+                try {
+                    pdf = await makePdf(p);
+                } catch (error) {
+                    results.push({ id: p.id, name: p.name, ok: false, error: error?.message || 'The certificate could not be drawn.' });
+                    continue;
+                }
+                if (!pdf) { results.push({ id: p.id, name: p.name, ok: false, error: 'The certificate could not be drawn.' }); continue; }
             }
-            for (const p of chunk) {
-                if (!p.email) { results.push({ id: p.id, name: p.name, ok: false, error: 'No email address saved.' }); continue; }
-                const link = `${publicBaseUrl()}/public/certificate/download/${p.id}?lang=${lang}`;
-                const queued = await queueCertificateEmail(p, link, lang);
-                results.push(queued.success
-                    ? { id: p.id, name: p.name, ok: true, queued: true }
-                    : { id: p.id, name: p.name, ok: false, error: queued.error });
+            try {
+                const res = await call({ participantIds: [p.id], lang, pdfs: pdf ? { [p.id]: pdf } : undefined });
+                results.push(...(res?.data?.results || []));
+                continue;
+            } catch (error) {
+                if (!FUNCTION_MISSING.includes(error?.code)) {
+                    results.push({ id: p.id, name: p.name, ok: false, error: error?.message || 'Sending failed.' });
+                    continue;
+                }
+                useQueue = true;
             }
         }
+
+        const link = `${publicBaseUrl()}/public/certificate/download/${p.id}?lang=${lang}`;
+        const queued = await queueCertificateEmail(p, link, lang);
+        results.push(queued.success
+            ? { id: p.id, name: p.name, ok: true, queued: true }
+            : { id: p.id, name: p.name, ok: false, error: queued.error });
     }
     return results;
 }

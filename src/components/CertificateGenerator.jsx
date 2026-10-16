@@ -1563,6 +1563,24 @@ export const generateCertificatePdf = async (inputCourse, participant, federalPr
     }
 };
 
+/**
+ * One participant's certificate as a PDF, base64-encoded, for attaching to an
+ * email. Same drawing as the download, saved as JPEG so a certificate stays a
+ * few hundred KB instead of several MB. Returns null if it could not be drawn.
+ */
+export const certificatePdfBase64 = async (course, participant, federalProgramManagerName, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
+    let participantSubCourse = participant.imci_sub_type;
+    if (!participantSubCourse) {
+        const assignment = course.facilitatorAssignments?.find((a) => a.group === participant.group);
+        participantSubCourse = assignment?.imci_sub_type;
+    }
+    const canvas = await generateCertificatePdf(course, participant, federalProgramManagerName, participantSubCourse, language, cachedFacilitators, cachedCoordinators);
+    if (!canvas) return null;
+    const doc = new jsPDF('landscape', 'mm', 'a4');
+    doc.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
+    return doc.output('datauristring').split('base64,')[1] || null;
+};
+
 export const generateBlankCertificatePdf = async (inputCourse, federalProgramManagerName, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
     const course = await loadAuthoritativeCourse(inputCourse);
     logThirdPartyDiagnostics(course);
