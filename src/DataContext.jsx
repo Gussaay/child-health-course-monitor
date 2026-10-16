@@ -267,6 +267,9 @@ export const DataProvider = ({ children }) => {
     
     const createFetcher = useCallback((key, fetchFn) => {
         if (key === 'healthFacilities') {
+             // force: false = cache-first; 'sync' = ask the server now, but only
+             // for facilities changed since the last fetch (use after this
+             // device saved or approved a facility); true = full re-download.
              return async (filters = {}, force = false) => { 
                 const filterKey = getFilterKey(filters);
                 const internalCache = facilitiesFilterCacheRef.current;
@@ -339,7 +342,7 @@ export const DataProvider = ({ children }) => {
                     if (!localData || localData.length === 0) {
                         effectiveLastFetchTime = 0; // First time, full load needed
                     }
-                    if (force) {
+                    if (force === true) {
                         effectiveLastFetchTime = 0; // Explicit refresh = get the truth
                     }
 

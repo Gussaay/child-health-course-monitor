@@ -1264,7 +1264,7 @@ const ChildHealthServicesView = ({
             if (permissions.canApproveSubmissions) {
                 await saveFacilitySnapshot(payload);
                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
-                await fetchHealthFacilities({}, true);
+                await fetchHealthFacilities({}, 'sync');
             } else {
                  await submitFacilityDataForApproval(payload, auth.currentUser?.email || 'Unknown User');
                  setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
@@ -1348,6 +1348,11 @@ const ChildHealthServicesView = ({
             refreshSubmissions(false);
         }
     }, [permissions, refreshSubmissions]);
+
+    const dropPendingSubmissions = useCallback((ids) => {
+        const gone = new Set(ids);
+        setPendingSubmissions((prev) => prev.filter((s) => !gone.has(s.submissionId)));
+    }, []);
 
     useEffect(() => {
         if (view === 'list') {
@@ -1571,7 +1576,7 @@ const ChildHealthServicesView = ({
             if (permissions.canApproveSubmissions) { 
                 await saveFacilitySnapshot(cleanedPayload); 
                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
-                await fetchHealthFacilities({}, true);
+                await fetchHealthFacilities({}, 'sync');
             } else { 
                 await submitFacilityDataForApproval(cleanedPayload, user.email || 'Unknown User'); 
                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
@@ -1709,8 +1714,12 @@ const ChildHealthServicesView = ({
             }
             setSubmissionForReview(null);
             setComparisonFacilities([]);
-            refreshSubmissions(true);
-            if (cleanSubmissionData._action !== 'DELETE') await fetchHealthFacilities({}, true);
+            // Take the handled submissions off the list here instead of
+            // re-reading every pending submission, and fetch only the
+            // facilities that changed instead of all of them.
+            const handledIds = (cleanSubmissionData._mergedSubmissionIds || [cleanSubmissionData.submissionId]).filter(Boolean);
+            dropPendingSubmissions(handledIds);
+            if (cleanSubmissionData._action !== 'DELETE') await fetchHealthFacilities({}, 'sync');
         } catch (error) {
              setToast({ show: true, message: t('facilities_page.services.approval_failed', 'Approval failed: {{message}}', { message: error.message }), type: 'error' });
         }
@@ -1726,7 +1735,7 @@ const ChildHealthServicesView = ({
                 
                 await Promise.all(idsArray.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Rejector')));
                 setToast({ show: true, message: t('facilities_page.services.submission_rejected', 'Submission rejected.'), type: "success" });
-                refreshSubmissions(true);
+                dropPendingSubmissions(idsArray);
             } catch (error) {
                 setToast({ show: true, message: t('facilities_page.services.rejection_failed', 'Rejection failed: {{message}}', { message: error.message }), type: 'error' });
             }
