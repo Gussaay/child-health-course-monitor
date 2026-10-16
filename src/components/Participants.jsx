@@ -40,6 +40,7 @@ import { useAuth } from '../hooks/useAuth';
 // --- Import Certificate Generators ---
 import { generateBlankCertificatePdf, startCertificateDownload } from './CertificateGenerator';
 import { confirmDialog, alertDialog } from './dialogs';
+import { publicBaseUrl } from '../utils/publicLink';
 
 
 // ====================================================================
@@ -142,6 +143,10 @@ const CertificateLanguageModal = ({ isOpen, onClose, onConfirm, title }) => {
     );
 };
 
+const certificateLink = (participantId, lang) => {
+    return `${publicBaseUrl()}/public/certificate/download/${participantId}?lang=${lang}`;
+};
+
 const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = false, setToast }) => {
     const { t } = useTranslation();
     const [language, setLanguage] = useState('en');
@@ -165,7 +170,7 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
             const p = participants[i];
             setProgress({ current: i + 1, total, errors: errorCount });
             
-            const downloadLink = `${window.location.origin}/public/certificate/download/${p.id}?lang=${language}`;
+            const downloadLink = certificateLink(p.id, language);
 
             if (p.email) {
                 const result = await queueCertificateEmail(p, downloadLink, language);
@@ -250,7 +255,7 @@ const ShareCoursePageModal = ({ isOpen, onClose, courseId, courseName }) => {
 
     useEffect(() => {
         if (isOpen && courseId) {
-            setLink(`${window.location.origin}/public/course/certificates/${courseId}`);
+            setLink(`${publicBaseUrl()}/public/course/certificates/${courseId}`);
             setCopied(false);
         }
     }, [isOpen, courseId]);
@@ -296,7 +301,7 @@ const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId
         if (isOpen && participantId) {
             setLanguage('en'); 
             setCopied(false);
-            const link = `${window.location.origin}/public/certificate/download/${participantId}?lang=en`;
+            const link = certificateLink(participantId, 'en');
             setGeneratedLink(link);
         }
     }, [isOpen, participantId]);
@@ -304,7 +309,7 @@ const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId
     const handleLanguageChange = (e) => {
         const newLang = e.target.value;
         setLanguage(newLang);
-        const link = `${window.location.origin}/public/certificate/download/${participantId}?lang=${newLang}`;
+        const link = certificateLink(participantId, newLang);
         setGeneratedLink(link);
     };
 

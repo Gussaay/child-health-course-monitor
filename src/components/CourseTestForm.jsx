@@ -16,6 +16,7 @@ import {
 import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X, AlertTriangle } from 'lucide-react'; 
 import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { publicBaseUrl } from '../utils/publicLink';
 
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -1226,7 +1227,7 @@ const TestScoresDashboard = ({
                                 const params = new URLSearchParams();
                                 params.set('type', type === 'pre-test' ? 'pre' : 'post');
                                 if (module) params.set('module', module);
-                                const link = `${window.location.origin}/public/test/course/${courseId}?${params.toString()}`;
+                                const link = `${publicBaseUrl()}/public/test/course/${courseId}?${params.toString()}`;
                                 navigator.clipboard.writeText(link)
                                     .then(() => notify(t('course_tests.tests.link_copied_label', '{{label}} link copied to clipboard!', { label: formatTestLabel(type, module || null, t) })))
                                     .catch(() => notify(t('course_tests.tests.copy_link_failed', 'Failed to copy link.')));
@@ -2692,7 +2693,7 @@ export function CourseTestForm({
                                     } else if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
                                         params.set('module', ssnbSubCourse);
                                     }
-                                    const link = `${window.location.origin}/public/test/course/${course.id}?${params.toString()}`;
+                                    const link = `${publicBaseUrl()}/public/test/course/${course.id}?${params.toString()}`;
                                     navigator.clipboard.writeText(link).then(() => notify(t('course_tests.tests.link_copied', 'Link copied!'))).catch(() => notify(t('course_tests.tests.copy_failed', 'Failed to copy.'))); 
                                 }} 
                                 title={t('course_tests.tests.copy_link', 'Copy link')}

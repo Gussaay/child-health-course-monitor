@@ -31,9 +31,10 @@ import SudanMap from '../SudanMap';
 import { Capacitor } from '@capacitor/core';
 import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { publicBaseUrl, publicCurrentUrl } from '../utils/publicLink';
 
 // --- Helper Functions ---
-const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+const getBaseUrl = () => publicBaseUrl();
 
 const shareViaWhatsApp = (textToShare, successMessage) => {
     navigator.clipboard.writeText(textToShare).then(() => {
@@ -1357,7 +1358,7 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack, isShare
     const hasCerts = facilitator?.certificateUrls && Object.keys(facilitator.certificateUrls).length > 0;
     
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const publicLink = isSharedView ? window.location.href : `${getBaseUrl()}/public/report/facilitator/${facilitator?.id}`;
+    const publicLink = isSharedView ? publicCurrentUrl() : `${getBaseUrl()}/public/report/facilitator/${facilitator?.id}`;
     
     const { 
         directedCourses, facilitatedCourses, combinedChartData, imciSubcourseData, 

@@ -69,6 +69,7 @@ import {
 import { confirmDialog } from '../dialogs';
 import { useStandardNames } from '../../hooks/useNameRegistry';
 import { hasRecordedProject, projectOfVisit, visitTimeOf } from '../../utils/visitProject';
+import { publicBaseUrl } from '../../utils/publicLink';
 
 // --- IPC form tabs (all three IPC forms save with serviceType 'IPC') ---
 const IPC_LIST_TABS = [
@@ -3854,7 +3855,7 @@ const SkillsMentorshipView = ({
     };
 
     const handleShareDashboardLink = () => {
-        const baseUrl = `${window.location.origin}/public/mentorship/dashboard/${activeService}`;
+        const baseUrl = `${publicBaseUrl()}/public/mentorship/dashboard/${activeService}`;
         const params = new URLSearchParams();
         
         const stateToShare = activeDashboardState || selectedState;

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { publicBaseUrl } from '../utils/publicLink';
 
 const PROGRAM_UNITS_DATA = [
     { id: "Neonatal Health Unit", key: "neonatal", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100", border: "border-blue-200" },
@@ -402,7 +403,7 @@ export default function ProjectTrackerView({ permissions }) {
         params.set('view', 'dashboard');
         params.set('tab', dashboardTab);
 
-        const link = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+        const link = `${publicBaseUrl()}${window.location.pathname}?${params.toString()}`;
         setShareModalInfo({ isOpen: true, title: t('trackers.projects.share.filtered_title', 'Share Filtered View'), link });
     };
 
@@ -413,7 +414,7 @@ export default function ProjectTrackerView({ permissions }) {
         params.set('view', 'dashboard');
         params.set('tab', task.status === 'Completed' ? 'completed' : 'active');
 
-        const link = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+        const link = `${publicBaseUrl()}${window.location.pathname}?${params.toString()}`;
         setShareModalInfo({ isOpen: true, title: t('trackers.projects.share.task_title', 'Share Specific Task'), link });
     };
 

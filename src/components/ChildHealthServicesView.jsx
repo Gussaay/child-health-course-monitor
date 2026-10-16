@@ -52,6 +52,7 @@ import {
 } from './FacilityForms.jsx';
 import { STATE_LOCALITIES } from "./constants.js";
 import { notify, confirmDialog } from './dialogs';
+import { publicBaseUrl } from '../utils/publicLink';
 
 // MISSING IMPLEMENTATION — generateFacilityListPdf is called below but has never
 // been defined in this file or imported from anywhere, so the facility-list PDF
@@ -1059,7 +1060,7 @@ const ChildHealthServicesView = ({
 
     const isSuperUserOrFed = permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || permissions?.manageScope === 'federal' || permissions?.isAdmin;
 
-    const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+    const getBaseUrl = () => publicBaseUrl();
 
     const shareViaWhatsApp = (textToShare, successMessage) => {
         navigator.clipboard.writeText(textToShare).then(() => {

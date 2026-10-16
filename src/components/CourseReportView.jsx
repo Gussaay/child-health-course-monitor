@@ -31,6 +31,7 @@ import { ExerciseCourseReport } from './imnci';
 import { FinalReportManager, ReportDocumentManager } from './FinalReportManager';
 import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { publicBaseUrl } from '../utils/publicLink';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 
@@ -153,7 +154,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
             routePrefix = `shared/${shareType}-report`;
         }
 
-        const shareUrl = `${window.location.origin}/${routePrefix}/${shareableItem.id}`;
+        const shareUrl = `${publicBaseUrl()}/${routePrefix}/${shareableItem.id}`;
         
         navigator.clipboard.writeText(shareUrl).then(() => {
             setCopySuccess(t('course_report.share.link_copied', 'Link copied!'));

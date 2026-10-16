@@ -60,6 +60,7 @@ import {
 import { notify, confirmDialog, alertDialog } from './dialogs';
 import { useStandardNames } from '../hooks/useNameRegistry';
 import { canonicalOptions } from '../utils/nameRegistry';
+import { publicBaseUrl } from '../utils/publicLink';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
@@ -909,7 +910,7 @@ export function CoursesTable({
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
-    const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+    const getBaseUrl = () => publicBaseUrl();
 
     const shareViaWhatsApp = (textToShare, successMessage) => {
         navigator.clipboard.writeText(textToShare).then(() => {

@@ -13,6 +13,7 @@ import {
     AlertTriangle, Briefcase, Save, X, BarChart2, PieChart, Layers, ListFilter, FileText, Download, Upload, Users, Share2
 } from 'lucide-react';
 import { notify, confirmDialog } from './dialogs';
+import { publicBaseUrl } from '../utils/publicLink';
 
 // Population targets are the denominators the plans are measured against, so
 // they are maintained here rather than in a screen of their own. Lazy because
@@ -983,7 +984,7 @@ export default function PlanningView({ permissions = {} }) {
 
     // Absolute, because it is going into WhatsApp.
     const planShareLink = (planId) => {
-        const base = `${window.location.origin}${window.location.pathname}`;
+        const base = `${publicBaseUrl()}${window.location.pathname}`;
         return `${base}?view=planning&plan=${encodeURIComponent(planId)}`;
     };
 

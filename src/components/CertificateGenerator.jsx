@@ -38,6 +38,7 @@ import {
 import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
+import { publicBaseUrl } from '../utils/publicLink';
 
 // -----------------------------------------------------------------------------
 // HELPER FUNCTIONS
@@ -1062,7 +1063,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         : (customConfig.dateLabelEn || CERT_DEFAULTS.dateLabelEn);
     const showDate = !customConfig.hideDate && !!displayDate;
 
-    const verificationUrl = isTemplate ? '' : `${window.location.origin}/verify/certificate/${participant?.id}`;
+    const verificationUrl = isTemplate ? '' : `${publicBaseUrl()}/verify/certificate/${participant?.id}`;
 
     const containerStyle = { width: '297mm', height: '210mm', boxSizing: 'border-box', fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif', color: 'black', backgroundColor: 'white', position: 'relative', direction: isArabic ? 'rtl' : 'ltr' };
     const qrContainerStyle = { position: 'absolute', top: '60mm', width: '45mm', height: 'auto', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', left: isArabic ? '15mm' : 'auto', right: isArabic ? 'auto' : '15mm' };

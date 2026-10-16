@@ -49,6 +49,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { publicBaseUrl, publicCurrentUrl } from '../utils/publicLink';
 
 // Standard job titles for normalization
 const STANDARD_JOB_TITLES = ['صحة عامة', 'طبيب', 'ممرض', 'ظابط تغذية', 'مساعد طبي', 'صيدلي', 'إحصائي', 'إدارة اعمال'];
@@ -68,7 +69,7 @@ const normalizeState = (rawState) => {
 };
 
 // --- Helper Functions ---
-const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+const getBaseUrl = () => publicBaseUrl();
 
 const shareViaWhatsApp = (textToShare, successMessage) => {
     navigator.clipboard.writeText(textToShare).then(() => {
@@ -3020,7 +3021,7 @@ export function TeamMemberApplicationForm() {
 export function PublicTeamMemberProfileView({ member, level }) {
     const { t } = useTranslation();
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const publicLink = window.location.href;
+    const publicLink = publicCurrentUrl();
 
     const renderDetail = (label, value) => {
         if (!value) return null;
