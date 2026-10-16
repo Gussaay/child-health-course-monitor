@@ -429,56 +429,48 @@ function StatBox({ value, label, busy, icon: Icon, format = (v) => v.toLocaleStr
     );
 }
 
-// One service's coverage as a labelled bar on the main menu.
-const COVERAGE_BARS = [
-    { key: 'imnci', label: 'IMNCI', bar: 'bg-sky-500', text: 'text-sky-700' },
-    { key: 'etat', label: 'ETAT', bar: 'bg-rose-500', text: 'text-rose-700' },
-    { key: 'eenc', label: 'EENC', bar: 'bg-emerald-500', text: 'text-emerald-700' },
-    { key: 'scnu', label: 'SCNU', bar: 'bg-violet-500', text: 'text-violet-700' },
+// Coverage on the greeting card: overall first, then the four services,
+// all on one row (it scrolls sideways on narrow phones).
+const COVERAGE_ITEMS = [
+    { key: 'imnci', label: 'IMNCI' },
+    { key: 'etat', label: 'ETAT' },
+    { key: 'eenc', label: 'EENC' },
+    { key: 'scnu', label: 'SCNU' },
 ];
 
-function CoverageCard({ coverage, busy, onOpen }) {
+function CoverageChip({ label, value, loading, strong = false }) {
+    return (
+        <div className={`shrink-0 min-w-[5.5rem] flex-1 rounded-2xl px-3 py-2 ring-1 ${strong ? 'bg-white text-slate-800 ring-white' : 'bg-white/15 ring-white/10'}`}>
+            <p className={`text-[11px] leading-tight truncate ${strong ? 'font-semibold text-slate-500' : 'text-white/80'}`}>{label}</p>
+            {loading
+                ? <Skeleton className={`${strong ? '' : 'shimmer-light'} h-5 w-10 mt-1`} />
+                : (
+                    <>
+                        <p className="text-lg font-bold leading-tight mt-0.5">{value === null || value === undefined ? '—' : `${value}%`}</p>
+                        <div className={`mt-1 h-1 rounded-full overflow-hidden ${strong ? 'bg-slate-200' : 'bg-white/20'}`}>
+                            <div className={`h-full rounded-full ${strong ? 'bg-sky-500' : 'bg-white'}`} style={{ width: `${Math.min(100, value || 0)}%` }} />
+                        </div>
+                    </>
+                )}
+        </div>
+    );
+}
+
+function CoverageRow({ coverage, busy, onOpen }) {
     const { t } = useTranslation();
     const loading = !coverage && busy;
     if (!coverage && !busy) return null;
-    const overall = coverage?.overall ?? 0;
-    const ring = `conic-gradient(#0ea5e9 ${overall * 3.6}deg, #e2e8f0 0deg)`;
-    return (
-        <button type="button" onClick={onOpen} className="w-full text-start rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition p-4 sm:p-5">
-            <div className="flex items-center gap-4 sm:gap-6">
-                <div className="shrink-0 flex flex-col items-center">
-                    {loading
-                        ? <Skeleton className="h-20 w-20 rounded-full" />
-                        : (
-                            <div className="h-20 w-20 rounded-full p-1.5" style={{ background: ring }}>
-                                <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
-                                    <span className="text-lg font-bold text-slate-800">{overall}%</span>
-                                </div>
-                            </div>
-                        )}
-                    <span className="mt-1.5 text-[11px] font-semibold text-slate-500 text-center leading-tight">{t('landing.coverage.overall', 'Overall coverage')}</span>
-                </div>
-                <div className="flex-1 min-w-0 grid gap-2.5">
-                    {COVERAGE_BARS.map(({ key, label, bar, text }) => {
-                        const s = coverage?.services?.[key];
-                        return (
-                            <div key={key} className="min-w-0">
-                                <div className="flex items-baseline justify-between gap-2 text-xs">
-                                    <span className="font-semibold text-slate-700 truncate">{t(`landing.coverage.${key}`, label)}</span>
-                                    {loading
-                                        ? <Skeleton className="h-3 w-10" />
-                                        : <span className={`font-bold ${text}`}>{s.perc}% <span className="font-normal text-slate-400">({s.n}/{s.d})</span></span>}
-                                </div>
-                                <div className="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                                    <div className={`h-full rounded-full ${bar} transition-all duration-700`} style={{ width: `${loading ? 0 : Math.min(100, s.perc)}%` }} />
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        </button>
+    const row = (
+        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <CoverageChip strong label={t('landing.coverage.overall', 'Overall coverage')} value={coverage?.overall} loading={loading} />
+            {COVERAGE_ITEMS.map(({ key, label }) => (
+                <CoverageChip key={key} label={t(`landing.coverage.${key}`, label)} value={coverage?.services?.[key]?.perc} loading={loading} />
+            ))}
+        </div>
     );
+    return onOpen
+        ? <button type="button" onClick={onOpen} className="mt-2 block w-full text-start">{row}</button>
+        : <div className="mt-2">{row}</div>;
 }
 
 function Landing({ navigate, permissions, user, roles = [], userStates = [], userLocalities = [], stats = null }) {
@@ -524,17 +516,16 @@ function Landing({ navigate, permissions, user, roles = [], userStates = [], use
                             {level !== 'locality' && <StatBox icon={User} busy={stats.busy.facilitators} value={stats.facilitators} label={t('landing.stats.facilitators', 'Facilitators')} />}
                         </div>
                     )}
+                    {stats && (
+                        <CoverageRow
+                            coverage={stats.coverage}
+                            busy={stats.busy.facilities}
+                            onOpen={permissions.canViewFacilities ? () => navigate('childHealthServices') : undefined}
+                        />
+                    )}
                     {stats && <p className="mt-2 text-[11px] text-white/70">{t('landing.stats_year', 'This year')} ({new Date().getFullYear()})</p>}
                 </div>
             </section>
-
-            {stats && (
-                <CoverageCard
-                    coverage={stats.coverage}
-                    busy={stats.busy.facilities}
-                    onOpen={permissions.canViewFacilities ? () => navigate('childHealthServices') : undefined}
-                />
-            )}
 
             {accessibleButtons.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
