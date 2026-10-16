@@ -1,5 +1,7 @@
 // data.js
 import { db, auth as firebaseAuth, isOnline } from './firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { publicBaseUrl } from './utils/publicLink';
 import {
     collection,
     query,
@@ -2615,6 +2617,43 @@ export const queueCertificateEmail = async (participant, link, language) => {
         return { success: false, error: error.message };
     }
 };
+
+// Sends certificate emails through the sendCertificateEmails Cloud Function,
+// which mails them straight away and reports each failure with its reason.
+// Until that function is deployed (it needs the SMTP_PASSWORD secret), the
+// old route is used: the email is queued for the Trigger Email extension.
+// Returns [{ id, name, ok, queued?, error? }] in the order given.
+const FUNCTION_MISSING = ['functions/not-found', 'functions/internal', 'functions/unavailable'];
+
+export async function sendCertificateEmails(participants = [], language = 'en') {
+    const lang = language === 'ar' ? 'ar' : 'en';
+    const list = participants.filter(Boolean);
+    const results = [];
+    const call = httpsCallable(getFunctions(db.app), 'sendCertificateEmails');
+
+    for (let i = 0; i < list.length; i += 100) {
+        const chunk = list.slice(i, i + 100);
+        try {
+            const res = await call({ participantIds: chunk.map((p) => p.id), lang });
+            results.push(...(res?.data?.results || []));
+        } catch (error) {
+            if (!FUNCTION_MISSING.includes(error?.code)) {
+                const reason = error?.message || 'Sending failed.';
+                chunk.forEach((p) => results.push({ id: p.id, name: p.name, ok: false, error: reason }));
+                continue;
+            }
+            for (const p of chunk) {
+                if (!p.email) { results.push({ id: p.id, name: p.name, ok: false, error: 'No email address saved.' }); continue; }
+                const link = `${publicBaseUrl()}/public/certificate/download/${p.id}?lang=${lang}`;
+                const queued = await queueCertificateEmail(p, link, lang);
+                results.push(queued.success
+                    ? { id: p.id, name: p.name, ok: true, queued: true }
+                    : { id: p.id, name: p.name, ok: false, error: queued.error });
+            }
+        }
+    }
+    return results;
+}
 
 // ============================================================================
 // --- ONLINE COURSES (self-paced training) ---

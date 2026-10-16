@@ -313,6 +313,9 @@ exports.setUserRoles = onCall(async (request) => {
 // Read-only programme data for the chat panel in the app and for the MCP server
 // the team connects from claude.ai. Both act as the person asking and apply the
 // same permissions the app applies; see claudeAccess.js.
+// Certificate emails, sent directly instead of through the Trigger Email extension.
+exports.sendCertificateEmails = require("./certificateEmail").sendCertificateEmails;
+
 const claudeEndpoints = require("./claudeEndpoints");
 exports.claudeQuery = claudeEndpoints.claudeQuery;
 exports.claudeMcp = claudeEndpoints.claudeMcp;

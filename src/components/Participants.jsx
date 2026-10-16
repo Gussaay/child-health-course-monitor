@@ -23,7 +23,7 @@ import {
     importParticipants,
     bulkMigrateFromMappings,
     getHealthFacilityById,
-    queueCertificateEmail,
+    sendCertificateEmails,
     saveParticipantAndSubmitFacilityUpdate,
     deleteParticipant,
     saveFacilitySnapshot,
@@ -163,37 +163,28 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
 
     const handleSend = async () => {
         setIsSending(true);
-        let errorCount = 0;
         const total = participants.length;
+        setProgress({ current: 0, total, errors: 0, failures: [] });
 
-        for (let i = 0; i < total; i++) {
-            const p = participants[i];
-            setProgress({ current: i + 1, total, errors: errorCount });
-            
-            const downloadLink = certificateLink(p.id, language);
-
-            if (p.email) {
-                const result = await queueCertificateEmail(p, downloadLink, language);
-                if (!result.success) {
-                    console.error(`Failed to email ${p.name}: ${result.error}`);
-                    errorCount++;
-                }
-            } else {
-                console.warn(`Skipping ${p.name}: No email address.`);
-                errorCount++;
-            }
+        let results = [];
+        try {
+            results = await sendCertificateEmails(participants, language);
+        } catch (error) {
+            results = participants.map((p) => ({ id: p.id, name: p.name, ok: false, error: error?.message || 'Sending failed.' }));
         }
-        
+        const failures = results.filter((r) => !r.ok);
+        const errorCount = failures.length;
+
         setIsSending(false);
-        setProgress(prev => ({ ...prev, errors: errorCount }));
-        
+        setProgress({ current: total, total, errors: errorCount, failures });
+
         if (errorCount === 0) {
-            setToast({ show: true, message: t('participants_page.email.success', 'Successfully queued emails for {{count}} participants.', { count: total }), type: 'success' });
+            setToast({ show: true, message: t('participants_page.email.sent', 'Emails sent to {{count}} participants.', { count: total }), type: 'success' });
             onClose();
         } else if (errorCount < total) {
             setToast({ show: true, message: t('participants_page.email.partial', 'Queued emails. {{count}} failed (missing email or error).', { count: errorCount }), type: 'warning' });
         } else {
-            setToast({ show: true, message: t('participants_page.email.failed', 'Failed to send emails. Check if participants have email addresses.'), type: 'error' });
+            setToast({ show: true, message: failures[0]?.error || t('participants_page.email.failed', 'Failed to send emails. Check if participants have email addresses.'), type: 'error' });
         }
     };
 
@@ -231,6 +222,13 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
                             <p className="text-red-600 text-sm mt-2">
                                 {t('participants_page.email.skipped', '{{count}} skipped (missing email or error)', { count: progress.errors })}
                             </p>
+                        )}
+                        {progress.failures?.length > 0 && (
+                            <ul className="mt-3 max-h-40 overflow-y-auto text-start text-xs text-red-700 space-y-1 bg-red-50 border border-red-100 rounded p-2">
+                                {progress.failures.map((f) => (
+                                    <li key={f.id}><strong>{f.name || f.id}:</strong> {f.error}</li>
+                                ))}
+                            </ul>
                         )}
                     </div>
                 )}

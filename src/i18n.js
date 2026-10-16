@@ -1418,6 +1418,7 @@ const resources = {
         },
         email: {
           success: "Successfully queued emails for {{count}} participants.",
+          sent: "Emails sent to {{count}} participants.",
           partial: "Queued emails. {{count}} failed (missing email or error).",
           failed: "Failed to send emails. Check if participants have email addresses.",
           title_bulk: "Email All Certificates",
@@ -8320,6 +8321,7 @@ const resources = {
           design_template: "تصميم قالب الشهادة",
         },
         email: {
+          sent: "تم إرسال البريد الإلكتروني إلى {{count}} مشارك.",
           success: "تمت جدولة رسائل البريد الإلكتروني لـ {{count}} مشارك بنجاح.",
           partial: "تمت جدولة الرسائل. فشل {{count}} (بريد إلكتروني مفقود أو خطأ).",
           failed: "فشل إرسال الرسائل. تحقق من وجود عناوين بريد إلكتروني للمشاركين.",
