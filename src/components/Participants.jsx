@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from "jspdf"; 
 
 // --- Icons ---
-import { Mail, Lock, RefreshCw, Search, Printer, ArrowLeft, Save, X, Building2, Users, CheckCircle, AlertTriangle } from 'lucide-react'; 
+import { Mail, MessageCircle, Share2, Lock, RefreshCw, Search, Printer, ArrowLeft, Save, X, Building2, Users, CheckCircle, AlertTriangle } from 'lucide-react'; 
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
@@ -41,6 +41,9 @@ import { useAuth } from '../hooks/useAuth';
 import { generateBlankCertificatePdf, startCertificateDownload, certificatePdfBase64 } from './CertificateGenerator';
 import { confirmDialog, alertDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
+import { whatsappLink } from '../utils/whatsapp';
+import { sharePdf, certificateFileName } from '../utils/sharePdf';
+import { Capacitor } from '@capacitor/core';
 
 
 // ====================================================================
@@ -153,13 +156,104 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
     const [isSending, setIsSending] = useState(false);
     const [progress, setProgress] = useState({ current: 0, total: 0, errors: 0 });
 
+    const [whatsappOpened, setWhatsappOpened] = useState({});
+
     useEffect(() => {
         if (isOpen) {
             setLanguage('en');
             setIsSending(false);
             setProgress({ current: 0, total: participants.length, errors: 0 });
+            setWhatsappOpened({});
         }
     }, [isOpen, participants]);
+
+    // WhatsApp cannot be sent from the server without Meta's business API, so
+    // each button opens WhatsApp with the number and message filled in and the
+    // user presses send. Only the link can go this way, not the PDF.
+    const whatsappMessage = (p) => {
+        const params = { name: p.name || '', course: course?.course_type || '', link: certificateLink(p.id, language) };
+        return language === 'ar'
+            ? `مرحباً ${params.name}،\nتهانينا على إكمال دورة ${params.course}. يمكنك تنزيل شهادتك من الرابط التالي:\n${params.link}`
+            : `Dear ${params.name},\nCongratulations on completing the ${params.course} course. You can download your certificate here:\n${params.link}`;
+    };
+
+    const openWhatsapp = (p) => {
+        const url = whatsappLink(p.phone, whatsappMessage(p));
+        if (!url) return;
+        window.open(url, Capacitor.isNativePlatform() ? '_system' : '_blank');
+        setWhatsappOpened((prev) => ({ ...prev, [p.id]: true }));
+    };
+
+    const [sharingId, setSharingId] = useState(null);
+
+    // Shares the certificate PDF itself; the user picks WhatsApp and the chat
+    // in the phone's share sheet.
+    const shareCertificatePdf = async (p) => {
+        if (!course) return;
+        if (certificateApprovalState(p, course).state === 'stale') {
+            setToast({ show: true, message: t('participants_page.email.held', 'Details changed after approval; the certificate must be approved again.'), type: 'error' });
+            return;
+        }
+        setSharingId(p.id);
+        try {
+            const pdf = await certificatePdfBase64(course, p, managerName, language, facilitators, coordinators);
+            if (!pdf) throw new Error(t('participants_page.whatsapp.pdf_failed', 'Could not create the certificate PDF.'));
+            const result = await sharePdf(pdf, certificateFileName(p.name), { title: p.name, text: whatsappMessage(p) });
+            if (result === 'shared') setWhatsappOpened((prev) => ({ ...prev, [p.id]: true }));
+            if (result === 'downloaded') {
+                setToast({ show: true, message: t('participants_page.whatsapp.downloaded', 'This device cannot share files, so the PDF was downloaded. Attach it in WhatsApp.'), type: 'info' });
+            }
+        } catch (error) {
+            setToast({ show: true, message: error?.message || t('participants_page.whatsapp.pdf_failed', 'Could not create the certificate PDF.'), type: 'error' });
+        } finally {
+            setSharingId(null);
+        }
+    };
+
+    const whatsappSection = !isSending && (
+        <div className="border-t pt-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1">
+                <MessageCircle className="w-4 h-4 text-green-600" />
+                {t('participants_page.whatsapp.title', 'Send on WhatsApp')}
+            </div>
+            <p className="text-xs text-gray-500 mb-2">
+                {t('participants_page.whatsapp.hint_both', 'Share PDF sends the certificate file: choose WhatsApp, then the chat. The WhatsApp button opens the participant\'s chat with the certificate link ready.')}
+            </p>
+            <ul className="max-h-48 overflow-y-auto divide-y border rounded">
+                {participants.map((p) => {
+                    const hasNumber = !!whatsappLink(p.phone, '');
+                    return (
+                        <li key={p.id} className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm">
+                            <span className="truncate">
+                                {p.name}
+                                <span className="block text-xs text-gray-400" dir="ltr">{p.phone || t('participants_page.whatsapp.no_phone', 'No phone number')}</span>
+                            </span>
+                            <div className="flex gap-1 shrink-0">
+                            <Button
+                                variant="secondary"
+                                onClick={() => shareCertificatePdf(p)}
+                                disabled={!course || sharingId !== null}
+                                className="shrink-0 !py-1 !px-2 text-xs"
+                            >
+                                {sharingId === p.id ? <span className="inline-block w-3.5 h-3.5 me-1 align-middle animate-spin rounded-full border-2 border-gray-400 border-t-transparent" /> : <Share2 className="w-3.5 h-3.5 me-1 inline" />}
+                                {t('participants_page.whatsapp.share_pdf', 'Share PDF')}
+                            </Button>
+                            <Button
+                                variant={whatsappOpened[p.id] ? 'secondary' : 'success'}
+                                onClick={() => openWhatsapp(p)}
+                                disabled={!hasNumber}
+                                className="shrink-0 !py-1 !px-2 text-xs"
+                            >
+                                {whatsappOpened[p.id] ? <CheckCircle className="w-3.5 h-3.5 me-1 inline" /> : <MessageCircle className="w-3.5 h-3.5 me-1 inline" />}
+                                {whatsappOpened[p.id] ? t('participants_page.whatsapp.opened', 'Opened') : t('participants_page.whatsapp.send', 'WhatsApp')}
+                            </Button>
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
+    );
 
     const handleSend = async () => {
         setIsSending(true);
@@ -246,6 +340,8 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
                         )}
                     </div>
                 )}
+
+                {whatsappSection}
 
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
                     <Button variant="secondary" onClick={onClose} disabled={isSending}>{t('participants_page.common.close', 'Close')}</Button>
