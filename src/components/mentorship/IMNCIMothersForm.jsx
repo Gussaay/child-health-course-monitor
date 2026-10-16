@@ -445,7 +445,7 @@ const MothersForm = ({
                             
                             <FormGroup label="رقم الزيارة" className="text-right">
                                 <Input 
-                                    type="number" 
+                                    type="number" inputMode="decimal" 
                                     name="visitNumber" 
                                     value={formData.visitNumber} 
                                     readOnly={!canEditVisitNumber} 
@@ -459,7 +459,7 @@ const MothersForm = ({
                                 <Input type="text" name="mother_name" value={formData.mother_name} onChange={handleSimpleChange} placeholder="اسم الأم" className="p-1 text-sm w-full border rounded text-right" />
                             </FormGroup>
                              <FormGroup label="عمر الطفل (شهور) (اختياري)" className="text-right">
-                                <Input type="number" name="child_age" value={formData.child_age} onChange={handleSimpleChange} placeholder="العمر" className="p-1 text-sm w-full border rounded text-right" min="0" max="59" />
+                                <Input type="number" inputMode="decimal" name="child_age" value={formData.child_age} onChange={handleSimpleChange} placeholder="العمر" className="p-1 text-sm w-full border rounded text-right" min="0" max="59" />
                             </FormGroup>
                              <FormGroup label="جنس الطفل (اختياري)" className="text-right">
                                 <Select name="child_sex" value={formData.child_sex} onChange={handleSimpleChange}>
@@ -510,7 +510,7 @@ const MothersForm = ({
                     <Button type="submit" disabled={isSaving}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الاستبيان'} </Button>
                  </div>
 
-                 <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
+                 <div className="flex sm:hidden fixed bottom-[var(--bottom-nav,4rem)] left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving} size="sm">
                         إلغاء
                     </Button>

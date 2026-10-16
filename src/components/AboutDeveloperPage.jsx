@@ -90,16 +90,16 @@ export default function AboutDeveloperPage({ permissions }) {
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
             <Card>
                 <PageHeader title={t('admin_pages.about.page_title', 'About the Team')} subtitle={t('admin_pages.about.page_subtitle', 'National Child Health Program Monitoring System')} />
-                <div className="p-6 sm:p-10">
+                <div className="p-3 md:p-10">
                     
                     {/* Main Developer (Horizontal Layout) */}
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8 mb-12 border-b border-slate-200 pb-10">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-8 mb-6 md:mb-12 border-b border-slate-200 pb-6 md:pb-10">
                         {mainDeveloper && <ProfilePicture member={mainDeveloper} />}
                         
                         {mainDeveloper && (
                             <div className="text-center sm:text-start pt-2">
-                                <h2 className="text-3xl font-bold text-slate-800">{mainDeveloper.name}</h2>
-                                <h3 className="text-xl font-bold text-sky-600 mt-1.5">{mainDeveloper.title}</h3>
+                                <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{mainDeveloper.name}</h2>
+                                <h3 className="text-lg md:text-xl font-bold text-sky-600 mt-1.5">{mainDeveloper.title}</h3>
                                 <div className="mt-4 space-y-1.5 text-slate-600 font-medium">
                                     <p className="flex items-center justify-center sm:justify-start gap-2">
                                         <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0"></span>
@@ -116,7 +116,7 @@ export default function AboutDeveloperPage({ permissions }) {
 
                     {/* Reviewers Section */}
                     <div>
-                        <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center justify-center sm:justify-start gap-3 border-b-2 border-sky-100 inline-flex pb-2">
+                        <h3 className="text-xl md:text-2xl font-bold text-slate-800 mb-4 md:mb-6 flex items-center justify-center sm:justify-start gap-3 border-b-2 border-sky-100 inline-flex pb-2">
                             <Users className="w-7 h-7 text-sky-500" />
                             {t('admin_pages.about.main_reviewers', 'Main Reviewers')}
                         </h3>
@@ -124,7 +124,7 @@ export default function AboutDeveloperPage({ permissions }) {
                         {/* Grid for Reviewers (Horizontal cards inside the grid) */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-4">
                             {reviewers.map(member => (
-                                <div key={member.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                                <div key={member.id} className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-center sm:items-start gap-5">
                                     <ProfilePicture member={member} />
                                     
                                     <div className="text-center sm:text-start w-full">

@@ -5,14 +5,25 @@ import {
 } from '../CommonComponents';
 
 // --- Smart Auto-Scroll Helper ---
+// After an answer, move down to the next unanswered question BELOW the one
+// just answered. Questions left unanswered higher up are not jumped back to
+// (that used to pull the page up whenever something earlier was skipped).
+let lastTapped = null;
+if (typeof document !== 'undefined') {
+    document.addEventListener('pointerdown', (e) => { lastTapped = e.target; }, true);
+}
+
 export const handleAutoScroll = () => {
+    const anchor = lastTapped;
     setTimeout(() => {
-        const nextUnanswered = document.querySelector('.row-unanswered');
-        if (nextUnanswered) {
-            const y = nextUnanswered.getBoundingClientRect().top + window.scrollY - 180;
-            window.scrollTo({ top: y, behavior: 'smooth' });
-        }
-    }, 400); 
+        const rows = Array.from(document.querySelectorAll('.row-unanswered'));
+        if (!rows.length) return;
+        const fromY = anchor && anchor.isConnected ? anchor.getBoundingClientRect().bottom : 0;
+        const next = rows.find((el) => el.getBoundingClientRect().top > fromY && !el.contains(anchor));
+        if (!next) return;
+        const y = next.getBoundingClientRect().top + window.scrollY - 180;
+        if (y > window.scrollY) window.scrollTo({ top: y, behavior: 'smooth' });
+    }, 400);
 };
 
 // --- Reusable Segmented Control (Adapted for RTL) ---

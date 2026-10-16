@@ -4,7 +4,8 @@ import * as XLSX from 'xlsx';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { amiriFontBase64 } from './AmiriFont.js'; 
-import { Card, CardBody, Button, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, Modal } from './CommonComponents';
+import { Card, CardBody, Button, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, Modal, PageTabs } from './CommonComponents';
+import { useTranslation } from 'react-i18next';
 import { upsertMasterPlan, deleteMasterPlan, upsertOperationalPlan, deleteOperationalPlan } from '../data';
 import { useDataCache } from '../DataContext';
 import { 
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { notify, confirmDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
+import { useRememberedState } from '../utils/rememberedState';
 
 // Population targets are the denominators the plans are measured against, so
 // they are maintained here rather than in a screen of their own. Lazy because
@@ -463,6 +465,7 @@ const SelectWithOther = ({ options, value, onChange, placeholder, otherLabel = '
 };
 
 export default function PlanningView({ permissions = {} }) {
+    const { t } = useTranslation();
     const { 
         masterPlans: rawPlans, fetchMasterPlans, 
         operationalPlans: rawOpPlans, fetchOperationalPlans, 
@@ -492,10 +495,10 @@ export default function PlanningView({ permissions = {} }) {
     // ==========================================
     // 1. GLOBAL CONTEXT STATE (Simplified to Year Only)
     // ==========================================
-    const [globalFilter, setGlobalFilter] = useState({ year: CURRENT_YEAR });
+    const [globalFilter, setGlobalFilter] = useRememberedState('planning.filters', { year: CURRENT_YEAR });
 
     // Evaluation Granular Filters
-    const [evalFilters, setEvalFilters] = useState({ outcome: '', axis: '' });
+    const [evalFilters, setEvalFilters] = useRememberedState('planning.evalFilters', { outcome: '', axis: '' });
 
     const [currentPlan, setCurrentPlan] = useState(null);
     const [currentOpPlan, setCurrentOpPlan] = useState(null);
@@ -1464,8 +1467,8 @@ export default function PlanningView({ permissions = {} }) {
                                         <td className={cellClass}><select className={`${inputClass} text-[10px]`} value={inv.axis} onChange={(e) => update('axis', e.target.value)}>{AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select></td>
                                         <td className={cellClass}><textarea className={`${inputClass} font-bold h-full`} rows={2} value={inv.name} onChange={(e) => update('name', e.target.value)} placeholder="نشاط..." required /></td>
                                         <td className={cellClass}><SelectWithOther options={INDICATOR_OPTIONS} value={inv.indicator} onChange={(val) => update('indicator', val)} placeholder="- اختر مؤشر -" otherLabel="اخرى حدد" /></td>
-                                        <td className={cellClass}><input type="number" className={`${inputClass} text-center`} value={inv.baseline} onChange={(e) => update('baseline', e.target.value)} /></td>
-                                        <td className={cellClass}><input type="number" className={`${inputClass} text-center font-bold`} value={inv.target} onChange={(e) => update('target', e.target.value)} /></td>
+                                        <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center`} value={inv.baseline} onChange={(e) => update('baseline', e.target.value)} /></td>
+                                        <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center font-bold`} value={inv.target} onChange={(e) => update('target', e.target.value)} /></td>
                                         
                                         <td className={`${cellClass} text-center align-middle bg-green-50/50 p-1`}>
                                             <button type="button" onClick={() => setScheduleModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-green-700 bg-white border border-green-300 hover:bg-green-100 transition-colors shadow-sm cursor-pointer">
@@ -1475,7 +1478,7 @@ export default function PlanningView({ permissions = {} }) {
                                             </button>
                                         </td>
                                         
-                                        <td className={cellClass}><input type="number" className={`${inputClass} text-center font-bold bg-gray-50`} value={inv.totalCost} onChange={(e) => update('totalCost', e.target.value)} /></td>
+                                        <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center font-bold bg-gray-50`} value={inv.totalCost} onChange={(e) => update('totalCost', e.target.value)} /></td>
                                         
                                         <td className={`${cellClass} text-center align-middle bg-indigo-50/30 p-1`}>
                                             <button type="button" onClick={() => setSupportModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer">
@@ -1665,7 +1668,7 @@ export default function PlanningView({ permissions = {} }) {
                                             </div>
                                             <div className="col-span-2">
                                                 <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة (المبلغ)</label>
-                                                <input type="number" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-left" dir="ltr" value={currentPlan.interventions[supportModalIdx].govValue} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, 'govValue', e.target.value)} placeholder="0" />
+                                                <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-left" dir="ltr" value={currentPlan.interventions[supportModalIdx].govValue} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, 'govValue', e.target.value)} placeholder="0" />
                                             </div>
                                         </div>
                                     </div>
@@ -1679,7 +1682,7 @@ export default function PlanningView({ permissions = {} }) {
                                                 </div>
                                                 <div className="w-full sm:w-1/3">
                                                     <label className="text-[10px] text-gray-500 font-bold mb-1 block">قيمة الدعم</label>
-                                                    <input type="number" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-left" dir="ltr" value={currentPlan.interventions[supportModalIdx][`extValue${num}`]} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
+                                                    <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-left" dir="ltr" value={currentPlan.interventions[supportModalIdx][`extValue${num}`]} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
                                                 </div>
                                             </div>
                                         ))}
@@ -1900,8 +1903,8 @@ export default function PlanningView({ permissions = {} }) {
                                                     )}
                                                 </td>
 
-                                                <td className={cellClass}><input type="number" className={`${inputClass} text-center font-bold`} value={act.target} onChange={(e) => update('target', e.target.value)} placeholder="0" /></td>
-                                                <td className={cellClass}><input type="number" className={`${inputClass} text-center font-bold bg-gray-50`} value={act.totalCost} onChange={(e) => update('totalCost', e.target.value)} placeholder="0" /></td>
+                                                <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center font-bold`} value={act.target} onChange={(e) => update('target', e.target.value)} placeholder="0" /></td>
+                                                <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center font-bold bg-gray-50`} value={act.totalCost} onChange={(e) => update('totalCost', e.target.value)} placeholder="0" /></td>
                                                 
                                                 <td className={`${cellClass} text-center align-middle bg-indigo-50/30 p-1`}>
                                                     <button type="button" onClick={() => setOpSupportModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer">
@@ -1953,7 +1956,7 @@ export default function PlanningView({ permissions = {} }) {
                                             </div>
                                             <div className="col-span-2">
                                                 <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة</label>
-                                                <input type="number" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 outline-none text-left" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx].govValue} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, 'govValue', e.target.value)} placeholder="0" />
+                                                <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 outline-none text-left" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx].govValue} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, 'govValue', e.target.value)} placeholder="0" />
                                             </div>
                                         </div>
                                     </div>
@@ -1967,7 +1970,7 @@ export default function PlanningView({ permissions = {} }) {
                                                 </div>
                                                 <div className="w-full sm:w-1/3">
                                                     <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة</label>
-                                                    <input type="number" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 outline-none text-left" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx][`extValue${num}`]} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
+                                                    <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 outline-none text-left" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx][`extValue${num}`]} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
                                                 </div>
                                             </div>
                                         ))}
@@ -2028,10 +2031,10 @@ export default function PlanningView({ permissions = {} }) {
                                         <td className="p-3 text-center font-bold text-indigo-600 min-w-[120px]">{a.target}</td>
                                         <td className="p-3 text-center bg-gray-100/50 text-xs font-medium min-w-[120px]">{base}</td>
                                         <td className="p-3 w-32 min-w-[120px]">
-                                            <Input type="number" value={a.achieved || 0} onChange={(e) => handleUpdateWeeklyTracking(a.id, 'achieved', e.target.value)} className="text-center font-bold text-green-700 border-green-200 w-full" />
+                                            <Input type="number" inputMode="decimal" value={a.achieved || 0} onChange={(e) => handleUpdateWeeklyTracking(a.id, 'achieved', e.target.value)} className="text-center font-bold text-green-700 border-green-200 w-full" />
                                         </td>
                                         <td className="p-3 w-32 min-w-[120px]">
-                                            <Input type="number" value={a.actualCost || 0} onChange={(e) => handleUpdateWeeklyTracking(a.id, 'actualCost', e.target.value)} className="text-center w-full" />
+                                            <Input type="number" inputMode="decimal" value={a.actualCost || 0} onChange={(e) => handleUpdateWeeklyTracking(a.id, 'actualCost', e.target.value)} className="text-center w-full" />
                                         </td>
                                         <td className="p-3 min-w-[120px]">
                                             <div className="flex items-center gap-2">
@@ -2062,6 +2065,20 @@ export default function PlanningView({ permissions = {} }) {
                 subtitle="الخطة الاستراتيجية، الخطط التشغيلية، وتقارير التقييم الشاملة" 
             />
 
+            <PageTabs
+                active={activeTab}
+                onChange={setActiveTab}
+                tabs={[
+                    { id: 'master', label: 'الخطة السنوية', short: t('ui.short.annual', 'Annual'), icon: TrendingUp },
+                    { id: 'quarterly', label: 'الخطط الربعية', short: t('ui.short.quarterly', 'Quarterly'), icon: Calendar },
+                    { id: 'monthly', label: 'الخطط الشهرية', short: t('ui.short.monthly', 'Monthly'), icon: Calendar },
+                    { id: 'weekly', label: 'التشغيلية الأسبوعية', short: t('ui.short.weekly', 'Weekly'), icon: FileSpreadsheet },
+                    { id: 'evaluation', label: 'التقييم', short: t('ui.short.evaluation', 'Evaluation'), icon: Activity },
+                    { id: 'population', label: 'السكان المستهدفون', short: t('ui.dash_tabs.population', 'Population'), icon: Users },
+                    { id: 'deleted', label: 'المحذوفات (Deleted Items)', short: t('ui.short.deleted', 'Deleted'), icon: Trash2 }
+                ]}
+            />
+
             {/* ==========================================
                 GLOBAL FILTER BAR (YEAR ONLY)
             ========================================== */}
@@ -2075,30 +2092,6 @@ export default function PlanningView({ permissions = {} }) {
                         {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 </div>
-            </div>
-
-            <div className="border-b border-gray-200">
-                <nav className="-mb-px flex gap-4 sm:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                    {[
-                        { id: 'master', label: 'الخطة السنوية', icon: TrendingUp },
-                        { id: 'quarterly', label: 'الخطط الربعية', icon: Calendar },
-                        { id: 'monthly', label: 'الخطط الشهرية', icon: Calendar },
-                        { id: 'weekly', label: 'التشغيلية الأسبوعية', icon: FileSpreadsheet },
-                        { id: 'evaluation', label: 'التقييم', icon: Activity },
-                        { id: 'population', label: 'السكان المستهدفون', icon: Users },
-                        { id: 'deleted', label: 'المحذوفات (Deleted Items)', icon: Trash2 }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`pb-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors ${
-                                activeTab === tab.id ? 'border-sky-500 text-sky-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            <tab.icon size={18} /> {tab.label}
-                        </button>
-                    ))}
-                </nav>
             </div>
 
             {/* --- Master Plan Tab --- */}
@@ -2145,7 +2138,29 @@ export default function PlanningView({ permissions = {} }) {
                                     </div>
                                     
                                     {expandedPlanId === plan.id && (
-                                        <div className="overflow-x-auto p-2 sm:p-4">
+                                        <div className="md:hidden p-2 space-y-2 text-start">
+                                            {plan.interventions?.map(inv => {
+                                                const gap = calculateGap(inv);
+                                                const quarters = ['q1', 'q2', 'q3', 'q4'].map((q, i) => inv[q] ? `ر${i + 1}` : null).filter(Boolean).join('، ');
+                                                return (
+                                                    <div key={inv.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                                                        <div className="font-bold text-sm text-gray-800 break-words">{inv.name}</div>
+                                                        {inv.axis && <div className="text-[11px] text-gray-500 mb-2">{inv.axis}</div>}
+                                                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                                                            <div className="col-span-2"><span className="text-gray-500">المؤشر: </span><span className="text-gray-700">{inv.indicator || '-'}</span></div>
+                                                            <div><span className="text-gray-500">الهدف: </span><span className="font-bold">{inv.target}</span></div>
+                                                            <div><span className="text-gray-500">الجداول: </span><span className="font-bold text-green-700">{quarters || '-'}</span></div>
+                                                            <div><span className="text-gray-500">التكلفة: </span><span className="font-bold">{Number(inv.totalCost).toLocaleString()}</span></div>
+                                                            <div><span className="text-gray-500">العجز / Gap: </span><span className={`font-bold ${gap > 0 ? 'text-red-600' : 'text-gray-500'}`}>{gap > 0 ? gap.toLocaleString() : '-'}</span></div>
+                                                            {inv.notes && <div className="col-span-2 text-[11px] text-gray-500"><span>ملاحظات: </span>{inv.notes}</div>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    {expandedPlanId === plan.id && (
+                                        <div className="hidden md:block overflow-x-auto p-2 sm:p-4">
                                             <table className="w-full text-xs text-right table-fixed border-collapse min-w-[1000px]">
                                                 <thead className="bg-slate-100 text-slate-700 font-bold border-b">
                                                     <tr>
@@ -2377,7 +2392,55 @@ export default function PlanningView({ permissions = {} }) {
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto w-full pb-4">
+                        {/* Phone view: one card per evaluated activity */}
+                        <div className="md:hidden p-2 space-y-2 text-start">
+                            {evalData.groupedData.map((group, gIdx) => (
+                                <div key={gIdx} className="space-y-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleEvaluationGroup(gIdx)}
+                                        className="w-full flex justify-between items-center gap-2 px-2 py-1.5 rounded bg-sky-50 border border-sky-100 text-xs font-bold text-sky-900 text-start"
+                                    >
+                                        <span>النتيجة المتوقعة: {group.outcomeName}</span>
+                                        {collapsedGroups[gIdx] ? <ChevronDown size={14} className="text-sky-700 shrink-0" /> : <ChevronUp size={14} className="text-sky-700 shrink-0" />}
+                                    </button>
+                                    {!collapsedGroups[gIdx] && group.rows.map((row, idx) => {
+                                        const target = Number(row.targetAnnual) || 0;
+                                        const pct = target > 0 ? Math.round(((Number(row.achievedAnnual) || 0) / target) * 100) : 0;
+                                        return (
+                                            <div key={`${row.id}_${idx}`} className={`rounded-lg border p-3 shadow-sm ${row.type === 'غير مخطط' ? 'bg-amber-50/40 border-amber-200' : 'bg-white border-slate-200'}`}>
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div className="font-bold text-sm text-gray-800 break-words">{row.name}</div>
+                                                    {row.type === 'غير مخطط'
+                                                        ? <span className="shrink-0 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">غير مخطط</span>
+                                                        : <span className="shrink-0 bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">مخطط</span>}
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                                                    <div><span className="text-gray-500">المحور: </span><span className="text-gray-700">{row.axis || '-'}</span></div>
+                                                    <div><span className="text-gray-500">المستهدف السنوي: </span><span className="font-bold text-indigo-600">{row.targetAnnual}</span></div>
+                                                    <div className="col-span-2">
+                                                        <div className="flex justify-between"><span className="text-gray-500">سنوي: </span><span className="font-bold">{row.achievedAnnual} ({pct}%)</span></div>
+                                                        <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                                                            <div className={`h-1 rounded-full ${pct >= 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(pct, 100)}%` }}></div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-span-2 text-[11px] text-gray-600">
+                                                        ر1: <b>{row.achievedQ1}</b> · ر2: <b>{row.achievedQ2}</b> · ر3: <b>{row.achievedQ3}</b> · ر4: <b>{row.achievedQ4}</b> · نصف سنوي: <b>{row.achievedH1}</b>
+                                                    </div>
+                                                    <div><span className="text-gray-500">الميزانية السنوية: </span><span className="font-medium">{row.budget.toLocaleString()}</span></div>
+                                                    <div><span className="text-gray-500">المنصرف الفعلي: </span><span className="font-bold text-red-600">{row.actualCost.toLocaleString()}</span></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ))}
+                            {evalData.groupedData.length === 0 && (
+                                <div className="text-center p-6 text-xs text-gray-500">لا توجد بيانات متاحة لعرض التقييم بناءً على الفلاتر المحددة.</div>
+                            )}
+                        </div>
+
+                        <div className="hidden md:block overflow-x-auto w-full pb-4">
                             <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1300px]">
                                 <thead className="bg-slate-800 text-white">
                                     <tr>

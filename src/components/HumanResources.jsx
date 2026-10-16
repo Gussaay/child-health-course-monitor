@@ -1,6 +1,6 @@
 // src/components/HumanResources.jsx
 import React, { Suspense, lazy } from 'react';
-import { Button, Card, CardBody, Spinner } from './CommonComponents';
+import { Button, Card, CardBody, Spinner, IS_NATIVE } from './CommonComponents';
 import { FacilitatorsView } from './Facilitator';
 import { ProgramTeamView } from './ProgramTeamView';
 import { PartnersPage } from './PartnersPage';
@@ -61,24 +61,24 @@ const HumanResourcesMenu = ({ onAction, canEmptyBin }) => {
     ];
 
     return (
-        <div className="max-w-6xl mx-auto mt-4 p-4 space-y-12" dir="ltr">
+        <div className="max-w-6xl mx-auto mt-4 p-0 md:p-4 space-y-12" dir="ltr">
             <section>
                 <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">
                     Human Resources Management
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                     {menuItems.map(item => {
                         const Icon = item.icon;
                         return (
                             <button
                                 key={item.id}
                                 onClick={() => onAction(item.id)}
-                                className={`flex flex-col items-center justify-center p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
+                                className={`flex flex-col items-center justify-center p-4 md:p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
                             >
-                                <div className={`p-5 rounded-2xl mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
+                                <div className={`p-3 md:p-5 rounded-2xl mb-3 md:mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
                                     <Icon className={`w-8 h-8 ${item.color}`} strokeWidth={1.5} />
                                 </div>
-                                <div className="font-semibold text-gray-700 text-lg group-hover:text-gray-900 transition-colors text-center">
+                                <div className="font-semibold text-gray-700 text-sm md:text-lg group-hover:text-gray-900 transition-colors text-center">
                                     {item.label}
                                 </div>
                             </button>
@@ -114,11 +114,13 @@ export function HumanResourcesPage({
                 ) : (
                     <div>
                         {/* BACK BUTTON TO RETURN TO MAIN NAV */}
+                        {!IS_NATIVE && (
                         <div className="mb-6 border-b border-gray-200 pb-4">
                             <Button variant="secondary" onClick={() => setActiveTab('menu')}>
                                 <ArrowLeft className="w-4 h-4 mr-2" /> Back to HR Menu
                             </Button>
                         </div>
+                        )}
 
                         {/* RENDERED COMPONENTS */}
                         {currentTab === 'healthWorkers' && (

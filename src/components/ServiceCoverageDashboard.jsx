@@ -3,13 +3,14 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { Card, Spinner, FormGroup, Select } from './CommonComponents';
+import { Card, Spinner, FormGroup, Select, FilterPanel } from './CommonComponents';
 import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES, getLocalizedStateName, getLocalizedLocalityName } from "./constants.js";
 import SudanMap from '../SudanMap';
 
 import { useStandardNames } from '../hooks/useNameRegistry';
 import { canonicalOptions } from '../utils/nameRegistry';
+import { useRememberedState } from '../utils/rememberedState';
 // --- HELPER COMPONENTS ---
 
 const mapCoordinates = {
@@ -51,14 +52,14 @@ const KPIWrapper = ({ children, borderClass = 'border-s-slate-400', decorationCo
     const theme = colorMap[colorTheme] || colorMap.slate;
 
     return (
-        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 md:p-6 border-s-4 ${borderClass} hover:shadow-md transition-all duration-200 flex flex-col relative overflow-hidden min-h-[140px] ${className}`}>
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-3 md:p-6 border-s-4 ${borderClass} hover:shadow-md transition-all duration-200 flex flex-col relative overflow-hidden min-h-[84px] md:min-h-[140px] ${className}`}>
             <div className={`absolute -start-8 -bottom-8 w-32 h-32 rounded-full opacity-10 ${decorationColor} pointer-events-none`}></div>
             <div className="relative z-10 w-full flex justify-between items-center gap-4 h-full">
                 <div className="flex-1 flex flex-col justify-center text-start">
                     {children}
                 </div>
                 {percentage !== undefined && (
-                    <div className={`shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center font-black text-lg md:text-2xl ${theme.bg} ${theme.text} border-[4px] ${theme.border} shadow-sm z-20`}>
+                    <div className={`shrink-0 w-14 h-14 md:w-20 md:h-20 rounded-full flex items-center justify-center font-black text-base md:text-2xl ${theme.bg} ${theme.text} border-[4px] ${theme.border} shadow-sm z-20`}>
                         {percentage}%
                     </div>
                 )}
@@ -73,7 +74,7 @@ const ValueTotalPercentageCard = ({ title, value, total, percentage, borderClass
     <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} percentage={percentage} colorTheme={colorTheme} className={className}>
         <h3 className="text-xs md:text-sm font-extrabold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
         <div className="flex flex-col items-start mt-1">
-            <span className={`text-4xl md:text-5xl font-black tracking-tight leading-none ${valueClass}`}>{value}</span>
+            <span className={`text-3xl md:text-5xl font-black tracking-tight leading-none ${valueClass}`}>{value}</span>
             {total > 0 && <span className="text-[11px] md:text-xs text-slate-400 font-bold uppercase tracking-wider mt-1.5">{t('dashboard.cards.out_of', 'out of')} {total}</span>}
         </div>
     </KPIWrapper>
@@ -83,7 +84,7 @@ const TotalCountCard = ({ title, count, borderClass = 'border-s-slate-500', valu
     <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} className={className}>
         <h3 className="text-xs md:text-sm font-extrabold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
         <div className="flex flex-col items-start mt-1">
-            <span className={`text-4xl md:text-5xl font-black tracking-tight leading-none ${valueClass}`}>{count}</span>
+            <span className={`text-3xl md:text-5xl font-black tracking-tight leading-none ${valueClass}`}>{count}</span>
         </div>
     </KPIWrapper>
 );
@@ -113,8 +114,8 @@ const MapLegend = ({ isPlanningMap = false }) => {
     
     if (isPlanningMap) {
         return (
-            <div className="flex justify-center items-center flex-wrap gap-4 text-sm text-gray-700">
-                <span className="font-bold">{t('dashboard.map.legend', 'Legend')}</span>
+            <div className="flex justify-center items-center flex-wrap gap-x-3 gap-y-1 md:gap-4 text-sm text-gray-700">
+                <span className="hidden md:inline font-bold">{t('dashboard.map.legend', 'Legend')}</span>
                 <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#22c55e]"></div><span className='text-xs font-medium'>{t('dashboard.map.has_unit', 'Has Unit (Green)')}</span></div>
                 <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#eab308]"></div><span className='text-xs font-medium'>{t('dashboard.map.planned_only', 'Planned Only (Yellow)')}</span></div>
                 <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#ef4444]"></div><span className='text-xs font-medium'>{t('dashboard.map.no_unit', 'No Unit (Red)')}</span></div>
@@ -123,8 +124,8 @@ const MapLegend = ({ isPlanningMap = false }) => {
     }
     
     return (
-    <div className="flex justify-center items-center flex-wrap gap-4 text-sm text-gray-700">
-        <span className="font-bold">{t('dashboard.map.legend', 'Legend')}</span>
+    <div className="flex justify-center items-center flex-wrap gap-x-3 gap-y-1 md:gap-4 text-sm text-gray-700">
+        <span className="hidden md:inline font-bold">{t('dashboard.map.legend', 'Legend')}</span>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>{t('dashboard.map.no_data', '0-39% (or No Data)')}</span></div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_mid', '40-74%')}</span></div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_high', '≥75%')}</span></div>
@@ -176,14 +177,14 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : ''); 
-    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : ''); 
-    const [ownershipFilter, setOwnershipFilter] = useState('');
-    const [projectFilter, setProjectFilter] = useState('');
-    const [equipmentFilter, setEquipmentFilter] = useState('');
+    const [stateFilter, setStateFilter] = useRememberedState('coverage.neonatal.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
+    const [localityFilter, setLocalityFilter] = useRememberedState('coverage.neonatal.localityFilter', userLocalities?.length === 1 ? userLocalities[0] : ''); 
+    const [ownershipFilter, setOwnershipFilter] = useRememberedState('coverage.neonatal.ownershipFilter', '');
+    const [projectFilter, setProjectFilter] = useRememberedState('coverage.neonatal.projectFilter', '');
+    const [equipmentFilter, setEquipmentFilter] = useRememberedState('coverage.neonatal.equipmentFilter', '');
     
     // Filters
-    const [neonatalLevelFilter, setNeonatalLevelFilter] = useState('');
+    const [neonatalLevelFilter, setNeonatalLevelFilter] = useRememberedState('coverage.neonatal.neonatalLevelFilter', '');
     const [showPlanningMap, setShowPlanningMap] = useState(false);
 
     const [isMapFullscreen, setIsMapFullscreen] = useState(false); 
@@ -646,8 +647,8 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, neonatalLevelFilter, showPlanningMap].filter(Boolean).length} className="mb-3 md:mb-6">
+                <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                     <FormGroup label={t('dashboard.filters.state', 'State')}>
                         <Select value={stateFilter} onChange={handleStateChange}>
                             <option value="">{t('dashboard.filters.all_states', 'All States')}</option>
@@ -703,10 +704,10 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                         </div>
                     </FormGroup>
                 </div>
-            </div>
+            </FilterPanel>
 
-            <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
-                <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+            <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 items-stretch relative">
+                <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.total_pediatrics_emonc', 'Total Target Facilities')} count={kpiData.totalSupposed} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" colorTheme="slate" />
@@ -719,14 +720,14 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                         </>
                     )}
                 </div>
-                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
-                    <div className="lg:col-span-2 flex flex-col h-full">
+                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64 order-first lg:order-none"><Spinner/></div> : (
+                    <div className="lg:col-span-2 flex flex-col h-full order-first lg:order-none">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
-                            <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
-                                <h3 className="text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
+                            <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
+                                <h3 className="text-sm md:text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
-                            <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
+                            <div className="flex-grow h-[280px] md:h-auto md:min-h-[400px] p-1 md:p-2 relative flex flex-col">
                                 <div className='flex-grow min-h-0 h-full w-full'>
                                     <SudanMap 
                                         data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []} 
@@ -743,7 +744,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                     />
                                 </div>
                             </div>
-                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-3 px-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-2 px-3 md:py-3 md:px-4 flex flex-col xl:flex-row justify-between items-center gap-2 md:gap-4">
                                 <MapLegend isPlanningMap={showPlanningMap} />
                                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
                                     {!isLocalityView && !showPlanningMap && (
@@ -924,11 +925,11 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : ''); 
-    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : ''); 
-    const [ownershipFilter, setOwnershipFilter] = useState(''); 
-    const [projectFilter, setProjectFilter] = useState('');
-    const [equipmentFilter, setEquipmentFilter] = useState('');
+    const [stateFilter, setStateFilter] = useRememberedState('coverage.eenc.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
+    const [localityFilter, setLocalityFilter] = useRememberedState('coverage.eenc.localityFilter', userLocalities?.length === 1 ? userLocalities[0] : ''); 
+    const [ownershipFilter, setOwnershipFilter] = useRememberedState('coverage.eenc.ownershipFilter', ''); 
+    const [projectFilter, setProjectFilter] = useRememberedState('coverage.eenc.projectFilter', '');
+    const [equipmentFilter, setEquipmentFilter] = useRememberedState('coverage.eenc.equipmentFilter', '');
     const [mapViewLevel, setMapViewLevel] = useState('state');
     const [copyStatus, setCopyStatus] = useState('');
     const [tooltipData, setTooltipData] = useState(null); 
@@ -1078,18 +1079,18 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     return (
         <div onMouseMove={handleMouseMove}>
             
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.has_equipment', 'Has Equipment')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(EENC_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.equip.${label}`, label)}</option>)}</Select></FormGroup>
                 </div>
-            </div>
+            </FilterPanel>
 
-             <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
-                 <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+             <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 items-stretch relative">
+                 <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.total_emonc', 'Total EmONC Facilities')} count={kpiData.totalEmONC} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
@@ -1099,19 +1100,19 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                     )}
                 </div>
 
-                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
-                    <div className="lg:col-span-2 flex flex-col h-full">
+                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64 order-first lg:order-none"><Spinner/></div> : (
+                    <div className="lg:col-span-2 flex flex-col h-full order-first lg:order-none">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
-                             <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
-                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
+                             <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
+                                 <h3 className="text-sm md:text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                                  <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
-                            <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
+                            <div className="flex-grow h-[280px] md:h-auto md:min-h-[400px] p-1 md:p-2 relative flex flex-col">
                                  <div className='flex-grow min-h-0 h-full w-full'>
                                     <SudanMap data={!stateFilter && currentMapViewLevel === 'state' ? mapData : []} localityData={stateFilter ? tableData : []} facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []} viewLevel={currentMapViewLevel} {...mapViewConfig} isMovable={false} pannable={false} />
                                 </div>
                             </div>
-                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-3 px-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-2 px-3 md:py-3 md:px-4 flex flex-col xl:flex-row justify-between items-center gap-2 md:gap-4">
                                 <MapLegend />
                                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
                                     {!stateFilter && (
@@ -1220,11 +1221,11 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : '');
-    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : '');
-    const [ownershipFilter, setOwnershipFilter] = useState(''); 
-    const [projectFilter, setProjectFilter] = useState('');
-    const [equipmentFilter, setEquipmentFilter] = useState('');
+    const [stateFilter, setStateFilter] = useRememberedState('coverage.imnci.stateFilter', userStates?.length === 1 ? userStates[0] : '');
+    const [localityFilter, setLocalityFilter] = useRememberedState('coverage.imnci.localityFilter', userLocalities?.length === 1 ? userLocalities[0] : '');
+    const [ownershipFilter, setOwnershipFilter] = useRememberedState('coverage.imnci.ownershipFilter', ''); 
+    const [projectFilter, setProjectFilter] = useRememberedState('coverage.imnci.projectFilter', '');
+    const [equipmentFilter, setEquipmentFilter] = useRememberedState('coverage.imnci.equipmentFilter', '');
     const [mapViewLevel, setMapViewLevel] = useState('state');
     const [copyStatus, setCopyStatus] = useState('');
     const [tooltipData, setTooltipData] = useState(null);
@@ -1402,18 +1403,18 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     return (
         <div onMouseMove={handleMouseMove}>
             
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.has_equipment', 'Has Tool')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(IMNCI_FILTER_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.table.${label.replace(/ /g, '_').toLowerCase()}`, label)}</option>)}</Select></FormGroup>
                 </div>
-            </div>
+            </FilterPanel>
 
-             <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
-                 <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+             <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 items-stretch relative">
+                 <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.total_functioning_phc', 'Total Functioning PHC Facilities')} count={functioningPhcs.length} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
@@ -1423,19 +1424,19 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                     )}
                 </div>
 
-                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
-                    <div className="lg:col-span-2 flex flex-col h-full">
+                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64 order-first lg:order-none"><Spinner/></div> : (
+                    <div className="lg:col-span-2 flex flex-col h-full order-first lg:order-none">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
-                             <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
-                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
+                             <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
+                                 <h3 className="text-sm md:text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                                  <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
-                            <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
+                            <div className="flex-grow h-[280px] md:h-auto md:min-h-[400px] p-1 md:p-2 relative flex flex-col">
                                  <div className='flex-grow min-h-0 h-full w-full'>
                                     <SudanMap data={!stateFilter && currentMapViewLevel === 'state' ? nationalMapData : []} localityData={stateFilter ? tableCoverageData : []} facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []} viewLevel={currentMapViewLevel} {...mapViewConfig} isMovable={false} pannable={false} />
                                 </div>
                             </div>
-                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-3 px-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-2 px-3 md:py-3 md:px-4 flex flex-col xl:flex-row justify-between items-center gap-2 md:gap-4">
                                 <MapLegend />
                                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
                                     {!stateFilter && (
@@ -1585,10 +1586,10 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : ''); 
-    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : ''); 
-    const [ownershipFilter, setOwnershipFilter] = useState(''); 
-    const [projectFilter, setProjectFilter] = useState('');
+    const [stateFilter, setStateFilter] = useRememberedState('coverage.criticalCare.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
+    const [localityFilter, setLocalityFilter] = useRememberedState('coverage.criticalCare.localityFilter', userLocalities?.length === 1 ? userLocalities[0] : ''); 
+    const [ownershipFilter, setOwnershipFilter] = useRememberedState('coverage.criticalCare.ownershipFilter', ''); 
+    const [projectFilter, setProjectFilter] = useRememberedState('coverage.criticalCare.projectFilter', '');
     const [mapViewLevel, setMapViewLevel] = useState('state');
     
     const [copyStatus, setCopyStatus] = useState('');
@@ -1720,17 +1721,17 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                 </div>
-            </div>
+            </FilterPanel>
 
-            <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
-                <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+            <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 items-stretch relative">
+                <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.target_hospitals_etat', 'Target Hospitals (ETAT)')} count={kpiData.totalTarget} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
@@ -1743,19 +1744,19 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                     )}
                 </div>
 
-                {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
-                    <div className="lg:col-span-2 flex flex-col h-full">
+                {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64 order-first lg:order-none"><Spinner/></div> : (
+                    <div className="lg:col-span-2 flex flex-col h-full order-first lg:order-none">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
-                             <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
-                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
+                             <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
+                                 <h3 className="text-sm md:text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                                  <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
-                            <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
+                            <div className="flex-grow h-[280px] md:h-auto md:min-h-[400px] p-1 md:p-2 relative flex flex-col">
                                  <div className='flex-grow min-h-0 h-full w-full'>
                                     <SudanMap data={!stateFilter && currentMapViewLevel === 'state' ? mapData : []} localityData={stateFilter ? tableData : []} facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []} viewLevel={currentMapViewLevel} {...mapViewConfig} onStateHover={handleStateHover} onLocalityHover={handleMapLocalityHover} onStateLeave={handleMapMouseLeave} onLocalityLeave={handleMapMouseLeave} isMovable={false} pannable={false} />
                                 </div>
                             </div>
-                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-3 px-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-2 px-3 md:py-3 md:px-4 flex flex-col xl:flex-row justify-between items-center gap-2 md:gap-4">
                                 <MapLegend />
                                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
                                     {!stateFilter && (
@@ -1909,8 +1910,8 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : ''); 
-    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : ''); 
+    const [stateFilter, setStateFilter] = useRememberedState('coverage.combined.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
+    const [localityFilter, setLocalityFilter] = useRememberedState('coverage.combined.localityFilter', userLocalities?.length === 1 ? userLocalities[0] : ''); 
     
     const combinedExportRef = useRef(null);
     const [combinedCopyStatus, setCombinedCopyStatus] = useState('');
@@ -2075,10 +2076,10 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     const currentMapViewLevel = stateFilter ? 'locality' : 'state';
 
     return (
-        <div className="flex flex-col gap-6" onMouseMove={handleMouseMove}>
+        <div className="flex flex-col gap-3 md:gap-6" onMouseMove={handleMouseMove}>
             
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+            <FilterPanel activeCount={[stateFilter, localityFilter].filter(Boolean).length} className="md:mb-6 md:mt-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-2 max-w-2xl">
                     <FormGroup label={t('dashboard.filters.state', 'Filter by State')}>
                         <Select value={stateFilter} onChange={(e) => {setStateFilter(e.target.value); setLocalityFilter('');}}>
                             <option value="">{t('dashboard.filters.all_states', 'All States')}</option>
@@ -2092,14 +2093,14 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                         </Select>
                     </FormGroup>
                 </div>
-            </div>
+            </FilterPanel>
 
             {loading ? <div className="flex justify-center items-center h-64"><Spinner/></div> : (
                 <div ref={combinedExportRef}>
                     <Card className="p-0 flex flex-col shadow-sm border border-gray-200 rounded-xl">
-                        <div className="p-4 md:p-5 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center bg-slate-50/50 rounded-t-xl gap-4 sm:gap-0">
+                        <div className="px-3 py-2 md:p-5 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center bg-slate-50/50 rounded-t-xl gap-4 sm:gap-0">
                             <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.geographic_coverage', 'Geographic Coverage & Service Performance')}</h3>
+                                <h3 className="text-sm md:text-lg font-bold text-gray-800">{t('dashboard.headers.geographic_coverage', 'Geographic Coverage & Service Performance')}</h3>
                                 <button onClick={handleCopyCombined} title={t('dashboard.copy_image', 'Copy Dashboard Image')} className="text-gray-400 hover:text-sky-600 transition-colors p-1" disabled={!!combinedCopyStatus && combinedCopyStatus !== 'Failed'}>
                                     {combinedCopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{combinedCopyStatus}</span> : <CopyIcon />}
                                 </button>
@@ -2108,7 +2109,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
 
                         <div className="flex flex-col lg:flex-row items-stretch bg-white rounded-b-xl">
                             <div className="lg:w-2/3 flex flex-col border-b lg:border-b-0 lg:border-e border-gray-200 relative">
-                                <div className="flex-grow min-h-[550px] relative p-2">
+                                <div className="flex-grow h-[300px] md:h-auto md:min-h-[550px] relative p-1 md:p-2">
                                     <SudanMap
                                         data={currentMapViewLevel === 'state' ? stateMapData : []}
                                         localityData={currentMapViewLevel === 'locality' ? localityMapData : []}
@@ -2125,12 +2126,12 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                                         onLocalityLeave={() => setHoverData(null)}
                                     />
                                 </div>
-                                <div className="bg-slate-50 border-t border-gray-200 py-3 px-4 flex justify-center items-center rounded-bl-xl">
+                                <div className="bg-slate-50 border-t border-gray-200 py-2 px-3 md:py-3 md:px-4 flex justify-center items-center rounded-bl-xl">
                                     <MapLegend />
                                 </div>
                             </div>
 
-                            <div className="lg:w-1/3 flex flex-col p-5 bg-slate-50/50">
+                            <div className="lg:w-1/3 flex flex-col p-3 md:p-5 bg-slate-50/50">
                                 <div className="flex flex-col gap-4 overflow-y-auto h-full justify-between">
                                     <CompactKPICard 
                                         percentage={kpiData.imnci.perc}

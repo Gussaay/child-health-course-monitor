@@ -2696,9 +2696,9 @@ function CourseReportBody({
                                 <div key={s.name} className="bg-white p-4 rounded shadow-sm border">
                                     <h4 className="font-bold text-lg border-b pb-2 mb-4 text-indigo-800">{t('course_report.coverage.state_name', 'State: {{name}}', { name: s.name })}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <FormGroup label={t('course_report.coverage.total_functioning_phcs', 'Total Functioning PHCs')}><Input type="number" value={s.totalPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'totalPhc', e.target.value)} /></FormGroup>
-                                        <FormGroup label={t('course_report.coverage.phcs_imnci_before', 'PHCs w/ IMNCI (Before)')}><Input type="number" value={s.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('state', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
-                                        <FormGroup label={t('course_report.coverage.new_phcs_imnci', 'New PHCs w/ IMNCI')}><Input type="number" value={s.newPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'newPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.total_functioning_phcs', 'Total Functioning PHCs')}><Input type="number" inputMode="decimal" value={s.totalPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'totalPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.phcs_imnci_before', 'PHCs w/ IMNCI (Before)')}><Input type="number" inputMode="decimal" value={s.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('state', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.new_phcs_imnci', 'New PHCs w/ IMNCI')}><Input type="number" inputMode="decimal" value={s.newPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'newPhc', e.target.value)} /></FormGroup>
                                     </div>
                                 </div>
                             ))}
@@ -2707,9 +2707,9 @@ function CourseReportBody({
                                 <div key={l.name} className="bg-white p-4 rounded shadow-sm border">
                                     <h4 className="font-bold text-lg border-b pb-2 mb-4 text-sky-800">{t('course_report.coverage.locality_name', 'Locality: {{name}}', { name: l.name })}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <FormGroup label={t('course_report.coverage.total_functioning_phcs', 'Total Functioning PHCs')}><Input type="number" value={l.totalPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'totalPhc', e.target.value)} /></FormGroup>
-                                        <FormGroup label={t('course_report.coverage.phcs_imnci_before', 'PHCs w/ IMNCI (Before)')}><Input type="number" value={l.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('locality', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
-                                        <FormGroup label={t('course_report.coverage.new_phcs_imnci', 'New PHCs w/ IMNCI')}><Input type="number" value={l.newPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'newPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.total_functioning_phcs', 'Total Functioning PHCs')}><Input type="number" inputMode="decimal" value={l.totalPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'totalPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.phcs_imnci_before', 'PHCs w/ IMNCI (Before)')}><Input type="number" inputMode="decimal" value={l.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('locality', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.new_phcs_imnci', 'New PHCs w/ IMNCI')}><Input type="number" inputMode="decimal" value={l.newPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'newPhc', e.target.value)} /></FormGroup>
                                     </div>
                                 </div>
                             ))}

@@ -1,6 +1,6 @@
 // MentorshipDashboard.jsx
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { Spinner, Modal } from '../CommonComponents'; 
+import { Spinner, Modal, IS_NATIVE, PageTabs } from '../CommonComponents'; 
 import { 
     FilterSelect, 
     CopyImageButton, 
@@ -951,18 +951,30 @@ const MentorshipDashboard = ({
         customEndDate
     ].filter(Boolean).length;
 
+    // Tabs are hidden for IPC, which has its own per-form tabs inside IPCDashboardTab
+    const dashboardTabs = activeService !== 'IPC' ? [
+        { id: 'skills', label: t('tab.skills'), short: t('ui.short.skills', 'Skills') },
+        { id: 'mothers', label: t('tab.mothers'), short: t('ui.short.mothers', 'Mothers') },
+        { id: 'visit_reports', label: t('tab.visit_reports'), short: t('ui.short.visits', 'Visits') },
+        { id: 'facility_info', label: t('Facility Information') || 'Facility Information', short: t('ui.short.facility', 'Facility') },
+        canEditStatus && { id: 'admin', label: t('tab.admin'), short: t('ui.short.admin', 'Admin') },
+    ] : null;
+
     return (
         // ADDED pb-24 to prevent the Session Ops floating widget from covering bottom content
         <div className="p-2 sm:p-6 bg-slate-50/50 min-h-screen pb-24" dir={isAr ? 'rtl' : 'ltr'}>             
             
             {/* 1. OPTIMIZED HEADER: Tighter spacing and hierarchy */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-3 md:mb-6">
                 <h3 className={`text-2xl font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-left'} tracking-tight flex flex-col`}>
+                    {!IS_NATIVE && (
                     <div className="flex items-center gap-3">
                         {t('app.title')}: {serviceTitle}
                         {(isLoading || isRefreshing) && <Spinner size="sm" className="text-sky-600" />}
                     </div>
-                    <span className="text-sky-600 text-[1rem] font-semibold mt-1 break-words leading-snug">
+                    )}
+                    <span className={`text-sky-600 text-[1rem] font-semibold break-words leading-snug ${IS_NATIVE ? 'flex items-center gap-2' : 'mt-1'}`}>
+                        {IS_NATIVE && (isLoading || isRefreshing) && <Spinner size="sm" className="text-sky-600" />}
                         {scopeTitle}
                     </span>
                 </h3>
@@ -978,12 +990,17 @@ const MentorshipDashboard = ({
                 </div>
             </div>
             
+            {/* Phone tabs: first thing above the filters button (desktop copy stays below the filters) */}
+            {dashboardTabs && (
+                <PageTabs className="md:hidden" tabs={dashboardTabs} active={activeTab} onChange={setActiveTabFunc} />
+            )}
+
             {/* 2. RESPONSIVE FILTERS */}
             {/* Mobile Filter Button */}
-            <div className="flex md:hidden mb-6">
+            <div className="flex md:hidden mb-3">
                 <button 
                     onClick={() => setIsMobileFilterModalOpen(true)}
-                    className="w-full bg-white border border-slate-300 hover:border-sky-500 text-slate-700 py-3 px-4 rounded-xl shadow-sm flex items-center justify-between font-bold transition-all"
+                    className="w-full bg-white border border-slate-200 hover:border-sky-500 text-slate-700 py-2 px-3 text-sm rounded-xl shadow-sm flex items-center justify-between font-bold transition-all"
                 >
                     <div className="flex items-center gap-2">
                         <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
@@ -991,7 +1008,7 @@ const MentorshipDashboard = ({
                     </div>
                     {activeFilterCount > 0 && (
                         <span className="bg-sky-600 text-white text-xs px-2.5 py-0.5 rounded-full">
-                            {activeFilterCount} Active
+                            {activeFilterCount}
                         </span>
                     )}
                 </button>
@@ -1002,44 +1019,9 @@ const MentorshipDashboard = ({
                 {FilterControls}
             </div>
             
-            {/* 3. OPTIMIZED TABS: hidden for IPC, which has its own per-form tabs inside IPCDashboardTab */}
-            {activeService !== 'IPC' && (
-                <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-slate-300 w-fit">
-                    <>
-                        <button 
-                            className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                            onClick={() => setActiveTabFunc('skills')}
-                        >
-                            {t('tab.skills')}
-                        </button>
-                        <button 
-                            className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'mothers' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                            onClick={() => setActiveTabFunc('mothers')}
-                        >
-                            {t('tab.mothers')}
-                        </button>
-                        <button 
-                            className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'visit_reports' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                            onClick={() => setActiveTabFunc('visit_reports')}
-                        >
-                            {t('tab.visit_reports')}
-                        </button>
-                        <button 
-                            className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'facility_info' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                            onClick={() => setActiveTabFunc('facility_info')}
-                        >
-                            {t('Facility Information') || 'Facility Information'}
-                        </button>
-                        {canEditStatus && (
-                            <button 
-                                className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'admin' ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300 border border-transparent'}`} 
-                                onClick={() => setActiveTabFunc('admin')}
-                            >
-                                {t('tab.admin')}
-                            </button>
-                        )}
-                    </>
-                </div>
+            {/* 3. TABS (desktop copy; phones get theirs above the filters button) */}
+            {dashboardTabs && (
+                <PageTabs className="hidden md:block md:!mb-8" tabs={dashboardTabs} active={activeTab} onChange={setActiveTabFunc} />
             )}
 
             <div ref={presentationRef}>

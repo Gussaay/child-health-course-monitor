@@ -12,7 +12,7 @@ import { db } from '../firebase';
 import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 import {
-    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
+    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast, FilterPanel, PageActions, FormActions
 } from "./CommonComponents";
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC,
@@ -44,6 +44,7 @@ import { publicBaseUrl } from '../utils/publicLink';
 import { whatsappLink } from '../utils/whatsapp';
 import { sharePdf, certificateFileName } from '../utils/sharePdf';
 import { Capacitor } from '@capacitor/core';
+import { useRememberedState } from '../utils/rememberedState';
 
 
 // ====================================================================
@@ -81,14 +82,14 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
         <div className="relative flex flex-col gap-1" ref={ref}>
             <label className="font-semibold text-gray-700 text-xs uppercase">{label}</label>
             <div 
-                className="border border-gray-300 rounded px-3 py-1.5 bg-white text-sm cursor-pointer min-w-[160px] flex justify-between items-center hover:border-blue-400"
+                className="border border-gray-300 rounded px-3 py-1.5 bg-white text-sm cursor-pointer min-w-0 md:min-w-[160px] flex justify-between items-center hover:border-blue-400"
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <span className="truncate mr-2 text-gray-700">{displayValue}</span>
                 <span className="text-gray-500 text-[10px]">▼</span>
             </div>
             {isOpen && (
-                <div className="absolute top-full left-0 z-20 mt-1 w-full min-w-[220px] bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 z-20 mt-1 w-full md:min-w-[220px] bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                     {selected.length > 0 && (
                         <div 
                             className="p-2 border-b border-gray-200 cursor-pointer bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-red-600 text-center"
@@ -601,7 +602,7 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave, is
                             </FormGroup>
                         )}
                         <FormGroup label={t('participants_page.fields.phone_number', 'Phone Number')}>
-                            <Input disabled={isSaving} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('participants_page.fields.phone_number', 'Phone Number')} />
+                            <Input disabled={isSaving} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('participants_page.fields.phone_number', 'Phone Number')} />
                         </FormGroup>
                     </div>
                     <div className="flex gap-2 justify-end mt-6 border-t pt-6">
@@ -2000,11 +2001,11 @@ export function ParticipantsView({
         [participants, localCourseData]
     );
 
-    const [groupFilter, setGroupFilter] = useState([]);
-    const [jobTitleFilter, setJobTitleFilter] = useState([]);
-    const [facilityFilter, setFacilityFilter] = useState([]);
-    const [localityFilter, setLocalityFilter] = useState([]);
-    const [subTypeFilter, setSubTypeFilter] = useState([]);
+    const [groupFilter, setGroupFilter] = useRememberedState(`participants.${course?.id}.group`, []);
+    const [jobTitleFilter, setJobTitleFilter] = useRememberedState(`participants.${course?.id}.jobTitle`, []);
+    const [facilityFilter, setFacilityFilter] = useRememberedState(`participants.${course?.id}.facility`, []);
+    const [localityFilter, setLocalityFilter] = useRememberedState(`participants.${course?.id}.locality`, []);
+    const [subTypeFilter, setSubTypeFilter] = useRememberedState(`participants.${course?.id}.subType`, []);
 
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
@@ -2827,7 +2828,7 @@ export function ParticipantsView({
 
             <div className="flex flex-col gap-4 mb-4">
                 <div className="flex flex-wrap justify-between items-center gap-4">
-                    <div className="flex flex-wrap gap-2 items-center">
+                    <PageActions>
                         {canAddParticipant && (
                             <Button onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>
                                 {t('participants_page.list.add_participant', 'Add Participant')}
@@ -2856,25 +2857,25 @@ export function ParticipantsView({
                                 {t('participants_page.cert_mgmt.title', 'Certificate Management')}
                             </Button>
                         )}
-                    </div>
+                    </PageActions>
                 </div>
 
-                <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <div className="flex flex-wrap items-end gap-3">
+                <FilterPanel className="w-full" activeCount={[groupFilter, jobTitleFilter, localityFilter, facilityFilter, subTypeFilter].filter(f => f.length > 0).length}>
+                    <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:items-end">
                         <MultiSelectDropdown label={t('participants_page.fields.group', 'Group')} placeholder={t('participants_page.filters.all_groups', 'All Groups')} options={uniqueGroups.length > 0 ? uniqueGroups : ['Group A', 'Group B', 'Group C', 'Group D']} selected={groupFilter} onChange={setGroupFilter} />
                         <MultiSelectDropdown label={t('participants_page.fields.job_title', 'Job Title')} placeholder={t('participants_page.filters.all_job_titles', 'All Job Titles')} options={uniqueJobTitles} selected={jobTitleFilter} onChange={setJobTitleFilter} />
                         <MultiSelectDropdown label={t('participants_page.fields.locality', 'Locality')} placeholder={t('participants_page.filters.all_localities', 'All Localities')} options={uniqueLocalities} selected={localityFilter} onChange={setLocalityFilter} />
                         <MultiSelectDropdown label={t('participants_page.filters.facility', 'Facility')} placeholder={t('participants_page.filters.all_facilities', 'All Facilities')} options={uniqueFacilities} selected={facilityFilter} onChange={setFacilityFilter} />
                         {uniqueSubTypes.length > 0 && <MultiSelectDropdown label={t('participants_page.filters.sub_type', 'Course Sub Type')} placeholder={t('participants_page.filters.all_sub_types', 'All Sub Types')} options={uniqueSubTypes} selected={subTypeFilter} onChange={setSubTypeFilter} />}
                         {(groupFilter.length > 0 || jobTitleFilter.length > 0 || localityFilter.length > 0 || facilityFilter.length > 0 || subTypeFilter.length > 0) && (
-                            <div className="flex flex-col justify-end pb-0.5">
+                            <div className="col-span-2 md:col-span-1 flex flex-col justify-end pb-0.5">
                                 <Button variant="secondary" onClick={() => { setGroupFilter([]); setJobTitleFilter([]); setLocalityFilter([]); setFacilityFilter([]); setSubTypeFilter([]); }} className="text-xs py-1.5 px-3 hover:bg-red-50 hover:text-red-600 hover:border-red-200" disabled={isProcessing}>
                                     {t('participants_page.filters.clear', 'Clear Filters')}
                                 </Button>
                             </div>
                         )}
                     </div>
-                </div>
+                </FilterPanel>
             </div>
 
             <div className="hidden md:block overflow-hidden bg-white rounded-xl shadow-sm">
@@ -3023,7 +3024,7 @@ export function ParticipantsView({
 
                             {isExpanded && (
                                 <div className="p-4 bg-gray-50 border-t border-gray-100">
-                                    <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-50 border-b border-gray-200 pb-3">
+                                    <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-500 border-b border-gray-200 pb-3">
                                         <div><span className="block font-semibold text-gray-700">{t('participants_page.list.created', 'Created:')}</span>{createdDate}<br/>{t('participants_page.list.by', 'By: {{name}}', { name: p.createdBy || t('participants_page.list.legacy', 'Legacy') })}</div>
                                         <div><span className="block font-semibold text-gray-700">{t('participants_page.list.last_edit', 'Last Edit:')}</span>{lastEditDate}<br/>{t('participants_page.list.by', 'By: {{name}}', { name: p.updatedBy || t('participants_page.list.legacy', 'Legacy') })}</div>
                                     </div>
@@ -3776,8 +3777,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         <div className="mb-6 p-4 border rounded-md bg-gray-50/50">
                             <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">التقييم والاختبارات</h3>
                             <div className="grid md:grid-cols-2 gap-6">
-                                <FormGroup label="درجة الاختبار القبلي (%)"><Input disabled={isSaving} type="number" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
-                                <FormGroup label="درجة الاختبار البعدي (%)"><Input disabled={isSaving} type="number" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
+                                <FormGroup label="درجة الاختبار القبلي (%)"><Input disabled={isSaving} type="number" inputMode="decimal" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
+                                <FormGroup label="درجة الاختبار البعدي (%)"><Input disabled={isSaving} type="number" inputMode="decimal" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
                             </div>
                         </div>
                     )}
@@ -3817,19 +3818,19 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                                     <tr className="hover:bg-gray-50">
                                                         <td className="border p-3 font-medium text-gray-700 text-right">طبيب</td>
                                                         <td className="border p-2">
-                                                            <Input disabled={isSaving} type="number" value={imnciDoctorsTotal} onChange={(e) => setImnciDoctorsTotal(e.target.value)} min="0" />
+                                                            <Input disabled={isSaving} type="number" inputMode="decimal" value={imnciDoctorsTotal} onChange={(e) => setImnciDoctorsTotal(e.target.value)} min="0" />
                                                         </td>
                                                         <td className="border p-2">
-                                                            <Input disabled={isSaving} type="number" value={imnciDoctorsTrained} onChange={(e) => setImnciDoctorsTrained(e.target.value)} min="0" />
+                                                            <Input disabled={isSaving} type="number" inputMode="decimal" value={imnciDoctorsTrained} onChange={(e) => setImnciDoctorsTrained(e.target.value)} min="0" />
                                                         </td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50">
                                                         <td className="border p-3 font-medium text-gray-700 text-right">مساعد طبي</td>
                                                         <td className="border p-2">
-                                                            <Input disabled={isSaving} type="number" value={imnciMedicalAssistantsTotal} onChange={(e) => setImnciMedicalAssistantsTotal(e.target.value)} min="0" />
+                                                            <Input disabled={isSaving} type="number" inputMode="decimal" value={imnciMedicalAssistantsTotal} onChange={(e) => setImnciMedicalAssistantsTotal(e.target.value)} min="0" />
                                                         </td>
                                                         <td className="border p-2">
-                                                            <Input disabled={isSaving} type="number" value={imnciMedicalAssistantsTrained} onChange={(e) => setImnciMedicalAssistantsTrained(e.target.value)} min="0" />
+                                                            <Input disabled={isSaving} type="number" inputMode="decimal" value={imnciMedicalAssistantsTrained} onChange={(e) => setImnciMedicalAssistantsTrained(e.target.value)} min="0" />
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -3844,7 +3845,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                             <Input disabled={isSaving} value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder="اسم أقرب مؤسسة" />
                                         </FormGroup>
                                         <FormGroup label="الساعات للوصول للمؤسسة (سيراً على الأقدام)">
-                                            <Input disabled={isSaving} type="number" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder="مثال: 2.5" />
+                                            <Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder="مثال: 2.5" />
                                         </FormGroup>
                                     </div>
                                 )}
@@ -3881,8 +3882,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) في الطوارئ`}><Input disabled={isSaving} type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(e.target.value)} /></FormGroup>
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ETAT`}><Input disabled={isSaving} type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) في الطوارئ`}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ETAT`}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
                                     </div>
                                 )}
 
@@ -3919,8 +3920,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                             </Select>
                                         </FormGroup>
 
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) في غرفة الولادة`}><Input disabled={isSaving} type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ${isEenc ? 'EENC/EmONC' : 'SSNC'}`}><Input disabled={isSaving} type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) في غرفة الولادة`}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ${isEenc ? 'EENC/EmONC' : 'SSNC'}`}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
                                     </div>
                                 )}
                             </div>
@@ -4007,12 +4008,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     )}
 
                     {/* Submit Buttons */}
-                    <div className="flex gap-2 justify-end mt-6 border-t pt-6">
+                    <FormActions className="mt-6 md:border-t md:pt-6">
                         <Button variant="secondary" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
                         <Button onClick={submit} disabled={isSaving}>
                             {isSaving ? <Spinner size="sm"/> : 'حفظ المشارك'}
                         </Button>
-                    </div>
+                    </FormActions>
                 </div>
             </Card>
         </div>

@@ -42,6 +42,9 @@ export const SUPPLY_CATEGORIES = [
 ];
 
 // The categories whose need scales with how many children are seen.
+// Phone tab names for the categories above.
+const SUPPLY_SHORT = { drugs: 'Drugs', equipment: 'Equipment', consumables: 'Consumables', information: 'Info' };
+
 export const CASELOAD_CATEGORIES = ['drugs', 'consumables'];
 
 export const SUPPLY_CATEGORY_IDS = SUPPLY_CATEGORIES.map((c) => c.id);
@@ -317,7 +320,7 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
 
                         <Input
                             label={t('trackers.supply.form.price', 'Indicative price (per unit)')}
-                            type="number" min="0" step="any"
+                            type="number" inputMode="decimal" min="0" step="any"
                             value={form.indicativePrice ?? ''}
                             onChange={(e) => setField('indicativePrice', e.target.value)}
                             placeholder={t('trackers.supply.form.price_ph', 'e.g. 0.85')}
@@ -395,13 +398,13 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                     {perFacility ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input
-                                type="number" min="0" step="any"
+                                type="number" inputMode="decimal" min="0" step="any"
                                 label={t('trackers.supply.form.qty_per_facility', 'Quantity per facility')}
                                 value={form.quantification?.quantityPerFacility ?? 0}
                                 onChange={(e) => setQuant('quantityPerFacility', e.target.value)}
                             />
                             <Input
-                                type="number" min="1" step="1"
+                                type="number" inputMode="decimal" min="1" step="1"
                                 label={t('trackers.supply.form.replacement_period', 'Replacement period (months)')}
                                 value={form.quantification?.reviewPeriodMonths ?? 12}
                                 onChange={(e) => setQuant('reviewPeriodMonths', e.target.value)}
@@ -410,25 +413,25 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input
-                                type="number" min="0" step="any"
+                                type="number" inputMode="decimal" min="0" step="any"
                                 label={t('trackers.supply.form.incidence', 'Incidence per 1000 per year')}
                                 value={form.quantification?.incidencePer1000 ?? 0}
                                 onChange={(e) => setQuant('incidencePer1000', e.target.value)}
                             />
                             <Input
-                                type="number" min="0" max="100" step="any"
+                                type="number" inputMode="decimal" min="0" max="100" step="any"
                                 label={t('trackers.supply.form.reach', 'Share of cases reaching care (%)')}
                                 value={form.quantification?.attendanceRatePercent ?? 100}
                                 onChange={(e) => setQuant('attendanceRatePercent', e.target.value)}
                             />
                             <Input
-                                type="number" min="0" step="any"
+                                type="number" inputMode="decimal" min="0" step="any"
                                 label={t('trackers.supply.form.courses_per_case', 'Treatment courses per case')}
                                 value={form.quantification?.coursesPerCase ?? 1}
                                 onChange={(e) => setQuant('coursesPerCase', e.target.value)}
                             />
                             <Input
-                                type="number" min="0" step="any"
+                                type="number" inputMode="decimal" min="0" step="any"
                                 label={t('trackers.supply.form.units_per_course', 'Units per treatment course')}
                                 value={form.quantification?.unitsPerCourse ?? 1}
                                 onChange={(e) => setQuant('unitsPerCourse', e.target.value)}
@@ -438,20 +441,20 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Input
-                            type="number" min="0" max="100" step="any"
+                            type="number" inputMode="decimal" min="0" max="100" step="any"
                             label={t('trackers.supply.form.wastage', 'Wastage allowance (%)')}
                             value={form.quantification?.wastagePercent ?? 10}
                             onChange={(e) => setQuant('wastagePercent', e.target.value)}
                         />
                         <Input
-                            type="number" min="0" max="100" step="any"
+                            type="number" inputMode="decimal" min="0" max="100" step="any"
                             label={t('trackers.supply.form.buffer', 'Buffer stock (%)')}
                             value={form.quantification?.bufferPercent ?? 25}
                             onChange={(e) => setQuant('bufferPercent', e.target.value)}
                         />
                         {!perFacility && (
                             <Input
-                                type="number" min="1" step="1"
+                                type="number" inputMode="decimal" min="1" step="1"
                                 label={t('trackers.supply.form.forecast_period', 'Forecast period (months)')}
                                 value={form.quantification?.reviewPeriodMonths ?? 12}
                                 onChange={(e) => setQuant('reviewPeriodMonths', e.target.value)}
@@ -926,10 +929,10 @@ export default function SupplyManagementView({ permissions = {} }) {
                 <CardBody className="space-y-4">
                     <Tabs
                         tabs={[
-                            { id: 'list', label: isArabic ? 'القائمة الأساسية' : 'Essential list' },
-                            { id: 'quantification', label: isArabic ? 'التقدير الكمي' : 'Quantification' },
+                            { id: 'list', label: isArabic ? 'القائمة الأساسية' : 'Essential list', short: t('ui.short.list', 'List') },
+                            { id: 'quantification', label: isArabic ? 'التقدير الكمي' : 'Quantification', short: t('ui.short.quantify', 'Quantify') },
                             ...(permissions.canUseFederalManagerAdvancedFeatures
-                                ? [{ id: 'deleted', label: isArabic ? 'المحذوفات' : 'Deleted Items' }]
+                                ? [{ id: 'deleted', label: isArabic ? 'المحذوفات' : 'Deleted Items', short: t('ui.short.deleted', 'Deleted') }]
                                 : []),
                         ]}
                         activeTab={section}
@@ -946,6 +949,7 @@ export default function SupplyManagementView({ permissions = {} }) {
                         tabs={SUPPLY_CATEGORIES.map((c) => ({
                             id: c.id,
                             label: isArabic ? c.labelAr : c.label,
+                            short: t(`ui.short.supply_${c.id}`, SUPPLY_SHORT[c.id]),
                         }))}
                         activeTab={category}
                         onTabChange={setCategory}
@@ -981,7 +985,7 @@ export default function SupplyManagementView({ permissions = {} }) {
                     </div>
 
                     {isLoading?.supplyItems && !supplyItems ? <Spinner /> : (
-                        <Table headers={headers}>
+                        <Table headers={headers} cardsOnPhone>
                             {visibleItems.length === 0 ? (
                                 <EmptyState
                                     colSpan={headers.length}

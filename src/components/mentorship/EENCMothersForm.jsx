@@ -436,7 +436,7 @@ const EENCMothersForm = ({
 
                             <FormGroup label="رقم الزيارة" className="text-right">
                                 <Input 
-                                    type="number" 
+                                    type="number" inputMode="decimal" 
                                     name="visitNumber" 
                                     value={formData.visitNumber} 
                                     readOnly={!canEditVisitNumber} 
@@ -507,7 +507,7 @@ const EENCMothersForm = ({
                     </Button>
                 </div>
 
-                <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
+                <div className="flex sm:hidden fixed bottom-[var(--bottom-nav,4rem)] left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving} size="sm">
                         إلغاء
                     </Button>

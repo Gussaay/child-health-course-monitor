@@ -2331,11 +2331,11 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                         onChange={e => setField('id', e.target.value.trim())} placeholder="imnci-ex8-fatima" />
                 </FormGroup>
                 <FormGroup label={t('imnci_ui.exercises.editor.order', 'Order')}>
-                    <input type="number" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    <input type="number" inputMode="decimal" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.order} onChange={e => setField('order', Number(e.target.value))} />
                 </FormGroup>
                 <FormGroup label={t('imnci_ui.exercises.editor.est_minutes', 'Estimated minutes')}>
-                    <input type="number" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    <input type="number" inputMode="decimal" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.estimatedMinutes} onChange={e => setField('estimatedMinutes', Number(e.target.value))} />
                 </FormGroup>
                 <FormGroup label={t('imnci_ui.exercises.editor.title', 'Title')}>
@@ -2347,7 +2347,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                         value={ex.titleAr} onChange={e => setField('titleAr', e.target.value)} />
                 </FormGroup>
                 <FormGroup label={t('imnci_ui.exercises.editor.pass_mark', 'Pass mark (%)')}>
-                    <input type="number" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    <input type="number" inputMode="decimal" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.passMark} onChange={e => setField('passMark', Number(e.target.value))} />
                 </FormGroup>
             </div>

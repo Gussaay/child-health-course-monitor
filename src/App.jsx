@@ -18,6 +18,8 @@ import { downloadAndOpenFile } from './utils/fileDownloader';
 import { computeCoverage, computeHomeStats, levelFromPermissions } from './utils/homeStats';
 import { OWN_KEYS, describePage, pagePath, pageFromLocation, settlePage, isNewEntry, isTransientPage } from './utils/pageAddress';
 import { useAppUpdate } from './hooks/useAppUpdate';
+import { runInPageBack } from './utils/inPageBack';
+import { clearRememberedFilters } from './utils/rememberedState';
 import { usePushNotifications, usePushEvents } from './hooks/usePushNotifications';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
@@ -474,6 +476,65 @@ function CoverageRow({ coverage, busy, onOpen }) {
         : <div className="mt-2">{row}</div>;
 }
 
+// Phone greeting: two lines. The greeting, then one highlight from this
+// year's numbers, picked at random each time the main menu opens; tapping
+// it shows another.
+function homeFacts(t, stats, level) {
+    if (!stats) return [];
+    const n = (v) => Number(v).toLocaleString();
+    const facts = [];
+    const add = (value, key, icon) => {
+        if (value !== null && value !== undefined && Number(value) > 0) facts.push({ icon, text: t(`ui.facts.${key}`, { n: n(value) }) });
+    };
+    add(stats.courses, 'courses', Book);
+    add(stats.participants, 'participants', Users);
+    add(stats.facilitiesReached, 'facilities_reached', Hospital);
+    add(stats.visits, 'visits', ClipboardCheck);
+    if (level !== 'locality') add(stats.facilitators, 'facilitators', User);
+    const coverage = stats.coverage;
+    if (coverage?.overall !== null && coverage?.overall !== undefined) facts.push({ icon: Activity, text: t('ui.facts.overall', { n: coverage.overall }) });
+    COVERAGE_ITEMS.forEach(({ key, label }) => {
+        const perc = coverage?.services?.[key]?.perc;
+        if (perc !== null && perc !== undefined) facts.push({ icon: Activity, text: t('ui.facts.service', { n: perc, service: t(`landing.coverage.${key}`, label) }) });
+    });
+    return facts;
+}
+
+function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats }) {
+    const { t } = useTranslation();
+    const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
+    const facts = homeFacts(t, stats, level);
+    const loading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
+    const fact = facts.length ? facts[pick % facts.length] : null;
+    const FactIcon = fact?.icon;
+    return (
+        <section className={`md:hidden relative overflow-hidden rounded-2xl bg-gradient-to-br ${LEVEL_CARDS[level]} text-white px-4 py-3 shadow-md`}>
+            <span className="absolute -end-8 -top-10 h-28 w-28 rounded-full bg-white/10" />
+            <div className="relative flex items-center gap-2 min-w-0">
+                <h2 className="text-base font-bold leading-tight truncate">
+                    {greeting}{firstName ? `, ${firstName}` : ''} 👋
+                </h2>
+                <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-[11px] font-semibold">{scope || levelLabel}</span>
+            </div>
+            {fact ? (
+                <button
+                    type="button"
+                    onClick={() => setPick(p => p + 1)}
+                    title={t('ui.next_fact', 'Show another highlight')}
+                    className="relative mt-1 flex w-full items-center gap-1.5 text-start text-[13px] text-white/90 min-w-0"
+                >
+                    <FactIcon size={14} className="shrink-0" />
+                    <span className="truncate">{fact.text}</span>
+                </button>
+            ) : loading ? (
+                <Skeleton className="shimmer-light relative mt-1.5 h-4 w-2/3" />
+            ) : (
+                <p className="relative mt-1 text-[13px] text-white/80 truncate">{levelLabel}</p>
+            )}
+        </section>
+    );
+}
+
 function Landing({ navigate, permissions, user, roles = [], userStates = [], userLocalities = [], stats = null }) {
     const { t, i18n } = useTranslation();
 
@@ -495,7 +556,8 @@ function Landing({ navigate, permissions, user, roles = [], userStates = [], use
 
     return (
         <div className="flex flex-col min-h-full space-y-4">
-            <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${LEVEL_CARDS[level]} text-white p-4 sm:p-5 shadow-lg`}>
+            <PhoneGreeting greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} />
+            <section className={`hidden md:block relative overflow-hidden rounded-3xl bg-gradient-to-br ${LEVEL_CARDS[level]} text-white p-4 sm:p-5 shadow-lg`}>
                 <span className="absolute -end-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
                 <span className="absolute end-16 -bottom-12 h-28 w-28 rounded-full bg-white/10" />
                 <div className="relative">
@@ -545,13 +607,14 @@ function Landing({ navigate, permissions, user, roles = [], userStates = [], use
 // and as a page footer on wider screens and on pages without the bar.
 function AppCredit({ className = '' }) {
     return (
-        <p className={`text-center leading-snug ${className}`}>
-            <span className="font-semibold">{`© ${new Date().getFullYear()} National Child Health Program`}</span>
-            <span className="mx-1.5 opacity-60">•</span>
-            <span>Developed by <span className="font-semibold">Dr Qusay Mohamed</span></span>
-            <span className="mx-1.5 opacity-60">•</span>
-            <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 underline-offset-2 hover:underline">Gussaay@gmail.com</a>
-        </p>
+        <div className={`text-center leading-snug ${className}`}>
+            <p className="font-semibold">{`© ${new Date().getFullYear()} National Child Health Program`}</p>
+            <p>
+                <span>Developed by <span className="font-semibold">Dr Qusay Mohamed</span></span>
+                <span className="mx-1.5 opacity-60">•</span>
+                <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 underline-offset-2 hover:underline">Gussaay@gmail.com</a>
+            </p>
+        </div>
     );
 }
 
@@ -561,8 +624,21 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
         'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
     };
     
+    // Publishes the bar's height as --bottom-nav so pinned Save rows sit above it.
+    const navRef = useRef(null);
+    useEffect(() => {
+        const el = navRef.current;
+        if (!el) return undefined;
+        const root = document.documentElement.style;
+        const set = () => root.setProperty('--bottom-nav', `${el.offsetHeight}px`);
+        set();
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null;
+        ro?.observe(el);
+        return () => { ro?.disconnect(); root.removeProperty('--bottom-nav'); };
+    }, []);
+
     return (
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+        <nav ref={navRef} className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
             <div className="flex justify-between items-center px-2 w-full">
                 {navItems.map(item => {
                     const Icon = icons[item.view] || Activity;
@@ -807,6 +883,28 @@ export default function App() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
     const [sideMenuOpen, setSideMenuOpen] = useState(false);
+    // Where the sticky top bar ends, as --app-top, so page tabs, filter rows
+    // and toolbars can stick just under it.
+    const headerRef = useRef(null);
+    const headerElRef = useRef(null);
+    const headerObserverRef = useRef(null);
+    useEffect(() => {
+        const el = headerRef.current;
+        const set = () => {
+            const top = el ? (el.classList.contains('top-10') ? 40 : 0) + el.offsetHeight : 0;
+            document.documentElement.style.setProperty('--app-top', `${top}px`);
+        };
+        if (headerElRef.current !== el) {
+            headerObserverRef.current?.disconnect();
+            headerElRef.current = el;
+            if (el && typeof ResizeObserver !== 'undefined') {
+                headerObserverRef.current = new ResizeObserver(set);
+                headerObserverRef.current.observe(el);
+            }
+        }
+        set();
+    });
+    useEffect(() => () => headerObserverRef.current?.disconnect(), []);
 
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editDisplayName, setEditDisplayName] = useState('');
@@ -1880,6 +1978,7 @@ export default function App() {
     // Back buttons on pages: step back through history when there is an
     // in-app page to return to, otherwise fall back to the previous page.
     const goBack = useCallback(() => {
+        if (runInPageBack()) return;
         if ((window.history.state?.chmIdx || 0) > 0) { window.history.back(); return; }
         confirmLeaveRef.current?.().then((leave) => {
             if (!leave) return;
@@ -1980,6 +2079,7 @@ export default function App() {
     useEffect(() => {
         if (!Capacitor.isNativePlatform()) return undefined;
         const sub = CapacitorApp.addListener('backButton', () => {
+            if (runInPageBack()) return;
             if ((window.history.state?.chmIdx || 0) > 0) { window.history.back(); return; }
             if (hasWrittenPageRef.current && viewRef.current !== 'landing') {
                 confirmLeaveRef.current?.().then((leave) => {
@@ -2217,6 +2317,7 @@ export default function App() {
                     localStorage.removeItem(`backup_states_${user.uid}`);
                     localStorage.removeItem(`backup_localities_${user.uid}`);
                 }
+                clearRememberedFilters();
                 await signOut(auth); 
             } catch (error) { 
                 console.error("Error signing out:", error); 
@@ -2766,7 +2867,7 @@ case 'meetings':
             </div>
 
             {showSlimBar ? (
-            <header className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header ref={headerRef} className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-14 px-1 sm:px-4">
                     <button
                         onClick={goBack}
@@ -2783,7 +2884,7 @@ case 'meetings':
                 </div>
             </header>
             ) : (<>
-            <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header ref={headerRef} className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
@@ -2792,17 +2893,17 @@ case 'meetings':
                                 onClick={() => setSideMenuOpen(true)}
                                 aria-label={t('menu.title', 'Menu')}
                                 title={t('menu.title', 'Menu')}
-                                className="p-2 rounded-full text-white hover:bg-white/10 active:bg-white/20 shrink-0"
+                                className="hidden md:inline-flex p-2 rounded-full text-white hover:bg-white/10 active:bg-white/20 shrink-0"
                             >
                                 <Menu size={24} />
                             </button>
                         )}
-                        <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('landing')}>
-                            <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
-                                <img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-12 w-12 object-contain" />
+                        <div className="flex items-center gap-3 sm:gap-4 cursor-pointer min-w-0" onClick={() => !isSharedView && navigate('landing')}>
+                            <div className="h-11 w-11 sm:h-14 sm:w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md shrink-0">
+                                <img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-9 w-9 sm:h-12 sm:w-12 object-contain" />
                             </div>
-                            <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
+                            <div className="min-w-0">
+                                <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">{t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
                                     <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span
@@ -2848,8 +2949,17 @@ case 'meetings':
                 <div className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
 
                     <div className="flex-1 flex items-center justify-start overflow-hidden min-w-0">
+                        {/* Phones: the side menu sits here; the greeting already names the user. */}
+                        <button
+                            onClick={() => setSideMenuOpen(true)}
+                            aria-label={t('menu.title', 'Menu')}
+                            title={t('menu.title', 'Menu')}
+                            className="md:hidden p-1.5 rounded-md text-white hover:bg-slate-600 active:bg-slate-500 shrink-0"
+                        >
+                            <Menu size={22} />
+                        </button>
                         <div
-                            className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 min-w-0 max-w-full"
+                            className="hidden md:flex items-center gap-1.5 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 min-w-0 max-w-full"
                             onClick={() => setIsUserProfileModalOpen(true)}
                             title={t('app_extra.header.view_profile', 'View Profile Information')}
                         >
@@ -2893,7 +3003,7 @@ case 'meetings':
             {/* in-app replacements for alert()/confirm(); see components/dialogs.jsx */}
             <DialogHost />
 
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-28 md:pb-8 overflow-x-hidden">
+            <main className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 w-full flex-grow pb-32 md:pb-8 overflow-x-clip">
                 {/* keyed on `view` so navigating away from a crashed screen clears the error */}
                 <ErrorBoundary key={view} onGoHome={() => navigate('landing')}>
                     <Suspense fallback={<PageSkeleton />}>

@@ -859,7 +859,7 @@ function ItemModal({ isOpen, onClose, item, courseId, kind, modules, onSaved }) 
             <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Input label={t('imnci_ui.courses.common.title', 'Title')} value={form.title || ''} onChange={(e) => set('title', e.target.value)} />
-                    <Input label={t('imnci_ui.courses.item_modal.order', 'Order')} type="number" value={form.order ?? 0} onChange={(e) => set('order', e.target.value)} />
+                    <Input label={t('imnci_ui.courses.item_modal.order', 'Order')} type="number" inputMode="decimal" value={form.order ?? 0} onChange={(e) => set('order', e.target.value)} />
                 </div>
 
                 {isSection && (

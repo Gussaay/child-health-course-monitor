@@ -4,7 +4,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 import { Trash2, File, ExternalLink, ArrowLeft, RefreshCw, HardDrive } from 'lucide-react';
-import { Card, PageHeader, Button, Spinner, EmptyState } from './CommonComponents';
+import { Card, PageHeader, Button, Spinner, EmptyState, IS_NATIVE } from './CommonComponents';
 import { confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 
@@ -128,19 +128,25 @@ export default function DownloadedFilesView({ onBack, setToast }) {
 
     return (
         <div className="space-y-4 pb-20">
-            <div className="flex items-center justify-between mb-4">
+            <div className={`flex items-center mb-4 ${IS_NATIVE ? 'justify-end' : 'justify-between'}`}>
+                {!IS_NATIVE && (
                 <Button variant="secondary" onClick={onBack} className="flex items-center gap-2">
                     <ArrowLeft className="w-4 h-4" /> {t('admin_pages.downloaded_files.back', 'Back')}
                 </Button>
+                )}
                 <Button onClick={loadFiles} variant="secondary" className="flex items-center gap-2" disabled={loading}>
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('admin_pages.downloaded_files.refresh', 'Refresh')}
                 </Button>
             </div>
 
             <Card>
+                {!IS_NATIVE && (
+                <div className="px-3 pt-3 md:p-0">
                 <PageHeader title={t('admin_pages.downloaded_files.title', 'Downloaded Files')} subtitle={t('admin_pages.downloaded_files.subtitle', 'Manage APK updates and downloaded reports')} />
+                </div>
+                )}
                 
-                <div className="p-4">
+                <div className="p-3 md:p-4">
                     {loading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
                     ) : files.length === 0 ? (

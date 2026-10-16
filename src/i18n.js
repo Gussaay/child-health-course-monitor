@@ -6,6 +6,20 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 const resources = {
   en: {
     translation: {
+      // ===== Phone layout: filters toggle, home highlights, short tab names =====
+      ui: {
+        more: "More", more_actions: "More actions",
+        pull_refresh: "Pull to refresh", release_refresh: "Release to refresh", refreshing: "Refreshing…",
+        filters: "Filters", refresh: "Refresh data", next_fact: "Show another highlight",
+        facts: {
+          courses: "{{n}} courses held this year", participants: "{{n}} participants trained this year",
+          facilities_reached: "{{n}} facilities reached by mentorship this year", visits: "{{n}} mentorship visits this year",
+          facilitators: "{{n}} facilitators on the team", overall: "Overall service coverage is {{n}}%",
+          service: "{{service}} coverage is {{n}}%"
+        },
+        short: { active: "Active", admin: "Admin", all_facilities: "Facilities", ams: "AMS", annual: "Annual", approvals: "Approvals", back: "Back", certificates: "Certs", completed: "Completed", current: "Current", dashboard: "Stats", deleted: "Deleted", entry: "Entry", evaluation: "Evaluation", exercises: "Exercises", facility: "Facility", federal: "Federal", hand_hygiene: "Hand Hygiene", ipc: "IPC", list: "List", locality_plans: "Plans", maternal: "Maternal", members: "Members", monitor: "Monitor", monthly: "Monthly", mothers: "Mothers", neonatal: "Neonatal", participants: "Participants", pending: "Pending", practice: "Practice", quantify: "Quantify", quarterly: "Quarterly", report: "Report", reports: "Reports", skills: "Skills", structure: "Structure", tests: "Tests", trash: "Trash", visits: "Visits", weekly: "Weekly", supply_drugs: "Drugs", supply_equipment: "Equipment", supply_consumables: "Consumables", supply_information: "Info", admin_roles: "Roles", admin_permissions: "Permissions", admin_notifications: "Notify", admin_problems: "Problems", admin_usage: "Usage", admin_updates: "Updates" },
+        dash_tabs: { combined: "All", neonatal: "Neonatal", eenc: "EENC", imnci: "IMNCI", critical: "Critical", population: "Population" }
+      },
 
       // ===== ETAT mentorship checklists =====================================
       "Checklist 1 — Triage of all sick children (ABCD)": "Checklist 1 — Triage of all sick children (ABCD)",
@@ -6930,6 +6944,20 @@ const resources = {
   },
   ar: {
     translation: {
+      // ===== Phone layout: filters toggle, home highlights, short tab names =====
+      ui: {
+        more: "المزيد", more_actions: "إجراءات أخرى",
+        pull_refresh: "اسحب للتحديث", release_refresh: "اترك للتحديث", refreshing: "جارٍ التحديث…",
+        filters: "التصفية", refresh: "تحديث البيانات", next_fact: "عرض معلومة أخرى",
+        facts: {
+          courses: "{{n}} دورة أُقيمت هذا العام", participants: "{{n}} مشاركاً تم تدريبهم هذا العام",
+          facilities_reached: "{{n}} مرفقاً وصلها الإرشاد هذا العام", visits: "{{n}} زيارة إرشاد هذا العام",
+          facilitators: "{{n}} ميسراً في الفريق", overall: "التغطية الكلية للخدمات {{n}}%",
+          service: "تغطية {{service}} {{n}}%"
+        },
+        short: { active: "النشطة", admin: "الإدارة", all_facilities: "المنشآت", ams: "الإشراف الدوائي", annual: "السنوية", approvals: "الموافقات", back: "رجوع", certificates: "الشهادات", completed: "المكتملة", current: "الحاليون", dashboard: "اللوحة", deleted: "المحذوفات", entry: "الإدخال", evaluation: "التقييم", exercises: "التمارين", facility: "المنشأة", federal: "الإتحادية", hand_hygiene: "نظافة اليدين", ipc: "مكافحة العدوى", list: "القائمة", locality_plans: "الخطط", maternal: "الأمومة", members: "الأعضاء", monitor: "المتابعة", monthly: "الشهرية", mothers: "الأمهات", neonatal: "حديثي الولادة", participants: "المشاركون", pending: "المعلّقة", practice: "التطبيق", quantify: "التقدير", quarterly: "الربعية", report: "التقرير", reports: "التقارير", skills: "المهارات", structure: "الهيكل", tests: "الاختبارات", trash: "المهملات", visits: "الزيارات", weekly: "الأسبوعية", supply_drugs: "الأدوية", supply_equipment: "المعدات", supply_consumables: "المستهلكات", supply_information: "المعلوماتية", admin_roles: "الأدوار", admin_permissions: "الصلاحيات", admin_notifications: "الإشعارات", admin_problems: "البلاغات", admin_usage: "الاستخدام", admin_updates: "التحديثات" },
+        dash_tabs: { combined: "الكل", neonatal: "حديثي الولادة", eenc: "EENC", imnci: "IMNCI", critical: "الحرجة", population: "السكان" }
+      },
 
       // ===== ETAT mentorship checklists =====================================
       "Checklist 1 — Triage of all sick children (ABCD)": "قائمة التحقق 1 — فرز جميع الأطفال المرضى (ABCD)",

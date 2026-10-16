@@ -3,11 +3,14 @@
 @tailwind utilities;
 
 /*
-  - `overflow-x: hidden;` prevents any horizontal scrolling on the entire app.
+  - `overflow-x: clip;` prevents any horizontal scrolling on the entire app.
+    (`hidden` also did that, but it turned these boxes into scroll containers,
+    so nothing inside them could stay pinned with `position: sticky` — not even
+    the top bar.)
   - `max-width: 100vw;` ensures the body itself never tries to be wider than the screen.
 */
 html, body, #root {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
   width: 100%; /* Add this to be explicit */
 }
@@ -117,4 +120,15 @@ html, body, #root {
   }
   .cards-on-phone tbody > tr > td:empty { display: none; }
   .cards-on-phone tbody > tr > td[colspan] { display: block; text-align: center !important; }
+}
+
+/* Phones: icon-only buttons (copy, edit, delete, close, ...) get a finger-sized
+   tap area of at least 40px. */
+@media (max-width: 767px) {
+  main button:has(> svg:only-child) {
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+    align-items: center;
+  }
 }

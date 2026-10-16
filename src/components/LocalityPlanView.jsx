@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import jsPDF from "jspdf";
 import html2canvas from 'html2canvas';
 import { amiriFontBase64 } from './AmiriFont.js'; 
-import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner } from './CommonComponents';
+import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner, PageTabs, FilterPanel } from './CommonComponents';
+import { useTranslation } from 'react-i18next';
 import { upsertMasterPlan, deleteMasterPlan } from '../data';
 import { useDataCache } from '../DataContext';
 import { Save, Plus, Edit, Trash2, X, ChevronDown, ChevronUp, Layers, BarChart2, PieChart, Activity, Users, Calendar, Download, FileText, Target, CheckSquare, Settings, RefreshCw, AlertTriangle } from 'lucide-react';
@@ -13,6 +14,7 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { notify, confirmDialog } from './dialogs';
+import { useRememberedState } from '../utils/rememberedState';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 2 + i);
@@ -122,6 +124,7 @@ const TargetedFacilitiesSelect = ({ options, selectedIds, onChange, disabled }) 
 };
 
 export default function LocalityPlanView({ permissions, userStates, userLocalities }) {
+    const { t } = useTranslation();
     const { 
         masterPlans, fetchMasterPlans, 
         healthFacilities, fetchHealthFacilities,
@@ -135,12 +138,19 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
     const isFederalManager = permissions?.canUseFederalManagerAdvancedFeatures || permissions?.manageScope === 'federal';
 
     const [activeTab, setActiveTab] = useState('master'); 
-    const [globalFilter, setGlobalFilter] = useState({
+    const [rememberedGlobalFilter, setGlobalFilter] = useRememberedState('localityPlan.filters', () => ({
         year: CURRENT_YEAR,
         quarter: '', 
         state: isFederalManager ? '' : (userStates?.[0] || ''),
         locality: isLocalityManager ? (userLocalities?.[0] || '') : ''
-    });
+    }));
+    // Users below federal level stay within their own states, whatever was remembered.
+    const userStatesKey = (userStates || []).join('|');
+    const globalFilter = useMemo(() => {
+        const ownStates = userStatesKey ? userStatesKey.split('|') : [];
+        if (isFederalManager || ownStates.includes(rememberedGlobalFilter.state)) return rememberedGlobalFilter;
+        return { ...rememberedGlobalFilter, state: ownStates[0] || '', locality: isLocalityManager ? rememberedGlobalFilter.locality : '' };
+    }, [rememberedGlobalFilter, isFederalManager, isLocalityManager, userStatesKey]);
 
     useEffect(() => {
         if (isLocalityManager && userLocalities && userLocalities.length > 0) {
@@ -151,7 +161,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                 return prev;
             });
         }
-    }, [isLocalityManager, userLocalities]);
+    }, [isLocalityManager, userLocalities, setGlobalFilter]);
 
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false); 
@@ -781,7 +791,19 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         <div className="space-y-6 animate-in fade-in" dir="rtl">
             <PageHeader title="التخطيط القاعدي للمحليات" subtitle="إدارة الخطط الربعية وتطبيق العلاج المتكامل على مستوى المحليات" />
 
-            <div className="bg-slate-800 p-4 rounded-lg shadow-md flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end text-white">
+            <PageTabs
+                active={activeTab}
+                onChange={setActiveTab}
+                tabs={[
+                    isFederalManager && { id: 'federal', label: 'الخطة الإتحادية (Master Plan)', short: t('ui.short.federal', 'Federal'), icon: Settings },
+                    { id: 'master', label: 'الخطط القاعدية (للمحليات)', short: t('ui.short.locality_plans', 'Plans'), icon: Layers },
+                    { id: 'dashboard', label: 'لوحة المؤشرات المجمعة', short: t('ui.short.dashboard', 'Dashboard'), icon: BarChart2 },
+                    { id: 'trash', label: 'سلة المهملات', short: t('ui.short.trash', 'Trash'), icon: Trash2 },
+                ]}
+            />
+
+            <FilterPanel activeCount={[globalFilter.quarter, globalFilter.state, globalFilter.locality].filter(Boolean).length}>
+            <div className="bg-slate-800 -m-3 md:-m-4 p-4 rounded-xl grid grid-cols-2 gap-3 md:flex md:flex-row md:flex-wrap md:gap-4 md:items-end text-white">
                 <div className="w-full md:flex-1 md:min-w-[150px]">
                     <label className="block text-xs font-bold text-slate-300 mb-1">سنة الخطة</label>
                     <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-3 sm:p-2 outline-none h-12 sm:h-auto" value={globalFilter.year} onChange={e => setGlobalFilter({...globalFilter, year: Number(e.target.value)})}>
@@ -820,25 +842,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                     </div>
                 )}
             </div>
-
-            <div className="border-b border-gray-200">
-                <nav className="-mb-px flex gap-4 sm:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                    {isFederalManager && (
-                        <button onClick={() => setActiveTab('federal')} className={`pb-4 px-2 sm:px-1 border-b-2 font-bold text-sm sm:text-base flex items-center gap-2 transition-colors ${activeTab === 'federal' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                            <Settings size={20} /> الخطة الإتحادية (Master Plan)
-                        </button>
-                    )}
-                    <button onClick={() => setActiveTab('master')} className={`pb-4 px-2 sm:px-1 border-b-2 font-bold text-sm sm:text-base flex items-center gap-2 transition-colors ${activeTab === 'master' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                        <Layers size={20} /> الخطط القاعدية (للمحليات)
-                    </button>
-                    <button onClick={() => setActiveTab('dashboard')} className={`pb-4 px-2 sm:px-1 border-b-2 font-bold text-sm sm:text-base flex items-center gap-2 transition-colors ${activeTab === 'dashboard' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                        <BarChart2 size={20} /> لوحة المؤشرات المجمعة
-                    </button>
-                    <button onClick={() => setActiveTab('trash')} className={`pb-4 px-2 sm:px-1 border-b-2 font-bold text-sm sm:text-base flex items-center gap-2 transition-colors ${activeTab === 'trash' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-red-700'}`}>
-                        <Trash2 size={20} /> سلة المهملات
-                    </button>
-                </nav>
-            </div>
+            </FilterPanel>
 
             {/* TAB: FEDERAL MASTER TEMPLATES (ONLY FOR FEDERAL MANAGER) */}
             {activeTab === 'federal' && isFederalManager && (
@@ -878,7 +882,20 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                         </div>
                                         {expandedPlanId === plan.id && (
                                             <div className="p-2 sm:p-4">
-                                                <div className="overflow-x-auto">
+                                                <div className="md:hidden space-y-2 text-start">
+                                                    {plan.interventions?.map(inv => (
+                                                        <div key={inv.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                                                            <div className="font-bold text-sm text-gray-800 break-words">{inv.name}</div>
+                                                            <div className="text-[11px] text-gray-500 mb-2">{inv.axis}</div>
+                                                            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                                                                <div className="col-span-2"><span className="text-gray-500">المؤشر: </span><span className="font-bold text-teal-700">{inv.indicator || '-'}</span></div>
+                                                                <div className="col-span-2"><span className="text-gray-500">سعر الوحدة الافتراضي (ج.س): </span><span className="font-bold text-orange-600">{Number(inv.unitPrice||0).toLocaleString('en-US')}</span></div>
+                                                                {inv.notes && <div className="col-span-2 text-[11px] text-gray-500">ملاحظات: {inv.notes}</div>}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="hidden md:block overflow-x-auto">
                                                     <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1000px]">
                                                         <thead className="bg-slate-100 text-slate-700 font-bold border-b">
                                                             <tr>
@@ -1001,7 +1018,45 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                     </div>
                                                 </div>
 
-                                                <div className="overflow-x-auto">
+                                                <div className="md:hidden space-y-2 text-start">
+                                                    {plan.interventions?.filter(inv => Number(inv.target) > 0 || Number(inv.baseline) > 0 || Number(inv.planned) > 0 || Number(inv.totalCost) > 0 || inv.name).map(inv => {
+                                                        const isFacilityBasedIndicator = ['توفير ميزان وزن', 'توفير ميزان طول', 'توفير ميزان حرارة', 'توفير مؤقت تنفس', 'توفير كتيب لوحات', 'توفير سجل استمارات العلاج المتكامل + كرت الام'].includes(inv.name);
+                                                        const targetValue = Number(inv.target) || 0;
+                                                        const systemData = computeSystemBaseline(inv.name, plan.state, plan.locality);
+                                                        const coveragePct = isFacilityBasedIndicator && systemData.totalPhcs > 0 ? Math.min(100, Math.round((targetValue / systemData.totalPhcs) * 100)) : null;
+                                                        const fedTemplate = federalTemplates.find(p => p.quarter === plan.quarter && String(p.year) === String(plan.year));
+                                                        const fedInv = fedTemplate?.interventions?.find(f => f.name === inv.name);
+                                                        const displayUnitPrice = Number(inv.unitPrice || fedInv?.unitPrice || 0);
+                                                        const displayTotalCost = Number(inv.planned || 0) * displayUnitPrice;
+                                                        return (
+                                                            <div key={inv.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                                                                <div className="font-bold text-sm text-gray-800 break-words">{inv.name}</div>
+                                                                <div className="text-[11px] text-gray-500 mb-2">{inv.axis}{(ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator) ? ` · ${ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator}` : ''}</div>
+                                                                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                                                                    <div><span className="text-gray-500">المُخطط: </span><span className="font-bold text-indigo-600">{Number(inv.planned||0).toLocaleString('en-US')}</span></div>
+                                                                    <div><span className="text-gray-500">الابتدائي: </span><span className="font-bold">{Number(inv.baseline||0).toLocaleString('en-US')}</span></div>
+                                                                    <div className="col-span-2">
+                                                                        <div className="flex justify-between"><span className="text-gray-500">التغطية النهائية: </span><span className="font-bold text-teal-600">{targetValue.toLocaleString('en-US')}{coveragePct !== null ? ` (${coveragePct}%)` : ''}</span></div>
+                                                                        {coveragePct !== null && (
+                                                                            <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                                                                                <div className="h-1 rounded-full bg-teal-500" style={{ width: `${coveragePct}%` }}></div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div><span className="text-gray-500">سعر الوحدة (ج.س): </span><span className="font-bold text-orange-600">{displayUnitPrice.toLocaleString('en-US')}</span></div>
+                                                                    <div><span className="text-gray-500">التكلفة (ج.س): </span><span className="font-bold text-indigo-800">{displayTotalCost.toLocaleString('en-US')}</span></div>
+                                                                    {(inv.notes || inv.targetedFacilities?.length > 0) && (
+                                                                        <div className="col-span-2 text-[11px] text-gray-500">
+                                                                            {inv.notes && <span>ملاحظات: {inv.notes}</span>}
+                                                                            {inv.targetedFacilities?.length > 0 && <span className="block text-teal-600 font-semibold">المستهدف: {inv.targetedFacilities.length} مؤسسة</span>}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="hidden md:block overflow-x-auto">
                                                     <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1000px]">
                                                         <thead className="bg-slate-100 text-slate-700 font-bold border-b">
                                                             <tr>
@@ -1102,7 +1157,37 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                             <div className="p-4 border-b bg-gray-50 flex items-center gap-2">
                                 <BarChart2 className="text-teal-600"/> <h4 className="font-bold text-gray-800 text-sm sm:text-base">جدول التخطيط القاعدي المجمع بناءً على الفلاتر</h4>
                             </div>
-                            <div className="overflow-x-auto w-full pb-4">
+                            {/* Phone view: one card per aggregated activity */}
+                            <div className="md:hidden p-2 space-y-2 text-start">
+                                {visibleAggregatedRows.map((row, idx) => {
+                                    const isFacilityBasedIndicator = ['توفير ميزان وزن', 'توفير ميزان طول', 'توفير ميزان حرارة', 'توفير مؤقت تنفس', 'توفير كتيب لوحات', 'توفير سجل استمارات العلاج المتكامل + كرت الام'].includes(row.name);
+                                    const targetValue = Number(row.target) || 0;
+                                    const coveragePct = isFacilityBasedIndicator && currentTotalPhcs > 0 ? Math.min(100, Math.round((targetValue / currentTotalPhcs) * 100)) : null;
+                                    return (
+                                        <div key={idx} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                                            <div className="font-bold text-sm text-gray-800 break-words">{row.name}</div>
+                                            <div className="text-[11px] text-teal-800 mb-2">{row.axis}{row.indicator ? ` · ${row.indicator}` : ''}</div>
+                                            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                                                <div><span className="text-gray-500">الابتدائي الإجمالي: </span><span className="font-bold">{row.baseline.toLocaleString('en-US')}</span></div>
+                                                <div><span className="text-gray-500">المُخطط الإجمالي: </span><span className="font-bold">{row.planned.toLocaleString('en-US')}</span></div>
+                                                <div className="col-span-2">
+                                                    <div className="flex justify-between"><span className="text-gray-500">التغطية النهائية بالمحلية: </span><span className="font-bold text-teal-700">{targetValue.toLocaleString('en-US')}{coveragePct !== null ? ` (${coveragePct}%)` : ''}</span></div>
+                                                    {coveragePct !== null && (
+                                                        <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                                                            <div className="h-1 rounded-full bg-teal-500" style={{ width: `${coveragePct}%` }}></div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="col-span-2"><span className="text-gray-500">التكلفة الإجمالية (ج.س): </span><span className="font-bold text-orange-600">{row.totalCost.toLocaleString('en-US')}</span></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {visibleAggregatedRows.length === 0 && (
+                                    <div className="text-center p-6 text-xs text-gray-500">لا توجد بيانات مجمعة لعرضها بناءً على الفلاتر الحالية.</div>
+                                )}
+                            </div>
+                            <div className="hidden md:block overflow-x-auto w-full pb-4">
                                 <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1000px]">
                                     <thead className="bg-slate-800 text-white">
                                         <tr>

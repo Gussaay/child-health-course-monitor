@@ -7,7 +7,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { amiriFontBase64 } from './AmiriFont.js';
 
-import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
+import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, PageTabs } from './CommonComponents';
 import { upsertUnitMeeting, deleteUnitMeeting } from '../data';
 import { useDataCache } from '../DataContext';
 import { promptDialog } from './dialogs';
@@ -135,17 +135,15 @@ export default function MeetingTrackerView({ permissions }) {
         <div className="space-y-6">
             <PageHeader title={t('trackers.meetings.title', 'Federal Meeting Tracker')} subtitle={t('trackers.meetings.subtitle', 'Manage meeting series, schedules, and attendance tracking.')} />
 
-            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-max mb-4 border border-gray-200">
-                <Button variant={viewMode === 'dashboard' ? 'primary' : 'ghost'} onClick={() => setViewMode('dashboard')}>
-                    <BarChart2 className="w-4 h-4 mr-2" /> {t('trackers.meetings.tabs.dashboard', 'Dashboard Overview')}
-                </Button>
-                <Button variant={viewMode === 'entry' ? 'primary' : 'ghost'} onClick={() => { setViewMode('entry'); setSelectedMeetingId(''); setActiveMeeting(null); }}>
-                    <Edit className="w-4 h-4 mr-2" /> {t('trackers.meetings.tabs.entry', 'Data Entry')}
-                </Button>
-                <Button variant={viewMode === 'deleted' ? 'primary' : 'ghost'} onClick={() => setViewMode('deleted')}>
-                    {t('trackers.meetings.tabs.deleted', 'Deleted Items')}
-                </Button>
-            </div>
+            <PageTabs
+                active={viewMode}
+                onChange={(id) => { setViewMode(id); if (id === 'entry') { setSelectedMeetingId(''); setActiveMeeting(null); } }}
+                tabs={[
+                    { id: 'dashboard', label: t('trackers.meetings.tabs.dashboard', 'Dashboard Overview'), short: t('ui.short.dashboard', 'Dashboard'), icon: BarChart2 },
+                    { id: 'entry', label: t('trackers.meetings.tabs.entry', 'Data Entry'), short: t('ui.short.entry', 'Entry'), icon: Edit },
+                    { id: 'deleted', label: t('trackers.meetings.tabs.deleted', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted') },
+                ]}
+            />
 
             {viewMode === 'deleted' ? (
                 <Suspense fallback={<Spinner />}>
@@ -153,14 +151,14 @@ export default function MeetingTrackerView({ permissions }) {
                 </Suspense>
             ) : viewMode === 'dashboard' ? (
                 <Card>
-                    <CardBody className="p-6">
+                    <CardBody className="p-3 md:p-6">
                         <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
                             <Users className="text-sky-600" /> {t('trackers.meetings.overview', 'Federal Meetings Overview')}
                         </h3>
                         {rawMeetings?.length === 0 ? (
                             <EmptyState message={t('trackers.meetings.no_meetings', 'No meetings recorded across units.')} />
                         ) : (
-                            <Table headers={[t('trackers.meetings.table.title', 'Meeting Title'), t('trackers.meetings.table.unit', 'Unit'), t('trackers.meetings.table.schedule', 'Schedule'), t('trackers.meetings.table.attendees', 'Attendees'), t('trackers.meetings.table.sessions', 'Sessions')]}>
+                            <Table headers={[t('trackers.meetings.table.title', 'Meeting Title'), t('trackers.meetings.table.unit', 'Unit'), t('trackers.meetings.table.schedule', 'Schedule'), t('trackers.meetings.table.attendees', 'Attendees'), t('trackers.meetings.table.sessions', 'Sessions')]} cardsOnPhone>
                                 {(rawMeetings || []).filter(m => !m.isDeleted).map(m => (
                                     <tr key={m.id} className="hover:bg-gray-50">
                                         <td className="p-3 border font-medium">{m.title}</td>
@@ -176,8 +174,8 @@ export default function MeetingTrackerView({ permissions }) {
                 </Card>
             ) : (
                 <Card>
-                    <CardBody className="p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded border border-gray-200">
+                    <CardBody className="p-3 md:p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-3 md:p-4 rounded border border-gray-200">
                             <FormGroup label={t('trackers.meetings.select_unit', 'Select Program Unit')}>
                                 <Select value={selectedUnit} onChange={(e) => { setSelectedUnit(e.target.value); setSelectedMeetingId(''); setActiveMeeting(null); }}>
                                     <option value="">{t('trackers.meetings.choose_unit', '-- Choose Unit --')}</option>
@@ -210,7 +208,7 @@ export default function MeetingTrackerView({ permissions }) {
 
                         {activeMeeting && (
                             <div className="space-y-6 animate-in">
-                                <div className="p-4 border rounded-lg shadow-sm border-l-4 border-l-indigo-500">
+                                <div className="p-3 md:p-4 border rounded-lg shadow-sm border-l-4 border-l-indigo-500">
                                     <h4 className="font-bold text-gray-800 border-b pb-2 mb-4">{t('trackers.meetings.settings', 'Meeting Settings')}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                         <FormGroup label={t('trackers.meetings.schedule_freq', 'Schedule / Frequency')}>
@@ -228,7 +226,7 @@ export default function MeetingTrackerView({ permissions }) {
                                     </div>
                                 </div>
 
-                                <div className="p-4 border rounded-lg shadow-sm border-l-4 border-l-green-500">
+                                <div className="p-3 md:p-4 border rounded-lg shadow-sm border-l-4 border-l-green-500">
                                     <div className="flex justify-between items-center border-b pb-2 mb-4">
                                         <h4 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-4 h-4"/> {t('trackers.meetings.attendance', 'Attendance Tracking')}</h4>
                                         <Button size="sm" onClick={async () => {

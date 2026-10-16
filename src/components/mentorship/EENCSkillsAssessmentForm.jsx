@@ -11,13 +11,24 @@ import { GenericFacilityForm, EENCFormFields } from '../FacilityForms.jsx';
 import { submitFacilityDataForApproval } from '../../data';
 
 // --- Smart Auto-Scroll Helper ---
+// After an answer, move down to the next unanswered question BELOW the one
+// just answered. Questions left unanswered higher up are not jumped back to
+// (that used to pull the page up whenever something earlier was skipped).
+let lastTapped = null;
+if (typeof document !== 'undefined') {
+    document.addEventListener('pointerdown', (e) => { lastTapped = e.target; }, true);
+}
+
 export const handleAutoScroll = () => {
+    const anchor = lastTapped;
     setTimeout(() => {
-        const nextUnanswered = document.querySelector('.row-unanswered');
-        if (nextUnanswered) {
-            const y = nextUnanswered.getBoundingClientRect().top + window.scrollY - 180;
-            window.scrollTo({ top: y, behavior: 'smooth' });
-        }
+        const rows = Array.from(document.querySelectorAll('.row-unanswered'));
+        if (!rows.length) return;
+        const fromY = anchor && anchor.isConnected ? anchor.getBoundingClientRect().bottom : 0;
+        const next = rows.find((el) => el.getBoundingClientRect().top > fromY && !el.contains(anchor));
+        if (!next) return;
+        const y = next.getBoundingClientRect().top + window.scrollY - 180;
+        if (y > window.scrollY) window.scrollTo({ top: y, behavior: 'smooth' });
     }, 400);
 };
 
@@ -897,7 +908,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                                 <div className="text-sm flex items-center">
                                     <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
                                     {canEditVisitNumber ? (
-                                        <Input type="number" min="1" value={currentVisitNumber} onChange={(e) => setCurrentVisitNumber(e.target.value)} className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"/>
+                                        <Input type="number" inputMode="decimal" min="1" value={currentVisitNumber} onChange={(e) => setCurrentVisitNumber(e.target.value)} className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"/>
                                     ) : (
                                         <span className="text-lg font-bold text-sky-700 mr-2">{currentVisitNumber}</span>
                                     )}
@@ -957,7 +968,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                      </div>
                  </div>
 
-                 <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
+                 <div className="flex sm:hidden fixed bottom-[var(--bottom-nav,4rem)] left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm"> إلغاء </Button>
                     <Button type="button" variant="outline" onClick={(e) => handleSubmit(e, 'draft')} disabled={isSaving || isSavingDraft || formData.eenc_breathing_status === 'na'} size="sm"> {isSavingDraft ? 'جاري...' : 'حفظ مسودة'} </Button>
                     <Button type="submit" disabled={isSaving || isSavingDraft || !isFormComplete} size="sm"> {isSaving ? 'جاري...' : 'حفظ وإكمال'} </Button>

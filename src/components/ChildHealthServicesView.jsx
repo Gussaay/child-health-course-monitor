@@ -11,7 +11,7 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from 'react-i18next';
 
 // --- ICONS ---
-import { PdfIcon } from './CommonComponents';
+import { PdfIcon, PageActions } from './CommonComponents';
 import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity } from 'lucide-react';
 
 import NameStandardizationModal from './NameStandardizationModal.jsx';
@@ -26,7 +26,8 @@ import { point } from '@turf/helpers';
 
 import {
     Card, PageHeader, Button, FormGroup, Select, Table,
-    Modal, Spinner, EmptyState, Checkbox, Input, SkeletonTable
+    Modal, Spinner, EmptyState, Checkbox, Input, SkeletonTable,
+    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh
 } from './CommonComponents';
 import {
     saveFacilitySnapshot,
@@ -53,6 +54,7 @@ import {
 import { STATE_LOCALITIES } from "./constants.js";
 import { notify, confirmDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
+import { useRememberedState } from '../utils/rememberedState';
 
 // MISSING IMPLEMENTATION — generateFacilityListPdf is called below but has never
 // been defined in this file or imported from anywhere, so the facility-list PDF
@@ -309,22 +311,22 @@ const ActionMenu = ({ onAction, isSuperUserOrFed }) => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto mt-8 p-4 space-y-12" dir="rtl">
+        <div className="max-w-7xl mx-auto mt-4 md:mt-8 p-0 md:p-4 space-y-12" dir="rtl">
             <section>
                 <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">خدمات صحة الطفل</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                <div className="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-6">
                     {items.map(item => {
                         const Icon = item.icon;
                         return (
                             <button
                                 key={item.id}
                                 onClick={() => onAction(item.id)}
-                                className={`flex flex-col items-center justify-center p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
+                                className={`flex flex-col items-center justify-center p-4 md:p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
                             >
-                                <div className={`p-5 rounded-2xl mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
-                                    <Icon className={`w-8 h-8 ${item.color}`} strokeWidth={1.5} />
+                                <div className={`p-3 md:p-5 rounded-2xl mb-3 md:mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
+                                    <Icon className={`w-7 h-7 md:w-8 md:h-8 ${item.color}`} strokeWidth={1.5} />
                                 </div>
-                                <div className="font-semibold text-gray-700 text-lg group-hover:text-gray-900 transition-colors text-center">
+                                <div className="font-semibold text-gray-700 text-sm md:text-lg group-hover:text-gray-900 transition-colors text-center">
                                     {item.label}
                                 </div>
                             </button>
@@ -1183,20 +1185,20 @@ const ChildHealthServicesView = ({
     const [isNameStandardizationOpen, setIsNameStandardizationOpen] = useState(false);
     const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : '');
     const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : '');
-    const [facilityTypeFilter, setFacilityTypeFilter] = useState('');
-    const [functioningFilter, setFunctioningFilter] = useState('');
-    const [projectFilter, setProjectFilter] = useState('');
-    const [serviceTypeFilter, setServiceTypeFilter] = useState('');
-    const [eencServiceTypeFilter, setEencServiceTypeFilter] = useState('');
+    const [facilityTypeFilter, setFacilityTypeFilter] = useRememberedState('chs.facilityType', '');
+    const [functioningFilter, setFunctioningFilter] = useRememberedState('chs.functioning', '');
+    const [projectFilter, setProjectFilter] = useRememberedState('chs.project', '');
+    const [serviceTypeFilter, setServiceTypeFilter] = useRememberedState('chs.serviceType', '');
+    const [eencServiceTypeFilter, setEencServiceTypeFilter] = useRememberedState('chs.eencServiceType', '');
     const [pendingSubmissions, setPendingSubmissions] = useState([]);
     const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
     const [uploadStatus, setUploadStatus] = useState({ inProgress: false, processed: 0, total: 0, errors: [], message: '' });
     const [submissionForReview, setSubmissionForReview] = useState(null);
     const [comparisonFacilities, setComparisonFacilities] = useState([]);
     const [isReviewLoading, setIsReviewLoading] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [pendingStartDate, setPendingStartDate] = useState('');
-    const [pendingEndDate, setPendingEndDate] = useState('');
+    const [searchQuery, setSearchQuery] = useRememberedState('chs.search', '');
+    const [pendingStartDate, setPendingStartDate] = useRememberedState('chs.pending.startDate', '');
+    const [pendingEndDate, setPendingEndDate] = useRememberedState('chs.pending.endDate', '');
     const hasFetchedPendingRef = useRef(false); 
     
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
@@ -1212,7 +1214,9 @@ const ChildHealthServicesView = ({
     };
 
     const auth = getAuth();
-    const [hasManuallySelected, setHasManuallySelected] = useState(!!(userStates?.length === 1 || userLocalities?.length === 1));
+    // A remembered filter counts as a selection, so the filtered list shows again on return.
+    const [hasManuallySelected, setHasManuallySelected] = useState(() => !!(userStates?.length === 1 || userLocalities?.length === 1)
+        || [facilityTypeFilter, functioningFilter, projectFilter, serviceTypeFilter, eencServiceTypeFilter, searchQuery].some(Boolean));
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1879,11 +1883,13 @@ const ChildHealthServicesView = ({
 
         return (
             <div className="w-full max-w-7xl mx-auto animate-fade-in">
+                {!IS_NATIVE && (
                 <div className="mb-4 flex justify-end" dir="rtl">
                     <Button variant="secondary" onClick={handleBackClick} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
                         <ArrowLeft className="w-5 h-5 ml-2" /> الرجوع للخلف
                     </Button>
                 </div>
+                )}
                 <GenericFacilityForm
                     initialData={formInitialData}
                     pendingData={pendingFacilityData}
@@ -1968,22 +1974,25 @@ const ChildHealthServicesView = ({
         const totalPages = Math.ceil(totalFacilities / itemsPerPage);
 
         return (<Card>
-            <div className="p-6">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
+            <div className="p-3 md:p-6">
+                <div className="flex flex-wrap justify-between items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
+                        {!IS_NATIVE && (
                         <Button variant="secondary" onClick={() => setView('action_menu')} className="mr-4">
                             <ArrowLeft className="w-4 h-4 mr-1 inline" /> {t('facilities_page.common.back', 'Back')}
                         </Button>
+                        )}
                         <PageHeader 
                             title={t('facilities_page.services.page_title', 'Child Health Services Management')} 
                             subtitle={t('facilities_page.services.page_subtitle', 'Manage health facilities and their pediatric services.')}
                         />
                     </div>
+                    <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing} />
                     <Button 
                         variant="secondary" 
                         onClick={handleRefresh} 
                         disabled={isRefreshing}
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 shrink-0 ms-auto"
                     >
                         {isRefreshing ? (
                             <> <Spinner size="sm" /> {t('facilities_page.services.refreshing', 'Refreshing...')} </>
@@ -1998,10 +2007,21 @@ const ChildHealthServicesView = ({
                     </Button>
                 </div>
                 
-                <div className="border-b border-gray-200 mt-6"><nav className="-mb-px flex space-x-4 overflow-x-auto">{availableTabs.map(tabName => (<button key={tabName} onClick={() => setActiveTab(tabName)} className={`${activeTab === tabName ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm`}>{TAB_LABELS[tabName] || tabName}{tabName === TABS.PENDING && uniquePendingSubmissions && uniquePendingSubmissions.length > 0 && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">{uniquePendingSubmissions.length}</span>}</button>))}</nav></div>
+                <PageTabs
+                    className="mt-3 md:mt-6"
+                    active={activeTab}
+                    onChange={setActiveTab}
+                    tabs={availableTabs.map(tabName => ({
+                        id: tabName,
+                        label: TAB_LABELS[tabName] || tabName,
+                        short: tabName === TABS.PENDING ? t('ui.short.pending', 'Pending') : t('ui.short.all_facilities', 'Facilities'),
+                        count: tabName === TABS.PENDING ? (uniquePendingSubmissions?.length || 0) : 0,
+                    }))}
+                />
 
                 {activeTab === TABS.PENDING && (
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4 items-end">
+                     <FilterPanel className="my-4" activeCount={[pendingStartDate, pendingEndDate].filter(Boolean).length}>
+                     <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 items-end">
                         <FormGroup label={t('facilities_page.services.filter_submission_start', 'Filter by Submission Start Date')}>
                             <Input type="date" value={pendingStartDate} onChange={(e) => setPendingStartDate(e.target.value)} />
                         </FormGroup>
@@ -2009,12 +2029,14 @@ const ChildHealthServicesView = ({
                             <Input type="date" value={pendingEndDate} onChange={(e) => setPendingEndDate(e.target.value)} />
                         </FormGroup>
                     </div>
+                    </FilterPanel>
                 )}
 
                 {showFiltersAndActions && (<>
-                    <div className="flex flex-wrap gap-4 my-4 items-end">
-                       <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_state', 'Filter by State')}><Select value={stateFilter} onChange={handleStateChange} disabled={isStateFilterDisabled}>{availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</Select></FormGroup></div>
-                       <div className="flex-1 min-w-[160px]">
+                    <FilterPanel className="my-4" activeCount={[stateFilter, localityFilter, facilityTypeFilter, serviceTypeFilter, eencServiceTypeFilter, functioningFilter, projectFilter].filter(Boolean).length}>
+                    <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:gap-4 items-end">
+                       <div className="flex-1 min-w-0 md:min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_state', 'Filter by State')}><Select value={stateFilter} onChange={handleStateChange} disabled={isStateFilterDisabled}>{availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</Select></FormGroup></div>
+                       <div className="flex-1 min-w-0 md:min-w-[160px]">
                             <FormGroup label={t('facilities_page.services.filter_locality', 'Filter by Locality')}>
                                 <Select value={localityFilter} onChange={(e) => { setLocalityFilter(e.target.value); setHasManuallySelected(true); }} disabled={isLocalityFilterDisabled}>
                                     {isLocalityManager ? (
@@ -2025,17 +2047,18 @@ const ChildHealthServicesView = ({
                                 </Select>
                             </FormGroup>
                         </div>
-                        <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_facility_type', 'Filter by Facility Type')}><Select value={facilityTypeFilter} onChange={(e) => { setFacilityTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_types', 'All Types')}</option>{FACILITY_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
-                        <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_service', 'Filter by Service')}><Select value={serviceTypeFilter} onChange={(e) => { setServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_services', 'All Services')}</option>{SERVICE_TYPES.map(type => <option key={type} value={type}>{SERVICE_TYPE_LABELS[type] || type}</option>)}</Select></FormGroup></div>
+                        <div className="flex-1 min-w-0 md:min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_facility_type', 'Filter by Facility Type')}><Select value={facilityTypeFilter} onChange={(e) => { setFacilityTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_types', 'All Types')}</option>{FACILITY_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
+                        <div className="flex-1 min-w-0 md:min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_service', 'Filter by Service')}><Select value={serviceTypeFilter} onChange={(e) => { setServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_services', 'All Services')}</option>{SERVICE_TYPES.map(type => <option key={type} value={type}>{SERVICE_TYPE_LABELS[type] || type}</option>)}</Select></FormGroup></div>
                         
-                        <div className="flex-1 min-w-[160px]"><FormGroup label="نوع الخدمات المقدمة"><Select value={eencServiceTypeFilter} onChange={(e) => { setEencServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_types', 'All Types')}</option>{EENC_SERVICE_TYPES.map(type => <option key={type} value={type}>{EENC_SERVICE_TYPE_LABELS[type] || type}</option>)}</Select></FormGroup></div>
+                        <div className="flex-1 min-w-0 md:min-w-[160px]"><FormGroup label="نوع الخدمات المقدمة"><Select value={eencServiceTypeFilter} onChange={(e) => { setEencServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_types', 'All Types')}</option>{EENC_SERVICE_TYPES.map(type => <option key={type} value={type}>{EENC_SERVICE_TYPE_LABELS[type] || type}</option>)}</Select></FormGroup></div>
 
-                        <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.functioning_status', 'Functioning Status')}><Select value={functioningFilter} onChange={(e) => { setFunctioningFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all', 'All')}</option><option value="Yes">{t('facilities_page.common.yes', 'Yes')}</option><option value="No">{t('facilities_page.common.no', 'No')}</option><option value="NOT_SET">{t('facilities_page.services.not_set', 'Not Set')}</option></Select></FormGroup></div>
-                        <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_project', 'Filter by Project Name')}><Select value={projectFilter} onChange={(e) => { setProjectFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_projects', 'All Projects')}</option>{(projectNames || []).map(name => <option key={name} value={name}>{name}</option>)}</Select></FormGroup></div>
+                        <div className="flex-1 min-w-0 md:min-w-[160px]"><FormGroup label={t('facilities_page.services.functioning_status', 'Functioning Status')}><Select value={functioningFilter} onChange={(e) => { setFunctioningFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all', 'All')}</option><option value="Yes">{t('facilities_page.common.yes', 'Yes')}</option><option value="No">{t('facilities_page.common.no', 'No')}</option><option value="NOT_SET">{t('facilities_page.services.not_set', 'Not Set')}</option></Select></FormGroup></div>
+                        <div className="flex-1 min-w-0 md:min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_project', 'Filter by Project Name')}><Select value={projectFilter} onChange={(e) => { setProjectFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_projects', 'All Projects')}</option>{(projectNames || []).map(name => <option key={name} value={name}>{name}</option>)}</Select></FormGroup></div>
                     </div>
+                    </FilterPanel>
 
-                    <div className="flex justify-between items-center my-4">
-                        <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col items-start gap-2 md:flex-row md:justify-between md:items-center my-4">
+                        <PageActions keep={1}>
                             {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>{t('facilities_page.services.add_new', 'Add New')}</Button> )}
                             {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>{t('facilities_page.services.bulk_upload', 'Bulk Upload')}</Button> )}
                             
@@ -2055,7 +2078,7 @@ const ChildHealthServicesView = ({
                                     </Button>
                                 </>
                             )}
-                        </div>
+                        </PageActions>
                          
                         <div className="flex flex-wrap gap-2">
                              {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>{t('facilities_page.services.find_duplicates', 'Find Duplicates')}</Button> )}
@@ -2081,8 +2104,8 @@ const ChildHealthServicesView = ({
                 )}
                 
                 {showFiltersAndActions && hasManuallySelected && totalFacilities > 0 && (
-                    <div className="flex justify-between items-center mt-4 p-4 border-t">
-                        <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center mt-4 p-3 md:p-4 border-t">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-4">
                             <span className="text-sm text-gray-700">
                                 {t('facilities_page.services.page', 'Page')} <strong>{currentPage}</strong> {t('facilities_page.services.of', 'of')} <strong>{totalPages}</strong> {t('facilities_page.services.total_facilities', '(Total: {{count}} facilities)', { count: totalFacilities })}
                             </span>
@@ -2144,6 +2167,16 @@ const ChildHealthServicesView = ({
     }, [facilitiesToDisplay, updateSelectionSearch]);
 
     const isShowingAll = facilitiesWithService.length === 0 && facilitiesInLocality.length > 0;
+
+    // Android app: the top-bar arrow steps back from the list and the form.
+    useInPageBack(() => {
+        if (view === 'form') {
+            setEditingFacility(null);
+            if (updateSelectionService) { setUpdateSelectionService(null); setView('action_menu'); } else setView('list');
+        } else {
+            setView('action_menu');
+        }
+    }, view === 'form' || view === 'list');
     
     return (
         <>

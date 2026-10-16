@@ -18,7 +18,7 @@ import { Plus, Pencil, Trash2, Save, ArrowLeft } from 'lucide-react';
 
 import {
     Card, CardBody, PageHeader, Button, Tabs, Table, EmptyState, Spinner,
-    Input, Select,
+    Input, Select, IS_NATIVE, useInPageBack,
 } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
 import { useDataCache } from '../DataContext';
@@ -508,13 +508,13 @@ function SectionEditor({ section, values, onChange, readOnly }) {
                                                 <div className="col-span-2 text-gray-500">{item.standard}</div>
                                             )}
                                             <div className="col-span-3">
-                                                <input disabled={readOnly} type="number" min="0"
+                                                <input disabled={readOnly} type="number" inputMode="decimal" min="0"
                                                     value={v.available ?? ''}
                                                     onChange={(e) => set(item.id, 'available', e.target.value)}
                                                     className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50" />
                                             </div>
                                             <div className="col-span-3">
-                                                <input disabled={readOnly} type="number" min="0"
+                                                <input disabled={readOnly} type="number" inputMode="decimal" min="0"
                                                     value={v.need ?? ''}
                                                     onChange={(e) => set(item.id, 'need', e.target.value)}
                                                     className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50" />
@@ -533,6 +533,7 @@ function SectionEditor({ section, values, onChange, readOnly }) {
 
 function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
     const { t } = useTranslation();
+    useInPageBack(onBack);
     const [form, setForm] = useState(() => initial || {
         checklistId: checklist.id,
         service: checklist.service,
@@ -590,10 +591,13 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
 
     return (
         <div className="space-y-4">
+            {(!IS_NATIVE || canEdit) && (
             <div className="flex flex-wrap items-center justify-between gap-2">
+                {!IS_NATIVE && (
                 <Button variant="secondary" onClick={onBack}>
                     <ArrowLeft size={16} /> {t('trackers.supervision.form.back', 'Back to assessments')}
                 </Button>
+                )}
                 {canEdit && (
                     <div className="flex gap-2">
                         <Button variant="secondary" onClick={() => save('draft')} disabled={saving}>
@@ -605,6 +609,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
                     </div>
                 )}
             </div>
+            )}
 
             <Card>
                 <CardBody className="space-y-4">
@@ -753,8 +758,9 @@ export default function SupervisionView({ permissions = {} }) {
                             ...SUPERVISION_CHECKLISTS.map((c) => ({
                                 id: c.id,
                                 label: `${c.service} · ${isArabic ? c.titleAr : c.title}`,
+                                short: c.service,
                             })),
-                            ...(canEmptyBin ? [{ id: DELETED_TAB, label: t('trackers.supervision.deleted_items', 'Deleted Items') }] : []),
+                            ...(canEmptyBin ? [{ id: DELETED_TAB, label: t('trackers.supervision.deleted_items', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted') }] : []),
                         ]}
                         activeTab={showDeleted ? DELETED_TAB : checklistId}
                         onTabChange={(id) => {
@@ -770,7 +776,7 @@ export default function SupervisionView({ permissions = {} }) {
                         </Suspense>
                     ) : (<>
 
-                    <div className="w-56">
+                    <div className="w-full md:w-56">
                         <Select label={t('trackers.supervision.state', 'State')} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
                             <option value="all">{t('trackers.supervision.all_states', 'All states')}</option>
                             {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal')
@@ -779,7 +785,7 @@ export default function SupervisionView({ permissions = {} }) {
                     </div>
 
                     {isLoading?.supervisionAssessments && !supervisionAssessments ? <Spinner /> : (
-                        <Table headers={headers}>
+                        <Table headers={headers} cardsOnPhone>
                             {rows.length === 0 ? (
                                 <EmptyState colSpan={headers.length}
                                     message={t('trackers.supervision.empty', 'No assessments yet. Use New assessment to start one.')} />

@@ -395,7 +395,7 @@ export function RichTextEditor({
             {/* Sticky, because the document is now the whole tab: scrolling
                 three screens down should not leave the author without a bold
                 button. */}
-            <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-slate-50 border-b border-slate-200 sticky top-16 z-10">
+            <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-slate-50 border-b border-slate-200 sticky top-[var(--app-top,0px)] z-10">
                 <ToolButton title={t('imnci_ui.shared.editor.bold', 'Bold')} onClick={() => cmd('bold')}><Bold size={15} /></ToolButton>
                 <ToolButton title={t('imnci_ui.shared.editor.italic', 'Italic')} onClick={() => cmd('italic')}><Italic size={15} /></ToolButton>
                 <ToolButton title={t('imnci_ui.shared.editor.underline', 'Underline')} onClick={() => cmd('underline')}><Underline size={15} /></ToolButton>

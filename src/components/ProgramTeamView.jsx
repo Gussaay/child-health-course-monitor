@@ -30,7 +30,7 @@ import {
     uploadFile 
 
 } from '../data';
-import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeader, EmptyState, FormGroup, CardBody, CardFooter, PdfIcon } from './CommonComponents';
+import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeader, EmptyState, FormGroup, CardBody, CardFooter, PdfIcon, PageTabs, FilterPanel, PageActions, FormActions } from './CommonComponents';
 import { STATE_LOCALITIES } from './constants';
 import { auth, db } from '../firebase'; 
 import { onAuthStateChanged } from 'firebase/auth';
@@ -50,6 +50,7 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl, publicCurrentUrl } from '../utils/publicLink';
+import { useRememberedState } from '../utils/rememberedState';
 
 // Standard job titles for normalization
 const STANDARD_JOB_TITLES = ['صحة عامة', 'طبيب', 'ممرض', 'ظابط تغذية', 'مساعد طبي', 'صيدلي', 'إحصائي', 'إدارة اعمال'];
@@ -146,7 +147,7 @@ function DynamicExperienceFields({ experiences, onChange }) {
                     />
                     <Input 
                         label="مدة الخبرة بالسنوات" 
-                        type="number" 
+                        type="number" inputMode="decimal" 
                         min="0"
                         step="any"
                         value={exp.duration} 
@@ -529,7 +530,7 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
     return (
         <Card>
             <CardBody>
-                <Table headers={headers}>
+                <Table cardsOnPhone headers={headers}>
                     {submissions && submissions.length > 0 ? (
                         submissions.map(s => (
                             <tr key={s.id}>
@@ -1904,7 +1905,7 @@ export function ProgramTeamView({ permissions, userStates }) {
     
     const isFederal = permissions.manageScope === 'federal' || permissions.canUseSuperUserAdvancedFeatures;
 
-    const [filters, setFilters] = useState(() => {
+    const [rememberedFilters, setFilters] = useRememberedState('programTeam.filters', () => {
         const initialState = {
             level: isFederal ? 'federal' : 'state',
             state: isFederal ? '' : (userStates[0] || ''), 
@@ -1915,6 +1916,16 @@ export function ProgramTeamView({ permissions, userStates }) {
         };
         return initialState;
     });
+    // Non-federal users stay locked to their own state, whatever was remembered.
+    const ownState = userStates?.[0] || '';
+    const filters = useMemo(() => {
+        if (isFederal) return rememberedFilters;
+        return {
+            ...rememberedFilters,
+            level: rememberedFilters.level === 'federal' ? 'state' : rememberedFilters.level,
+            state: ownState,
+        };
+    }, [rememberedFilters, isFederal, ownState]);
 
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -2392,44 +2403,41 @@ export function ProgramTeamView({ permissions, userStates }) {
             </Modal>
 
             {/* TABS RENDERED FIRST */}
-            <div className="border-b border-gray-200 mb-6 pb-2">
-                 <div className="flex items-center gap-6">
-                    <nav className="-mb-px flex items-center gap-6" aria-label={t('program_teams.tabs.aria', 'Tabs')}>
-                        <Button variant="tab" isActive={activeTab === 'members'} onClick={() => setActiveTab('members')}>{t('program_teams.tabs.members', 'Team Members')}</Button>
-                        {permissions?.canApproveSubmissions && (
-                            <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
-                                {t('program_teams.tabs.pending', 'Pending Approvals')}{' '}
-                                <span className="ml-2 bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                                    {/* Exclude instantly hidden rows from the badge count too */}
-                                    {currentLevelData.pending ? currentLevelData.pending.filter(s => !processedPendingIds.has(s.id)).length : 0}
-                                </span>
-                            </Button>
-                        )}
-                        <Button variant="tab" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>{t('program_teams.tabs.dashboard', 'Dashboard')}</Button>
-                        
-                        <Button variant="tab" isActive={activeTab === 'structure'} onClick={() => setActiveTab('structure')}>{t('program_teams.tabs.structure', 'Program Structure')}</Button>
+            <PageTabs
+                className="mb-6"
+                active={activeTab}
+                onChange={setActiveTab}
+                tabs={[
+                    { id: 'members', label: t('program_teams.tabs.members', 'Team Members'), short: t('ui.short.members', 'Members') },
+                    permissions?.canApproveSubmissions && {
+                        id: 'pending',
+                        label: t('program_teams.tabs.pending', 'Pending Approvals'),
+                        short: t('ui.short.pending', 'Pending'),
+                        // Exclude instantly hidden rows from the badge count too
+                        count: currentLevelData.pending ? currentLevelData.pending.filter(s => !processedPendingIds.has(s.id)).length : 0,
+                    },
+                    { id: 'dashboard', label: t('program_teams.tabs.dashboard', 'Dashboard') },
+                    { id: 'structure', label: t('program_teams.tabs.structure', 'Program Structure'), short: t('ui.short.structure', 'Structure') },
+                ]}
+            />
 
-                        {permissions?.canApproveSubmissions && (
-                            <Button variant="secondary" size="sm" onClick={handleOpenLinkModal}>{t('program_teams.tabs.manage_link', 'Manage Submission Link')}</Button>
-                        )}
-                    </nav>
-                </div>
-            </div>
+            {/* ACTION BUTTONS */}
+            {((activeTab === 'members' && (permissions.canManageHumanResource || permissions.canUseFederalManagerAdvancedFeatures)) || permissions?.canApproveSubmissions) && (
+                <PageActions className="mb-4">
+                    {activeTab === 'members' && permissions.canManageHumanResource && <Button onClick={handleAdd}>{t('program_teams.members.add', 'Add New Team Member')}</Button>}
+                    {activeTab === 'members' && permissions.canManageHumanResource && <Button variant="secondary" onClick={handleOpenAutoNormalize}>{t('program_teams.members.auto_normalize', 'Auto-Normalize Jobs')}</Button>}
+                    {activeTab === 'members' && permissions.canUseFederalManagerAdvancedFeatures && (
+                        <Button variant="secondary" onClick={() => setIsBulkImportOpen(true)}>{t('program_teams.members.bulk_import', 'Bulk Import/Update')}</Button>
+                    )}
+                    {permissions?.canApproveSubmissions && (
+                        <Button variant="secondary" size="sm" onClick={handleOpenLinkModal}>{t('program_teams.tabs.manage_link', 'Manage Submission Link')}</Button>
+                    )}
+                </PageActions>
+            )}
 
             {/* FILTERS SECTION JUST ABOVE CONTENT/KPI */}
-            <div className="mb-6 flex flex-wrap items-end gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100 shadow-sm">
-                {activeTab === 'members' && (
-                    <FormGroup label={'\u00A0'}>
-                        <div className="flex gap-2">
-                            {permissions.canManageHumanResource && <Button onClick={handleAdd}>{t('program_teams.members.add', 'Add New Team Member')}</Button>}
-                            {permissions.canManageHumanResource && <Button variant="secondary" onClick={handleOpenAutoNormalize}>{t('program_teams.members.auto_normalize', 'Auto-Normalize Jobs')}</Button>}
-                            {permissions.canUseFederalManagerAdvancedFeatures && (
-                                <Button variant="secondary" onClick={() => setIsBulkImportOpen(true)}>{t('program_teams.members.bulk_import', 'Bulk Import/Update')}</Button>
-                            )}
-                        </div>
-                    </FormGroup>
-                )}
-                <div className="flex flex-wrap items-end gap-4 flex-grow">
+            <FilterPanel className="mb-6" activeCount={['state', 'locality', 'jobTitle', 'role', 'unit'].filter(k => filters[k]).length}>
+                <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:items-end md:gap-4">
                     {activeTab !== 'dashboard' && activeTab !== 'structure' && (
                         <FormGroup label={t('program_teams.filters.level', 'Filter by Level')}>
                             <Select value={filters.level} onChange={(e) => handleFilterChange('level', e.target.value)}>
@@ -2491,7 +2499,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                         </>
                     )}
                 </div>
-            </div>
+            </FilterPanel>
             
             {activeTab === 'structure' ? (
                 <ProgramStructureChart 
@@ -2524,7 +2532,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                         )}
 
                         {currentLevelData.loading ? <Spinner /> : (
-                            <Table headers={tableHeaders[filters.level]}>
+                            <Table cardsOnPhone headers={tableHeaders[filters.level]}>
                                 {filteredMembers.length > 0 ? filteredMembers.map(c => {
                                     let locAr = c.locality;
                                     if (c.state && c.locality) {
@@ -3006,11 +3014,11 @@ export function TeamMemberApplicationForm() {
                 </CardBody>
 
                 {selectedLevel && (
-                    <CardFooter>
+                    <FormActions className="mx-3 mb-3 md:m-0 md:p-4 md:!bg-gray-50 md:border-t md:border-gray-200 md:rounded-none md:rounded-b-lg">
                          <Button type="submit" disabled={submitting}>
                             {submitting ? t('program_teams.application.submitting', 'Submitting...') : (isUpdate || formData.pendingCollName ? 'تحديث المعلومات' : 'تسليم الاستمارة')}
                         </Button>
-                    </CardFooter>
+                    </FormActions>
                 )}
             </form>
         </Card>

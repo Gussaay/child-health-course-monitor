@@ -1,4 +1,22 @@
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ChevronDown, MoreHorizontal, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { addInPageBack } from '../utils/inPageBack';
+
+// The Android app shows every inner page's name and a back arrow in its slim
+// top bar, so in-page titles and back buttons are left out there.
+export const IS_NATIVE = Capacitor.isNativePlatform();
+
+// Lets the top-bar arrow (and the phone's back button) take this page's own
+// back step while `active`, for pages whose Back button is hidden in the app.
+export function useInPageBack(onBack, active = true) {
+    const ref = useRef(onBack);
+    ref.current = onBack;
+    useEffect(() => {
+        if (!active || !IS_NATIVE) return undefined;
+        return addInPageBack(() => ref.current?.());
+    }, [active]);
+}
 import { useTranslation } from 'react-i18next';
 
 // =============================================================================
@@ -7,18 +25,153 @@ import { useTranslation } from 'react-i18next';
 
 export const Card = ({ children, className = '' }) => <section className={`bg-white rounded-lg shadow-md ${className}`}>{children}</section>;
 export const CardHeader = ({ children, className = '' }) => <div className={`p-4 md:p-6 border-b border-gray-200 ${className}`}><h3 className="text-lg font-semibold text-gray-800">{children}</h3></div>;
-export const CardBody = ({ children, className = '' }) => <div className={`p-4 md:p-6 ${className}`}>{children}</div>;
-export const CardFooter = ({ children, className = '' }) => <div className={`p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end gap-2 ${className}`}>{children}</div>;
-
-export const PageHeader = ({ title, subtitle, actions }) => (
-    <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-            <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
-            {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
-        </div>
-        {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
+// A form's Save / Cancel row. On phones it stays pinned just above the bottom
+// bar while the form is on screen, so there is no scrolling down to save.
+// Put it as the last child of the form's own container (not inside a short
+// wrapper), or it has nothing to stick within.
+export const FormActions = ({ children, className = '' }) => (
+    <div className={`sticky bottom-[calc(var(--bottom-nav,0px)+8px)] [dialog_&]:bottom-2 z-20 -mx-1 mt-4 flex flex-wrap items-center justify-end gap-2 rounded-lg border border-gray-200 bg-white/95 p-2 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none ${className}`}>
+        {children}
     </div>
 );
+
+export const CardBody = ({ children, className = '' }) => <div className={`p-3 md:p-6 ${className}`}>{children}</div>;
+export const CardFooter = ({ children, className = '' }) => <div className={`p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end gap-2 ${className}`}>{children}</div>;
+
+// Extra buttons a page wants beside the phone "Filters" row (e.g. refresh).
+export const PageToolsContext = createContext(null);
+
+// Filters panel. Wider screens: always open, as before. Phones: one
+// "Filters (n)" row that opens the panel on tap, so the page's content shows
+// straight away.
+export function FilterPanel({ activeCount = 0, className = '', children }) {
+    const { t } = useTranslation();
+    const [open, setOpen] = useState(false);
+    const tools = useContext(PageToolsContext);
+    return (
+        <div className={`ignore-for-export sticky md:static z-20 top-[calc(var(--app-top,0px)+var(--tabs-h,0px)+4px)] ${className}`}>
+            <div className="md:hidden flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => setOpen(o => !o)}
+                    aria-expanded={open}
+                    className="flex-1 min-w-0 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50"
+                >
+                    <SlidersHorizontal size={16} className="text-sky-600 shrink-0" />
+                    <span className="truncate">{t('ui.filters', 'Filters')}</span>
+                    {activeCount > 0 && <span className="rounded-full bg-sky-600 px-1.5 text-[11px] leading-5 text-white">{activeCount}</span>}
+                    <ChevronDown size={16} className={`ms-auto shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                </button>
+                {tools}
+            </div>
+            <div className={`${open ? 'block mt-2 max-h-[60vh] overflow-y-auto shadow-lg' : 'hidden'} md:block md:mt-0 md:max-h-none md:overflow-visible md:shadow-sm bg-white rounded-xl border border-gray-200 p-3 md:p-4 shadow-sm`}>
+                {children}
+            </div>
+        </div>
+    );
+}
+
+// A page's row of action buttons. Wider screens: all of them, as before.
+// Phones: the first `keep` buttons plus a "⋯" button that opens the rest as a
+// full-width list. The buttons are rendered once, so their own state and
+// pop-ups are untouched.
+export function PageActions({ children, keep = 1, className = '' }) {
+    const { t } = useTranslation();
+    const [open, setOpen] = useState(false);
+    const items = React.Children.toArray(children);
+    const extra = items.length - keep;
+    return (
+        <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+            {extra > 1 ? items.slice(0, keep) : items}
+            {extra > 1 && (
+                <button
+                    type="button"
+                    onClick={() => setOpen(o => !o)}
+                    aria-expanded={open}
+                    title={t('ui.more_actions', 'More actions')}
+                    aria-label={t('ui.more_actions', 'More actions')}
+                    className={`md:hidden h-[38px] px-3 rounded-md border border-slate-300 flex items-center gap-1 text-sm font-semibold ${open ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-700'}`}
+                >
+                    <MoreHorizontal size={18} /> {t('ui.more', 'More')}
+                </button>
+            )}
+            {extra > 1 && items.slice(keep).map((child, i) => (
+                <div key={child.key ?? i} className={`${open ? 'w-full [&>*]:w-full [&>*]:justify-start' : 'hidden'} md:contents`}>{child}</div>
+            ))}
+        </div>
+    );
+}
+
+// Pull down from the top of a list to refresh it (phones / touch only).
+// Render it once in a page that has a refresh action.
+export function PullToRefresh({ onRefresh, disabled = false }) {
+    const { t } = useTranslation();
+    const [pull, setPull] = useState(0);
+    const [busy, setBusy] = useState(false);
+    const state = useRef({ startY: null, pull: 0 });
+    const refreshRef = useRef(onRefresh);
+    refreshRef.current = onRefresh;
+    const THRESHOLD = 70;
+    useEffect(() => {
+        if (disabled || typeof window === 'undefined' || window.matchMedia?.('(min-width: 768px)').matches) return undefined;
+        const blocked = (e) => window.scrollY > 0 || document.body.style.overflow === 'hidden' || e.target?.closest?.('[role="dialog"], .fixed, input, textarea, select');
+        const start = (e) => { state.current.startY = blocked(e) ? null : e.touches[0].clientY; };
+        const move = (e) => {
+            if (state.current.startY === null) return;
+            const dy = e.touches[0].clientY - state.current.startY;
+            if (dy <= 0 || window.scrollY > 0) { state.current.pull = 0; setPull(0); return; }
+            state.current.pull = Math.min(dy * 0.5, 100);
+            setPull(state.current.pull);
+        };
+        const end = async () => {
+            const done = state.current.pull >= THRESHOLD;
+            state.current = { startY: null, pull: 0 };
+            setPull(0);
+            if (!done) return;
+            setBusy(true);
+            try { await refreshRef.current?.(); } finally { setBusy(false); }
+        };
+        window.addEventListener('touchstart', start, { passive: true });
+        window.addEventListener('touchmove', move, { passive: true });
+        window.addEventListener('touchend', end);
+        window.addEventListener('touchcancel', end);
+        return () => {
+            window.removeEventListener('touchstart', start);
+            window.removeEventListener('touchmove', move);
+            window.removeEventListener('touchend', end);
+            window.removeEventListener('touchcancel', end);
+        };
+    }, [disabled]);
+    if (!pull && !busy) return null;
+    const ready = pull >= THRESHOLD;
+    return (
+        <div
+            className="md:hidden fixed inset-x-0 z-[45] flex justify-center pointer-events-none"
+            style={{ top: `calc(var(--app-top, 0px) + ${busy ? 12 : Math.max(pull - 30, 4)}px)` }}
+        >
+            <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-md border border-slate-200">
+                <RefreshCw size={14} className={`text-sky-600 ${busy ? 'animate-spin' : ''}`} style={busy ? undefined : { transform: `rotate(${pull * 3}deg)` }} />
+                {busy ? t('ui.refreshing', 'Refreshing…') : ready ? t('ui.release_refresh', 'Release to refresh') : t('ui.pull_refresh', 'Pull to refresh')}
+            </div>
+        </div>
+    );
+}
+
+export const PageHeader = ({ title, subtitle, actions }) => {
+    // Android app: the title is already in the top bar; keep only the buttons.
+    if (IS_NATIVE) {
+        return actions ? <div className="flex items-center gap-2 flex-wrap mb-3 md:mb-6">{actions}</div> : null;
+    }
+    return (
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div>
+                <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+                {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
+            </div>
+            {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
+        </div>
+    );
+};
 
 export const Footer = () => {
     const { t } = useTranslation();
@@ -50,18 +203,67 @@ export const Button = ({ onClick, children, variant = 'primary', disabled = fals
 };
 
 export function Tabs({ tabs, activeTab, onTabChange }) {
+    return <PageTabs tabs={tabs} active={activeTab} onChange={onTabChange} />;
+}
+
+// The phone tab row stays pinned under the top bar; it publishes its height
+// as --tabs-h so a "Filters" row can pin just below it.
+function usePinnedTabsHeight(ref) {
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el) return undefined;
+        const root = document.documentElement;
+        let mine = false;
+        const set = () => { if (el.offsetHeight > 0) { mine = true; root.style.setProperty('--tabs-h', `${el.offsetHeight + 4}px`); } };
+        set();
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null;
+        observer?.observe(el);
+        return () => {
+            observer?.disconnect();
+            if (mine) root.style.removeProperty('--tabs-h');
+        };
+    }, [ref]);
+}
+
+// Page tabs. Phones: every tab in one row that never scrolls sideways, using
+// each tab's `short` name when it has one. Wider screens: the usual buttons.
+// tabs: [{ id, label, short?, icon?, count?, disabled? }]
+export function PageTabs({ tabs, active, onChange, className = '' }) {
+    const visible = tabs.filter(Boolean);
+    const navRef = useRef(null);
+    usePinnedTabsHeight(navRef);
     return (
-        <div className="flex gap-2 border-b border-gray-200 pb-2">
-            {tabs.map((tab) => (
-                <Button
-                    key={tab.id}
-                    variant="tab"
-                    isActive={activeTab === tab.id}
-                    onClick={() => onTabChange(tab.id)}
-                >
-                    {tab.label}
-                </Button>
-            ))}
+        <div className={`mb-3 md:mb-4 md:static sticky z-30 top-[calc(var(--app-top,0px)+4px)] ${className}`}>
+            <nav ref={navRef} className="md:hidden flex gap-0.5 rounded-xl bg-white p-1 border border-slate-200 shadow-sm">
+                {visible.map(tab => {
+                    const on = active === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => onChange(tab.id)}
+                            disabled={tab.disabled}
+                            title={typeof tab.label === 'string' ? tab.label : undefined}
+                            className={`relative min-w-0 disabled:opacity-40 rounded-lg px-1 py-1.5 text-[11px] font-bold leading-tight text-center transition-colors ${on ? 'shrink-0 bg-sky-600 text-white shadow-sm' : 'flex-auto text-slate-500 active:bg-sky-50'}`}
+                        >
+                            <span className="block truncate">{tab.short || tab.label}</span>
+                            {tab.count > 0 && <span className="absolute -top-1.5 -end-0.5 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-[9px] leading-4 text-white">{tab.count}</span>}
+                        </button>
+                    );
+                })}
+            </nav>
+            <div className="hidden md:flex flex-wrap gap-2 border-b border-gray-200 pb-2">
+                {visible.map(tab => {
+                    const Icon = tab.icon;
+                    return (
+                        <Button key={tab.id} variant="tab" isActive={active === tab.id} disabled={tab.disabled} onClick={() => onChange(tab.id)}>
+                            {Icon && <Icon size={16} />}
+                            {tab.label}
+                            {tab.count > 0 && <span className="ms-1 rounded-full bg-red-500 px-1.5 text-[11px] text-white">{tab.count}</span>}
+                        </Button>
+                    );
+                })}
+            </div>
         </div>
     );
 }
@@ -80,6 +282,9 @@ export const FormGroup = ({ label, children, hint }) => (
     </div>
 );
 
+// Number and phone fields open the phone's number pad.
+const defaultInputMode = (type) => (type === 'number' ? 'decimal' : type === 'tel' ? 'tel' : undefined);
+
 export const Input = ({ label, name, ...props }) => (
     <div className="flex flex-col">
         <label htmlFor={name} className="mb-1 text-sm font-medium text-gray-700 rtl:text-right">
@@ -88,6 +293,7 @@ export const Input = ({ label, name, ...props }) => (
         <input
             id={name}
             name={name}
+            inputMode={defaultInputMode(props.type)}
             {...props}
             className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 rtl:text-right ${props.className || ''}`}
         />

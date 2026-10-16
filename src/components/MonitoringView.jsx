@@ -356,7 +356,7 @@ export function ObservationView({ course, participant, participants, onChangePar
                         <FormGroup label={t('monitoring_page.observation.encounter_date', 'Encounter Date')}><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
                         <FormGroup label={t('monitoring_page.observation.course_day', 'Course Day')}><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
                         <FormGroup label={isImnci && age === 'LT2M' ? t('monitoring_page.observation.age_wks', 'Age (wks)') : t('monitoring_page.observation.age_mos', 'Age (mos)')}>
-                            <Input type="number" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder={t('monitoring_page.common.optional', 'Optional')} />
+                            <Input type="number" inputMode="decimal" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder={t('monitoring_page.common.optional', 'Optional')} />
                         </FormGroup>
                     </div>
                 </div>
@@ -1835,7 +1835,7 @@ export function LegacyMentorshipMonitoringView({
                         </FormGroup>
                         {!isEenc && !isMothers && (
                             <FormGroup label={t('monitoring_page.legacy.child_age', 'Child age (months)')}>
-                                <Input type="number" value={caseAgeMonths}
+                                <Input type="number" inputMode="decimal" value={caseAgeMonths}
                                     onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))}
                                     placeholder={t('monitoring_page.common.optional', 'Optional')} />
                             </FormGroup>

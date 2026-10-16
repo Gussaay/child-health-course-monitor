@@ -6,7 +6,7 @@ import { Bar, Pie } from 'react-chartjs-2';
 import './chartSetup'; // registers the scales and elements these charts use
 import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Button, Card, EmptyState, FormGroup, Input, PageHeader, Select, Spinner, Table, Textarea, Modal, CardBody, CardFooter, CardHeader } from './CommonComponents';
+import { Button, Card, EmptyState, FormGroup, Input, PageHeader, Select, Spinner, Table, Textarea, Modal, CardBody, CardHeader, PageTabs, PageActions, FormActions } from './CommonComponents';
 import {
     listAllCourses,
     upsertFacilitator,
@@ -409,7 +409,7 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                         <FormGroup label={t('facilitators_page.form.name_ar', 'Facilitator Name (Arabic)')}><Input value={arabicName || ''} onChange={e => handleFieldChange('arabicName', e.target.value)} placeholder="الاسم بالعربي" /></FormGroup>
                     </div>
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
-                        <FormGroup label={t('facilitators_page.import.fields.phone_number', 'Phone Number')}><Input value={phone} onChange={e => handleFieldChange('phone', e.target.value)} required /></FormGroup>
+                        <FormGroup label={t('facilitators_page.import.fields.phone_number', 'Phone Number')}><Input type="tel" value={phone} onChange={e => handleFieldChange('phone', e.target.value)} required /></FormGroup>
                         <FormGroup label={t('facilitators_page.import.fields.email', 'Email')}><Input type="email" value={email} onChange={e => handleFieldChange('email', e.target.value)} disabled={isPublicForm && isUserEmail} /></FormGroup>
                     </div>
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
@@ -882,8 +882,17 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
         <Card>
             <CardBody>
                 <PageHeader title={t('facilitators_page.list.title', 'Manage Facilitators')} />
+                <PageTabs
+                    active={activeTab}
+                    onChange={setActiveTab}
+                    tabs={[
+                        { id: 'dashboard', label: t('facilitators_page.tabs.dashboard', 'Dashboard') },
+                        { id: 'current', label: t('facilitators_page.tabs.current', 'Current Facilitators'), short: t('ui.short.current', 'Current') },
+                        permissions.canApproveSubmissions && { id: 'pending', label: t('facilitators_page.tabs.pending', 'Pending Submissions'), short: t('ui.short.pending', 'Pending'), count: displayPendingSubmissions.length },
+                    ]}
+                />
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex gap-2 flex-wrap items-center">
+                    <PageActions>
                         {permissions.canManageHumanResource && <Button onClick={onAdd}>{t('facilitators_page.list.add_new', 'Add New Facilitator')}</Button>}
                         {permissions.canManageHumanResource && <Button variant="secondary" onClick={() => setImportModalOpen(true)}>{t('facilitators_page.list.import_excel', 'Import from Excel')}</Button>}
                         {permissions.canApproveSubmissions && <Button variant="secondary" onClick={() => setIsLinkModalOpen(true)}>{t('facilitators_page.list.manage_link', 'Manage Submission Link')}</Button>}
@@ -891,7 +900,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                         <Button variant="secondary" onClick={() => fetchFacilitators(true)} disabled={isLoading.facilitators}>
                             {isLoading.facilitators ? t('facilitators_page.list.refreshing', 'Refreshing...') : t('facilitators_page.list.refresh', 'Refresh Data')}
                         </Button>
-                    </div>
+                    </PageActions>
                     <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
                         {/* NEW: Sort Dropdown */}
                         <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-48">
@@ -910,18 +919,6 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                 <ShareLinkModal isOpen={shareModalInfo.isOpen} onClose={() => setShareModalInfo({ isOpen: false, link: '' })} title={t('facilitators_page.share.title', 'Share Facilitator Report')} link={shareModalInfo.link} />
 
                 <div className="mt-6">
-                    <div className="border-b border-gray-200">
-                        <nav className="-mb-px flex gap-6" aria-label={t('facilitators_page.tabs.aria', 'Tabs')}>
-                            <Button variant="tab" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>{t('facilitators_page.tabs.dashboard', 'Dashboard')}</Button>
-                            <Button variant="tab" isActive={activeTab === 'current'} onClick={() => setActiveTab('current')}>{t('facilitators_page.tabs.current', 'Current Facilitators')}</Button>
-                            {permissions.canApproveSubmissions && (
-                                <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
-                                    {t('facilitators_page.tabs.pending', 'Pending Submissions')} <span className={`ml-2 text-xs font-bold px-2 py-1 rounded-full ${activeTab === 'pending' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-200 text-gray-600'}`}>{displayPendingSubmissions.length}</span>
-                                </Button>
-                            )}
-                        </nav>
-                    </div>
-
                     <div className="mt-4">
                         {activeTab === 'dashboard' && (
                             <div className="mt-4">
@@ -1160,10 +1157,10 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
                     onFileChange={handleFileChange}
                 />
             </CardBody>
-            <CardFooter>
+            <FormActions className="mx-3 mb-3 md:m-0 md:p-4 md:!bg-gray-50 md:border-t md:border-gray-200 md:rounded-none md:rounded-b-lg">
                 <Button variant="secondary" onClick={onCancel}>{t('facilitators_page.common.cancel', 'Cancel')}</Button>
                 <Button onClick={handleSubmit}>{t('facilitators_page.form.save', 'Save Facilitator')}</Button>
-            </CardFooter>
+            </FormActions>
             <ViewCertificatesModal isOpen={isCertsModalOpen} onClose={() => setIsCertsModalOpen(false)} facilitator={initialData} />
         </Card>
     );
@@ -1341,11 +1338,11 @@ export function FacilitatorApplicationForm() {
                     isPublicForm={true}
                 />
             </CardBody>
-            <CardFooter>
+            <FormActions className="mx-3 mb-3 md:m-0 md:p-4 md:!bg-gray-50 md:border-t md:border-gray-200 md:rounded-none md:rounded-b-lg">
                  <Button onClick={handleSubmit} disabled={submitting}>
                     {submitting ? t('facilitators_page.application.submitting', 'Submitting...') : (isUpdate ? t('facilitators_page.application.update_profile', 'Update Profile') : t('facilitators_page.application.submit', 'Submit Application'))}
                 </Button>
-            </CardFooter>
+            </FormActions>
         </Card>
     );
 }

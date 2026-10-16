@@ -827,7 +827,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                     <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
                                     {canEditVisitNumber ? (
                                         <Input 
-                                            type="number" 
+                                            type="number" inputMode="decimal" 
                                             min="1"
                                             value={currentVisitNumber}
                                             onChange={(e) => setCurrentVisitNumber(e.target.value)}
@@ -919,7 +919,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                  </div>
 
                 {/* --- Mobile Bar --- */}
-                <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
+                <div className="flex sm:hidden fixed bottom-[var(--bottom-nav,4rem)] left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">
                         إلغاء
                     </Button>

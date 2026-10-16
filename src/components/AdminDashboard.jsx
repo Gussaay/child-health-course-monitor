@@ -1,6 +1,6 @@
 // src/components/AdminDashboard.jsx
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
-import { Card, PageHeader, Button, Table, Spinner, Select, Checkbox, Toast, Input, FormGroup, Modal, CardBody, CardFooter } from './CommonComponents';
+import { Card, PageHeader, Button, Table, Spinner, Select, Checkbox, Toast, Input, FormGroup, Modal, CardBody, CardFooter, PageTabs, FilterPanel } from './CommonComponents';
 import { db, auth } from '../firebase';
 import { collection, query, getDocs, doc, updateDoc, getDoc, setDoc, writeBatch, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions'; 
@@ -29,6 +29,7 @@ import {
     PERMISSION_DESCRIPTIONS
 } from './permissions';
 import { confirmDialog } from './dialogs';
+import { useRememberedState } from '../utils/rememberedState';
 import { useTranslation } from 'react-i18next';
 
 // -----------------------------------------------------------------------------
@@ -49,39 +50,30 @@ const getRoleBadgeStyle = (role) => {
 const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
     const { t } = useTranslation();
     const tabs = [
-        { key: 'roles', label: 'Manage User Roles', icon: Users },
-        { key: 'permissions', label: 'Manage Role Permissions', icon: Shield },
-        { key: 'notifications', label: 'Push Notifications', icon: Bell }, 
+        { key: 'roles', label: 'Manage User Roles', short: 'Roles', icon: Users },
+        { key: 'permissions', label: 'Manage Role Permissions', short: 'Permissions', icon: Shield },
+        { key: 'notifications', label: 'Push Notifications', short: 'Notify', icon: Bell }, 
         // What people reported, and what the app caught crashing by itself.
-        { key: 'problems', label: 'Problem Reports', icon: MessageSquareWarning },
+        { key: 'problems', label: 'Problem Reports', short: 'Problems', icon: MessageSquareWarning },
     ];
 
     if (currentUserRoles.includes('super_user')) {
-        tabs.push({ key: 'usage', label: 'Resource Usage', icon: Activity });
-        tabs.push({ key: 'updates', label: 'App Updates', icon: Smartphone });
+        tabs.push({ key: 'usage', label: 'Resource Usage', short: 'Usage', icon: Activity });
+        tabs.push({ key: 'updates', label: 'App Updates', short: 'Updates', icon: Smartphone });
     }
 
     return (
-        <div className="flex space-x-1 border-b border-gray-200 mb-6 overflow-x-auto p-1.5 bg-gray-50/80 rounded-t-xl shadow-sm inset-x-0">
-            {tabs.map(tab => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.key;
-                return (
-                    <button
-                        key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
-                        className={`flex items-center px-4 py-2.5 font-medium text-sm rounded-lg transition-all duration-200 whitespace-nowrap ${
-                            isActive
-                                ? 'bg-white text-sky-600 shadow border border-gray-100 scale-100'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/80 scale-95 hover:scale-100'
-                        }`}
-                    >
-                        <Icon className={`w-4 h-4 mr-2 ${isActive ? 'text-sky-500' : 'text-gray-400'}`} />
-                        {t(`admin_pages.admin_dashboard.tabs.${tab.key}`, tab.label)}
-                    </button>
-                );
-            })}
-        </div>
+        <PageTabs
+            className="mb-6"
+            active={activeTab}
+            onChange={setActiveTab}
+            tabs={tabs.map(tab => ({
+                id: tab.key,
+                label: t(`admin_pages.admin_dashboard.tabs.${tab.key}`, tab.label),
+                short: t(`ui.short.admin_${tab.key}`, tab.short),
+                icon: tab.icon,
+            }))}
+        />
     );
 };
 
@@ -219,10 +211,10 @@ export function AdminDashboard() {
     const [activeTab, setActiveTab] = useState('roles');
     const [notificationTargetId, setNotificationTargetId] = useState('all');
 
-    const [filterRole, setFilterRole] = useState('');
-    const [filterState, setFilterState] = useState('');
-    const [filterLocality, setFilterLocality] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [filterRole, setFilterRole] = useRememberedState('admin.users.role', '');
+    const [filterState, setFilterState] = useRememberedState('admin.users.state', '');
+    const [filterLocality, setFilterLocality] = useRememberedState('admin.users.locality', '');
+    const [searchQuery, setSearchQuery] = useRememberedState('admin.users.search', '');
 
     const [viewingUser, setViewingUser] = useState(null);
     const [editingRolesUser, setEditingRolesUser] = useState(null);
@@ -919,7 +911,7 @@ export function AdminDashboard() {
                     </div>
                     {updateHistory.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <Table headers={[t('admin_pages.admin_dashboard.updates.col.version', 'Version'), t('admin_pages.admin_dashboard.updates.col.build', 'Build ID'), t('admin_pages.admin_dashboard.updates.col.date', 'Deployment Date'), t('admin_pages.admin_dashboard.updates.col.notes', 'Release Notes'), t('admin_pages.admin_dashboard.updates.col.actions', 'Actions')]}>
+                            <Table headers={[t('admin_pages.admin_dashboard.updates.col.version', 'Version'), t('admin_pages.admin_dashboard.updates.col.build', 'Build ID'), t('admin_pages.admin_dashboard.updates.col.date', 'Deployment Date'), t('admin_pages.admin_dashboard.updates.col.notes', 'Release Notes'), t('admin_pages.admin_dashboard.updates.col.actions', 'Actions')]} cardsOnPhone>
                                 {updateHistory.map((stat) => {
                                     const isActiveUpdate = isUpdateActive && (parseInt(updateConfig?.latestNativeBuild, 10) === parseInt(stat.latestNativeBuild, 10));
 
@@ -1009,12 +1001,12 @@ export function AdminDashboard() {
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* BULK ACTIONS FOR SUPER USER PROFILE */}
             {currentUserRoles.includes('super_user') && (
-                <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <Smartphone className="w-6 h-6 text-orange-600 shrink-0" />
+                <div className="bg-orange-50 border border-orange-200 p-3 md:p-4 rounded-xl md:rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2 md:gap-4">
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <Smartphone className="w-5 h-5 md:w-6 md:h-6 text-orange-600 shrink-0" />
                         <div>
-                            <h4 className="font-bold text-orange-900 text-base">{t('admin_pages.admin_dashboard.roles_tab.bulk_title', 'Bulk Operational Maintenance Controls')}</h4>
-                            <p className="text-xs text-orange-700 mt-0.5 font-medium">{t('admin_pages.admin_dashboard.roles_tab.bulk_desc', 'Perform immediate diagnostic overrides across all systems.')}</p>
+                            <h4 className="font-bold text-orange-900 text-sm md:text-base">{t('admin_pages.admin_dashboard.roles_tab.bulk_title', 'Bulk Operational Maintenance Controls')}</h4>
+                            <p className="hidden md:block text-xs text-orange-700 mt-0.5 font-medium">{t('admin_pages.admin_dashboard.roles_tab.bulk_desc', 'Perform immediate diagnostic overrides across all systems.')}</p>
                         </div>
                     </div>
                     <Button
@@ -1026,14 +1018,16 @@ export function AdminDashboard() {
                 </div>
             )}
 
-            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                <div className="flex items-center text-gray-800 font-bold mb-4">
+            <FilterPanel activeCount={[searchQuery, filterRole, filterState, filterLocality].filter(Boolean).length}>
+                <div className="hidden md:flex items-center text-gray-800 font-bold mb-4">
                     <Filter className="w-5 h-5 mr-2 text-sky-500" /> {t('admin_pages.admin_dashboard.roles_tab.filter_search', 'Filter & Search Directory')}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
+                    <div className="col-span-2 md:col-span-1">
                     <FormGroup label={t('admin_pages.admin_dashboard.roles_tab.search_directory', 'Search Directory')}>
                         <Input type="search" placeholder={t('admin_pages.admin_dashboard.roles_tab.search_placeholder', 'Search by name or email...')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-gray-50 border-gray-200" />
                     </FormGroup>
+                    </div>
                     <FormGroup label={t('admin_pages.admin_dashboard.roles_tab.filter_role', 'Filter by Role')}>
                         <Select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="bg-gray-50 border-gray-200">
                             <option value="">{t('admin_pages.admin_dashboard.roles_tab.all_roles', 'All Roles')}</option>
@@ -1056,7 +1050,7 @@ export function AdminDashboard() {
                         </Select>
                     </FormGroup>
                 </div>
-            </div>
+            </FilterPanel>
 
             <Card className="overflow-hidden shadow-sm border border-gray-100">
                 <div className="flex justify-between items-center mb-4">
@@ -1064,7 +1058,7 @@ export function AdminDashboard() {
                 </div>
                 {filteredUsers.length > 0 ? (
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
-                        <Table headers={[t('admin_pages.admin_dashboard.roles_tab.col.name', 'Name & Email'), t('admin_pages.admin_dashboard.roles_tab.col.roles', 'Current Roles'), t('admin_pages.admin_dashboard.roles_tab.col.manage', 'Manage Roles'), t('admin_pages.admin_dashboard.roles_tab.col.area', 'Assigned Area'), t('admin_pages.admin_dashboard.roles_tab.col.app', 'App Status'), t('admin_pages.admin_dashboard.roles_tab.col.web', 'Web Status')]}>
+                        <Table headers={[t('admin_pages.admin_dashboard.roles_tab.col.name', 'Name & Email'), t('admin_pages.admin_dashboard.roles_tab.col.roles', 'Current Roles'), t('admin_pages.admin_dashboard.roles_tab.col.manage', 'Manage Roles'), t('admin_pages.admin_dashboard.roles_tab.col.area', 'Assigned Area'), t('admin_pages.admin_dashboard.roles_tab.col.app', 'App Status'), t('admin_pages.admin_dashboard.roles_tab.col.web', 'Web Status')]} cardsOnPhone>
                             {filteredUsers.map((user) => {
                                 const userRoles = user.roles || [user.role || 'user'];
                                 const isStateAssignable = userRoles.some(r => ['states_manager', 'state_coordinator', 'locality_manager'].includes(r));
@@ -1294,7 +1288,7 @@ export function AdminDashboard() {
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
                     <h3 className="text-md font-bold text-gray-800 mb-4 px-1">{t('admin_pages.admin_dashboard.usage.detailed', 'Detailed User Telemetry')}</h3>
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
-                        <Table headers={[t('admin_pages.admin_dashboard.usage.col.user', 'User Identity'), t('admin_pages.admin_dashboard.usage.col.reads', 'Total Reads'), t('admin_pages.admin_dashboard.usage.col.writes', 'Total Writes'), t('admin_pages.admin_dashboard.usage.col.duration', 'Active Duration'), t('admin_pages.admin_dashboard.usage.col.last', 'Last Recorded')]}>
+                        <Table headers={[t('admin_pages.admin_dashboard.usage.col.user', 'User Identity'), t('admin_pages.admin_dashboard.usage.col.reads', 'Total Reads'), t('admin_pages.admin_dashboard.usage.col.writes', 'Total Writes'), t('admin_pages.admin_dashboard.usage.col.duration', 'Active Duration'), t('admin_pages.admin_dashboard.usage.col.last', 'Last Recorded')]} cardsOnPhone>
                             {usageStats.map((stat) => (
                                 <tr key={stat.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="font-medium text-gray-800">{stat.email || t('admin_pages.admin_dashboard.usage.na', 'N/A')}</td>

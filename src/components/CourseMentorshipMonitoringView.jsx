@@ -1238,7 +1238,7 @@ export function MentorshipMonitoringView({
                         {formKey === 'skills_assessment' && service === 'IMNCI' && (
                             <FormGroup label={t('compiled_reports.course_mentorship.setup.child_age', 'Child age (months)')}>
                                 <Input
-                                    type="number"
+                                    type="number" inputMode="decimal"
                                     value={caseAgeMonths}
                                     onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))}
                                     placeholder={t('compiled_reports.course_mentorship.setup.optional', 'Optional')}

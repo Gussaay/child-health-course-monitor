@@ -1,7 +1,7 @@
 // src/components/CourseTestForm.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
-    Card, PageHeader, Button, FormGroup, Select, Spinner, Input, Modal, CardBody, CardFooter, Table, EmptyState
+    Card, PageHeader, Button, FormGroup, Select, Spinner, Input, Modal, CardBody, CardFooter, Table, EmptyState, FormActions
 } from "./CommonComponents"; 
 import {
     JOB_TITLES_ETAT, JOB_TITLES_EMONC, STATE_LOCALITIES,
@@ -2798,12 +2798,12 @@ export function CourseTestForm({
                         )}
                     </fieldset>
 
-                    <div className="flex gap-2 justify-end mt-8 border-t pt-6">
+                    <FormActions className="mt-8 md:border-t md:pt-6">
                         <Button variant="secondary" onClick={handleBackToDashboard} disabled={isSaving}>{t('course_tests.tests.cancel', 'Cancel')}</Button>
                         <Button onClick={handleSubmit} disabled={submitDisabled}>
                             {isSaving ? <Spinner /> : (isEditing ? t('course_tests.tests.save_grading', 'Save Grading & Score') : t('course_tests.tests.submit_view_score', 'Submit & View Score'))}
                         </Button>
-                    </div>
+                    </FormActions>
                 </div>
             )}
         </Card>

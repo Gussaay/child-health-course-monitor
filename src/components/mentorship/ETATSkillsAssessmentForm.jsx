@@ -815,7 +815,7 @@ const ETATSkillsAssessmentForm = ({
                                     <span className={`font-medium text-gray-700 ${isAr ? 'ml-2' : 'mr-2'}`}>{t('Visit Number')}:</span>
                                     {canEditVisitNumber ? (
                                         <Input
-                                            type="number"
+                                            type="number" inputMode="decimal"
                                             min="1"
                                             value={currentVisitNumber}
                                             onChange={(e) => setCurrentVisitNumber(e.target.value)}
@@ -937,7 +937,7 @@ const ETATSkillsAssessmentForm = ({
                 </div>
 
                 {/* Mobile buttons */}
-                <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir={dir}>
+                <div className="flex sm:hidden fixed bottom-[var(--bottom-nav,4rem)] left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir={dir}>
                     <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">{t('Cancel')}</Button>
                     <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft} size="sm">
                         {isSavingDraft ? t('Saving...') : t('Save as Draft')}

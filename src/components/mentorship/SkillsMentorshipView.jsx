@@ -22,8 +22,9 @@ import {
 } from '../../data';
 
 import {
-    Card, PageHeader, Button, FormGroup, Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards,
-    EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal
+    Card, PageHeader, Button, FormGroup, Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, PageActions,
+    EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal,
+    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh
 } from '../CommonComponents';
 
 import { STATE_LOCALITIES } from "../constants.js";
@@ -70,6 +71,7 @@ import { confirmDialog } from '../dialogs';
 import { useStandardNames } from '../../hooks/useNameRegistry';
 import { hasRecordedProject, projectOfVisit, visitTimeOf } from '../../utils/visitProject';
 import { publicBaseUrl } from '../../utils/publicLink';
+import { useRememberedState } from '../../utils/rememberedState';
 
 // --- IPC form tabs (all three IPC forms save with serviceType 'IPC') ---
 const IPC_LIST_TABS = [
@@ -527,7 +529,7 @@ const VisitSessionModal = ({
                         </div>
                         {(canEditVisitNumber && !isResume) ? (
                             <input
-                                type="number"
+                                type="number" inputMode="decimal"
                                 min="1"
                                 value={visitNumber}
                                 onChange={(e) => onVisitNumberChange(Math.max(1, parseInt(e.target.value, 10) || 1))}
@@ -715,6 +717,7 @@ const VisitCountdownBadge = ({ session, onEndVisit }) => {
 
 const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage, menuSection, onSelectSection, activeVisitSession }) => {
     const { t } = useTranslation();
+    useInPageBack(() => (menuSection ? onSelectSection(null) : onBack()));
 
     const canViewSubmissions = 
         permissions?.canViewSkillsMentorship ||
@@ -825,14 +828,14 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
     ];
 
     const renderLanding = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
             {landingItems.map(item => {
                 const Icon = item.icon;
                 return (
                     <button
                         key={item.id}
                         onClick={() => onSelectSection(item.id)}
-                        className={`flex flex-col items-start p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-start focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
+                        className={`flex flex-col items-start p-4 md:p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-start focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
                     >
                         <div className={`p-3 rounded-lg transition-transform duration-200 group-hover:scale-110 ${item.bg}`}>
                             <Icon className={`w-6 h-6 ${item.color}`} strokeWidth={2} />
@@ -850,7 +853,9 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
 
     return (
         <div className="max-w-4xl mx-auto mt-4 p-4 space-y-5" dir="ltr">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+            {(!IS_NATIVE || activeService) && (
+            <div className={`flex items-center justify-between ${IS_NATIVE ? '' : 'pb-3 border-b border-gray-200'}`}>
+                {!IS_NATIVE && (
                 <Button
                     variant="secondary"
                     onClick={() => (menuSection ? onSelectSection(null) : onBack())}
@@ -859,12 +864,14 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" /> {t('mentorship_page.buttons.back', 'Back')}
                 </Button>
+                )}
                 {activeService && (
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full">
                         {t('mentorship_page.menu.service_mentorship', '{{service}} Mentorship', { service: activeService })}
                     </span>
                 )}
             </div>
+            )}
 
             {activeVisitSession && (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2">
@@ -2087,22 +2094,22 @@ const ServiceSelector = ({ onSelectService }) => {
     ];
 
     return (
-        <Card className="p-6" dir="ltr">
+        <Card className="p-3 md:p-6" dir="ltr">
             <div className="text-start flex justify-between items-start">
                 <PageHeader
                     title={t('mentorship_page.services.choose_title', 'Choose Service for Mentorship')}
                     subtitle={t('mentorship_page.services.choose_subtitle', 'Select a program to begin skills mentorship.')}
                 />
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
                 {services.map(service => (
                     <button
                         key={service.key}
                         disabled={!service.enabled}
-                        className={`border rounded-lg p-6 text-start transition-all duration-200 ${service.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`}
+                        className={`border rounded-lg p-4 md:p-6 text-start transition-all duration-200 ${service.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`}
                         onClick={() => service.enabled && onSelectService(service.key)}
                     >
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
                             <CourseIcon course={service.key} />
                             <div>
                                 <div className="font-semibold text-gray-800 text-start">{service.title}</div>
@@ -2482,18 +2489,18 @@ const SkillsMentorshipView = ({
  
     const formRef = useRef(null);
     
-    const [stateFilter, setStateFilter] = useState('');
-    const [localityFilter, setLocalityFilter] = useState('');
-    const [supervisorFilter, setSupervisorFilter] = useState(''); 
-    const [statusFilter, setStatusFilter] = useState('');
-    const [visitNumberFilter, setVisitNumberFilter] = useState(''); 
-    const [facilityFilter, setFacilityFilter] = useState('');
-    const [workerFilter, setWorkerFilter] = useState('');
-    const [projectFilter, setProjectFilter] = useState('');
-    const [workerTypeFilter, setWorkerTypeFilter] = useState('');
-    const [dateFilter, setDateFilter] = useState('');
-    const [customStartDate, setCustomStartDate] = useState(''); 
-    const [customEndDate, setCustomEndDate] = useState('');     
+    const [stateFilter, setStateFilter] = useRememberedState('mentorship.state', '');
+    const [localityFilter, setLocalityFilter] = useRememberedState('mentorship.locality', '');
+    const [supervisorFilter, setSupervisorFilter] = useRememberedState('mentorship.supervisor', '');
+    const [statusFilter, setStatusFilter] = useRememberedState('mentorship.status', '');
+    const [visitNumberFilter, setVisitNumberFilter] = useRememberedState('mentorship.visitNumber', '');
+    const [facilityFilter, setFacilityFilter] = useRememberedState('mentorship.facility', '');
+    const [workerFilter, setWorkerFilter] = useRememberedState('mentorship.worker', '');
+    const [projectFilter, setProjectFilter] = useRememberedState('mentorship.project', '');
+    const [workerTypeFilter, setWorkerTypeFilter] = useRememberedState('mentorship.workerType', '');
+    const [dateFilter, setDateFilter] = useRememberedState('mentorship.date', '');
+    const [customStartDate, setCustomStartDate] = useRememberedState('mentorship.startDate', '');
+    const [customEndDate, setCustomEndDate] = useRememberedState('mentorship.endDate', '');
     
     const [viewingMentor, setViewingMentor] = useState(null);   
 
@@ -3223,8 +3230,12 @@ const SkillsMentorshipView = ({
         }
     };
 
+    // List filters are remembered for the tab they were set on; clear them only when
+    // the user moves to a different tab, not on mount or when coming back.
+    const [filtersTab, setFiltersTab] = useRememberedState('mentorship.filtersTab', activeTab);
     useEffect(() => {
-        if (!publicDashboardMode) {
+        if (!publicDashboardMode && activeTab !== filtersTab) {
+            setFiltersTab(activeTab);
             setStateFilter('');
             setLocalityFilter('');
             setSupervisorFilter('');
@@ -3238,7 +3249,7 @@ const SkillsMentorshipView = ({
             setCustomStartDate(''); 
             setCustomEndDate('');   
         }
-    }, [activeTab, publicDashboardMode]);
+    }, [activeTab, publicDashboardMode, filtersTab, setFiltersTab, setStateFilter, setLocalityFilter, setSupervisorFilter, setStatusFilter, setVisitNumberFilter, setFacilityFilter, setWorkerFilter, setProjectFilter, setWorkerTypeFilter, setDateFilter, setCustomStartDate, setCustomEndDate]);
 
     // 1. Add this reference to track if the record has been triggered already
     const hasTriggeredRecordView = useRef(false);
@@ -4218,6 +4229,9 @@ const SkillsMentorshipView = ({
         }
     };
 
+    // Android app: the top-bar arrow steps back from the records list to the service menu.
+    useInPageBack(() => setCurrentView('action_menu'), currentView === 'history' && !publicDashboardMode);
+
     if (currentView === 'service_selection') {
         return <ServiceSelector onSelectService={handleSelectService} />;
     }
@@ -4288,15 +4302,16 @@ const SkillsMentorshipView = ({
         return (
             <>
                 <Card dir="ltr">
-                    <div className="p-6">
-                        <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
-                            <div className="flex items-center gap-4">
-                                {!publicDashboardMode && (
+                    <div className="p-3 md:p-6">
+                        <div className="flex flex-wrap justify-between items-center gap-2 md:gap-3 mb-3 md:mb-6 border-b border-gray-200 pb-2">
+                            <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
+                                {!publicDashboardMode && !IS_NATIVE && (
                                     <Button variant="secondary" onClick={() => setCurrentView('action_menu')} className="mr-4">
                                         <ArrowLeft className="w-4 h-4 mr-2" /> {t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')}
                                     </Button>
                                 )}
 
+                                {!publicDashboardMode && <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing} />}
                                 <Button 
                                     variant="secondary" 
                                     onClick={handleRefresh} 
@@ -4334,84 +4349,42 @@ const SkillsMentorshipView = ({
                         </div>
 
                         {!publicDashboardMode && activeTab !== 'dashboard' && (
-                            <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
-                                {activeService === 'IPC' ? (
-                                    // IPC: one tab per form, no mothers survey
-                                    IPC_LIST_TABS.map(tab => {
-                                        const isActive = activeTab === 'skills_list' && ipcFormFilter === tab.key;
-                                        return (
-                                            <button
-                                                key={tab.key}
-                                                onClick={() => {
-                                                    setActiveTab('skills_list');
-                                                    setIpcFormFilter(tab.key);
-                                                    setSelectedSubmissionIds([]);
-                                                }}
-                                                className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap inline-flex items-center gap-2 ${
-                                                    isActive
-                                                        ? 'border-b-2 border-sky-500 text-sky-600'
-                                                        : 'text-gray-500 hover:text-gray-700'
-                                                }`}
-                                            >
-                                                {t(`mentorship_page.ipc_tabs.${tab.key}`, tab.label)}
-                                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-sky-100 text-sky-700' : 'bg-gray-200 text-gray-600'}`} dir="ltr">
-                                                    {ipcFormCounts[tab.key] || 0}
-                                                </span>
-                                            </button>
-                                        );
-                                    })
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => setActiveTab('skills_list')}
-                                            className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
-                                                activeTab === 'skills_list'
-                                                    ? 'border-b-2 border-sky-500 text-sky-600'
-                                                    : 'text-gray-500 hover:text-gray-700'
-                                            }`}
-                                        >
-                                            {t('mentorship_page.tabs.skills_assessments', 'Skills Assessments')}
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab('mothers_list')}
-                                            className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
-                                                activeTab === 'mothers_list'
-                                                    ? 'border-b-2 border-sky-500 text-sky-600'
-                                                    : 'text-gray-500 hover:text-gray-700'
-                                            }`}
-                                        >
-                                            {t('mentorship_page.tabs.mothers_surveys', 'Mothers Surveys')}
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab('visit_reports')}
-                                            className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
-                                                activeTab === 'visit_reports'
-                                                    ? 'border-b-2 border-sky-500 text-sky-600'
-                                                    : 'text-gray-500 hover:text-gray-700'
-                                            }`}
-                                        >
-                                            {t('mentorship_page.tabs.visit_reports', 'Visit Reports')}
-                                        </button>
-                                    </>
-                                )}
-                                {permissions?.canUseFederalManagerAdvancedFeatures && (
-                                    <button
-                                        onClick={() => setActiveTab('deleted')}
-                                        className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
-                                            activeTab === 'deleted'
-                                                ? 'border-b-2 border-sky-500 text-sky-600'
-                                                : 'text-gray-500 hover:text-gray-700'
-                                        }`}
-                                    >
-                                        {t('mentorship_page.tabs.deleted_items', 'Deleted Items')}
-                                    </button>
-                                )}
-                            </div>
+                            <PageTabs
+                                className="md:!mb-6"
+                                active={activeService === 'IPC' && activeTab === 'skills_list' ? `ipc:${ipcFormFilter}` : activeTab}
+                                onChange={(id) => {
+                                    if (id.startsWith('ipc:')) {
+                                        setActiveTab('skills_list');
+                                        setIpcFormFilter(id.slice(4));
+                                        setSelectedSubmissionIds([]);
+                                    } else {
+                                        setActiveTab(id);
+                                    }
+                                }}
+                                tabs={[
+                                    ...(activeService === 'IPC'
+                                        ? IPC_LIST_TABS.map(tab => ({
+                                            id: `ipc:${tab.key}`,
+                                            label: t(`mentorship_page.ipc_tabs.${tab.key}`, tab.label),
+                                            short: tab.key === 'ipc' ? t('ui.short.ipc', 'IPC')
+                                                : tab.key === 'ams' ? t('ui.short.ams', 'AMS')
+                                                : t('ui.short.hand_hygiene', 'Hand Hygiene'),
+                                            count: ipcFormCounts[tab.key] || 0,
+                                        }))
+                                        : [
+                                            { id: 'skills_list', label: t('mentorship_page.tabs.skills_assessments', 'Skills Assessments'), short: t('ui.short.skills', 'Skills') },
+                                            { id: 'mothers_list', label: t('mentorship_page.tabs.mothers_surveys', 'Mothers Surveys'), short: t('ui.short.mothers', 'Mothers') },
+                                            { id: 'visit_reports', label: t('mentorship_page.tabs.visit_reports', 'Visit Reports'), short: t('ui.short.visits', 'Visits') },
+                                        ]),
+                                    permissions?.canUseFederalManagerAdvancedFeatures && { id: 'deleted', label: t('mentorship_page.tabs.deleted_items', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted') },
+                                ]}
+                            />
                         )}
 
                         {activeTab !== 'dashboard' && activeTab !== 'deleted' && !publicDashboardMode && (
                             <>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
+                                <FilterPanel className="mb-4 md:mb-6" activeCount={[customStartDate, customEndDate, dateFilter, stateFilter, localityFilter, facilityFilter, workerFilter, workerTypeFilter, projectFilter, supervisorFilter, statusFilter, visitNumberFilter].filter(Boolean).length}>
+                                <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                                     
                                     <FormGroup label={t('mentorship_page.filters.start_date', 'Start Date')} className="text-start" dir="ltr">
                                         <Input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="w-full" />
@@ -4504,9 +4477,10 @@ const SkillsMentorshipView = ({
                                         </Select>
                                     </FormGroup>
                                 </div>
+                                </FilterPanel>
                             
                                 <div className="flex justify-between items-center mb-6">
-                                    <div className="flex gap-2 flex-wrap">
+                                    <PageActions keep={1}>
                                         
                                         {activeTab === 'skills_list' && selectedSubmissionIds.length === 0 && canAddMentorshipData && (
                                             <Button onClick={handleStartNewVisit}>{t('mentorship_page.buttons.add_skills_observation', 'Add New Skills Observation')}</Button>
@@ -4560,7 +4534,7 @@ const SkillsMentorshipView = ({
                                                 {isAssigningProjects ? t('mentorship_page.buttons.assigning_projects', 'Assigning projects…') : t('mentorship_page.buttons.assign_projects', 'Assign projects to past visits ({{count}})', { count: visitsWithoutProject.length })}
                                             </Button>
                                         )}
-                                    </div>
+                                    </PageActions>
                                 </div>
                             </>
                         )}

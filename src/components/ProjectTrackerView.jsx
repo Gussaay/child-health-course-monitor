@@ -1,6 +1,6 @@
 // src/components/ProjectTrackerView.jsx
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
+import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, PageTabs, PhoneCards } from './CommonComponents';
 import { upsertProject, deleteProject } from '../data';
 import { useDataCache } from '../DataContext';
 import { db } from '../firebase'; 
@@ -450,26 +450,15 @@ export default function ProjectTrackerView({ permissions }) {
         <div className="space-y-6">
             <PageHeader title={t('trackers.projects.title', 'Federal Project Tracker')} subtitle={t('trackers.projects.subtitle', 'Manage and track federal projects and tasks across program units.')} />
 
-            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-max mb-4 border border-gray-200">
-                <Button 
-                    variant={viewMode === 'dashboard' ? 'primary' : 'ghost'} 
-                    onClick={() => setViewMode('dashboard')}
-                >
-                    <BarChart2 className="w-4 h-4 mr-2" /> {t('trackers.projects.tabs.dashboard', 'Dashboard Overview')}
-                </Button>
-                <Button 
-                    variant={viewMode === 'entry' ? 'primary' : 'ghost'} 
-                    onClick={() => { setViewMode('entry'); setSelectedProjectId(''); }}
-                >
-                    <Edit className="w-4 h-4 mr-2" /> {t('trackers.projects.tabs.entry', 'Data Entry')}
-                </Button>
-                <Button 
-                    variant={viewMode === 'deleted' ? 'primary' : 'ghost'} 
-                    onClick={() => setViewMode('deleted')}
-                >
-                    {t('trackers.projects.tabs.deleted', 'Deleted Items')}
-                </Button>
-            </div>
+            <PageTabs
+                active={viewMode}
+                onChange={(id) => { setViewMode(id); if (id === 'entry') setSelectedProjectId(''); }}
+                tabs={[
+                    { id: 'dashboard', label: t('trackers.projects.tabs.dashboard', 'Dashboard Overview'), short: t('ui.short.dashboard', 'Dashboard'), icon: BarChart2 },
+                    { id: 'entry', label: t('trackers.projects.tabs.entry', 'Data Entry'), short: t('ui.short.entry', 'Entry'), icon: Edit },
+                    { id: 'deleted', label: t('trackers.projects.tabs.deleted', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted') },
+                ]}
+            />
 
             {viewMode === 'deleted' ? (
                 <Suspense fallback={<Spinner />}>
@@ -477,26 +466,15 @@ export default function ProjectTrackerView({ permissions }) {
                 </Suspense>
             ) : viewMode === 'dashboard' ? (
                 <div className="space-y-6">
-                    <div className="flex gap-4 border-b border-gray-200">
-                        <button 
-                            onClick={() => { setDashboardTab('overview'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
-                            className={`pb-2 px-2 font-semibold transition-colors ${dashboardTab === 'overview' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            {t('trackers.projects.tabs.overview', 'Overview')}
-                        </button>
-                        <button 
-                            onClick={() => { setDashboardTab('active'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
-                            className={`pb-2 px-2 font-semibold transition-colors flex items-center gap-2 ${dashboardTab === 'active' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            {t('trackers.projects.tabs.active', 'Active Tasks')} <span className="bg-sky-100 text-sky-700 text-xs py-0.5 px-2 rounded-full">{allActiveTasks.length}</span>
-                        </button>
-                        <button 
-                            onClick={() => { setDashboardTab('completed'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
-                            className={`pb-2 px-2 font-semibold transition-colors flex items-center gap-2 ${dashboardTab === 'completed' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            {t('trackers.projects.tabs.completed', 'Completed Tasks')} <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full">{allCompletedTasks.length}</span>
-                        </button>
-                    </div>
+                    <PageTabs
+                        active={dashboardTab}
+                        onChange={(id) => { setDashboardTab(id); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
+                        tabs={[
+                            { id: 'overview', label: t('trackers.projects.tabs.overview', 'Overview') },
+                            { id: 'active', label: t('trackers.projects.tabs.active', 'Active Tasks'), short: t('ui.short.active', 'Active'), count: allActiveTasks.length },
+                            { id: 'completed', label: t('trackers.projects.tabs.completed', 'Completed Tasks'), short: t('ui.short.completed', 'Completed'), count: allCompletedTasks.length },
+                        ]}
+                    />
 
                     {dashboardTab === 'overview' && (
                         <div className="space-y-6">
@@ -586,7 +564,7 @@ export default function ProjectTrackerView({ permissions }) {
                                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
                                         <Users className="text-indigo-600" /> {t('trackers.projects.team_performance', 'Team Member Performance')}
                                     </h3>
-                                    <div className="overflow-x-auto">
+                                    <PhoneCards className="overflow-x-auto">
                                         <table className="min-w-full divide-y divide-gray-200 border">
                                             <thead className="bg-gray-50">
                                                 <tr>
@@ -621,7 +599,7 @@ export default function ProjectTrackerView({ permissions }) {
                                                 )}
                                             </tbody>
                                         </table>
-                                    </div>
+                                    </PhoneCards>
                                 </CardBody>
                             </Card>
                         </div>
@@ -630,9 +608,9 @@ export default function ProjectTrackerView({ permissions }) {
                     {(dashboardTab === 'active' || dashboardTab === 'completed') && (
                         <Card className="animate-in fade-in">
                             <CardBody className="p-0">
-                                <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-4 items-center justify-between">
-                                    <div className="flex flex-wrap gap-4 items-center flex-1">
-                                        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+                                <div className="p-3 md:p-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-3 md:gap-4 items-center justify-between">
+                                    <div className="grid grid-cols-2 gap-2 w-full md:w-auto md:flex md:flex-wrap md:gap-4 items-center md:flex-1">
+                                        <div className="relative col-span-2 md:flex-1 md:min-w-[200px] md:max-w-[300px]">
                                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                             <Input
                                                 placeholder={t('trackers.projects.filters.search', 'Search tasks...')}
@@ -641,16 +619,16 @@ export default function ProjectTrackerView({ permissions }) {
                                                 className="pl-9 w-full"
                                             />
                                         </div>
-                                        <Select value={taskFilter.project} onChange={e => setTaskFilter({...taskFilter, project: e.target.value})} className="w-48">
+                                        <Select value={taskFilter.project} onChange={e => setTaskFilter({...taskFilter, project: e.target.value})} className="w-full md:w-48">
                                             <option value="">{t('trackers.projects.filters.all_projects', 'All Projects')}</option>
                                             {allActiveProjects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                                         </Select>
-                                        <Select value={taskFilter.responsible} onChange={e => setTaskFilter({...taskFilter, responsible: e.target.value})} className="w-48">
+                                        <Select value={taskFilter.responsible} onChange={e => setTaskFilter({...taskFilter, responsible: e.target.value})} className="w-full md:w-48">
                                             <option value="">{t('trackers.projects.filters.all_members', 'All Federal Members')}</option>
                                             {allTeamMembers.map(m => <option key={m.id} value={m.id}>{m.nameAr || m.name}</option>)}
                                         </Select>
                                         {dashboardTab === 'active' && (
-                                            <Select value={taskFilter.status} onChange={e => setTaskFilter({...taskFilter, status: e.target.value})} className="w-40">
+                                            <Select value={taskFilter.status} onChange={e => setTaskFilter({...taskFilter, status: e.target.value})} className="w-full md:w-40">
                                                 <option value="">{t('trackers.projects.filters.all_statuses', 'All Statuses')}</option>
                                                 <option value="Pending">{t('trackers.projects.status.pending', 'Pending')}</option>
                                                 <option value="In Progress">{t('trackers.projects.status.in_progress', 'In Progress')}</option>
@@ -663,7 +641,7 @@ export default function ProjectTrackerView({ permissions }) {
                                 </div>
 
                                 <div className="overflow-x-auto">
-                                    <Table headers={[t('trackers.projects.table.unit', 'Program Unit'), t('trackers.projects.table.project', 'Project'), t('trackers.projects.table.task', 'Task Description'), t('trackers.projects.table.responsible', 'Responsible'), t('trackers.projects.table.due', 'Due Date'), t('trackers.projects.table.status', 'Status'), t('trackers.projects.table.actions', 'Actions')]}>
+                                    <Table headers={[t('trackers.projects.table.unit', 'Program Unit'), t('trackers.projects.table.project', 'Project'), t('trackers.projects.table.task', 'Task Description'), t('trackers.projects.table.responsible', 'Responsible'), t('trackers.projects.table.due', 'Due Date'), t('trackers.projects.table.status', 'Status'), t('trackers.projects.table.actions', 'Actions')]} cardsOnPhone>
                                         {(dashboardTab === 'active' ? filteredActiveTasks : filteredCompletedTasks).map(task => {
                                             const isOverdue = dashboardTab === 'active' && task.dueDate && new Date(task.dueDate) < new Date();
                                             return (
@@ -715,8 +693,8 @@ export default function ProjectTrackerView({ permissions }) {
                 </div>
             ) : (
                 <Card>
-                    <CardBody className="p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded border border-gray-200">
+                    <CardBody className="p-3 md:p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-3 md:p-4 rounded border border-gray-200">
                             <FormGroup label={t('trackers.projects.select_unit', 'Select Program Unit')}>
                                 <Select value={selectedUnit} onChange={(e) => { setSelectedUnit(e.target.value); setSelectedProjectId(''); }}>
                                     <option value="">{t('trackers.projects.choose_unit', '-- Choose Unit --')}</option>
@@ -767,7 +745,7 @@ export default function ProjectTrackerView({ permissions }) {
                                 </div>
                                 
                                 {activeProject.subtasks && activeProject.subtasks.length > 0 ? (
-                                    <Table headers={[t('trackers.projects.table.task', 'Task Description'), t('trackers.projects.table.responsible', 'Responsible'), t('trackers.projects.table.due', 'Due Date'), t('trackers.projects.table.status', 'Status'), t('trackers.projects.table.actions', 'Actions')]}>
+                                    <Table headers={[t('trackers.projects.table.task', 'Task Description'), t('trackers.projects.table.responsible', 'Responsible'), t('trackers.projects.table.due', 'Due Date'), t('trackers.projects.table.status', 'Status'), t('trackers.projects.table.actions', 'Actions')]} cardsOnPhone>
                                         {activeProject.subtasks.map(task => (
                                             <tr key={task.id} className="hover:bg-gray-50">
                                                 <td className="p-3 text-sm font-medium">

@@ -1029,7 +1029,7 @@ function EditModal({ isOpen, onClose, target, year, onSaved }) {
                     {POPULATION_FIELDS.map((field) => (
                         <Input
                             key={field.id}
-                            type="number"
+                            type="number" inputMode="decimal"
                             min="0"
                             step="1"
                             label={isArabic ? field.labelAr : field.label}

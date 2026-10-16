@@ -129,7 +129,7 @@ export function PartnersPage({ permissions, userStates }) {
                 </div>
             
                 {loading ? <Spinner /> : (
-                    <Table headers={[t('hr_misc.partners.org_name', 'Organization Name'), t('hr_misc.partners.state', 'State'), t('hr_misc.partners.projects', 'Projects'), t('hr_misc.partners.focal_person', 'Focal Person'), t('hr_misc.partners.phone', 'Phone'), t('hr_misc.partners.actions', 'Actions')]}>
+                    <Table cardsOnPhone headers={[t('hr_misc.partners.org_name', 'Organization Name'), t('hr_misc.partners.state', 'State'), t('hr_misc.partners.projects', 'Projects'), t('hr_misc.partners.focal_person', 'Focal Person'), t('hr_misc.partners.phone', 'Phone'), t('hr_misc.partners.actions', 'Actions')]}>
                         {/* --- FIX: This check is now safe --- */}
                         {filteredPartners.length > 0 ? filteredPartners.map(p => (
                             <tr key={p.id}>

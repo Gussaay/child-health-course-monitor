@@ -9,7 +9,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select,
-    Spinner, Checkbox, Modal
+    Spinner, Checkbox, Modal, FormActions
 } from './CommonComponents';
 import {
     getHealthFacilityById,
@@ -821,10 +821,10 @@ export const SharedFacilityFields = ({ formData, pendingData, handleChange, hand
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <FormGroup label={<>خط العرض (Latitude) <PendingBadge fieldKey="_الإحداثيات_latitude" pendingData={pendingData} currentData={formData} /></>}>
-                                <Input type="number" step="any" name="_الإحداثيات_latitude" value={formData['_الإحداثيات_latitude'] || ''} onChange={handleChange} disabled={isReadOnly} />
+                                <Input type="number" inputMode="decimal" step="any" name="_الإحداثيات_latitude" value={formData['_الإحداثيات_latitude'] || ''} onChange={handleChange} disabled={isReadOnly} />
                             </FormGroup>
                             <FormGroup label={<>خط الطول (Longitude) <PendingBadge fieldKey="_الإحداثيات_longitude" pendingData={pendingData} currentData={formData} /></>}>
-                                <Input type="number" step="any" name="_الإحداثيات_longitude" value={formData['_الإحداثيات_longitude'] || ''} onChange={handleChange} disabled={isReadOnly} />
+                                <Input type="number" inputMode="decimal" step="any" name="_الإحداثيات_longitude" value={formData['_الإحداثيات_longitude'] || ''} onChange={handleChange} disabled={isReadOnly} />
                             </FormGroup>
                         </div>
                     </div>
@@ -1300,7 +1300,7 @@ export const GenericFacilityForm = React.forwardRef(({
                 setToast={setToast}
             />
 
-            <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-hidden">
+            <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-clip">
                 <div className="bg-gradient-to-r from-sky-50 to-white px-6 py-5 border-b border-gray-100">
                     <h2 className="text-2xl font-extrabold text-sky-900">{isEditing ? `تعديل: ${title}` : `إضافة: ${title}`}</h2>
                     <p className="text-sky-700 mt-1 font-medium">{subtitle || (isEditing ? (formData['اسم_المؤسسة'] || t('clinical_ui.facility_forms.update_details', 'Update details for this facility')) : "أدخل تفاصيل المنشأة الجديدة.")}</p>
@@ -1355,14 +1355,14 @@ export const GenericFacilityForm = React.forwardRef(({
                             </div>
                         )}
 
-                        <div className="flex gap-3 mt-8 pt-6 border-t justify-end">
+                        <FormActions className="mt-8 md:gap-3 md:border-t md:pt-6">
                             <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); onCancel(); }} disabled={currentlySubmitting} className="px-6">
                                 {cancelButtonText}
                             </Button>
                             <Button type="submit" variant={saveButtonVariant} disabled={currentlySubmitting} className="px-8 font-bold">
                                 {currentlySubmitting ? 'جاري الحفظ...' : saveButtonText}
                             </Button>
-                        </div>
+                        </FormActions>
                     </form>
                 </div>
             </Card>
@@ -1512,13 +1512,13 @@ export const IMNCIFormFields = ({ formData, pendingData, handleChange, handleSta
                                 <tbody>
                                     <tr className="hover:bg-gray-50">
                                         <td className="border p-3 font-medium text-gray-700 text-right">طبيب</td>
-                                        <td className="border p-2"><Input type="number" name="imnci_doctors_total" value={formData.imnci_doctors_total ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
-                                        <td className="border p-2"><Input type="number" name="imnci_doctors_trained" value={formData.imnci_doctors_trained ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
+                                        <td className="border p-2"><Input type="number" inputMode="decimal" name="imnci_doctors_total" value={formData.imnci_doctors_total ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
+                                        <td className="border p-2"><Input type="number" inputMode="decimal" name="imnci_doctors_trained" value={formData.imnci_doctors_trained ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
                                     </tr>
                                     <tr className="hover:bg-gray-50">
                                         <td className="border p-3 font-medium text-gray-700 text-right">مساعد طبي</td>
-                                        <td className="border p-2"><Input type="number" name="imnci_medical_assistants_total" value={formData.imnci_medical_assistants_total ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
-                                        <td className="border p-2"><Input type="number" name="imnci_medical_assistants_trained" value={formData.imnci_medical_assistants_trained ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
+                                        <td className="border p-2"><Input type="number" inputMode="decimal" name="imnci_medical_assistants_total" value={formData.imnci_medical_assistants_total ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
+                                        <td className="border p-2"><Input type="number" inputMode="decimal" name="imnci_medical_assistants_trained" value={formData.imnci_medical_assistants_trained ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1597,7 +1597,7 @@ export const EENCFormFields = ({ formData, pendingData, handleChange, handleStaf
                 </FormGroup>
 
                 <div className="space-y-6 animate-fade-in pt-4 border-t border-gray-200">
-                    <FormGroup label={<>عدد الكوادر الصحية المدربة (إجمالي) <PendingBadge fieldKey="eenc_trained_workers" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_trained_workers" value={formData.eenc_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                    <FormGroup label={<>عدد الكوادر الصحية المدربة (إجمالي) <PendingBadge fieldKey="eenc_trained_workers" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="eenc_trained_workers" value={formData.eenc_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                     
                     <StaffTable 
                         serviceKey="eenc_staff" 
@@ -1616,11 +1616,11 @@ export const EENCFormFields = ({ formData, pendingData, handleChange, handleStaf
                     <div>
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">الموارد والمعدات المتاحة</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormGroup label={<>العدد الكلي لسرير الولادة <PendingBadge fieldKey="eenc_delivery_beds" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_delivery_beds" value={formData.eenc_delivery_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>العدد الكلي لمحطات الانعاش <PendingBadge fieldKey="eenc_resuscitation_stations" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_resuscitation_stations" value={formData.eenc_resuscitation_stations ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>العدد الكلي لاجهزة التدفئة <PendingBadge fieldKey="eenc_warmers" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_warmers" value={formData.eenc_warmers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>العدد الكلي لجهاز الامبوباق <PendingBadge fieldKey="eenc_ambu_bags" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_ambu_bags" value={formData.eenc_ambu_bags ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>العدد الكلي لجهاز الشفط اليدوي <PendingBadge fieldKey="eenc_manual_suction" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="eenc_manual_suction" value={formData.eenc_manual_suction ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لسرير الولادة <PendingBadge fieldKey="eenc_delivery_beds" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="eenc_delivery_beds" value={formData.eenc_delivery_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لمحطات الانعاش <PendingBadge fieldKey="eenc_resuscitation_stations" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="eenc_resuscitation_stations" value={formData.eenc_resuscitation_stations ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لاجهزة التدفئة <PendingBadge fieldKey="eenc_warmers" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="eenc_warmers" value={formData.eenc_warmers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لجهاز الامبوباق <PendingBadge fieldKey="eenc_ambu_bags" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="eenc_ambu_bags" value={formData.eenc_ambu_bags ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي لجهاز الشفط اليدوي <PendingBadge fieldKey="eenc_manual_suction" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="eenc_manual_suction" value={formData.eenc_manual_suction ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                             <FormGroup label={<>ساعة حائط <PendingBadge fieldKey="eenc_wall_clock" pendingData={pendingData} currentData={formData} /></>}><Select name="eenc_wall_clock" value={formData.eenc_wall_clock || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
                             <FormGroup label={<>جهاز التعقيم بالبخار <PendingBadge fieldKey="eenc_steam_sterilizer" pendingData={pendingData} currentData={formData} /></>}><Select name="eenc_steam_sterilizer" value={formData.eenc_steam_sterilizer || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
                         </div>
@@ -1718,21 +1718,21 @@ export const NeonatalFormFields = ({ formData, pendingData, handleChange, handle
                     <div>
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">المعدات المتاحة</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormGroup label={<>إجمالي سعة الأسرة <PendingBadge fieldKey="neonatal_total_beds" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_total_beds" value={formData.neonatal_total_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>العدد الكلي للحضانات (incubators) <PendingBadge fieldKey="neonatal_total_incubators" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_total_incubators" value={formData.neonatal_total_incubators ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>العدد الكلي للاسرة للاطفال مكتملي النمو (cots) <PendingBadge fieldKey="neonatal_total_cots" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_total_cots" value={formData.neonatal_total_cots ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>أجهزة CPAP <PendingBadge fieldKey="neonatal_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_cpap" value={formData.neonatal_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>جهاز تدفئة حرارية (warmer) <PendingBadge fieldKey="neonatal_warmer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_warmer" value={formData.neonatal_warmer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>مضخة تسريب (infusion pump) <PendingBadge fieldKey="neonatal_infusion_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_infusion_pump" value={formData.neonatal_infusion_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>مضخات الحقن (Syringe pump) <PendingBadge fieldKey="neonatal_syringe_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_syringe_pump" value={formData.neonatal_syringe_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>جهاز شفط (suction machine) <PendingBadge fieldKey="neonatal_sucker" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_sucker" value={formData.neonatal_sucker ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>وحدات العلاج الضوئي (Phototherapy) <PendingBadge fieldKey="neonatal_phototherapy" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_phototherapy" value={formData.neonatal_phototherapy ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>أكياس الإنعاش (Ambu Bag) <PendingBadge fieldKey="neonatal_ambu_bag" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_ambu_bag" value={formData.neonatal_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor) <PendingBadge fieldKey="neonatal_respiration_monitor" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_respiration_monitor" value={formData.neonatal_respiration_monitor ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>جهاز أكسجين (Oxygen concentrator) <PendingBadge fieldKey="neonatal_oxygen_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_oxygen_machine" value={formData.neonatal_oxygen_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>أسطوانة الاكسجين (oxygen cylinder) <PendingBadge fieldKey="neonatal_oxygen_cylinder" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_oxygen_cylinder" value={formData.neonatal_oxygen_cylinder ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>جهاز تنفس صناعي (Mechanical ventilator) <PendingBadge fieldKey="neonatal_mechanical_ventilator" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_mechanical_ventilator" value={formData.neonatal_mechanical_ventilator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                            <FormGroup label={<>حاضنة محمولة (Portable Incubator) <PendingBadge fieldKey="neonatal_portable_incubator" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="neonatal_portable_incubator" value={formData.neonatal_portable_incubator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>إجمالي سعة الأسرة <PendingBadge fieldKey="neonatal_total_beds" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_total_beds" value={formData.neonatal_total_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي للحضانات (incubators) <PendingBadge fieldKey="neonatal_total_incubators" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_total_incubators" value={formData.neonatal_total_incubators ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>العدد الكلي للاسرة للاطفال مكتملي النمو (cots) <PendingBadge fieldKey="neonatal_total_cots" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_total_cots" value={formData.neonatal_total_cots ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>أجهزة CPAP <PendingBadge fieldKey="neonatal_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_cpap" value={formData.neonatal_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز تدفئة حرارية (warmer) <PendingBadge fieldKey="neonatal_warmer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_warmer" value={formData.neonatal_warmer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>مضخة تسريب (infusion pump) <PendingBadge fieldKey="neonatal_infusion_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_infusion_pump" value={formData.neonatal_infusion_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>مضخات الحقن (Syringe pump) <PendingBadge fieldKey="neonatal_syringe_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_syringe_pump" value={formData.neonatal_syringe_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز شفط (suction machine) <PendingBadge fieldKey="neonatal_sucker" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_sucker" value={formData.neonatal_sucker ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>وحدات العلاج الضوئي (Phototherapy) <PendingBadge fieldKey="neonatal_phototherapy" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_phototherapy" value={formData.neonatal_phototherapy ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>أكياس الإنعاش (Ambu Bag) <PendingBadge fieldKey="neonatal_ambu_bag" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_ambu_bag" value={formData.neonatal_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor) <PendingBadge fieldKey="neonatal_respiration_monitor" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_respiration_monitor" value={formData.neonatal_respiration_monitor ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز أكسجين (Oxygen concentrator) <PendingBadge fieldKey="neonatal_oxygen_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_oxygen_machine" value={formData.neonatal_oxygen_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>أسطوانة الاكسجين (oxygen cylinder) <PendingBadge fieldKey="neonatal_oxygen_cylinder" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_oxygen_cylinder" value={formData.neonatal_oxygen_cylinder ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>جهاز تنفس صناعي (Mechanical ventilator) <PendingBadge fieldKey="neonatal_mechanical_ventilator" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_mechanical_ventilator" value={formData.neonatal_mechanical_ventilator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            <FormGroup label={<>حاضنة محمولة (Portable Incubator) <PendingBadge fieldKey="neonatal_portable_incubator" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="neonatal_portable_incubator" value={formData.neonatal_portable_incubator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                         </div>
                     </div>
                 </div>
@@ -1802,10 +1802,10 @@ export const CriticalCareFormFields = ({ formData, pendingData, handleChange, ha
                                             <tr key={staff.key} className="hover:bg-gray-50">
                                                 <td className="border p-3 font-medium text-gray-700 text-right">{staff.label}</td>
                                                 <td className="border p-2">
-                                                    <Input type="number" name={`etat_staff_${staff.key}_total`} value={formData[`etat_staff_${staff.key}_total`] ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" />
+                                                    <Input type="number" inputMode="decimal" name={`etat_staff_${staff.key}_total`} value={formData[`etat_staff_${staff.key}_total`] ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" />
                                                 </td>
                                                 <td className="border p-2">
-                                                    <Input type="number" name={`etat_staff_${staff.key}_trained`} value={formData[`etat_staff_${staff.key}_trained`] ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" />
+                                                    <Input type="number" inputMode="decimal" name={`etat_staff_${staff.key}_trained`} value={formData[`etat_staff_${staff.key}_trained`] ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" />
                                                 </td>
                                             </tr>
                                         ))}
@@ -1864,12 +1864,12 @@ export const CriticalCareFormFields = ({ formData, pendingData, handleChange, ha
                         <div>
                             <h4 className="text-md font-semibold mb-4 text-sky-800">الأجهزة والمعدات المتاحة (العدد)</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                <FormGroup label={<>أمبوباق <PendingBadge fieldKey="etat_ambu_bag" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_ambu_bag" value={formData.etat_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label={<>قناع أكسجين <PendingBadge fieldKey="etat_oxygen_mask" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_oxygen_mask" value={formData.etat_oxygen_mask ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label={<>جهاز قياس السكر <PendingBadge fieldKey="etat_glucometer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_glucometer" value={formData.etat_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label={<>جهاز مضخة السوائل <PendingBadge fieldKey="etat_fluid_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_fluid_pump" value={formData.etat_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label={<>جهاز شفط <PendingBadge fieldKey="etat_suction_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_suction_machine" value={formData.etat_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label={<>جهاز تنفس صناعي CPAP <PendingBadge fieldKey="etat_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="etat_cpap" value={formData.etat_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>أمبوباق <PendingBadge fieldKey="etat_ambu_bag" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="etat_ambu_bag" value={formData.etat_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>قناع أكسجين <PendingBadge fieldKey="etat_oxygen_mask" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="etat_oxygen_mask" value={formData.etat_oxygen_mask ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز قياس السكر <PendingBadge fieldKey="etat_glucometer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="etat_glucometer" value={formData.etat_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز مضخة السوائل <PendingBadge fieldKey="etat_fluid_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="etat_fluid_pump" value={formData.etat_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز شفط <PendingBadge fieldKey="etat_suction_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="etat_suction_machine" value={formData.etat_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز تنفس صناعي CPAP <PendingBadge fieldKey="etat_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="etat_cpap" value={formData.etat_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                             </div>
                         </div>
 
@@ -1889,7 +1889,7 @@ export const CriticalCareFormFields = ({ formData, pendingData, handleChange, ha
 
                     <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormGroup label={<>عدد الاسرة في العناية الوسيطة <PendingBadge fieldKey="hdu_bed_capacity" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_bed_capacity" value={formData.hdu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} placeholder="أدخل العدد" min="0" /></FormGroup>
+                            <FormGroup label={<>عدد الاسرة في العناية الوسيطة <PendingBadge fieldKey="hdu_bed_capacity" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="hdu_bed_capacity" value={formData.hdu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} placeholder="أدخل العدد" min="0" /></FormGroup>
                             <FormGroup label="تعليقات (عدد الأسرة)"><Input type="text" name="hdu_bed_capacity_notes" value={formData.hdu_bed_capacity_notes || ''} onChange={handleChange} disabled={isReadOnly} placeholder="إضافة تعليق..." /></FormGroup>
                         </div>
 
@@ -1910,8 +1910,8 @@ export const CriticalCareFormFields = ({ formData, pendingData, handleChange, ha
                                         {CRITICAL_CARE_STAFF_CATEGORIES.map((staff) => (
                                             <tr key={staff.key} className="hover:bg-gray-50">
                                                 <td className="border p-3 font-medium text-gray-700 text-right">{staff.label}</td>
-                                                <td className="border p-2"><Input type="number" name={`hdu_staff_${staff.key}_total`} value={formData[`hdu_staff_${staff.key}_total`] ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
-                                                <td className="border p-2"><Input type="number" name={`hdu_staff_${staff.key}_trained`} value={formData[`hdu_staff_${staff.key}_trained`] ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
+                                                <td className="border p-2"><Input type="number" inputMode="decimal" name={`hdu_staff_${staff.key}_total`} value={formData[`hdu_staff_${staff.key}_total`] ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
+                                                <td className="border p-2"><Input type="number" inputMode="decimal" name={`hdu_staff_${staff.key}_trained`} value={formData[`hdu_staff_${staff.key}_trained`] ?? ''} onChange={handleChange} disabled={isReadOnly} min="0" /></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1924,10 +1924,10 @@ export const CriticalCareFormFields = ({ formData, pendingData, handleChange, ha
                         <div>
                             <h4 className="text-md font-semibold mb-4 text-sky-800">الأجهزة والمعدات المتاحة (العدد)</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                <FormGroup label={<>جهاز قياس السكر <PendingBadge fieldKey="hdu_glucometer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_glucometer" value={formData.hdu_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label={<>جهاز مضخة السوائل <PendingBadge fieldKey="hdu_fluid_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_fluid_pump" value={formData.hdu_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label={<>جهاز شفط <PendingBadge fieldKey="hdu_suction_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_suction_machine" value={formData.hdu_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                                <FormGroup label={<>جهاز تنفس صناعي CPAP <PendingBadge fieldKey="hdu_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" name="hdu_cpap" value={formData.hdu_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز قياس السكر <PendingBadge fieldKey="hdu_glucometer" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="hdu_glucometer" value={formData.hdu_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز مضخة السوائل <PendingBadge fieldKey="hdu_fluid_pump" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="hdu_fluid_pump" value={formData.hdu_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز شفط <PendingBadge fieldKey="hdu_suction_machine" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="hdu_suction_machine" value={formData.hdu_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label={<>جهاز تنفس صناعي CPAP <PendingBadge fieldKey="hdu_cpap" pendingData={pendingData} currentData={formData} /></>}><Input type="number" inputMode="decimal" name="hdu_cpap" value={formData.hdu_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
                             </div>
                         </div>
 
@@ -1947,7 +1947,7 @@ export const CriticalCareFormFields = ({ formData, pendingData, handleChange, ha
 
                     <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in">
                         <FormGroup label={<>سعة أسرة PICU <PendingBadge fieldKey="picu_bed_capacity" pendingData={pendingData} currentData={formData} /></>}>
-                            <Input type="number" name="picu_bed_capacity" value={formData.picu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                            <Input type="number" inputMode="decimal" name="picu_bed_capacity" value={formData.picu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} />
                         </FormGroup>
                     </div>
                 </div>

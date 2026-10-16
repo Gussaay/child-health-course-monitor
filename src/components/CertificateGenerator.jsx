@@ -1943,7 +1943,7 @@ const NudgeRow = ({ label, fieldKey, value, defaultValue, onChange, min = 0, max
                     className="w-6 h-6 rounded border border-gray-300 bg-white text-gray-700 text-xs leading-none hover:bg-gray-100"
                 >▲</button>
                 <input
-                    type="number"
+                    type="number" inputMode="decimal"
                     min={min}
                     max={max}
                     value={value ?? ''}
@@ -2462,7 +2462,7 @@ const StepField = ({ value, defaultValue, min, max, step = 1, unit, onChange }) 
         <div className="flex items-center gap-1">
             <button type="button" onClick={() => bump(-step)} className="w-7 h-7 border rounded text-sm hover:bg-gray-100">−</button>
             <input
-                type="number"
+                type="number" inputMode="decimal"
                 min={min} max={max} step={step}
                 value={value ?? ''}
                 placeholder={String(defaultValue)}
@@ -4183,7 +4183,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                 <div className="grid grid-cols-3 gap-2">
                                     <FormGroup label={t('certificates.customizer.top_mm', 'Top mm')}>
                                         <Input
-                                            type="number"
+                                            type="number" inputMode="decimal"
                                             value={data[`logo${slot.n}Top`] ?? ''}
                                             onChange={e => handleInputChange(`logo${slot.n}Top`, e.target.value)}
                                             placeholder={String(defaultLogoTop(data))}
@@ -4191,7 +4191,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                     </FormGroup>
                                     <FormGroup label={t('certificates.customizer.left_pct', 'Left %')}>
                                         <Input
-                                            type="number"
+                                            type="number" inputMode="decimal"
                                             value={data[`logo${slot.n}Left`] ?? ''}
                                             onChange={e => handleInputChange(`logo${slot.n}Left`, e.target.value)}
                                             placeholder={String(Math.round(defaultLogoLeft(data, slot, previewLang === 'ar')))}
@@ -4199,7 +4199,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                     </FormGroup>
                                     <FormGroup label={t('certificates.customizer.height_mm', 'Height mm')}>
                                         <Input
-                                            type="number"
+                                            type="number" inputMode="decimal"
                                             value={data[slot.heightKey] ?? ''}
                                             onChange={e => handleInputChange(slot.heightKey, e.target.value)}
                                             placeholder={String(CERT_DEFAULTS[slot.heightKey])}
@@ -4397,31 +4397,31 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                     <p className="text-xs text-gray-500 mb-3">{t('certificates.customizer.s7_help', 'Leave blank to use the default size for each title.')}</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <FormGroup label={t('certificates.customizer.fs_header', 'Header text (default {{en}}/{{ar}})', { en: CERT_DEFAULTS.headerFontSizeEn, ar: CERT_DEFAULTS.headerFontSizeAr })}>
-                            <Input type="number" min="8" value={data.headerFontSize ?? ''} onChange={e => handleInputChange('headerFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.headerFontSizeEn)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.headerFontSize ?? ''} onChange={e => handleInputChange('headerFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.headerFontSizeEn)} />
                         </FormGroup>
                         <FormGroup label={t('certificates.customizer.fs_title', '"CERTIFICATE" title (default {{value}})', { value: CERT_DEFAULTS.titleFontSize })}>
-                            <Input type="number" min="8" value={data.titleFontSize ?? ''} onChange={e => handleInputChange('titleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.titleFontSize)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.titleFontSize ?? ''} onChange={e => handleInputChange('titleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.titleFontSize)} />
                         </FormGroup>
                         <FormGroup label={t('certificates.customizer.fs_name', 'Participant name (default {{value}})', { value: CERT_DEFAULTS.nameFontSize })}>
-                            <Input type="number" min="8" value={data.nameFontSize ?? ''} onChange={e => handleInputChange('nameFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.nameFontSize)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.nameFontSize ?? ''} onChange={e => handleInputChange('nameFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.nameFontSize)} />
                         </FormGroup>
                         <FormGroup label={t('certificates.customizer.fs_completion', 'Completion line (default {{value}})', { value: CERT_DEFAULTS.completionFontSize })}>
-                            <Input type="number" min="8" value={data.completionFontSize ?? ''} onChange={e => handleInputChange('completionFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.completionFontSize)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.completionFontSize ?? ''} onChange={e => handleInputChange('completionFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.completionFontSize)} />
                         </FormGroup>
                         <FormGroup label={t('certificates.customizer.fs_course_title', 'Course title (default {{value}})', { value: CERT_DEFAULTS.courseTitleFontSize })}>
-                            <Input type="number" min="8" value={data.courseTitleFontSize ?? ''} onChange={e => handleInputChange('courseTitleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.courseTitleFontSize)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.courseTitleFontSize ?? ''} onChange={e => handleInputChange('courseTitleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.courseTitleFontSize)} />
                         </FormGroup>
                         <FormGroup label={t('certificates.customizer.fs_sub_course', 'Sub-course line (default {{value}})', { value: CERT_DEFAULTS.subCourseFontSize })}>
-                            <Input type="number" min="8" value={data.subCourseFontSize ?? ''} onChange={e => handleInputChange('subCourseFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.subCourseFontSize)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.subCourseFontSize ?? ''} onChange={e => handleInputChange('subCourseFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.subCourseFontSize)} />
                         </FormGroup>
                         <FormGroup label={t('certificates.customizer.fs_place_date', 'Place & date (default {{value}})', { value: CERT_DEFAULTS.placeDateFontSize })}>
-                            <Input type="number" min="8" value={data.placeDateFontSize ?? ''} onChange={e => handleInputChange('placeDateFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.placeDateFontSize)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.placeDateFontSize ?? ''} onChange={e => handleInputChange('placeDateFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.placeDateFontSize)} />
                         </FormGroup>
                         <FormGroup label={t('certificates.customizer.fs_sig_names', 'Signature names (default {{value}})', { value: CERT_DEFAULTS.signatureNameFontSize })}>
-                            <Input type="number" min="8" value={data.signatureNameFontSize ?? ''} onChange={e => handleInputChange('signatureNameFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.signatureNameFontSize)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.signatureNameFontSize ?? ''} onChange={e => handleInputChange('signatureNameFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.signatureNameFontSize)} />
                         </FormGroup>
                         <FormGroup label={t('certificates.customizer.fs_sig_titles', 'Signature titles (default {{value}})', { value: CERT_DEFAULTS.signatureRoleFontSize })}>
-                            <Input type="number" min="8" value={data.signatureRoleFontSize ?? ''} onChange={e => handleInputChange('signatureRoleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.signatureRoleFontSize)} />
+                            <Input type="number" inputMode="decimal" min="8" value={data.signatureRoleFontSize ?? ''} onChange={e => handleInputChange('signatureRoleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.signatureRoleFontSize)} />
                         </FormGroup>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">{t('certificates.customizer.s7_footer', 'Signature sizes apply to all three signatories. Lower the title size if a long role caption wraps past the border.')}</p>
@@ -4518,7 +4518,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                         ].map(({ key, ph }) => (
                                             <td key={key} className="px-1 py-1">
                                                 <input
-                                                    type="number"
+                                                    type="number" inputMode="decimal"
                                                     value={data[key] ?? ''}
                                                     onChange={e => handleInputChange(key, e.target.value)}
                                                     placeholder={String(ph)}
@@ -4537,12 +4537,12 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 
                     <p className="text-xs text-gray-500 mb-3">{t('certificates.customizer.widths_help', 'Fine-tune the shared widths if the third signature and the stamp overlap. The page is 297 × 210 mm.')}</p>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <FormGroup label={t('certificates.customizer.side_sig_width', 'Side signature width')}><Input type="number" value={data.signatureWidth ?? ''} onChange={e => handleInputChange('signatureWidth', e.target.value)} placeholder={thirdPartyWillPrint ? '80' : String(CERT_DEFAULTS.signatureWidth)} /></FormGroup>
-                        <FormGroup label={t('certificates.customizer.third_sig_width', 'Third signature width')}><Input type="number" value={data.thirdSignatureWidth ?? ''} onChange={e => handleInputChange('thirdSignatureWidth', e.target.value)} placeholder={String(CERT_DEFAULTS.thirdSignatureWidth)} /></FormGroup>
-                        <FormGroup label={t('certificates.customizer.stamp_top', 'Stamp top')}><Input type="number" value={data.stampTop ?? ''} onChange={e => handleInputChange('stampTop', e.target.value)} placeholder={data.thirdPartyEnabled ? '168' : '162'} /></FormGroup>
-                        <FormGroup label={t('certificates.customizer.stamp_left', 'Stamp left (%)')}><Input type="number" value={data.stampLeft ?? ''} onChange={e => handleInputChange('stampLeft', e.target.value)} placeholder="50" /></FormGroup>
-                        <FormGroup label={t('certificates.customizer.stamp_width', 'Stamp width')}><Input type="number" value={data.stampWidth ?? ''} onChange={e => handleInputChange('stampWidth', e.target.value)} placeholder={data.thirdPartyEnabled ? '32' : '40'} /></FormGroup>
-                        <FormGroup label={t('certificates.customizer.stamp_opacity', 'Stamp opacity')}><Input type="number" step="0.05" min="0" max="1" value={data.stampOpacity ?? ''} onChange={e => handleInputChange('stampOpacity', e.target.value)} placeholder={data.thirdPartyEnabled ? '0.55' : '0.9'} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.side_sig_width', 'Side signature width')}><Input type="number" inputMode="decimal" value={data.signatureWidth ?? ''} onChange={e => handleInputChange('signatureWidth', e.target.value)} placeholder={thirdPartyWillPrint ? '80' : String(CERT_DEFAULTS.signatureWidth)} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.third_sig_width', 'Third signature width')}><Input type="number" inputMode="decimal" value={data.thirdSignatureWidth ?? ''} onChange={e => handleInputChange('thirdSignatureWidth', e.target.value)} placeholder={String(CERT_DEFAULTS.thirdSignatureWidth)} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.stamp_top', 'Stamp top')}><Input type="number" inputMode="decimal" value={data.stampTop ?? ''} onChange={e => handleInputChange('stampTop', e.target.value)} placeholder={data.thirdPartyEnabled ? '168' : '162'} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.stamp_left', 'Stamp left (%)')}><Input type="number" inputMode="decimal" value={data.stampLeft ?? ''} onChange={e => handleInputChange('stampLeft', e.target.value)} placeholder="50" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.stamp_width', 'Stamp width')}><Input type="number" inputMode="decimal" value={data.stampWidth ?? ''} onChange={e => handleInputChange('stampWidth', e.target.value)} placeholder={data.thirdPartyEnabled ? '32' : '40'} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.stamp_opacity', 'Stamp opacity')}><Input type="number" inputMode="decimal" step="0.05" min="0" max="1" value={data.stampOpacity ?? ''} onChange={e => handleInputChange('stampOpacity', e.target.value)} placeholder={data.thirdPartyEnabled ? '0.55' : '0.9'} /></FormGroup>
                     </div>
                 </div>
                 </>

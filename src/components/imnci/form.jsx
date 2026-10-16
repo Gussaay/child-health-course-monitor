@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, PageHeader, Button } from '../CommonComponents'; 
+import { Card, PageHeader, Button, IS_NATIVE, useInPageBack, FormActions } from '../CommonComponents'; 
 import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle, FileText, X, Check, Stethoscope, Users, ArrowLeft } from 'lucide-react';
 import zScoreData from '../zscore_reference_data.json'; 
 import { STATE_LOCALITIES } from '../constants'; 
@@ -327,22 +327,24 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
         <div className="space-y-6 animate-fade-in" dir="rtl">
             <RecordDetailsModal record={selectedRecordDetails} onClose={() => setSelectedRecordDetails(null)} />
 
+            {!IS_NATIVE && (
             <div className="flex justify-start">
                 <Button variant="secondary" onClick={() => onNavigate('nav')} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200">
                     <ArrowRight size={18} /> العودة إلى القائمة الرئيسية
                 </Button>
             </div>
+            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-3 md:gap-6">
                 <button onClick={() => onNavigate('infant')} className="text-right cursor-pointer focus:outline-none w-full h-full block">
                     <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-sky-500 group h-full">
-                        <div className="p-6 flex items-center gap-6">
-                            <div className="p-4 bg-sky-100 text-sky-600 rounded-2xl group-hover:scale-110 transition-transform">
-                                <Baby size={32} />
+                        <div className="p-4 md:p-6 flex flex-col md:flex-row items-center text-center md:text-right gap-3 md:gap-6">
+                            <div className="p-3 md:p-4 bg-sky-100 text-sky-600 rounded-2xl group-hover:scale-110 transition-transform">
+                                <Baby size={32} className="w-7 h-7 md:w-8 md:h-8" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-sky-900">تسجيل طفل أقل من شهرين</h3>
-                                <p className="text-sky-600 text-sm mt-1">إدخال بيانات التقييم والعلاج للرضع (Young Infant Form)</p>
+                                <h3 className="text-base md:text-xl font-bold text-sky-900">تسجيل طفل أقل من شهرين</h3>
+                                <p className="text-sky-600 text-xs md:text-sm mt-1">إدخال بيانات التقييم والعلاج للرضع (Young Infant Form)</p>
                             </div>
                         </div>
                     </Card>
@@ -350,13 +352,13 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
 
                 <button onClick={() => onNavigate('child')} className="text-right cursor-pointer focus:outline-none w-full h-full block">
                     <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-indigo-500 group h-full">
-                        <div className="p-6 flex items-center gap-6">
-                            <div className="p-4 bg-indigo-100 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
-                                <User size={32} />
+                        <div className="p-4 md:p-6 flex flex-col md:flex-row items-center text-center md:text-right gap-3 md:gap-6">
+                            <div className="p-3 md:p-4 bg-indigo-100 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
+                                <User size={32} className="w-7 h-7 md:w-8 md:h-8" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-indigo-900">تسجيل طفل من شهرين إلى 5 سنوات</h3>
-                                <p className="text-indigo-600 text-sm mt-1">إدخال بيانات التقييم والعلاج للأطفال (Sick Child Form)</p>
+                                <h3 className="text-base md:text-xl font-bold text-indigo-900">تسجيل طفل من شهرين إلى 5 سنوات</h3>
+                                <p className="text-indigo-600 text-xs md:text-sm mt-1">إدخال بيانات التقييم والعلاج للأطفال (Sick Child Form)</p>
                             </div>
                         </div>
                     </Card>
@@ -775,7 +777,7 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
     return (
         <div className="space-y-6 animate-in fade-in duration-300 relative">
             <SaveStatusPopup status={statusModal} onClose={() => setStatusModal(null)} onBack={onBack} />
-            <div className="flex justify-start"><Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200"><ArrowRight size={18} /> العودة إلى القائمة الرئيسية</Button></div>
+            {!IS_NATIVE && <div className="flex justify-start"><Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200"><ArrowRight size={18} /> العودة إلى القائمة الرئيسية</Button></div>}
             
             <Card>
                 <div className="bg-sky-700 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide flex items-center justify-center gap-2"><Baby /> {t('imci.infant_title')}</div>
@@ -784,8 +786,8 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
                         <div className="space-y-1 lg:col-span-2"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><UserSquare2 size={14}/> {t('imci.common.child_name')}</label><input type="text" name="childName" value={infantData.childName} onChange={handleDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.child_name')} /></div>
                         <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><CalendarDays size={14}/> {t('imci.common.date')}</label><input type="date" name="date" value={infantData.date} onChange={handleDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" /></div>
                         <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><CalendarDays size={14}/> {t('imci.common.age_days_weeks')}</label><input type="text" name="ageDaysWeeks" value={infantData.ageDaysWeeks} onChange={handleDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.age_days')} /></div>
-                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Weight size={14}/> {t('imci.common.weight')}</label><input type="number" step="0.1" name="weightKg" value={infantData.weightKg} onChange={handleDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.weight')} /></div>
-                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Thermometer size={14}/> {t('imci.common.temp')}</label><input type="number" step="0.1" name="tempC" value={infantData.tempC} onChange={handleDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.temp')} /></div>
+                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Weight size={14}/> {t('imci.common.weight')}</label><input type="number" inputMode="decimal" step="0.1" name="weightKg" value={infantData.weightKg} onChange={handleDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.weight')} /></div>
+                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Thermometer size={14}/> {t('imci.common.temp')}</label><input type="number" inputMode="decimal" step="0.1" name="tempC" value={infantData.tempC} onChange={handleDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.temp')} /></div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 border-t border-slate-200 pt-4">
                         <div className="lg:col-span-2 space-y-1"><label className="text-xs font-bold text-slate-500 uppercase">{t('imci.common.ask_problems')}</label><input type="text" name="problems" value={infantData.problems} onChange={handleDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.problems')} /></div>
@@ -813,7 +815,7 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="convulsingNow" checked={assessments.convulsingNow} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.convulsing_now')}</span></label>
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="movementOnlyStimulatedNoMovement" checked={assessments.movementOnlyStimulatedNoMovement} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.movement')}</span></label>
                             <div className="flex flex-wrap items-center gap-2 text-sm border-t pt-2 border-slate-200">
-                                <span>{t('imci.infant.count_breaths')}</span><input type="number" name="breathRate" value={assessments.breathRate} onChange={(e) => setAssessments(p=>({...p, breathRate: e.target.value}))} className="w-16 rounded border-slate-300 p-1" />
+                                <span>{t('imci.infant.count_breaths')}</span><input type="number" inputMode="decimal" name="breathRate" value={assessments.breathRate} onChange={(e) => setAssessments(p=>({...p, breathRate: e.target.value}))} className="w-16 rounded border-slate-300 p-1" />
                                 <span>{t('imci.infant.repeat_60')}</span><label className="flex items-center space-x-1 cursor-pointer"><input type="checkbox" name="fastBreathing" checked={assessments.fastBreathing} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.fast_breathing')}</span></label>
                             </div>
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="severeChestIndrawing" checked={assessments.severeChestIndrawing} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.chest_indrawing')}</span></label>
@@ -842,7 +844,7 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <div className="space-y-3 bg-slate-50 p-3 rounded border border-slate-200">
                             <div className="flex justify-between items-center text-sm border-b pb-2"><span>{t('imci.infant.is_breastfed')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="breastfed" value="yes" checked={assessments.breastfed==='yes'} onChange={handleRadioChange}/> {t('imci.common.yes')}</label><label className="cursor-pointer"><input type="radio" name="breastfed" value="no" checked={assessments.breastfed==='no'} onChange={handleRadioChange}/> {t('imci.common.no')}</label></div></div>
-                            {assessments.breastfed === 'yes' && (<div className="flex items-center gap-2 text-sm ml-4"><span>{t('imci.infant.times_24h')}</span><input type="number" name="breastfeedTimes" value={assessments.breastfeedTimes} onChange={(e) => setAssessments(p=>({...p, breastfeedTimes: e.target.value}))} className="w-16 rounded border-slate-300 p-1"/><span>{t('imci.infant.times')}</span></div>)}
+                            {assessments.breastfed === 'yes' && (<div className="flex items-center gap-2 text-sm ml-4"><span>{t('imci.infant.times_24h')}</span><input type="number" inputMode="decimal" name="breastfeedTimes" value={assessments.breastfeedTimes} onChange={(e) => setAssessments(p=>({...p, breastfeedTimes: e.target.value}))} className="w-16 rounded border-slate-300 p-1"/><span>{t('imci.infant.times')}</span></div>)}
                             <div className="flex justify-between items-center text-sm border-b pb-2"><span>{t('imci.infant.other_foods')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="otherFoods" value="yes" checked={assessments.otherFoods==='yes'} onChange={handleRadioChange}/> {t('imci.common.yes')}</label><label className="cursor-pointer"><input type="radio" name="otherFoods" value="no" checked={assessments.otherFoods==='no'} onChange={handleRadioChange}/> {t('imci.common.no')}</label></div></div>
                         </div>
                         <div className="space-y-3 bg-slate-50 p-3 rounded border border-slate-200">
@@ -867,11 +869,11 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
                 </div>
             </div>
             
-            <div className="flex justify-end pb-8">
+            <FormActions className="md:pb-8">
                 <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
                     <ClipboardList className="w-5 h-5 mr-2 inline-block"/> {isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_infant', 'Save Infant Record')}
                 </Button>
-            </div>
+            </FormActions>
         </div>
     );
 }
@@ -1030,7 +1032,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
     return (
         <div className="space-y-6 animate-in fade-in duration-300 relative">
             <SaveStatusPopup status={statusModal} onClose={() => setStatusModal(null)} onBack={onBack} />
-            <div className="flex justify-start"><Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200"><ArrowRight size={18} /> العودة إلى القائمة الرئيسية</Button></div>
+            {!IS_NATIVE && <div className="flex justify-start"><Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200"><ArrowRight size={18} /> العودة إلى القائمة الرئيسية</Button></div>}
             
             <Card>
                 <div className="bg-indigo-700 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide flex items-center justify-center gap-2"><User /> {t('imci.child_title')}</div>
@@ -1039,10 +1041,10 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                         <div className="space-y-1 lg:col-span-2"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><UserSquare2 size={14}/> {t('imci.common.child_name')}</label><input type="text" name="childName" value={childData.childName} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.child_name')} /></div>
                         <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><CalendarDays size={14}/> {t('imci.common.date')}</label><input type="date" name="date" value={childData.date} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" /></div>
                         <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><User size={14}/> {t('imci.common.sex')}</label><select name="sex" value={childData.sex} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white"><option value="male">{t('imci.common.male')}</option><option value="female">{t('imci.common.female')}</option></select></div>
-                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><CalendarDays size={14}/> {t('imci.common.age_months')}</label><input type="number" name="ageMonths" value={childData.ageMonths} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.age_months')} /></div>
-                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Weight size={14}/> {t('imci.common.weight')}</label><input type="number" step="0.1" name="weightKg" value={childData.weightKg} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.weight')} /></div>
-                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Ruler size={14}/> {t('imci.common.length')}</label><input type="number" step="0.5" name="lengthCm" value={childData.lengthCm} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.length')} /></div>
-                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Thermometer size={14}/> {t('imci.common.temp')}</label><input type="number" step="0.1" name="tempC" value={childData.tempC} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.temp')} /></div>
+                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><CalendarDays size={14}/> {t('imci.common.age_months')}</label><input type="number" inputMode="decimal" name="ageMonths" value={childData.ageMonths} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.age_months')} /></div>
+                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Weight size={14}/> {t('imci.common.weight')}</label><input type="number" inputMode="decimal" step="0.1" name="weightKg" value={childData.weightKg} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.weight')} /></div>
+                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Ruler size={14}/> {t('imci.common.length')}</label><input type="number" inputMode="decimal" step="0.5" name="lengthCm" value={childData.lengthCm} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.length')} /></div>
+                        <div className="space-y-1"><label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Thermometer size={14}/> {t('imci.common.temp')}</label><input type="number" inputMode="decimal" step="0.1" name="tempC" value={childData.tempC} onChange={handleChildDataChange} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white" placeholder={t('imci.placeholders.temp')} /></div>
                     </div>
                 </div>
             </Card>
@@ -1066,7 +1068,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
 
                 <AssessmentRow title={t('imci.child.cough_title')} isConditional={true} yesNoValue={assessments.hasCough} onYesNoChange={(val) => setAssessments(p => ({...p, hasCough: val}))} classifyData={results.cough?.c} treatmentData={results.cough?.t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded">
-                        <div className="flex items-center gap-2"><span className="text-sm font-medium">{t('imci.common.duration')}</span><input type="number" name="coughDays" value={assessments.coughDays} onChange={(e) => setAssessments(p => ({...p, coughDays: e.target.value}))} className="w-16 rounded border-slate-300 sm:text-sm p-1" /><span className="text-sm font-medium">{t('imci.common.days')}</span></div>
+                        <div className="flex items-center gap-2"><span className="text-sm font-medium">{t('imci.common.duration')}</span><input type="number" inputMode="decimal" name="coughDays" value={assessments.coughDays} onChange={(e) => setAssessments(p => ({...p, coughDays: e.target.value}))} className="w-16 rounded border-slate-300 sm:text-sm p-1" /><span className="text-sm font-medium">{t('imci.common.days')}</span></div>
                         <div className="space-y-3">
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="fastBreathing" checked={assessments.fastBreathing} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.fast_breathing')}</span></label>
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="chestIndrawing" checked={assessments.chestIndrawing} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.chest_indrawing')}</span></label>
@@ -1082,7 +1084,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                 <AssessmentRow title={t('imci.child.diarrhea_title')} isConditional={true} yesNoValue={assessments.hasDiarrhea} onYesNoChange={(val) => setAssessments(p => ({...p, hasDiarrhea: val}))} classifyData={results.diarrhea?.c} treatmentData={results.diarrhea?.t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded">
                         <div className="space-y-3">
-                            <div className="flex items-center gap-2"><span className="text-sm font-medium">{t('imci.common.duration')}</span><input type="number" name="diarrheaDays" value={assessments.diarrheaDays} onChange={(e) => setAssessments(p => ({...p, diarrheaDays: e.target.value}))} className="w-16 rounded border-slate-300 sm:text-sm p-1" /><span className="text-sm font-medium">{t('imci.common.days')}</span></div>
+                            <div className="flex items-center gap-2"><span className="text-sm font-medium">{t('imci.common.duration')}</span><input type="number" inputMode="decimal" name="diarrheaDays" value={assessments.diarrheaDays} onChange={(e) => setAssessments(p => ({...p, diarrheaDays: e.target.value}))} className="w-16 rounded border-slate-300 sm:text-sm p-1" /><span className="text-sm font-medium">{t('imci.common.days')}</span></div>
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="bloodInStool" checked={assessments.bloodInStool} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.blood_in_stool')}</span></label>
                         </div>
                         <div className="space-y-3">
@@ -1132,7 +1134,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded">
                         <div className="space-y-3">
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="earPain" checked={assessments.earPain} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.ear_pain')}</span></label>
-                            <div className="flex items-center gap-2"><label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="earDischarge" checked={assessments.earDischarge} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.ear_discharge')}</span></label><input type="number" name="earDischargeDays" value={assessments.earDischargeDays} onChange={(e) => setAssessments(p => ({...p, earDischargeDays: e.target.value}))} className="w-16 rounded border-slate-300 sm:text-sm p-1" /><span className="text-sm">{t('imci.common.days')}</span></div>
+                            <div className="flex items-center gap-2"><label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="earDischarge" checked={assessments.earDischarge} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.ear_discharge')}</span></label><input type="number" inputMode="decimal" name="earDischargeDays" value={assessments.earDischargeDays} onChange={(e) => setAssessments(p => ({...p, earDischargeDays: e.target.value}))} className="w-16 rounded border-slate-300 sm:text-sm p-1" /><span className="text-sm">{t('imci.common.days')}</span></div>
                         </div>
                         <div className="space-y-3">
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="tenderSwelling" checked={assessments.tenderSwelling} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.tender_swelling')}</span></label>
@@ -1150,7 +1152,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                         </div>
                         <div className="text-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-slate-50 p-2 rounded">
                             <span className="font-bold min-w-[70px]">{t('imci.child.muac')}</span>
-                            <div className="flex flex-wrap gap-4 items-center"><input type="number" step="0.1" name="muacCm" placeholder="cm" value={assessments.muacCm} onChange={(e) => setAssessments(prev => ({...prev, muacCm: e.target.value}))} className="w-24 rounded-md border-slate-300 sm:text-sm p-1.5" /><span className="text-xs text-slate-500">{t('imci.child.enter_muac')}</span></div>
+                            <div className="flex flex-wrap gap-4 items-center"><input type="number" inputMode="decimal" step="0.1" name="muacCm" placeholder="cm" value={assessments.muacCm} onChange={(e) => setAssessments(prev => ({...prev, muacCm: e.target.value}))} className="w-24 rounded-md border-slate-300 sm:text-sm p-1.5" /><span className="text-xs text-slate-500">{t('imci.child.enter_muac')}</span></div>
                         </div>
                         <div className="border border-sky-100 bg-sky-50 p-3 rounded-md">
                             <div className="text-sm font-bold mb-2 text-slate-700">{t('imci.child.if_z_muac')}</div>
@@ -1182,12 +1184,12 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                 </div>
             </div>
 
-            <div className="flex justify-end pb-8">
+            <FormActions className="md:pb-8">
                 <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
                     <ClipboardList className="w-5 h-5 mr-2 inline-block"/> 
                     {isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_child', 'Save Child Record')}
                 </Button>
-            </div>
+            </FormActions>
         </div>
     );
 }
@@ -1200,13 +1202,13 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
 const HubTile = ({ icon: Icon, title, subtitle, tone, onClick }) => (
     <button onClick={onClick} className="text-right cursor-pointer focus:outline-none w-full h-full block group">
         <Card className={`hover:shadow-lg transition-shadow border-t-4 ${tone.border} h-full`}>
-            <div className="p-6 flex flex-col items-center text-center gap-4">
-                <div className={`p-4 rounded-full group-hover:scale-110 transition-transform ${tone.bg} ${tone.text}`}>
-                    <Icon size={40} />
+            <div className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-4">
+                <div className={`p-3 md:p-4 rounded-full group-hover:scale-110 transition-transform ${tone.bg} ${tone.text}`}>
+                    <Icon size={40} className="w-7 h-7 md:w-10 md:h-10" />
                 </div>
                 <div>
-                    <h3 className={`text-xl font-bold ${tone.title}`}>{title}</h3>
-                    <p className={`text-sm mt-2 ${tone.text}`}>{subtitle}</p>
+                    <h3 className={`text-base md:text-xl font-bold ${tone.title}`}>{title}</h3>
+                    <p className={`text-xs md:text-sm mt-1 md:mt-2 ${tone.text}`}>{subtitle}</p>
                 </div>
             </div>
         </Card>
@@ -1225,6 +1227,10 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
     // 'hub' is the three-way entry: protocol, reports, patients. 'patients' is
     // the age split that used to be the entry point.
     const [activeView, setActiveView] = useState('hub');
+    // Phones: once a facility is picked, the picker folds to one line.
+    const [facilityPickerOpen, setFacilityPickerOpen] = useState(false);
+    // Android app: the top-bar arrow steps back inside the protocol (form -> patients -> hub).
+    useInPageBack(() => setActiveView(activeView === 'infant' || activeView === 'child' ? 'patients' : 'hub'), activeView !== 'hub');
 
     const [selectedState, setSelectedState] = useState('');
     const [selectedLocality, setSelectedLocality] = useState('');
@@ -1266,9 +1272,21 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
             {activeView === 'reports' && <PageHeader title="إدارة التقارير" subtitle="استعراض إحصائيات وتقارير الرعاية المتكاملة" />}
             {(activeView === 'infant' || activeView === 'child') && <PageHeader title={t('imci.form_title')} subtitle={activeFacilities.find(f => f.id === selectedFacility)?.['اسم_المؤسسة'] || "إدخال البيانات"} />}
 
+            {activeView !== 'hub' && activeView !== 'protocol' && selectedFacility && !facilityPickerOpen && (
+                <button
+                    type="button"
+                    dir="rtl"
+                    onClick={() => setFacilityPickerOpen(true)}
+                    className="md:hidden w-full flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm text-start"
+                >
+                    <Building size={16} className="text-sky-600 shrink-0" />
+                    <span className="font-semibold text-slate-700 truncate">{activeFacilities.find(f => f.id === selectedFacility)?.['اسم_المؤسسة'] || selectedFacility}</span>
+                    <span className="ms-auto shrink-0 text-xs font-bold text-sky-700">تغيير</span>
+                </button>
+            )}
             {activeView !== 'hub' && activeView !== 'protocol' && (
-            <Card>
-                <div className="p-5 space-y-4 bg-slate-50 rounded-lg shadow-sm border border-slate-200" dir="rtl">
+            <Card className={selectedFacility && !facilityPickerOpen ? 'hidden md:block' : ''}>
+                <div className="p-3 md:p-5 space-y-4 bg-slate-50 rounded-lg shadow-sm border border-slate-200" dir="rtl">
                     <h3 className="font-bold text-slate-700 flex items-center gap-2"><Building size={18} /> اختر المؤسسة الصحية للبدء بالإدخال أو لتصفية التقرير:</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1">
@@ -1287,7 +1305,7 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
                         </div>
                         <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-500 uppercase">اسم المؤسسة الصحية</label>
-                            <select value={selectedFacility} onChange={e => setSelectedFacility(e.target.value)} disabled={!selectedLocality || isLoading?.healthFacilities} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white disabled:bg-slate-100 disabled:cursor-not-allowed">
+                            <select value={selectedFacility} onChange={e => { setSelectedFacility(e.target.value); setFacilityPickerOpen(false); }} disabled={!selectedLocality || isLoading?.healthFacilities} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white disabled:bg-slate-100 disabled:cursor-not-allowed">
                                 <option value="">-- {isLoading?.healthFacilities ? 'جاري التحميل...' : 'اختر المؤسسة الصحية'} --</option>
                                 {facilities.map(f => <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>)}
                             </select>
@@ -1298,7 +1316,7 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
             )}
 
             {activeView === 'hub' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-fade-in" dir="rtl">
+                <div className="grid grid-cols-2 gap-3 md:gap-6 md:grid-cols-3 mt-6 animate-fade-in" dir="rtl">
                     {/* Editing the protocol changes the guidance every clinician
                         sees, so the tile only appears for the roles allowed to. */}
                     {permissions.canManageProtocols && (
@@ -1324,7 +1342,7 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
                 </div>
             )}
 
-            {activeView !== 'hub' && (
+            {!IS_NATIVE && activeView !== 'hub' && (
                 <div dir="rtl">
                     <Button variant="secondary" onClick={() => setActiveView(
                         activeView === 'infant' || activeView === 'child' ? 'patients' : 'hub'
@@ -1341,9 +1359,9 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
             )}
 
             {activeView === 'patients' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 animate-fade-in" dir="rtl">
-                    <button onClick={() => handleNavigation('infant')} className="text-right cursor-pointer focus:outline-none w-full h-full block group"><Card className="hover:shadow-lg transition-shadow border-t-4 border-t-sky-500 h-full"><div className="p-6 flex flex-col items-center text-center gap-4"><div className="p-4 bg-sky-100 text-sky-600 rounded-full group-hover:scale-110 transition-transform"><Baby size={40} /></div><div><h3 className="text-xl font-bold text-sky-900">أقل من شهرين</h3><p className="text-sky-600 text-sm mt-2">تسجيل بيانات الرضع (Young Infant)</p></div></div></Card></button>
-                    <button onClick={() => handleNavigation('child')} className="text-right cursor-pointer focus:outline-none w-full h-full block group"><Card className="hover:shadow-lg transition-shadow border-t-4 border-t-indigo-500 h-full"><div className="p-6 flex flex-col items-center text-center gap-4"><div className="p-4 bg-indigo-100 text-indigo-600 rounded-full group-hover:scale-110 transition-transform"><User size={40} /></div><div><h3 className="text-xl font-bold text-indigo-900">شهرين إلى 5 سنوات</h3><p className="text-indigo-600 text-sm mt-2">تسجيل بيانات الأطفال (Sick Child)</p></div></div></Card></button>
+                <div className="grid grid-cols-2 gap-3 md:gap-6 mt-6 animate-fade-in" dir="rtl">
+                    <button onClick={() => handleNavigation('infant')} className="text-right cursor-pointer focus:outline-none w-full h-full block group"><Card className="hover:shadow-lg transition-shadow border-t-4 border-t-sky-500 h-full"><div className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-4"><div className="p-3 md:p-4 bg-sky-100 text-sky-600 rounded-full group-hover:scale-110 transition-transform"><Baby size={40} className="w-7 h-7 md:w-10 md:h-10" /></div><div><h3 className="text-base md:text-xl font-bold text-sky-900">أقل من شهرين</h3><p className="text-sky-600 text-xs md:text-sm mt-1 md:mt-2">تسجيل بيانات الرضع (Young Infant)</p></div></div></Card></button>
+                    <button onClick={() => handleNavigation('child')} className="text-right cursor-pointer focus:outline-none w-full h-full block group"><Card className="hover:shadow-lg transition-shadow border-t-4 border-t-indigo-500 h-full"><div className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-4"><div className="p-3 md:p-4 bg-indigo-100 text-indigo-600 rounded-full group-hover:scale-110 transition-transform"><User size={40} className="w-7 h-7 md:w-10 md:h-10" /></div><div><h3 className="text-base md:text-xl font-bold text-indigo-900">شهرين إلى 5 سنوات</h3><p className="text-indigo-600 text-xs md:text-sm mt-1 md:mt-2">تسجيل بيانات الأطفال (Sick Child)</p></div></div></Card></button>
                 </div>
             )}
 

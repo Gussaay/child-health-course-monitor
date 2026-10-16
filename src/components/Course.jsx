@@ -3,8 +3,9 @@ import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
-    Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, CourseIcon, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges 
-} from './CommonComponents'; 
+    Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, CourseIcon, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges,
+    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, PageActions, FormActions
+} from './CommonComponents';
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
@@ -61,6 +62,7 @@ import { notify, confirmDialog, alertDialog } from './dialogs';
 import { useStandardNames } from '../hooks/useNameRegistry';
 import { canonicalOptions } from '../utils/nameRegistry';
 import { publicBaseUrl } from '../utils/publicLink';
+import { useRememberedState } from '../utils/rememberedState';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
@@ -580,7 +582,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                         <Input disabled={isSaving} value={name} onChange={e => setName(e.target.value)} placeholder={t('course_page.registration.enter_full_name', 'Enter full name')} />
                     </FormGroup>
                     <FormGroup label={t('course_page.registration.phone_number', 'Phone Number')}>
-                        <Input disabled={isSaving} value={phone} onChange={e => setPhone(e.target.value)} placeholder="0xxxxxxxxx" />
+                        <Input disabled={isSaving} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="0xxxxxxxxx" />
                     </FormGroup>
                     
                     <FormGroup label={t('course_page.registration.job_title', 'Job Title')}>
@@ -763,12 +765,12 @@ const Landing = React.memo(function Landing({ active, onPick }) {
     ];
   
     return (
-        <Card className="p-6">
+        <Card className="p-4 md:p-6">
             <PageHeader title={t('course_page.packages.select_title', 'Select a Course Package')} subtitle={t('course_page.packages.select_subtitle', 'Choose a monitoring package to begin.')} />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {items.map(it => (
-                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
-                        <div className="flex items-center gap-4">
+                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-4 md:p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
+                        <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
                             {it.key === 'ICCM' ? <IccmIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'Comprehensive Package For Community Midwives' ? <Users className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'IPC' ? <IpcIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
@@ -777,7 +779,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
                                 <CourseIcon course={it.key} />
                              }
                             <div>
-                                <div className="font-semibold text-gray-800">{it.title}</div>
+                                <div className="font-semibold text-gray-800 text-sm md:text-base">{it.title}</div>
                                 <div className="text-xs text-gray-500 mt-1">{it.enabled ? t('course_page.packages.click_to_manage', 'Click to manage courses') : t('course_page.packages.coming_soon', 'Coming Soon')}</div>
                             </div>
                         </div>
@@ -1632,10 +1634,10 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         return allCourses.filter(c => c.course_type === activeCourseType);
     }, [allCourses, activeCourseType]);
 
-    const [filterState, setFilterState] = useState('All');
-    const [filterLocality, setFilterLocality] = useState('All');
-    const [filterSubCourse, setFilterSubCourse] = useState('All');
-    const [filterProject, setFilterProject] = useState('All');
+    const [filterState, setFilterState] = useRememberedState('courses.state', 'All');
+    const [filterLocality, setFilterLocality] = useRememberedState('courses.locality', 'All');
+    const [filterSubCourse, setFilterSubCourse] = useRememberedState('courses.subCourse', 'All');
+    const [filterProject, setFilterProject] = useRememberedState('courses.project', 'All');
 
     const filterStateOptions = useMemo(() => {
         const states = new Set();
@@ -1681,16 +1683,27 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     );
 
     useEffect(() => {
+        setShowTypeReport(false);
+    }, [activeCourseType]);
+
+    // Remembered filters belong to one course package: clear them only when a
+    // different package is picked, not on mount or when coming back to the same one.
+    const [filtersCourseType, setFiltersCourseType] = useRememberedState('courses.filtersCourseType', activeCourseType);
+    useEffect(() => {
+        if (!activeCourseType || activeCourseType === filtersCourseType) return;
+        setFiltersCourseType(activeCourseType);
         setFilterState('All');
         setFilterLocality('All');
         setFilterSubCourse('All');
         setFilterProject('All');
-        setShowTypeReport(false);
-    }, [activeCourseType]);
+    }, [activeCourseType, filtersCourseType, setFiltersCourseType, setFilterState, setFilterLocality, setFilterSubCourse, setFilterProject]);
 
+    const prevFilterStateRef = useRef(filterState);
     useEffect(() => {
+        if (prevFilterStateRef.current === filterState) return;
+        prevFilterStateRef.current = filterState;
         setFilterLocality('All');
-    }, [filterState]);
+    }, [filterState, setFilterLocality]);
 
     const courses = useMemo(() => {
         return coursesForActiveType.filter(c => {
@@ -2113,107 +2126,56 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     const finalReportCourses = useMemo(() => packageCourses.filter(c => c.approvalStatus !== 'rejected'), [packageCourses]);
     const isGlobalView = globalTabs.includes(activeCoursesTab);
 
+    // Page tabs. Each `go` keeps the side effects the old tab buttons had.
+    const pendingApprovalCount = allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length;
+    const deletedCount = allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length;
+    const openTab = (id) => () => { setActiveCoursesTab(id); onSetSelectedParticipantId(null); };
+    const showTestScores = !isGlobalView && selectedCourse && ['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(selectedCourse.course_type);
+    const showExercises = !isGlobalView && selectedCourse && selectedCourse.course_type === 'IMNCI' && (
+        selectedCourse.director_imci_sub_type === 'online IMCI course' ||
+        selectedCourse.clinical_instructor_imci_sub_type === 'online IMCI course' ||
+        selectedCourse.facilitatorAssignments?.some(a => a.imci_sub_type === 'online IMCI course')
+    );
+    const isMentorship = !isGlobalView && selectedCourse && hasMentorshipForm(selectedCourse, currentParticipant);
+    const courseTabs = [
+        // Inside a course this tab reads "Back to Courses"; the Android app's top-bar arrow does that.
+        (isGlobalView || !IS_NATIVE) && { id: 'courses', label: isGlobalView ? t('course_page.tabs.courses', 'Courses') : t('course_page.tabs.back_to_courses', '← Back to Courses'), short: isGlobalView ? t('course_page.tabs.courses', 'Courses') : t('ui.short.back', 'Back'), go: openTab('courses') },
+        isGlobalView && { id: 'dashboard', label: activeCourseType ? t('course_page.tabs.type_dashboard', '{{type}} Dashboard', { type: activeCourseType }) : t('course_page.tabs.courses_dashboard', 'Courses Dashboard'), short: t('ui.short.dashboard', 'Dashboard'), go: openTab('dashboard') },
+        isGlobalView && canSeeFinalReports && { id: 'final-reports', label: t('course_page.tabs.final_reports', 'Final Reports'), short: t('ui.short.reports', 'Reports'), go: openTab('final-reports') },
+        isGlobalView && canUseFederalManagerAdvancedFeatures && { id: 'course-approvals', label: t('course_page.approvals.title', 'Course Approvals'), short: t('ui.short.approvals', 'Approvals'), count: pendingApprovalCount, go: openTab('course-approvals') },
+        isGlobalView && canUseSuperUserAdvancedFeatures && { id: 'certificate-approvals', label: t('course_page.tabs.certificate_approvals', 'Certificate Approvals'), short: t('ui.short.certificates', 'Certificates'), go: openTab('certificate-approvals') },
+        isGlobalView && canAccessRecycleBin && { id: 'deleted-courses', label: t('course_page.tabs.deleted_items', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted'), count: deletedCount, go: openTab('deleted-courses') },
+        !isGlobalView && selectedCourse && { id: 'participants', label: t('course_page.tabs.participants', 'Participants'), short: t('ui.short.participants', 'Participants'), go: openTab('participants') },
+        ...(!isGlobalView && selectedCourse ? (selectedCourse.course_type === 'EmONC' ? [
+            { id: 'monitoring-maternal', label: t('course_page.tabs.maternal_monitor', 'Maternal Monitor'), short: t('ui.short.maternal', 'Maternal'), disabled: !currentParticipant, go: () => { setEmoncModule('maternal'); setActiveCoursesTab('monitoring'); } },
+            { id: 'monitoring-neonatal', label: t('course_page.tabs.neonatal_monitor', 'Neonatal Monitor'), short: t('ui.short.neonatal', 'Neonatal'), disabled: !currentParticipant, go: () => { setEmoncModule('neonatal'); setActiveCoursesTab('monitoring'); } },
+        ] : [
+            { id: 'monitoring', label: isMentorship ? t('course_page.tabs.mentorship_practice', 'Mentorship Practice') : t('course_page.tabs.monitoring', 'Monitoring'), short: isMentorship ? t('ui.short.practice', 'Practice') : t('ui.short.monitor', 'Monitor'), disabled: !currentParticipant, go: () => setActiveCoursesTab('monitoring') },
+        ]) : []),
+        !isGlobalView && selectedCourse && { id: 'reports', label: t('course_page.tabs.individual_report', 'Individual Participant Report'), short: t('ui.short.report', 'Report'), go: () => setActiveCoursesTab('reports') },
+        showTestScores && { id: 'enter-test-scores', label: t('course_page.tabs.test_scores', 'Test Scores'), short: t('ui.short.tests', 'Tests'), go: () => setActiveCoursesTab('enter-test-scores') },
+        showExercises && { id: 'exercises', label: t('course_page.tabs.exercises', 'Exercises'), short: t('ui.short.exercises', 'Exercises'), go: () => setActiveCoursesTab('exercises') },
+        !isGlobalView && selectedCourse && canManageCourseCertificates && { id: 'course-certificates', label: <>{t('course_page.tabs.certificates', 'Certificates')}{selectedCourse.isCertificateApproved && <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>}</>, short: t('ui.short.certificates', 'Certificates'), go: openTab('course-certificates') },
+    ];
+    const activeCourseTabId =
+        ['courses', 'add-course', 'edit-course'].includes(activeCoursesTab) ? 'courses'
+        : ['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) ? 'participants'
+        : activeCoursesTab === 'monitoring' && selectedCourse?.course_type === 'EmONC' ? `monitoring-${emoncModule}`
+        : activeCoursesTab;
+
     return (
         <Card>
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
-            <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4">
-                <Button 
-                    variant="tab" 
-                    disabled={isProcessing}
-                    isActive={activeCoursesTab === 'courses' || activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course'} 
-                    onClick={() => { 
-                        setActiveCoursesTab('courses');
-                        onSetSelectedParticipantId(null);
-                    }}
-                >
-                    {isGlobalView ? t('course_page.tabs.courses', 'Courses') : t('course_page.tabs.back_to_courses', '← Back to Courses')}
-                </Button>
-                
-                {isGlobalView && (
-                    <>
-                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>{activeCourseType ? t('course_page.tabs.type_dashboard', '{{type}} Dashboard', { type: activeCourseType }) : t('course_page.tabs.courses_dashboard', 'Courses Dashboard')}</Button>
-
-                        {canSeeFinalReports && (
-                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'final-reports'} onClick={() => { setActiveCoursesTab('final-reports'); onSetSelectedParticipantId(null); }}>
-                                {t('course_page.tabs.final_reports', 'Final Reports')}
-                            </Button>
-                        )}
-
-                        {canUseFederalManagerAdvancedFeatures && (
-                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'course-approvals'} onClick={() => { setActiveCoursesTab('course-approvals'); onSetSelectedParticipantId(null); }}>
-                                {t('course_page.approvals.title', 'Course Approvals')}
-                                 {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length > 0 && (
-                                     <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
-                                         {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length}
-                                     </span>
-                                 )}
-                            </Button>
-                        )}
-
-                        {canUseSuperUserAdvancedFeatures && (
-                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'certificate-approvals'} onClick={() => { setActiveCoursesTab('certificate-approvals'); onSetSelectedParticipantId(null); }}>
-                                {t('course_page.tabs.certificate_approvals', 'Certificate Approvals')}
-                            </Button>
-                        )}
-
-                        {canAccessRecycleBin && (
-                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'deleted-courses'} onClick={() => { setActiveCoursesTab('deleted-courses'); onSetSelectedParticipantId(null); }}>
-                                {t('course_page.tabs.deleted_items', 'Deleted Items')}
-                                 {allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length > 0 && (
-                                     <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded-full">{allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length}</span>
-                                 )}
-                            </Button>
-                        )}
-                    </>
-                )}
-
-                {!isGlobalView && selectedCourse && (
-    <>
-        <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>{t('course_page.tabs.participants', 'Participants')}</Button>
-        
-        {/* --- DYNAMIC MONITORS BLOCK --- */}
-        {selectedCourse.course_type === 'EmONC' ? (
-            <>
-                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring' && emoncModule === 'maternal'} onClick={() => { setEmoncModule('maternal'); setActiveCoursesTab('monitoring'); }}>{t('course_page.tabs.maternal_monitor', 'Maternal Monitor')}</Button>
-                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring' && emoncModule === 'neonatal'} onClick={() => { setEmoncModule('neonatal'); setActiveCoursesTab('monitoring'); }}>{t('course_page.tabs.neonatal_monitor', 'Neonatal Monitor')}</Button>
-            </>
-        ) : (
-            <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>
-                {hasMentorshipForm(selectedCourse, currentParticipant) ? t('course_page.tabs.mentorship_practice', 'Mentorship Practice') : t('course_page.tabs.monitoring', 'Monitoring')}
-            </Button>
-        )}
-        
-        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>{t('course_page.tabs.individual_report', 'Individual Participant Report')}</Button>
-        {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(selectedCourse.course_type)) && (
-            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>{t('course_page.tabs.test_scores', 'Test Scores')}</Button>
-        )}
-
-        {selectedCourse.course_type === 'IMNCI' && (
-            selectedCourse.director_imci_sub_type === 'online IMCI course' ||
-            selectedCourse.clinical_instructor_imci_sub_type === 'online IMCI course' ||
-            selectedCourse.facilitatorAssignments?.some(a => a.imci_sub_type === 'online IMCI course')
-        ) && (
-            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'exercises'} onClick={() => { setActiveCoursesTab('exercises'); }}>{t('course_page.tabs.exercises', 'Exercises')}</Button>
-        )}
-
-        {canManageCourseCertificates && (
-            <Button
-                disabled={isProcessing}
-                variant="tab"
-                isActive={activeCoursesTab === 'course-certificates'}
-                onClick={() => { setActiveCoursesTab('course-certificates'); onSetSelectedParticipantId(null); }}
-            >
-                {t('course_page.tabs.certificates', 'Certificates')}
-                {selectedCourse.isCertificateApproved && (
-                    <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>
-                )}
-            </Button>
-        )}
-    </>
-)}
-
-
-            </div>
+            <PageTabs
+                className="md:mb-0"
+                tabs={courseTabs}
+                active={activeCourseTabId}
+                onChange={(id) => {
+                    const tab = courseTabs.find(x => x && x.id === id);
+                    if (!tab || isProcessing || tab.disabled) return;
+                    tab.go();
+                }}
+            />
             
             <div className="p-4">
                 {activeCoursesTab === 'courses' && (
@@ -2234,8 +2196,8 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                             </Suspense>
                         ) : (
                             <div>
-                                <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
-                                    <div className="flex gap-2">
+                                <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing || isProcessing} />
+                                <PageActions className="mb-4">
                                         {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">{t('course_page.buttons.add_course', 'Add New Course')}</Button>}
                                         <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> {t('course_page.buttons.refresh', 'Refresh Data')}</>}</Button>
                                         
@@ -2245,22 +2207,19 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                                 {t('course_page.buttons.total_sync', 'Total Sync Tool')}
                                             </Button>
                                         )}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="bg-indigo-600 text-white hover:bg-indigo-700"><ClipboardList size={14} className="mr-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
+                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="bg-indigo-600 text-white hover:bg-indigo-700 md:ms-auto"><ClipboardList size={14} className="mr-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
                                         <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>
-                                    </div>
-                                </div>
+                                </PageActions>
                                 
-                                <Card className="p-4 mb-4 bg-gray-50">
-                                    <h4 className="text-lg font-semibold mb-3">{t('course_page.filters.title', 'Filter Courses')}</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <FilterPanel className="mb-4" activeCount={[filterState, filterLocality, filterSubCourse, filterProject].filter(v => v && v !== 'All').length}>
+                                    <h4 className="hidden md:block text-lg font-semibold mb-3">{t('course_page.filters.title', 'Filter Courses')}</h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                         <FormGroup label={t('course_page.filters.by_state', 'Filter by State')}><Select disabled={isProcessing} value={filterState} onChange={(e) => setFilterState(e.target.value)}>{filterStateOptions.map(s => <option key={s} value={s}>{s === 'All' ? t('course_page.filters.all', 'All') : s}</option>)}</Select></FormGroup>
                                         <FormGroup label={t('course_page.filters.by_locality', 'Filter by Locality')}><Select disabled={isProcessing || filterLocalityOptions.length <= 1} value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)}>{filterLocalityOptions.map(l => <option key={l} value={l}>{l === 'All' ? t('course_page.filters.all', 'All') : l}</option>)}</Select></FormGroup>
                                         <FormGroup label={t('course_page.filters.by_subcourse', 'Filter by Sub-course')}><Select disabled={isProcessing || filterSubCourseOptions.length <= 1} value={filterSubCourse} onChange={(e) => setFilterSubCourse(e.target.value)}>{filterSubCourseOptions.map(s => <option key={s} value={s}>{s === 'All' ? t('course_page.filters.all', 'All') : s}</option>)}</Select></FormGroup>
                                         <FormGroup label={t('course_page.filters.by_project', 'Filter by Project')}><Select disabled={isProcessing || filterProjectOptions.length <= 1} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>{filterProjectOptions.map(p => <option key={p} value={p}>{p === 'All' ? t('course_page.filters.all', 'All') : p}</option>)}</Select></FormGroup>
                                     </div>
-                                </Card>
+                                </FilterPanel>
                                 
                                 <CoursesTable
                                     courses={courses} onOpen={handleOpenCourse} onEdit={handleOpenEditForm} onDelete={handleCourseDeleteAction} 
@@ -2380,6 +2339,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         {/* --- PARTICIPANTS TABLE --- */}
 {['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) && selectedCourse && (
     <ParticipantsView
+        key={selectedCourse.id}
         course={selectedCourse} 
         participants={participants} 
         onOpen={(id) => { 
@@ -3082,9 +3042,9 @@ export function CourseForm({
                             <Input disabled={isSaving} value={hallEnglish} onChange={(e) => setHallEnglish(e.target.value)} dir="ltr" placeholder="Course Hall Name in English" />
                         </FormGroup>
                         <FormGroup label={<ReqLabel text="تاريخ بداية الدورة" />}><Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
-                        <FormGroup label={<ReqLabel text="مدة الدورة بالأيام" />}><Input disabled={isSaving} type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label={<ReqLabel text="عدد المشاركين" />}><Input disabled={isSaving} type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label="ميزانية الدورة بالدولار الأمريكي"><Input disabled={isSaving} type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label={<ReqLabel text="مدة الدورة بالأيام" />}><Input disabled={isSaving} type="number" inputMode="decimal" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label={<ReqLabel text="عدد المشاركين" />}><Input disabled={isSaving} type="number" inputMode="decimal" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label="ميزانية الدورة بالدولار الأمريكي"><Input disabled={isSaving} type="number" inputMode="decimal" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
                     </div>
                 </div>
 
@@ -3264,12 +3224,12 @@ export function CourseForm({
                     )}
                 </div>
 
-                <div className="flex gap-2 justify-end mt-8 border-t pt-6">
+                <FormActions className="mt-8 md:border-t md:pt-6">
                     <Button variant="secondary" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
                     <Button onClick={submit} disabled={isSaving}>
                         {isSaving ? <Spinner size="sm" /> : 'حفظ الدورة'}
                     </Button>
-                </div>
+                </FormActions>
             </div>
         </Card>
     );

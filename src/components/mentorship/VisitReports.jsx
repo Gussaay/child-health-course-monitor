@@ -12,7 +12,7 @@ import {
     saveEENCVisitReport 
 } from '../../data';
 import { 
-    Card, PageHeader, Button, FormGroup, Spinner, Input, Textarea, Select, Modal 
+    Card, PageHeader, Button, FormGroup, Spinner, Input, Textarea, Select, Modal, PhoneCards 
 } from '../CommonComponents';
 import { PlusCircle, Trash2, Camera, Save, Clock, CheckCircle } from 'lucide-react';
 
@@ -129,7 +129,7 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
                 <Clock className="w-5 h-5" />
                 المشاكل السابقة في هذه المنشأة (Previous Problems)
             </h3>
-            <div className="overflow-x-auto border rounded-lg">
+            <PhoneCards className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full text-xs text-right bg-gray-50" dir="rtl">
                     <thead className="bg-gray-200 font-bold text-gray-700">
                         <tr>
@@ -173,7 +173,7 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
                         ))}
                     </tbody>
                 </table>
-            </div>
+            </PhoneCards>
         </div>
     );
 };
@@ -763,7 +763,7 @@ export const IMNCIVisitReport = ({
                     </td>
                     <td className="px-4 py-2 border border-gray-300 text-center">
                         <Input 
-                            type="number" 
+                            type="number" inputMode="decimal" 
                             min="0"
                             value={matrixData.timesTrained}
                             onChange={(e) => handleMentoringMatrixChange(key, 'timesTrained', e.target.value)}
@@ -812,7 +812,7 @@ export const IMNCIVisitReport = ({
                              <div className="w-full sm:w-auto">
                                 <FormGroup label="رقم الزيارة" className="text-right">
                                     <Input 
-                                        type="number" 
+                                        type="number" inputMode="decimal" 
                                         name="visitNumber" 
                                         value={formData.visitNumber} 
                                         onChange={handleFormChange} 
@@ -892,7 +892,7 @@ export const IMNCIVisitReport = ({
                                                 </td>
                                                 <td className="px-4 py-2 border border-gray-300 text-center">
                                                     <Input 
-                                                        type="number" 
+                                                        type="number" inputMode="decimal" 
                                                         min="0"
                                                         value={formData.orientations_counts?.[k] || ''}
                                                         onChange={(e) => handleOrientationCountChange(k, e.target.value)}
@@ -982,7 +982,7 @@ export const IMNCIVisitReport = ({
                                                 <td className="px-4 py-2 border border-gray-300 font-semibold text-sm">{item.label}</td>
                                                 <td className="px-4 py-2 border border-gray-300 text-center">
                                                     <Input 
-                                                        type="number" 
+                                                        type="number" inputMode="decimal" 
                                                         min="0"
                                                         value={formData.info_system[item.key]} 
                                                         onChange={(e) => handleInfoSystemChange(item.key, e.target.value)}
@@ -1539,7 +1539,7 @@ export const EENCVisitReport = ({
                     </td>
                     <td className="px-4 py-2 border border-gray-300 text-center">
                         <Input 
-                            type="number" 
+                            type="number" inputMode="decimal" 
                             min="0"
                             value={matrixData.timesTrained}
                             onChange={(e) => handleMentoringMatrixChange(key, 'timesTrained', e.target.value)}
@@ -1585,7 +1585,7 @@ export const EENCVisitReport = ({
                              <div className="w-full sm:w-auto">
                                 <FormGroup label="رقم الزيارة" className="text-right">
                                     <Input 
-                                        type="number" 
+                                        type="number" inputMode="decimal" 
                                         name="visitNumber" 
                                         value={formData.visitNumber} 
                                         onChange={handleFormChange} 
@@ -1666,7 +1666,7 @@ export const EENCVisitReport = ({
                                                 </td>
                                                 <td className="px-4 py-2 border border-gray-300 text-center">
                                                     <Input 
-                                                        type="number" 
+                                                        type="number" inputMode="decimal" 
                                                         min="0"
                                                         value={formData.orientations_counts?.[k] || ''}
                                                         onChange={(e) => handleOrientationCountChange(k, e.target.value)}
@@ -1759,7 +1759,7 @@ export const EENCVisitReport = ({
                                                 <td className="px-4 py-2 border border-gray-300 font-semibold text-sm">{item.label}</td>
                                                 <td className="px-4 py-2 border border-gray-300 text-center">
                                                     <Input 
-                                                        type="number" 
+                                                        type="number" inputMode="decimal" 
                                                         min="0"
                                                         value={formData.info_system[item.key]} 
                                                         onChange={(e) => handlePaperworkChange(item.key, e.target.value)}
