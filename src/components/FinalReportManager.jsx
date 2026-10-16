@@ -10,9 +10,11 @@ import { notify, promptDialog, confirmDialog } from './dialogs';
 import { createPortal } from 'react-dom';
 import { attachFinalReportPdf, removeFinalReportPdf, getFinalReportByCourseId, lightFinalReport, updateFinalReportContent } from '../data';
 import html2canvas from 'html2canvas'; // <-- Added proper import
+import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 
 // --- Shared Utility: Copy as Image ---
-const copyAsImage = async (ref) => {
+const copyAsImage = async (ref, t) => {
     try {
         const node = ref.current;
         if (!node) return;
@@ -26,27 +28,28 @@ const copyAsImage = async (ref) => {
 
         canvas.toBlob(async (blob) => {
             if (!blob) {
-                notify("Failed to create image blob.");
+                notify(t('final_report.copy.blob_failed', 'Failed to create image blob.'));
                 return;
             }
             try {
                 // Modern Clipboard API requires secure context (HTTPS)
                 const item = new window.ClipboardItem({ 'image/png': blob });
                 await navigator.clipboard.write([item]);
-                notify("Image copied to clipboard!");
+                notify(t('final_report.copy.image_copied', 'Image copied to clipboard!'));
             } catch (err) {
                 console.error("Clipboard API failed:", err);
-                notify("Failed to copy image. Your browser might require HTTPS or strict permissions.");
+                notify(t('final_report.copy.image_failed', 'Failed to copy image. Your browser might require HTTPS or strict permissions.'));
             }
         }, 'image/png');
     } catch (err) {
         console.error("HTML2Canvas Error:", err);
-        notify("Failed to generate image.");
+        notify(t('final_report.copy.generate_failed', 'Failed to generate image.'));
     }
 };
 
 // --- Sub-component for individual participant groups ---
 const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
+    const { t } = useTranslation();
     const tableRef = useRef(null);
 
     const isArabic = subCourse && subCourse.toLowerCase().includes('medical assist');
@@ -75,13 +78,13 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
             p.job_title, 
             getDisplayState(p.state), 
             getDisplayLocality(p.state, p.locality), 
-            p.center_name || p.department || 'N/A', 
-            p.phone || 'N/A'
+            p.center_name || p.department || t('final_report.na', 'N/A'), 
+            p.phone || t('final_report.na', 'N/A')
         ]);
         const tsv = [displayHeaders.join('\t'), ...rows.map(row => row.join('\t'))].join('\n');
         navigator.clipboard.writeText(tsv)
-            .then(() => notify(`Table for ${subCourse} copied as text!`))
-            .catch(err => notify("Failed to copy table."));
+            .then(() => notify(t('final_report.copy.group_table_copied', 'Table for {{subCourse}} copied as text!', { subCourse })))
+            .catch(err => notify(t('final_report.copy.table_failed', 'Failed to copy table.')));
     };
 
     return (
@@ -89,14 +92,14 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
             <div className="flex justify-between items-center p-4 bg-blue-50 border-b border-blue-200" dir={isArabic ? "rtl" : "ltr"}>
                 <h4 className="text-lg font-bold text-blue-900 flex items-center gap-2">
                     <BookOpen className={`w-5 h-5 text-blue-600 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} />
-                    {subCourse}
+                    {subCourse === 'Unspecified Sub-course' ? t('final_report.annex.unspecified_subcourse', 'Unspecified Sub-course') : subCourse}
                 </h4>
                 <div className="flex gap-2">
                     <Button variant="secondary" size="sm" onClick={copyAsText} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
-                        <Copy className={`w-4 h-4 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} /> {isArabic ? 'نسخ كجدول' : 'Copy as Table'}
+                        <Copy className={`w-4 h-4 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} /> {isArabic ? 'نسخ كجدول' : t('final_report.annex.copy_table', 'Copy as Table')}
                     </Button>
-                    <Button variant="secondary" size="sm" onClick={() => copyAsImage(tableRef)} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
-                        <ImageIcon className={`w-4 h-4 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} /> {isArabic ? 'نسخ كصورة' : 'Copy as Image'}
+                    <Button variant="secondary" size="sm" onClick={() => copyAsImage(tableRef, t)} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
+                        <ImageIcon className={`w-4 h-4 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} /> {isArabic ? 'نسخ كصورة' : t('final_report.annex.copy_image', 'Copy as Image')}
                     </Button>
                 </div>
             </div>
@@ -120,8 +123,8 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-800 bg-blue-50/50 text-start">{p.job_title}</td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start">{getDisplayState(p.state)}</td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start">{getDisplayLocality(p.state, p.locality)}</td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start">{p.center_name || p.department || 'N/A'}</td>
-                                <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start ${isArabic ? '' : 'font-mono'}`} dir="ltr">{p.phone || 'N/A'}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start">{p.center_name || p.department || t('final_report.na', 'N/A')}</td>
+                                <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start ${isArabic ? '' : 'font-mono'}`} dir="ltr">{p.phone || t('final_report.na', 'N/A')}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -133,22 +136,23 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
 
 // --- Annex Section Component (Refactored to accept pre-calculated arrays) ---
 const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
+    const { t } = useTranslation();
     const facilitatorTableRef = useRef(null);
 
-    const facilitatorHeaders = ['#', 'Facilitator Name', 'Phone Number', 'Qualification'];
-    const participantHeaders = ['#', 'Participant Name', 'Job Title', 'State', 'Locality', 'Facility', 'Phone Number'];
+    const facilitatorHeaders = ['#', t('final_report.annex.facilitator_name', 'Facilitator Name'), t('final_report.table.phone_number', 'Phone Number'), t('final_report.annex.qualification', 'Qualification')];
+    const participantHeaders = ['#', t('final_report.table.participant_name', 'Participant Name'), t('final_report.annex.job_title', 'Job Title'), t('final_report.annex.state', 'State'), t('final_report.annex.locality', 'Locality'), t('final_report.annex.facility', 'Facility'), t('final_report.table.phone_number', 'Phone Number')];
 
     const copyFacilitatorsAsText = () => {
         const rows = annexFacilitators.map((f, i) => [i + 1, f.name, f.phone, f.qualification]);
         const tsv = [facilitatorHeaders.join('\t'), ...rows.map(row => row.join('\t'))].join('\n');
         navigator.clipboard.writeText(tsv)
-            .then(() => notify("Table copied as text!"))
-            .catch(err => notify("Failed to copy table."));
+            .then(() => notify(t('final_report.copy.table_copied', 'Table copied as text!')))
+            .catch(err => notify(t('final_report.copy.table_failed', 'Failed to copy table.')));
     };
 
     return (
         <div className="mt-10 pt-8 border-t-2 border-blue-200">
-            <h2 className="text-2xl font-extrabold mb-6 text-blue-900">Annex: Detailed Rosters</h2>
+            <h2 className="text-2xl font-extrabold mb-6 text-blue-900">{t('final_report.annex.title', 'Annex: Detailed Rosters')}</h2>
 
             {/* Facilitators Table */}
             <div className="mb-10">
@@ -156,14 +160,14 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                     <div className="flex justify-between items-center p-4 bg-blue-50 border-b border-blue-200">
                         <h3 className="text-xl font-bold text-blue-900 flex items-center gap-2">
                             <Users className="w-6 h-6 text-blue-600" />
-                            Course Facilitators
+                            {t('final_report.annex.course_facilitators', 'Course Facilitators')}
                         </h3>
                         <div className="flex gap-2">
                             <Button variant="secondary" size="sm" onClick={copyFacilitatorsAsText} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
-                                <Copy className="w-4 h-4 mr-2" /> Copy as Table
+                                <Copy className="w-4 h-4 mr-2" /> {t('final_report.annex.copy_table', 'Copy as Table')}
                             </Button>
-                            <Button variant="secondary" size="sm" onClick={() => copyAsImage(facilitatorTableRef)} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
-                                <ImageIcon className="w-4 h-4 mr-2" /> Copy as Image
+                            <Button variant="secondary" size="sm" onClick={() => copyAsImage(facilitatorTableRef, t)} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
+                                <ImageIcon className="w-4 h-4 mr-2" /> {t('final_report.annex.copy_image', 'Copy as Image')}
                             </Button>
                         </div>
                     </div>
@@ -189,7 +193,7 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan="4" className="px-4 py-8 text-center text-sm text-gray-500 italic">No facilitators found.</td>
+                                        <td colSpan="4" className="px-4 py-8 text-center text-sm text-gray-500 italic">{t('final_report.annex.no_facilitators', 'No facilitators found.')}</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -202,7 +206,7 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
             <div>
                 <h3 className="text-xl font-bold text-blue-900 mb-6 flex items-center gap-2">
                     <Users className="w-6 h-6 text-blue-600" />
-                    Course Participants (By Sub-course)
+                    {t('final_report.annex.course_participants', 'Course Participants (By Sub-course)')}
                 </h3>
                 
                 <div className="space-y-8">
@@ -217,7 +221,7 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                         ))
                     ) : (
                         <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-blue-200 italic">
-                            No participants found for this course.
+                            {t('final_report.annex.no_participants', 'No participants found for this course.')}
                         </div>
                     )}
                 </div>
@@ -359,6 +363,7 @@ const newItemId = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}
 
 /** A finger or mouse signature pad. Hands back a trimmed transparent PNG. */
 const SignaturePad = ({ onDone, onCancel }) => {
+    const { t } = useTranslation();
     const canvasRef = useRef(null);
     const drawing = useRef(false);
     const [hasInk, setHasInk] = useState(false);
@@ -427,15 +432,15 @@ const SignaturePad = ({ onDone, onCancel }) => {
 
     return (
         <div className="border rounded-lg p-3 bg-slate-50">
-            <p className="text-sm font-semibold mb-2">Sign in the box</p>
+            <p className="text-sm font-semibold mb-2">{t('final_report.sign.sign_in_box', 'Sign in the box')}</p>
             <canvas ref={canvasRef}
                 className="w-full h-40 bg-white border border-dashed border-slate-400 rounded cursor-crosshair"
                 style={{ touchAction: 'none' }}
                 onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} />
             <div className="flex flex-wrap gap-2 mt-2 justify-end">
-                <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
-                <Button variant="secondary" size="sm" onClick={clear} disabled={!hasInk}>Clear</Button>
-                <Button size="sm" onClick={done} disabled={!hasInk}>Place on page</Button>
+                <Button variant="secondary" size="sm" onClick={onCancel}>{t('final_report.buttons.cancel', 'Cancel')}</Button>
+                <Button variant="secondary" size="sm" onClick={clear} disabled={!hasInk}>{t('final_report.sign.clear', 'Clear')}</Button>
+                <Button size="sm" onClick={done} disabled={!hasInk}>{t('final_report.sign.place_on_page', 'Place on page')}</Button>
             </div>
         </div>
     );
@@ -453,6 +458,7 @@ const SignaturePad = ({ onDone, onCancel }) => {
  *                      and the layout to keep with it
  */
 export function SignAndStampModal({ isOpen, onClose, source, course, initialLayout, signerName, onSigned }) {
+    const { t } = useTranslation();
     const canvasRef = useRef(null);
     const pdfBytes = useRef(null);
     const pageVp = useRef(null);
@@ -473,6 +479,15 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
     const layoutRef = useRef(initialLayout);
     layoutRef.current = initialLayout;
     const isEdit = !!initialLayout?.items?.length;
+    // Item labels are kept in English on the saved layout; shown translated.
+    const itemLabelText = (label) => ({
+        Signature: t('final_report.sign.labels.signature', 'Signature'),
+        Stamp: t('final_report.sign.labels.stamp', 'Stamp'),
+        'Approved by': t('final_report.sign.labels.approved_by', 'Approved by'),
+        "Course director's signature": t('final_report.sign.labels.director_signature', "Course director's signature"),
+        "Programme manager's signature": t('final_report.sign.labels.manager_signature', "Programme manager's signature"),
+        'Programme stamp': t('final_report.sign.labels.programme_stamp', 'Programme stamp'),
+    })[label] || label;
 
     // Signatures and the stamp already approved on this course for its
     // certificates. Only real images — the disk cache leaves `__present` flags.
@@ -520,13 +535,13 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
                 await page.render({ canvasContext: canvas.getContext('2d'), viewport: renderVp }).promise;
             } catch (e) {
                 console.error('[SignAndStamp] could not load the report', e);
-                if (!cancelled) setError(e.message || 'Could not open the report PDF.');
+                if (!cancelled) setError(e.message || t('final_report.sign.open_failed', 'Could not open the report PDF.'));
             } finally {
                 if (!cancelled) setLoading(false);
             }
         })();
         return () => { cancelled = true; };
-    }, [isOpen, source]);
+    }, [isOpen, source]); // eslint-disable-line react-hooks/exhaustive-deps -- t only words the error
 
     // Track the displayed width so overlays line up at any screen size.
     useEffect(() => {
@@ -585,7 +600,7 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
         const file = e.target.files?.[0];
         e.target.value = '';
         if (!file) return;
-        if (!file.type.startsWith('image/')) { setError('Choose an image file (PNG or JPG).'); return; }
+        if (!file.type.startsWith('image/')) { setError(t('final_report.sign.choose_image', 'Choose an image file (PNG or JPG).')); return; }
         try {
             const kind = uploadKind.current;
             addItem(await toInkPng(file, { clearWhite }), kind, kind === 'stamp' ? 'Stamp' : 'Signature');
@@ -673,7 +688,7 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
             onClose();
         } catch (e) {
             console.error('[SignAndStamp] could not sign', e);
-            setError(e.message || 'Could not sign the report.');
+            setError(e.message || t('final_report.sign.sign_failed', 'Could not sign the report.'));
         } finally {
             setSaving(false);
         }
@@ -683,36 +698,35 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
     // one must not count as a click outside that one and close it.
     return createPortal(
         <Modal isOpen={isOpen} onClose={saving ? undefined : onClose}
-            title={isEdit ? 'Edit the signature' : 'Sign and stamp the final report'}>
+            title={isEdit ? t('final_report.sign.edit_title', 'Edit the signature') : t('final_report.sign.title', 'Sign and stamp the final report')}>
             <div className="space-y-3">
                 <p className="text-sm text-slate-600">
-                    Add signatures, the stamp and who approved it, drag them into place on the first
-                    page, then save. Tap an item to change or remove it.
+                    {t('final_report.sign.intro', 'Add signatures, the stamp and who approved it, drag them into place on the first page, then save. Tap an item to change or remove it.')}
                 </p>
 
                 <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => setPadOpen(true)} disabled={!pageSize || padOpen}>
-                        <PenLine className="w-4 h-4 mr-1" /> Draw signature
+                        <PenLine className="w-4 h-4 mr-1" /> {t('final_report.sign.draw_signature', 'Draw signature')}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => pickUpload('signature')} disabled={!pageSize}>
-                        <ImageIcon className="w-4 h-4 mr-1" /> Signature image
+                        <ImageIcon className="w-4 h-4 mr-1" /> {t('final_report.sign.signature_image', 'Signature image')}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => pickUpload('stamp')} disabled={!pageSize}>
-                        <Stamp className="w-4 h-4 mr-1" /> Stamp image
+                        <Stamp className="w-4 h-4 mr-1" /> {t('final_report.sign.stamp_image', 'Stamp image')}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={addApproval} disabled={!pageSize}>
-                        <Type className="w-4 h-4 mr-1" /> Approved by + date
+                        <Type className="w-4 h-4 mr-1" /> {t('final_report.sign.approved_by_date', 'Approved by + date')}
                     </Button>
                     <input ref={uploadInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onUpload} />
                 </div>
 
                 {courseAssets.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-slate-500">Already on this course:</span>
+                        <span className="text-xs text-slate-500">{t('final_report.sign.already_on_course', 'Already on this course:')}</span>
                         {courseAssets.map(a => (
                             <Button key={a.key} size="sm" variant="secondary" disabled={!pageSize} onClick={() => addCourseAsset(a)}
                                 className="text-xs">
-                                + {a.label}
+                                + {itemLabelText(a.label)}
                             </Button>
                         ))}
                     </div>
@@ -720,7 +734,7 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
 
                 <label className="flex items-center gap-2 text-xs text-slate-600">
                     <input type="checkbox" checked={clearWhite} onChange={(e) => setClearWhite(e.target.checked)} />
-                    Make the white background of added images transparent
+                    {t('final_report.sign.clear_white', 'Make the white background of added images transparent')}
                 </label>
 
                 {padOpen && (
@@ -731,17 +745,17 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
 
                 {selectedItem?.kind === 'text' && (
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-end border rounded-lg p-3 bg-blue-50/50">
-                        <label className="text-xs font-semibold text-slate-600">Approved by
-                            <input type="text" value={selectedItem.name || ''} placeholder="Name"
+                        <label className="text-xs font-semibold text-slate-600">{t('final_report.sign.labels.approved_by', 'Approved by')}
+                            <input type="text" value={selectedItem.name || ''} placeholder={t('final_report.sign.name', 'Name')}
                                 onChange={(e) => updateText(selectedItem.id, { name: e.target.value })}
                                 className="mt-1 w-full border rounded px-2 py-1.5 text-sm font-normal" />
                         </label>
-                        <label className="text-xs font-semibold text-slate-600">Date
+                        <label className="text-xs font-semibold text-slate-600">{t('final_report.sign.date', 'Date')}
                             <input type="date" value={selectedItem.date || ''}
                                 onChange={(e) => updateText(selectedItem.id, { date: e.target.value })}
                                 className="mt-1 w-full border rounded px-2 py-1.5 text-sm font-normal" />
                         </label>
-                        <Button size="sm" variant="secondary" onClick={() => updateText(selectedItem.id, { date: todayIso() })}>Today</Button>
+                        <Button size="sm" variant="secondary" onClick={() => updateText(selectedItem.id, { date: todayIso() })}>{t('final_report.sign.today', 'Today')}</Button>
                     </div>
                 )}
 
@@ -751,7 +765,7 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
                     onPointerDown={() => setSelected(null)}
                     onPointerMove={onDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
                     {loading && (
-                        <div className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Spinner /> Opening the report…</div>
+                        <div className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Spinner /> {t('final_report.sign.opening', 'Opening the report…')}</div>
                     )}
                     <canvas ref={canvasRef} className={`block w-full h-auto bg-white ${pageSize ? '' : 'hidden'}`} />
                     {scale > 0 && items.map(item => (
@@ -759,17 +773,17 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
                             className={`absolute cursor-move ${selected === item.id ? 'outline outline-2 outline-blue-500' : 'hover:outline hover:outline-1 hover:outline-blue-300'}`}
                             style={{ left: item.x * scale, top: item.y * scale, width: item.w * scale, height: item.h * scale, touchAction: 'none' }}
                             onPointerDown={(e) => startDrag(e, item, 'move')}
-                            title={`${item.label} — drag to move`}>
-                            <img src={item.src} alt={item.label} draggable={false} className="w-full h-full pointer-events-none" />
+                            title={t('final_report.sign.drag_to_move', '{{label}} — drag to move', { label: itemLabelText(item.label) })}>
+                            <img src={item.src} alt={itemLabelText(item.label)} draggable={false} className="w-full h-full pointer-events-none" />
                             {selected === item.id && (
                                 <>
-                                    <button type="button" aria-label={`Remove ${item.label}`}
+                                    <button type="button" aria-label={t('final_report.sign.remove_item', 'Remove {{label}}', { label: itemLabelText(item.label) })}
                                         className="absolute -top-3 -right-3 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow"
                                         onPointerDown={(e) => e.stopPropagation()}
                                         onClick={() => removeItem(item.id)}>
                                         <X className="w-4 h-4" />
                                     </button>
-                                    <span aria-label="Resize"
+                                    <span aria-label={t('final_report.sign.resize', 'Resize')}
                                         className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-600 border-2 border-white rounded-sm cursor-nwse-resize"
                                         style={{ touchAction: 'none' }}
                                         onPointerDown={(e) => startDrag(e, item, 'resize')} />
@@ -778,12 +792,12 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
                         </div>
                     ))}
                 </div>
-                {pageSize && <p className="text-xs text-slate-500">Page 1 only — the rest of the report is kept as it is. Drag the blue corner to resize.</p>}
+                {pageSize && <p className="text-xs text-slate-500">{t('final_report.sign.page_one_note', 'Page 1 only — the rest of the report is kept as it is. Drag the blue corner to resize.')}</p>}
 
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={saving}>{t('final_report.buttons.cancel', 'Cancel')}</Button>
                     <Button onClick={apply} disabled={!items.length || saving || loading}>
-                        {saving ? <Spinner /> : 'Save signed report'}
+                        {saving ? <Spinner /> : t('final_report.sign.save_signed', 'Save signed report')}
                     </Button>
                 </div>
             </div>
@@ -1029,6 +1043,13 @@ export const themeLabel = (id) => THEME_BY_ID[id]?.label || 'Other';
 
 const REC_STATUSES = [['pending', 'Pending'], ['in-progress', 'In progress'], ['completed', 'Completed']];
 
+// Shown words for a theme and a status; the stored values stay as they are.
+const themeText = (t, id) => t(`final_report.themes.${id}`, themeLabel(id));
+const REC_STATUS_KEY = { pending: 'pending', 'in-progress': 'in_progress', completed: 'completed' };
+const recStatusText = (t, s) => (!s ? t('final_report.rec_status.not_set', 'Not set')
+    : REC_STATUS_KEY[s] ? t(`final_report.rec_status.${REC_STATUS_KEY[s]}`, recStatusLabel(s))
+    : recStatusLabel(s));
+
 /**
  * Check what was found in the PDF, then save it. Also the place to type them
  * in when the PDF had nothing to find.
@@ -1038,6 +1059,7 @@ const REC_STATUSES = [['pending', 'Pending'], ['in-progress', 'In progress'], ['
  * @param onApply  async ({ summary, recommendations }) => void
  */
 export function CaptureReportContentModal({ isOpen, onClose, capture, existing, onApply }) {
+    const { t } = useTranslation();
     const [summary, setSummary] = useState('');
     const [recs, setRecs] = useState([]);
     const [replaceSummary, setReplaceSummary] = useState(true);
@@ -1077,7 +1099,7 @@ export function CaptureReportContentModal({ isOpen, onClose, capture, existing, 
             });
             onClose();
         } catch (e) {
-            setError(e.message || 'Could not save.');
+            setError(e.message || t('final_report.capture.save_failed', 'Could not save.'));
         } finally {
             setSaving(false);
         }
@@ -1085,37 +1107,43 @@ export function CaptureReportContentModal({ isOpen, onClose, capture, existing, 
 
     const found = (capture?.summary ? 1 : 0) + (capture?.recommendations?.length || 0);
     return createPortal(
-        <Modal isOpen={isOpen} onClose={saving ? undefined : onClose} title="Summary and recommendations from the report">
+        <Modal isOpen={isOpen} onClose={saving ? undefined : onClose} title={t('final_report.capture.title', 'Summary and recommendations from the report')}>
             <div className="space-y-4">
                 <p className={`text-sm rounded p-2 ${capture?.noText ? 'bg-amber-50 text-amber-800' : found ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-50 text-slate-600'}`}>
                     {capture?.noText
-                        ? 'This PDF has no text to read (it looks scanned), so nothing could be captured. You can type the summary and recommendations here.'
+                        ? t('final_report.capture.no_text', 'This PDF has no text to read (it looks scanned), so nothing could be captured. You can type the summary and recommendations here.')
                         : found
-                            ? `Found ${capture.summary ? 'the summary' : 'no summary'} and ${capture.recommendations.length} recommendation${capture.recommendations.length === 1 ? '' : 's'} in the PDF. Check them, then save.`
-                            : 'No Summary or Recommendations heading was found in the PDF. You can type them here.'}
+                            ? (capture.summary
+                                ? (capture.recommendations.length === 1
+                                    ? t('final_report.capture.found_summary_one', 'Found the summary and {{n}} recommendation in the PDF. Check them, then save.', { n: capture.recommendations.length })
+                                    : t('final_report.capture.found_summary_many', 'Found the summary and {{n}} recommendations in the PDF. Check them, then save.', { n: capture.recommendations.length }))
+                                : (capture.recommendations.length === 1
+                                    ? t('final_report.capture.found_nosummary_one', 'Found no summary and {{n}} recommendation in the PDF. Check them, then save.', { n: capture.recommendations.length })
+                                    : t('final_report.capture.found_nosummary_many', 'Found no summary and {{n}} recommendations in the PDF. Check them, then save.', { n: capture.recommendations.length })))
+                            : t('final_report.capture.not_found', 'No Summary or Recommendations heading was found in the PDF. You can type them here.')}
                 </p>
 
                 <div>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                        <h4 className="font-semibold text-sm">Course summary</h4>
+                        <h4 className="font-semibold text-sm">{t('final_report.capture.course_summary', 'Course summary')}</h4>
                         {hadSummary && (
                             <label className="flex items-center gap-1.5 text-xs text-slate-600">
                                 <input type="checkbox" checked={replaceSummary} onChange={e => setReplaceSummary(e.target.checked)} />
-                                Replace the summary already saved
+                                {t('final_report.capture.replace_summary', 'Replace the summary already saved')}
                             </label>
                         )}
                     </div>
                     <Textarea rows="5" value={summary} onChange={e => setSummary(e.target.value)} disabled={hadSummary && !replaceSummary}
-                        placeholder="The course summary" dir="auto" />
+                        placeholder={t('final_report.capture.summary_placeholder', 'The course summary')} dir="auto" />
                 </div>
 
                 <div>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                        <h4 className="font-semibold text-sm">Recommendations ({recs.length})</h4>
+                        <h4 className="font-semibold text-sm">{t('final_report.capture.recommendations_count', 'Recommendations ({{n}})', { n: recs.length })}</h4>
                         {hadRecs > 0 && (
                             <Select value={recMode} onChange={e => setRecMode(e.target.value)} className="text-xs w-auto">
-                                <option value="add">Add to the {hadRecs} already saved</option>
-                                <option value="replace">Replace the {hadRecs} already saved</option>
+                                <option value="add">{t('final_report.capture.add_to_saved', 'Add to the {{n}} already saved', { n: hadRecs })}</option>
+                                <option value="replace">{t('final_report.capture.replace_saved', 'Replace the {{n}} already saved', { n: hadRecs })}</option>
                             </Select>
                         )}
                     </div>
@@ -1127,33 +1155,33 @@ export function CaptureReportContentModal({ isOpen, onClose, capture, existing, 
                                         <Textarea rows="2" value={r.recommendation} dir="auto"
                                             onChange={e => setRec(i, { recommendation: e.target.value })} />
                                     </div>
-                                    <button type="button" aria-label="Remove" className="text-red-600 hover:text-red-800 self-start p-1"
+                                    <button type="button" aria-label={t('final_report.buttons.remove', 'Remove')} className="text-red-600 hover:text-red-800 self-start p-1"
                                         onClick={() => setRecs(prev => prev.filter((_, j) => j !== i))}><Trash2 className="w-4 h-4" /></button>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    <Input value={r.responsible || ''} placeholder="Responsible" dir="auto"
+                                    <Input value={r.responsible || ''} placeholder={t('final_report.table.responsible', 'Responsible')} dir="auto"
                                         onChange={e => setRec(i, { responsible: e.target.value })} />
                                     <Select value={r.theme || autoTheme(r.recommendation)} onChange={e => setRec(i, { theme: e.target.value })}>
-                                        {[...RECOMMENDATION_THEMES, OTHER_THEME].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                        {[...RECOMMENDATION_THEMES, OTHER_THEME].map(th => <option key={th.id} value={th.id}>{themeText(t, th.id)}</option>)}
                                     </Select>
                                     <Select value={r.status || 'pending'} onChange={e => setRec(i, { status: e.target.value })}>
-                                        {REC_STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                                        {REC_STATUSES.map(([v]) => <option key={v} value={v}>{recStatusText(t, v)}</option>)}
                                     </Select>
                                 </div>
                             </div>
                         ))}
                         <Button variant="secondary" className="text-xs"
                             onClick={() => setRecs(prev => [...prev, { recommendation: '', responsible: '', status: 'pending', theme: '' }])}>
-                            Add a recommendation
+                            {t('final_report.capture.add_recommendation', 'Add a recommendation')}
                         </Button>
                     </div>
                 </div>
 
                 {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>Skip</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={saving}>{t('final_report.capture.skip', 'Skip')}</Button>
                     <Button onClick={apply} disabled={saving || (!summary.trim() && !recs.some(r => r.recommendation?.trim()))}>
-                        {saving ? <Spinner /> : 'Save to the final report'}
+                        {saving ? <Spinner /> : t('final_report.capture.save', 'Save to the final report')}
                     </Button>
                 </div>
             </div>
@@ -1231,9 +1259,9 @@ export const shareReportPdf = async (url, fileName, title = 'Final report') => {
     }
     try {
         await navigator.clipboard.writeText(url);
-        notify('Link to the report copied — paste it to share.', 'success');
+        notify(i18n.t('final_report.share.link_copied', 'Link to the report copied — paste it to share.'), 'success');
     } catch {
-        await promptDialog('Copy this link to share the report:', { defaultValue: url, title: 'Share' });
+        await promptDialog(i18n.t('final_report.share.copy_link', 'Copy this link to share the report:'), { defaultValue: url, title: i18n.t('final_report.buttons.share', 'Share') });
     }
 };
 
@@ -1242,6 +1270,7 @@ export const shareReportPdf = async (url, fileName, title = 'Final report') => {
  * managing buttons where the user may change it.
  */
 export function ReportDocumentCard({ report, course, children }) {
+    const { t } = useTranslation();
     const [busy, setBusy] = useState(null);
     const docInfo = currentReportDocument(report, course);
     const layout = report?.signatureLayout;
@@ -1260,17 +1289,17 @@ export function ReportDocumentCard({ report, course, children }) {
                     <PdfIcon className={`w-6 h-6 shrink-0 ${docInfo?.signed ? 'text-emerald-600' : docInfo ? 'text-blue-500' : 'text-slate-400'}`} />
                     <div className="min-w-0">
                         <div className={`font-semibold ${docInfo?.signed ? 'text-emerald-800' : 'text-slate-800'}`}>
-                            {docInfo ? (docInfo.signed ? 'Signed final report' : 'Final report PDF') : 'No report PDF attached'}
+                            {docInfo ? (docInfo.signed ? t('final_report.doc.signed_report', 'Signed final report') : t('final_report.doc.report_pdf', 'Final report PDF')) : t('final_report.doc.no_pdf', 'No report PDF attached')}
                         </div>
                         <div className="text-xs text-slate-500">
-                            {!docInfo ? 'Attach the final report PDF, then sign it here.'
-                                : !docInfo.signed ? 'Not signed yet'
-                                : approval ? `Approved by ${approval.name || '—'} · ${formatDate(approval.date)}`
-                                : 'Signed in the app'}
+                            {!docInfo ? t('final_report.doc.attach_then_sign', 'Attach the final report PDF, then sign it here.')
+                                : !docInfo.signed ? t('final_report.doc.not_signed', 'Not signed yet')
+                                : approval ? t('final_report.doc.approved_by', 'Approved by {{name}} · {{date}}', { name: approval.name || '—', date: formatDate(approval.date) })
+                                : t('final_report.doc.signed_in_app', 'Signed in the app')}
                         </div>
                         {stale && (
                             <div className="text-xs text-amber-700 mt-1">
-                                The report PDF was replaced after it was signed — edit the signature to sign the new one.
+                                {t('final_report.doc.stale', 'The report PDF was replaced after it was signed — edit the signature to sign the new one.')}
                             </div>
                         )}
                     </div>
@@ -1278,16 +1307,16 @@ export function ReportDocumentCard({ report, course, children }) {
                 {docInfo && (
                     <div className="grid grid-cols-3 sm:flex gap-2 shrink-0">
                         <a href={docInfo.url} target="_blank" rel="noopener noreferrer" className="contents">
-                            <Button variant="secondary" className="justify-center text-sm"><Eye className="w-4 h-4 mr-1" />View</Button>
+                            <Button variant="secondary" className="justify-center text-sm"><Eye className="w-4 h-4 mr-1" />{t('final_report.buttons.view', 'View')}</Button>
                         </a>
                         <Button variant="secondary" className="justify-center text-sm" disabled={!!busy}
                             onClick={run('download', () => downloadReportPdf(docInfo.url, docInfo.fileName))}>
-                            {busy === 'download' ? <Spinner size="sm" /> : <><Download className="w-4 h-4 mr-1" />Download</>}
+                            {busy === 'download' ? <Spinner size="sm" /> : <><Download className="w-4 h-4 mr-1" />{t('final_report.buttons.download', 'Download')}</>}
                         </Button>
                         <Button variant="secondary" className="justify-center text-sm" disabled={!!busy}
                             onClick={run('share', () => shareReportPdf(docInfo.url, docInfo.fileName,
                                 `Final report — ${course?.course_type || ''} ${course?.state || ''}`.trim()))}>
-                            {busy === 'share' ? <Spinner size="sm" /> : <><Share2 className="w-4 h-4 mr-1" />Share</>}
+                            {busy === 'share' ? <Spinner size="sm" /> : <><Share2 className="w-4 h-4 mr-1" />{t('final_report.buttons.share', 'Share')}</>}
                         </Button>
                     </div>
                 )}
@@ -1314,6 +1343,7 @@ export function ReportDocumentCard({ report, course, children }) {
  *                    change the report wait for the fresh one
  */
 export function ReportDocumentManager({ course, finalReport, onChanged: notifyChanged, say = notify, ready = true }) {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const { mergeIntoCache } = useDataCache();
     // Every change also goes into the shared cache, so the course list's labels
@@ -1340,19 +1370,19 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
             setCaptured(await captureReportContent(source));
         } catch (err) {
             console.error('[FinalReport] capture failed', err);
-            say(`Could not read the PDF: ${err.message}`, 'error');
+            say(t('final_report.manage.read_failed', 'Could not read the PDF: {{error}}', { error: err.message }), 'error');
         } finally { setBusy(null); }
     };
 
     const saveCaptured = async ({ summary, recommendations }) => {
         onChanged?.(await updateFinalReportContent(course.id, { summary, recommendations }, who));
-        say('Summary and recommendations saved to the final report.', 'success');
+        say(t('final_report.manage.content_saved', 'Summary and recommendations saved to the final report.'), 'success');
     };
 
     const attachReport = async (file) => {
         if (!file) return;
         if (file.type && file.type !== 'application/pdf') {
-            say('That is not a PDF file.', 'error');
+            say(t('final_report.manage.not_pdf', 'That is not a PDF file.'), 'error');
             return;
         }
         setBusy('report');
@@ -1360,9 +1390,9 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
         try {
             onChanged?.(await attachFinalReportPdf(course.id, file, 'report', who));
             attached = true;
-            say(signedUrl ? 'Report PDF replaced. Edit the signature to sign the new one.' : 'Report PDF attached.', 'success');
+            say(signedUrl ? t('final_report.manage.pdf_replaced', 'Report PDF replaced. Edit the signature to sign the new one.') : t('final_report.manage.pdf_attached', 'Report PDF attached.'), 'success');
         } catch (err) {
-            say(`Upload failed: ${err.message}`, 'error');
+            say(t('final_report.manage.upload_failed', 'Upload failed: {{error}}', { error: err.message }), 'error');
         } finally {
             setBusy(null);
             if (reportInput.current) reportInput.current.value = '';
@@ -1375,20 +1405,20 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
         setBusy('signed');
         try {
             onChanged?.(await attachFinalReportPdf(course.id, file, 'signed', who, { signatureLayout: layout }));
-            say('Signed report saved.', 'success');
+            say(t('final_report.manage.signed_saved', 'Signed report saved.'), 'success');
         } finally {
             setBusy(null);
         }
     };
 
     const deleteSignature = async () => {
-        if (!await confirmDialog('Delete the signature? The unsigned report PDF is kept.', { danger: true, confirmLabel: 'Delete signature' })) return;
+        if (!await confirmDialog(t('final_report.manage.confirm_delete_signature', 'Delete the signature? The unsigned report PDF is kept.'), { danger: true, confirmLabel: t('final_report.buttons.delete_signature', 'Delete signature') })) return;
         setBusy('signed');
         try {
             onChanged?.(await removeFinalReportPdf(course.id, 'signed', who));
-            say('Signature deleted.', 'info');
+            say(t('final_report.manage.signature_deleted', 'Signature deleted.'), 'info');
         } catch (err) {
-            say(`Could not delete it: ${err.message}`, 'error');
+            say(t('final_report.manage.delete_failed', 'Could not delete it: {{error}}', { error: err.message }), 'error');
         } finally { setBusy(null); }
     };
 
@@ -1396,16 +1426,16 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
     // no longer there could not be edited.
     const removeReport = async () => {
         const message = signedUrl
-            ? 'Remove the final report PDF? Its signed copy is removed too.'
-            : 'Remove the final report PDF?';
-        if (!await confirmDialog(message, { danger: true, confirmLabel: 'Remove' })) return;
+            ? t('final_report.manage.confirm_remove_signed', 'Remove the final report PDF? Its signed copy is removed too.')
+            : t('final_report.manage.confirm_remove', 'Remove the final report PDF?');
+        if (!await confirmDialog(message, { danger: true, confirmLabel: t('final_report.buttons.remove', 'Remove') })) return;
         setBusy('report');
         try {
             if (signedUrl) await removeFinalReportPdf(course.id, 'signed', who);
             onChanged?.(await removeFinalReportPdf(course.id, 'report', who));
-            say('Removed.', 'info');
+            say(t('final_report.manage.removed', 'Removed.'), 'info');
         } catch (err) {
-            say(`Could not remove it: ${err.message}`, 'error');
+            say(t('final_report.manage.remove_failed', 'Could not remove it: {{error}}', { error: err.message }), 'error');
         } finally { setBusy(null); }
     };
 
@@ -1417,28 +1447,28 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
             <ReportDocumentCard report={finalReport} course={course}>
                 <Button variant={reportUrl ? 'secondary' : 'primary'} disabled={!!busy || !ready}
                     onClick={() => reportInput.current?.click()} className={btn}>
-                    {busy === 'report' ? <Spinner size="sm" /> : (reportUrl ? 'Replace report PDF' : 'Add report PDF')}
+                    {busy === 'report' ? <Spinner size="sm" /> : (reportUrl ? t('final_report.manage.replace_pdf', 'Replace report PDF') : t('final_report.manage.add_pdf', 'Add report PDF'))}
                 </Button>
                 {reportUrl && (signedUrl ? (
                     <>
                         <Button variant="primary" disabled={!!busy || !ready} onClick={() => setSignerOpen(true)} className={btn}>
-                            {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />Edit signature</>}
+                            {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />{t('final_report.buttons.edit_signature', 'Edit signature')}</>}
                         </Button>
-                        <Button variant="danger" disabled={!!busy || !ready} onClick={deleteSignature} className={btn}>Delete signature</Button>
+                        <Button variant="danger" disabled={!!busy || !ready} onClick={deleteSignature} className={btn}>{t('final_report.buttons.delete_signature', 'Delete signature')}</Button>
                     </>
                 ) : (
                     <Button variant="primary" disabled={!!busy || !ready} onClick={() => setSignerOpen(true)} className={btn}>
-                        {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />Sign &amp; stamp</>}
+                        {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />{t('final_report.buttons.sign_stamp', 'Sign & stamp')}</>}
                     </Button>
                 ))}
                 {reportUrl && (
                     <Button variant="secondary" disabled={!!busy || !ready} onClick={() => capture(reportUrl)} className={btn}
-                        title="Read the summary and recommendations from the report PDF">
-                        {busy === 'capture' ? <><Spinner size="sm" /> Reading the PDF…</> : 'Capture summary & recommendations'}
+                        title={t('final_report.manage.capture_hint', 'Read the summary and recommendations from the report PDF')}>
+                        {busy === 'capture' ? <><Spinner size="sm" /> {t('final_report.manage.reading_pdf', 'Reading the PDF…')}</> : t('final_report.manage.capture', 'Capture summary & recommendations')}
                     </Button>
                 )}
                 {(reportUrl || signedUrl) && (
-                    <Button variant="danger" disabled={!!busy || !ready} onClick={removeReport} className={btn}>Remove report</Button>
+                    <Button variant="danger" disabled={!!busy || !ready} onClick={removeReport} className={btn}>{t('final_report.manage.remove_report', 'Remove report')}</Button>
                 )}
             </ReportDocumentCard>
             <CaptureReportContentModal isOpen={!!captured} onClose={() => setCaptured(null)}
@@ -1456,6 +1486,7 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
  * users only — the caller decides who sees the button.
  */
 export function FinalReportQuickModal({ course, isOpen, onClose, onOpenFullReport, onReportChanged }) {
+    const { t } = useTranslation();
     const { finalReports } = useDataCache();
     const [report, setReport] = useState(undefined);
     const [fresh, setFresh] = useState(false);
@@ -1474,33 +1505,33 @@ export function FinalReportQuickModal({ course, isOpen, onClose, onOpenFullRepor
         getFinalReportByCourseId(course.id, { source: 'server' })
             .catch(() => getFinalReportByCourseId(course.id))
             .then(r => { if (!cancelled) { setReport(r || null); setFresh(true); } })
-            .catch(e => { if (!cancelled) setLoadError(e.message || 'Could not load the final report.'); });
+            .catch(e => { if (!cancelled) setLoadError(e.message || t('final_report.quick.load_failed', 'Could not load the final report.')); });
         return () => { cancelled = true; };
     }, [isOpen, course?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- the cache is read once per open
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Final report — ${course?.course_type || ''} ${course?.state ? `(${course.state})` : ''}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={t('final_report.quick.title', 'Final report — {{type}} {{state}}', { type: course?.course_type || '', state: course?.state ? `(${course.state})` : '' })}>
             <div className="space-y-4">
                 {loadError && report === undefined ? (
                     <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{loadError}</div>
                 ) : report === undefined ? (
-                    <div className="flex items-center justify-center gap-2 p-8 text-sm text-slate-500"><Spinner /> Loading the final report…</div>
+                    <div className="flex items-center justify-center gap-2 p-8 text-sm text-slate-500"><Spinner /> {t('final_report.quick.loading', 'Loading the final report…')}</div>
                 ) : (
                     <>
                         <ReportDocumentManager course={course} finalReport={report} ready={fresh}
                             onChanged={(saved) => { setReport(saved); onReportChanged?.(saved); }} />
                         {!fresh && (loadError
-                            ? <p className="text-xs text-amber-700">Could not reach the server — showing the saved copy. Changes need a connection.</p>
-                            : <p className="text-xs text-slate-500 flex items-center gap-1"><Spinner size="sm" /> Checking for the latest version…</p>)}
+                            ? <p className="text-xs text-amber-700">{t('final_report.quick.offline', 'Could not reach the server — showing the saved copy. Changes need a connection.')}</p>
+                            : <p className="text-xs text-slate-500 flex items-center gap-1"><Spinner size="sm" /> {t('final_report.quick.checking', 'Checking for the latest version…')}</p>)}
                     </>
                 )}
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-2 pt-3 border-t">
                     {onOpenFullReport ? (
                         <Button variant="secondary" onClick={() => { onClose(); onOpenFullReport(course.id); }} className="justify-center">
-                            {report?.summary ? 'Open the full final report' : 'Write the final report (summary, recommendations…)'}
+                            {report?.summary ? t('final_report.open_full', 'Open the full final report') : t('final_report.quick.write_full', 'Write the final report (summary, recommendations…)')}
                         </Button>
                     ) : <span />}
-                    <Button variant="secondary" onClick={onClose} className="justify-center">Close</Button>
+                    <Button variant="secondary" onClick={onClose} className="justify-center">{t('final_report.buttons.close', 'Close')}</Button>
                 </div>
             </div>
         </Modal>
@@ -1535,6 +1566,7 @@ const courseLabelOf = (c) => `${c.state || '—'}${c.locality ? ` - ${c.locality
  * @param onOpenFullReport (courseId) => void, to write the narrative report
  */
 export function FinalReportsDashboard({ courseType, courses, reportsByCourse, loading, onReportChanged, onOpenFullReport }) {
+    const { t } = useTranslation();
     const [view, setView] = useState('courses');
     const [stateFilter, setStateFilter] = useState('All');
     const [yearFilter, setYearFilter] = useState('All');
@@ -1605,7 +1637,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
             mergeIntoCache?.('finalReports', lightFinalReport(saved));
             onReportChanged?.(saved);
         } catch (e) {
-            notify(`Could not save: ${e.message}`, 'error');
+            notify(t('final_report.dashboard.save_failed', 'Could not save: {{error}}', { error: e.message }), 'error');
         } finally { setSavingKey(null); }
     };
 
@@ -1646,14 +1678,14 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
             <td className="p-2 border text-sm">
                 <select value={r.theme} disabled={savingKey === r.key} onChange={e => updateRec(r, { theme: e.target.value })}
                     className="border border-gray-300 rounded px-1 py-0.5 text-xs max-w-[11rem]">
-                    {[...RECOMMENDATION_THEMES, OTHER_THEME].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    {[...RECOMMENDATION_THEMES, OTHER_THEME].map(th => <option key={th.id} value={th.id}>{themeText(t, th.id)}</option>)}
                 </select>
             </td>
             <td className="p-2 border text-sm whitespace-nowrap">
                 <select value={r.status || ''} disabled={savingKey === r.key} onChange={e => updateRec(r, { status: e.target.value })}
                     className={`rounded px-1 py-0.5 text-xs font-semibold border-0 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>
-                    {!r.status && <option value="">Not set</option>}
-                    {REC_STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    {!r.status && <option value="">{t('final_report.rec_status.not_set', 'Not set')}</option>}
+                    {REC_STATUSES.map(([v]) => <option key={v} value={v}>{recStatusText(t, v)}</option>)}
                 </select>
                 {savingKey === r.key && <Spinner size="sm" />}
             </td>
@@ -1681,49 +1713,49 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
     return (
         <div className="space-y-4">
             <div>
-                <h2 className="text-2xl font-bold text-gray-800">{courseType ? `${courseType} ` : ''}Final Reports Dashboard</h2>
-                <p className="text-sm text-gray-500">Final report documents, summaries, recommendations and potential facilitators for each course.</p>
+                <h2 className="text-2xl font-bold text-gray-800">{courseType ? t('final_report.dashboard.title_type', '{{type}} Final Reports Dashboard', { type: courseType }) : t('final_report.dashboard.title', 'Final Reports Dashboard')}</h2>
+                <p className="text-sm text-gray-500">{t('final_report.dashboard.subtitle', 'Final report documents, summaries, recommendations and potential facilitators for each course.')}</p>
             </div>
 
             <Card className="bg-gray-50 border border-gray-200 p-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <FormGroup label="State"><Select value={stateFilter} onChange={e => setStateFilter(e.target.value)}>{states.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                    <FormGroup label="Year"><Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>{years.map(y => <option key={y} value={y}>{y}</option>)}</Select></FormGroup>
-                    <FormGroup label="Final report">
+                    <FormGroup label={t('final_report.dashboard.state', 'State')}><Select value={stateFilter} onChange={e => setStateFilter(e.target.value)}>{states.map(s => <option key={s} value={s}>{s === 'All' ? t('final_report.dashboard.all', 'All') : s}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('final_report.dashboard.year', 'Year')}><Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>{years.map(y => <option key={y} value={y}>{y === 'All' ? t('final_report.dashboard.all', 'All') : y}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('final_report.dashboard.final_report', 'Final report')}>
                         <Select value={docFilter} onChange={e => setDocFilter(e.target.value)}>
-                            <option value="All">All courses</option>
-                            <option value="none">No report uploaded</option>
-                            <option value="unsigned">Uploaded, not signed</option>
-                            <option value="signed">Signed</option>
-                            <option value="pending">Has pending recommendations</option>
+                            <option value="All">{t('final_report.dashboard.filter.all', 'All courses')}</option>
+                            <option value="none">{t('final_report.dashboard.filter.none', 'No report uploaded')}</option>
+                            <option value="unsigned">{t('final_report.dashboard.filter.unsigned', 'Uploaded, not signed')}</option>
+                            <option value="signed">{t('final_report.dashboard.signed', 'Signed')}</option>
+                            <option value="pending">{t('final_report.dashboard.filter.pending', 'Has pending recommendations')}</option>
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Search"><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="State, locality, director, summary…" /></FormGroup>
+                    <FormGroup label={t('final_report.dashboard.search', 'Search')}><Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('final_report.dashboard.search_placeholder', 'State, locality, director, summary…')} /></FormGroup>
                 </div>
             </Card>
 
             {loading ? (
-                <div className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Spinner /> Loading final reports…</div>
+                <div className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Spinner /> {t('final_report.dashboard.loading', 'Loading final reports…')}</div>
             ) : (
                 <>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        <Tile label="Courses" value={kpis.courses} />
-                        <Tile label="Report uploaded" value={kpis.uploaded} sub={`${pct(kpis.uploaded)}% of courses`} />
-                        <Tile label="Signed" value={kpis.signed} sub={`${pct(kpis.signed)}% of courses`} />
-                        <Tile label="Courses with pending recommendations" value={kpis.withPending} />
-                        <Tile label="Pending recommendations" value={kpis.pending} tone={kpis.pending ? 'border-red-200' : ''} />
+                        <Tile label={t('final_report.dashboard.courses', 'Courses')} value={kpis.courses} />
+                        <Tile label={t('final_report.dashboard.kpi.uploaded', 'Report uploaded')} value={kpis.uploaded} sub={t('final_report.dashboard.kpi.pct_of_courses', '{{pct}}% of courses', { pct: pct(kpis.uploaded) })} />
+                        <Tile label={t('final_report.dashboard.signed', 'Signed')} value={kpis.signed} sub={t('final_report.dashboard.kpi.pct_of_courses', '{{pct}}% of courses', { pct: pct(kpis.signed) })} />
+                        <Tile label={t('final_report.dashboard.kpi.with_pending', 'Courses with pending recommendations')} value={kpis.withPending} />
+                        <Tile label={t('final_report.dashboard.kpi.pending', 'Pending recommendations')} value={kpis.pending} tone={kpis.pending ? 'border-red-200' : ''} />
                     </div>
 
                     <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
-                        {tab('courses', 'Courses', rows.length)}
-                        {tab('matrix', 'Recommendations matrix')}
-                        {tab('recommendations', 'Recommendations', recommendations.length)}
-                        {tab('facilitators', 'Potential facilitators', facilitators.length)}
+                        {tab('courses', t('final_report.dashboard.courses', 'Courses'), rows.length)}
+                        {tab('matrix', t('final_report.dashboard.tabs.matrix', 'Recommendations matrix'))}
+                        {tab('recommendations', t('final_report.dashboard.recommendations', 'Recommendations'), recommendations.length)}
+                        {tab('facilitators', t('final_report.dashboard.potential_facilitators', 'Potential facilitators'), facilitators.length)}
                     </div>
 
                     {view === 'courses' && (
                         <div className="space-y-3">
-                            {rows.length === 0 && <p className="text-center text-sm text-slate-500 p-6">No courses match these filters.</p>}
+                            {rows.length === 0 && <p className="text-center text-sm text-slate-500 p-6">{t('final_report.dashboard.no_courses', 'No courses match these filters.')}</p>}
                             {rows.map(({ course, report, status }) => {
                                 const open = !!expanded[course.id];
                                 const recs = (report?.recommendations || []).filter(r => r?.recommendation);
@@ -1734,17 +1766,17 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                             <button type="button" className="text-left min-w-0" onClick={() => setExpanded(e => ({ ...e, [course.id]: !open }))}>
                                                 <div className="font-semibold text-slate-800">{courseLabelOf(course)}</div>
                                                 <div className="text-xs text-slate-500">
-                                                    {courseDateOf(course)?.toLocaleDateString() || 'No start date'}
-                                                    {course.director ? ` · Director: ${course.director}` : ''}
+                                                    {courseDateOf(course)?.toLocaleDateString() || t('final_report.dashboard.no_start_date', 'No start date')}
+                                                    {course.director ? ` · ${t('final_report.dashboard.director', 'Director: {{name}}', { name: course.director })}` : ''}
                                                 </div>
                                                 <FinalReportStatusBadges report={report} className="mt-1" />
                                             </button>
                                             <div className="flex gap-2 shrink-0">
                                                 <Button variant="secondary" className="text-xs" onClick={() => setExpanded(e => ({ ...e, [course.id]: !open }))}>
-                                                    {open ? 'Hide details' : 'Details'}
+                                                    {open ? t('final_report.dashboard.hide_details', 'Hide details') : t('final_report.dashboard.details', 'Details')}
                                                 </Button>
                                                 <Button className="text-xs" onClick={() => setManageCourse(course)}>
-                                                    <PenLine className="w-4 h-4 mr-1" />{status.uploaded ? 'Manage' : 'Add report'}
+                                                    <PenLine className="w-4 h-4 mr-1" />{status.uploaded ? t('final_report.dashboard.manage', 'Manage') : t('final_report.dashboard.add_report', 'Add report')}
                                                 </Button>
                                             </div>
                                         </div>
@@ -1752,31 +1784,31 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                             <div className="border-t p-3 space-y-4 bg-slate-50/50">
                                                 {status.uploaded && <ReportDocumentCard report={report} course={course} />}
                                                 <div>
-                                                    <h4 className="font-semibold text-sm mb-1">Summary</h4>
-                                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{report?.summary || <span className="text-slate-400">No summary written.</span>}</p>
+                                                    <h4 className="font-semibold text-sm mb-1">{t('final_report.dashboard.summary', 'Summary')}</h4>
+                                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{report?.summary || <span className="text-slate-400">{t('final_report.dashboard.no_summary', 'No summary written.')}</span>}</p>
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-semibold text-sm mb-1">Recommendations</h4>
+                                                    <h4 className="font-semibold text-sm mb-1">{t('final_report.dashboard.recommendations', 'Recommendations')}</h4>
                                                     {recs.length ? (
                                                         <ul className="space-y-1">
                                                             {recs.map((r, i) => (
                                                                 <li key={i} className="text-sm flex flex-wrap items-start gap-2">
-                                                                    <span className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>{recStatusLabel(r.status)}</span>
+                                                                    <span className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>{recStatusText(t, r.status)}</span>
                                                                     <span className="flex-1 min-w-0">{r.recommendation}{r.responsible && <span className="text-slate-500"> — {r.responsible}</span>}</span>
                                                                 </li>
                                                             ))}
                                                         </ul>
-                                                    ) : <p className="text-sm text-slate-400">No recommendations.</p>}
+                                                    ) : <p className="text-sm text-slate-400">{t('final_report.dashboard.no_recommendations', 'No recommendations.')}</p>}
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-semibold text-sm mb-1">Potential facilitators</h4>
+                                                    <h4 className="font-semibold text-sm mb-1">{t('final_report.dashboard.potential_facilitators', 'Potential facilitators')}</h4>
                                                     {facs.length
-                                                        ? <p className="text-sm text-slate-700">{facs.map(f => f.participant_name || 'N/A').join(', ')}</p>
-                                                        : <p className="text-sm text-slate-400">None identified.</p>}
+                                                        ? <p className="text-sm text-slate-700">{facs.map(f => f.participant_name || t('final_report.na', 'N/A')).join(', ')}</p>
+                                                        : <p className="text-sm text-slate-400">{t('final_report.dashboard.none_identified', 'None identified.')}</p>}
                                                 </div>
                                                 {onOpenFullReport && (
                                                     <Button variant="secondary" className="text-xs" onClick={() => onOpenFullReport(course.id)}>
-                                                        {report?.summary ? 'Open the full final report' : 'Write the final report'}
+                                                        {report?.summary ? t('final_report.open_full', 'Open the full final report') : t('final_report.dashboard.write_report', 'Write the final report')}
                                                     </Button>
                                                 )}
                                             </div>
@@ -1790,14 +1822,14 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                     {view === 'recommendations' && (
                         <div className="space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm text-slate-600">Show:</span>
-                                {[['open', 'Pending (not completed)'], ['all', 'All'], ['pending', 'Pending'], ['in-progress', 'In progress'], ['completed', 'Completed']].map(([v, l]) => (
+                                <span className="text-sm text-slate-600">{t('final_report.dashboard.show', 'Show:')}</span>
+                                {[['open', t('final_report.dashboard.rec_filter.open', 'Pending (not completed)')], ['all', t('final_report.dashboard.all', 'All')], ['pending', recStatusText(t, 'pending')], ['in-progress', recStatusText(t, 'in-progress')], ['completed', recStatusText(t, 'completed')]].map(([v, l]) => (
                                     <Button key={v} variant={recFilter === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => setRecFilter(v)}>{l}</Button>
                                 ))}
                             </div>
-                            <Table headers={['Course', 'Recommendation', 'Responsible', 'Theme', 'Status']}>
+                            <Table headers={[t('final_report.table.course', 'Course'), t('final_report.table.recommendation', 'Recommendation'), t('final_report.table.responsible', 'Responsible'), t('final_report.table.theme', 'Theme'), t('final_report.table.status', 'Status')]}>
                                 {recommendations.length ? recommendations.map(recRow)
-                                    : <tr><td colSpan="5" className="p-4 text-center text-sm text-slate-500">No recommendations in these filters.</td></tr>}
+                                    : <tr><td colSpan="5" className="p-4 text-center text-sm text-slate-500">{t('final_report.dashboard.no_recs_filters', 'No recommendations in these filters.')}</td></tr>}
                             </Table>
                         </div>
                     )}
@@ -1805,61 +1837,60 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                     {view === 'matrix' && (
                         <div className="space-y-3">
                             <p className="text-sm text-slate-500">
-                                Every course's recommendations, linked by theme. Click a cell, a theme or a column
-                                to see the recommendations behind it, and update their status there.
+                                {t('final_report.dashboard.matrix_intro', "Every course's recommendations, linked by theme. Click a cell, a theme or a column to see the recommendations behind it, and update their status there.")}
                             </p>
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm text-slate-600">Across:</span>
-                                {[['state', 'State'], ['year', 'Year'], ['course', 'Course']].map(([v, l]) => (
+                                <span className="text-sm text-slate-600">{t('final_report.dashboard.across', 'Across:')}</span>
+                                {[['state', t('final_report.dashboard.state', 'State')], ['year', t('final_report.dashboard.year', 'Year')], ['course', t('final_report.table.course', 'Course')]].map(([v, l]) => (
                                     <Button key={v} variant={matrixBy === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => { setMatrixBy(v); setCell(null); }}>{l}</Button>
                                 ))}
-                                <span className="text-sm text-slate-600 ml-2">Show:</span>
-                                {[['open', 'Pending only'], ['all', 'All (pending / total)']].map(([v, l]) => (
+                                <span className="text-sm text-slate-600 ml-2">{t('final_report.dashboard.show', 'Show:')}</span>
+                                {[['open', t('final_report.dashboard.scope.open', 'Pending only')], ['all', t('final_report.dashboard.scope.all', 'All (pending / total)')]].map(([v, l]) => (
                                     <Button key={v} variant={matrixScope === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => { setMatrixScope(v); setCell(null); }}>{l}</Button>
                                 ))}
                             </div>
                             {matrix.themes.length === 0 ? (
-                                <p className="text-center text-sm text-slate-500 p-6">No recommendations in these filters.</p>
+                                <p className="text-center text-sm text-slate-500 p-6">{t('final_report.dashboard.no_recs_filters', 'No recommendations in these filters.')}</p>
                             ) : (
                                 <div className="overflow-x-auto border rounded-lg">
                                     <table className="text-sm border-collapse min-w-full">
                                         <thead>
                                             <tr className="bg-slate-100">
-                                                <th className="p-2 border text-left sticky left-0 bg-slate-100 z-10 min-w-[12rem]">Theme</th>
+                                                <th className="p-2 border text-left sticky left-0 bg-slate-100 z-10 min-w-[12rem]">{t('final_report.table.theme', 'Theme')}</th>
                                                 {matrix.cols.map(col => (
                                                     <th key={col} className="p-2 border text-xs font-semibold align-bottom">
                                                         <button type="button" className="hover:underline max-w-[9rem] text-left" onClick={() => setCell({ theme: null, col })}>{colLabelOf(col)}</button>
                                                     </th>
                                                 ))}
-                                                <th className="p-2 border text-xs font-semibold bg-slate-200">Total</th>
+                                                <th className="p-2 border text-xs font-semibold bg-slate-200">{t('final_report.dashboard.total', 'Total')}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {matrix.themes.map(t => (
-                                                <tr key={t.id}>
+                                            {matrix.themes.map(th => (
+                                                <tr key={th.id}>
                                                     <th className="p-2 border text-left font-medium sticky left-0 bg-white z-10">
-                                                        <button type="button" className="hover:underline text-left" onClick={() => setCell({ theme: t.id, col: null })}>{t.label}</button>
+                                                        <button type="button" className="hover:underline text-left" onClick={() => setCell({ theme: th.id, col: null })}>{themeText(t, th.id)}</button>
                                                     </th>
                                                     {matrix.cols.map(col => {
-                                                        const c = matrix.cells[`${t.id}|${col}`];
-                                                        const active = cell?.theme === t.id && cell?.col === col;
+                                                        const c = matrix.cells[`${th.id}|${col}`];
+                                                        const active = cell?.theme === th.id && cell?.col === col;
                                                         const shade = c?.open ? `rgba(220, 38, 38, ${0.12 + 0.55 * (c.open / matrix.maxOpen)})` : c ? 'rgba(16, 185, 129, 0.15)' : undefined;
                                                         return (
                                                             <td key={col} className={`p-0 border text-center ${active ? 'outline outline-2 outline-blue-600' : ''}`} style={{ background: shade }}>
                                                                 {c ? (
-                                                                    <button type="button" className="w-full px-2 py-2 font-semibold" onClick={() => setCell({ theme: t.id, col })}
-                                                                        title={`${c.open} pending of ${c.total}`}>
+                                                                    <button type="button" className="w-full px-2 py-2 font-semibold" onClick={() => setCell({ theme: th.id, col })}
+                                                                        title={t('final_report.dashboard.pending_of', '{{open}} pending of {{total}}', { open: c.open, total: c.total })}>
                                                                         {matrixScope === 'open' ? c.open : `${c.open}/${c.total}`}
                                                                     </button>
                                                                 ) : <span className="text-slate-300">·</span>}
                                                             </td>
                                                         );
                                                     })}
-                                                    <td className="p-2 border text-center font-semibold bg-slate-50">{countText(matrix.scoped.filter(r => r.theme === t.id))}</td>
+                                                    <td className="p-2 border text-center font-semibold bg-slate-50">{countText(matrix.scoped.filter(r => r.theme === th.id))}</td>
                                                 </tr>
                                             ))}
                                             <tr className="bg-slate-50 font-semibold">
-                                                <th className="p-2 border text-left sticky left-0 bg-slate-50 z-10">Total</th>
+                                                <th className="p-2 border text-left sticky left-0 bg-slate-50 z-10">{t('final_report.dashboard.total', 'Total')}</th>
                                                 {matrix.cols.map(col => (
                                                     <td key={col} className="p-2 border text-center">{countText(matrix.scoped.filter(r => colKeyOf(r) === col))}</td>
                                                 ))}
@@ -1873,12 +1904,18 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                 <div className="border rounded-lg p-3 bg-slate-50/60">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                         <h4 className="font-semibold text-sm">
-                                            {cell.theme ? themeLabel(cell.theme) : 'All themes'} · {cell.col ? colLabelOf(cell.col) : `every ${matrixBy}`}
-                                            <span className="text-slate-500 font-normal"> ({cellRecs.length} recommendation{cellRecs.length === 1 ? '' : 's'})</span>
+                                            {cell.theme ? themeText(t, cell.theme) : t('final_report.dashboard.all_themes', 'All themes')} · {cell.col ? colLabelOf(cell.col) : ({
+                                                state: t('final_report.dashboard.every_state', 'every state'),
+                                                year: t('final_report.dashboard.every_year', 'every year'),
+                                                course: t('final_report.dashboard.every_course', 'every course'),
+                                            })[matrixBy]}
+                                            <span className="text-slate-500 font-normal"> {cellRecs.length === 1
+                                                ? t('final_report.dashboard.rec_count_one', '({{n}} recommendation)', { n: cellRecs.length })
+                                                : t('final_report.dashboard.rec_count_many', '({{n}} recommendations)', { n: cellRecs.length })}</span>
                                         </h4>
-                                        <Button variant="secondary" className="text-xs" onClick={() => setCell(null)}>Close</Button>
+                                        <Button variant="secondary" className="text-xs" onClick={() => setCell(null)}>{t('final_report.buttons.close', 'Close')}</Button>
                                     </div>
-                                    <Table headers={['Course', 'Recommendation', 'Responsible', 'Theme', 'Status']}>
+                                    <Table headers={[t('final_report.table.course', 'Course'), t('final_report.table.recommendation', 'Recommendation'), t('final_report.table.responsible', 'Responsible'), t('final_report.table.theme', 'Theme'), t('final_report.table.status', 'Status')]}>
                                         {cellRecs.map(recRow)}
                                     </Table>
                                 </div>
@@ -1887,15 +1924,15 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                     )}
 
                     {view === 'facilitators' && (
-                        <Table headers={['#', 'Potential facilitator', 'Course', 'Course date']}>
+                        <Table headers={['#', t('final_report.dashboard.potential_facilitator', 'Potential facilitator'), t('final_report.table.course', 'Course'), t('final_report.dashboard.course_date', 'Course date')]}>
                             {facilitators.length ? facilitators.map((f, i) => (
                                 <tr key={f.key}>
                                     <td className="p-2 border text-sm">{i + 1}</td>
-                                    <td className="p-2 border text-sm font-semibold">{f.participant_name || 'N/A'}</td>
+                                    <td className="p-2 border text-sm font-semibold">{f.participant_name || t('final_report.na', 'N/A')}</td>
                                     <td className="p-2 border text-sm">{courseLabelOf(f.course)}</td>
                                     <td className="p-2 border text-sm">{courseDateOf(f.course)?.toLocaleDateString() || '—'}</td>
                                 </tr>
-                            )) : <tr><td colSpan="4" className="p-4 text-center text-sm text-slate-500">No potential facilitators in these filters.</td></tr>}
+                            )) : <tr><td colSpan="4" className="p-4 text-center text-sm text-slate-500">{t('final_report.dashboard.no_facilitators_filters', 'No potential facilitators in these filters.')}</td></tr>}
                         </Table>
                     )}
                 </>
@@ -1915,6 +1952,7 @@ export function FinalReportManager({
     // Off where the report document card already sits above this view.
     showDocument = true
 }) {
+    const { t } = useTranslation();
     const { facilitators } = useDataCache();
     const facilitatorsList = facilitators || [];
 
@@ -2108,7 +2146,7 @@ export function FinalReportManager({
     const captureInto = async (source) => {
         setCapturing(true);
         try { setEditorCapture(await captureReportContent(source)); }
-        catch (err) { notify(`Could not read the PDF: ${err.message}`, 'error'); }
+        catch (err) { notify(t('final_report.manage.read_failed', 'Could not read the PDF: {{error}}', { error: err.message }), 'error'); }
         finally { setCapturing(false); }
     };
     const applyEditorCapture = async ({ summary: s, recommendations: recs }) => {
@@ -2186,134 +2224,134 @@ export function FinalReportManager({
     if (isEditing) {
         return (
             <Card>
-                <PageHeader title={`${initialData ? 'Edit' : 'Create'} Final Report for ${course.course_type} - ${course.state}`} subtitle="Complete the final report for this course." />
+                <PageHeader title={initialData
+                    ? t('final_report.editor.edit_title', 'Edit Final Report for {{type}} - {{state}}', { type: course.course_type, state: course.state })
+                    : t('final_report.editor.create_title', 'Create Final Report for {{type}} - {{state}}', { type: course.course_type, state: course.state })} subtitle={t('final_report.editor.subtitle', 'Complete the final report for this course.')} />
                 <div className="space-y-6 mt-6 p-6">
-                    <FormGroup label="Course Summary"><Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows="5" /></FormGroup>
+                    <FormGroup label={t('final_report.course_summary', 'Course Summary')}><Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows="5" /></FormGroup>
                     
-                    <h3 className="text-xl font-bold mb-2">Course Recommendations</h3>
+                    <h3 className="text-xl font-bold mb-2">{t('final_report.course_recommendations', 'Course Recommendations')}</h3>
                     {(pdfFile || existingPdfUrl) && (
                         <Button variant="secondary" className="text-xs" disabled={capturing} onClick={() => captureInto(pdfFile || existingPdfUrl)}>
-                            {capturing ? <><Spinner size="sm" /> Reading the PDF…</> : 'Fill summary & recommendations from the report PDF'}
+                            {capturing ? <><Spinner size="sm" /> {t('final_report.manage.reading_pdf', 'Reading the PDF…')}</> : t('final_report.editor.fill_from_pdf', 'Fill summary & recommendations from the report PDF')}
                         </Button>
                     )}
                     <CaptureReportContentModal isOpen={!!editorCapture} onClose={() => setEditorCapture(null)} capture={editorCapture}
                         existing={{ summary, recommendations }} onApply={applyEditorCapture} />
-                    <Table headers={['Recommendation', 'Responsible', 'Theme', 'Status', 'Actions']}>
+                    <Table headers={[t('final_report.table.recommendation', 'Recommendation'), t('final_report.table.responsible', 'Responsible'), t('final_report.table.theme', 'Theme'), t('final_report.table.status', 'Status'), t('final_report.table.actions', 'Actions')]}>
                         {recommendations.map((rec, index) => (
                             <tr key={index}>
                                 <td className="p-2 border"><Input value={rec.recommendation} onChange={(e) => updateRecommendation(index, 'recommendation', e.target.value)} /></td>
                                 <td className="p-2 border"><Input value={rec.responsible} onChange={(e) => updateRecommendation(index, 'responsible', e.target.value)} /></td>
-                                <td className="p-2 border"><Select value={themeOf(rec)} onChange={(e) => updateRecommendation(index, 'theme', e.target.value)}>{[...RECOMMENDATION_THEMES, OTHER_THEME].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</Select></td>
-                                <td className="p-2 border"><Select value={rec.status} onChange={(e) => updateRecommendation(index, 'status', e.target.value)}><option value="">Select Status</option><option value="pending">Pending</option><option value="in-progress">In Progress</option><option value="completed">Completed</option></Select></td>
-                                <td className="p-2 border"><Button variant="danger" onClick={() => removeRecommendation(index)}>Remove</Button></td>
+                                <td className="p-2 border"><Select value={themeOf(rec)} onChange={(e) => updateRecommendation(index, 'theme', e.target.value)}>{[...RECOMMENDATION_THEMES, OTHER_THEME].map(th => <option key={th.id} value={th.id}>{themeText(t, th.id)}</option>)}</Select></td>
+                                <td className="p-2 border"><Select value={rec.status} onChange={(e) => updateRecommendation(index, 'status', e.target.value)}><option value="">{t('final_report.editor.select_status', 'Select Status')}</option><option value="pending">{recStatusText(t, 'pending')}</option><option value="in-progress">{recStatusText(t, 'in-progress')}</option><option value="completed">{recStatusText(t, 'completed')}</option></Select></td>
+                                <td className="p-2 border"><Button variant="danger" onClick={() => removeRecommendation(index)}>{t('final_report.buttons.remove', 'Remove')}</Button></td>
                             </tr>
                         ))}
-                        <tr><td colSpan="5" className="p-2 border-t"><Button variant="secondary" onClick={addRecommendation}>Add Recommendation</Button></td></tr>
+                        <tr><td colSpan="5" className="p-2 border-t"><Button variant="secondary" onClick={addRecommendation}>{t('final_report.editor.add_recommendation', 'Add Recommendation')}</Button></td></tr>
                     </Table>
 
-                    <h3 className="text-xl font-bold mb-2">Potential Facilitators</h3>
-                    <Table headers={['Participant', 'Phone Number', 'Responsible Facilitator', 'Actions']}>
+                    <h3 className="text-xl font-bold mb-2">{t('final_report.potential_facilitators', 'Potential Facilitators')}</h3>
+                    <Table headers={[t('final_report.table.participant', 'Participant'), t('final_report.table.phone_number', 'Phone Number'), t('final_report.table.responsible_facilitator', 'Responsible Facilitator'), t('final_report.table.actions', 'Actions')]}>
                         {potentialFacilitators.map((fac, index) => {
                             const participant = participants.find(p => p.id === fac.participant_id);
                             const responsibleFacilitator = course.facilitatorAssignments?.find(f => f.group === participant?.group);
                             return (
                                 <tr key={index}>
-                                    <td className="p-2 border"><Select value={fac.participant_id} onChange={(e) => updatePotentialFacilitator(index, e.target.value)}><option value="">Select Participant</option>{(participants || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></td>
-                                    <td className="p-2 border">{participant?.phone || 'N/A'}</td>
-                                    <td className="p-2 border">{responsibleFacilitator?.name || 'N/A'}</td>
-                                    <td className="p-2 border"><Button variant="danger" onClick={() => removePotentialFacilitator(index)}>Remove</Button></td>
+                                    <td className="p-2 border"><Select value={fac.participant_id} onChange={(e) => updatePotentialFacilitator(index, e.target.value)}><option value="">{t('final_report.editor.select_participant', 'Select Participant')}</option>{(participants || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></td>
+                                    <td className="p-2 border">{participant?.phone || t('final_report.na', 'N/A')}</td>
+                                    <td className="p-2 border">{responsibleFacilitator?.name || t('final_report.na', 'N/A')}</td>
+                                    <td className="p-2 border"><Button variant="danger" onClick={() => removePotentialFacilitator(index)}>{t('final_report.buttons.remove', 'Remove')}</Button></td>
                                 </tr>
                             );
                         })}
-                        <tr><td colSpan="4" className="p-2 border-t"><Button variant="secondary" onClick={addPotentialFacilitator}>Add Potential Facilitator</Button></td></tr>
+                        <tr><td colSpan="4" className="p-2 border-t"><Button variant="secondary" onClick={addPotentialFacilitator}>{t('final_report.editor.add_potential_facilitator', 'Add Potential Facilitator')}</Button></td></tr>
                     </Table>
 
-                    <h3 className="text-xl font-bold mb-2">Participants Requiring Follow-up</h3>
-                    <Table headers={['Participant', 'Phone Number', 'Comment / Action Required', 'Actions']}>
+                    <h3 className="text-xl font-bold mb-2">{t('final_report.follow_up', 'Participants Requiring Follow-up')}</h3>
+                    <Table headers={[t('final_report.table.participant', 'Participant'), t('final_report.table.phone_number', 'Phone Number'), t('final_report.table.comment', 'Comment / Action Required'), t('final_report.table.actions', 'Actions')]}>
                         {participantsForFollowUp.map((p, index) => (
                             <tr key={index}>
-                                <td className="p-2 border" style={{width: '25%'}}><Select value={p.participant_id} onChange={(e) => updateFollowUpParticipant(index, 'participant_id', e.target.value)}><option value="">Select Participant</option>{(participants || []).map(pt => <option key={pt.id} value={pt.id}>{pt.name}</option>)}</Select></td>
-                                <td className="p-2 border" style={{width: '15%'}}>{p.phone || 'N/A'}</td>
-                                <td className="p-2 border"><Input value={p.comment} onChange={(e) => updateFollowUpParticipant(index, 'comment', e.target.value)} placeholder="e.g., Needs more clinical practice" /></td>
-                                <td className="p-2 border" style={{width: '10%'}}><Button variant="danger" onClick={() => removeFollowUpParticipant(index)}>Remove</Button></td>
+                                <td className="p-2 border" style={{width: '25%'}}><Select value={p.participant_id} onChange={(e) => updateFollowUpParticipant(index, 'participant_id', e.target.value)}><option value="">{t('final_report.editor.select_participant', 'Select Participant')}</option>{(participants || []).map(pt => <option key={pt.id} value={pt.id}>{pt.name}</option>)}</Select></td>
+                                <td className="p-2 border" style={{width: '15%'}}>{p.phone || t('final_report.na', 'N/A')}</td>
+                                <td className="p-2 border"><Input value={p.comment} onChange={(e) => updateFollowUpParticipant(index, 'comment', e.target.value)} placeholder={t('final_report.editor.comment_placeholder', 'e.g., Needs more clinical practice')} /></td>
+                                <td className="p-2 border" style={{width: '10%'}}><Button variant="danger" onClick={() => removeFollowUpParticipant(index)}>{t('final_report.buttons.remove', 'Remove')}</Button></td>
                             </tr>
                         ))}
-                        <tr><td colSpan="4" className="p-2 border-t"><Button variant="secondary" onClick={addFollowUpParticipant}>Add Participant</Button></td></tr>
+                        <tr><td colSpan="4" className="p-2 border-t"><Button variant="secondary" onClick={addFollowUpParticipant}>{t('final_report.editor.add_participant', 'Add Participant')}</Button></td></tr>
                     </Table>
 
-                    <h3 className="text-xl font-bold mb-2">Course Gallery (up to 3 images)</h3>
+                    <h3 className="text-xl font-bold mb-2">{t('final_report.editor.gallery_title', 'Course Gallery (up to 3 images)')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {[0, 1, 2].map(index => (
                             <div key={index} className="border rounded-lg p-3 flex flex-col items-center justify-center space-y-2">
                                 {galleryImageUrls[index] ? (
                                     <>
-                                        <img src={galleryImageUrls[index]} alt={`Gallery item ${index + 1}`} className="w-full h-32 object-cover rounded-md" />
-                                        <Button variant="danger" size="sm" onClick={() => handleDeleteGalleryImage(index)}>Remove Image</Button>
+                                        <img src={galleryImageUrls[index]} alt={t('final_report.gallery_item', 'Gallery item {{n}}', { n: index + 1 })} className="w-full h-32 object-cover rounded-md" />
+                                        <Button variant="danger" size="sm" onClick={() => handleDeleteGalleryImage(index)}>{t('final_report.editor.remove_image', 'Remove Image')}</Button>
                                     </>
                                 ) : (
                                     <div className="text-center">
-                                        <label htmlFor={`gallery-upload-${index}`} className="cursor-pointer text-blue-600 hover:text-blue-800 font-semibold">Click to upload image</label>
+                                        <label htmlFor={`gallery-upload-${index}`} className="cursor-pointer text-blue-600 hover:text-blue-800 font-semibold">{t('final_report.editor.click_upload', 'Click to upload image')}</label>
                                         <input id={`gallery-upload-${index}`} type="file" accept="image/*" className="hidden" onChange={(e) => handleGalleryImageUpload(e, index)} />
-                                        <p className="text-xs text-gray-500 mt-1">Image {index + 1}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{t('final_report.editor.image_n', 'Image {{n}}', { n: index + 1 })}</p>
                                     </div>
                                 )}
                             </div>
                         ))}
                     </div>
 
-                    <h3 className="text-xl font-bold mb-2">Report documents</h3>
+                    <h3 className="text-xl font-bold mb-2">{t('final_report.editor.documents', 'Report documents')}</h3>
                     <p className="text-sm text-gray-500 mb-3">
-                        The report itself, and the signed copy that gets filed. The signed copy is made
-                        in the app: signatures and the stamp are placed on the report's first page. Both
-                        can also be done from the course report screen without opening this editor.
+                        {t('final_report.editor.documents_intro', "The report itself, and the signed copy that gets filed. The signed copy is made in the app: signatures and the stamp are placed on the report's first page. Both can also be done from the course report screen without opening this editor.")}
                     </p>
-                    <Table headers={['Document', 'Actions']}>
+                    <Table headers={[t('final_report.editor.document', 'Document'), t('final_report.table.actions', 'Actions')]}>
                         <tbody>
                             <tr>
                                 <td className="p-2 border align-top">
-                                    <div className="font-semibold text-sm">Final report PDF</div>
+                                    <div className="font-semibold text-sm">{t('final_report.doc.report_pdf', 'Final report PDF')}</div>
                                     {existingPdfUrl
-                                        ? <div className="flex items-center gap-2 mt-1"><PdfIcon className="text-blue-500 w-5 h-5" /><span className="text-xs">Attached</span></div>
-                                        : <span className="text-gray-500 text-xs">Not attached</span>}
+                                        ? <div className="flex items-center gap-2 mt-1"><PdfIcon className="text-blue-500 w-5 h-5" /><span className="text-xs">{t('final_report.editor.attached', 'Attached')}</span></div>
+                                        : <span className="text-gray-500 text-xs">{t('final_report.editor.not_attached', 'Not attached')}</span>}
                                 </td>
                                 <td className="p-2 border">
                                     {existingPdfUrl ? (
                                         <div className="flex flex-wrap gap-2">
-                                            <a href={existingPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">View</Button></a>
-                                            <Button variant="primary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : 'Download'}</Button>
-                                            <Button variant="danger" onClick={() => { setExistingPdfUrl(null); setPdfFile(null); setFileName(null); }}>Delete</Button>
+                                            <a href={existingPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">{t('final_report.buttons.view', 'View')}</Button></a>
+                                            <Button variant="primary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : t('final_report.buttons.download', 'Download')}</Button>
+                                            <Button variant="danger" onClick={() => { setExistingPdfUrl(null); setPdfFile(null); setFileName(null); }}>{t('final_report.buttons.delete', 'Delete')}</Button>
                                         </div>
-                                    ) : ( <div className="flex flex-col sm:flex-row sm:items-center gap-2"><input type="file" accept=".pdf" onChange={handleFileUpload} />{fileName && <p className="text-sm text-gray-500 break-all">File selected: {fileName}</p>}</div> )}
+                                    ) : ( <div className="flex flex-col sm:flex-row sm:items-center gap-2"><input type="file" accept=".pdf" onChange={handleFileUpload} />{fileName && <p className="text-sm text-gray-500 break-all">{t('final_report.editor.file_selected', 'File selected: {{name}}', { name: fileName })}</p>}</div> )}
                                 </td>
                             </tr>
                             <tr>
                                 <td className="p-2 border align-top">
-                                    <div className="font-semibold text-sm">Signed final report</div>
+                                    <div className="font-semibold text-sm">{t('final_report.doc.signed_report', 'Signed final report')}</div>
                                     {existingSignedPdfUrl
-                                        ? <div className="flex items-center gap-2 mt-1"><PdfIcon className="text-emerald-600 w-5 h-5" /><span className="text-xs">Signed copy attached</span></div>
-                                        : <span className="text-gray-500 text-xs">Not attached</span>}
+                                        ? <div className="flex items-center gap-2 mt-1"><PdfIcon className="text-emerald-600 w-5 h-5" /><span className="text-xs">{t('final_report.editor.signed_attached', 'Signed copy attached')}</span></div>
+                                        : <span className="text-gray-500 text-xs">{t('final_report.editor.not_attached', 'Not attached')}</span>}
                                 </td>
                                 <td className="p-2 border">
                                     <div className="flex flex-wrap items-center gap-2">
                                         {existingSignedPdfUrl && (
-                                            <a href={existingSignedPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">View</Button></a>
+                                            <a href={existingSignedPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">{t('final_report.buttons.view', 'View')}</Button></a>
                                         )}
                                         {(existingSignedPdfUrl || signedPdfFile) ? (
                                             <>
                                                 <Button variant="primary" onClick={() => setSignerOpen(true)} disabled={!reportSource}>
-                                                    <PenLine className="w-4 h-4 mr-1" /> Edit signature
+                                                    <PenLine className="w-4 h-4 mr-1" /> {t('final_report.buttons.edit_signature', 'Edit signature')}
                                                 </Button>
                                                 <Button variant="danger" onClick={deleteSignature}>
-                                                    <Trash2 className="w-4 h-4 mr-1" /> Delete signature
+                                                    <Trash2 className="w-4 h-4 mr-1" /> {t('final_report.buttons.delete_signature', 'Delete signature')}
                                                 </Button>
-                                                {signedPdfFile && <p className="text-sm text-emerald-700">Signed — saved with the report.</p>}
+                                                {signedPdfFile && <p className="text-sm text-emerald-700">{t('final_report.editor.signed_saved_with', 'Signed — saved with the report.')}</p>}
                                             </>
                                         ) : (
                                             <>
                                                 <Button variant="primary" onClick={() => setSignerOpen(true)} disabled={!reportSource}>
-                                                    <PenLine className="w-4 h-4 mr-1" /> Sign & stamp
+                                                    <PenLine className="w-4 h-4 mr-1" /> {t('final_report.buttons.sign_stamp', 'Sign & stamp')}
                                                 </Button>
-                                                {!reportSource && <p className="text-xs text-gray-500">Attach the final report PDF first.</p>}
+                                                {!reportSource && <p className="text-xs text-gray-500">{t('final_report.editor.attach_first', 'Attach the final report PDF first.')}</p>}
                                             </>
                                         )}
                                     </div>
@@ -2330,32 +2368,32 @@ export function FinalReportManager({
                         annexFacilitators={currentAnnexFacilitators} 
                     />
                 </div>
-                <div className="flex gap-2 justify-end mt-6 border-t pt-6 px-6 pb-6"><Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button><Button onClick={handleSave}>Save Final Report</Button></div>
+                <div className="flex gap-2 justify-end mt-6 border-t pt-6 px-6 pb-6"><Button variant="secondary" onClick={handleCancelEdit}>{t('final_report.buttons.cancel', 'Cancel')}</Button><Button onClick={handleSave}>{t('final_report.editor.save', 'Save Final Report')}</Button></div>
             </Card>
         );
     }
 
     const finalGalleryUrls = initialData?.galleryImageUrls?.filter(url => url) || [];
     const finalFollowUpList = initialData?.participantsForFollowUp?.filter(p => p.participant_id) || [];
-    const finalSummary = initialData?.summary || 'No summary provided.';
+    const finalSummary = initialData?.summary || t('final_report.view.no_summary', 'No summary provided.');
     const finalRecommendations = initialData?.recommendations?.filter(r => r.recommendation) || [];
     const finalFacilitatorList = initialData?.potentialFacilitators?.filter(f => f.participant_id) || [];
 
     return (
         <Card>
             <PageHeader 
-                title={`Final Report for ${course.course_type} - ${course.state}`} 
-                subtitle="Review the summary, recommendations, and documents for this course." 
-                actions={canUseFederalManagerAdvancedFeatures && <Button onClick={() => setIsEditing(true)}>Edit Report</Button>} 
+                title={t('final_report.view.title', 'Final Report for {{type}} - {{state}}', { type: course.course_type, state: course.state })} 
+                subtitle={t('final_report.view.subtitle', 'Review the summary, recommendations, and documents for this course.')} 
+                actions={canUseFederalManagerAdvancedFeatures && <Button onClick={() => setIsEditing(true)}>{t('final_report.view.edit_report', 'Edit Report')}</Button>} 
             />
             <div className="space-y-8 mt-6 p-6">
-                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Summary</h3><p className="text-gray-700 whitespace-pre-wrap">{finalSummary}</p></div>
+                <div><h3 className="text-xl font-bold mb-2 text-gray-800">{t('final_report.course_summary', 'Course Summary')}</h3><p className="text-gray-700 whitespace-pre-wrap">{finalSummary}</p></div>
                 
-                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Recommendations</h3><Table headers={['#', 'Recommendation', 'Responsible', 'Theme', 'Status']}>{finalRecommendations.length > 0 ? (finalRecommendations.map((rec, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{rec.recommendation}</td><td className="p-2 border">{rec.responsible}</td><td className="p-2 border">{themeLabel(themeOf(rec))}</td><td className="p-2 border capitalize">{rec.status}</td></tr>))) : (<tr><td colSpan="5" className="p-4 text-center text-gray-500">No recommendations were made.</td></tr>)}</Table></div>
+                <div><h3 className="text-xl font-bold mb-2 text-gray-800">{t('final_report.course_recommendations', 'Course Recommendations')}</h3><Table headers={['#', t('final_report.table.recommendation', 'Recommendation'), t('final_report.table.responsible', 'Responsible'), t('final_report.table.theme', 'Theme'), t('final_report.table.status', 'Status')]}>{finalRecommendations.length > 0 ? (finalRecommendations.map((rec, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{rec.recommendation}</td><td className="p-2 border">{rec.responsible}</td><td className="p-2 border">{themeText(t, themeOf(rec))}</td><td className="p-2 border capitalize">{rec.status ? recStatusText(t, rec.status) : rec.status}</td></tr>))) : (<tr><td colSpan="5" className="p-4 text-center text-gray-500">{t('final_report.view.no_recommendations', 'No recommendations were made.')}</td></tr>)}</Table></div>
                 
                 <div>
-                    <h3 className="text-xl font-bold mb-2 text-gray-800">Potential Facilitators</h3>
-                    <Table headers={['#', 'Participant Name', 'Phone Number', 'Responsible Facilitator']}>
+                    <h3 className="text-xl font-bold mb-2 text-gray-800">{t('final_report.potential_facilitators', 'Potential Facilitators')}</h3>
+                    <Table headers={['#', t('final_report.table.participant_name', 'Participant Name'), t('final_report.table.phone_number', 'Phone Number'), t('final_report.table.responsible_facilitator', 'Responsible Facilitator')]}>
                         {finalFacilitatorList.length > 0 ? (
                             finalFacilitatorList.map((fac, index) => {
                                 const participant = participants.find(p => p.id === fac.participant_id);
@@ -2364,27 +2402,27 @@ export function FinalReportManager({
                                 return (
                                     <tr key={index}>
                                         <td className="p-2 border">{index + 1}</td>
-                                        <td className="p-2 border">{fac.participant_name || 'N/A'}</td>
-                                        <td className="p-2 border">{participant?.phone || 'N/A'}</td>
-                                        <td className="p-2 border">{responsibleFacilitator?.name || 'N/A'}</td>
+                                        <td className="p-2 border">{fac.participant_name || t('final_report.na', 'N/A')}</td>
+                                        <td className="p-2 border">{participant?.phone || t('final_report.na', 'N/A')}</td>
+                                        <td className="p-2 border">{responsibleFacilitator?.name || t('final_report.na', 'N/A')}</td>
                                     </tr>
                                 );
                             })
                         ) : (
-                            <tr><td colSpan="4" className="p-4 text-center text-gray-500">No potential facilitators were identified.</td></tr>
+                            <tr><td colSpan="4" className="p-4 text-center text-gray-500">{t('final_report.view.no_facilitators', 'No potential facilitators were identified.')}</td></tr>
                         )}
                     </Table>
                 </div>
                 
-                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Participants Requiring Follow-up</h3><Table headers={['#', 'Participant Name', 'Phone', 'Comment / Action Required']}>{finalFollowUpList.length > 0 ? (finalFollowUpList.map((p, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{p.participant_name}</td><td className="p-2 border">{p.phone}</td><td className="p-2 border">{p.comment}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">No participants were marked for follow-up.</td></tr>)}</Table></div>
+                <div><h3 className="text-xl font-bold mb-2 text-gray-800">{t('final_report.follow_up', 'Participants Requiring Follow-up')}</h3><Table headers={['#', t('final_report.table.participant_name', 'Participant Name'), t('final_report.table.phone', 'Phone'), t('final_report.table.comment', 'Comment / Action Required')]}>{finalFollowUpList.length > 0 ? (finalFollowUpList.map((p, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{p.participant_name}</td><td className="p-2 border">{p.phone}</td><td className="p-2 border">{p.comment}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">{t('final_report.view.no_follow_up', 'No participants were marked for follow-up.')}</td></tr>)}</Table></div>
                 
                 <div>
-                    <h3 className="text-xl font-bold mb-2 text-gray-800">Course Gallery</h3>
-                    {finalGalleryUrls.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-3 gap-4">{finalGalleryUrls.map((url, index) => (<a key={index} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={`Gallery item ${index + 1}`} className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow" /></a>))}</div>) : (<p className="text-gray-500">No images were added to the gallery.</p>)}
+                    <h3 className="text-xl font-bold mb-2 text-gray-800">{t('final_report.view.gallery', 'Course Gallery')}</h3>
+                    {finalGalleryUrls.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-3 gap-4">{finalGalleryUrls.map((url, index) => (<a key={index} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={t('final_report.gallery_item', 'Gallery item {{n}}', { n: index + 1 })} className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow" /></a>))}</div>) : (<p className="text-gray-500">{t('final_report.view.no_images', 'No images were added to the gallery.')}</p>)}
                 </div>
                 {showDocument && (initialData?.pdfUrl || initialData?.signedPdfUrl) && (
                     <div>
-                        <h3 className="text-xl font-bold mb-2 text-gray-800">Report document</h3>
+                        <h3 className="text-xl font-bold mb-2 text-gray-800">{t('final_report.view.report_document', 'Report document')}</h3>
                         <ReportDocumentCard report={initialData} course={course} />
                     </div>
                 )}
@@ -2394,7 +2432,7 @@ export function FinalReportManager({
                     annexFacilitators={finalAnnexFacilitators} 
                 />
             </div>
-            <div className="flex justify-end mt-6 border-t pt-6 px-6 pb-6"><Button variant="secondary" onClick={onCancel}>Back</Button></div>
+            <div className="flex justify-end mt-6 border-t pt-6 px-6 pb-6"><Button variant="secondary" onClick={onCancel}>{t('final_report.buttons.back', 'Back')}</Button></div>
         </Card>
     );
 }

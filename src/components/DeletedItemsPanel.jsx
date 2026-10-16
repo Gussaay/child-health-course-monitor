@@ -10,6 +10,7 @@
 // (removeFromCache); nothing is re-downloaded.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trash2, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button, FormGroup, Select, Spinner } from './CommonComponents';
 import { RECYCLE_BIN_TYPES, recordTitle, recordSubtitle, mergeRemovals } from '../utils/recycleBin.js';
 import { listSoftDeletedRecords, permanentlyDeleteRecord, RECYCLE_BIN_PAGE } from '../data.js';
@@ -27,9 +28,12 @@ const formatWhen = (ts) => {
  * @param {Function} [onDeleted] called with the removals after a permanent delete
  */
 export default function DeletedItemsPanel({ types, note, onDeleted }) {
+    const { t } = useTranslation();
     const { removeFromCache } = useDataCache();
+    // Labels come from RECYCLE_BIN_TYPES; translated per collection at render time.
+    const typeLabel = (info) => (info ? t(`shared_ui.deleted_items.types.${info.collection}`, info.label) : '');
     const available = useMemo(
-        () => RECYCLE_BIN_TYPES.filter((t) => !types || types.includes(t.collection)),
+        () => RECYCLE_BIN_TYPES.filter((ti) => !types || types.includes(ti.collection)),
         [types]
     );
     const [type, setType] = useState(available[0]?.collection);
@@ -38,7 +42,7 @@ export default function DeletedItemsPanel({ types, note, onDeleted }) {
     const [selected, setSelected] = useState(() => new Set());
     const [busy, setBusy] = useState(false);
 
-    const typeInfo = useMemo(() => available.find((t) => t.collection === type), [available, type]);
+    const typeInfo = useMemo(() => available.find((ti) => ti.collection === type), [available, type]);
 
     const load = useCallback(async () => {
         if (!type) return;
@@ -48,11 +52,14 @@ export default function DeletedItemsPanel({ types, note, onDeleted }) {
             setRows(await listSoftDeletedRecords(type));
         } catch (error) {
             setRows([]);
-            await alertDialog(`Could not load deleted ${typeInfo?.label.toLowerCase() || 'records'}: ${error.message}`);
+            await alertDialog(t('shared_ui.deleted_items.load_failed', 'Could not load deleted {{type}}: {{error}}', {
+                type: typeInfo ? typeLabel(typeInfo).toLowerCase() : t('shared_ui.deleted_items.records', 'records'),
+                error: error.message,
+            }));
         } finally {
             setIsLoading(false);
         }
-    }, [type, typeInfo]);
+    }, [type, typeInfo]); // eslint-disable-line react-hooks/exhaustive-deps -- t/typeLabel only change with the language
 
     useEffect(() => { load(); }, [load]);
 
@@ -67,13 +74,16 @@ export default function DeletedItemsPanel({ types, note, onDeleted }) {
     const deleteForGood = async (ids) => {
         if (!ids.length) return;
         const names = rows.filter((r) => ids.includes(r.id)).slice(0, 5).map((r) => `• ${recordTitle(r)}`).join('\n');
-        const more = ids.length > 5 ? `\n…and ${ids.length - 5} more` : '';
+        const more = ids.length > 5 ? `\n${t('shared_ui.deleted_items.and_more', '…and {{count}} more', { count: ids.length - 5 })}` : '';
+        const childList = typeInfo?.children?.map((c) => c.collection).join(', ');
         const linked = typeInfo?.children?.length
-            ? `\n\nRecords that belong to ${ids.length === 1 ? 'it' : 'them'} (${typeInfo.children.map((c) => c.collection).join(', ')}) are removed too.`
+            ? `\n\n${ids.length === 1
+                ? t('shared_ui.deleted_items.linked_one', 'Records that belong to it ({{list}}) are removed too.', { list: childList })
+                : t('shared_ui.deleted_items.linked_many', 'Records that belong to them ({{list}}) are removed too.', { list: childList })}`
             : '';
         const ok = await confirmDialog(
-            `Permanently delete ${ids.length} ${typeInfo.label.toLowerCase()}?\n\n${names}${more}${linked}\n\nThis cannot be undone.`,
-            { title: 'Delete permanently', confirmLabel: 'Delete permanently', danger: true }
+            `${t('shared_ui.deleted_items.confirm_question', 'Permanently delete {{count}} {{type}}?', { count: ids.length, type: typeLabel(typeInfo).toLowerCase() })}\n\n${names}${more}${linked}\n\n${t('shared_ui.deleted_items.cannot_undo', 'This cannot be undone.')}`,
+            { title: t('shared_ui.deleted_items.delete_permanently', 'Delete permanently'), confirmLabel: t('shared_ui.deleted_items.delete_permanently', 'Delete permanently'), danger: true }
         );
         if (!ok) return;
 
@@ -96,32 +106,32 @@ export default function DeletedItemsPanel({ types, note, onDeleted }) {
         setBusy(false);
 
         if (failed.length) {
-            await alertDialog(`${done.length} deleted. ${failed.length} could not be deleted:\n\n${failed.join('\n')}`, { title: 'Some records were not deleted' });
+            await alertDialog(`${t('shared_ui.deleted_items.partial_failed', '{{done}} deleted. {{failed}} could not be deleted:', { done: done.length, failed: failed.length })}\n\n${failed.join('\n')}`, { title: t('shared_ui.deleted_items.some_not_deleted', 'Some records were not deleted') });
         } else {
-            notify(`${done.length} permanently deleted.`, 'success');
+            notify(t('shared_ui.deleted_items.n_deleted', '{{count}} permanently deleted.', { count: done.length }), 'success');
         }
     };
 
     return (
         <div className="space-y-4" dir="ltr">
                 <p className="text-sm text-gray-600">
-                    Deleting only hides a record. Delete it here permanently to remove it for good.
+                    {t('shared_ui.deleted_items.intro', 'Deleting only hides a record. Delete it here permanently to remove it for good.')}
                 </p>
                 <div className="flex flex-wrap items-end gap-3">
                     {available.length > 1 && (
-                        <FormGroup label="Record type">
+                        <FormGroup label={t('shared_ui.deleted_items.record_type', 'Record type')}>
                             <Select value={type} onChange={(e) => setType(e.target.value)} disabled={busy}>
-                                {available.map((t) => (
-                                    <option key={t.collection} value={t.collection}>{t.label}</option>
+                                {available.map((ti) => (
+                                    <option key={ti.collection} value={ti.collection}>{typeLabel(ti)}</option>
                                 ))}
                             </Select>
                         </FormGroup>
                     )}
                     <Button variant="secondary" onClick={load} disabled={busy || isLoading}>
-                        <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+                        <RefreshCw className="w-4 h-4 mr-1" /> {t('shared_ui.deleted_items.refresh', 'Refresh')}
                     </Button>
                     <Button variant="danger" onClick={() => deleteForGood([...selected])} disabled={busy || selected.size === 0}>
-                        {busy ? <Spinner size="sm" /> : <><Trash2 className="w-4 h-4 mr-1" /> Delete selected permanently ({selected.size})</>}
+                        {busy ? <Spinner size="sm" /> : <><Trash2 className="w-4 h-4 mr-1" /> {t('shared_ui.deleted_items.delete_selected', 'Delete selected permanently ({{count}})', { count: selected.size })}</>}
                     </Button>
                 </div>
 
@@ -130,17 +140,17 @@ export default function DeletedItemsPanel({ types, note, onDeleted }) {
                 {isLoading ? (
                     <div className="flex justify-center p-8"><Spinner /></div>
                 ) : rows.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-gray-500">No deleted {typeInfo?.label.toLowerCase()}.</p>
+                    <p className="py-10 text-center text-sm text-gray-500">{t('shared_ui.deleted_items.none', 'No deleted {{type}}.', { type: typeLabel(typeInfo).toLowerCase() })}</p>
                 ) : (
                     <>
                         {rows.length >= RECYCLE_BIN_PAGE && (
                             <div className="p-2 text-xs rounded bg-amber-50 border border-amber-200 text-amber-800">
-                                Showing the first {RECYCLE_BIN_PAGE}. Delete these and press Refresh to see more.
+                                {t('shared_ui.deleted_items.showing_first', 'Showing the first {{count}}. Delete these and press Refresh to see more.', { count: RECYCLE_BIN_PAGE })}
                             </div>
                         )}
                         <label className="flex items-center gap-2 text-sm text-gray-700">
                             <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={busy} />
-                            Select all ({rows.length})
+                            {t('shared_ui.deleted_items.select_all', 'Select all ({{count}})', { count: rows.length })}
                         </label>
                         <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg">
                             {rows.map((r) => (
@@ -151,13 +161,15 @@ export default function DeletedItemsPanel({ types, note, onDeleted }) {
                                         <div className="text-xs text-gray-500 truncate">{recordSubtitle(r)}</div>
                                         {(r.deletedAt || r.lastUpdatedAt) && (
                                             <div className="text-xs text-gray-400">
-                                                Deleted {formatWhen(r.deletedAt || r.lastUpdatedAt)}{r.deletedBy || r.updatedBy ? ` by ${r.deletedBy || r.updatedBy}` : ''}
+                                                {r.deletedBy || r.updatedBy
+                                                    ? t('shared_ui.deleted_items.deleted_at_by', 'Deleted {{when}} by {{who}}', { when: formatWhen(r.deletedAt || r.lastUpdatedAt), who: r.deletedBy || r.updatedBy })
+                                                    : t('shared_ui.deleted_items.deleted_at', 'Deleted {{when}}', { when: formatWhen(r.deletedAt || r.lastUpdatedAt) })}
                                             </div>
                                         )}
                                     </div>
                                     <Button variant="danger" onClick={() => deleteForGood([r.id])} disabled={busy} className="shrink-0">
                                         <Trash2 className="w-4 h-4" />
-                                        <span className="sr-only">Delete permanently</span>
+                                        <span className="sr-only">{t('shared_ui.deleted_items.delete_permanently', 'Delete permanently')}</span>
                                     </Button>
                                 </li>
                             ))}

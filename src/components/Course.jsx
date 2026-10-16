@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
-    Select, Spinner, Table, CourseIcon, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges 
+    Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, CourseIcon, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges 
 } from './CommonComponents'; 
 
 // --- Firebase Imports ---
@@ -46,6 +46,7 @@ import {
 import { useDataCache } from '../DataContext'; 
 import { useAuth } from '../hooks/useAuth'; 
 import { Capacitor } from '@capacitor/core';
+import { useTranslation } from 'react-i18next';
 
 import SudanMap from '../SudanMap';
 import CompiledReportView from './CompiledReportView.jsx';
@@ -72,6 +73,7 @@ const NeonatalEmergencyMonitoring = React.lazy(() => import('./EmONC/NeonatalEme
 
 // --- BULLETPROOF FACILITATOR ID & SYNC MIGRATION MODAL ---
 export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [progressText, setProgressText] = useState('');
 
@@ -98,7 +100,7 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
 
     const analyzeData = async () => {
         setLoading(true);
-        setProgressText("Fetching database records...");
+        setProgressText(t('course_page.migration.fetching', 'Fetching database records...'));
         try {
             const facSnap = await getDocs(collection(db, "facilitators"));
             const facs = [];
@@ -111,7 +113,7 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
             setAllFacilitators(facs.sort((a,b) => (a.name || '').localeCompare(b.name || '')));
             setRawCourses(crs);
 
-            setProgressText("Analyzing names and checking for outdated records...");
+            setProgressText(t('course_page.migration.analyzing', 'Analyzing names and checking for outdated records...'));
 
             const uniqueNamesInCourses = new Set();
             let outdatedSyncNeeded = 0;
@@ -179,7 +181,7 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
             setUnmatchedList(unmatched);
 
         } catch (error) {
-            notify("Error analyzing data: " + error.message);
+            notify(t('course_page.migration.error_analyzing', 'Error analyzing data: {{message}}', { message: error.message }));
         } finally {
             setLoading(false);
         }
@@ -207,7 +209,7 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
             
             for (let i = 0; i < rawCourses.length; i++) {
                 const course = rawCourses[i];
-                setProgressText(`Updating course ${i + 1} of ${rawCourses.length}...`);
+                setProgressText(t('course_page.migration.updating_course', 'Updating course {{current}} of {{total}}...', { current: i + 1, total: rawCourses.length }));
                 
                 let needsUpdate = false;
                 let updates = {};
@@ -283,19 +285,19 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                 }
             }
 
-            notify(`Success! Updated ${updatedCount} courses. Both IDs and Names have been permanently synchronized.`);
+            notify(t('course_page.migration.success', 'Success! Updated {{count}} courses. Both IDs and Names have been permanently synchronized.', { count: updatedCount }));
             if (onComplete) onComplete();
             onClose();
 
         } catch (err) {
-            notify("Error applying migration: " + err.message);
+            notify(t('course_page.migration.error_applying', 'Error applying migration: {{message}}', { message: err.message }));
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={loading ? null : onClose} title="Total Synchronization Tool" size="2xl">
+        <Modal isOpen={isOpen} onClose={loading ? null : onClose} title={t('course_page.migration.title', 'Total Synchronization Tool')} size="2xl">
             <CardBody className="p-6">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center p-10">
@@ -305,24 +307,24 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                 ) : (
                     <div className="space-y-6">
                         <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                            <h4 className="font-bold text-blue-800 text-lg">Analysis Complete</h4>
+                            <h4 className="font-bold text-blue-800 text-lg">{t('course_page.migration.analysis_complete', 'Analysis Complete')}</h4>
                             <ul className="list-disc pl-5 mt-2 text-blue-700">
-                                <li>Found <strong>{outdatedCoursesCount} courses</strong> where the stored name is outdated and needs syncing with the current ID.</li>
-                                <li>Found <strong>{Object.keys(autoMappings).length}</strong> historical names missing an ID that can be auto-linked.</li>
+                                <li>{t('course_page.migration.found_outdated', 'Found {{count}} courses where the stored name is outdated and needs syncing with the current ID.', { count: outdatedCoursesCount })}</li>
+                                <li>{t('course_page.migration.found_auto', 'Found {{count}} historical names missing an ID that can be auto-linked.', { count: Object.keys(autoMappings).length })}</li>
                             </ul>
                         </div>
 
                         {unmatchedList.length > 0 ? (
                             <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mt-4 max-h-96 overflow-y-auto">
-                                <h4 className="font-bold text-yellow-800 mb-2">Unmatched Names (Manual Mapping Required)</h4>
-                                <p className="text-sm text-yellow-700 mb-4">Because spelling or spacing differs (e.g., "Alaeldein" vs "Alaeldin"), the system skipped these names to be safe. <strong>You must select the correct facilitator below for their dashboard scores to update.</strong></p>
+                                <h4 className="font-bold text-yellow-800 mb-2">{t('course_page.migration.unmatched_title', 'Unmatched Names (Manual Mapping Required)')}</h4>
+                                <p className="text-sm text-yellow-700 mb-4">{t('course_page.migration.unmatched_help', 'Because spelling or spacing differs (e.g., "Alaeldein" vs "Alaeldin"), the system skipped these names to be safe.')} <strong>{t('course_page.migration.unmatched_must_select', 'You must select the correct facilitator below for their dashboard scores to update.')}</strong></p>
                                 
                                 <div className="border border-yellow-300 rounded overflow-hidden">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-yellow-100 text-yellow-800 border-b border-yellow-300">
                                             <tr>
-                                                <th className="p-2 w-1/2">Historical Name (Old Course)</th>
-                                                <th className="p-2 w-1/2">Map to Current Facilitator</th>
+                                                <th className="p-2 w-1/2">{t('course_page.migration.col_historical', 'Historical Name (Old Course)')}</th>
+                                                <th className="p-2 w-1/2">{t('course_page.migration.col_map_to', 'Map to Current Facilitator')}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-yellow-200 bg-white">
@@ -335,7 +337,7 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                                                             onChange={(e) => handleManualMapChange(uName, e.target.value)}
                                                             className="w-full py-1 text-sm border-yellow-300"
                                                         >
-                                                            <option value="">-- Leave Unmapped --</option>
+                                                            <option value="">{t('course_page.migration.leave_unmapped', '-- Leave Unmapped --')}</option>
                                                             {allFacilitators.map(f => (
                                                                 <option key={f.id} value={f.id}>{f.name} {f.arabicName ? `(${f.arabicName})` : ''}</option>
                                                             ))}
@@ -350,16 +352,16 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                         ) : (
                             <div className="bg-green-50 border border-green-200 p-4 rounded-lg text-green-800 font-medium">
                                 <CheckCircle className="inline mr-2" />
-                                All names found perfectly matched current facilitators!
+                                {t('course_page.migration.all_matched', 'All names found perfectly matched current facilitators!')}
                             </div>
                         )}
                     </div>
                 )}
             </CardBody>
             <CardFooter className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+                <Button variant="secondary" onClick={onClose} disabled={loading}>{t('course_page.buttons.cancel', 'Cancel')}</Button>
                 <Button variant="success" onClick={applyMigration} disabled={loading}>
-                    Confirm & Sync All Records
+                    {t('course_page.migration.confirm_sync', 'Confirm & Sync All Records')}
                 </Button>
             </CardFooter>
         </Modal>
@@ -375,6 +377,7 @@ const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg
 
 
 export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, onSuccess }) => {
+    const { t } = useTranslation();
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [jobTitle, setJobTitle] = useState('');
@@ -466,13 +469,13 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
     const handleSave = async () => {
         setError('');
-        const showError = (msg) => { setError(msg); alertDialog(msg, { title: 'Registration not saved' }); };
-        if (!name.trim()) return showError('Name is required. Enter your full name.');
-        if (!phone.trim()) return showError('Phone is required. Enter your phone number.');
-        if (!jobTitle) return showError('Job Title is required. Choose your job title from the list.');
-        if (!regState) return showError('State is required. Choose your state.');
-        if (!regLocality) return showError('Locality is required. Choose your locality.');
-        if (!facilityId) return showError('Facility is required. Choose your facility from the list.'); 
+        const showError = (msg) => { setError(msg); alertDialog(msg, { title: t('course_page.registration.not_saved', 'Registration not saved') }); };
+        if (!name.trim()) return showError(t('course_page.registration.err_name', 'Name is required. Enter your full name.'));
+        if (!phone.trim()) return showError(t('course_page.registration.err_phone', 'Phone is required. Enter your phone number.'));
+        if (!jobTitle) return showError(t('course_page.registration.err_job', 'Job Title is required. Choose your job title from the list.'));
+        if (!regState) return showError(t('course_page.registration.err_state', 'State is required. Choose your state.'));
+        if (!regLocality) return showError(t('course_page.registration.err_locality', 'Locality is required. Choose your locality.'));
+        if (!facilityId) return showError(t('course_page.registration.err_facility', 'Facility is required. Choose your facility from the list.')); 
 
         setIsSaving(true);
         try {
@@ -550,10 +553,10 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
             // Someone registering themselves cannot ask for a re-add approval,
             // so a clash with a deleted record sends them to the organisers.
             const message = err?.code === 'DUPLICATE_PHONE' && err.isDeleted
-                ? `Phone number ${err.phone} was already registered in this course. Please contact the course coordinator to be added again.`
+                ? t('course_page.registration.err_duplicate_phone', 'Phone number {{phone}} was already registered in this course. Please contact the course coordinator to be added again.', { phone: err.phone })
                 : err.message;
             setError(message);
-            alertDialog(message, { title: 'Registration not saved' });
+            alertDialog(message, { title: t('course_page.registration.not_saved', 'Registration not saved') });
         } finally {
             setIsSaving(false);
         }
@@ -567,32 +570,32 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={isSaving ? null : onClose} title="Register New Participant" size="lg">
+        <Modal isOpen={isOpen} onClose={isSaving ? null : onClose} title={t('course_page.registration.register_new', 'Register New Participant')} size="lg">
             <CardBody className="p-6">
                 {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded border border-red-200">{error}</div>}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Full Name">
-                        <Input disabled={isSaving} value={name} onChange={e => setName(e.target.value)} placeholder="Enter full name" />
+                    <FormGroup label={t('course_page.registration.full_name', 'Full Name')}>
+                        <Input disabled={isSaving} value={name} onChange={e => setName(e.target.value)} placeholder={t('course_page.registration.enter_full_name', 'Enter full name')} />
                     </FormGroup>
-                    <FormGroup label="Phone Number">
+                    <FormGroup label={t('course_page.registration.phone_number', 'Phone Number')}>
                         <Input disabled={isSaving} value={phone} onChange={e => setPhone(e.target.value)} placeholder="0xxxxxxxxx" />
                     </FormGroup>
                     
-                    <FormGroup label="Job Title">
+                    <FormGroup label={t('course_page.registration.job_title', 'Job Title')}>
                         <Select disabled={isSaving} value={jobTitle} onChange={e => setJobTitle(e.target.value)}>
-                            <option value="">-- Select Job --</option>
+                            <option value="">{t('course_page.registration.select_job', '-- Select Job --')}</option>
                             {jobOptions.map(j => <option key={j} value={j}>{j}</option>)}
                         </Select>
                     </FormGroup>
 
-                    <FormGroup label="Group">
+                    <FormGroup label={t('course_page.registration.group', 'Group')}>
                         <Select disabled={isSaving} value={group} onChange={e => setGroup(e.target.value)}>
                             {groupOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </Select>
                     </FormGroup>
 
-                    <FormGroup label="State">
+                    <FormGroup label={t('course_page.registration.state', 'State')}>
                         <Select
                             disabled={isSaving || (!isFederal && stateOptions.length <= 1)}
                             value={regState}
@@ -604,12 +607,12 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                                 setSelectedFacility(null);
                             }}
                         >
-                            <option value="">-- Select State --</option>
+                            <option value="">{t('course_page.registration.select_state', '-- Select State --')}</option>
                             {stateOptions.map(s => <option key={s} value={s}>{s}</option>)}
                         </Select>
                     </FormGroup>
 
-                    <FormGroup label="Locality">
+                    <FormGroup label={t('course_page.registration.locality', 'Locality')}>
                         <Select
                             disabled={isSaving || !regState}
                             value={regLocality}
@@ -620,14 +623,14 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                                 setSelectedFacility(null);
                             }}
                         >
-                            <option value="">-- Select Locality --</option>
+                            <option value="">{t('course_page.registration.select_locality', '-- Select Locality --')}</option>
                             {localityOptions.map(l => <option key={l.en} value={l.en}>{l.en}</option>)}
                         </Select>
                     </FormGroup>
 
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Health Facility (in {regLocality || '\u2014'})
+                            {t('course_page.registration.health_facility_in', 'Health Facility (in {{locality}})', { locality: regLocality || '\u2014' })}
                         </label>
                         
                         <div className="relative">
@@ -640,7 +643,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                                     setIsFacilitySelectorOpen(true);
                                 }}
                                 onFocus={() => setIsFacilitySelectorOpen(true)}
-                                placeholder="Search facility name..."
+                                placeholder={t('course_page.registration.search_facility', 'Search facility name...')}
                                 disabled={loadingFacilities || isSaving || !regLocality}
                             />
                             {loadingFacilities && <div className="absolute right-3 top-2.5"><Spinner size="sm" /></div>}
@@ -660,7 +663,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                                                 </div>
                                             ))
                                     ) : (
-                                        <div className="p-2 text-gray-500">No facilities found.</div>
+                                        <div className="p-2 text-gray-500">{t('course_page.registration.no_facilities', 'No facilities found.')}</div>
                                     )}
                                 </div>
                             )}
@@ -669,9 +672,9 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                 </div>
             </CardBody>
             <CardFooter className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>
+                <Button variant="secondary" onClick={onClose} disabled={isSaving}>{t('course_page.buttons.cancel', 'Cancel')}</Button>
                 <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? <Spinner size="sm" /> : 'Register & Save'}
+                    {isSaving ? <Spinner size="sm" /> : t('course_page.registration.register_save', 'Register & Save')}
                 </Button>
             </CardFooter>
         </Modal>
@@ -679,6 +682,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 };
 
 export function PublicParticipantRegistrationView({ courseId }) {
+    const { t } = useTranslation();
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -697,7 +701,7 @@ export function PublicParticipantRegistrationView({ courseId }) {
 
     if (loading) return <div className="flex justify-center p-10"><Spinner /></div>;
     if (error) return <EmptyState message={error} />;
-    if (!course) return <EmptyState message="Course data unavailable" />;
+    if (!course) return <EmptyState message={t('course_page.registration.course_unavailable', 'Course data unavailable')} />;
 
     if (successMessage) {
         return (
@@ -705,9 +709,9 @@ export function PublicParticipantRegistrationView({ courseId }) {
                 <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                     <CheckCircle className="h-10 w-10 text-green-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Successful</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('course_page.registration.successful', 'Registration Successful')}</h2>
                 <p className="text-gray-600 mb-6">{successMessage}</p>
-                <Button onClick={() => setSuccessMessage('')}>Register Another Participant</Button>
+                <Button onClick={() => setSuccessMessage('')}>{t('course_page.registration.register_another', 'Register Another Participant')}</Button>
             </div>
         );
     }
@@ -718,16 +722,16 @@ export function PublicParticipantRegistrationView({ courseId }) {
                 <div className="mx-auto h-20 w-20 bg-sky-100 rounded-full flex items-center justify-center mb-6">
                     <UserPlus className="h-10 w-10 text-sky-600" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Course Registration</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('course_page.registration.course_registration', 'Course Registration')}</h1>
                 <p className="text-lg text-gray-600 mb-1">{course.course_type}</p>
                 <p className="text-sm text-gray-500 mb-8">{course.state} - {course.locality} ({course.start_date})</p>
 
                 <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6 text-left text-sm text-blue-800">
-                    <p><strong>Note:</strong> Use this form to register yourself or a participant if you are not already on the list.</p>
+                    <p><strong>{t('course_page.registration.note', 'Note:')}</strong> {t('course_page.registration.note_text', 'Use this form to register yourself or a participant if you are not already on the list.')}</p>
                 </div>
 
                 <Button size="lg" className="w-full justify-center" onClick={() => setShowModal(true)}>
-                    Register New Participant
+                    {t('course_page.registration.register_new', 'Register New Participant')}
                 </Button>
             </Card>
 
@@ -736,7 +740,7 @@ export function PublicParticipantRegistrationView({ courseId }) {
                 onClose={() => setShowModal(false)}
                 course={course}
                 onSuccess={(participant) => {
-                    setSuccessMessage(`Successfully registered ${participant.name}.`);
+                    setSuccessMessage(t('course_page.registration.success_registered', 'Successfully registered {{name}}.', { name: participant.name }));
                     setShowModal(false);
                 }}
             />
@@ -745,20 +749,21 @@ export function PublicParticipantRegistrationView({ courseId }) {
 }
 
 const Landing = React.memo(function Landing({ active, onPick }) {
+    const { t } = useTranslation();
    const items = [
-        { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
-        { key: 'ICCM', title: 'Integrated Community case management for under 5 children (iCCM)', enabled: true },
-        { key: 'Comprehensive Package For Community Midwives', title: 'Comprehensive Package For Community Midwives', enabled: true },
-        { key: 'ETAT', title: 'Emergency Triage, Assessment & Treatment (ETAT)', enabled: true },
-        { key: 'EmONC', title: 'Emergency Obstetric and Newborn Care (EmONC)', enabled: true },
-        { key: 'IPC', title: 'Infection Prevention & Control (Neonatal Unit)', enabled: true },
-        { key: 'Small & Sick Newborn', title: 'Small & Sick Newborn Case Management', enabled: true },
-        { key: 'Program Management', title: 'Program Management', enabled: true },
+        { key: 'IMNCI', title: t('course_page.packages.imnci', 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)'), enabled: true },
+        { key: 'ICCM', title: t('course_page.packages.iccm', 'Integrated Community case management for under 5 children (iCCM)'), enabled: true },
+        { key: 'Comprehensive Package For Community Midwives', title: t('course_page.packages.midwives', 'Comprehensive Package For Community Midwives'), enabled: true },
+        { key: 'ETAT', title: t('course_page.packages.etat', 'Emergency Triage, Assessment & Treatment (ETAT)'), enabled: true },
+        { key: 'EmONC', title: t('course_page.packages.emonc', 'Emergency Obstetric and Newborn Care (EmONC)'), enabled: true },
+        { key: 'IPC', title: t('course_page.packages.ipc', 'Infection Prevention & Control (Neonatal Unit)'), enabled: true },
+        { key: 'Small & Sick Newborn', title: t('course_page.packages.ssnc', 'Small & Sick Newborn Case Management'), enabled: true },
+        { key: 'Program Management', title: t('course_page.packages.program_management', 'Program Management'), enabled: true },
     ];
   
     return (
         <Card className="p-6">
-            <PageHeader title="Select a Course Package" subtitle="Choose a monitoring package to begin." />
+            <PageHeader title={t('course_page.packages.select_title', 'Select a Course Package')} subtitle={t('course_page.packages.select_subtitle', 'Choose a monitoring package to begin.')} />
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {items.map(it => (
                     <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
@@ -772,7 +777,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
                              }
                             <div>
                                 <div className="font-semibold text-gray-800">{it.title}</div>
-                                <div className="text-xs text-gray-500 mt-1">{it.enabled ? 'Click to manage courses' : 'Coming Soon'}</div>
+                                <div className="text-xs text-gray-500 mt-1">{it.enabled ? t('course_page.packages.click_to_manage', 'Click to manage courses') : t('course_page.packages.coming_soon', 'Coming Soon')}</div>
                             </div>
                         </div>
                     </button>
@@ -785,11 +790,12 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 
 // --- QR Code Share Modal ---
 function QRShareModal({ isOpen, onClose, url, title }) {
+    const { t } = useTranslation();
     const qrCanvasRef = useRef(null);
 
     const handleCopyLink = async () => {
-        try { await navigator.clipboard.writeText(url); notify('Link copied to clipboard!'); }
-        catch { notify('Failed to copy link.'); }
+        try { await navigator.clipboard.writeText(url); notify(t('course_page.share.link_copied_clipboard', 'Link copied to clipboard!')); }
+        catch { notify(t('course_page.share.copy_failed', 'Failed to copy link.')); }
     };
 
     const handleOpenLink = () => { window.open(url, '_blank'); };
@@ -842,7 +848,7 @@ function QRShareModal({ isOpen, onClose, url, title }) {
 
     if (!isOpen) return null;
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={title || 'Share Link'}>
+        <Modal isOpen={isOpen} onClose={onClose} title={title || t('course_page.share.share_link', 'Share Link')}>
             <CardBody className="flex flex-col items-center gap-5 p-6">
                 <div ref={qrCanvasRef} className="bg-white p-5 rounded-2xl shadow-md border border-gray-100">
                     <QRCodeCanvas value={url || ' '} size={220} level="L" includeMargin={false} />
@@ -855,21 +861,21 @@ function QRShareModal({ isOpen, onClose, url, title }) {
                         className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-[0.98]"
                         style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}
                     >
-                        <ExternalLink size={16} /> Open Link
+                        <ExternalLink size={16} /> {t('course_page.share.open_link', 'Open Link')}
                     </button>
                     <button
                         onClick={handleShareLink}
                         className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-[0.98]"
                         style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
                     >
-                        <Send size={16} /> Share Link
+                        <Send size={16} /> {t('course_page.share.share_link', 'Share Link')}
                     </button>
                     <button
                         onClick={handleShareQR}
                         className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-[0.98]"
                         style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}
                     >
-                        <QrCode size={16} /> Share QR Code
+                        <QrCode size={16} /> {t('course_page.share.share_qr', 'Share QR Code')}
                     </button>
                 </div>
             </CardBody>
@@ -892,6 +898,7 @@ export function CoursesTable({
     finalReportsByCourse,
     onOpenAttendanceManager, isProcessing 
 }) {
+    const { t } = useTranslation();
     const [shareModalCourse, setShareModalCourse] = useState(null);
     const [qrShareData, setQrShareData] = useState(null);
     const [reportModalCourse, setReportModalCourse] = useState(null);
@@ -909,10 +916,10 @@ export function CoursesTable({
             if (Capacitor.isNativePlatform()) {
                 window.open(`whatsapp://send?text=${encodeURIComponent(textToShare)}`, '_system');
             } else {
-                notify(successMessage || 'Link copied!');
+                notify(successMessage || t('course_page.share.link_copied', 'Link copied!'));
             }
         }).catch(() => {
-            notify('Failed to copy text. Please try again.');
+            notify(t('course_page.share.copy_text_failed', 'Failed to copy text. Please try again.'));
         });
     };
 
@@ -960,23 +967,23 @@ export function CoursesTable({
         setExpandedId(prev => (prev === id ? null : id));
     };
 
-    if (sortedCourses.length === 0) return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">No courses found matching the selected filters.</div>;
+    if (sortedCourses.length === 0) return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">{t('course_page.table.no_courses', 'No courses found matching the selected filters.')}</div>;
 
     const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
 
     return (
         <div>
-            <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
+            <h3 className="text-xl font-bold mb-4">{t('course_page.table.type_courses', '{{type}} Courses', { type: courseType })}</h3>
             
             {/* Desktop View (Standard Table) */}
             <div className="hidden md:block overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
                 <table className="w-full text-left border-collapse text-sm">
                     <thead>
                         <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                            <th className="p-3 font-semibold border-b border-slate-300 w-1/3">Location & Subcourses</th>
-                            <th className="p-3 font-semibold border-b border-slate-300 w-1/6">Status</th>
-                            <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">Activity</th>
-                            <th className="p-3 font-semibold border-b border-slate-300 text-right">Actions</th>
+                            <th className="p-3 font-semibold border-b border-slate-300 w-1/3">{t('course_page.table.location_subcourses', 'Location & Subcourses')}</th>
+                            <th className="p-3 font-semibold border-b border-slate-300 w-1/6">{t('course_page.table.status', 'Status')}</th>
+                            <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">{t('course_page.table.activity', 'Activity')}</th>
+                            <th className="p-3 font-semibold border-b border-slate-300 text-right">{t('course_page.table.actions', 'Actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -988,11 +995,11 @@ export function CoursesTable({
                             
                             const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
                                 ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ')
-                                : 'N/A';
+                                : t('course_page.na', 'N/A');
 
                             const createdDate = c.createdAt?.toDate 
                                 ? c.createdAt.toDate().toLocaleDateString() 
-                                : c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+                                : c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : t('course_page.na', 'N/A');
 
                             return (
                                 <tr key={c.id} className={`hover:bg-blue-50/50 transition-colors group ${isPendingDeletion ? 'bg-red-50' : ''}`}>
@@ -1002,7 +1009,7 @@ export function CoursesTable({
                                                 <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">
                                                     {formatLocation(c.state)} - {formatLocation(c.locality)}
                                                 </span>
-                                                {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold whitespace-nowrap">(Deleting)</span>}
+                                                {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold whitespace-nowrap">{t('course_page.table.deleting', '(Deleting)')}</span>}
                                             </div>
                                             <span className="text-[11px] font-medium text-slate-500 truncate max-w-[250px]" title={subcourses}>
                                                 {subcourses}
@@ -1013,44 +1020,44 @@ export function CoursesTable({
 
                                     <td className="p-3 align-middle border-b border-slate-200">
                                         {c.approvalStatus === 'pending' ? (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 border border-yellow-200">Pending</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 border border-yellow-200">{t('course_page.status.pending', 'Pending')}</span>
                                         ) : c.approvalStatus === 'rejected' ? (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200">Rejected</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200">{t('course_page.status.rejected', 'Rejected')}</span>
                                         ) : active ? (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-800 border border-green-200">Active</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-800 border border-green-200">{t('course_page.status.active', 'Active')}</span>
                                         ) : (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-800 border border-gray-200">Inactive</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-800 border border-gray-200">{t('course_page.status.inactive', 'Inactive')}</span>
                                         )}
                                     </td>
                                     
                                     <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
                                         <div>{createdDate}</div>
-                                        <div className="truncate max-w-[120px]" title={c.createdBy || 'Legacy Data'}>
-                                            By: {c.createdBy || 'Legacy Data'}
+                                        <div className="truncate max-w-[120px]" title={c.createdBy || t('course_page.table.legacy_data', 'Legacy Data')}>
+                                            {t('course_page.table.by', 'By: {{name}}', { name: c.createdBy || t('course_page.table.legacy_data', 'Legacy Data') })}
                                         </div>
                                     </td>
 
                                     <td className="p-3 align-middle border-b border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
                                             <Button variant="primary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => onOpen(c.id)} disabled={isProcessing}>
-                                                <ExternalLink size={12} /> Open
+                                                <ExternalLink size={12} /> {t('course_page.buttons.open', 'Open')}
                                             </Button>
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
-                                                <FileText size={12} /> Reports
+                                                <FileText size={12} /> {t('course_page.buttons.reports', 'Reports')}
                                             </Button>
                                             {canManageFinalReportDocument && (
                                                 <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
-                                                    <FileSignature size={12} /> Final report
+                                                    <FileSignature size={12} /> {t('course_page.buttons.final_report', 'Final report')}
                                                 </Button>
                                             )}
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
-                                                <Share2 size={12} /> Share
+                                                <Share2 size={12} /> {t('course_page.buttons.share', 'Share')}
                                             </Button>
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px] text-gray-600 flex items-center gap-1" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
-                                                <Edit size={12} /> Edit
+                                                <Edit size={12} /> {t('course_page.buttons.edit', 'Edit')}
                                             </Button>
-                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={async () => { if(await confirmDialog(`Are you sure you want to delete ${c.course_type} (${c.state})? It will be moved to Deleted Courses.`)) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
-                                                <Trash2 size={12} /> Delete
+                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                                <Trash2 size={12} /> {t('course_page.buttons.delete', 'Delete')}
                                             </Button>
                                         </div>
                                     </td>
@@ -1071,7 +1078,7 @@ export function CoursesTable({
                     const isExpanded = expandedId === c.id;
                     
                     const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
-                        ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ') : 'N/A';
+                        ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ') : t('course_page.na', 'N/A');
 
                     return (
                         <div key={c.id} className={`border rounded-lg bg-white shadow-sm overflow-hidden ${isPendingDeletion ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
@@ -1086,15 +1093,15 @@ export function CoursesTable({
                                     <p className="text-sm text-gray-600 line-clamp-1">{subcourses}</p>
                                     <div className="mt-2 flex gap-2 items-center flex-wrap">
                                         {c.approvalStatus === 'pending' ? (
-                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-800">Pending</span>
+                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-800">{t('course_page.status.pending', 'Pending')}</span>
                                         ) : c.approvalStatus === 'rejected' ? (
-                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-red-100 text-red-800">Rejected</span>
+                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-red-100 text-red-800">{t('course_page.status.rejected', 'Rejected')}</span>
                                         ) : active ? (
-                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-green-100 text-green-800">Active</span>
+                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-green-100 text-green-800">{t('course_page.status.active', 'Active')}</span>
                                         ) : (
-                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-800">Inactive</span>
+                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-800">{t('course_page.status.inactive', 'Inactive')}</span>
                                         )}
-                                        {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold">(Deletion Pending)</span>}
+                                        {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold">{t('course_page.table.deletion_pending', '(Deletion Pending)')}</span>}
                                     </div>
                                     {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-2" />}
                                 </div>
@@ -1106,24 +1113,24 @@ export function CoursesTable({
                             {isExpanded && (
                                 <div className="p-4 border-t border-gray-100 bg-gray-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                     <Button variant="primary" className="w-full flex justify-center items-center gap-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
-                                        <ExternalLink size={16} /> Open
+                                        <ExternalLink size={16} /> {t('course_page.buttons.open', 'Open')}
                                     </Button>
                                     <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
-                                        <Edit size={16} /> Edit
+                                        <Edit size={16} /> {t('course_page.buttons.edit', 'Edit')}
                                     </Button>
                                     <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
-                                        <FileText size={16} /> Reports
+                                        <FileText size={16} /> {t('course_page.buttons.reports', 'Reports')}
                                     </Button>
                                     {canManageFinalReportDocument && (
                                         <Button variant="secondary" className="w-full flex justify-center items-center gap-2 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
-                                            <FileSignature size={16} /> Final report
+                                            <FileSignature size={16} /> {t('course_page.buttons.final_report', 'Final report')}
                                         </Button>
                                     )}
                                     <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
-                                        <Share2 size={16} /> Share
+                                        <Share2 size={16} /> {t('course_page.buttons.share', 'Share')}
                                     </Button>
-                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={async () => { if(await confirmDialog(`Are you sure you want to delete ${c.course_type} (${c.state})? It will be moved to Deleted Courses.`)) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
-                                        <Trash2 size={16} /> Delete
+                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                        <Trash2 size={16} /> {t('course_page.buttons.delete', 'Delete')}
                                     </Button>
                                 </div>
                             )}
@@ -1135,9 +1142,9 @@ export function CoursesTable({
             {totalItems > 0 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between mt-4 p-4 bg-white border rounded-lg text-sm text-gray-700 shadow-sm">
                     <div className="flex items-center gap-4 mb-4 sm:mb-0">
-                        <span>Page <strong>{currentPage}</strong> of <strong>{totalPages || 1}</strong> <span className="text-gray-500">(Total: {totalItems} courses)</span></span>
+                        <span>{t('course_page.pagination.page_of', 'Page {{page}} of {{total}}', { page: currentPage, total: totalPages || 1 })} <span className="text-gray-500">{t('course_page.pagination.total_courses', '(Total: {{count}} courses)', { count: totalItems })}</span></span>
                         <div className="flex items-center gap-2">
-                            <span className="font-medium">Per Page:</span>
+                            <span className="font-medium">{t('course_page.pagination.per_page', 'Per Page:')}</span>
                             <Select 
                                 disabled={isProcessing}
                                 value={itemsPerPage} 
@@ -1158,7 +1165,7 @@ export function CoursesTable({
                             disabled={currentPage === 1 || isProcessing}
                             className="px-3 py-1"
                         >
-                            &larr; Previous
+                            &larr; {t('course_page.pagination.previous', 'Previous')}
                         </Button>
                         <Button 
                             variant="secondary" 
@@ -1166,7 +1173,7 @@ export function CoursesTable({
                             disabled={currentPage >= totalPages || totalPages === 0 || isProcessing}
                             className="px-3 py-1"
                         >
-                            Next &rarr;
+                            {t('course_page.pagination.next', 'Next')} &rarr;
                         </Button>
                     </div>
                 </div>
@@ -1174,20 +1181,20 @@ export function CoursesTable({
 
             {shareModalCourse && (
                 <>
-                <Modal isOpen={!!shareModalCourse} onClose={() => setShareModalCourse(null)} title="Share Public Links">
+                <Modal isOpen={!!shareModalCourse} onClose={() => setShareModalCourse(null)} title={t('course_page.share.public_links_title', 'Share Public Links')}>
                      <CardBody className="flex flex-col gap-6 p-4">
                         <div>
                             <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                <Share2 size={16} /> Public Links
+                                <Share2 size={16} /> {t('course_page.share.public_links', 'Public Links')}
                             </h4>
                             <div className="space-y-3 pl-2">
                                 <div className="bg-gray-50 p-3 rounded border">
                                     <div className="flex justify-between items-center mb-1">
-                                        <span className="text-sm font-semibold">Participant Registration</span>
+                                        <span className="text-sm font-semibold">{t('course_page.share.participant_registration', 'Participant Registration')}</span>
                                         <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
                                             const link = `${getBaseUrl()}/public/register/course/${shareModalCourse.id}`;
-                                            setQrShareData({ url: link, title: `Registration: ${shareModalCourse.course_type}` });
-                                        }}><QrCode size={14} /> Share</Button>
+                                            setQrShareData({ url: link, title: t('course_page.share.qr_registration', 'Registration: {{type}}', { type: shareModalCourse.course_type }) });
+                                        }}><QrCode size={14} /> {t('course_page.buttons.share', 'Share')}</Button>
                                     </div>
                                 </div>
                                 <div className="bg-gray-50 p-3 rounded border">
@@ -1195,28 +1202,28 @@ export function CoursesTable({
                                         // EmONC monitoring is split into two checklist modules, so each gets its
                                         // own link and the observer lands directly on the right set of checklists.
                                         <>
-                                            <span className="text-sm font-semibold block mb-2">Course Monitoring</span>
+                                            <span className="text-sm font-semibold block mb-2">{t('course_page.share.course_monitoring', 'Course Monitoring')}</span>
                                             <div className="grid grid-cols-2 gap-2">
                                                 {[
-                                                    { module: 'maternal', label: 'Maternal (Obstetric)' },
-                                                    { module: 'neonatal', label: 'Newborn' }
+                                                    { module: 'maternal', label: t('course_page.share.maternal', 'Maternal (Obstetric)') },
+                                                    { module: 'neonatal', label: t('course_page.share.newborn', 'Newborn') }
                                                 ].map(({ module, label }) => (
                                                     <Button key={module} variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                         const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}?module=${module}`;
                                                         const text = `*Course Monitoring - ${label}*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
-                                                        shareViaWhatsApp(text, `${label} monitoring link copied!`);
+                                                        shareViaWhatsApp(text, t('course_page.share.module_link_copied', '{{label}} monitoring link copied!', { label }));
                                                     }}><Eye size={14} /> {label}</Button>
                                                 ))}
                                             </div>
                                         </>
                                     ) : (
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-sm font-semibold">Course Monitoring</span>
+                                            <span className="text-sm font-semibold">{t('course_page.share.course_monitoring', 'Course Monitoring')}</span>
                                             <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
                                                 const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}`;
                                                 const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
-                                                shareViaWhatsApp(text, 'Monitoring link copied!');
-                                            }}><Eye size={14} /> Share</Button>
+                                                shareViaWhatsApp(text, t('course_page.share.monitoring_link_copied', 'Monitoring link copied!'));
+                                            }}><Eye size={14} /> {t('course_page.buttons.share', 'Share')}</Button>
                                         </div>
                                     )}
                                 </div>
@@ -1225,35 +1232,35 @@ export function CoursesTable({
                                  shareModalCourse.facilitatorAssignments?.some(a => a.imci_sub_type === 'online IMCI course') && (
                                     <div className="bg-gray-50 p-3 rounded border">
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-sm font-semibold">Online Training Exercises</span>
+                                            <span className="text-sm font-semibold">{t('course_page.share.online_exercises', 'Online Training Exercises')}</span>
                                             <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
                                                 const link = `${getBaseUrl()}/public/exercises/course/${shareModalCourse.id}`;
-                                                setQrShareData({ url: link, title: `Exercises: ${shareModalCourse.course_type}` });
-                                            }}><QrCode size={14} /> Share</Button>
+                                                setQrShareData({ url: link, title: t('course_page.share.qr_exercises', 'Exercises: {{type}}', { type: shareModalCourse.course_type }) });
+                                            }}><QrCode size={14} /> {t('course_page.buttons.share', 'Share')}</Button>
                                         </div>
                                     </div>
                                 )}
                                 
                                 {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(shareModalCourse.course_type)) && (
                                     <div className="bg-gray-50 p-3 rounded border">
-                                        <span className="text-sm font-semibold block mb-2">Testing</span>
+                                        <span className="text-sm font-semibold block mb-2">{t('course_page.share.testing', 'Testing')}</span>
                                         {(shareModalCourse.course_type === 'EmONC' || shareModalCourse.course_type === 'EENC') ? (
                                             // EmONC has two separate tests: one link per module so participants land on the right part.
                                             <div className="space-y-2">
                                                 {[
-                                                    { module: 'Emergency Newborn Care', label: 'Newborn' },
-                                                    { module: 'Emergency Maternal Care', label: 'Maternal (Obstetric)' }
+                                                    { module: 'Emergency Newborn Care', label: t('course_page.share.newborn', 'Newborn') },
+                                                    { module: 'Emergency Maternal Care', label: t('course_page.share.maternal', 'Maternal (Obstetric)') }
                                                 ].map(({ module, label }) => (
                                                     <div key={module} className="grid grid-cols-2 gap-2">
                                                         <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                             const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=pre&module=${encodeURIComponent(module)}`;
-                                                            setQrShareData({ url: link, title: `Pre-Test (${label}): ${shareModalCourse.course_type}` });
-                                                        }}><FileText size={14} /> Pre-Test - {label}</Button>
+                                                            setQrShareData({ url: link, title: t('course_page.share.qr_pretest_module', 'Pre-Test ({{label}}): {{type}}', { label, type: shareModalCourse.course_type }) });
+                                                        }}><FileText size={14} /> {t('course_page.share.pretest_module', 'Pre-Test - {{label}}', { label })}</Button>
 
                                                         <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                             const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=post&module=${encodeURIComponent(module)}`;
-                                                            setQrShareData({ url: link, title: `Post-Test (${label}): ${shareModalCourse.course_type}` });
-                                                        }}><FileText size={14} /> Post-Test - {label}</Button>
+                                                            setQrShareData({ url: link, title: t('course_page.share.qr_posttest_module', 'Post-Test ({{label}}): {{type}}', { label, type: shareModalCourse.course_type }) });
+                                                        }}><FileText size={14} /> {t('course_page.share.posttest_module', 'Post-Test - {{label}}', { label })}</Button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -1261,20 +1268,20 @@ export function CoursesTable({
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                 const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=pre`;
-                                                setQrShareData({ url: link, title: `Pre-Test: ${shareModalCourse.course_type}` });
-                                            }}><FileText size={14} /> Share Pre-Test</Button>
+                                                setQrShareData({ url: link, title: t('course_page.share.qr_pretest', 'Pre-Test: {{type}}', { type: shareModalCourse.course_type }) });
+                                            }}><FileText size={14} /> {t('course_page.share.share_pretest', 'Share Pre-Test')}</Button>
 
                                             <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                 const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=post`;
-                                                setQrShareData({ url: link, title: `Post-Test: ${shareModalCourse.course_type}` });
-                                            }}><FileText size={14} /> Share Post-Test</Button>
+                                                setQrShareData({ url: link, title: t('course_page.share.qr_posttest', 'Post-Test: {{type}}', { type: shareModalCourse.course_type }) });
+                                            }}><FileText size={14} /> {t('course_page.share.share_posttest', 'Share Post-Test')}</Button>
                                         </div>
                                         )}
                                     </div>
                                 )}
 
                                 <div className="bg-gray-50 p-3 rounded border">
-                                    <span className="text-sm font-semibold block mb-2">Daily Attendance</span>
+                                    <span className="text-sm font-semibold block mb-2">{t('course_page.share.daily_attendance', 'Daily Attendance')}</span>
                                     <div className="flex gap-2">
                                         <Input 
                                             type="date" 
@@ -1288,10 +1295,10 @@ export function CoursesTable({
                                             className="flex items-center gap-1" 
                                             onClick={() => { 
                                                 const link = `${getBaseUrl()}/attendance/course/${shareModalCourse.id}?date=${attendanceDate}`; 
-                                                setQrShareData({ url: link, title: `Attendance: ${shareModalCourse.course_type} - ${attendanceDate}` });
+                                                setQrShareData({ url: link, title: t('course_page.share.qr_attendance', 'Attendance: {{type}} - {{date}}', { type: shareModalCourse.course_type, date: attendanceDate }) });
                                             }}
                                         >
-                                            <QrCode size={14} /> Share
+                                            <QrCode size={14} /> {t('course_page.buttons.share', 'Share')}
                                         </Button>
                                     </div>
                                 </div>
@@ -1299,7 +1306,7 @@ export function CoursesTable({
                         </div>
                     </CardBody>
                     <CardFooter>
-                         <Button variant="secondary" onClick={() => setShareModalCourse(null)}>Close</Button>
+                         <Button variant="secondary" onClick={() => setShareModalCourse(null)}>{t('course_page.buttons.close', 'Close')}</Button>
                     </CardFooter>
                 </Modal>
                 
@@ -1320,23 +1327,23 @@ export function CoursesTable({
             )}
 
             {reportModalCourse && (
-                <Modal isOpen={!!reportModalCourse} onClose={() => setReportModalCourse(null)} title="Course Reports">
+                <Modal isOpen={!!reportModalCourse} onClose={() => setReportModalCourse(null)} title={t('course_page.reports.title', 'Course Reports')}>
                     <CardBody className="p-6 flex flex-col gap-3">
-                        <p className="text-sm text-gray-500 mb-2">Access all reporting and analysis tools for this course.</p>
+                        <p className="text-sm text-gray-500 mb-2">{t('course_page.reports.subtitle', 'Access all reporting and analysis tools for this course.')}</p>
                         
                         <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenReport(reportModalCourse.id); setReportModalCourse(null); }}>
                             <div className="bg-blue-100 p-2 rounded-full"><BarChart2 className="text-blue-600" size={20} /></div>
                             <div className="text-left">
-                                <div className="font-semibold text-gray-800">Course Analytics</div>
-                                <div className="text-xs text-gray-500">View charts and performance metrics</div>
+                                <div className="font-semibold text-gray-800">{t('course_page.reports.analytics', 'Course Analytics')}</div>
+                                <div className="text-xs text-gray-500">{t('course_page.reports.analytics_desc', 'View charts and performance metrics')}</div>
                             </div>
                         </Button>
 
                         <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenAttendanceManager(reportModalCourse.id); setReportModalCourse(null); }}>
                             <div className="bg-green-100 p-2 rounded-full"><ClipboardList className="text-green-600" size={20} /></div>
                             <div className="text-left">
-                                <div className="font-semibold text-gray-800">Attendance Dashboard</div>
-                                <div className="text-xs text-gray-500">View daily attendance logs</div>
+                                <div className="font-semibold text-gray-800">{t('course_page.reports.attendance', 'Attendance Dashboard')}</div>
+                                <div className="text-xs text-gray-500">{t('course_page.reports.attendance_desc', 'View daily attendance logs')}</div>
                             </div>
                         </Button>
 
@@ -1344,8 +1351,8 @@ export function CoursesTable({
                             <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenTestForm(reportModalCourse.id); setReportModalCourse(null); }}>
                                 <div className="bg-orange-100 p-2 rounded-full"><CheckCircle className="text-orange-600" size={20} /></div>
                                 <div className="text-left">
-                                    <div className="font-semibold text-gray-800">Test Scores Dashboard</div>
-                                    <div className="text-xs text-gray-500">Manage pre-test and post-test scores</div>
+                                    <div className="font-semibold text-gray-800">{t('course_page.reports.test_scores', 'Test Scores Dashboard')}</div>
+                                    <div className="text-xs text-gray-500">{t('course_page.reports.test_scores_desc', 'Manage pre-test and post-test scores')}</div>
                                 </div>
                             </Button>
                         )}
@@ -1354,8 +1361,8 @@ export function CoursesTable({
                             <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onAddFinalReport(reportModalCourse.id); setReportModalCourse(null); }}>
                                 <div className="bg-purple-100 p-2 rounded-full"><FileText className="text-purple-600" size={20} /></div>
                                 <div className="text-left">
-                                    <div className="font-semibold text-gray-800">Final Report</div>
-                                    <div className="text-xs text-gray-500">Generate or view the narrative report</div>
+                                    <div className="font-semibold text-gray-800">{t('course_page.reports.final_report', 'Final Report')}</div>
+                                    <div className="text-xs text-gray-500">{t('course_page.reports.final_report_desc', 'Generate or view the narrative report')}</div>
                                 </div>
                             </Button>
                         )}
@@ -1363,18 +1370,18 @@ export function CoursesTable({
                         <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => {
                             const link = `${getBaseUrl()}/public/report/course/${reportModalCourse.id}`;
                             const text = `*Course Report*\nCourse: ${reportModalCourse.course_type}\nLocation: ${reportModalCourse.state} - ${reportModalCourse.locality}\n\nView the comprehensive course report here:\n${link}`;
-                            shareViaWhatsApp(text, 'Report link copied to clipboard!');
+                            shareViaWhatsApp(text, t('course_page.reports.link_copied', 'Report link copied to clipboard!'));
                         }}>
                             <div className="bg-indigo-100 p-2 rounded-full"><LinkIcon className="text-indigo-600" size={20} /></div>
                             <div className="text-left">
-                                <div className="font-semibold text-gray-800">Share Report Link</div>
-                                <div className="text-xs text-gray-500">Copy & share report link via WhatsApp</div>
+                                <div className="font-semibold text-gray-800">{t('course_page.reports.share_link', 'Share Report Link')}</div>
+                                <div className="text-xs text-gray-500">{t('course_page.reports.share_link_desc', 'Copy & share report link via WhatsApp')}</div>
                             </div>
                         </Button>
 
                     </CardBody>
                     <CardFooter>
-                         <Button variant="secondary" onClick={() => setReportModalCourse(null)}>Close</Button>
+                         <Button variant="secondary" onClick={() => setReportModalCourse(null)}>{t('course_page.buttons.close', 'Close')}</Button>
                     </CardFooter>
                 </Modal>
             )}
@@ -1385,6 +1392,7 @@ export function CoursesTable({
 export { PublicAttendanceView, AttendanceManagerView } from './CourseAttendanceView';
 
 function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessing }) {
+    const { t } = useTranslation();
     const sortedDeletedCourses = useMemo(() => {
         return [...courses].sort((a, b) => {
             const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
@@ -1394,42 +1402,42 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
     }, [courses]);
 
     if (sortedDeletedCourses.length === 0) {
-        return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">No deleted courses found.</div>;
+        return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">{t('course_page.deleted.none', 'No deleted courses found.')}</div>;
     }
 
     return (
         <div>
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Trash2 className="text-red-600" /> Deleted Courses
+                <Trash2 className="text-red-600" /> {t('course_page.deleted.title', 'Deleted Courses')}
             </h3>
             <div className="bg-gray-50 border-l-4 border-gray-400 p-4 mb-4">
                 <p className="text-sm text-gray-700">
-                    Courses here are hidden from the main list. You can restore them or permanently delete them.
+                    {t('course_page.deleted.help', 'Courses here are hidden from the main list. You can restore them or permanently delete them.')}
                 </p>
             </div>
 
-            <div className="overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
+            <PhoneCards className="overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
                 <table className="w-full text-left border-collapse text-sm">
                     <thead>
                         <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                            <th className="p-3 font-semibold border-b border-slate-300 w-1/4">Course Type</th>
-                            <th className="p-3 font-semibold border-b border-slate-300 w-1/3">Location & Start Date</th>
-                            <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">Activity</th>
-                            <th className="p-3 font-semibold border-b border-slate-300 text-right">Actions</th>
+                            <th className="p-3 font-semibold border-b border-slate-300 w-1/4">{t('course_page.table.course_type', 'Course Type')}</th>
+                            <th className="p-3 font-semibold border-b border-slate-300 w-1/3">{t('course_page.table.location_start', 'Location & Start Date')}</th>
+                            <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">{t('course_page.table.activity', 'Activity')}</th>
+                            <th className="p-3 font-semibold border-b border-slate-300 text-right">{t('course_page.table.actions', 'Actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedDeletedCourses.map(c => {
                             const createdDate = c.createdAt?.toDate 
                                 ? c.createdAt.toDate().toLocaleDateString() 
-                                : c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+                                : c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : t('course_page.na', 'N/A');
                             
                             return (
                                 <tr key={c.id} className="hover:bg-gray-50 transition-colors opacity-75 group">
                                     <td className="p-3 align-middle border-b border-slate-200">
                                         <div className="font-bold text-gray-900 text-[13px] whitespace-nowrap">{c.course_type}</div>
                                         {c.approvalStatus === 'rejected' && (
-                                            <span className="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200">Rejected</span>
+                                            <span className="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200">{t('course_page.status.rejected', 'Rejected')}</span>
                                         )}
                                     </td>
                                     
@@ -1437,23 +1445,23 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
                                         <div className="font-semibold text-gray-800 whitespace-nowrap">
                                             {formatLocation(c.state)} - {formatLocation(c.locality)}
                                         </div>
-                                        <div className="text-[11px] text-gray-500 whitespace-nowrap">Started: {c.start_date}</div>
+                                        <div className="text-[11px] text-gray-500 whitespace-nowrap">{t('course_page.table.started', 'Started: {{date}}', { date: c.start_date })}</div>
                                     </td>
                                     
                                     <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
                                         <div>{createdDate}</div>
-                                        <div className="truncate max-w-[120px]" title={c.createdBy || 'Legacy Data'}>
-                                            By: {c.createdBy || 'Legacy Data'}
+                                        <div className="truncate max-w-[120px]" title={c.createdBy || t('course_page.table.legacy_data', 'Legacy Data')}>
+                                            {t('course_page.table.by', 'By: {{name}}', { name: c.createdBy || t('course_page.table.legacy_data', 'Legacy Data') })}
                                         </div>
                                     </td>
 
                                     <td className="p-3 align-middle border-b border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => onRestore(c)} disabled={isProcessing}>
-                                                <RefreshCw size={12} /> Restore
+                                                <RefreshCw size={12} /> {t('course_page.buttons.restore', 'Restore')}
                                             </Button>
                                             <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={() => onPermanentDelete(c.id)} disabled={isProcessing}>
-                                                <X size={12} /> Delete Forever
+                                                <X size={12} /> {t('course_page.buttons.delete_forever', 'Delete Forever')}
                                             </Button>
                                         </div>
                                     </td>
@@ -1462,12 +1470,13 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
                         })}
                     </tbody>
                 </table>
-            </div>
+            </PhoneCards>
         </div>
     );
 }
 
 function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProcessing }) {
+    const { t } = useTranslation();
     const pendingApprovalCourses = useMemo(() => {
         return courses.filter(c => c.approvalStatus === 'pending' && !c.deletionRequested && !c.inRecycleBin)
             .sort((a, b) => {
@@ -1478,30 +1487,30 @@ function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProce
     }, [courses]);
 
     if (pendingApprovalCourses.length === 0) {
-        return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">No courses are currently pending federal approval.</div>;
+        return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">{t('course_page.approvals.none', 'No courses are currently pending federal approval.')}</div>;
     }
 
     return (
         <div className="space-y-8">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <CheckCircle className="text-green-600" /> Course Approvals
+                <CheckCircle className="text-green-600" /> {t('course_page.approvals.title', 'Course Approvals')}
             </h3>
 
             <div>
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
                     <p className="text-sm text-yellow-700">
-                        These courses have been created but require federal approval before they can become actively tracked and monitored.
+                        {t('course_page.approvals.help', 'These courses have been created but require federal approval before they can become actively tracked and monitored.')}
                     </p>
                 </div>
                 
-                <div className="overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
+                <PhoneCards className="overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
                     <table className="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                                <th className="p-3 font-semibold border-b border-slate-300 w-1/4">Course Type</th>
-                                <th className="p-3 font-semibold border-b border-slate-300 w-1/3">Location & Start Date</th>
-                                <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">Coordinator</th>
-                                <th className="p-3 font-semibold border-b border-slate-300 text-right">Actions</th>
+                                <th className="p-3 font-semibold border-b border-slate-300 w-1/4">{t('course_page.table.course_type', 'Course Type')}</th>
+                                <th className="p-3 font-semibold border-b border-slate-300 w-1/3">{t('course_page.table.location_start', 'Location & Start Date')}</th>
+                                <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">{t('course_page.table.coordinator', 'Coordinator')}</th>
+                                <th className="p-3 font-semibold border-b border-slate-300 text-right">{t('course_page.table.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1515,20 +1524,20 @@ function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProce
                                         <div className="font-semibold text-gray-800 whitespace-nowrap">
                                             {formatLocation(c.state)} - {formatLocation(c.locality)}
                                         </div>
-                                        <div className="text-[11px] text-gray-500 whitespace-nowrap">Started: {c.start_date}</div>
+                                        <div className="text-[11px] text-gray-500 whitespace-nowrap">{t('course_page.table.started', 'Started: {{date}}', { date: c.start_date })}</div>
                                     </td>
                                     
                                     <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
-                                        <div className="truncate max-w-[150px]" title={c.coordinator || 'N/A'}>{c.coordinator || 'N/A'}</div>
+                                        <div className="truncate max-w-[150px]" title={c.coordinator || t('course_page.na', 'N/A')}>{c.coordinator || t('course_page.na', 'N/A')}</div>
                                     </td>
 
                                     <td className="p-3 align-middle border-b border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
                                             <Button variant="primary" className="px-2.5 py-1 text-[11px] bg-green-600 hover:bg-green-700 flex items-center gap-1" onClick={() => onApproveCourse(c.id)} disabled={isProcessing}>
-                                                <Check size={12} /> Approve
+                                                <Check size={12} /> {t('course_page.buttons.approve', 'Approve')}
                                             </Button>
                                             <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={() => onRejectCourse(c.id)} disabled={isProcessing}>
-                                                <X size={12} /> Reject
+                                                <X size={12} /> {t('course_page.buttons.reject', 'Reject')}
                                             </Button>
                                         </div>
                                     </td>
@@ -1536,7 +1545,7 @@ function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProce
                             ))}
                         </tbody>
                     </table>
-                </div>
+                </PhoneCards>
             </div>
         </div>
     );
@@ -1563,6 +1572,7 @@ export function CourseManagementView({
     onOpenAttendanceManager,
     currentUserRole 
 }) {
+    const { t } = useTranslation();
     const { 
         federalCoordinators, fetchFederalCoordinators,
         stateCoordinators, fetchStateCoordinators,
@@ -1973,9 +1983,9 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
             setActiveCoursesTab('courses'); 
             setCourseToEdit(null);
-            setToast({ show: true, message: 'Course saved successfully!', type: 'success' });
+            setToast({ show: true, message: t('course_page.toast.saved', 'Course saved successfully!'), type: 'success' });
         } catch (error) {
-            await alertDialog(`The course was not saved: ${error.message}`, { title: 'Could not save course' });
+            await alertDialog(t('course_page.toast.not_saved', 'The course was not saved: {{message}}', { message: error.message }), { title: t('course_page.toast.could_not_save', 'Could not save course') });
         } finally {
             setIsProcessing(false);
         }
@@ -1988,24 +1998,24 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         setIsProcessing(true);
         try {
             await upsertCourse({ ...courseToUpdate, deletionRequested: false, inRecycleBin: true }, currentUserIdentifier);
-            setToast({ show: true, message: 'Course moved to Deleted Courses.', type: 'success' });
+            setToast({ show: true, message: t('course_page.toast.moved_to_deleted', 'Course moved to Deleted Courses.'), type: 'success' });
             await fetchCourses(true); 
         } catch (error) {
-            setToast({ show: true, message: `Failed to process deletion: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('course_page.toast.deletion_process_failed', 'Failed to process deletion: {{message}}', { message: error.message }), type: 'error' });
         } finally {
             setIsProcessing(false);
         }
     };
 
     const handlePermanentDelete = async (courseId) => { 
-        if (await confirmDialog("Delete this course? It and its participants are hidden everywhere. A federal manager can remove it for good from Deleted Items.")) {
+        if (await confirmDialog(t('course_page.toast.confirm_permanent_delete', 'Delete this course? It and its participants are hidden everywhere. A federal manager can remove it for good from Deleted Items.'))) {
             setIsProcessing(true);
             try {
                 await deleteCourse(courseId, currentUserIdentifier);
                 await fetchCourses(true); 
-                setToast({ show: true, message: 'Course deleted. It is now in Deleted Items.', type: 'success' });
+                setToast({ show: true, message: t('course_page.toast.deleted', 'Course deleted. It is now in Deleted Items.'), type: 'success' });
             } catch (error) {
-                setToast({ show: true, message: `Deletion failed: ${error.message}`, type: 'error' });
+                setToast({ show: true, message: t('course_page.toast.deletion_failed', 'Deletion failed: {{message}}', { message: error.message }), type: 'error' });
             } finally {
                 setIsProcessing(false);
             }
@@ -2019,9 +2029,9 @@ const [emoncModule, setEmoncModule] = useState('maternal');
             try {
                 await upsertCourse({ ...courseToUpdate, approvalStatus: 'approved' }, currentUserIdentifier);
                 await fetchCourses(true); 
-                setToast({ show: true, message: 'Course approved successfully!', type: 'success' });
+                setToast({ show: true, message: t('course_page.toast.approved', 'Course approved successfully!'), type: 'success' });
             } catch (error) {
-                setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
+                setToast({ show: true, message: t('course_page.toast.approval_failed', 'Approval failed: {{message}}', { message: error.message }), type: 'error' });
             } finally {
                 setIsProcessing(false);
             }
@@ -2029,16 +2039,16 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     };
 
     const handleRejectCourse = async (courseId) => {
-        if (await confirmDialog("Are you sure you want to reject this course? It will be moved to the Deleted Courses bin.")) {
+        if (await confirmDialog(t('course_page.toast.confirm_reject', 'Are you sure you want to reject this course? It will be moved to the Deleted Courses bin.'))) {
             const courseToUpdate = allCourses.find(c => c.id === courseId);
             if (courseToUpdate) {
                 setIsProcessing(true);
                 try {
                     await upsertCourse({ ...courseToUpdate, approvalStatus: 'rejected', inRecycleBin: true }, currentUserIdentifier);
                     await fetchCourses(true); 
-                    setToast({ show: true, message: 'Course rejected and moved to Deleted Courses.', type: 'info' });
+                    setToast({ show: true, message: t('course_page.toast.rejected', 'Course rejected and moved to Deleted Courses.'), type: 'info' });
                 } catch (error) {
-                    setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' });
+                    setToast({ show: true, message: t('course_page.toast.rejection_failed', 'Rejection failed: {{message}}', { message: error.message }), type: 'error' });
                 } finally {
                     setIsProcessing(false);
                 }
@@ -2051,23 +2061,23 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         try {
             await upsertCourse({ ...course, deletionRequested: false }, currentUserIdentifier);
             await fetchCourses(true); 
-            setToast({ show: true, message: 'Deletion request rejected.', type: 'success' });
+            setToast({ show: true, message: t('course_page.toast.deletion_request_rejected', 'Deletion request rejected.'), type: 'success' });
         } catch (error) {
-            setToast({ show: true, message: `Failed to reject deletion: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('course_page.toast.reject_deletion_failed', 'Failed to reject deletion: {{message}}', { message: error.message }), type: 'error' });
         } finally {
             setIsProcessing(false);
         }
     };
     
     const handleRestoreCourse = async (course) => { 
-        if (await confirmDialog(`Are you sure you want to restore the course: ${course.course_type}?`)) {
+        if (await confirmDialog(t('course_page.toast.confirm_restore', 'Are you sure you want to restore the course: {{type}}?', { type: course.course_type }))) {
             setIsProcessing(true);
             try {
                 await upsertCourse({ ...course, inRecycleBin: false }, currentUserIdentifier); 
                 await fetchCourses(true); 
-                setToast({ show: true, message: 'Course restored successfully!', type: 'success' });
+                setToast({ show: true, message: t('course_page.toast.restored', 'Course restored successfully!'), type: 'success' });
             } catch (error) {
-                setToast({ show: true, message: `Failed to restore course: ${error.message}`, type: 'error' });
+                setToast({ show: true, message: t('course_page.toast.restore_failed', 'Failed to restore course: {{message}}', { message: error.message }), type: 'error' });
             } finally {
                 setIsProcessing(false);
             }
@@ -2082,7 +2092,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
             }
             if (onBatchUpdate) onBatchUpdate();
         } catch (error) {
-            setToast({ show: true, message: `Failed to save test score: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('course_page.toast.test_save_failed', 'Failed to save test score: {{message}}', { message: error.message }), type: 'error' });
         } finally {
             setIsProcessing(false);
         }
@@ -2115,22 +2125,22 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                         onSetSelectedParticipantId(null);
                     }}
                 >
-                    {isGlobalView ? 'Courses' : '← Back to Courses'}
+                    {isGlobalView ? t('course_page.tabs.courses', 'Courses') : t('course_page.tabs.back_to_courses', '← Back to Courses')}
                 </Button>
                 
                 {isGlobalView && (
                     <>
-                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>{activeCourseType ? `${activeCourseType} Dashboard` : 'Courses Dashboard'}</Button>
+                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>{activeCourseType ? t('course_page.tabs.type_dashboard', '{{type}} Dashboard', { type: activeCourseType }) : t('course_page.tabs.courses_dashboard', 'Courses Dashboard')}</Button>
 
                         {canSeeFinalReports && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'final-reports'} onClick={() => { setActiveCoursesTab('final-reports'); onSetSelectedParticipantId(null); }}>
-                                Final Reports
+                                {t('course_page.tabs.final_reports', 'Final Reports')}
                             </Button>
                         )}
 
                         {canUseFederalManagerAdvancedFeatures && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'course-approvals'} onClick={() => { setActiveCoursesTab('course-approvals'); onSetSelectedParticipantId(null); }}>
-                                Course Approvals
+                                {t('course_page.approvals.title', 'Course Approvals')}
                                  {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length > 0 && (
                                      <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
                                          {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length}
@@ -2141,13 +2151,13 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
                         {canUseSuperUserAdvancedFeatures && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'certificate-approvals'} onClick={() => { setActiveCoursesTab('certificate-approvals'); onSetSelectedParticipantId(null); }}>
-                                Certificate Approvals
+                                {t('course_page.tabs.certificate_approvals', 'Certificate Approvals')}
                             </Button>
                         )}
 
                         {canAccessRecycleBin && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'deleted-courses'} onClick={() => { setActiveCoursesTab('deleted-courses'); onSetSelectedParticipantId(null); }}>
-                                Deleted Items
+                                {t('course_page.tabs.deleted_items', 'Deleted Items')}
                                  {allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length > 0 && (
                                      <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded-full">{allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length}</span>
                                  )}
@@ -2158,23 +2168,23 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
                 {!isGlobalView && selectedCourse && (
     <>
-        <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
+        <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>{t('course_page.tabs.participants', 'Participants')}</Button>
         
         {/* --- DYNAMIC MONITORS BLOCK --- */}
         {selectedCourse.course_type === 'EmONC' ? (
             <>
-                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring' && emoncModule === 'maternal'} onClick={() => { setEmoncModule('maternal'); setActiveCoursesTab('monitoring'); }}>Maternal Monitor</Button>
-                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring' && emoncModule === 'neonatal'} onClick={() => { setEmoncModule('neonatal'); setActiveCoursesTab('monitoring'); }}>Neonatal Monitor</Button>
+                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring' && emoncModule === 'maternal'} onClick={() => { setEmoncModule('maternal'); setActiveCoursesTab('monitoring'); }}>{t('course_page.tabs.maternal_monitor', 'Maternal Monitor')}</Button>
+                <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring' && emoncModule === 'neonatal'} onClick={() => { setEmoncModule('neonatal'); setActiveCoursesTab('monitoring'); }}>{t('course_page.tabs.neonatal_monitor', 'Neonatal Monitor')}</Button>
             </>
         ) : (
             <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>
-                {hasMentorshipForm(selectedCourse, currentParticipant) ? 'Mentorship Practice' : 'Monitoring'}
+                {hasMentorshipForm(selectedCourse, currentParticipant) ? t('course_page.tabs.mentorship_practice', 'Mentorship Practice') : t('course_page.tabs.monitoring', 'Monitoring')}
             </Button>
         )}
         
-        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Individual Participant Report</Button>
+        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>{t('course_page.tabs.individual_report', 'Individual Participant Report')}</Button>
         {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(selectedCourse.course_type)) && (
-            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
+            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>{t('course_page.tabs.test_scores', 'Test Scores')}</Button>
         )}
 
         {selectedCourse.course_type === 'IMNCI' && (
@@ -2182,7 +2192,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
             selectedCourse.clinical_instructor_imci_sub_type === 'online IMCI course' ||
             selectedCourse.facilitatorAssignments?.some(a => a.imci_sub_type === 'online IMCI course')
         ) && (
-            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'exercises'} onClick={() => { setActiveCoursesTab('exercises'); }}>Exercises</Button>
+            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'exercises'} onClick={() => { setActiveCoursesTab('exercises'); }}>{t('course_page.tabs.exercises', 'Exercises')}</Button>
         )}
 
         {canManageCourseCertificates && (
@@ -2192,9 +2202,9 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 isActive={activeCoursesTab === 'course-certificates'}
                 onClick={() => { setActiveCoursesTab('course-certificates'); onSetSelectedParticipantId(null); }}
             >
-                Certificates
+                {t('course_page.tabs.certificates', 'Certificates')}
                 {selectedCourse.isCertificateApproved && (
-                    <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">Approved</span>
+                    <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>
                 )}
             </Button>
         )}
@@ -2208,9 +2218,9 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 {activeCoursesTab === 'courses' && (
                     <>
                         {!activeCourseType ? (
-                            <Landing active={activeCourseType} onPick={(t) => setActiveCourseType(t)} />
+                            <Landing active={activeCourseType} onPick={(type) => setActiveCourseType(type)} />
                         ) : showTypeReport ? (
-                            <Suspense fallback={<Spinner />}>
+                            <Suspense fallback={<PageSkeleton />}>
                                 <CourseTypeReportView
                                     courseType={activeCourseType}
                                     courses={typeReportCourses}
@@ -2225,29 +2235,29 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                             <div>
                                 <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
                                     <div className="flex gap-2">
-                                        {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>}
-                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> Refresh Data</>}</Button>
+                                        {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">{t('course_page.buttons.add_course', 'Add New Course')}</Button>}
+                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> {t('course_page.buttons.refresh', 'Refresh Data')}</>}</Button>
                                         
                                         {/* TRIGGER BUTTON FOR MIGRATION MODAL */}
                                         {canUseSuperUserAdvancedFeatures && (
                                             <Button variant="danger" onClick={() => setShowMigrationModal(true)}>
-                                                Total Sync Tool
+                                                {t('course_page.buttons.total_sync', 'Total Sync Tool')}
                                             </Button>
                                         )}
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="bg-indigo-600 text-white hover:bg-indigo-700"><ClipboardList size={14} className="mr-1"/> Comprehensive {activeCourseType} Report</Button>
-                                        <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>Change Course Package</Button>
+                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="bg-indigo-600 text-white hover:bg-indigo-700"><ClipboardList size={14} className="mr-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
+                                        <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>
                                     </div>
                                 </div>
                                 
                                 <Card className="p-4 mb-4 bg-gray-50">
-                                    <h4 className="text-lg font-semibold mb-3">Filter Courses</h4>
+                                    <h4 className="text-lg font-semibold mb-3">{t('course_page.filters.title', 'Filter Courses')}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <FormGroup label="Filter by State"><Select disabled={isProcessing} value={filterState} onChange={(e) => setFilterState(e.target.value)}>{filterStateOptions.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Filter by Locality"><Select disabled={isProcessing || filterLocalityOptions.length <= 1} value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)}>{filterLocalityOptions.map(l => <option key={l} value={l}>{l}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Filter by Sub-course"><Select disabled={isProcessing || filterSubCourseOptions.length <= 1} value={filterSubCourse} onChange={(e) => setFilterSubCourse(e.target.value)}>{filterSubCourseOptions.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Filter by Project"><Select disabled={isProcessing || filterProjectOptions.length <= 1} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>{filterProjectOptions.map(p => <option key={p} value={p}>{p}</option>)}</Select></FormGroup>
+                                        <FormGroup label={t('course_page.filters.by_state', 'Filter by State')}><Select disabled={isProcessing} value={filterState} onChange={(e) => setFilterState(e.target.value)}>{filterStateOptions.map(s => <option key={s} value={s}>{s === 'All' ? t('course_page.filters.all', 'All') : s}</option>)}</Select></FormGroup>
+                                        <FormGroup label={t('course_page.filters.by_locality', 'Filter by Locality')}><Select disabled={isProcessing || filterLocalityOptions.length <= 1} value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)}>{filterLocalityOptions.map(l => <option key={l} value={l}>{l === 'All' ? t('course_page.filters.all', 'All') : l}</option>)}</Select></FormGroup>
+                                        <FormGroup label={t('course_page.filters.by_subcourse', 'Filter by Sub-course')}><Select disabled={isProcessing || filterSubCourseOptions.length <= 1} value={filterSubCourse} onChange={(e) => setFilterSubCourse(e.target.value)}>{filterSubCourseOptions.map(s => <option key={s} value={s}>{s === 'All' ? t('course_page.filters.all', 'All') : s}</option>)}</Select></FormGroup>
+                                        <FormGroup label={t('course_page.filters.by_project', 'Filter by Project')}><Select disabled={isProcessing || filterProjectOptions.length <= 1} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>{filterProjectOptions.map(p => <option key={p} value={p}>{p === 'All' ? t('course_page.filters.all', 'All') : p}</option>)}</Select></FormGroup>
                                     </div>
                                 </Card>
                                 
@@ -2268,7 +2278,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 {activeCoursesTab === 'dashboard' && (
                     <div className="mt-4">
                         {isLoading?.healthFacilities ? (
-                            <div className="flex justify-center p-8"><Spinner /></div>
+                            <PageSkeleton />
                         ) : (
                             <CompiledReportView 
                                 allCourses={packageCourses} 
@@ -2282,7 +2292,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
                 {activeCoursesTab === 'final-reports' && canSeeFinalReports && (
                     <div className="mt-4">
-                        <Suspense fallback={<div className="flex justify-center p-8"><Spinner /></div>}>
+                        <Suspense fallback={<PageSkeleton />}>
                             <FinalReportsDashboard
                                 courseType={activeCourseType || null}
                                 courses={finalReportCourses}
@@ -2325,11 +2335,11 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                             currentUserRole={currentUserRole}
                             canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
                             singleCourseMode
-                            title={`Certificates — ${selectedCourse.course_type}`}
+                            title={t('course_page.certificates_title', 'Certificates — {{type}}', { type: selectedCourse.course_type })}
                         />
                     ) : (
                         <Card className="p-6 text-center text-sm text-gray-600">
-                            You do not have permission to manage certificates for this course.
+                            {t('course_page.no_cert_permission', 'You do not have permission to manage certificates for this course.')}
                         </Card>
                     )
                 )}
@@ -2338,8 +2348,8 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     <>
                         <DeletedCoursesView courses={allCourses.filter(c => c.inRecycleBin || c.deletionRequested)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />
                         <div className="mt-8 border-t border-gray-200 pt-6">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Deleted course records</h3>
-                            <Suspense fallback={<Spinner />}>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-3">{t('course_page.deleted.records', 'Deleted course records')}</h3>
+                            <Suspense fallback={<PageSkeleton />}>
                                 <DeletedItemsPanel types={['courses', 'participants', 'participantTests', 'cases', 'observations', 'finalReports', 'exerciseAttempts', 'exerciseDefinitions']} />
                             </Suspense>
                         </div>
@@ -2364,7 +2374,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     />
                 )}
                 
-                {loadingDetails && (!globalTabs.includes(activeCoursesTab)) ? <div className="flex justify-center p-8"><Spinner /></div> : (
+                {loadingDetails && (!globalTabs.includes(activeCoursesTab)) ? <div className="mt-4"><PageSkeleton /></div> : (
     <>
         {/* --- PARTICIPANTS TABLE --- */}
 {['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) && selectedCourse && (
@@ -2394,11 +2404,11 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     />
 )}
 
-{activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message="Please select a course from the 'Courses' tab to view participants." />}
+{activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message={t('course_page.select_course_participants', "Please select a course from the 'Courses' tab to view participants.")} />}
 
 {/* --- SPLIT SCREEN MONITORS VIEW OR STANDALONE --- */}
 {activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<PageSkeleton />}>
         {selectedCourse.course_type === 'EmONC' ? (
             emoncModule === 'maternal' ? (
                 <MaternalEmergencyMonitoring 
@@ -2440,7 +2450,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
 
 
-        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>}
+        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<PageSkeleton />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>}
         
         {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
             <CourseTestForm
@@ -2451,7 +2461,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 canManageTests={canManageCourse || canUseFederalManagerAdvancedFeatures} 
                 onSaveParticipant={async (participantData, facilityUpdateData) => {
                     const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData, currentUserIdentifier);
-                    if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
+                    if (facilityUpdateData) setToast({ show: true, message: t('course_page.toast.facility_update_submitted', 'Facility update submitted for approval.'), type: 'info' });
                     return savedParticipant;
                 }}
             />
@@ -2466,7 +2476,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         )}
 
         {activeCoursesTab === 'exercises' && !selectedCourse && (
-            <EmptyState message="Please select a course from the 'Courses' tab to open the exercises." />
+            <EmptyState message={t('course_page.select_course_exercises', "Please select a course from the 'Courses' tab to open the exercises.")} />
         )}
     </>
 )}
@@ -2539,6 +2549,7 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, d
 };
 
 const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder, disabled }) => {
+    const { t } = useTranslation();
      const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value || '');
     const ref = useRef(null);
@@ -2601,7 +2612,7 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
                             className={`p-2 cursor-pointer font-medium text-indigo-600 hover:bg-gray-100 ${isNewEntry ? 'border-b' : ''}`}
                             onClick={handleAddNew}
                         >
-                           {`+ Add "${isNewEntry ? inputValue : `New ${label ? label.replace(':', '') : ''}`}"`}
+                           {t('course_page.select.add_value', '+ Add "{{value}}"', { value: isNewEntry ? inputValue : t('course_page.select.new_label', 'New {{label}}', { label: label ? label.replace(':', '') : '' }) })}
                         </div>
                     )}
                     {filteredOptions.length > 0 ? (
@@ -2615,7 +2626,7 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
                             </div>
                         ))
                     ) : (
-                        <div className="p-2 text-gray-500">No results found.</div>
+                        <div className="p-2 text-gray-500">{t('course_page.select.no_results', 'No results found.')}</div>
                     )}
                 </div>
             )}
@@ -3288,6 +3299,7 @@ const urlNamesModule = () => {
 };
 
 export function PublicCourseMonitoringView({ course, allParticipants }) {
+    const { t } = useTranslation();
     const [selectedParticipantId, setSelectedParticipantId] = useState(
         allParticipants && allParticipants.length > 0 ? allParticipants[0].id : null
     );
@@ -3300,7 +3312,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
     
     const currentParticipant = allParticipants?.find(p => p.id === selectedParticipantId);
 
-    if (!course) return <EmptyState message="Course data unavailable." />;
+    if (!course) return <EmptyState message={t('course_page.monitoring.course_unavailable', 'Course data unavailable.')} />;
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto p-4">
@@ -3316,7 +3328,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                                 <div className="p-2 bg-sky-100 rounded-lg">
                                     <Eye className="w-6 h-6 text-sky-600" />
                                 </div>
-                                <h1 className="text-2xl font-bold text-gray-900">Course Monitoring</h1>
+                                <h1 className="text-2xl font-bold text-gray-900">{t('course_page.share.course_monitoring', 'Course Monitoring')}</h1>
                              </div>
                              <div className="text-gray-600">
                                 <span className="font-semibold text-gray-900">{course.course_type}</span>
@@ -3327,7 +3339,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                     
                         {allParticipants && allParticipants.length > 0 && (
                             <div className="w-full sm:w-auto">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Select Participant</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('course_page.monitoring.select_participant', 'Select Participant')}</label>
                                 <Select value={selectedParticipantId || ''} onChange={(e) => setSelectedParticipantId(e.target.value)} className="min-w-[200px]">
                                     {allParticipants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
                                 </Select>
@@ -3337,7 +3349,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                 </Card>
             )}
 
-            <Suspense fallback={<div className="flex justify-center p-10"><Spinner /></div>}>
+            <Suspense fallback={<PageSkeleton />}>
                 {allParticipants && allParticipants.length > 0 ? (
                     currentParticipant ? (
                         course.course_type === 'EmONC' ? (
@@ -3380,10 +3392,10 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                             />
                         )
                     ) : (
-                         <div className="flex justify-center p-10"><Spinner /></div>
+                         <div className="p-4"><SkeletonTable /></div>
                     )
                 ) : (
-                    <EmptyState message="No participants found for this course." />
+                    <EmptyState message={t('course_page.monitoring.no_participants', 'No participants found for this course.')} />
                 )}
             </Suspense>
         </div>

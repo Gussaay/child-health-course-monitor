@@ -12,6 +12,7 @@ import { STATE_LOCALITIES } from './constants';
 import { Download, Eye, Users, CheckCircle, AlertCircle, RefreshCw, BookOpen, FileText } from 'lucide-react';
 
 import { useStandardNames } from '../hooks/useNameRegistry';
+import { useTranslation } from 'react-i18next';
 // Export Helpers
 const exportToExcel = (tableData, headers, fileName) => {
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + '\n' + tableData.map(row => row.join(',')).join('\n');
@@ -39,6 +40,7 @@ const exportTableToPdf = (title, tableHeaders, tableBody, fileName, filters) => 
 };
 
 export function HealthWorkerView({ permissions, userStates }) {
+    const { t } = useTranslation();
     const { 
         participants, 
         healthFacilities, 
@@ -326,6 +328,10 @@ export function HealthWorkerView({ permissions, userStates }) {
         XLSX.writeFile(workbook, `Health_Workers_Directory_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
+    // Display-only labels for data values (data/export values stay English)
+    const sourceLabel = (src) => src === 'Course Registration' ? t('hr_misc.health_workers.course_registration', 'Course Registration') : src === 'Facility Form' ? t('hr_misc.health_workers.facility_form', 'Facility Form') : src;
+    const allLabel = (v) => v === 'All' ? t('hr_misc.health_workers.all', 'All') : v;
+
     // --- KPIs for Top Header ---
     const totalWorkers = filteredWorkers.length;
     const trainedCount = filteredWorkers.filter(w => w.isTrained).length;
@@ -338,13 +344,13 @@ export function HealthWorkerView({ permissions, userStates }) {
     return (
         <div className="space-y-6 animate-fade-in">
             <PageHeader 
-                title="Health Workers Overview" 
-                subtitle="Consolidated database and analysis of all health workers."
+                title={t('hr_misc.health_workers.title', 'Health Workers Overview')} 
+                subtitle={t('hr_misc.health_workers.subtitle', 'Consolidated database and analysis of all health workers.')}
                 actions={
                     <div className="flex gap-2">
                         <Button onClick={handleRefresh} disabled={isRefreshing} variant="secondary" className="flex items-center gap-2">
                             {isRefreshing ? <Spinner size="sm" /> : <RefreshCw size={16} />} 
-                            Refresh Data
+                            {t('hr_misc.health_workers.refresh', 'Refresh Data')}
                         </Button>
                     </div>
                 }
@@ -352,66 +358,66 @@ export function HealthWorkerView({ permissions, userStates }) {
 
             {/* Sub-Tabs */}
             <div className="border-b border-gray-200">
-                <nav className="-mb-px flex gap-6" aria-label="Tabs">
+                <nav className="-mb-px flex gap-6" aria-label={t('hr_misc.health_workers.tabs_aria', 'Tabs')}>
                     <button
                         onClick={() => setActiveSubTab('dashboard')}
                         className={`whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors ${activeSubTab === 'dashboard' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'}`}
                     >
-                        Health Worker Dashboard
+                        {t('hr_misc.health_workers.tab_dashboard', 'Health Worker Dashboard')}
                     </button>
                     <button
                         onClick={() => setActiveSubTab('directory')}
                         className={`whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors ${activeSubTab === 'directory' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'}`}
                     >
-                        Health Worker Directory
+                        {t('hr_misc.health_workers.tab_directory', 'Health Worker Directory')}
                     </button>
                 </nav>
             </div>
 
             {/* Global Filters (Applies to both Dashboard and Directory) */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Global Filters & Search</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('hr_misc.health_workers.filters_heading', 'Global Filters & Search')}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <FormGroup label="Search">
-                        <Input placeholder="Name, Phone, Facility..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                    <FormGroup label={t('hr_misc.health_workers.search', 'Search')}>
+                        <Input placeholder={t('hr_misc.health_workers.search_placeholder', 'Name, Phone, Facility...')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </FormGroup>
-                    <FormGroup label="State">
+                    <FormGroup label={t('hr_misc.health_workers.state', 'State')}>
                         <Select value={stateFilter} onChange={e => { setStateFilter(e.target.value); setLocalityFilter('All'); }}>
-                            {availableStates.map(s => <option key={s} value={s}>{s}</option>)}
+                            {availableStates.map(s => <option key={s} value={s}>{allLabel(s)}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Locality">
+                    <FormGroup label={t('hr_misc.health_workers.locality', 'Locality')}>
                         <Select value={localityFilter} onChange={e => setLocalityFilter(e.target.value)} disabled={stateFilter === 'All'}>
-                            {availableLocalities.length === 0 ? <option value="All">All</option> : availableLocalities.map(l => <option key={l} value={l}>{l}</option>)}
+                            {availableLocalities.length === 0 ? <option value="All">{t('hr_misc.health_workers.all', 'All')}</option> : availableLocalities.map(l => <option key={l} value={l}>{allLabel(l)}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Course Type">
+                    <FormGroup label={t('hr_misc.health_workers.course_type', 'Course Type')}>
                         <Select value={courseTypeFilter} onChange={e => setCourseTypeFilter(e.target.value)}>
-                            {availableCourseTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                            {availableCourseTypes.map(c => <option key={c} value={c}>{allLabel(c)}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Health Worker Type (Cadre)">
+                    <FormGroup label={t('hr_misc.health_workers.cadre_filter', 'Health Worker Type (Cadre)')}>
                         <Select value={jobTitleFilter} onChange={e => setJobTitleFilter(e.target.value)}>
-                            {availableJobTitles.map(j => <option key={j} value={j}>{j}</option>)}
+                            {availableJobTitles.map(j => <option key={j} value={j}>{allLabel(j)}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Project">
+                    <FormGroup label={t('hr_misc.health_workers.project', 'Project')}>
                         <Select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}>
-                            {availableProjects.map(p => <option key={p} value={p}>{p}</option>)}
+                            {availableProjects.map(p => <option key={p} value={p}>{allLabel(p)}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Training Status">
+                    <FormGroup label={t('hr_misc.health_workers.training_status', 'Training Status')}>
                         <Select value={trainingFilter} onChange={e => setTrainingFilter(e.target.value)}>
-                            <option value="All">All Statuses</option>
-                            <option value="Trained">Trained</option>
-                            <option value="Untrained">Untrained</option>
+                            <option value="All">{t('hr_misc.health_workers.all_statuses', 'All Statuses')}</option>
+                            <option value="Trained">{t('hr_misc.health_workers.trained', 'Trained')}</option>
+                            <option value="Untrained">{t('hr_misc.health_workers.untrained', 'Untrained')}</option>
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Data Source">
+                    <FormGroup label={t('hr_misc.health_workers.data_source', 'Data Source')}>
                         <Select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}>
-                            <option value="All">All Sources</option>
-                            <option value="Course Registration">Course Registration</option>
-                            <option value="Facility Form">Facility Form</option>
+                            <option value="All">{t('hr_misc.health_workers.all_sources', 'All Sources')}</option>
+                            <option value="Course Registration">{t('hr_misc.health_workers.course_registration', 'Course Registration')}</option>
+                            <option value="Facility Form">{t('hr_misc.health_workers.facility_form', 'Facility Form')}</option>
                         </Select>
                     </FormGroup>
                 </div>
@@ -423,14 +429,14 @@ export function HealthWorkerView({ permissions, userStates }) {
                     <div className="mt-2 border-t border-gray-200 pt-4">
                         <h3 className="text-xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
                             <BookOpen className="text-sky-600" size={24} />
-                            Course Registration Analytics
+                            {t('hr_misc.health_workers.analytics_heading', 'Course Registration Analytics')}
                         </h3>
                         
                         {/* Enhanced Participant KPIs Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-8">
                             {/* Total Card */}
                             <div className="col-span-2 md:col-span-1 lg:col-span-1 p-5 bg-gradient-to-br from-indigo-600 to-sky-600 rounded-xl shadow-md text-white flex flex-col justify-between">
-                                <div className="text-indigo-100 text-sm font-medium uppercase tracking-wider mb-2">Total Participants</div>
+                                <div className="text-indigo-100 text-sm font-medium uppercase tracking-wider mb-2">{t('hr_misc.health_workers.total_participants', 'Total Participants')}</div>
                                 <div className="text-4xl font-extrabold">{participantKPIs.total}</div>
                             </div>
                             
@@ -450,14 +456,14 @@ export function HealthWorkerView({ permissions, userStates }) {
                                     <div className="p-2 bg-white rounded-lg shadow-sm text-sky-600">
                                         <Users size={20} />
                                     </div>
-                                    <h4 className="font-bold text-lg text-gray-800">Trained by Health Cadre</h4>
+                                    <h4 className="font-bold text-lg text-gray-800">{t('hr_misc.health_workers.trained_by_cadre', 'Trained by Health Cadre')}</h4>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button variant="secondary" size="sm" onClick={() => exportToExcel(trainedByCadreAndCourse.body.concat([trainedByCadreAndCourse.totals]), trainedByCadreAndCourse.headers, "Participant_Dashboard_by_Cadre")} className="flex items-center gap-1">
-                                        <Download size={14}/> Excel
+                                        <Download size={14}/> {t('hr_misc.health_workers.excel', 'Excel')}
                                     </Button>
                                     <Button variant="secondary" size="sm" onClick={() => exportTableToPdf("Trained by Health Cadre", trainedByCadreAndCourse.headers, trainedByCadreAndCourse.body.concat([trainedByCadreAndCourse.totals]), "Participant_Dashboard_by_Cadre", currentFiltersExportStr)} className="flex items-center gap-1">
-                                        <FileText size={14}/> PDF
+                                        <FileText size={14}/> {t('hr_misc.health_workers.pdf', 'PDF')}
                                     </Button>
                                 </div>
                             </div>
@@ -469,7 +475,7 @@ export function HealthWorkerView({ permissions, userStates }) {
                                             <thead className="bg-white border-b-2 border-gray-100">
                                                 <tr className="text-left text-gray-500 uppercase tracking-wider text-xs">
                                                     {trainedByCadreAndCourse.headers.map((h, i) => (
-                                                        <th key={i} className="py-4 px-6 font-bold">{h}</th>
+                                                        <th key={i} className="py-4 px-6 font-bold">{i === 0 ? t('hr_misc.health_workers.health_cadre', 'Health Cadre') : h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
@@ -488,7 +494,7 @@ export function HealthWorkerView({ permissions, userStates }) {
                                                 <tr>
                                                     {trainedByCadreAndCourse.totals.map((cell, index) => (
                                                         <td key={index} className={`py-4 px-6 ${index === 0 ? 'font-extrabold uppercase text-xs tracking-wider' : 'font-bold'}`}>
-                                                            {cell}
+                                                            {index === 0 ? t('hr_misc.health_workers.total', 'Total') : cell}
                                                         </td>
                                                     ))}
                                                 </tr>
@@ -497,7 +503,7 @@ export function HealthWorkerView({ permissions, userStates }) {
                                     </div>
                                 ) : (
                                     <div className="p-8">
-                                        <EmptyState message="No trained participants match your current filters." />
+                                        <EmptyState message={t('hr_misc.health_workers.empty_trained', 'No trained participants match your current filters.')} />
                                     </div>
                                 )}
                             </div>
@@ -514,35 +520,35 @@ export function HealthWorkerView({ permissions, userStates }) {
                         <div className="bg-white rounded-lg shadow-sm border p-4 flex items-center gap-4">
                             <div className="bg-sky-100 p-3 rounded-full text-sky-600"><Users size={24} /></div>
                             <div>
-                                <p className="text-sm text-gray-500 font-medium">Total Health Workers</p>
+                                <p className="text-sm text-gray-500 font-medium">{t('hr_misc.health_workers.total_workers', 'Total Health Workers')}</p>
                                 <h4 className="text-2xl font-bold text-gray-900">{totalWorkers}</h4>
                             </div>
                         </div>
                         <div className="bg-white rounded-lg shadow-sm border p-4 flex items-center gap-4">
                             <div className="bg-green-100 p-3 rounded-full text-green-600"><CheckCircle size={24} /></div>
                             <div>
-                                <p className="text-sm text-gray-500 font-medium">Trained</p>
+                                <p className="text-sm text-gray-500 font-medium">{t('hr_misc.health_workers.trained', 'Trained')}</p>
                                 <h4 className="text-2xl font-bold text-gray-900">{trainedCount}</h4>
                             </div>
                         </div>
                         <div className="bg-white rounded-lg shadow-sm border p-4 flex items-center gap-4">
                             <div className="bg-red-100 p-3 rounded-full text-red-600"><AlertCircle size={24} /></div>
                             <div>
-                                <p className="text-sm text-gray-500 font-medium">Untrained (Facility Data)</p>
+                                <p className="text-sm text-gray-500 font-medium">{t('hr_misc.health_workers.untrained_facility', 'Untrained (Facility Data)')}</p>
                                 <h4 className="text-2xl font-bold text-gray-900">{untrainedCount}</h4>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-bold">Health Worker List</h3>
+                        <h3 className="text-xl font-bold">{t('hr_misc.health_workers.list_heading', 'Health Worker List')}</h3>
                         <Button onClick={handleExportExcelDirectory} variant="secondary" className="flex items-center gap-2">
-                            <Download size={16} /> Export List to Excel
+                            <Download size={16} /> {t('hr_misc.health_workers.export_list', 'Export List to Excel')}
                         </Button>
                     </div>
 
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <Table headers={["Name", "Job Title", "Facility", "Location", "Status", "Source", "Action"]}>
+                        <Table headers={[t('hr_misc.health_workers.name', 'Name'), t('hr_misc.health_workers.job_title', 'Job Title'), t('hr_misc.health_workers.facility', 'Facility'), t('hr_misc.health_workers.location', 'Location'), t('hr_misc.health_workers.status', 'Status'), t('hr_misc.health_workers.source', 'Source'), t('hr_misc.health_workers.action', 'Action')]}>
                             {paginatedWorkers.length > 0 ? paginatedWorkers.map(w => (
                                 <tr key={w.id} className="hover:bg-gray-50">
                                     <td className="p-3 border-b text-sm font-medium text-gray-900">{w.name}</td>
@@ -551,29 +557,29 @@ export function HealthWorkerView({ permissions, userStates }) {
                                     <td className="p-3 border-b text-sm text-gray-600">{w.state} - {w.locality}</td>
                                     <td className="p-3 border-b text-sm">
                                         {w.isTrained 
-                                            ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Trained</span>
-                                            : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Untrained</span>
+                                            ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">{t('hr_misc.health_workers.trained', 'Trained')}</span>
+                                            : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{t('hr_misc.health_workers.untrained', 'Untrained')}</span>
                                         }
                                     </td>
-                                    <td className="p-3 border-b text-sm text-gray-500 text-xs">{w.source}</td>
+                                    <td className="p-3 border-b text-sm text-gray-500 text-xs">{sourceLabel(w.source)}</td>
                                     <td className="p-3 border-b text-sm text-right">
                                         <Button size="sm" variant="secondary" onClick={() => setViewingWorker(w)} className="flex items-center gap-1">
-                                            <Eye size={14} /> View
+                                            <Eye size={14} /> {t('hr_misc.health_workers.view', 'View')}
                                         </Button>
                                     </td>
                                 </tr>
                             )) : (
-                                <EmptyState message="No health workers found matching your criteria." colSpan={7} />
+                                <EmptyState message={t('hr_misc.health_workers.empty_workers', 'No health workers found matching your criteria.')} colSpan={7} />
                             )}
                         </Table>
                         
                         {/* Pagination Controls */}
                         {totalPages > 1 && (
                             <div className="p-4 border-t flex justify-between items-center bg-gray-50">
-                                <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
+                                <span className="text-sm text-gray-600">{t('hr_misc.health_workers.page_of', 'Page {{current}} of {{total}}', { current: currentPage, total: totalPages })}</span>
                                 <div className="flex gap-2">
-                                    <Button variant="secondary" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Previous</Button>
-                                    <Button variant="secondary" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
+                                    <Button variant="secondary" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>{t('hr_misc.health_workers.previous', 'Previous')}</Button>
+                                    <Button variant="secondary" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>{t('hr_misc.health_workers.next', 'Next')}</Button>
                                 </div>
                             </div>
                         )}
@@ -583,34 +589,34 @@ export function HealthWorkerView({ permissions, userStates }) {
 
             {/* Worker Details Modal (Applies to both tabs) */}
             {viewingWorker && (
-                <Modal isOpen={!!viewingWorker} onClose={() => setViewingWorker(null)} title="Health Worker Profile">
+                <Modal isOpen={!!viewingWorker} onClose={() => setViewingWorker(null)} title={t('hr_misc.health_workers.profile_title', 'Health Worker Profile')}>
                     <CardBody className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-                            <div><span className="block text-sm font-medium text-gray-500">Full Name</span><span className="block text-gray-900 font-semibold">{viewingWorker.name}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">Phone Number</span><span className="block text-gray-900">{viewingWorker.phone}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">Job Title</span><span className="block text-gray-900">{viewingWorker.jobTitle}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">Facility</span><span className="block text-gray-900">{viewingWorker.facility}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">Project</span><span className="block text-gray-900">{viewingWorker.project}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">State</span><span className="block text-gray-900">{viewingWorker.state}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">Locality</span><span className="block text-gray-900">{viewingWorker.locality}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.full_name', 'Full Name')}</span><span className="block text-gray-900 font-semibold">{viewingWorker.name}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.phone_number', 'Phone Number')}</span><span className="block text-gray-900">{viewingWorker.phone}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.job_title', 'Job Title')}</span><span className="block text-gray-900">{viewingWorker.jobTitle}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.facility', 'Facility')}</span><span className="block text-gray-900">{viewingWorker.facility}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.project', 'Project')}</span><span className="block text-gray-900">{viewingWorker.project}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.state', 'State')}</span><span className="block text-gray-900">{viewingWorker.state}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.locality', 'Locality')}</span><span className="block text-gray-900">{viewingWorker.locality}</span></div>
                             
                             <div className="md:col-span-2 border-t pt-4 mt-2">
-                                <h4 className="font-semibold text-gray-800 mb-3">Training Information</h4>
+                                <h4 className="font-semibold text-gray-800 mb-3">{t('hr_misc.health_workers.training_info', 'Training Information')}</h4>
                             </div>
                             <div>
-                                <span className="block text-sm font-medium text-gray-500">Status</span>
+                                <span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.status', 'Status')}</span>
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-1 ${viewingWorker.isTrained ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    {viewingWorker.isTrained ? 'Trained' : 'Untrained'}
+                                    {viewingWorker.isTrained ? t('hr_misc.health_workers.trained', 'Trained') : t('hr_misc.health_workers.untrained', 'Untrained')}
                                 </span>
                             </div>
-                            <div><span className="block text-sm font-medium text-gray-500">Course Type</span><span className="block text-gray-900">{viewingWorker.courseType}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">Training Details</span><span className="block text-gray-900">{viewingWorker.trainingDetails}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">Training Date</span><span className="block text-gray-900">{viewingWorker.trainingDate}</span></div>
-                            <div><span className="block text-sm font-medium text-gray-500">Data Origin</span><span className="block text-gray-900">{viewingWorker.source}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.course_type', 'Course Type')}</span><span className="block text-gray-900">{viewingWorker.courseType}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.training_details', 'Training Details')}</span><span className="block text-gray-900">{viewingWorker.trainingDetails}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.training_date', 'Training Date')}</span><span className="block text-gray-900">{viewingWorker.trainingDate}</span></div>
+                            <div><span className="block text-sm font-medium text-gray-500">{t('hr_misc.health_workers.data_origin', 'Data Origin')}</span><span className="block text-gray-900">{sourceLabel(viewingWorker.source)}</span></div>
                         </div>
                     </CardBody>
                     <CardFooter className="flex justify-end">
-                        <Button variant="secondary" onClick={() => setViewingWorker(null)}>Close</Button>
+                        <Button variant="secondary" onClick={() => setViewingWorker(null)}>{t('hr_misc.health_workers.close', 'Close')}</Button>
                     </CardFooter>
                 </Modal>
             )}

@@ -1029,7 +1029,8 @@ export default function PlanningView({ permissions = {} }) {
 
         const url = new URL(window.location.href);
         url.searchParams.delete('plan');
-        window.history.replaceState({}, '', url.toString());
+        // Keeps the history entry's page record so back still works.
+        window.history.replaceState(window.history.state, '', url.toString());
     }, [rawPlans]);
 
     const openCreateMasterPlan = () => {

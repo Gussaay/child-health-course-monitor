@@ -19,6 +19,7 @@ import { listAllDataForCourse, listParticipantTestsForCourse } from '../data.js'
 import { buildEmoncModuleTestSummary } from './CourseReportView';
 import { isEencOnlyCourse } from './CourseTestForm';
 import { notify } from './dialogs';
+import { useTranslation } from 'react-i18next';
 import {
     ALL, buildFilterOptions, filterCourses, filterParticipants, buildCourseTypeReport,
     mergeEmoncModuleSummaries, formatMonth,
@@ -74,6 +75,16 @@ const CATEGORY_CLASSES = {
     'Data Incomplete': 'bg-gray-700 text-white',
 };
 
+// On-screen names for the category keys above (the keys themselves stay as data).
+const getCategoryLabel = (t, name) => ({
+    Perfect: t('reports_views.course_type.categories.perfect', 'Perfect'),
+    Excellent: t('reports_views.course_type.categories.excellent', 'Excellent'),
+    Good: t('reports_views.course_type.categories.good', 'Good'),
+    Fair: t('reports_views.course_type.categories.fair', 'Fair'),
+    Fail: t('reports_views.course_type.categories.fail', 'Fail'),
+    'Data Incomplete': t('reports_views.course_type.categories.data_incomplete', 'Data Incomplete'),
+}[name] || name);
+
 const EMONC_MODULE_STYLES = {
     'Emergency Newborn Care': { header: 'bg-sky-600 text-white', border: 'border-sky-300', light: 'bg-sky-50' },
     'Emergency Maternal Care': { header: 'bg-rose-600 text-white', border: 'border-rose-300', light: 'bg-rose-50' },
@@ -87,6 +98,16 @@ const BREAKDOWNS = [
     { key: 'byPartner', label: 'Funded by' },
     { key: 'byYear', label: 'Year' },
 ];
+
+// On-screen breakdown names; the English labels above are kept for the PDF.
+const getBreakdownLabel = (t, key) => ({
+    byState: t('reports_views.course_type.dims.state', 'State'),
+    byLocality: t('reports_views.course_type.dims.locality', 'Locality'),
+    bySubType: t('reports_views.course_type.dims.sub_course', 'Sub-course'),
+    byProject: t('reports_views.course_type.dims.project', 'Project'),
+    byPartner: t('reports_views.course_type.dims.funded_by', 'Funded by'),
+    byYear: t('reports_views.course_type.dims.year', 'Year'),
+}[key] || '');
 
 
 // --- Small presentational pieces ---
@@ -112,7 +133,9 @@ const Section = ({ title, subtitle, children, actions }) => (
     </Card>
 );
 
-const FilterSelect = ({ label, value, onChange, options, disabled }) => (
+const FilterSelect = ({ label, value, onChange, options, disabled }) => {
+    const { t } = useTranslation();
+    return (
     <div className="flex flex-col gap-1">
         <label className="font-semibold text-gray-700 text-sm">{label}</label>
         <select
@@ -121,13 +144,16 @@ const FilterSelect = ({ label, value, onChange, options, disabled }) => (
             disabled={disabled || options.length <= 1}
             className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-2 focus:ring-sky-500 disabled:bg-gray-100"
         >
-            {options.map((o) => <option key={o} value={o}>{o}</option>)}
+            {options.map((o) => <option key={o} value={o}>{o === ALL ? t('reports_views.course_type.all', 'All') : o}</option>)}
         </select>
     </div>
-);
+    );
+};
 
 // Months that have courses, picked from a list rather than typed.
-const MonthSelect = ({ label, value, onChange, months }) => (
+const MonthSelect = ({ label, value, onChange, months }) => {
+    const { t } = useTranslation();
+    return (
     <div className="flex flex-col gap-1">
         <label className="font-semibold text-gray-700 text-sm">{label}</label>
         <select
@@ -136,20 +162,22 @@ const MonthSelect = ({ label, value, onChange, months }) => (
             disabled={months.length === 0}
             className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-2 focus:ring-sky-500 disabled:bg-gray-100"
         >
-            <option value="">Any</option>
+            <option value="">{t('reports_views.course_type.any', 'Any')}</option>
             {months.map((m) => <option key={m} value={m}>{formatMonth(m)}</option>)}
         </select>
     </div>
-);
+    );
+};
 
 const DistributionBar = ({ distribution }) => {
+    const { t } = useTranslation();
     const total = Object.values(distribution).reduce((a, b) => a + b, 0);
     if (!total) return null;
     return (
         <div className="flex flex-wrap gap-2">
             {Object.entries(distribution).map(([name, count]) => (
                 <span key={name} className={`px-3 py-1 rounded-full text-xs font-bold ${CATEGORY_CLASSES[name]}`}>
-                    {name}: {count} ({fmtPct((count / total) * 100)})
+                    {getCategoryLabel(t, name)}: {count} ({fmtPct((count / total) * 100)})
                 </span>
             ))}
         </div>
@@ -171,6 +199,7 @@ export default function CourseTypeReportView({
     courseType, courses: availableCourses = [], participants: allParticipants = [], healthFacilities = [],
     initialFilters = {}, onOpenCourseReport, onBack,
 }) {
+    const { t } = useTranslation();
     const [filters, setFilters] = useState({
         state: ALL, locality: ALL, subType: ALL, project: ALL, partner: ALL, dateFrom: '', dateTo: '',
         ...initialFilters,
@@ -277,26 +306,26 @@ export default function CourseTypeReportView({
     const groupChart = {
         labels: groups,
         datasets: [
-            { label: 'Total Cases', data: groups.map((g) => groupPerformance[g].totalCases), backgroundColor: '#3b82f6' },
-            { label: 'Total Correct Cases', data: groups.map((g) => groupPerformance[g].correctCases), backgroundColor: '#10b981' },
+            { label: t('reports_views.course_type.chart.total_cases', 'Total Cases'), data: groups.map((g) => groupPerformance[g].totalCases), backgroundColor: '#3b82f6' },
+            { label: t('reports_views.course_type.chart.total_correct_cases', 'Total Correct Cases'), data: groups.map((g) => groupPerformance[g].correctCases), backgroundColor: '#10b981' },
         ],
     };
     const dayTotal = (day, key) => groups.reduce((s, g) => s + (dailyPerformance[day]?.[g]?.[key] || 0), 0);
     const dailyChart = {
         labels: days,
         datasets: [
-            { label: 'Total Cases', data: days.map((d) => dayTotal(d, 'cases')), backgroundColor: '#3b82f6' },
-            { label: 'Total Correct Cases', data: days.map((d) => dayTotal(d, 'correctCases')), backgroundColor: '#10b981' },
+            { label: t('reports_views.course_type.chart.total_cases', 'Total Cases'), data: days.map((d) => dayTotal(d, 'cases')), backgroundColor: '#3b82f6' },
+            { label: t('reports_views.course_type.chart.total_correct_cases', 'Total Correct Cases'), data: days.map((d) => dayTotal(d, 'correctCases')), backgroundColor: '#10b981' },
         ],
     };
     const activeBreakdown = breakdowns[breakdownKey] || [];
-    const breakdownLabel = BREAKDOWNS.find((b) => b.key === breakdownKey)?.label || '';
+    const breakdownLabel = getBreakdownLabel(t, breakdownKey);
     const breakdownChart = {
         labels: activeBreakdown.map((r) => r.key),
         datasets: [
-            { label: 'Avg. Pre-Test %', data: activeBreakdown.map((r) => r.avgPre ?? 0), backgroundColor: '#6366f1' },
-            { label: 'Avg. Post-Test %', data: activeBreakdown.map((r) => r.avgPost ?? 0), backgroundColor: '#10b981' },
-            { label: 'Skill Correctness %', data: activeBreakdown.map((r) => r.skillPct ?? 0), backgroundColor: '#f59e0b' },
+            { label: t('reports_views.course_type.chart.avg_pre', 'Avg. Pre-Test %'), data: activeBreakdown.map((r) => r.avgPre ?? 0), backgroundColor: '#6366f1' },
+            { label: t('reports_views.course_type.chart.avg_post', 'Avg. Post-Test %'), data: activeBreakdown.map((r) => r.avgPost ?? 0), backgroundColor: '#10b981' },
+            { label: t('reports_views.course_type.chart.skill_correctness', 'Skill Correctness %'), data: activeBreakdown.map((r) => r.skillPct ?? 0), backgroundColor: '#f59e0b' },
         ],
     };
 
@@ -309,6 +338,15 @@ export default function CourseTypeReportView({
         filters.dateFrom && `From: ${formatMonth(filters.dateFrom)}`,
         filters.dateTo && `To: ${formatMonth(filters.dateTo)}`,
     ].filter(Boolean).join(' | ') || 'All courses';
+    const filterSummaryText = [
+        filters.state !== ALL && t('reports_views.course_type.filter_summary.state', 'State: {{value}}', { value: filters.state }),
+        filters.locality !== ALL && t('reports_views.course_type.filter_summary.locality', 'Locality: {{value}}', { value: filters.locality }),
+        filters.subType !== ALL && t('reports_views.course_type.filter_summary.sub_course', 'Sub-course: {{value}}', { value: filters.subType }),
+        filters.project !== ALL && t('reports_views.course_type.filter_summary.project', 'Project: {{value}}', { value: filters.project }),
+        filters.partner !== ALL && t('reports_views.course_type.filter_summary.funded_by', 'Funded by: {{value}}', { value: filters.partner }),
+        filters.dateFrom && t('reports_views.course_type.filter_summary.from', 'From: {{value}}', { value: formatMonth(filters.dateFrom) }),
+        filters.dateTo && t('reports_views.course_type.filter_summary.to', 'To: {{value}}', { value: formatMonth(filters.dateTo) }),
+    ].filter(Boolean).join(' | ') || t('reports_views.course_type.filter_summary.all_courses', 'All courses');
 
     // --- PDF export ---
     const handlePdf = async () => {
@@ -425,7 +463,7 @@ export default function CourseTypeReportView({
             doc.save(`Comprehensive_${safeType}_Report_${new Date().toISOString().split('T')[0]}.pdf`);
         } catch (e) {
             console.error('Failed to generate comprehensive report PDF', e);
-            notify('Sorry, there was an error generating the PDF.', 'error');
+            notify(t('reports_views.course_type.pdf_error', 'Sorry, there was an error generating the PDF.'), 'error');
         } finally {
             setIsPdfGenerating(false);
         }
@@ -438,15 +476,15 @@ export default function CourseTypeReportView({
         <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
             <div className="flex flex-wrap justify-between items-start gap-3">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-800">Comprehensive {courseType} Report</h2>
-                    <p className="text-sm text-gray-500 mt-1">Aggregated from {summary.totalCourses} course(s) &middot; {filterSummary}</p>
+                    <h2 className="text-2xl font-bold text-gray-800">{t('reports_views.course_type.title', 'Comprehensive {{courseType}} Report', { courseType })}</h2>
+                    <p className="text-sm text-gray-500 mt-1">{t('reports_views.course_type.aggregated_from', 'Aggregated from {{count}} course(s)', { count: summary.totalCourses })} &middot; {filterSummaryText}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <Button variant="secondary" onClick={handleRefresh} disabled={loading.active}><RefreshCw size={14} /> Reload Data</Button>
+                    <Button variant="secondary" onClick={handleRefresh} disabled={loading.active}><RefreshCw size={14} /> {t('reports_views.course_type.buttons.reload', 'Reload Data')}</Button>
                     <Button variant="secondary" onClick={handlePdf} disabled={isPdfGenerating || loading.active || courses.length === 0}>
-                        <PdfIcon /> {isPdfGenerating ? 'Generating…' : 'Export PDF'}
+                        <PdfIcon /> {isPdfGenerating ? t('reports_views.course_type.buttons.generating', 'Generating…') : t('reports_views.course_type.buttons.export_pdf', 'Export PDF')}
                     </Button>
-                    {onBack && <Button onClick={onBack}>Back to Course List</Button>}
+                    {onBack && <Button onClick={onBack}>{t('reports_views.course_type.buttons.back', 'Back to Course List')}</Button>}
                 </div>
             </div>
 
@@ -454,18 +492,18 @@ export default function CourseTypeReportView({
             <Card className="bg-gray-50">
                 <div className="p-4">
                     <div className="flex justify-between items-center mb-3">
-                        <h4 className="text-lg font-semibold">Filter Report</h4>
-                        <button type="button" onClick={resetFilters} className="text-sm text-sky-700 hover:underline">Reset filters</button>
+                        <h4 className="text-lg font-semibold">{t('reports_views.course_type.filters.title', 'Filter Report')}</h4>
+                        <button type="button" onClick={resetFilters} className="text-sm text-sky-700 hover:underline">{t('reports_views.course_type.filters.reset', 'Reset filters')}</button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <FilterSelect label="State" value={filters.state} onChange={(v) => setFilter('state', v)} options={filterOptions.states} />
-                        <FilterSelect label="Locality" value={filters.locality} onChange={(v) => setFilter('locality', v)} options={filterOptions.localities} />
-                        <FilterSelect label="Sub-course" value={filters.subType} onChange={(v) => setFilter('subType', v)} options={filterOptions.subTypes} />
-                        <FilterSelect label="Project" value={filters.project} onChange={(v) => setFilter('project', v)} options={filterOptions.projects} />
-                        <FilterSelect label="Funded by" value={filters.partner} onChange={(v) => setFilter('partner', v)} options={filterOptions.partners} />
-                        <MonthSelect label="From month" value={filters.dateFrom} onChange={(v) => setFilter('dateFrom', v)}
+                        <FilterSelect label={t('reports_views.course_type.dims.state', 'State')} value={filters.state} onChange={(v) => setFilter('state', v)} options={filterOptions.states} />
+                        <FilterSelect label={t('reports_views.course_type.dims.locality', 'Locality')} value={filters.locality} onChange={(v) => setFilter('locality', v)} options={filterOptions.localities} />
+                        <FilterSelect label={t('reports_views.course_type.dims.sub_course', 'Sub-course')} value={filters.subType} onChange={(v) => setFilter('subType', v)} options={filterOptions.subTypes} />
+                        <FilterSelect label={t('reports_views.course_type.dims.project', 'Project')} value={filters.project} onChange={(v) => setFilter('project', v)} options={filterOptions.projects} />
+                        <FilterSelect label={t('reports_views.course_type.dims.funded_by', 'Funded by')} value={filters.partner} onChange={(v) => setFilter('partner', v)} options={filterOptions.partners} />
+                        <MonthSelect label={t('reports_views.course_type.filters.from_month', 'From month')} value={filters.dateFrom} onChange={(v) => setFilter('dateFrom', v)}
                             months={filterOptions.months.filter((m) => !filters.dateTo || m <= filters.dateTo)} />
-                        <MonthSelect label="To month" value={filters.dateTo} onChange={(v) => setFilter('dateTo', v)}
+                        <MonthSelect label={t('reports_views.course_type.filters.to_month', 'To month')} value={filters.dateTo} onChange={(v) => setFilter('dateTo', v)}
                             months={filterOptions.months.filter((m) => !filters.dateFrom || m >= filters.dateFrom)} />
                     </div>
                 </div>
@@ -474,76 +512,76 @@ export default function CourseTypeReportView({
             {loading.active && (
                 <div className="flex items-center gap-3 p-3 bg-sky-50 border border-sky-200 rounded-lg text-sky-800 text-sm">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-sky-600" />
-                    Loading cases, observations and test records… {loading.done}/{loading.total}
+                    {t('reports_views.course_type.loading', 'Loading cases, observations and test records… {{done}}/{{total}}', { done: loading.done, total: loading.total })}
                 </div>
             )}
             {!loading.active && failedCourses > 0 && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
-                    Data for {failedCourses} course(s) could not be loaded; their practical results are missing from this report. Use “Reload Data” to try again.
+                    {t('reports_views.course_type.load_failed', 'Data for {{count}} course(s) could not be loaded; their practical results are missing from this report. Use “Reload Data” to try again.', { count: failedCourses })}
                 </div>
             )}
 
             {courses.length === 0 ? (
-                <Card><div className="p-10 text-center text-gray-500">No courses match the selected filters.</div></Card>
+                <Card><div className="p-10 text-center text-gray-500">{t('reports_views.course_type.no_courses', 'No courses match the selected filters.')}</div></Card>
             ) : (
                 <>
                     {/* Summary */}
-                    <Section title="Summary">
+                    <Section title={t('reports_views.course_type.summary.title', 'Summary')}>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                            <Kpi label="Courses" value={summary.totalCourses} />
-                            <Kpi label="Participants" value={summary.totalParticipants} />
-                            <Kpi label="Avg. Participants / Course" value={fmtNum(summary.avgParticipantsPerCourse)} />
-                            <Kpi label="Health Facilities Represented" value={summary.facilitiesRepresented} />
+                            <Kpi label={t('reports_views.course_type.summary.courses', 'Courses')} value={summary.totalCourses} />
+                            <Kpi label={t('reports_views.course_type.summary.participants', 'Participants')} value={summary.totalParticipants} />
+                            <Kpi label={t('reports_views.course_type.summary.avg_per_course', 'Avg. Participants / Course')} value={fmtNum(summary.avgParticipantsPerCourse)} />
+                            <Kpi label={t('reports_views.course_type.summary.facilities', 'Health Facilities Represented')} value={summary.facilitiesRepresented} />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                            <div><strong>Period:</strong> {summary.firstDate ? `${summary.firstDate} → ${summary.lastDate}` : 'N/A'}</div>
-                            <div><strong>States ({summary.states.length}):</strong> {summary.states.join(', ') || '-'}</div>
-                            <div><strong>Localities ({summary.localities.length}):</strong> {summary.localities.join(', ') || '-'}</div>
-                            {summary.subTypes.length > 0 && <div><strong>Sub-courses:</strong> {summary.subTypes.join(', ')}</div>}
-                            <div><strong>Funded by:</strong> {summary.partners.join(', ') || '-'}</div>
-                            <div><strong>Projects:</strong> {summary.projects.join(', ') || '-'}</div>
+                            <div><strong>{t('reports_views.course_type.summary.period', 'Period:')}</strong> {summary.firstDate ? `${summary.firstDate} → ${summary.lastDate}` : 'N/A'}</div>
+                            <div><strong>{t('reports_views.course_type.summary.states', 'States ({{count}}):', { count: summary.states.length })}</strong> {summary.states.join(', ') || '-'}</div>
+                            <div><strong>{t('reports_views.course_type.summary.localities', 'Localities ({{count}}):', { count: summary.localities.length })}</strong> {summary.localities.join(', ') || '-'}</div>
+                            {summary.subTypes.length > 0 && <div><strong>{t('reports_views.course_type.summary.sub_courses', 'Sub-courses:')}</strong> {summary.subTypes.join(', ')}</div>}
+                            <div><strong>{t('reports_views.course_type.summary.funded_by', 'Funded by:')}</strong> {summary.partners.join(', ') || '-'}</div>
+                            <div><strong>{t('reports_views.course_type.summary.projects', 'Projects:')}</strong> {summary.projects.join(', ') || '-'}</div>
                         </div>
                     </Section>
 
                     {/* KPIs */}
                     {(report.hasCases || report.hasSkills) && (
-                        <Section title="Key Performance Indicators (KPIs)">
-                            <h4 className="text-lg font-semibold mb-2 text-gray-700">Case KPIs</h4>
+                        <Section title={t('reports_views.course_type.kpi.title', 'Key Performance Indicators (KPIs)')}>
+                            <h4 className="text-lg font-semibold mb-2 text-gray-700">{t('reports_views.course_type.kpi.case_kpis', 'Case KPIs')}</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                <Kpi label="Total Cases" value={overall.totalCases} />
-                                <Kpi label="Total Correct Cases" value={overall.correctCases} />
-                                <Kpi label="Avg. Cases / Participant" value={fmtNum(overall.avgCasesPerParticipant)} />
-                                <Kpi label="Overall Correctness" value={fmtPct(overall.caseCorrectnessPercentage)} className={scoreClass(overall.caseCorrectnessPercentage)} valueClass="" />
+                                <Kpi label={t('reports_views.course_type.kpi.total_cases', 'Total Cases')} value={overall.totalCases} />
+                                <Kpi label={t('reports_views.course_type.kpi.total_correct_cases', 'Total Correct Cases')} value={overall.correctCases} />
+                                <Kpi label={t('reports_views.course_type.kpi.avg_cases', 'Avg. Cases / Participant')} value={fmtNum(overall.avgCasesPerParticipant)} />
+                                <Kpi label={t('reports_views.course_type.kpi.overall_correctness', 'Overall Correctness')} value={fmtPct(overall.caseCorrectnessPercentage)} className={scoreClass(overall.caseCorrectnessPercentage)} valueClass="" />
                             </div>
-                            <h4 className="text-lg font-semibold mb-2 text-gray-700">Skill/Classification KPIs</h4>
+                            <h4 className="text-lg font-semibold mb-2 text-gray-700">{t('reports_views.course_type.kpi.skill_kpis', 'Skill/Classification KPIs')}</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                <Kpi label="Total Skills" value={overall.totalSkills} />
-                                <Kpi label="Total Correct Skills" value={overall.correctSkills} />
-                                <Kpi label="Avg. Skills / Participant" value={fmtNum(overall.avgSkillsPerParticipant)} />
-                                <Kpi label="Overall Correctness" value={fmtPct(overall.skillCorrectnessPercentage)} className={scoreClass(overall.skillCorrectnessPercentage)} valueClass="" />
+                                <Kpi label={t('reports_views.course_type.kpi.total_skills', 'Total Skills')} value={overall.totalSkills} />
+                                <Kpi label={t('reports_views.course_type.kpi.total_correct_skills', 'Total Correct Skills')} value={overall.correctSkills} />
+                                <Kpi label={t('reports_views.course_type.kpi.avg_skills', 'Avg. Skills / Participant')} value={fmtNum(overall.avgSkillsPerParticipant)} />
+                                <Kpi label={t('reports_views.course_type.kpi.overall_correctness', 'Overall Correctness')} value={fmtPct(overall.skillCorrectnessPercentage)} className={scoreClass(overall.skillCorrectnessPercentage)} valueClass="" />
                             </div>
                         </Section>
                     )}
 
                     {/* Test scores */}
                     {report.hasTestScores && (
-                        <Section title="Participant Test Scores">
+                        <Section title={t('reports_views.course_type.tests.title', 'Participant Test Scores')}>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                                <Kpi label="Avg. Pre-Test" value={fmtPct(report.preTestStats.avg)} valueClass="text-gray-800" />
-                                <Kpi label="Avg. Post-Test" value={fmtPct(report.postTestStats.avg)} valueClass="text-gray-800" />
-                                <Kpi label="Avg. Improvement" value={fmtPct(report.totalImprovement)} className={scoreClass(report.totalImprovement, 'improvement')} valueClass="" />
+                                <Kpi label={t('reports_views.course_type.tests.avg_pre', 'Avg. Pre-Test')} value={fmtPct(report.preTestStats.avg)} valueClass="text-gray-800" />
+                                <Kpi label={t('reports_views.course_type.tests.avg_post', 'Avg. Post-Test')} value={fmtPct(report.postTestStats.avg)} valueClass="text-gray-800" />
+                                <Kpi label={t('reports_views.course_type.tests.avg_improvement', 'Avg. Improvement')} value={fmtPct(report.totalImprovement)} className={scoreClass(report.totalImprovement, 'improvement')} valueClass="" />
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
-                                <div><strong>Pre-test:</strong> {report.preTestStats.count} results, median {fmtPct(report.preTestStats.median)}, range {fmtNum(report.preTestStats.min)}–{fmtNum(report.preTestStats.max)}</div>
-                                <div><strong>Post-test:</strong> {report.postTestStats.count} results, median {fmtPct(report.postTestStats.median)}, range {fmtNum(report.postTestStats.min)}–{fmtNum(report.postTestStats.max)}</div>
+                                <div><strong>{t('reports_views.course_type.tests.pre_label', 'Pre-test:')}</strong> {t('reports_views.course_type.tests.stats', '{{count}} results, median {{median}}, range {{min}}–{{max}}', { count: report.preTestStats.count, median: fmtPct(report.preTestStats.median), min: fmtNum(report.preTestStats.min), max: fmtNum(report.preTestStats.max) })}</div>
+                                <div><strong>{t('reports_views.course_type.tests.post_label', 'Post-test:')}</strong> {t('reports_views.course_type.tests.stats', '{{count}} results, median {{median}}, range {{min}}–{{max}}', { count: report.postTestStats.count, median: fmtPct(report.postTestStats.median), min: fmtNum(report.postTestStats.min), max: fmtNum(report.postTestStats.max) })}</div>
                             </div>
-                            <h4 className="font-semibold text-gray-700 mb-2">Improvement categories</h4>
+                            <h4 className="font-semibold text-gray-700 mb-2">{t('reports_views.course_type.tests.improvement_categories', 'Improvement categories')}</h4>
                             <DistributionBar distribution={report.improvementDistribution} />
                         </Section>
                     )}
 
                     {emoncSummary && (
-                        <Section title="Participant Test Scores by EmONC Module" subtitle="Each module is a separate test; results pooled across all courses in the report.">
+                        <Section title={t('reports_views.course_type.emonc.title', 'Participant Test Scores by EmONC Module')} subtitle={t('reports_views.course_type.emonc.subtitle', 'Each module is a separate test; results pooled across all courses in the report.')}>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 {emoncSummary.modules.map((mod) => {
                                     const style = EMONC_MODULE_STYLES[mod.module] || { header: 'bg-emerald-600 text-white', border: 'border-emerald-300', light: 'bg-emerald-50' };
@@ -551,20 +589,20 @@ export default function CourseTypeReportView({
                                         <div key={mod.module} className={`rounded-xl border-2 ${style.border} overflow-hidden`}>
                                             <div className={`${style.header} px-4 py-3`}>
                                                 <div className="text-lg font-extrabold">{mod.label}</div>
-                                                <div className="text-xs opacity-90">{mod.stats.participantCount} participants &middot; Pre: {mod.stats.preCount} &middot; Post: {mod.stats.postCount}</div>
+                                                <div className="text-xs opacity-90">{t('reports_views.course_type.emonc.counts', '{{count}} participants · Pre: {{pre}} · Post: {{post}}', { count: mod.stats.participantCount, pre: mod.stats.preCount, post: mod.stats.postCount })}</div>
                                             </div>
                                             <div className={`${style.light} p-4`}>
                                                 <div className="grid grid-cols-3 gap-3 text-center mb-3">
-                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">Avg. Pre</div><div className="text-xl font-bold">{fmtPct(mod.stats.preAvg)}</div></div>
-                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">Avg. Post</div><div className="text-xl font-bold">{fmtPct(mod.stats.postAvg)}</div></div>
-                                                    <div className={`p-3 rounded-lg ${scoreClass(mod.stats.improvement, 'improvement')}`}><div className="text-xs font-semibold">Improvement</div><div className="text-xl font-bold">{fmtPct(mod.stats.improvement)}</div></div>
+                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">{t('reports_views.course_type.emonc.avg_pre', 'Avg. Pre')}</div><div className="text-xl font-bold">{fmtPct(mod.stats.preAvg)}</div></div>
+                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">{t('reports_views.course_type.emonc.avg_post', 'Avg. Post')}</div><div className="text-xl font-bold">{fmtPct(mod.stats.postAvg)}</div></div>
+                                                    <div className={`p-3 rounded-lg ${scoreClass(mod.stats.improvement, 'improvement')}`}><div className="text-xs font-semibold">{t('reports_views.course_type.emonc.improvement', 'Improvement')}</div><div className="text-xl font-bold">{fmtPct(mod.stats.improvement)}</div></div>
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     {mod.parts.map((part) => (
                                                         <div key={part.key} className="border rounded-lg px-3 py-2 bg-white text-sm">
-                                                            <div className="text-[11px] font-bold uppercase opacity-70">Part {part.part}</div>
+                                                            <div className="text-[11px] font-bold uppercase opacity-70">{t('reports_views.course_type.emonc.part', 'Part {{part}}', { part: part.part })}</div>
                                                             <div className="font-semibold">{part.title}</div>
-                                                            <div>Pre <b>{fmtPct(part.preAvg)}</b> → Post <b>{fmtPct(part.postAvg)}</b></div>
+                                                            <div>{t('reports_views.course_type.emonc.pre', 'Pre')} <b>{fmtPct(part.preAvg)}</b> → {t('reports_views.course_type.emonc.post', 'Post')} <b>{fmtPct(part.postAvg)}</b></div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -577,26 +615,26 @@ export default function CourseTypeReportView({
                     )}
 
                     {/* Investment & coverage */}
-                    <Section title="Investment KPIs">
+                    <Section title={t('reports_views.course_type.invest.title', 'Investment KPIs')}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                            <Kpi label="Total Investment" value={fmtMoney(investment.totalBudget)} className="bg-blue-50 border border-blue-100" valueClass="text-blue-800" />
-                            <Kpi label="Cost / Course" value={fmtMoney(investment.costPerCourse)} className="bg-sky-50 border border-sky-100" valueClass="text-sky-800" />
-                            <Kpi label="Cost / Participant" value={fmtMoney(investment.costPerParticipant)} className="bg-yellow-50 border border-yellow-100" valueClass="text-yellow-800" />
-                            <Kpi label="Cost / New PHC introducing IMNCI" value={coverage.totalNewPhc > 0 ? fmtMoney(investment.costPerNewFacility) : 'N/A'} className="bg-purple-50 border border-purple-100" valueClass="text-purple-800" />
+                            <Kpi label={t('reports_views.course_type.invest.total', 'Total Investment')} value={fmtMoney(investment.totalBudget)} className="bg-blue-50 border border-blue-100" valueClass="text-blue-800" />
+                            <Kpi label={t('reports_views.course_type.invest.per_course', 'Cost / Course')} value={fmtMoney(investment.costPerCourse)} className="bg-sky-50 border border-sky-100" valueClass="text-sky-800" />
+                            <Kpi label={t('reports_views.course_type.invest.per_participant', 'Cost / Participant')} value={fmtMoney(investment.costPerParticipant)} className="bg-yellow-50 border border-yellow-100" valueClass="text-yellow-800" />
+                            <Kpi label={t('reports_views.course_type.invest.per_new_phc', 'Cost / New PHC introducing IMNCI')} value={coverage.totalNewPhc > 0 ? fmtMoney(investment.costPerNewFacility) : 'N/A'} className="bg-purple-50 border border-purple-100" valueClass="text-purple-800" />
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">{investment.coursesWithBudget} of {summary.totalCourses} course(s) have a budget recorded.</p>
+                        <p className="text-xs text-gray-500 mt-2">{t('reports_views.course_type.invest.with_budget', '{{withBudget}} of {{total}} course(s) have a budget recorded.', { withBudget: investment.coursesWithBudget, total: summary.totalCourses })}</p>
                     </Section>
 
                     {coverage.coursesWithSnapshot > 0 && (
                         <Section
-                            title="Coverage KPIs (PHC Facilities Only)"
-                            subtitle={`Baseline from the earliest saved snapshot per level; new PHCs summed across ${coverage.coursesWithSnapshot} course(s).${coverage.coursesWithoutSnapshot ? ` ${coverage.coursesWithoutSnapshot} course(s) have no saved baseline and are not included.` : ''}`}
+                            title={t('reports_views.course_type.coverage.title', 'Coverage KPIs (PHC Facilities Only)')}
+                            subtitle={t('reports_views.course_type.coverage.subtitle', 'Baseline from the earliest saved snapshot per level; new PHCs summed across {{count}} course(s).', { count: coverage.coursesWithSnapshot }) + (coverage.coursesWithoutSnapshot ? t('reports_views.course_type.coverage.subtitle_missing', ' {{count}} course(s) have no saved baseline and are not included.', { count: coverage.coursesWithoutSnapshot }) : '')}
                         >
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                <Kpi label="Total new PHCs introducing IMNCI" value={coverage.totalNewPhc} className="bg-green-50 border border-green-100" valueClass="text-green-800" />
+                                <Kpi label={t('reports_views.course_type.coverage.total_new', 'Total new PHCs introducing IMNCI')} value={coverage.totalNewPhc} className="bg-green-50 border border-green-100" valueClass="text-green-800" />
                             </div>
-                            <h4 className="font-semibold text-gray-700 mt-2">State Coverage Increase</h4>
-                            <Table headers={['State', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
+                            <h4 className="font-semibold text-gray-700 mt-2">{t('reports_views.course_type.coverage.state_increase', 'State Coverage Increase')}</h4>
+                            <Table headers={[t('reports_views.course_type.dims.state', 'State'), t('reports_views.course_type.coverage.total_functioning', 'Total Functioning PHCs'), t('reports_views.course_type.coverage.with_imnci_before', 'PHCs w/ IMNCI (Before)'), t('reports_views.course_type.coverage.before', 'Coverage Before'), t('reports_views.course_type.coverage.new_with_imnci', 'New PHCs w/ IMNCI'), t('reports_views.course_type.coverage.after', 'Coverage After'), t('reports_views.course_type.coverage.increase', 'Increase')]}>
                                 {coverage.stateCoverage.map((s) => (
                                     <tr key={`state-${s.name}`}>
                                         <td className="font-semibold">{s.name}</td><td>{s.totalPhc}</td><td>{s.phcWithImnciBefore}</td>
@@ -609,8 +647,8 @@ export default function CourseTypeReportView({
                     )}
 
                     {/* Per-course breakdown */}
-                    <Section title="Results by Course" subtitle={onOpenCourseReport ? 'Click a course to open its full course report.' : undefined}>
-                        <Table headers={['Start Date', 'State', 'Locality', 'Sub-course', 'Project', 'Funded by', '# Pax', 'Cases (Correct %)', 'Skills (Correct %)', 'Avg Pre', 'Avg Post', 'Improvement', 'Budget', 'New PHCs']}>
+                    <Section title={t('reports_views.course_type.by_course.title', 'Results by Course')} subtitle={onOpenCourseReport ? t('reports_views.course_type.by_course.subtitle', 'Click a course to open its full course report.') : undefined}>
+                        <Table headers={[t('reports_views.course_type.table.start_date', 'Start Date'), t('reports_views.course_type.dims.state', 'State'), t('reports_views.course_type.dims.locality', 'Locality'), t('reports_views.course_type.dims.sub_course', 'Sub-course'), t('reports_views.course_type.dims.project', 'Project'), t('reports_views.course_type.dims.funded_by', 'Funded by'), t('reports_views.course_type.table.pax', '# Pax'), t('reports_views.course_type.table.cases', 'Cases (Correct %)'), t('reports_views.course_type.table.skills', 'Skills (Correct %)'), t('reports_views.course_type.table.avg_pre', 'Avg Pre'), t('reports_views.course_type.table.avg_post', 'Avg Post'), t('reports_views.course_type.table.improvement', 'Improvement'), t('reports_views.course_type.table.budget', 'Budget'), t('reports_views.course_type.table.new_phcs', 'New PHCs')]}>
                             {breakdowns.byCourse.map((c) => (
                                 <tr key={c.id} className={onOpenCourseReport ? 'cursor-pointer' : ''} onClick={onOpenCourseReport ? () => onOpenCourseReport(c.id) : undefined}>
                                     <td className="whitespace-nowrap">{c.date || '-'}</td><td>{c.state}</td><td>{c.locality}</td><td>{c.subTypes || '-'}</td>
@@ -626,11 +664,11 @@ export default function CourseTypeReportView({
 
                     {/* Dimension breakdowns */}
                     <Section
-                        title={`Results by ${breakdownLabel}`}
+                        title={t('reports_views.course_type.by_dim.title', 'Results by {{dimension}}', { dimension: breakdownLabel })}
                         actions={(
                             <div className="flex flex-wrap gap-1">
                                 {BREAKDOWNS.map((b) => (
-                                    <Button key={b.key} variant="tab" isActive={breakdownKey === b.key} onClick={() => setBreakdownKey(b.key)} className="px-3 py-1">{b.label}</Button>
+                                    <Button key={b.key} variant="tab" isActive={breakdownKey === b.key} onClick={() => setBreakdownKey(b.key)} className="px-3 py-1">{getBreakdownLabel(t, b.key)}</Button>
                                 ))}
                             </div>
                         )}
@@ -638,11 +676,11 @@ export default function CourseTypeReportView({
                         {activeBreakdown.length > 1 && (
                             <div className="w-full overflow-x-auto pb-2">
                                 <div style={{ height: 320, minWidth: Math.max(500, activeBreakdown.length * 70) }}>
-                                    <Bar data={breakdownChart} options={chartOptions(`Scores by ${breakdownLabel}`)} />
+                                    <Bar data={breakdownChart} options={chartOptions(t('reports_views.course_type.by_dim.chart', 'Scores by {{dimension}}', { dimension: breakdownLabel }))} />
                                 </div>
                             </div>
                         )}
-                        <Table headers={[breakdownLabel, 'Courses', '# Pax', 'Cases (Correct %)', 'Skills (Correct %)', 'Avg Pre', 'Avg Post', 'Improvement', 'Budget']}>
+                        <Table headers={[breakdownLabel, t('reports_views.course_type.table.courses', 'Courses'), t('reports_views.course_type.table.pax', '# Pax'), t('reports_views.course_type.table.cases', 'Cases (Correct %)'), t('reports_views.course_type.table.skills', 'Skills (Correct %)'), t('reports_views.course_type.table.avg_pre', 'Avg Pre'), t('reports_views.course_type.table.avg_post', 'Avg Post'), t('reports_views.course_type.table.improvement', 'Improvement'), t('reports_views.course_type.table.budget', 'Budget')]}>
                             {activeBreakdown.map((r) => (
                                 <tr key={r.key}>
                                     <td className="font-semibold">{r.key}</td><td className="text-center">{r.courses}</td><td className="text-center">{r.participants}</td>
@@ -658,23 +696,23 @@ export default function CourseTypeReportView({
                     {/* Group & daily charts */}
                     {report.hasCases && groups.length > 0 && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <Section title="Overall Performance by Group" subtitle="Groups with the same name are pooled across courses.">
-                                <div style={{ height: 300 }}><Bar data={groupChart} options={chartOptions('Cases & Correct Cases by Group')} /></div>
+                            <Section title={t('reports_views.course_type.group_perf.title', 'Overall Performance by Group')} subtitle={t('reports_views.course_type.group_perf.subtitle', 'Groups with the same name are pooled across courses.')}>
+                                <div style={{ height: 300 }}><Bar data={groupChart} options={chartOptions(t('reports_views.course_type.group_perf.chart', 'Cases & Correct Cases by Group'))} /></div>
                             </Section>
                             {days.length > 0 && (
-                                <Section title="Overall Performance by Day">
-                                    <div style={{ height: 300 }}><Bar data={dailyChart} options={chartOptions('Cases & Correct Cases by Day', 'Day')} /></div>
+                                <Section title={t('reports_views.course_type.day_perf.title', 'Overall Performance by Day')}>
+                                    <div style={{ height: 300 }}><Bar data={dailyChart} options={chartOptions(t('reports_views.course_type.day_perf.chart', 'Cases & Correct Cases by Day'), t('reports_views.course_type.table.day', 'Day'))} /></div>
                                 </Section>
                             )}
                         </div>
                     )}
 
                     {groups.length > 0 && days.length > 0 && [
-                        ['Daily Case Performance', report.dailyCases],
-                        ['Daily Skill Performance', report.dailySkills],
+                        [t('reports_views.course_type.daily.cases', 'Daily Case Performance'), report.dailyCases],
+                        [t('reports_views.course_type.daily.skills', 'Daily Skill Performance'), report.dailySkills],
                     ].filter(([, data]) => data.totals.total > 0).map(([title, data]) => (
                         <Section key={title} title={title}>
-                            <Table headers={['Day', ...groups, 'Total']}>
+                            <Table headers={[t('reports_views.course_type.table.day', 'Day'), ...groups, t('reports_views.course_type.table.total', 'Total')]}>
                                 {data.rows.map((r) => (
                                     <tr key={r.day}>
                                         <td className="font-semibold">{r.day}</td>
@@ -683,7 +721,7 @@ export default function CourseTypeReportView({
                                     </tr>
                                 ))}
                                 <tr className="bg-gray-100 font-bold">
-                                    <td>Total</td>
+                                    <td>{t('reports_views.course_type.table.total', 'Total')}</td>
                                     {groups.map((g) => <td key={g}>{fmtCount(data.totals.cells[g].correct, data.totals.cells[g].total)}</td>)}
                                     <td>{fmtCount(data.totals.correct, data.totals.total)}</td>
                                 </tr>
@@ -692,20 +730,20 @@ export default function CourseTypeReportView({
                     ))}
 
                     {/* Participant results */}
-                    <Section title="Participant Results" subtitle={`Overall figures for ${report.participantSummary.total} participants across all filtered courses.`}>
+                    <Section title={t('reports_views.course_type.results.title', 'Participant Results')} subtitle={t('reports_views.course_type.results.subtitle', 'Overall figures for {{count}} participants across all filtered courses.', { count: report.participantSummary.total })}>
                         {report.hasSkills && (
                             <div className="mb-6">
-                                <h4 className="text-lg font-bold text-sky-800 mb-2">Practical Case Performance</h4>
+                                <h4 className="text-lg font-bold text-sky-800 mb-2">{t('reports_views.course_type.results.practical', 'Practical Case Performance')}</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                                    <Kpi label="Participants Assessed" value={`${report.participantSummary.practicalAssessed} / ${report.participantSummary.total}`} />
-                                    <Kpi label="Avg. Practical Score" value={fmtPct(report.participantSummary.avgPracticalScore)} className={scoreClass(report.participantSummary.avgPracticalScore)} valueClass="" />
-                                    <Kpi label="Scored 90% or More" value={fmtPct(report.participantSummary.practicalPassRate)} />
+                                    <Kpi label={t('reports_views.course_type.results.assessed', 'Participants Assessed')} value={`${report.participantSummary.practicalAssessed} / ${report.participantSummary.total}`} />
+                                    <Kpi label={t('reports_views.course_type.results.avg_practical', 'Avg. Practical Score')} value={fmtPct(report.participantSummary.avgPracticalScore)} className={scoreClass(report.participantSummary.avgPracticalScore)} valueClass="" />
+                                    <Kpi label={t('reports_views.course_type.results.scored_90', 'Scored 90% or More')} value={fmtPct(report.participantSummary.practicalPassRate)} />
                                     {showEmoncParts ? (
-                                        <Kpi label="Avg. EENC / Maternal / Neonatal" value={<span className="text-lg">{fmtPct(report.participantSummary.avgEencScore)} / {fmtPct(report.participantSummary.avgMaternalScore)} / {fmtPct(report.participantSummary.avgNeonatalScore)}</span>} />
+                                        <Kpi label={t('reports_views.course_type.results.avg_eenc_mat_neo', 'Avg. EENC / Maternal / Neonatal')} value={<span className="text-lg">{fmtPct(report.participantSummary.avgEencScore)} / {fmtPct(report.participantSummary.avgMaternalScore)} / {fmtPct(report.participantSummary.avgNeonatalScore)}</span>} />
                                     ) : showEencOnly ? (
-                                        <Kpi label="Avg. EENC Score" value={fmtPct(report.participantSummary.avgEencScore)} />
+                                        <Kpi label={t('reports_views.course_type.results.avg_eenc', 'Avg. EENC Score')} value={fmtPct(report.participantSummary.avgEencScore)} />
                                     ) : (
-                                        <Kpi label="Avg. Skills / Participant" value={fmtNum(overall.avgSkillsPerParticipant)} />
+                                        <Kpi label={t('reports_views.course_type.kpi.avg_skills', 'Avg. Skills / Participant')} value={fmtNum(overall.avgSkillsPerParticipant)} />
                                     )}
                                 </div>
                                 <DistributionBar distribution={report.practicalDistribution} />
@@ -714,18 +752,18 @@ export default function CourseTypeReportView({
 
                         {report.hasTestScores && (
                             <div>
-                                <h4 className="text-lg font-bold text-indigo-800 mb-2">Written Test Improvement</h4>
+                                <h4 className="text-lg font-bold text-indigo-800 mb-2">{t('reports_views.course_type.results.written', 'Written Test Improvement')}</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
-                                    <Kpi label="With Pre- and Post-Test" value={`${report.participantSummary.withBothTests} / ${report.participantSummary.total}`} />
-                                    <Kpi label="Avg. % Increase per Participant" value={fmtPct(report.participantSummary.avgIncrease)} className={scoreClass(report.participantSummary.avgIncrease, 'improvement')} valueClass="" />
-                                    <Kpi label="Participants Who Improved" value={fmtPct(report.participantSummary.improvedRate)} />
+                                    <Kpi label={t('reports_views.course_type.results.with_both', 'With Pre- and Post-Test')} value={`${report.participantSummary.withBothTests} / ${report.participantSummary.total}`} />
+                                    <Kpi label={t('reports_views.course_type.results.avg_increase', 'Avg. % Increase per Participant')} value={fmtPct(report.participantSummary.avgIncrease)} className={scoreClass(report.participantSummary.avgIncrease, 'improvement')} valueClass="" />
+                                    <Kpi label={t('reports_views.course_type.results.improved', 'Participants Who Improved')} value={fmtPct(report.participantSummary.improvedRate)} />
                                 </div>
                                 <DistributionBar distribution={report.improvementDistribution} />
                             </div>
                         )}
 
                         {!report.hasSkills && !report.hasTestScores && (
-                            loading.active ? <Spinner /> : <p className="text-sm text-gray-500">No practical or test results recorded for these participants yet.</p>
+                            loading.active ? <Spinner /> : <p className="text-sm text-gray-500">{t('reports_views.course_type.results.none', 'No practical or test results recorded for these participants yet.')}</p>
                         )}
                     </Section>
                 </>

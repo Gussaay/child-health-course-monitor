@@ -6,14 +6,17 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 
 // --- CUSTOM HOOKS & UTILS ---
 import { downloadAndOpenFile } from './utils/fileDownloader';
+import { computeCoverage, computeHomeStats, levelFromPermissions } from './utils/homeStats';
+import { OWN_KEYS, describePage, pagePath, pageFromLocation, settlePage, isNewEntry, isTransientPage } from './utils/pageAddress';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import { usePushNotifications, usePushEvents } from './hooks/usePushNotifications';
 
@@ -126,7 +129,7 @@ import {
     getCachedCourse, getCachedParticipants,
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
-import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
+import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton } from './components/CommonComponents';
 import { auth, db } from './firebase';
 
 import { doc, getDoc, getDocFromServer, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
@@ -165,6 +168,7 @@ function readBackup(key, fallback) {
 }
 
 function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSave }) {
+    const { t } = useTranslation();
     const [accessLevel, setAccessLevel] = useState('private');
     const [sharedWith, setSharedWith] = useState([]);
     const [emailInput, setEmailInput] = useState('');
@@ -221,10 +225,10 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
         const shareUrl = `${baseUrl}/${routePrefix}/${shareableItem.id}`;
         
         navigator.clipboard.writeText(shareUrl).then(() => {
-            setCopySuccess('Link copied!');
+            setCopySuccess(t('app_extra.share.link_copied', 'Link copied!'));
             setTimeout(() => setCopySuccess(''), 2000);
         }).catch(err => {
-            setCopySuccess('Failed to copy.');
+            setCopySuccess(t('app_extra.share.copy_failed', 'Failed to copy.'));
         });
     };
 
@@ -232,7 +236,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
 
     const isCourse = shareType === 'course';
     const reportName = isCourse ? `${shareableItem.course_type} - ${shareableItem.state}` : shareableItem.name;
-    const modalTitle = `Share ${isCourse ? 'Course' : 'Participant'} Report`;
+    const modalTitle = isCourse ? t('app_extra.share.title_course', 'Share Course Report') : t('app_extra.share.title_participant', 'Share Participant Report');
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
@@ -243,30 +247,30 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                     </div>
                     <div>
                         <h3 className="text-lg font-semibold text-gray-800">{reportName}</h3>
-                        <p className="text-sm text-gray-500">Manage access permissions for this report.</p>
+                        <p className="text-sm text-gray-500">{t('app_extra.share.manage_access', 'Manage access permissions for this report.')}</p>
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="font-semibold text-gray-700">General Access</label>
+                    <label className="font-semibold text-gray-700">{t('app_extra.share.general_access', 'General Access')}</label>
                     <div className="flex space-x-4">
                         <label className="flex items-center space-x-2">
                             <input type="radio" name="accessLevel" value="private" checked={accessLevel === 'private'} onChange={() => setAccessLevel('private')} className="form-radio text-sky-600" />
-                            <span>Restricted</span>
+                            <span>{t('app_extra.share.restricted', 'Restricted')}</span>
                         </label>
                         <label className="flex items-center space-x-2">
                             <input type="radio" name="accessLevel" value="public" checked={accessLevel === 'public'} onChange={() => setAccessLevel('public')} className="form-radio text-sky-600" />
-                            <span>Anyone with the link</span>
+                            <span>{t('app_extra.share.anyone', 'Anyone with the link')}</span>
                         </label>
                     </div>
                 </div>
 
                 {accessLevel === 'private' && (
                     <div className="space-y-4">
-                        <label className="font-semibold text-gray-700">Share with specific people</label>
+                        <label className="font-semibold text-gray-700">{t('app_extra.share.specific_people', 'Share with specific people')}</label>
                         <div className="flex space-x-2">
-                            <Input type="email" placeholder="Enter email address" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="flex-grow" />
-                            <Button onClick={handleAddEmail}>Add</Button>
+                            <Input type="email" placeholder={t('app_extra.share.email_placeholder', 'Enter email address')} value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="flex-grow" />
+                            <Button onClick={handleAddEmail}>{t('app_extra.buttons.add', 'Add')}</Button>
                         </div>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
                             {sharedWith.map(email => (
@@ -275,7 +279,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                                     <button onClick={() => handleRemoveEmail(email)} className="text-red-500 hover:text-red-700 font-bold">&times;</button>
                                 </div>
                             ))}
-                            {sharedWith.length === 0 && <p className="text-sm text-gray-500 text-center py-2">Not shared with anyone yet.</p>}
+                            {sharedWith.length === 0 && <p className="text-sm text-gray-500 text-center py-2">{t('app_extra.share.not_shared', 'Not shared with anyone yet.')}</p>}
                         </div>
                     </div>
                 )}
@@ -283,12 +287,12 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                 <div className="pt-4 border-t">
                      <div className="flex items-center justify-between">
                         <Button onClick={handleCopyLink} variant="secondary">
-                            <LinkIcon /> {copySuccess ? copySuccess : "Copy Link"}
+                            <LinkIcon /> {copySuccess ? copySuccess : t('app_extra.share.copy_link', 'Copy Link')}
                         </Button>
                         <div className="flex space-x-2">
-                            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                            <Button variant="secondary" onClick={onClose}>{t('app_extra.buttons.cancel', 'Cancel')}</Button>
                             <Button onClick={handleSave} disabled={isSaving}>
-                                {isSaving ? <Spinner /> : 'Save Changes'}
+                                {isSaving ? <Spinner /> : t('app_extra.buttons.save_changes', 'Save Changes')}
                             </Button>
                         </div>
                     </div>
@@ -299,25 +303,26 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
 }
 
 const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
+    const { t } = useTranslation();
     return (
         <div className="fixed top-4 end-4 md:bottom-4 md:top-auto bg-gray-900 text-white p-2 rounded-lg shadow-lg z-50 opacity-90 w-56">
             <div className="flex justify-between items-center mb-1.5">
                 <div className="flex items-center gap-1.5">
                     <Database className="w-4 h-4 text-sky-400" />
-                    <h4 className="font-bold text-sm">Session Ops</h4>
+                    <h4 className="font-bold text-sm">{t('app_extra.monitor.title', 'Session Ops')}</h4>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={onReset} className="text-xs text-gray-400 hover:text-white transition-colors" title="Reset Counts">Reset</button>
-                    <button onClick={onDismiss} className="text-gray-400 hover:text-white transition-colors" title="Dismiss Monitor"><X className="w-4 h-4" /></button>
+                    <button onClick={onReset} className="text-xs text-gray-400 hover:text-white transition-colors" title={t('app_extra.monitor.reset_counts', 'Reset Counts')}>{t('app_extra.monitor.reset', 'Reset')}</button>
+                    <button onClick={onDismiss} className="text-gray-400 hover:text-white transition-colors" title={t('app_extra.monitor.dismiss', 'Dismiss Monitor')}><X className="w-4 h-4" /></button>
                 </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-center">
                 <div>
-                    <div className="text-[10px] text-gray-400 uppercase">Reads</div>
+                    <div className="text-[10px] text-gray-400 uppercase">{t('app_extra.monitor.reads', 'Reads')}</div>
                     <div className="text-xl font-mono font-bold text-green-400">{counts.reads}</div>
                 </div>
                 <div>
-                    <div className="text-[10px] text-gray-400 uppercase">Writes</div>
+                    <div className="text-[10px] text-gray-400 uppercase">{t('app_extra.monitor.writes', 'Writes')}</div>
                     <div className="text-xl font-mono font-bold text-yellow-400">{counts.writes}</div>
                 </div>
             </div>
@@ -326,62 +331,239 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
 };
 
 // --- Landing Page ---
-function Landing({ navigate, permissions }) {
-    const { t } = useTranslation();
-    
-    // Conditionally include 'downloads' ONLY if it's a native platform
-    const navButtons = [
-        { label: t('landing.modules.dashboard', 'Dashboard'), view: 'dashboard', icon: Home, permission: true },
-        { label: t('landing.modules.courses', 'Courses'), view: 'courses', icon: Book, permission: permissions.canViewCourse },
-        { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', icon: Users, permission: permissions.canViewHumanResource },
-        { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
-        { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
-        { label: t('landing.modules.imci', 'IMNCI Protocol'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
-        { label: 'Project Tracker', view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: 'Meeting Tracker', view: 'meetings', icon: Users, permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.supply', 'Supply Management'), view: 'supplyManagement', icon: Package, permission: permissions.canViewSupplyChain },
-        { label: t('landing.modules.supervision', 'Supervision'), view: 'supervision', icon: ClipboardCheck, permission: permissions.canViewSupervision },
-        { label: t('landing.modules.online_courses', 'Online Courses'), view: 'onlineCourses', icon: BookOpen, permission: permissions.canViewOnlineCourses },
-        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
-        { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
-        { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
-    ];
+// Tailwind keeps only class names it can see whole in the source, so each
+// tile's colours are written out rather than built from a colour name.
+const TILE_TINTS = {
+    sky: { icon: 'bg-sky-50 text-sky-700', ring: 'group-hover:ring-sky-200' },
+    violet: { icon: 'bg-violet-50 text-violet-700', ring: 'group-hover:ring-violet-200' },
+    emerald: { icon: 'bg-emerald-50 text-emerald-700', ring: 'group-hover:ring-emerald-200' },
+    teal: { icon: 'bg-teal-50 text-teal-700', ring: 'group-hover:ring-teal-200' },
+    rose: { icon: 'bg-rose-50 text-rose-700', ring: 'group-hover:ring-rose-200' },
+    amber: { icon: 'bg-amber-50 text-amber-700', ring: 'group-hover:ring-amber-200' },
+    indigo: { icon: 'bg-indigo-50 text-indigo-700', ring: 'group-hover:ring-indigo-200' },
+    cyan: { icon: 'bg-cyan-50 text-cyan-700', ring: 'group-hover:ring-cyan-200' },
+    lime: { icon: 'bg-lime-50 text-lime-700', ring: 'group-hover:ring-lime-200' },
+    orange: { icon: 'bg-orange-50 text-orange-700', ring: 'group-hover:ring-orange-200' },
+    fuchsia: { icon: 'bg-fuchsia-50 text-fuchsia-700', ring: 'group-hover:ring-fuchsia-200' },
+    slate: { icon: 'bg-slate-100 text-slate-700', ring: 'group-hover:ring-slate-200' },
+};
 
-    const accessibleButtons = navButtons.filter(btn => btn.permission);
-
+function ModuleTile({ label, tagline, icon: Icon, tint, onClick }) {
+    const { icon: iconCls, ring: ringCls } = TILE_TINTS[tint];
     return (
-        <div className="flex flex-col min-h-full">
-            <Card>
-                <PageHeader title={t('landing.welcome', 'Welcome')} subtitle={t('landing.subtitle', 'Select a module to get started')} />
-                <div className="p-4">
-                    {accessibleButtons.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {accessibleButtons.map(btn => {
-                                const Icon = btn.icon; 
-                                return (
-                                    <button key={btn.view} onClick={() => navigate(btn.view)} className="flex flex-col items-center justify-center gap-3 p-6 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:bg-slate-50 transition-all duration-150 text-slate-700 hover:text-sky-600">
-                                        <Icon className="w-12 h-12 text-sky-500" />
-                                        <span className="text-lg font-semibold">{btn.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <EmptyState message={t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')} />
-                    )}
-                </div>
-            </Card>
-            
-            <div className="hidden md:block mt-8 mb-4 text-center text-slate-600 text-xs font-medium w-full">
-                <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-600 hover:text-sky-500 transition-colors font-bold">Gussaay@gmail.com</a></p>
+        <button
+            onClick={onClick}
+            className={`group relative text-start bg-white rounded-2xl border border-slate-100 p-4 shadow-sm ring-2 ring-transparent transition hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] ${ringCls}`}
+        >
+            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${iconCls}`}>
+                <Icon size={24} />
             </div>
+            <p className="font-bold text-slate-900 mt-3 leading-snug">{label}</p>
+            <p className="text-xs text-slate-500 mt-0.5 leading-snug">{tagline}</p>
+        </button>
+    );
+}
+
+// The greeting card's colour and label follow the person's programme level.
+const LEVEL_CARDS = {
+    federal: 'from-sky-700 via-sky-600 to-cyan-500 shadow-sky-700/20',
+    state: 'from-emerald-700 via-emerald-600 to-teal-500 shadow-emerald-700/20',
+    locality: 'from-violet-700 via-violet-600 to-indigo-500 shadow-violet-700/20',
+};
+
+// `value` null: still loading (`busy`) or could not be loaded.
+// The app's modules, for the main menu tiles and the side menu. 'downloads'
+// only exists on the native app.
+// Page names for the slim bar.
+function pageTitles(t) {
+    return {
+    dashboard: t('landing.modules.dashboard', 'Dashboard'), courses: t('landing.modules.courses', 'Courses'),
+    humanResources: t('landing.modules.human_resources', 'Human Resources'), childHealthServices: t('landing.modules.facilities', 'Child Health Services'),
+    skillsMentorship: t('landing.modules.mentorship', 'Skills Mentorship'), imciForm: t('landing.modules.imci', 'IMNCI Protocol'),
+    projects: t('landing.modules.projects', 'Project Tracker'), meetings: t('landing.modules.meetings', 'Meeting Tracker'),
+    planning: t('landing.modules.planning', 'Master Plan'), localityPlan: t('landing.modules.locality_plan', 'Bottom-up Planning'),
+    supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'),
+    onlineCourses: t('landing.modules.online_courses', 'Online Courses'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
+    admin: t('landing.modules.admin', 'Admin'), about: t('landing.modules.about', 'About Team'),
+    courseReport: t('landing.modules.course_report', 'Course Report'), participantReport: t('landing.modules.participant_report', 'Participant Report'),
+    facilitatorReport: t('landing.modules.facilitator_report', 'Facilitator Report'), facilitatorForm: t('landing.modules.facilitator_form', 'Facilitator'),
+    finalReport: t('landing.modules.final_report', 'Final Report'), attendanceManager: t('landing.modules.attendance', 'Attendance'),
+    observe: t('landing.modules.monitoring', 'Monitoring'), monitoring: t('landing.modules.monitoring', 'Monitoring'),
+};
+}
+
+function buildModules(t, permissions) {
+    const tile = (key, fallback) => t(`landing.taglines.${key}`, fallback);
+    return [
+        { label: t('landing.modules.dashboard', 'Dashboard'), tagline: tile('dashboard', 'Key indicators at a glance'), view: 'dashboard', icon: Home, tint: 'sky', permission: true },
+        { label: t('landing.modules.courses', 'Courses'), tagline: tile('courses', 'Courses, participants and reports'), view: 'courses', icon: Book, tint: 'violet', permission: permissions.canViewCourse },
+        { label: t('landing.modules.human_resources', 'Human Resources'), tagline: tile('human_resources', 'Facilitators, teams and partners'), view: 'humanResources', icon: Users, tint: 'emerald', permission: permissions.canViewHumanResource },
+        { label: t('landing.modules.facilities', 'Child Health Services'), tagline: tile('facilities', 'Facilities and service coverage'), view: 'childHealthServices', icon: Hospital, tint: 'teal', permission: permissions.canViewFacilities },
+        { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', icon: ClipboardCheck, tint: 'rose', permission: permissions.canViewSkillsMentorship },
+        { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', icon: Activity, tint: 'amber', permission: permissions.canViewCourse },
+        { label: t('landing.modules.projects', 'Project Tracker'), tagline: tile('projects', 'Track project tasks'), view: 'projects', icon: FolderKanban, tint: 'indigo', permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: t('landing.modules.meetings', 'Meeting Tracker'), tagline: tile('meetings', 'Meetings and attendance'), view: 'meetings', icon: CalendarDays, tint: 'cyan', permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: t('landing.modules.planning', 'Master Plan'), tagline: tile('planning', 'The annual master plan'), view: 'planning', icon: TrendingUp, tint: 'lime', permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), tagline: tile('locality_plan', 'Plans from the localities'), view: 'localityPlan', icon: Layers, tint: 'orange', permission: permissions.canViewLocalityPlan },
+        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', icon: Package, tint: 'fuchsia', permission: permissions.canViewSupplyChain },
+        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', icon: ClipboardCheck, tint: 'sky', permission: permissions.canViewSupervision },
+        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', icon: BookOpen, tint: 'violet', permission: permissions.canViewOnlineCourses },
+        { label: t('landing.modules.downloads', 'App Files & Downloads'), tagline: tile('downloads', 'Files saved on this device'), view: 'downloads', icon: HardDrive, tint: 'slate', permission: Capacitor.isNativePlatform() },
+        { label: t('landing.modules.admin', 'Admin'), tagline: tile('admin', 'Users, roles and settings'), view: 'admin', icon: User, tint: 'slate', permission: permissions.canViewAdmin },
+        { label: t('landing.modules.about', 'About Team'), tagline: tile('about', 'The programme team'), view: 'about', icon: Info, tint: 'slate', permission: true },
+    ];
+}
+
+function StatBox({ value, label, busy, icon: Icon, format = (v) => v.toLocaleString() }) {
+    const loading = value === null && busy;
+    return (
+        <div className="rounded-2xl bg-white/15 backdrop-blur-sm px-3 py-2.5 min-w-0 ring-1 ring-white/10">
+            <div className="flex items-center gap-1.5 text-white/80">
+                {Icon && <Icon size={13} className="shrink-0" />}
+                <p className="text-[11px] leading-tight truncate">{label}</p>
+            </div>
+            {loading
+                ? <Skeleton className="shimmer-light h-6 w-12 mt-1" />
+                : <p className="text-xl font-bold leading-tight mt-0.5">{value === null ? '—' : format(value)}</p>}
         </div>
     );
 }
 
-const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentView }) {
+// One service's coverage as a labelled bar on the main menu.
+const COVERAGE_BARS = [
+    { key: 'imnci', label: 'IMNCI', bar: 'bg-sky-500', text: 'text-sky-700' },
+    { key: 'etat', label: 'ETAT', bar: 'bg-rose-500', text: 'text-rose-700' },
+    { key: 'eenc', label: 'EENC', bar: 'bg-emerald-500', text: 'text-emerald-700' },
+    { key: 'scnu', label: 'SCNU', bar: 'bg-violet-500', text: 'text-violet-700' },
+];
+
+function CoverageCard({ coverage, busy, onOpen }) {
+    const { t } = useTranslation();
+    const loading = !coverage && busy;
+    if (!coverage && !busy) return null;
+    const overall = coverage?.overall ?? 0;
+    const ring = `conic-gradient(#0ea5e9 ${overall * 3.6}deg, #e2e8f0 0deg)`;
+    return (
+        <button type="button" onClick={onOpen} className="w-full text-start rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition p-4 sm:p-5">
+            <div className="flex items-center gap-4 sm:gap-6">
+                <div className="shrink-0 flex flex-col items-center">
+                    {loading
+                        ? <Skeleton className="h-20 w-20 rounded-full" />
+                        : (
+                            <div className="h-20 w-20 rounded-full p-1.5" style={{ background: ring }}>
+                                <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
+                                    <span className="text-lg font-bold text-slate-800">{overall}%</span>
+                                </div>
+                            </div>
+                        )}
+                    <span className="mt-1.5 text-[11px] font-semibold text-slate-500 text-center leading-tight">{t('landing.coverage.overall', 'Overall coverage')}</span>
+                </div>
+                <div className="flex-1 min-w-0 grid gap-2.5">
+                    {COVERAGE_BARS.map(({ key, label, bar, text }) => {
+                        const s = coverage?.services?.[key];
+                        return (
+                            <div key={key} className="min-w-0">
+                                <div className="flex items-baseline justify-between gap-2 text-xs">
+                                    <span className="font-semibold text-slate-700 truncate">{t(`landing.coverage.${key}`, label)}</span>
+                                    {loading
+                                        ? <Skeleton className="h-3 w-10" />
+                                        : <span className={`font-bold ${text}`}>{s.perc}% <span className="font-normal text-slate-400">({s.n}/{s.d})</span></span>}
+                                </div>
+                                <div className="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                    <div className={`h-full rounded-full ${bar} transition-all duration-700`} style={{ width: `${loading ? 0 : Math.min(100, s.perc)}%` }} />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </button>
+    );
+}
+
+function Landing({ navigate, permissions, user, roles = [], userStates = [], userLocalities = [], stats = null }) {
+    const { t, i18n } = useTranslation();
+
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
+    const firstName = String(user?.displayName || '').trim().split(/\s+/)[0];
+    const role = roles[0] ? String(roles[0]).replace(/_/g, ' ') : '';
+    const level = levelFromPermissions(permissions);
+    const levelLabel = {
+        federal: t('landing.level_federal', 'Federal level'),
+        state: t('landing.level_state', 'State level'),
+        locality: t('landing.level_locality', 'Locality level'),
+    }[level];
+    const places = (level === 'locality' ? userLocalities : level === 'state' ? userStates : []) || [];
+    const scope = places.filter(Boolean).join(i18n.language?.startsWith('ar') ? '، ' : ', ');
+
+    const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
+    const chip = 'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold';
+
+    return (
+        <div className="flex flex-col min-h-full space-y-4">
+            <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${LEVEL_CARDS[level]} text-white p-4 sm:p-5 shadow-lg`}>
+                <span className="absolute -end-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+                <span className="absolute end-16 -bottom-12 h-28 w-28 rounded-full bg-white/10" />
+                <div className="relative">
+                    <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <h2 className="shrink-0 text-lg sm:text-xl font-bold leading-tight">
+                            {greeting}{firstName ? `, ${firstName}` : ''} 👋
+                        </h2>
+                        <span className={`${chip} bg-white text-slate-800`}>{levelLabel}</span>
+                        {scope && <span className={`${chip} bg-white/20`}>{scope}</span>}
+                        {role && <span className={`${chip} bg-white/20 capitalize`}>{role}</span>}
+                        {stats?.focus && <span className={`${chip} bg-white/20`}>{t(`landing.unit_${stats.focus.toLowerCase()}`, `${stats.focus} unit`)}</span>}
+                    </div>
+                    {stats && (
+                        <div className={`mt-3 grid grid-cols-2 sm:grid-cols-3 ${level === 'locality' ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-2`}>
+                            <StatBox icon={Book} busy={stats.busy.courses} value={stats.courses} label={t('landing.stats.courses', 'Courses')} />
+                            <StatBox icon={Users} busy={stats.busy.courses || stats.busy.participants} value={stats.participants} label={t('landing.stats.participants', 'Participants trained')} />
+                            <StatBox icon={Hospital} busy={stats.busy.visits} value={stats.facilitiesReached} label={t('landing.stats.facilities_reached', 'Facilities reached')} />
+                            <StatBox icon={ClipboardCheck} busy={stats.busy.visits} value={stats.visits} label={t('landing.stats.visits', 'Mentorship visits')} />
+                            {level !== 'locality' && <StatBox icon={User} busy={stats.busy.facilitators} value={stats.facilitators} label={t('landing.stats.facilitators', 'Facilitators')} />}
+                        </div>
+                    )}
+                    {stats && <p className="mt-2 text-[11px] text-white/70">{t('landing.stats_year', 'This year')} ({new Date().getFullYear()})</p>}
+                </div>
+            </section>
+
+            {stats && (
+                <CoverageCard
+                    coverage={stats.coverage}
+                    busy={stats.busy.facilities}
+                    onOpen={permissions.canViewFacilities ? () => navigate('childHealthServices') : undefined}
+                />
+            )}
+
+            {accessibleButtons.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {accessibleButtons.map(btn => (
+                        <ModuleTile key={btn.view} label={btn.label} tagline={btn.tagline} icon={btn.icon} tint={btn.tint} onClick={() => navigate(btn.view)} />
+                    ))}
+                </div>
+            ) : (
+                <Card><div className="p-8 text-center text-gray-500">{t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')}</div></Card>
+            )}
+        </div>
+    );
+}
+
+// Credit line shown at the foot of every page: inside the phone bottom bar,
+// and as a page footer on wider screens and on pages without the bar.
+function AppCredit({ className = '' }) {
+    return (
+        <p className={`text-center leading-snug ${className}`}>
+            <span className="font-semibold">{`© ${new Date().getFullYear()} National Child Health Program`}</span>
+            <span className="mx-1.5 opacity-60">•</span>
+            <span>Developed by <span className="font-semibold">Dr Qusay Mohamed</span></span>
+            <span className="mx-1.5 opacity-60">•</span>
+            <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 underline-offset-2 hover:underline">Gussaay@gmail.com</a>
+        </p>
+    );
+}
+
+const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
         'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
@@ -408,20 +590,106 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentVie
                 })}
             </div>
             
-            {currentView === 'landing' && (
-                <div className="bg-slate-900 text-slate-400 text-center text-[8px] py-1.5 w-full border-t border-slate-800">
-                    App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300">Gussaay@gmail.com</a>
-                </div>
-            )}
+            <div className="bg-slate-900 text-slate-300 text-[10px] py-1.5 px-2 w-full border-t border-slate-700 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
+                <AppCredit />
+            </div>
         </nav>
     );
 });
+
+// Slide-out side menu (☰): who you are, every module you can open, and the
+// app's settings in one place. The header keeps its own buttons as well.
+function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, currentView, onNavigate, onProfile, onSync, onLanguage, onUpdate, onLogout, appVersion, isOffline, languageLabel }) {
+    const { t } = useTranslation();
+    const closeRef = useRef(onClose);
+    closeRef.current = onClose;
+    useEffect(() => {
+        if (!open) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') closeRef.current(); };
+        window.addEventListener('keydown', onKey);
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = previous; };
+    }, [open]);
+
+    const go = (fn) => () => { onClose(); fn(); };
+    const settings = [
+        { icon: User, label: t('menu.profile', 'My profile'), action: onProfile },
+        { icon: isOffline ? CloudOff : Cloud, label: isOffline ? t('menu.offline', 'Offline – sync status') : t('menu.sync', 'Data sync status'), action: onSync },
+        { icon: Languages, label: languageLabel, action: onLanguage, keepOpen: true },
+        { icon: RefreshCw, label: t('menu.updates', 'Check for updates'), action: onUpdate },
+    ];
+
+    return createPortal(
+        <div className={`fixed inset-0 z-[100010] ${open ? '' : 'pointer-events-none'}`} aria-hidden={!open}>
+            <div className={`absolute inset-0 bg-black/40 transition-opacity ${open ? 'opacity-100' : 'opacity-0'}`} onClick={onClose} />
+            <aside
+                role="dialog"
+                aria-label={t('menu.title', 'Menu')}
+                className={`absolute inset-y-0 start-0 w-72 max-w-[85vw] bg-white shadow-2xl flex flex-col transition-transform duration-200 ${open ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}`}
+            >
+                <div className="bg-gradient-to-br from-slate-800 to-sky-700 text-white px-5 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+                    <button className="float-end p-1 text-white/80 hover:text-white" onClick={onClose} aria-label={t('menu.close', 'Close menu')}>
+                        <X size={20} />
+                    </button>
+                    <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md mt-1">
+                        <img src="/child.png" alt="" className="h-12 w-12 object-contain" />
+                    </div>
+                    <p className="text-lg font-bold mt-3 truncate">{user?.displayName || user?.email}</p>
+                    {user?.displayName && <p className="text-xs text-white/80 truncate">{user?.email}</p>}
+                    <div className="flex flex-wrap gap-1.5 mt-2 text-[11px]">
+                        {levelLabel && <span className="rounded-full bg-white text-slate-800 px-2 py-0.5 font-bold">{levelLabel}</span>}
+                        {roleLabel && <span className="rounded-full bg-white/20 px-2 py-0.5 font-semibold capitalize">{roleLabel}</span>}
+                    </div>
+                </div>
+                <nav className="flex-1 overflow-y-auto py-2">
+                    <button
+                        onClick={go(() => onNavigate('landing'))}
+                        className={`w-full flex items-center gap-4 px-5 py-2.5 text-start ${currentView === 'landing' ? 'bg-sky-50 text-sky-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'}`}
+                    >
+                        <Home size={20} className="text-sky-600 shrink-0" /> {t('landing.modules.home', 'Home')}
+                    </button>
+                    {modules.map(({ view, label, icon: Icon, tint }) => (
+                        <button
+                            key={view}
+                            onClick={go(() => onNavigate(view))}
+                            className={`w-full flex items-center gap-4 px-5 py-2.5 text-start ${currentView === view ? 'bg-sky-50 text-sky-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'}`}
+                        >
+                            <span className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${TILE_TINTS[tint]?.icon || ''}`}><Icon size={16} /></span>
+                            <span className="truncate">{label}</span>
+                        </button>
+                    ))}
+                    <div className="my-2 border-t border-slate-100" />
+                    {settings.map(({ icon: Icon, label, action, keepOpen }) => (
+                        <button
+                            key={label}
+                            onClick={keepOpen ? action : go(action)}
+                            className="w-full flex items-center gap-4 px-5 py-2.5 text-start text-slate-700 hover:bg-slate-50"
+                        >
+                            <Icon size={20} className="text-sky-600 shrink-0" /> <span className="truncate">{label}</span>
+                        </button>
+                    ))}
+                </nav>
+                <div className="p-4 border-t border-slate-100 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                    <button
+                        onClick={go(onLogout)}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-red-50 text-red-700 py-2.5 font-semibold hover:bg-red-100"
+                    >
+                        <LogOut size={18} /> {t('app.logout', 'Logout')}
+                    </button>
+                    <p className="text-center text-xs text-slate-400 mt-3">{t('menu.version', 'App version')}: {appVersion}</p>
+                </div>
+            </aside>
+        </div>,
+        document.body
+    );
+}
 
 function SplashScreen() {
     const { t } = useTranslation();
     return (
         <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
-            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt="NCHP Logo" className="h-20 w-20 object-contain" /></div>
+            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-20 w-20 object-contain" /></div>
             <div>
                 <h1 className="text-3xl font-bold text-slate-800">{t('app.title', 'National Child Health Program')}</h1>
                 <p className="text-lg text-slate-500 mt-1">{t('app.subtitle', 'Program & Course Monitoring System')}</p>
@@ -440,7 +708,8 @@ function SplashScreen() {
 // It also uses role="dialog", not role="alert": the mobile <style> block below
 // forces `bottom: 80px` on [role="alert"], which shortens an inset-0 overlay
 // from the bottom and lifts anything centred inside it by ~40px.
-function PushPopup({ open, title, body, onClose, onPrimary, primaryLabel, secondaryLabel = 'Dismiss' }) {
+function PushPopup({ open, title, body, onClose, onPrimary, primaryLabel, secondaryLabel }) {
+    const { t } = useTranslation();
     // In a WebView, 100vh is the LAYOUT viewport: it stays tall when the
     // keyboard opens or the URL bar collapses, so centring against it puts the
     // box below the fold. Measure the visual viewport instead.
@@ -497,13 +766,13 @@ function PushPopup({ open, title, body, onClose, onPrimary, primaryLabel, second
                         <h2 id="push-popup-title" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#0f172a', lineHeight: 1.3 }}>{title}</h2>
                         {body && <p style={{ margin: '6px 0 0', fontSize: 14, color: '#475569', lineHeight: 1.5 }}>{body}</p>}
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Close" style={{ flexShrink: 0, background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: '#94a3b8' }}>
+                    <button type="button" onClick={onClose} aria-label={t('app_extra.buttons.close', 'Close')} style={{ flexShrink: 0, background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: '#94a3b8' }}>
                         <X size={18} />
                     </button>
                 </div>
                 <div style={{ display: 'flex', gap: 10, padding: 20 }}>
                     <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 16px', fontSize: 14, fontWeight: 600, color: '#334155', background: '#fff', border: '1px solid #cbd5e1', borderRadius: 9, cursor: 'pointer' }}>
-                        {secondaryLabel}
+                        {secondaryLabel || t('app_extra.push.dismiss', 'Dismiss')}
                     </button>
                     {primaryLabel && onPrimary && (
                         <button type="button" onClick={onPrimary} style={{ flex: 1, padding: '10px 16px', fontSize: 14, fontWeight: 600, color: '#fff', background: '#0284c7', border: '1px solid #0284c7', borderRadius: 9, cursor: 'pointer' }}>
@@ -545,6 +814,7 @@ export default function App() {
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+    const [sideMenuOpen, setSideMenuOpen] = useState(false);
 
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editDisplayName, setEditDisplayName] = useState('');
@@ -660,7 +930,7 @@ export default function App() {
         funders, federalCoordinators, stateCoordinators, localityCoordinators, healthFacilities, participantTests, 
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests,
-        mergeIntoCache
+        mergeIntoCache, participants: rawParticipants, skillMentorshipSubmissions, isLoading: dataLoading
     } = useDataCache();
 
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
@@ -695,11 +965,11 @@ export default function App() {
     const handleSaveProfile = async () => {
         try {
             await updateProfile(auth.currentUser, { displayName: editDisplayName });
-            setToast({ show: true, message: 'Profile updated successfully!', type: 'success' });
+            setToast({ show: true, message: t('app_extra.toast.profile_updated', 'Profile updated successfully!'), type: 'success' });
             setIsEditingProfile(false);
             window.location.reload(); 
         } catch (error) {
-            setToast({ show: true, message: `Failed to update profile: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('app_extra.toast.profile_update_failed', 'Failed to update profile: {{message}}', { message: error.message }), type: 'error' });
         }
     };
 
@@ -788,14 +1058,26 @@ export default function App() {
     const historyInitialized = useRef(false);
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
+    // Page addresses (see utils/pageAddress.js). `pageRestored` turns the
+    // address writer on once the start-up page has been read from the address.
+    const [pageRestored, setPageRestored] = useState(false);
+    const navigateRef = useRef(null);
+    const applyPageRef = useRef(null);
+    const formDirtyRef = useRef(false);
+    const confirmLeaveRef = useRef(null);
+    const lastEntryRef = useRef(null);
+    const viewRef = useRef('landing');
+    const lastPageRef = useRef(null);
+    const hasWrittenPageRef = useRef(false);
+    const replaceNextPageRef = useRef(false);
 
     const handleFileDownloadAndOpen = (url, customFileName = null) => {
         downloadAndOpenFile(url, customFileName, {
             onStart: () => { setIsFileDownloading(true); setFileDownloadProgress(0); },
-            onSuccess: () => setToast({ show: true, message: 'Download complete. Opening...', type: 'success' }),
+            onSuccess: () => setToast({ show: true, message: t('app_extra.toast.download_opening', 'Download complete. Opening...'), type: 'success' }),
             onError: (error) => {
-                notify(`NATIVE ERROR: ${error.message || JSON.stringify(error)}`);
-                setToast({ show: true, message: `Failed to open automatically.`, type: 'error' });
+                notify(t('app_extra.toast.native_error', 'NATIVE ERROR: {{message}}', { message: error.message || JSON.stringify(error) }));
+                setToast({ show: true, message: t('app_extra.toast.open_failed', 'Failed to open automatically.'), type: 'error' });
             },
             onFinally: () => { setIsFileDownloading(false); setFileDownloadProgress(0); }
         });
@@ -849,7 +1131,7 @@ export default function App() {
             } else if (queueLength > 1) {
                 setToast({
                     show: true,
-                    message: `You have ${queueLength} new notifications (e.g., ${notificationQueue.current[0].title})`,
+                    message: t('app_extra.toast.notifications_many', 'You have {{n}} new notifications (e.g., {{title}})', { n: queueLength, title: notificationQueue.current[0].title }),
                     type: 'info'
                 });
             }
@@ -1122,8 +1404,16 @@ export default function App() {
                               path.startsWith('/attendance/');
                               
         if (!isSpecialPath && user && !permissionsLoading && !initialViewIsSet.current) {
-            setView("landing");
             initialViewIsSet.current = true;
+            // Open the page the address names, so refresh and opened links
+            // land where they point. A ?view= link is left to the deep-link
+            // effect below.
+            const linked = new URLSearchParams(window.location.search).get('view');
+            const page = settlePage(pageFromLocation(path, window.location.search));
+            if (linked) navigateRef.current?.(linked);
+            else if (page && page.view !== 'landing') applyPageRef.current?.(page);
+            else setView("landing");
+            setPageRestored(true);
         }
     }, [user, permissionsLoading]);
 
@@ -1208,6 +1498,9 @@ export default function App() {
                 setUserPermissions(readBackup(`backup_perms_${user.uid}`, {}));
                 setUserStates(readBackup(`backup_states_${user.uid}`, []));
                 setUserLocalities(readBackup(`backup_localities_${user.uid}`, []));
+                // The saved profile is enough to open the app straight away;
+                // the server copy below refreshes it in the background.
+                setPermissionsLoading(false);
             }
 
             try {
@@ -1319,12 +1612,26 @@ export default function App() {
         return () => { isMounted = false; };
     }, [user]);
 
-    useEffect(() => { if (!user) initialViewIsSet.current = false; }, [user]);
+    useEffect(() => { if (!user) { initialViewIsSet.current = false; setPageRestored(false); hasWrittenPageRef.current = false; } }, [user]);
 
+    // Browser back/forward: reopen the page that history entry was written for.
     useEffect(() => {
         const handlePopState = (event) => {
+            if (!hasWrittenPageRef.current) return;
+            // Leaving a half-filled form: put the form's history entry back,
+            // then ask, and step back again only if they choose to leave.
+            if (formDirtyRef.current) {
+                const entry = lastEntryRef.current;
+                if (entry) window.history.pushState(entry.state, '', entry.url);
+                confirmLeaveRef.current?.().then((leave) => { if (leave) window.history.back(); });
+                return;
+            }
+            const page = settlePage(event.state?.chmPage || pageFromLocation(window.location.pathname, window.location.search));
+            if (!page) return;
+            const last = lastPageRef.current;
+            if (last && !isNewEntry(last, page) && (last.participant || null) === (page.participant || null)) return;
             isPopStateNavigation.current = true;
-            if (window.location.pathname === '/') navigate('landing');
+            applyPageRef.current?.(page);
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
@@ -1342,6 +1649,10 @@ export default function App() {
         if (view === 'skillsMentorship') { fetchHealthFacilities(); fetchSkillMentorshipSubmissions(); }
         if (view === 'childHealthServices') fetchHealthFacilities();
         if (view === 'courseReport') fetchHealthFacilities();
+        // The main menu's greeting card counts courses, participants and mentorship visits.
+        // Coordinators tell us the person's unit (IMNCI, newborn...), which narrows the numbers.
+        // Facilities give the coverage card.
+        if (view === 'landing') { fetchCourses(); fetchParticipants(); fetchSkillMentorshipSubmissions(); fetchCoordinators(); fetchHealthFacilities(); }
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
 
     useEffect(() => {
@@ -1441,13 +1752,56 @@ export default function App() {
         if (!permissions.canApproveSubmissions) return;
         setIsSubmissionsLoading(true);
         try { const submissions = await listPendingFacilitatorSubmissions(); setPendingSubmissions(submissions); } 
-        catch (error) { setToast({ show: true, message: 'Failed to load submissions.', type: 'error' }); } 
+        catch (error) { setToast({ show: true, message: t('app_extra.toast.load_submissions_failed', 'Failed to load submissions.'), type: 'error' }); } 
         finally { setIsSubmissionsLoading(false); }
-    }, [permissions.canApproveSubmissions]);
+    }, [permissions.canApproveSubmissions, t]);
 
     useEffect(() => { if (view === 'humanResources' && activeHRTab === 'facilitators' && permissions.canApproveSubmissions) fetchPendingSubmissions(); }, [view, activeHRTab, permissions.canApproveSubmissions, fetchPendingSubmissions]);
 
     const selectedCourse = useMemo(() => (allCourses || []).find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
+    // The main menu's numbers. The last ones worked out are kept on the
+    // device, so the menu shows them at once and refreshes them as data loads.
+    const homeStatsKey = user?.uid ? `home_stats_${user.uid}` : null;
+    const savedHomeStats = useMemo(() => (homeStatsKey ? readBackup(homeStatsKey, null) : null), [homeStatsKey]);
+    const freshHomeStats = useMemo(() => {
+        if (view !== 'landing' || !user) return null;
+        const level = levelFromPermissions(permissions);
+        const stats = computeHomeStats({
+            level, unit: userHRProfile?.unit,
+            states: userStates, localities: userLocalities,
+            courses: rawCourses, participants: rawParticipants, sessions: skillMentorshipSubmissions, facilitators: rawFacilitators,
+        });
+        const coverage = computeCoverage({ level, states: userStates, localities: userLocalities, facilities: healthFacilities });
+        return { ...stats, coverage };
+    }, [view, user, permissions, userHRProfile, userStates, userLocalities, rawCourses, rawParticipants, skillMentorshipSubmissions, rawFacilitators, healthFacilities]);
+    const homeStats = useMemo(() => {
+        if (!freshHomeStats) return null;
+        const merged = { ...freshHomeStats };
+        if (savedHomeStats) {
+            Object.keys(savedHomeStats).forEach((k) => { if (merged[k] === null || merged[k] === undefined) merged[k] = savedHomeStats[k]; });
+        }
+        // A number whose data failed to load shows a dash instead of a placeholder forever.
+        const busy = {
+            courses: !!dataLoading?.courses, participants: !!dataLoading?.participants,
+            visits: !!dataLoading?.skillMentorshipSubmissions, facilitators: !!dataLoading?.facilitators,
+            facilities: !!dataLoading?.healthFacilities,
+        };
+        return { ...merged, busy };
+    }, [freshHomeStats, savedHomeStats, dataLoading]);
+    useEffect(() => {
+        if (!homeStatsKey || !freshHomeStats) return;
+        const known = Object.fromEntries(Object.entries(freshHomeStats).filter(([, v]) => v !== null && v !== undefined));
+        if (Object.keys(known).length === 0) return;
+        try {
+            const prev = readBackup(homeStatsKey, {}) || {};
+            localStorage.setItem(homeStatsKey, JSON.stringify({ ...prev, ...known }));
+        } catch { /* the menu still works without the saved copy */ }
+    }, [homeStatsKey, freshHomeStats]);
+    // A course page opened from an address or history needs the course list.
+    useEffect(() => {
+        if (user && selectedCourseId && !selectedCourse) fetchCourses();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, selectedCourseId]);
 
     const isCourseActive = useMemo(() => {
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) return false;
@@ -1484,7 +1838,7 @@ export default function App() {
 
         if (user && !viewPermissions[newView]) {
             console.warn(`Access denied to view: ${newView}. Redirecting to landing.`);
-            setView('landing'); return;
+            setView('landing'); return false;
         }
 
         setPreviousView(view); setEditingCourse(null); setEditingFacilitator(null); setEditingCaseFromReport(null);
@@ -1512,7 +1866,75 @@ export default function App() {
             if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
+        return true;
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
+    navigateRef.current = navigate;
+    viewRef.current = view;
+
+    // Opens a page described by an address or history entry.
+    const applyPage = useCallback((page) => {
+        const go = navigateRef.current;
+        let opened;
+        if (page.view === 'courses') { opened = go('courses'); if (opened) setActiveCoursesTab(page.tab || 'courses'); }
+        else if (page.view === 'humanResources') { opened = go('humanResources'); if (opened) setActiveHRTab(page.tab || 'facilitators'); }
+        else opened = go(page.view, page.facilitator ? { openFacilitatorReport: page.facilitator } : {});
+        if (!opened) return;
+        setSelectedCourseId(page.course || null);
+        setSelectedParticipantId(page.participant || null);
+        setActiveCourseType(page.type || null);
+    }, []);
+    applyPageRef.current = applyPage;
+
+    // Back buttons on pages: step back through history when there is an
+    // in-app page to return to, otherwise fall back to the previous page.
+    const goBack = useCallback(() => {
+        if ((window.history.state?.chmIdx || 0) > 0) { window.history.back(); return; }
+        confirmLeaveRef.current?.().then((leave) => {
+            if (!leave) return;
+            replaceNextPageRef.current = true;
+            navigate(previousView);
+        });
+    }, [navigate, previousView]);
+
+    // Half-filled forms (new/edit course, participant, facilitator) live only
+    // in memory, so leaving one loses what was typed. Typing on one marks it
+    // changed; back buttons, the menus and closing the tab then ask first.
+    // Saving leaves the form by its own route and is not asked about.
+    const formPageKey = view === 'facilitatorForm' ? 'facilitatorForm'
+        : (view === 'courses' && ['add-course', 'edit-course', 'participant-form'].includes(activeCoursesTab) ? `courses:${activeCoursesTab}` : null);
+    const formPageKeyRef = useRef(null);
+    formPageKeyRef.current = formPageKey;
+    useEffect(() => { formDirtyRef.current = false; }, [formPageKey]);
+    useEffect(() => {
+        const mark = (e) => { if (formPageKeyRef.current && e.target?.closest?.('main')) formDirtyRef.current = true; };
+        const warn = (e) => { if (formDirtyRef.current) { e.preventDefault(); e.returnValue = ''; } };
+        document.addEventListener('input', mark, true);
+        document.addEventListener('change', mark, true);
+        window.addEventListener('beforeunload', warn);
+        return () => {
+            document.removeEventListener('input', mark, true);
+            document.removeEventListener('change', mark, true);
+            window.removeEventListener('beforeunload', warn);
+        };
+    }, []);
+    // Resolves true when it is fine to leave (nothing typed, or they chose to).
+    const confirmLeave = useCallback(async () => {
+        if (!formDirtyRef.current) return true;
+        const leave = await confirmDialog(t('app.leave_form', 'You have unsaved changes. Leave this page without saving?'), {
+            title: t('app.unsaved_title', 'Unsaved changes'),
+            confirmLabel: t('app.leave', 'Leave'),
+            cancelLabel: t('app.stay', 'Stay'),
+            danger: true,
+        });
+        if (leave) formDirtyRef.current = false;
+        return leave;
+    }, [t]);
+    confirmLeaveRef.current = confirmLeave;
+    const guardedNavigate = useCallback((newView, state) => {
+        if (!formDirtyRef.current) return navigate(newView, state);
+        confirmLeave().then((leave) => { if (leave) navigate(newView, state); });
+        return false;
+    }, [confirmLeave, navigate]);
 
     // A shared in-app link, e.g. ?view=planning&plan=<id>.
     //
@@ -1528,6 +1950,57 @@ export default function App() {
         deepLinked.current = true;
         navigate(wanted);
     }, [user, navigate]);
+
+    // Writes the current page into the address bar. A new page adds a history
+    // entry; a participant change, a page reopened from history, and the page
+    // left behind by a half-filled form only replace the current one.
+    useEffect(() => {
+        if (!pageRestored || !user || connectClaudeId || isPublicProjectsView) return;
+        if (pageFromLocation(window.location.pathname, '') === null) return;
+        const page = describePage({
+            view, coursesTab: activeCoursesTab, hrTab: activeHRTab, courseId: selectedCourseId,
+            participantId: selectedParticipantId, facilitatorId: selectedFacilitatorId, courseType: activeCourseType,
+        });
+        const { path, params } = pagePath(page);
+        const current = new URL(window.location.href);
+        const fromHistory = isPopStateNavigation.current;
+        const forceReplace = replaceNextPageRef.current;
+        isPopStateNavigation.current = false;
+        replaceNextPageRef.current = false;
+        const first = !hasWrittenPageRef.current;
+        const prev = lastPageRef.current;
+        // The page's own query (e.g. ?plan=) stays while it is still on screen.
+        if (first || fromHistory || current.pathname === path) {
+            current.searchParams.forEach((value, key) => { if (!OWN_KEYS.includes(key) && key !== 'view') params.set(key, value); });
+        }
+        const query = params.toString();
+        const url = `${path}${query ? `?${query}` : ''}${current.hash}`;
+        const idx = window.history.state?.chmIdx || 0;
+        const push = !first && !fromHistory && !forceReplace && isNewEntry(prev, page) && !isTransientPage(prev);
+        if (push) window.history.pushState({ chmPage: page, chmIdx: idx + 1 }, '', url);
+        else window.history.replaceState({ ...(window.history.state || {}), chmPage: page, chmIdx: idx }, '', url);
+        hasWrittenPageRef.current = true;
+        lastPageRef.current = page;
+        lastEntryRef.current = { state: window.history.state, url };
+    }, [pageRestored, user, connectClaudeId, isPublicProjectsView, view, activeCoursesTab, activeHRTab, selectedCourseId, selectedParticipantId, selectedFacilitatorId, activeCourseType]);
+
+    // Android back button: back through the app's pages, then home, then exit.
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return undefined;
+        const sub = CapacitorApp.addListener('backButton', () => {
+            if ((window.history.state?.chmIdx || 0) > 0) { window.history.back(); return; }
+            if (hasWrittenPageRef.current && viewRef.current !== 'landing') {
+                confirmLeaveRef.current?.().then((leave) => {
+                    if (!leave) return;
+                    replaceNextPageRef.current = true;
+                    navigateRef.current?.('landing');
+                });
+                return;
+            }
+            CapacitorApp.exitApp();
+        });
+        return () => { sub.then((h) => h.remove()).catch(() => {}); };
+    }, []);
 
 
     const handleOpenCourse = useCallback((courseId) => { setSelectedCourseId(courseId); setLoading(false); navigate('participants', { courseId }); }, [navigate]);
@@ -1585,7 +2058,7 @@ export default function App() {
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests } }));
         } catch (error) { 
             console.error("Error loading course report data:", error); 
-            setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' }); 
+            setToast({ show: true, message: t('app_extra.toast.course_report_load_failed', 'Failed to load course report data. Please try again.'), type: 'error' }); 
             // The page is already open, so it must be told the load finished and
             // failed — otherwise it spins for ever on an error nobody can see.
             setCourseDetailsCache(prev => ({
@@ -1595,7 +2068,7 @@ export default function App() {
         } finally { 
             setLoading(false); setCourseDetailsLoading(false); 
         }
-    }, [navigate, courseDetailsCache, courseDetailsLoading]);
+    }, [navigate, courseDetailsCache, courseDetailsLoading, t]);
 
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
         setLoading(true); setSelectedCourseId(courseId); setSelectedParticipantId(null); 
@@ -1616,51 +2089,51 @@ export default function App() {
             setActiveCoursesTab('test-dashboard'); setView('courses');
         } catch (error) { 
             console.error("Error loading data for test form:", error); 
-            setToast({ show: true, message: 'Failed to load test form data.', type: 'error' }); 
+            setToast({ show: true, message: t('app_extra.toast.test_form_load_failed', 'Failed to load test form data.'), type: 'error' }); 
             navigate('courses'); 
         } finally { 
             setLoading(false); 
         }
-    }, [navigate]); 
+    }, [navigate, t]); 
 
     const handleApproveSubmission = useCallback(async (submission) => {
-        if (await confirmDialog(`Approve ${submission.name}?`)) {
+        if (await confirmDialog(t('app_extra.confirm.approve', 'Approve {{name}}?', { name: submission.name }))) {
             try {
                 await approveFacilitatorSubmission(submission, user.email);
-                setToast({ show: true, message: 'Facilitator approved.', type: 'success' });
+                setToast({ show: true, message: t('app_extra.toast.facilitator_approved', 'Facilitator approved.'), type: 'success' });
                 await fetchPendingSubmissions(); await fetchFacilitators();
-            } catch (error) { setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' }); }
+            } catch (error) { setToast({ show: true, message: t('app_extra.toast.approval_failed', 'Approval failed: {{message}}', { message: error.message }), type: 'error' }); }
         }
-    }, [user, fetchPendingSubmissions, fetchFacilitators]);
+    }, [user, fetchPendingSubmissions, fetchFacilitators, t]);
 
     const handleRejectSubmission = useCallback(async (submissionId) => {
-        if (await confirmDialog('Reject this submission?')) {
-            try { await rejectFacilitatorSubmission(submissionId, user.email); setToast({ show: true, message: 'Submission rejected.', type: 'success' }); await fetchPendingSubmissions(); } 
-            catch (error) { setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' }); }
+        if (await confirmDialog(t('app_extra.confirm.reject', 'Reject this submission?'))) {
+            try { await rejectFacilitatorSubmission(submissionId, user.email); setToast({ show: true, message: t('app_extra.toast.submission_rejected', 'Submission rejected.'), type: 'success' }); await fetchPendingSubmissions(); } 
+            catch (error) { setToast({ show: true, message: t('app_extra.toast.rejection_failed', 'Rejection failed: {{message}}', { message: error.message }), type: 'error' }); }
         }
-    }, [user, fetchPendingSubmissions]);
+    }, [user, fetchPendingSubmissions, t]);
 
     const handleShare = useCallback((item, type) => { setItemToShare(item); setShareType(type); setIsShareModalOpen(true); }, []);
 
     const handleSaveSharingSettings = useCallback(async (itemId, settings) => {
         try {
             if (shareType === 'course') await updateCourseSharingSettings(itemId, settings); else if (shareType === 'participant') await updateParticipantSharingSettings(itemId, settings);
-            await fetchCourses(); setToast({ show: true, message: "Sharing settings updated.", type: "success" });
-        } catch (error) { setToast({ show: true, message: "Failed to update sharing settings.", type: "error" }); }
-    }, [shareType, fetchCourses]);
+            await fetchCourses(); setToast({ show: true, message: t('app_extra.toast.sharing_updated', 'Sharing settings updated.'), type: "success" });
+        } catch (error) { setToast({ show: true, message: t('app_extra.toast.sharing_update_failed', 'Failed to update sharing settings.'), type: "error" }); }
+    }, [shareType, fetchCourses, t]);
 
     const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
         if (!permissions.canManageHumanResource) return;
-        if (await confirmDialog('Are you sure you want to delete this facilitator?')) {
+        if (await confirmDialog(t('app_extra.confirm.delete_facilitator', 'Are you sure you want to delete this facilitator?'))) {
             setLoading(true);
             try {
                 await deleteFacilitator(facilitatorId); await fetchFacilitators(); 
                 if (selectedFacilitatorId === facilitatorId) { setSelectedFacilitatorId(null); navigate('humanResources'); }
-                setToast({ show: true, message: 'Facilitator deleted successfully.', type: 'success' });
-            } catch (error) { console.error("Error deleting facilitator:", error); setToast({ show: true, message: `Failed to delete facilitator: ${error.message}`, type: 'error' }); } 
+                setToast({ show: true, message: t('app_extra.toast.facilitator_deleted', 'Facilitator deleted successfully.'), type: 'success' });
+            } catch (error) { console.error("Error deleting facilitator:", error); setToast({ show: true, message: t('app_extra.toast.facilitator_delete_failed', 'Failed to delete facilitator: {{message}}', { message: error.message }), type: 'error' }); } 
             finally { setLoading(false); }
         }
-    }, [permissions.canManageHumanResource, selectedFacilitatorId, navigate, fetchFacilitators]);
+    }, [permissions.canManageHumanResource, selectedFacilitatorId, navigate, fetchFacilitators, t]);
 
     const handleAddFinalReport = useCallback(async (courseId) => {
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
@@ -1683,11 +2156,11 @@ export default function App() {
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport } }));
             navigate('finalReport');
         } catch (error) { 
-            setToast({ show: true, message: 'Failed to load data for Final Report.', type: 'error' }); 
+            setToast({ show: true, message: t('app_extra.toast.final_report_load_failed', 'Failed to load data for Final Report.'), type: 'error' }); 
         } finally { 
             setLoading(false); 
         }
-    }, [permissions, allCourses, navigate]);
+    }, [permissions, allCourses, navigate, t]);
 
     // The uploads live in saveFinalReportWithFiles, which the report view's own
     // save path calls too. They used to be written out here only, so the Save
@@ -1705,17 +2178,17 @@ export default function App() {
             setCourseDetailsCache(prev => ({ ...prev, [reportData.courseId]: { ...prev[reportData.courseId], finalReport: savedReport } }));
             // Into the shared cache too, so the course list and dashboards show it without a fetch.
             if (savedReport?.id) mergeIntoCache('finalReports', lightFinalReport(savedReport));
-            setToast({ show: true, message: 'Final report saved successfully.', type: 'success' });
+            setToast({ show: true, message: t('app_extra.toast.final_report_saved', 'Final report saved successfully.'), type: 'success' });
         } catch (error) {
             console.error("Error saving final report:", error);
-            setToast({ show: true, message: `Error saving final report: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('app_extra.toast.final_report_save_error', 'Error saving final report: {{message}}', { message: error.message }), type: 'error' });
         } finally { setLoading(false); }
-    }, [permissions, user, mergeIntoCache]);
+    }, [permissions, user, mergeIntoCache, t]);
 
     const handleEditFinalReport = useCallback(async (courseId) => {
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         const courseToEditReport = (allCourses || []).find(c => c.id === courseId);
-        if (!courseToEditReport) { setToast({ show: true, message: 'Course not found.', type: 'error' }); return; }
+        if (!courseToEditReport) { setToast({ show: true, message: t('app_extra.toast.course_not_found', 'Course not found.'), type: 'error' }); return; }
         setFinalReportCourse(courseToEditReport); setSelectedCourseId(courseId); setLoading(true);
         try {
             let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null);
@@ -1734,16 +2207,16 @@ export default function App() {
             navigate('finalReport');
         } catch (error) { 
             console.error("Error fetching final report for editing:", error); 
-            setToast({ show: true, message: 'Failed to load the final report.', type: 'error' }); 
+            setToast({ show: true, message: t('app_extra.toast.final_report_fetch_failed', 'Failed to load the final report.'), type: 'error' }); 
         } finally { 
             setLoading(false); 
         }
-    }, [permissions, allCourses, navigate]);
+    }, [permissions, allCourses, navigate, t]);
 
     const handleDeletePdf = useCallback(async (courseId) => {  }, [permissions, courseDetails.finalReport]);
 
     const handleLogout = useCallback(async () => { 
-        if (await confirmDialog('Are you sure you want to log out?')) {
+        if (await confirmDialog(t('app_extra.confirm.logout', 'Are you sure you want to log out?'))) {
             try { 
                 if (user) {
                     localStorage.removeItem(`backup_role_${user.uid}`);
@@ -1757,7 +2230,7 @@ export default function App() {
                 console.error("Error signing out:", error); 
             } 
         }
-    }, [user]);
+    }, [user, t]);
 
     const handleLoginForSharedView = useCallback(async () => {  }, []);
 
@@ -1769,11 +2242,11 @@ export default function App() {
         const viewToRender = view;
 
         switch (viewToRender) {
-            case 'landing': return <Landing navigate={navigate} permissions={permissions} />;
+            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={homeStats} />;
             case 'admin': return <AdminDashboard />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
-                return permissions.canViewCourse ? ( <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}><ImnciProvider><IMNCIRecordingForm permissions={permissions} /></ImnciProvider></Suspense> ) : null;
+                return permissions.canViewCourse ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><IMNCIRecordingForm permissions={permissions} /></ImnciProvider></Suspense> ) : null;
 
             case 'humanResources': return <HumanResourcesPage
                 activeTab={activeHRTab} setActiveTab={setActiveHRTab}
@@ -1822,29 +2295,29 @@ export default function App() {
                 ) : null;
 
            case 'supplyManagement':
-    return permissions.canViewSupplyChain ? ( <Suspense fallback={<Spinner />}><SupplyManagementView permissions={permissions} /></Suspense> ) : null;
+    return permissions.canViewSupplyChain ? ( <Suspense fallback={<PageSkeleton />}><SupplyManagementView permissions={permissions} /></Suspense> ) : null;
 
            case 'supervision':
-    return permissions.canViewSupervision ? ( <Suspense fallback={<Spinner />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
+    return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
 
            case 'onlineCourses':
-    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<Spinner />}><ImnciProvider><OnlineCoursesView permissions={permissions} /></ImnciProvider></Suspense> ) : null;
+    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} /></ImnciProvider></Suspense> ) : null;
 
 
            case 'projects':
-    return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><ProjectTrackerView permissions={permissions} /></Suspense> ) : null;
+    return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<PageSkeleton />}><ProjectTrackerView permissions={permissions} /></Suspense> ) : null;
 
 case 'meetings':
-    return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><MeetingTrackerView permissions={permissions} /></Suspense> ) : null;
+    return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<PageSkeleton />}><MeetingTrackerView permissions={permissions} /></Suspense> ) : null;
 
             case 'planning':
-                return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><PlanningView permissions={permissions} userStates={userStates} /></Suspense> ) : null;
+                return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<PageSkeleton />}><PlanningView permissions={permissions} userStates={userStates} /></Suspense> ) : null;
 
             case 'localityPlan':
-                return permissions.canViewLocalityPlan ? ( <Suspense fallback={<Spinner />}><LocalityPlanView permissions={permissions} userStates={userStates} userLocalities={userLocalities} /></Suspense> ) : null;
+                return permissions.canViewLocalityPlan ? ( <Suspense fallback={<PageSkeleton />}><LocalityPlanView permissions={permissions} userStates={userStates} userLocalities={userLocalities} /></Suspense> ) : null;
 
             case 'downloads':
-                return ( <Suspense fallback={<Card><Spinner /></Card>}><DownloadedFilesView onBack={() => navigate(previousView)} setToast={setToast} /></Suspense> );
+                return ( <Suspense fallback={<PageSkeleton />}><DownloadedFilesView onBack={goBack} setToast={setToast} /></Suspense> );
 
             case 'monitoring': case 'observe':
                 const canMonitor = (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures || permissions.manageTimePeriod === 'anytime';
@@ -1855,22 +2328,22 @@ case 'meetings':
                 <ParticipantReportView 
                     course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} 
                     observations={courseDetails.allObs?.filter(o => o.participant_id === currentParticipant.id) || []} cases={courseDetails.allCases?.filter(c => c.participant_id === currentParticipant.id) || []}
-                    onChangeParticipant={(pid) => setSelectedParticipantId(pid)} onBack={() => navigate(previousView)} 
+                    onChangeParticipant={(pid) => setSelectedParticipantId(pid)} onBack={goBack} 
                     onNavigateToCase={(caseToEdit) => navigate('observe', { caseToEdit, courseId: caseToEdit.courseId, participantId: caseToEdit.participant_id })} 
                     onShare={(participant) => handleShare(participant, 'participant')} 
                 />
             ) : null;
 
-            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
+            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={goBack} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm 
-                    initialData={editingFacilitator} onCancel={() => navigate(previousView)} 
-                    onSave={async () => { await fetchFacilitators(); setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); navigate('humanResources'); }}
+                    initialData={editingFacilitator} onCancel={goBack} 
+                    onSave={async () => { await fetchFacilitators(); setToast({ show: true, message: t('app_extra.toast.facilitator_saved', 'Facilitator saved.'), type: 'success' }); navigate('humanResources'); }}
                     setToast={setToast} setLoading={setLoading}
                 />) : null;
 
-            case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView facilitator={selectedFacilitator} allCourses={allCourses || []} onBack={() => navigate(previousView)} />) : null;
+            case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView facilitator={selectedFacilitator} allCourses={allCourses || []} onBack={goBack} />) : null;
 
             case 'dashboard': return <DashboardView onOpenCourseReport={handleOpenCourseReport} onOpenParticipantReport={(pId, cId) => navigate('participantReport', { openParticipantReport: pId, openCourseReport: cId })} onOpenFacilitatorReport={(id) => { setSelectedFacilitatorId(id); navigate('facilitatorReport'); }} permissions={permissions} userStates={userStates} userLocalities={userLocalities} STATE_LOCALITIES={STATE_LOCALITIES} />;
 
@@ -1878,13 +2351,13 @@ case 'meetings':
                 return (
                     <FinalReportManager
                         course={finalReportCourse || selectedCourse} participants={courseDetails.participants} initialData={courseDetails.finalReport}
-                        onSave={handleSaveFinalReport} onCancel={() => navigate(previousView)} canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
+                        onSave={handleSaveFinalReport} onCancel={goBack} canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                     />
                 );
             case 'attendanceManager':
-                return permissions.canManageCourse ? ( selectedCourse && ( <Suspense fallback={<Card><Spinner /></Card>}><AttendanceManagerView course={selectedCourse} onClose={() => navigate('courses')} /></Suspense> ) ) : null;
+                return permissions.canManageCourse ? ( selectedCourse && ( <Suspense fallback={<PageSkeleton />}><AttendanceManagerView course={selectedCourse} onClose={() => navigate('courses')} /></Suspense> ) ) : null;
 
-            default: return <Landing navigate={navigate} permissions={permissions} />;
+            default: return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={homeStats} />;
         }
     };
 
@@ -1936,7 +2409,7 @@ case 'meetings':
         // nothing at all. Signing in here sets `user`, and the branch below
         // then takes over with the request id still held in state.
         mainContent = (
-            <SignInBox message="Sign in to let Claude read programme data as you." />
+            <SignInBox message={t('app_extra.signin.claude', 'Sign in to let Claude read programme data as you.')} />
         );
     }
     else if (connectClaudeId) {
@@ -1953,14 +2426,14 @@ case 'meetings':
     }
     else if (isPublicProjectsView) {
         mainContent = (
-             <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
+             <Suspense fallback={<PageSkeleton />}>
                  <ProjectTrackerView permissions={{ canUseFederalManagerAdvancedFeatures: false }} />
              </Suspense>
         );
     }
     else if (isPublicMentorshipDashboardView) {
         mainContent = (
-             <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
+             <Suspense fallback={<PageSkeleton />}>
                  <SkillsMentorshipView
                      setToast={setToast}
                      permissions={{ canViewSkillsMentorship: true, manageScope: 'none' }}
@@ -1975,36 +2448,36 @@ case 'meetings':
     
     else if (isPublicFacilityUpdateView) {
         if (authLoading) {
-            mainContent = <Card><Spinner /></Card>;
+            mainContent = <PageSkeleton />;
         } else if (!user) {
-            mainContent = <SignInBox message="You must sign in to use this facility data entry form." />;
+            mainContent = <SignInBox message={t('app_extra.signin.facility_update', 'You must sign in to use this facility data entry form.')} />;
         } else {
             mainContent = <PublicFacilityUpdateForm setToast={setToast} serviceType={publicServiceType} />;
         }
     }
     else if (isNewFacilityView) {
         if (authLoading) {
-            mainContent = <Card><Spinner /></Card>;
+            mainContent = <PageSkeleton />;
         } else if (!user) {
-            mainContent = <SignInBox message="You must sign in to use this new facility entry form." />;
+            mainContent = <SignInBox message={t('app_extra.signin.new_facility', 'You must sign in to use this new facility entry form.')} />;
         } else {
             mainContent = <NewFacilityEntryForm setToast={setToast} serviceType={publicServiceType} />;
         }
     }
     else if (isPublicSubmissionView) {
         if (authLoading) {
-            mainContent = <Card><Spinner /></Card>;
+            mainContent = <PageSkeleton />;
         } else if (!user) {
-            mainContent = <SignInBox message="You must sign in to submit an application." />;
+            mainContent = <SignInBox message={t('app_extra.signin.application', 'You must sign in to submit an application.')} />;
         } else {
             if (submissionType === 'facilitator-application') mainContent = <FacilitatorApplicationForm />;
             else if (submissionType === 'team-member-application') mainContent = <TeamMemberApplicationForm />;
-            else mainContent = <div className="p-8 text-center">Invalid form link.</div>;
+            else mainContent = <div className="p-8 text-center">{t('app_extra.errors.invalid_form_link', 'Invalid form link.')}</div>;
         }
     }
     else if (isBulkUpdateView) {
         mainContent = (
-            <Suspense fallback={<Card><Spinner /></Card>}>
+            <Suspense fallback={<PageSkeleton />}>
                 <LocalityBulkUpdateView stateParam={publicBulkUpdateParams.state} localityParam={publicBulkUpdateParams.locality} filters={publicBulkUpdateParams} setToast={setToast} />
             </Suspense>
         );
@@ -2012,41 +2485,41 @@ case 'meetings':
     else if (isPublicRegistrationView) {
         if (publicRegistrationCourseId) {
             mainContent = (
-                <Suspense fallback={<Card><Spinner /></Card>}>
+                <Suspense fallback={<PageSkeleton />}>
                     <PublicParticipantRegistrationView courseId={publicRegistrationCourseId} />
                 </Suspense>
             );
         } else {
-            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid Registration Link.</div></Card>;
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{t('app_extra.errors.invalid_registration_link', 'Invalid Registration Link.')}</div></Card>;
         }
     }
     else if (isPublicMeetingView) {
         if (publicViewLoading) {
-            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+            mainContent = <PageSkeleton />;
         } else if (sharedViewError) {
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
         } else if (publicMeetingData) {
             mainContent = (
-                <Suspense fallback={<Card><Spinner /></Card>}>
+                <Suspense fallback={<PageSkeleton />}>
                     <PublicMeetingAttendanceView
                         meeting={publicMeetingData}
                         targetDate={publicMeetingTargetDate}
                         onSave={async (updatedMeeting) => {
                             await upsertUnitMeeting(updatedMeeting);
                             setPublicMeetingData(updatedMeeting);
-                            setToast({ show: true, message: 'Attendance updated successfully!', type: 'success' });
+                            setToast({ show: true, message: t('app_extra.toast.attendance_updated', 'Attendance updated successfully!'), type: 'success' });
                         }}
                     />
                 </Suspense>
             );
         } else {
-            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load meeting data.</div></Card>;
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{t('app_extra.errors.meeting_load_failed', 'Could not load meeting data.')}</div></Card>;
         }
     }
 
     else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'onlineExercises') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
-            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+            mainContent = <PageSkeleton />;
         }
         else if (sharedViewError) { 
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
@@ -2065,50 +2538,50 @@ case 'meetings':
                     mainContent = ( <PublicTeamMemberProfileView member={publicViewData.member} level={publicViewData.level} /> );
                     break;
                 case 'certificateVerification':
-                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><CertificateVerificationView participant={publicViewData.participant} course={publicViewData.course} /></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><CertificateVerificationView participant={publicViewData.participant} course={publicViewData.course} /></Suspense> );
                     break;
                 case 'certificateDownload':
-                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicCertificateDownloadView participantId={publicViewData.participantId} /></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicCertificateDownloadView participantId={publicViewData.participantId} /></Suspense> );
                     break;
                 case 'courseCertificatesPage':
-                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicCourseCertificatesView courseId={publicViewData.courseId} /></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicCourseCertificatesView courseId={publicViewData.courseId} /></Suspense> );
                     break;
                 case 'attendance':
-                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );
                     break;
                 case 'onlineExercises':
-                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><ImnciProvider><PublicExerciseView courseId={publicViewData.courseId} /></ImnciProvider></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><PublicExerciseView courseId={publicViewData.courseId} /></ImnciProvider></Suspense> );
                     break;
                 default:
-                    mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid report type.</div></Card>;
+                    mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{t('app_extra.errors.invalid_report_type', 'Invalid report type.')}</div></Card>;
             }
         }
         else {
-             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load report data.</div></Card>;
+             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{t('app_extra.errors.report_load_failed', 'Could not load report data.')}</div></Card>;
         }
     }
     
     else if (isPublicMonitoringView) {
         if (authLoading) {
-             mainContent = <Card><Spinner /></Card>;
+             mainContent = <PageSkeleton />;
         } else if (!user) {
-            mainContent = <SignInBox message="You must sign in to access the public monitoring page." />;
+            mainContent = <SignInBox message={t('app_extra.signin.monitoring', 'You must sign in to access the public monitoring page.')} />;
         } else if (publicMonitorLoading) {
-            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+            mainContent = <PageSkeleton />;
         } else if (publicMonitorError) {
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{publicMonitorError}</div></Card>;
         } else if (publicMonitorData.course && publicMonitorData.participants) {
             mainContent = ( <PublicCourseMonitoringView course={publicMonitorData.course} allParticipants={publicMonitorData.participants} /> );
         } else {
-             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load monitoring session.</div></Card>;
+             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{t('app_extra.errors.monitoring_load_failed', 'Could not load monitoring session.')}</div></Card>;
         }
     }
 
     else if (isMentorshipPublicView && !isPublicMentorshipDashboardView) {
         if (authLoading) {
-            mainContent = <Card><Spinner /></Card>;
+            mainContent = <PageSkeleton />;
         } else if (!user) { 
-            mainContent = <SignInBox message="You must sign in to use the mentorship submission link." />;
+            mainContent = <SignInBox message={t('app_extra.signin.mentorship', 'You must sign in to use the mentorship submission link.')} />;
         } else {
             mainContent = (
                 <SkillsMentorshipView
@@ -2121,26 +2594,26 @@ case 'meetings':
 
     else if (isPublicTestView) {
         if (authLoading) {
-            mainContent = <Card><Spinner /></Card>;
+            mainContent = <PageSkeleton />;
         } else if (publicTestLoading) {
-            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+            mainContent = <PageSkeleton />;
         } else if (publicTestError) {
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{publicTestError}</div></Card>;
         } else if (publicTestData.course) {
             mainContent = (
-                <Suspense fallback={<Card><Spinner /></Card>}>
+                <Suspense fallback={<PageSkeleton />}>
                     <CourseTestForm
                         course={publicTestData.course} participants={publicTestData.participants} participantTests={publicTestData.tests}
                         onSaveTest={upsertParticipantTest} 
                         onSaveParticipant={async (participantData, facilityUpdateData) => {
                             const currentUserIdentifier = user?.displayName || user?.email || 'Public User';
                             const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData, currentUserIdentifier);
-                            if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
+                            if (facilityUpdateData) setToast({ show: true, message: t('app_extra.toast.facility_update_submitted', 'Facility update submitted for approval.'), type: 'info' });
                             return savedParticipant;
                         }} 
                         onCancel={() => {}} 
                         onSave={(savedTest) => { 
-                            setToast({ show: true, message: 'Test saved successfully!', type: 'success' });
+                            setToast({ show: true, message: t('app_extra.toast.test_saved', 'Test saved successfully!'), type: 'success' });
                             const refetchData = async () => {
                                 setPublicTestLoading(true);
                                 try {
@@ -2148,7 +2621,7 @@ case 'meetings':
                                     const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
                                     const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
                                     setPublicTestData(prev => ({ ...prev, tests: activeTests, participants: activeParticipants }));
-                                } catch (err) { setToast({ show: true, message: 'Failed to refresh test data.', type: 'error' }); } finally { setPublicTestLoading(false); }
+                                } catch (err) { setToast({ show: true, message: t('app_extra.toast.test_refresh_failed', 'Failed to refresh test data.'), type: 'error' }); } finally { setPublicTestLoading(false); }
                             };
                             refetchData();
                         }}
@@ -2157,7 +2630,7 @@ case 'meetings':
                 </Suspense>
             );
         } else {
-             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load test session.</div></Card>;
+             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{t('app_extra.errors.test_load_failed', 'Could not load test session.')}</div></Card>;
         }
     }
 
@@ -2170,6 +2643,88 @@ case 'meetings':
     else {
         mainContent = renderView();
     }
+
+
+    // Slim top bar (back arrow and page title only) on the Android app, on
+    // every page but the main menu. The web keeps its full header.
+    const PAGE_TITLES = pageTitles(t);
+    const closeSideMenu = () => setSideMenuOpen(false);
+    const showSlimBar = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
+    const pageTitle = PAGE_TITLES[view] || t('app.title', 'National Child Health Program');
+    const pageSubtitle = (() => {
+        if (view === 'facilitatorReport' || view === 'facilitatorForm') return selectedFacilitator?.name || '';
+        const course = view === 'finalReport' ? (finalReportCourse || selectedCourse) : selectedCourse;
+        const courseLine = course ? [course.course_type, [course.state, course.locality].filter(Boolean).join(' / ')].filter(Boolean).join(' · ') : '';
+        if (['participantReport', 'observe', 'monitoring'].includes(view)) {
+            const participant = (courseDetails.participants || []).find(p => p.id === selectedParticipantId);
+            return [participant?.name, courseLine].filter(Boolean).join(' · ');
+        }
+        if (['courses', 'courseReport', 'finalReport', 'attendanceManager'].includes(view)) return courseLine || (view === 'courses' ? activeCourseType || '' : '');
+        return '';
+    })();
+    const headerActions = (
+        <>
+                {/* The in-app chat is built but not switched on: it
+                    calls the Anthropic API, which is billed separately
+                    and cannot be paid for with a Claude subscription.
+                    The team asks their questions through the claude.ai
+                    connector instead, which costs them nothing extra.
+                    Turn this back on alongside the claudeChat export in
+                    functions/index.js. */}
+                {CLAUDE_CHAT_ENABLED && permissions.canViewDashboard && (
+                    <button
+                        onClick={() => setClaudeChatOpen(true)}
+                        title={t('app_extra.header.ask_data', 'Ask about the data')}
+                        className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                        <Sparkles size={20} />
+                    </button>
+                )}
+
+                {/* Reporting a problem, from wherever the problem is.
+                    A report sent from the screen it happened on knows
+                    which screen that was; one sent later does not. */}
+                <QuietBoundary>
+                    <Suspense fallback={null}>
+                        <ReportProblemButton user={user} currentView={view} />
+                    </Suspense>
+                </QuietBoundary>
+
+                <NotificationBell user={user} navigate={guardedNavigate} />
+
+                {/* Update arrow. Red and pulsing when an update is
+                    waiting, green once a check confirms the app is
+                    current, spinner while checking or downloading. */}
+                <UpdateButton />
+
+                <button
+                    onClick={() => setIsSyncModalOpen(true)}
+                    className={`p-1 sm:p-1.5 border rounded transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px] ${
+                        isOffline 
+                        ? 'text-amber-400 bg-slate-600 border-slate-500 hover:bg-slate-500' 
+                        : 'text-sky-400 bg-slate-600 border-slate-500 hover:bg-slate-500 hover:text-sky-300'
+                    }`}
+                    title={isOffline ? t('app_extra.header.offline_mode', 'Offline Mode') : t('app_extra.header.sync_status', 'Data Sync Status')}
+                >
+                    {isOffline ? (
+                        <CloudOff size={18} />
+                    ) : (
+                        isSyncing ? <RefreshCw size={18} className="animate-spin text-sky-300" /> : <Cloud size={18} />
+                    )}
+                </button>
+
+                <button
+                    onClick={() => {
+                        const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
+                        i18n.changeLanguage(newLang);
+                    }}
+                    className="p-1 sm:p-1.5 text-sky-400 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px]"
+                    title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
+                >
+                    <span className="font-bold text-sm">E/ع</span>
+                </button>
+        </>
+    );
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
@@ -2218,12 +2773,41 @@ case 'meetings':
                 )}
             </div>
 
+            {showSlimBar ? (
+            <header className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+                <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-14 px-1 sm:px-4">
+                    <button
+                        onClick={goBack}
+                        aria-label={t('app.back', 'Back')}
+                        title={t('app.back', 'Back')}
+                        className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 shrink-0"
+                    >
+                        <ArrowLeft size={22} className="rtl:-scale-x-100" />
+                    </button>
+                    <div className="flex-1 min-w-0 px-1">
+                        <h1 className="text-base sm:text-lg font-bold leading-tight truncate">{pageTitle}</h1>
+                        {pageSubtitle && <p className="text-xs text-slate-300 truncate">{pageSubtitle}</p>}
+                    </div>
+                </div>
+            </header>
+            ) : (<>
             <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                        {user && !isMinimalUILayout && (
+                            <button
+                                onClick={() => setSideMenuOpen(true)}
+                                aria-label={t('menu.title', 'Menu')}
+                                title={t('menu.title', 'Menu')}
+                                className="p-2 rounded-full text-white hover:bg-white/10 active:bg-white/20 shrink-0"
+                            >
+                                <Menu size={24} />
+                            </button>
+                        )}
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('landing')}>
                             <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
-                                <img src="/child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" />
+                                <img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-12 w-12 object-contain" />
                             </div>
                             <div>
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
@@ -2232,19 +2816,20 @@ case 'meetings':
                                     <span
                                         onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
                                         className="bg-slate-700 text-sky-300 text-[10px] px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
-                                        title="Tap to check for updates"
+                                        title={t('app_extra.header.check_updates', 'Tap to check for updates')}
                                     >
                                         v{appVersion}
                                     </span>
                                 </p>
                             </div>
                         </div>
+                        </div>
                         
                         <div className="flex items-center gap-3">
                             {!isMinimalUILayout && user && (
                                 <nav className="hidden md:flex items-center gap-1">
                                     {visibleNavItems.map(item => (
-                                        <button key={item.view} onClick={() => navigate(item.view)} className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${item.active ? 'bg-sky-600 text-white' : 'text-slate-200 hover:bg-slate-700'}`}>
+                                        <button key={item.view} onClick={() => guardedNavigate(item.view)} className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${item.active ? 'bg-sky-600 text-white' : 'text-slate-200 hover:bg-slate-700'}`}>
                                             {item.label}
                                         </button>
                                     ))} 
@@ -2274,7 +2859,7 @@ case 'meetings':
                         <div
                             className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 min-w-0 max-w-full"
                             onClick={() => setIsUserProfileModalOpen(true)}
-                            title="View Profile Information"
+                            title={t('app_extra.header.view_profile', 'View Profile Information')}
                         >
                             <span className="font-semibold text-sm truncate shrink-0 max-w-[90px] sm:max-w-xs">
                                 {user.displayName || user.email}
@@ -2296,65 +2881,7 @@ case 'meetings':
                     </div>
 
                     <div className="flex items-center justify-end gap-1.5 shrink-0">
-                        {/* The in-app chat is built but not switched on: it
-                            calls the Anthropic API, which is billed separately
-                            and cannot be paid for with a Claude subscription.
-                            The team asks their questions through the claude.ai
-                            connector instead, which costs them nothing extra.
-                            Turn this back on alongside the claudeChat export in
-                            functions/index.js. */}
-                        {CLAUDE_CHAT_ENABLED && permissions.canViewDashboard && (
-                            <button
-                                onClick={() => setClaudeChatOpen(true)}
-                                title="Ask about the data"
-                                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-                            >
-                                <Sparkles size={20} />
-                            </button>
-                        )}
-
-                        {/* Reporting a problem, from wherever the problem is.
-                            A report sent from the screen it happened on knows
-                            which screen that was; one sent later does not. */}
-                        <QuietBoundary>
-                            <Suspense fallback={null}>
-                                <ReportProblemButton user={user} currentView={view} />
-                            </Suspense>
-                        </QuietBoundary>
-
-                        <NotificationBell user={user} navigate={navigate} />
-
-                        {/* Update arrow. Red and pulsing when an update is
-                            waiting, green once a check confirms the app is
-                            current, spinner while checking or downloading. */}
-                        <UpdateButton />
-
-                        <button
-                            onClick={() => setIsSyncModalOpen(true)}
-                            className={`p-1 sm:p-1.5 border rounded transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px] ${
-                                isOffline 
-                                ? 'text-amber-400 bg-slate-600 border-slate-500 hover:bg-slate-500' 
-                                : 'text-sky-400 bg-slate-600 border-slate-500 hover:bg-slate-500 hover:text-sky-300'
-                            }`}
-                            title={isOffline ? 'Offline Mode' : 'Data Sync Status'}
-                        >
-                            {isOffline ? (
-                                <CloudOff size={18} />
-                            ) : (
-                                isSyncing ? <RefreshCw size={18} className="animate-spin text-sky-300" /> : <Cloud size={18} />
-                            )}
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
-                                i18n.changeLanguage(newLang);
-                            }}
-                            className="p-1 sm:p-1.5 text-sky-400 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px]"
-                            title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
-                        >
-                            <span className="font-bold text-sm">E/ع</span>
-                        </button>
+                        {headerActions}
                         
                         <button
                             onClick={handleLogout}
@@ -2367,22 +2894,49 @@ case 'meetings':
                     </div>
                 </div>
             )}
+            </>)}
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
             {/* in-app replacements for alert()/confirm(); see components/dialogs.jsx */}
             <DialogHost />
 
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-24 md:pb-8 overflow-x-hidden">
+            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-28 md:pb-8 overflow-x-hidden">
                 {/* keyed on `view` so navigating away from a crashed screen clears the error */}
                 <ErrorBoundary key={view} onGoHome={() => navigate('landing')}>
-                    <Suspense fallback={<Card><Spinner /></Card>}>
+                    <Suspense fallback={<PageSkeleton />}>
                         {mainContent}
                     </Suspense>
                 </ErrorBoundary>
             </main>
 
-            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} currentView={view} /> }
+            {/* On phones the credit sits in the bottom bar; everywhere else it is the page footer. */}
+            <footer className={`${user && !isMinimalUILayout ? 'hidden md:block' : 'block'} bg-slate-800 text-slate-300 text-xs py-3 px-4 border-t border-slate-700`}>
+                <AppCredit />
+            </footer>
+
+            {user && !isMinimalUILayout && (
+                <SideMenu
+                    open={sideMenuOpen}
+                    onClose={closeSideMenu}
+                    user={user}
+                    roleLabel={userRoles?.[0] ? String(userRoles[0]).replace(/_/g, ' ') : ''}
+                    levelLabel={{ federal: t('landing.level_federal', 'Federal level'), state: t('landing.level_state', 'State level'), locality: t('landing.level_locality', 'Locality level') }[levelFromPermissions(permissions)]}
+                    modules={buildModules(t, permissions).filter(m => m.permission)}
+                    currentView={view}
+                    onNavigate={guardedNavigate}
+                    onProfile={() => setIsUserProfileModalOpen(true)}
+                    onSync={() => setIsSyncModalOpen(true)}
+                    onLanguage={() => i18n.changeLanguage(i18n.language?.startsWith('en') ? 'ar' : 'en')}
+                    languageLabel={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
+                    onUpdate={handleManualUpdateCheck}
+                    onLogout={handleLogout}
+                    appVersion={appVersion}
+                    isOffline={isOffline}
+                />
+            )}
+
+            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} /> }
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
@@ -2395,7 +2949,7 @@ case 'meetings':
                     <Modal 
                         isOpen={isUserProfileModalOpen} 
                         onClose={() => setIsUserProfileModalOpen(false)} 
-                        title="My Profile Information"
+                        title={t('app_extra.profile.title', 'My Profile Information')}
                     >
                         <div className="p-6 space-y-6">
                             <div className="flex items-start justify-between border-b border-gray-200 pb-6">
@@ -2409,14 +2963,14 @@ case 'meetings':
                                                 <Input 
                                                     value={editDisplayName} 
                                                     onChange={(e) => setEditDisplayName(e.target.value)} 
-                                                    placeholder="Full Name" 
+                                                    placeholder={t('app_extra.profile.full_name', 'Full Name')} 
                                                 />
                                             </div>
                                         ) : (
-                                            <h3 className="text-xl font-bold text-gray-800 mb-1">{user.displayName || 'No Name Set'}</h3>
+                                            <h3 className="text-xl font-bold text-gray-800 mb-1">{user.displayName || t('app_extra.profile.no_name', 'No Name Set')}</h3>
                                         )}
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Active Account
+                                            {t('app_extra.profile.active', 'Active Account')}
                                         </span>
                                     </div>
                                 </div>
@@ -2424,12 +2978,12 @@ case 'meetings':
                                 <div className="shrink-0 ml-4">
                                     {isEditingProfile ? (
                                         <div className="flex space-x-2">
-                                            <Button variant="secondary" onClick={() => setIsEditingProfile(false)}>Cancel</Button>
-                                            <Button onClick={handleSaveProfile}>Save</Button>
+                                            <Button variant="secondary" onClick={() => setIsEditingProfile(false)}>{t('app_extra.buttons.cancel', 'Cancel')}</Button>
+                                            <Button onClick={handleSaveProfile}>{t('app_extra.buttons.save', 'Save')}</Button>
                                         </div>
                                     ) : (
                                         <Button variant="secondary" onClick={() => setIsEditingProfile(true)}>
-                                            Edit Profile
+                                            {t('app_extra.profile.edit', 'Edit Profile')}
                                         </Button>
                                     )}
                                 </div>
@@ -2437,27 +2991,27 @@ case 'meetings':
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Email Address</span>
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">{t('app_extra.profile.email', 'Email Address')}</span>
                                     <span className="text-gray-800 font-medium">{user.email}</span>
                                 </div>
 
                                 <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Date of Registration</span>
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">{t('app_extra.profile.registered', 'Date of Registration')}</span>
                                     <span className="text-gray-800 font-medium">
                                         {user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', {
                                             year: 'numeric',
                                             month: 'long',
                                             day: 'numeric'
-                                        }) : 'Not Available'}
+                                        }) : t('app_extra.profile.not_available', 'Not Available')}
                                     </span>
                                 </div>
 
                                 <div className="border border-gray-200 p-4 rounded-lg bg-white shadow-sm md:col-span-2">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-3">Roles & Designations</span>
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-3">{t('app_extra.profile.roles', 'Roles & Designations')}</span>
                                     <div className="flex flex-col gap-2">
                                         
                                         <div className="flex flex-col gap-2 bg-sky-50 p-2.5 rounded border border-sky-100">
-                                            <span className="text-sm font-medium text-sky-800">System Access Levels</span>
+                                            <span className="text-sm font-medium text-sky-800">{t('app_extra.profile.access_levels', 'System Access Levels')}</span>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {userRoles && userRoles.length > 0 ? userRoles.map(r => (
                                                     <span key={r} className="text-sky-700 font-bold capitalize bg-white px-2 py-0.5 rounded shadow-sm text-xs">
@@ -2465,7 +3019,7 @@ case 'meetings':
                                                     </span>
                                                 )) : (
                                                     <span className="text-sky-700 font-bold capitalize">
-                                                        {(userRole || 'Standard User').replace(/_/g, ' ')}
+                                                        {userRole ? userRole.replace(/_/g, ' ') : t('app_extra.profile.standard_user', 'Standard User')}
                                                     </span>
                                                 )}
                                             </div>
@@ -2473,21 +3027,21 @@ case 'meetings':
                                         
                                         {userHRProfile && userHRProfile.role && (
                                             <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200">
-                                                <span className="text-sm font-medium text-gray-600">Program Team Role</span>
+                                                <span className="text-sm font-medium text-gray-600">{t('app_extra.profile.team_role', 'Program Team Role')}</span>
                                                 <span className="text-gray-800 font-bold">{userHRProfile.role}</span>
                                             </div>
                                         )}
                                         
                                         {userHRProfile && userHRProfile.unit && (
                                             <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200">
-                                                <span className="text-sm font-medium text-gray-600">Assigned Unit</span>
+                                                <span className="text-sm font-medium text-gray-600">{t('app_extra.profile.unit', 'Assigned Unit')}</span>
                                                 <span className="text-gray-800 font-bold">{userHRProfile.unit}</span>
                                             </div>
                                         )}
 
                                         {userHRProfile && userHRProfile.jobTitle && (
                                             <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200">
-                                                <span className="text-sm font-medium text-gray-600">Job Title</span>
+                                                <span className="text-sm font-medium text-gray-600">{t('app_extra.profile.job_title', 'Job Title')}</span>
                                                 <span className="text-gray-800 font-bold">
                                                     {userHRProfile.jobTitle === 'اخرى' ? userHRProfile.jobTitleOther : userHRProfile.jobTitle}
                                                 </span>
@@ -2496,23 +3050,23 @@ case 'meetings':
 
                                         {!userHRProfile && (
                                             <div className="text-center p-2 text-xs text-gray-400 mt-2">
-                                                No specific Program Team role assigned in the HR database yet.
+                                                {t('app_extra.profile.no_team_role', 'No specific Program Team role assigned in the HR database yet.')}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                                 
                                 <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Assigned States</span>
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">{t('app_extra.profile.states', 'Assigned States')}</span>
                                     <span className="text-gray-800 font-medium">
-                                        {userStates?.length > 0 ? userStates.join(', ') : 'Global / None'}
+                                        {userStates?.length > 0 ? userStates.join(', ') : t('app_extra.profile.global_none', 'Global / None')}
                                     </span>
                                 </div>
                                 
                                 <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Assigned Localities</span>
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">{t('app_extra.profile.localities', 'Assigned Localities')}</span>
                                     <span className="text-gray-800 font-medium">
-                                        {userLocalities?.length > 0 ? userLocalities.join(', ') : 'All Localities in State / None'}
+                                        {userLocalities?.length > 0 ? userLocalities.join(', ') : t('app_extra.profile.all_localities', 'All Localities in State / None')}
                                     </span>
                                 </div>
                             </div>
@@ -2520,7 +3074,7 @@ case 'meetings':
                         
                         <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end rounded-b-lg">
                             <Button onClick={() => setIsUserProfileModalOpen(false)} variant="secondary">
-                                Close
+                                {t('app_extra.buttons.close', 'Close')}
                             </Button>
                         </div>
                     </Modal>
@@ -2532,22 +3086,22 @@ case 'meetings':
                     <Modal 
                         isOpen={isSyncModalOpen} 
                         onClose={() => setIsSyncModalOpen(false)} 
-                        title="Data Sync Status"
+                        title={t('app_extra.header.sync_status', 'Data Sync Status')}
                     >
                         <div className="p-6 space-y-5">
                             <div className={`p-4 rounded-lg flex items-center gap-4 ${isOffline ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-green-50 text-green-800 border border-green-200'}`}>
                                 {isOffline ? <CloudOff size={28} /> : <Cloud size={28} />}
                                 <div>
-                                    <h4 className="font-bold text-lg">{isOffline ? 'Currently Offline' : 'Connected to Server'}</h4>
-                                    <p className="text-sm mt-1">{isOffline ? 'Changes are being saved locally. They will sync automatically when your connection is restored.' : 'Your connection is stable and the database is reachable.'}</p>
+                                    <h4 className="font-bold text-lg">{isOffline ? t('app_extra.sync.offline_title', 'Currently Offline') : t('app_extra.sync.online_title', 'Connected to Server')}</h4>
+                                    <p className="text-sm mt-1">{isOffline ? t('app_extra.sync.offline_desc', 'Changes are being saved locally. They will sync automatically when your connection is restored.') : t('app_extra.sync.online_desc', 'Your connection is stable and the database is reachable.')}</p>
                                 </div>
                             </div>
 
                             <div>
                                 <div className="flex justify-between items-center mb-3 border-b pb-2">
-                                    <h4 className="font-semibold text-gray-700">Data Waiting for Sync</h4>
+                                    <h4 className="font-semibold text-gray-700">{t('app_extra.sync.waiting', 'Data Waiting for Sync')}</h4>
                                     <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">
-                                        {pendingSyncItems.length} items
+                                        {t('app_extra.sync.items', '{{n}} items', { n: pendingSyncItems.length })}
                                     </span>
                                 </div>
                                 
@@ -2560,41 +3114,41 @@ case 'meetings':
                                                     <span className="text-gray-500 text-xs mt-0.5">{item.name}</span>
                                                 </div>
                                                 <span className="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded border border-amber-100">
-                                                    Pending
+                                                    {t('app_extra.sync.pending', 'Pending')}
                                                 </span>
                                             </li>
                                         ))}
                                     </ul>
                                 ) : (
                                     <div className="text-center py-6 bg-gray-50 rounded border border-dashed border-gray-300">
-                                        <p className="text-sm text-gray-500">No tracked items waiting to sync.</p>
-                                        <p className="text-xs text-gray-400 mt-1">Firebase handles background data synchronization automatically.</p>
+                                        <p className="text-sm text-gray-500">{t('app_extra.sync.none', 'No tracked items waiting to sync.')}</p>
+                                        <p className="text-xs text-gray-400 mt-1">{t('app_extra.sync.firebase', 'Firebase handles background data synchronization automatically.')}</p>
                                     </div>
                                 )}
                             </div>
 
                             <div className="pt-4 flex justify-end gap-2 border-t">
                                 <Button variant="secondary" onClick={() => setIsSyncModalOpen(false)}>
-                                    Close
+                                    {t('app_extra.buttons.close', 'Close')}
                                 </Button>
                                 <Button
                                     disabled={isOffline || isSyncing}
                                     onClick={() => {
                                         setIsSyncing(true);
-                                        setToast({ show: true, message: 'Checking and syncing offline data...', type: 'info' });
+                                        setToast({ show: true, message: t('app_extra.toast.syncing', 'Checking and syncing offline data...'), type: 'info' });
                                         
                                         waitForPendingWrites(db).then(() => {
-                                            setToast({ show: true, message: 'All offline data synced successfully.', type: 'success' });
+                                            setToast({ show: true, message: t('app_extra.toast.sync_done', 'All offline data synced successfully.'), type: 'success' });
                                             clearPendingSyncQueue();
                                             setIsSyncModalOpen(false);
                                         }).catch(() => {
-                                            setToast({ show: true, message: 'Sync failed or timed out.', type: 'error' });
+                                            setToast({ show: true, message: t('app_extra.toast.sync_failed', 'Sync failed or timed out.'), type: 'error' });
                                         }).finally(() => {
                                             setIsSyncing(false);
                                         });
                                     }}
                                 >
-                                    {isSyncing ? <Spinner /> : 'Force Sync Now'}
+                                    {isSyncing ? <Spinner /> : t('app_extra.buttons.force_sync', 'Force Sync Now')}
                                 </Button>
                             </div>
                         </div>
@@ -2610,8 +3164,8 @@ case 'meetings':
                 title={actionAlert?.title}
                 body={actionAlert?.body}
                 onClose={() => setActionAlert(null)}
-                secondaryLabel="Dismiss"
-                primaryLabel="View details"
+                secondaryLabel={t('app_extra.push.dismiss', 'Dismiss')}
+                primaryLabel={t('app_extra.push.view_details', 'View details')}
                 onPrimary={() => {
                     const data = actionAlert?.data || {};
                     setActionAlert(null);

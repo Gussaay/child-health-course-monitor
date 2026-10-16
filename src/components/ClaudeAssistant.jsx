@@ -19,6 +19,7 @@ import {
 
 import { Button, Card, CardBody, Spinner } from './CommonComponents';
 import { notify } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 const fn = (name) => httpsCallable(getFunctions(), name);
 
@@ -34,6 +35,7 @@ const fn = (name) => httpsCallable(getFunctions(), name);
  * without reading and end up handing over more than they meant to.
  */
 export function ConnectClaudeScreen({ requestId, user, authLoading = false, onDone }) {
+    const { t } = useTranslation();
     const [state, setState] = useState({ loading: true, error: '', client: null });
     const [granting, setGranting] = useState(false);
 
@@ -44,9 +46,9 @@ export function ConnectClaudeScreen({ requestId, user, authLoading = false, onDo
         let alive = true;
         fn('describeClaudeConnection')({ requestId })
             .then(({ data }) => { if (alive) setState({ loading: false, error: '', client: data }); })
-            .catch((e) => { if (alive) setState({ loading: false, error: e.message || 'That request could not be read.', client: null }); });
+            .catch((e) => { if (alive) setState({ loading: false, error: e.message || t('admin_pages.claude_assistant.request_unreadable', 'That request could not be read.'), client: null }); });
         return () => { alive = false; };
-    }, [requestId, user, authLoading]);
+    }, [requestId, user, authLoading, t]);
 
     if (authLoading) {
         return <div className="min-h-screen grid place-items-center bg-slate-100"><Spinner /></div>;
@@ -59,7 +61,7 @@ export function ConnectClaudeScreen({ requestId, user, authLoading = false, onDo
             // Straight back to Claude with the code. Nothing is stored here.
             window.location.replace(data.redirectTo);
         } catch (e) {
-            notify(e.message || 'The connection could not be completed.', 'error');
+            notify(e.message || t('admin_pages.claude_assistant.connection_failed', 'The connection could not be completed.'), 'error');
             setGranting(false);
         }
     };
@@ -74,10 +76,10 @@ export function ConnectClaudeScreen({ requestId, user, authLoading = false, onDo
                         <div className="p-2.5 bg-sky-100 text-sky-700 rounded-lg"><Sparkles size={22} /></div>
                         <div>
                             <h1 className="text-lg font-bold text-slate-800">
-                                Connect {state.client?.clientName || 'Claude'}
+                                {t('admin_pages.claude_assistant.connect_title', 'Connect {{name}}', { name: state.client?.clientName || 'Claude' })}
                             </h1>
                             <p className="text-sm text-slate-500">
-                                to the National Child Health Programme
+                                {t('admin_pages.claude_assistant.connect_subtitle', 'to the National Child Health Programme')}
                             </p>
                         </div>
                     </div>
@@ -93,33 +95,31 @@ export function ConnectClaudeScreen({ requestId, user, authLoading = false, onDo
                                 <div className="flex gap-2">
                                     <ShieldCheck size={17} className="text-emerald-600 shrink-0 mt-0.5" />
                                     <span>
-                                        Claude will read programme data <strong>as you</strong> — exactly what
-                                        your account can already open in this app, and nothing more.
+                                        {t('admin_pages.claude_assistant.reads_as_you_before', 'Claude will read programme data')} <strong>{t('admin_pages.claude_assistant.as_you', 'as you')}</strong> {t('admin_pages.claude_assistant.reads_as_you_after', '— exactly what your account can already open in this app, and nothing more.')}
                                     </span>
                                 </div>
                                 <div className="flex gap-2">
                                     <Database size={17} className="text-slate-500 shrink-0 mt-0.5" />
-                                    <span>It can read. It cannot add, change or delete anything.</span>
+                                    <span>{t('admin_pages.claude_assistant.read_only', 'It can read. It cannot add, change or delete anything.')}</span>
                                 </div>
                                 <div className="flex gap-2">
                                     <AlertTriangle size={17} className="text-amber-600 shrink-0 mt-0.5" />
                                     <span>
-                                        Every question it answers is recorded against your name, and what
-                                        it reads leaves this system to be answered.
+                                        {t('admin_pages.claude_assistant.recorded', 'Every question it answers is recorded against your name, and what it reads leaves this system to be answered.')}
                                     </span>
                                 </div>
                             </div>
 
                             <p className="text-xs text-slate-500">
-                                Signed in as <strong>{user?.email}</strong>. Approving sends you back to
+                                {t('admin_pages.claude_assistant.signed_in_as', 'Signed in as')} <strong>{user?.email}</strong>. {t('admin_pages.claude_assistant.approving_sends_back', 'Approving sends you back to')}
                                 {' '}{state.client?.redirectHost || 'Claude'}.
                             </p>
 
                             <div className="flex gap-2 justify-end">
-                                <Button variant="secondary" onClick={onDone} disabled={granting}>Cancel</Button>
+                                <Button variant="secondary" onClick={onDone} disabled={granting}>{t('admin_pages.claude_assistant.cancel', 'Cancel')}</Button>
                                 <Button onClick={approve} disabled={granting}>
                                     {granting ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
-                                    {granting ? 'Connecting…' : 'Allow'}
+                                    {granting ? t('admin_pages.claude_assistant.connecting', 'Connecting…') : t('admin_pages.claude_assistant.allow', 'Allow')}
                                 </Button>
                             </div>
                         </>
@@ -135,6 +135,7 @@ export function ConnectClaudeScreen({ requestId, user, authLoading = false, onDo
 // =============================================================================
 
 export function ClaudeChatPanel({ isOpen, onClose }) {
+    const { t } = useTranslation();
     const [messages, setMessages] = useState([]);
     const [question, setQuestion] = useState('');
     const [busy, setBusy] = useState(false);
@@ -161,13 +162,13 @@ export function ClaudeChatPanel({ isOpen, onClose }) {
         } catch (e) {
             setMessages([...asked, {
                 role: 'assistant',
-                content: e.message || 'That could not be answered.',
+                content: e.message || t('admin_pages.claude_assistant.answer_failed', 'That could not be answered.'),
                 failed: true,
             }]);
         } finally {
             setBusy(false);
         }
-    }, [question, busy, messages]);
+    }, [question, busy, messages, t]);
 
     if (!isOpen) return null;
 
@@ -177,19 +178,19 @@ export function ClaudeChatPanel({ isOpen, onClose }) {
                 onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-2 px-4 py-3 border-b bg-slate-800 text-white shrink-0">
                     <Sparkles size={18} />
-                    <span className="font-bold flex-1">Ask about the data</span>
-                    <button onClick={onClose} className="p-1.5 rounded hover:bg-white/15"><X size={18} /></button>
+                    <span className="font-bold flex-1">{t('admin_pages.claude_assistant.panel_title', 'Ask about the data')}</span>
+                    <button onClick={onClose} className="p-1.5 rounded hover:bg-white/15" aria-label={t('admin_pages.claude_assistant.close', 'Close')}><X size={18} /></button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {messages.length === 0 && (
                         <div className="text-sm text-slate-500 space-y-3">
-                            <p>Ask about the programme data you have access to. For example:</p>
+                            <p>{t('admin_pages.claude_assistant.intro', 'Ask about the programme data you have access to. For example:')}</p>
                             <ul className="space-y-1.5">
                                 {[
-                                    'How many IMNCI courses were run in each state this year?',
-                                    'Which localities have the lowest post-test scores?',
-                                    'Compare planned against achieved for the current quarter.',
+                                    t('admin_pages.claude_assistant.example_1', 'How many IMNCI courses were run in each state this year?'),
+                                    t('admin_pages.claude_assistant.example_2', 'Which localities have the lowest post-test scores?'),
+                                    t('admin_pages.claude_assistant.example_3', 'Compare planned against achieved for the current quarter.'),
                                 ].map((example) => (
                                     <li key={example}>
                                         <button onClick={() => setQuestion(example)}
@@ -200,8 +201,7 @@ export function ClaudeChatPanel({ isOpen, onClose }) {
                                 ))}
                             </ul>
                             <p className="text-xs text-slate-400 pt-2 border-t">
-                                It reads only what your own account can open, and it cannot change
-                                anything. Questions are recorded.
+                                {t('admin_pages.claude_assistant.footer_note', 'It reads only what your own account can open, and it cannot change anything. Questions are recorded.')}
                             </p>
                         </div>
                     )}
@@ -216,7 +216,7 @@ export function ClaudeChatPanel({ isOpen, onClose }) {
                             </div>
                             {m.usedTools?.length > 0 && (
                                 <div className="text-[11px] text-slate-400 mt-1">
-                                    read: {[...new Set(m.usedTools.map((t) => t.input?.collection).filter(Boolean))].join(', ') || 'catalogue'}
+                                    {t('admin_pages.claude_assistant.read_label', 'read:')} {[...new Set(m.usedTools.map((tool) => tool.input?.collection).filter(Boolean))].join(', ') || t('admin_pages.claude_assistant.catalogue', 'catalogue')}
                                 </div>
                             )}
                         </div>
@@ -224,7 +224,7 @@ export function ClaudeChatPanel({ isOpen, onClose }) {
 
                     {busy && (
                         <div className="flex items-center gap-2 text-sm text-slate-500">
-                            <Loader2 size={15} className="animate-spin" /> Reading the data…
+                            <Loader2 size={15} className="animate-spin" /> {t('admin_pages.claude_assistant.reading', 'Reading the data…')}
                         </div>
                     )}
                     <div ref={endRef} />
@@ -238,7 +238,7 @@ export function ClaudeChatPanel({ isOpen, onClose }) {
                             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
                         }}
                         rows={2}
-                        placeholder="Ask a question…"
+                        placeholder={t('admin_pages.claude_assistant.placeholder', 'Ask a question…')}
                         className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-sky-500"
                     />
                     <Button onClick={ask} disabled={busy || !question.trim()} className="self-end">

@@ -26,9 +26,20 @@ import { getAnalytics } from 'firebase/analytics';
 import { getStorage } from 'firebase/storage';
 import { Capacitor } from '@capacitor/core';
 
+// Google sign-in opens its helper page on `authDomain`. When that is a
+// different site from the one the app is served on, phone browsers block the
+// helper from reporting back (storage partitioning), so the sign-in window
+// closes with auth/popup-closed-by-user and a redirect sign-in returns with
+// no user. Serving the helper from the app's own Hosting domain keeps it on
+// the same site. Elsewhere (localhost, the Android app) the default stays.
+const HOSTING_DOMAINS = ['imnci-courses-monitor.web.app', 'imnci-courses-monitor.firebaseapp.com'];
+export function authDomainFor(hostname) {
+  return HOSTING_DOMAINS.includes(hostname) ? hostname : 'imnci-courses-monitor.firebaseapp.com';
+}
+
 const firebaseConfig = {
   apiKey: 'AIzaSyDRZoNR9eiAnE9RyqPZ-eXYbhkWOuJmoyI',
-  authDomain: 'imnci-courses-monitor.firebaseapp.com',
+  authDomain: authDomainFor(typeof window !== 'undefined' ? window.location.hostname : ''),
   projectId: 'imnci-courses-monitor',
   storageBucket: 'gs://imnci-courses-monitor.firebasestorage.app',
   messagingSenderId: '928082473485',

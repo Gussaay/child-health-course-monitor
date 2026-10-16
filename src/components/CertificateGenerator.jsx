@@ -36,6 +36,8 @@ import {
     uploadFile 
 } from '../data.js';
 import { notify, confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 
 // -----------------------------------------------------------------------------
 // HELPER FUNCTIONS
@@ -1476,7 +1478,7 @@ export const saveAndOpenPdf = async (doc, fileName) => {
                 await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
             } catch (openError) {
                 console.error("FileOpener Error:", openError);
-                notify("Certificate saved to your Documents/downloads folder, but no PDF viewer was found on your device to open it automatically.");
+                notify(i18n.t('certificates.toast.saved_no_viewer', 'Certificate saved to your Documents/downloads folder, but no PDF viewer was found on your device to open it automatically.'));
             }
 
         } catch (err) {
@@ -1553,7 +1555,7 @@ export const generateCertificatePdf = async (inputCourse, participant, federalPr
         return canvas;
     } catch (error) {
         console.error("Error generating certificate:", error);
-        notify(`Could not generate certificate for ${participant.name}. See console for details.`);
+        notify(i18n.t('certificates.toast.generate_failed_for', 'Could not generate certificate for {{name}}. See console for details.', { name: participant.name }));
         return null;
     } finally {
         if (container.parentNode === document.body) { root.unmount(); document.body.removeChild(container); }
@@ -1624,12 +1626,12 @@ export const generateBlankCertificatePdf = async (inputCourse, federalProgramMan
 
         canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
         return canvas;
-    } catch (error) { console.error("Error generating certificate template:", error); notify("Could not generate certificate template."); return null; } 
+    } catch (error) { console.error("Error generating certificate template:", error); notify(i18n.t('certificates.toast.template_generate_failed', 'Could not generate certificate template.')); return null; } 
     finally { if (container.parentNode === document.body) { root.unmount(); document.body.removeChild(container); } }
 };
 
 export const generateAllCertificatesPdf = async (inputCourse, participants, federalProgramManagerName, language = 'en', onProgress = null, cachedFacilitators = null, cachedCoordinators = null) => {
-    if (!participants || participants.length === 0) { notify("No participants found to generate certificates."); return; }
+    if (!participants || participants.length === 0) { notify(i18n.t('certificates.toast.no_participants', 'No participants found to generate certificates.')); return; }
 
     // Resolve once for the whole batch instead of once per participant.
     const course = await loadAuthoritativeCourse(inputCourse);
@@ -1664,7 +1666,7 @@ export const generateAllCertificatesPdf = async (inputCourse, participants, fede
         const langSuffix = language === 'ar' ? 'AR' : 'EN';
         const fileName = `All_Certificates_${langSuffix}_${course.course_type}_${course.start_date}.pdf`;
         await saveAndOpenPdf(doc, fileName);
-    } else { notify("Failed to generate any certificates."); }
+    } else { notify(i18n.t('certificates.toast.none_generated', 'Failed to generate any certificates.')); }
 };
 
 
@@ -1752,8 +1754,8 @@ export const startCertificateDownload = (spec) => {
         id,
         kind: spec.kind,
         label: isBulk
-            ? `${(spec.participants || []).length} certificates`
-            : (spec.participant?.name || 'Certificate'),
+            ? i18n.t('certificates.banner.n_certificates', '{{count}} certificates', { count: (spec.participants || []).length })
+            : (spec.participant?.name || i18n.t('certificates.banner.certificate', 'Certificate')),
         language: spec.language,
         current: 0,
         total: isBulk ? (spec.participants || []).length : 1,
@@ -1803,7 +1805,7 @@ export const startCertificateDownload = (spec) => {
             } else {
                 console.error('[Certificate] download failed', err);
                 job.status = 'failed';
-                job.error = err?.message || 'Unknown error';
+                job.error = err?.message || i18n.t('certificates.banner.unknown_error', 'Unknown error');
             }
         })
         .finally(() => {
@@ -1825,6 +1827,7 @@ export const startCertificateDownload = (spec) => {
  * rather than part of the participants screen.
  */
 export const CertificateDownloadBanner = () => {
+    const { t } = useTranslation();
     const [jobs, setJobs] = useState([]);
     useEffect(() => subscribeCertificateDownloads(setJobs), []);
 
@@ -1847,18 +1850,18 @@ export const CertificateDownloadBanner = () => {
                             <div className="min-w-0 flex-1">
                                 <div className="font-semibold text-slate-800 break-words">{job.label}</div>
                                 <div className="text-xs text-slate-500">
-                                    {done ? 'Downloaded'
+                                    {done ? t('certificates.banner.downloaded', 'Downloaded')
                                         : failed ? job.error
-                                            : stopped ? 'Stopped'
-                                                : job.status === 'stopping' ? 'Stopping…'
+                                            : stopped ? t('certificates.banner.stopped', 'Stopped')
+                                                : job.status === 'stopping' ? t('certificates.banner.stopping', 'Stopping…')
                                                     : job.kind === 'bulk'
-                                                        ? `Preparing ${job.current} of ${job.total}`
-                                                        : 'Preparing the certificate…'}
+                                                        ? t('certificates.banner.preparing_n', 'Preparing {{current}} of {{total}}', { current: job.current, total: job.total })
+                                                        : t('certificates.banner.preparing_one', 'Preparing the certificate…')}
                                 </div>
                             </div>
                             {job.status === 'running' ? (
                                 <button type="button" onClick={() => cancelCertificateDownload(job.id)}
-                                    className="text-xs text-red-600 hover:underline shrink-0">Stop</button>
+                                    className="text-xs text-red-600 hover:underline shrink-0">{t('certificates.banner.stop', 'Stop')}</button>
                             ) : (
                                 <button type="button" onClick={() => dismissCertificateDownload(job.id)}
                                     className="text-slate-400 hover:text-slate-600 shrink-0"><X size={14} /></button>
@@ -1877,7 +1880,9 @@ export const CertificateDownloadBanner = () => {
     );
 };
 
-const AssetUploader = ({ label, fieldKey, value, uploading, onPick, onClear, height = 'h-12' }) => (
+const AssetUploader = ({ label, fieldKey, value, uploading, onPick, onClear, height = 'h-12' }) => {
+    const { t } = useTranslation();
+    return (
     <div className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50">
         <span className="text-xs font-semibold text-gray-700">{label}</span>
         {value ? (
@@ -1886,21 +1891,23 @@ const AssetUploader = ({ label, fieldKey, value, uploading, onPick, onClear, hei
                 <button
                     type="button"
                     onClick={() => onClear(fieldKey)}
-                    aria-label={`Remove ${label}`}
+                    aria-label={t('certificates.uploader.remove_label', 'Remove {{label}}', { label })}
                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
                 >x</button>
             </div>
         ) : (
             <Button size="sm" variant="secondary" onClick={() => onPick(fieldKey)} disabled={uploading} className="w-full text-xs flex justify-center">
-                {uploading ? <Spinner size="sm" /> : <><Upload size={12} className="mr-1" /> Upload image</>}
+                {uploading ? <Spinner size="sm" /> : <><Upload size={12} className="mr-1" /> {t('certificates.uploader.upload_image', 'Upload image')}</>}
             </Button>
         )}
     </div>
-);
+    );
+};
 
 // A single vertical-position control: ▲ / ▼ arrows for quick nudging plus a
 // number box for typing an exact millimetre value. Blank = system default.
 const NudgeRow = ({ label, fieldKey, value, defaultValue, onChange, min = 0, max = 210, step = 1 }) => {
+    const { t } = useTranslation();
     const current = value === '' || value === undefined || value === null ? defaultValue : Number(value);
     const nudge = (delta) => {
         const next = Math.min(max, Math.max(min, current + delta));
@@ -1913,7 +1920,7 @@ const NudgeRow = ({ label, fieldKey, value, defaultValue, onChange, min = 0, max
                 <button
                     type="button"
                     onClick={() => nudge(-step)}
-                    aria-label={`Move ${label} up`}
+                    aria-label={t('certificates.nudge.move_up', 'Move {{label}} up', { label })}
                     className="w-6 h-6 rounded border border-gray-300 bg-white text-gray-700 text-xs leading-none hover:bg-gray-100"
                 >▲</button>
                 <input
@@ -1928,7 +1935,7 @@ const NudgeRow = ({ label, fieldKey, value, defaultValue, onChange, min = 0, max
                 <button
                     type="button"
                     onClick={() => nudge(step)}
-                    aria-label={`Move ${label} down`}
+                    aria-label={t('certificates.nudge.move_down', 'Move {{label}} down', { label })}
                     className="w-6 h-6 rounded border border-gray-300 bg-white text-gray-700 text-xs leading-none hover:bg-gray-100"
                 >▼</button>
             </div>
@@ -2043,49 +2050,50 @@ const buildEditorElements = (ctx) => {
         isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
         subCourseMode = 'auto', autoSubCourse = '',
         hideManager, hideDirector, showSealNotice, signatureImages = [],
-        logoTopDef, logoLeftFor, hiddenLogos = {}, extraLogos = [], sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef
+        logoTopDef, logoLeftFor, hiddenLogos = {}, extraLogos = [], sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef,
+        t
     } = ctx;
 
     // Per-signature controls, generated so every block gets the same set.
-    const sigNumbers = (block, widthDef, widthLabel = 'This block width (mm)') => [
-        { key: `${block}SignatureNameFontSize`, label: 'This name size (px)', def: sharedNameFs, min: 6, max: 60 },
-        { key: `${block}SignatureRoleFontSize`, label: 'This title size (px)', def: sharedRoleFs, min: 6, max: 60 },
+    const sigNumbers = (block, widthDef, widthLabel = t('certificates.elements.this_block_width', 'This block width (mm)')) => [
+        { key: `${block}SignatureNameFontSize`, label: t('certificates.elements.this_name_size', 'This name size (px)'), def: sharedNameFs, min: 6, max: 60 },
+        { key: `${block}SignatureRoleFontSize`, label: t('certificates.elements.this_title_size', 'This title size (px)'), def: sharedRoleFs, min: 6, max: 60 },
         { key: `${block}SignatureWidth`, label: widthLabel, def: widthDef, min: 30, max: 140 }
     ];
 
     return [
         {
-            id: 'logoRow', label: 'Logo row (all four)',
+            id: 'logoRow', label: t('certificates.elements.logo_row', 'Logo row (all four)'),
             topKey: 'logoTop', topDef: CERT_DEFAULTS.logoTop,
             box: { widthPct: 96, heightMm: 8 },
             numbers: [
-                { key: 'logoGroup1Left', label: 'Left pair centre (%)', def: isArabic ? 100 - CERT_DEFAULTS.logoGroup1Left : CERT_DEFAULTS.logoGroup1Left, min: 0, max: 100 },
-                { key: 'logoGroup2Left', label: 'Right pair centre (%)', def: isArabic ? 100 - CERT_DEFAULTS.logoGroup2Left : CERT_DEFAULTS.logoGroup2Left, min: 0, max: 100 },
-                { key: 'logoSpread', label: 'Gap from pair centre (%)', def: CERT_DEFAULTS.logoSpread, min: 0, max: 25, step: 0.5 }
+                { key: 'logoGroup1Left', label: t('certificates.elements.left_pair_centre', 'Left pair centre (%)'), def: isArabic ? 100 - CERT_DEFAULTS.logoGroup1Left : CERT_DEFAULTS.logoGroup1Left, min: 0, max: 100 },
+                { key: 'logoGroup2Left', label: t('certificates.elements.right_pair_centre', 'Right pair centre (%)'), def: isArabic ? 100 - CERT_DEFAULTS.logoGroup2Left : CERT_DEFAULTS.logoGroup2Left, min: 0, max: 100 },
+                { key: 'logoSpread', label: t('certificates.elements.gap_pair_centre', 'Gap from pair centre (%)'), def: CERT_DEFAULTS.logoSpread, min: 0, max: 25, step: 0.5 }
             ],
-            note: 'The baseline every logo follows until it is given a position of its own. A logo that has been moved individually ignores this.'
+            note: t('certificates.elements.logo_row_note', 'The baseline every logo follows until it is given a position of its own. A logo that has been moved individually ignores this.')
         },
         // One entry per logo: each drags, resizes and uploads on its own.
         ...LOGO_SLOTS.map(slot => ({
             id: `logo${slot.n}`,
-            label: `${slot.label} (default: ${slot.defaultName})`,
+            label: t('certificates.elements.logo_slot', 'Logo {{n}} (default: {{name}})', { n: slot.n, name: slot.defaultName }),
             logoKey: slot.imageKey,
             topKey: `logo${slot.n}Top`, topDef: logoTopDef,
             leftKey: `logo${slot.n}Left`, leftDef: logoLeftFor(slot),
             box: { widthPct: 11, heightMm: 34 },
             boxHeightKey: slot.heightKey, boxHeightDef: CERT_DEFAULTS[slot.heightKey],
             numbers: [
-                { key: slot.heightKey, label: 'Height (mm)', def: CERT_DEFAULTS[slot.heightKey], min: 5, max: 80 }
+                { key: slot.heightKey, label: t('certificates.elements.height_mm', 'Height (mm)'), def: CERT_DEFAULTS[slot.heightKey], min: 5, max: 80 }
             ],
             inactive: !!hiddenLogos[slot.n],
-            inactiveNote: 'Hidden. Untick “Hide this logo” below to print it again.',
-            checks: [{ key: `hideLogo${slot.n}`, label: 'Hide this logo' }],
-            note: 'This logo moves and resizes on its own. Reset it to follow the shared logo row again.'
+            inactiveNote: t('certificates.elements.logo_hidden_note', 'Hidden. Untick “Hide this logo” below to print it again.'),
+            checks: [{ key: `hideLogo${slot.n}`, label: t('certificates.elements.hide_logo', 'Hide this logo') }],
+            note: t('certificates.elements.logo_own_note', 'This logo moves and resizes on its own. Reset it to follow the shared logo row again.')
         })),
         // Extra logos added with “Add logo”. Without an image they are placeholders.
         ...extraLogos.map((x, i) => ({
             id: `xlogo:${x.id}`,
-            label: `${x.label || `Logo ${LOGO_SLOTS.length + i + 1}`}${x.src ? '' : ' (placeholder)'}`,
+            label: `${x.label || t('certificates.elements.logo_n', 'Logo {{n}}', { n: LOGO_SLOTS.length + i + 1 })}${x.src ? '' : ` ${t('certificates.elements.placeholder_suffix', '(placeholder)')}`}`,
             logoKey: xlogoKey(x.id, 'Src'),
             extraLogoId: x.id,
             extraInherited: x.inherited,
@@ -2094,132 +2102,132 @@ const buildEditorElements = (ctx) => {
             box: { widthPct: 11, heightMm: 34 },
             boxHeightKey: xlogoKey(x.id, 'Height'), boxHeightDef: EXTRA_LOGO_DEFAULT_HEIGHT,
             numbers: [
-                { key: xlogoKey(x.id, 'Height'), label: 'Height (mm)', def: EXTRA_LOGO_DEFAULT_HEIGHT, min: 5, max: 80 }
+                { key: xlogoKey(x.id, 'Height'), label: t('certificates.elements.height_mm', 'Height (mm)'), def: EXTRA_LOGO_DEFAULT_HEIGHT, min: 5, max: 80 }
             ],
             texts: [
-                { key: xlogoKey(x.id, 'Label'), label: 'Name (shown in the designer only)', placeholder: 'e.g. Partner logo' }
+                { key: xlogoKey(x.id, 'Label'), label: t('certificates.elements.designer_name', 'Name (shown in the designer only)'), placeholder: t('certificates.elements.partner_logo_ph', 'e.g. Partner logo') }
             ],
             inactive: x.hidden,
-            inactiveNote: 'Hidden. Untick “Hide this logo” below to print it again.',
-            checks: [{ key: xlogoKey(x.id, 'Hidden'), label: 'Hide this logo' }],
+            inactiveNote: t('certificates.elements.logo_hidden_note', 'Hidden. Untick “Hide this logo” below to print it again.'),
+            checks: [{ key: xlogoKey(x.id, 'Hidden'), label: t('certificates.elements.hide_logo', 'Hide this logo') }],
             note: x.src
-                ? 'An added logo. Drag it anywhere on the page.'
-                : 'A placeholder: position and size it now, upload the image whenever it is ready. Nothing prints until an image is added.'
+                ? t('certificates.elements.added_logo_note', 'An added logo. Drag it anywhere on the page.')
+                : t('certificates.elements.placeholder_logo_note', 'A placeholder: position and size it now, upload the image whenever it is ready. Nothing prints until an image is added.')
         })),
         {
-            id: 'header', label: 'Header text',
+            id: 'header', label: t('certificates.elements.header_text', 'Header text'),
             topKey: 'headerTop', topDef: CERT_DEFAULTS.headerTop,
             leftKey: 'headerLeft', leftDef: CERT_DEFAULTS.headerLeft,
             widthKey: 'headerWidth', widthDef: CERT_DEFAULTS.headerWidth,
             box: { widthPct: 48, heightMm: 44 },
             texts: [
-                { key: 'headerEn', label: 'Text (English)', multiline: true, placeholder: 'Republic of Sudan\nFederal Ministry of Health...' },
-                { key: 'headerAr', label: 'Text (Arabic)', multiline: true, rtl: true, placeholder: 'جمهورية السودان\nوزارة الصحة الاتحادية...' }
+                { key: 'headerEn', label: t('certificates.elements.text_en', 'Text (English)'), multiline: true, placeholder: 'Republic of Sudan\nFederal Ministry of Health...' },
+                { key: 'headerAr', label: t('certificates.elements.text_ar', 'Text (Arabic)'), multiline: true, rtl: true, placeholder: 'جمهورية السودان\nوزارة الصحة الاتحادية...' }
             ],
-            colors: [{ key: 'headerColor', label: 'Text colour' }],
+            colors: [{ key: 'headerColor', label: t('certificates.elements.text_colour', 'Text colour') }],
             fontKey: 'headerFontSize', fontDef: CERT_DEFAULTS.headerFontSizeEn
         },
         {
-            id: 'title', label: 'Certificate title',
+            id: 'title', label: t('certificates.elements.certificate_title', 'Certificate title'),
             topKey: 'titleTop', topDef: CERT_DEFAULTS.titleTop,
             leftKey: 'titleLeft', leftDef: CERT_DEFAULTS.titleLeft,
             widthKey: 'titleWidth', widthDef: CERT_DEFAULTS.titleWidth,
             box: { widthPct: 48, heightMm: 22 },
             texts: [
-                { key: 'titleEn', label: 'Text (English)', placeholder: 'CERTIFICATE' },
-                { key: 'titleAr', label: 'Text (Arabic)', rtl: true, placeholder: 'شهادة' }
+                { key: 'titleEn', label: t('certificates.elements.text_en', 'Text (English)'), placeholder: 'CERTIFICATE' },
+                { key: 'titleAr', label: t('certificates.elements.text_ar', 'Text (Arabic)'), rtl: true, placeholder: 'شهادة' }
             ],
-            colors: [{ key: 'titleColor', label: 'Text colour' }],
+            colors: [{ key: 'titleColor', label: t('certificates.elements.text_colour', 'Text colour') }],
             fontKey: 'titleFontSize', fontDef: CERT_DEFAULTS.titleFontSize
         },
         {
-            id: 'name', label: 'Participant name',
+            id: 'name', label: t('certificates.elements.participant_name', 'Participant name'),
             topKey: 'nameTop', topDef: CERT_DEFAULTS.nameTop,
             leftKey: 'nameLeft', leftDef: CERT_DEFAULTS.nameLeft,
             widthKey: 'nameWidth', widthDef: CERT_DEFAULTS.nameWidth,
             box: { widthPct: 76, heightMm: 15 },
             colors: [
-                { key: 'nameColor', label: 'Name colour' },
-                { key: 'nameRuleColor', label: 'Dotted rule colour' }
+                { key: 'nameColor', label: t('certificates.elements.name_colour', 'Name colour') },
+                { key: 'nameRuleColor', label: t('certificates.elements.dotted_rule_colour', 'Dotted rule colour') }
             ],
             fontKey: 'nameFontSize', fontDef: CERT_DEFAULTS.nameFontSize,
-            checks: [{ key: 'rawParticipantName', label: 'Keep name exactly as entered' }],
-            note: 'The name comes from the participant record. It is printed with one capital per name part (e.g. "AHMED ALI" prints as "Ahmed Ali") unless you tick the box above.'
+            checks: [{ key: 'rawParticipantName', label: t('certificates.elements.keep_name_raw', 'Keep name exactly as entered') }],
+            note: t('certificates.elements.name_note', 'The name comes from the participant record. It is printed with one capital per name part (e.g. "AHMED ALI" prints as "Ahmed Ali") unless you tick the box above.')
         },
         {
-            id: 'completion', label: 'Completion line',
+            id: 'completion', label: t('certificates.elements.completion_line', 'Completion line'),
             topKey: 'completionTop', topDef: CERT_DEFAULTS.completionTop,
             leftKey: 'completionLeft', leftDef: CERT_DEFAULTS.completionLeft,
             widthKey: 'completionWidth', widthDef: CERT_DEFAULTS.completionWidth,
             box: { widthPct: 56, heightMm: 9 },
             texts: [
-                { key: 'completionTextEn', label: 'Text (English)', placeholder: 'Has successfully completed:' },
-                { key: 'completionTextAr', label: 'Text (Arabic)', rtl: true, placeholder: 'أكمل/ت بنجاح الدورة التدريبية على : ' }
+                { key: 'completionTextEn', label: t('certificates.elements.text_en', 'Text (English)'), placeholder: 'Has successfully completed:' },
+                { key: 'completionTextAr', label: t('certificates.elements.text_ar', 'Text (Arabic)'), rtl: true, placeholder: 'أكمل/ت بنجاح الدورة التدريبية على : ' }
             ],
-            colors: [{ key: 'completionColor', label: 'Text colour' }],
+            colors: [{ key: 'completionColor', label: t('certificates.elements.text_colour', 'Text colour') }],
             fontKey: 'completionFontSize', fontDef: CERT_DEFAULTS.completionFontSize
         },
         {
-            id: 'courseTitle', label: 'Course title',
+            id: 'courseTitle', label: t('certificates.elements.course_title', 'Course title'),
             topKey: 'courseTitleTop', topDef: CERT_DEFAULTS.courseTitleTop,
             leftKey: 'courseTitleLeft', leftDef: CERT_DEFAULTS.courseTitleLeft,
             widthKey: 'courseTitleWidth', widthDef: CERT_DEFAULTS.courseTitleWidth,
             box: { widthPct: 90, heightMm: 12 },
             texts: [
-                { key: 'courseTitleEn', label: 'Override title (English)', placeholder: 'Leave blank to use the course name' },
-                { key: 'courseTitleAr', label: 'Override title (Arabic)', rtl: true, placeholder: 'اتركه فارغاً لاستخدام اسم الدورة' }
+                { key: 'courseTitleEn', label: t('certificates.elements.override_title_en', 'Override title (English)'), placeholder: t('certificates.elements.blank_course_name', 'Leave blank to use the course name') },
+                { key: 'courseTitleAr', label: t('certificates.elements.override_title_ar', 'Override title (Arabic)'), rtl: true, placeholder: 'اتركه فارغاً لاستخدام اسم الدورة' }
             ],
-            colors: [{ key: 'courseTitleColor', label: 'Text colour' }],
+            colors: [{ key: 'courseTitleColor', label: t('certificates.elements.text_colour', 'Text colour') }],
             fontKey: 'courseTitleFontSize', fontDef: CERT_DEFAULTS.courseTitleFontSize
         },
         {
-            id: 'subCourse', label: 'Sub-course line',
+            id: 'subCourse', label: t('certificates.elements.sub_course_line', 'Sub-course line'),
             topKey: 'subCourseTop', topDef: CERT_DEFAULTS.subCourseTop,
             leftKey: 'subCourseLeft', leftDef: CERT_DEFAULTS.subCourseLeft,
             widthKey: 'subCourseWidth', widthDef: CERT_DEFAULTS.subCourseWidth,
             box: { widthPct: 56, heightMm: 8 },
             inactive: !hasSubCourse,
             inactiveNote: subCourseMode === 'hide'
-                ? 'Set to “Never print”. Change “What prints” below to bring it back.'
-                : 'Nothing on this line yet. Type the wording below and it appears on the certificate.',
+                ? t('certificates.elements.sub_never_note', 'Set to “Never print”. Change “What prints” below to bring it back.')
+                : t('certificates.elements.sub_empty_note', 'Nothing on this line yet. Type the wording below and it appears on the certificate.'),
             selects: [{
                 key: 'subCourseMode',
-                label: 'What prints',
+                label: t('certificates.elements.what_prints', 'What prints'),
                 def: 'auto',
                 options: [
-                    { value: 'auto', label: 'Automatic — each participant’s sub-course (or the text below)' },
-                    { value: 'customOnly', label: 'Only the text typed below' },
-                    { value: 'hide', label: 'Never print this line' }
+                    { value: 'auto', label: t('certificates.elements.mode_auto', 'Automatic — each participant’s sub-course (or the text below)') },
+                    { value: 'customOnly', label: t('certificates.elements.mode_custom', 'Only the text typed below') },
+                    { value: 'hide', label: t('certificates.elements.mode_hide', 'Never print this line') }
                 ]
             }],
             texts: [
-                { key: 'subCourseEn', label: 'Text (English)', placeholder: subCourseMode === 'customOnly' ? 'Type the line to print' : 'Blank = participant’s sub-course' },
-                { key: 'subCourseAr', label: 'Text (Arabic)', rtl: true, placeholder: subCourseMode === 'customOnly' ? 'اكتب النص المطلوب' : 'فارغ = النوع الفرعي للمشارك' }
+                { key: 'subCourseEn', label: t('certificates.elements.text_en', 'Text (English)'), placeholder: subCourseMode === 'customOnly' ? t('certificates.elements.type_line_ph', 'Type the line to print') : t('certificates.elements.blank_sub_ph', 'Blank = participant’s sub-course') },
+                { key: 'subCourseAr', label: t('certificates.elements.text_ar', 'Text (Arabic)'), rtl: true, placeholder: subCourseMode === 'customOnly' ? 'اكتب النص المطلوب' : 'فارغ = النوع الفرعي للمشارك' }
             ],
-            colors: [{ key: 'subCourseColor', label: 'Text colour' }],
+            colors: [{ key: 'subCourseColor', label: t('certificates.elements.text_colour', 'Text colour') }],
             fontKey: 'subCourseFontSize', fontDef: CERT_DEFAULTS.subCourseFontSize,
             note: subCourseMode === 'auto' && autoSubCourse
-                ? `Printing automatically from the participant records: “${autoSubCourse}”. Choose “Only the text typed below” or “Never print” if you don’t want it.`
-                : 'Prints in brackets under the course title. Filling only one language makes that text print in both.'
+                ? t('certificates.elements.sub_auto_note', 'Printing automatically from the participant records: “{{value}}”. Choose “Only the text typed below” or “Never print” if you don’t want it.', { value: autoSubCourse })
+                : t('certificates.elements.sub_note', 'Prints in brackets under the course title. Filling only one language makes that text print in both.')
         },
         {
-            id: 'placeDate', label: 'Place & date',
+            id: 'placeDate', label: t('certificates.elements.place_date', 'Place & date'),
             topKey: 'placeDateTop', topDef: CERT_DEFAULTS.placeDateTop,
             leftKey: 'placeDateLeft', leftDef: CERT_DEFAULTS.placeDateLeft,
             widthKey: 'placeDateWidth', widthDef: CERT_DEFAULTS.placeDateWidth,
             box: { widthPct: 56, heightMm: 20 },
             texts: [
-                { key: 'placeEn', label: 'Place (English)', placeholder: 'e.g. Khartoum - Grand Hall' },
-                { key: 'placeAr', label: 'Place (Arabic)', rtl: true, placeholder: 'مثال: الخرطوم - القاعة الكبرى' },
-                { key: 'placeLabelEn', label: 'Place label (English)', placeholder: 'Place : ' },
-                { key: 'placeLabelAr', label: 'Place label (Arabic)', rtl: true, placeholder: 'المكان : ' },
-                { key: 'dateLabelEn', label: 'Date label (English)', placeholder: 'Date : ' },
-                { key: 'dateLabelAr', label: 'Date label (Arabic)', rtl: true, placeholder: 'التاريخ : ' }
+                { key: 'placeEn', label: t('certificates.elements.place_en', 'Place (English)'), placeholder: 'e.g. Khartoum - Grand Hall' },
+                { key: 'placeAr', label: t('certificates.elements.place_ar', 'Place (Arabic)'), rtl: true, placeholder: 'مثال: الخرطوم - القاعة الكبرى' },
+                { key: 'placeLabelEn', label: t('certificates.elements.place_label_en', 'Place label (English)'), placeholder: 'Place : ' },
+                { key: 'placeLabelAr', label: t('certificates.elements.place_label_ar', 'Place label (Arabic)'), rtl: true, placeholder: 'المكان : ' },
+                { key: 'dateLabelEn', label: t('certificates.elements.date_label_en', 'Date label (English)'), placeholder: 'Date : ' },
+                { key: 'dateLabelAr', label: t('certificates.elements.date_label_ar', 'Date label (Arabic)'), rtl: true, placeholder: 'التاريخ : ' }
             ],
             dates: true,
             colors: [
-                { key: 'placeDateColor', label: 'Value colour' },
-                { key: 'placeDateLabelColor', label: 'Label colour' }
+                { key: 'placeDateColor', label: t('certificates.elements.value_colour', 'Value colour') },
+                { key: 'placeDateLabelColor', label: t('certificates.elements.label_colour', 'Label colour') }
             ],
             fontKey: 'placeDateFontSize', fontDef: CERT_DEFAULTS.placeDateFontSize
         },
@@ -2227,109 +2235,109 @@ const buildEditorElements = (ctx) => {
         // entries are keyed by ROLE and pick up whichever side key applies. That
         // keeps the name/title fields unambiguous in both languages.
         {
-            id: 'sigRow', label: 'Signature row (all)',
+            id: 'sigRow', label: t('certificates.elements.sig_row', 'Signature row (all)'),
             topKey: 'signatureTop', topDef: CERT_DEFAULTS.signatureTop,
             box: { widthPct: 96, heightMm: 8 },
             numbers: [
-                { key: 'signatureNameFontSize', label: 'Name size (px)', def: CERT_DEFAULTS.signatureNameFontSize, min: 6, max: 60 },
-                { key: 'signatureRoleFontSize', label: 'Title size (px)', def: CERT_DEFAULTS.signatureRoleFontSize, min: 6, max: 60 },
-                { key: 'signatureWidth', label: 'Side block width (mm)', def: sideWidthDef, min: 30, max: 140 },
-                { key: 'thirdSignatureWidth', label: 'Middle block width (mm)', def: thirdWidthDef, min: 30, max: 140 }
+                { key: 'signatureNameFontSize', label: t('certificates.elements.name_size', 'Name size (px)'), def: CERT_DEFAULTS.signatureNameFontSize, min: 6, max: 60 },
+                { key: 'signatureRoleFontSize', label: t('certificates.elements.title_size', 'Title size (px)'), def: CERT_DEFAULTS.signatureRoleFontSize, min: 6, max: 60 },
+                { key: 'signatureWidth', label: t('certificates.elements.side_block_width', 'Side block width (mm)'), def: sideWidthDef, min: 30, max: 140 },
+                { key: 'thirdSignatureWidth', label: t('certificates.elements.middle_block_width', 'Middle block width (mm)'), def: thirdWidthDef, min: 30, max: 140 }
             ],
             colors: [
-                { key: 'signatureColor', label: 'ALL signatures — name colour' },
-                { key: 'signatureRoleColor', label: 'ALL signatures — title colour' }
+                { key: 'signatureColor', label: t('certificates.elements.all_sig_name_colour', 'ALL signatures — name colour') },
+                { key: 'signatureRoleColor', label: t('certificates.elements.all_sig_title_colour', 'ALL signatures — title colour') }
             ],
-            note: 'The baseline for every signature. A block that has been given its own height, width or text size ignores this row.'
+            note: t('certificates.elements.sig_row_note', 'The baseline for every signature. A block that has been given its own height, width or text size ignores this row.')
         },
         {
-            id: 'sigManager', label: 'Program Manager signature',
+            id: 'sigManager', label: t('certificates.elements.sig_manager', 'Program Manager signature'),
             topKey: 'managerSignatureTop', topDef: sharedSigTop,
             leftKey: isArabic ? 'sigRightLeft' : 'sigLeftLeft',
             leftDef: slotFor(isArabic ? sigCount - 1 : 0),
             box: { widthPct: 26, heightMm: 22 },
             texts: [
-                { key: 'managerTitleEn', label: 'Name (English)', placeholder: 'Blank = approved manager name' },
-                { key: 'managerTitleAr', label: 'Name (Arabic)', rtl: true, placeholder: 'فارغ = الاسم المعتمد' },
-                { key: 'managerRoleEn', label: 'Title (English)', placeholder: CERT_DEFAULTS.managerRoleEn },
-                { key: 'managerRoleAr', label: 'Title (Arabic)', rtl: true, placeholder: CERT_DEFAULTS.managerRoleAr }
+                { key: 'managerTitleEn', label: t('certificates.elements.name_en', 'Name (English)'), placeholder: t('certificates.elements.blank_manager_ph', 'Blank = approved manager name') },
+                { key: 'managerTitleAr', label: t('certificates.elements.name_ar', 'Name (Arabic)'), rtl: true, placeholder: 'فارغ = الاسم المعتمد' },
+                { key: 'managerRoleEn', label: t('certificates.elements.title_en', 'Title (English)'), placeholder: CERT_DEFAULTS.managerRoleEn },
+                { key: 'managerRoleAr', label: t('certificates.elements.title_ar', 'Title (Arabic)'), rtl: true, placeholder: CERT_DEFAULTS.managerRoleAr }
             ],
             inactive: hideManager,
-            inactiveNote: 'Currently hidden. Untick “Hide this signature” below to print it.',
-            checks: [{ key: 'hideManager', label: 'Hide this signature' }],
+            inactiveNote: t('certificates.elements.sig_hidden_note', 'Currently hidden. Untick “Hide this signature” below to print it.'),
+            checks: [{ key: 'hideManager', label: t('certificates.elements.hide_signature', 'Hide this signature') }],
             colors: [
-                { key: 'managerSignatureColor', label: 'This name colour' },
-                { key: 'managerSignatureRoleColor', label: 'This title colour' }
+                { key: 'managerSignatureColor', label: t('certificates.elements.this_name_colour', 'This name colour') },
+                { key: 'managerSignatureRoleColor', label: t('certificates.elements.this_title_colour', 'This title colour') }
             ],
             numbers: sigNumbers('manager', sideWidthDef),
-            note: 'Every box here affects this signature only. Leave one blank to follow "Signature row (all)". The signature IMAGE is uploaded from the certificate list, not here.'
+            note: t('certificates.elements.sig_manager_note', 'Every box here affects this signature only. Leave one blank to follow "Signature row (all)". The signature IMAGE is uploaded from the certificate list, not here.')
         },
         {
-            id: 'sigDirector', label: 'Course Director signature',
+            id: 'sigDirector', label: t('certificates.elements.sig_director', 'Course Director signature'),
             topKey: 'directorSignatureTop', topDef: sharedSigTop,
             leftKey: isArabic ? 'sigLeftLeft' : 'sigRightLeft',
             leftDef: slotFor(isArabic ? 0 : sigCount - 1),
             box: { widthPct: 26, heightMm: 22 },
             texts: [
-                { key: 'directorTitleEn', label: 'Name (English)', placeholder: 'Blank = course director name' },
-                { key: 'directorTitleAr', label: 'Name (Arabic)', rtl: true, placeholder: 'فارغ = اسم مدير الدورة' },
-                { key: 'directorRoleEn', label: 'Title (English)', placeholder: CERT_DEFAULTS.directorRoleEn },
-                { key: 'directorRoleAr', label: 'Title (Arabic)', rtl: true, placeholder: CERT_DEFAULTS.directorRoleAr },
-                { key: 'honorificEn', label: 'Honorific (English)', placeholder: CERT_DEFAULTS.honorificEn },
-                { key: 'honorificAr', label: 'Honorific (Arabic)', rtl: true, placeholder: CERT_DEFAULTS.honorificAr }
+                { key: 'directorTitleEn', label: t('certificates.elements.name_en', 'Name (English)'), placeholder: t('certificates.elements.blank_director_ph', 'Blank = course director name') },
+                { key: 'directorTitleAr', label: t('certificates.elements.name_ar', 'Name (Arabic)'), rtl: true, placeholder: 'فارغ = اسم مدير الدورة' },
+                { key: 'directorRoleEn', label: t('certificates.elements.title_en', 'Title (English)'), placeholder: CERT_DEFAULTS.directorRoleEn },
+                { key: 'directorRoleAr', label: t('certificates.elements.title_ar', 'Title (Arabic)'), rtl: true, placeholder: CERT_DEFAULTS.directorRoleAr },
+                { key: 'honorificEn', label: t('certificates.elements.honorific_en', 'Honorific (English)'), placeholder: CERT_DEFAULTS.honorificEn },
+                { key: 'honorificAr', label: t('certificates.elements.honorific_ar', 'Honorific (Arabic)'), rtl: true, placeholder: CERT_DEFAULTS.honorificAr }
             ],
             inactive: hideDirector,
-            inactiveNote: 'Currently hidden. Untick “Hide this signature” below to print it.',
+            inactiveNote: t('certificates.elements.sig_hidden_note', 'Currently hidden. Untick “Hide this signature” below to print it.'),
             checks: [
-                { key: 'hideDirector', label: 'Hide this signature' },
-                { key: 'hideHonorific', label: 'Drop the honorific from both names' }
+                { key: 'hideDirector', label: t('certificates.elements.hide_signature', 'Hide this signature') },
+                { key: 'hideHonorific', label: t('certificates.elements.drop_honorific', 'Drop the honorific from both names') }
             ],
             colors: [
-                { key: 'directorSignatureColor', label: 'This name colour' },
-                { key: 'directorSignatureRoleColor', label: 'This title colour' }
+                { key: 'directorSignatureColor', label: t('certificates.elements.this_name_colour', 'This name colour') },
+                { key: 'directorSignatureRoleColor', label: t('certificates.elements.this_title_colour', 'This title colour') }
             ],
             numbers: sigNumbers('director', sideWidthDef),
-            note: 'Honorific settings apply to the director and manager names together. Every other box here affects this signature only; leave one blank to follow the shared signature row.'
+            note: t('certificates.elements.sig_director_note', 'Honorific settings apply to the director and manager names together. Every other box here affects this signature only; leave one blank to follow the shared signature row.')
         },
         {
-            id: 'sigThird', label: 'Signature (third party)',
+            id: 'sigThird', label: t('certificates.elements.sig_third', 'Signature (third party)'),
             topKey: 'thirdSignatureTop', topDef: sharedSigTop,
             leftKey: 'sigThirdLeft', leftDef: slotFor(1),
             box: { widthPct: 24, heightMm: 22 },
             inactive: !hasThirdParty,
             signatureKey: 'thirdPartySignatureUrl',
             texts: [
-                { key: 'thirdPartyNameEn', label: 'Name (English)' },
-                { key: 'thirdPartyNameAr', label: 'Name (Arabic)', rtl: true },
-                { key: 'thirdPartyRoleEn', label: 'Title (English)', placeholder: CERT_DEFAULTS.thirdPartyRoleEn },
-                { key: 'thirdPartyRoleAr', label: 'Title (Arabic)', rtl: true, placeholder: CERT_DEFAULTS.thirdPartyRoleAr }
+                { key: 'thirdPartyNameEn', label: t('certificates.elements.name_en', 'Name (English)') },
+                { key: 'thirdPartyNameAr', label: t('certificates.elements.name_ar', 'Name (Arabic)'), rtl: true },
+                { key: 'thirdPartyRoleEn', label: t('certificates.elements.title_en', 'Title (English)'), placeholder: CERT_DEFAULTS.thirdPartyRoleEn },
+                { key: 'thirdPartyRoleAr', label: t('certificates.elements.title_ar', 'Title (Arabic)'), rtl: true, placeholder: CERT_DEFAULTS.thirdPartyRoleAr }
             ],
             colors: [
-                { key: 'thirdSignatureColor', label: 'This name colour' },
-                { key: 'thirdSignatureRoleColor', label: 'This title colour' }
+                { key: 'thirdSignatureColor', label: t('certificates.elements.this_name_colour', 'This name colour') },
+                { key: 'thirdSignatureRoleColor', label: t('certificates.elements.this_title_colour', 'This title colour') }
             ],
-            numbers: sigNumbers('third', thirdWidthDef, 'Block width (mm)'),
-            note: 'Prints as soon as a name or signature image is added. Height, width and text size here apply to this signature only.'
+            numbers: sigNumbers('third', thirdWidthDef, t('certificates.elements.block_width', 'Block width (mm)')),
+            note: t('certificates.elements.sig_third_note', 'Prints as soon as a name or signature image is added. Height, width and text size here apply to this signature only.')
         },
         {
-            id: 'sigFourth', label: 'Signature (fourth party)',
+            id: 'sigFourth', label: t('certificates.elements.sig_fourth', 'Signature (fourth party)'),
             topKey: 'fourthSignatureTop', topDef: sharedSigTop,
             leftKey: 'sigFourthLeft', leftDef: slotFor(hasFourthParty ? 2 : 1),
             box: { widthPct: 24, heightMm: 22 },
             inactive: !hasFourthParty,
             signatureKey: 'fourthPartySignatureUrl',
             texts: [
-                { key: 'fourthPartyNameEn', label: 'Name (English)' },
-                { key: 'fourthPartyNameAr', label: 'Name (Arabic)', rtl: true },
-                { key: 'fourthPartyRoleEn', label: 'Title (English)', placeholder: CERT_DEFAULTS.fourthPartyRoleEn },
-                { key: 'fourthPartyRoleAr', label: 'Title (Arabic)', rtl: true, placeholder: CERT_DEFAULTS.fourthPartyRoleAr }
+                { key: 'fourthPartyNameEn', label: t('certificates.elements.name_en', 'Name (English)') },
+                { key: 'fourthPartyNameAr', label: t('certificates.elements.name_ar', 'Name (Arabic)'), rtl: true },
+                { key: 'fourthPartyRoleEn', label: t('certificates.elements.title_en', 'Title (English)'), placeholder: CERT_DEFAULTS.fourthPartyRoleEn },
+                { key: 'fourthPartyRoleAr', label: t('certificates.elements.title_ar', 'Title (Arabic)'), rtl: true, placeholder: CERT_DEFAULTS.fourthPartyRoleAr }
             ],
             colors: [
-                { key: 'fourthSignatureColor', label: 'This name colour' },
-                { key: 'fourthSignatureRoleColor', label: 'This title colour' }
+                { key: 'fourthSignatureColor', label: t('certificates.elements.this_name_colour', 'This name colour') },
+                { key: 'fourthSignatureRoleColor', label: t('certificates.elements.this_title_colour', 'This title colour') }
             ],
-            numbers: sigNumbers('fourth', thirdWidthDef, 'Block width (mm)'),
-            note: 'Prints as soon as a name or signature image is added. Adding it re-spaces all four signatures automatically.'
+            numbers: sigNumbers('fourth', thirdWidthDef, t('certificates.elements.block_width', 'Block width (mm)')),
+            note: t('certificates.elements.sig_fourth_note', 'Prints as soon as a name or signature image is added. Adding it re-spaces all four signatures automatically.')
         },
         // --- Draggable signature IMAGES -------------------------------------
         // Only listed when that signatory actually has an image, since there is
@@ -2338,7 +2346,7 @@ const buildEditorElements = (ctx) => {
         // UPWARD from the name, so `yInvert` flips the drag direction.
         ...signatureImages.map(({ block, label, blockLeftKey, blockLeftDef }) => ({
             id: `${block}Image`,
-            label: `${label} — image`,
+            label: t('certificates.elements.image_of', '{{label}} — image', { label }),
             imageOf: block,
             blockLeftKey,
             blockLeftDef,
@@ -2347,45 +2355,45 @@ const buildEditorElements = (ctx) => {
                 yKey: `${block}SignatureImageBottom`, yDef: CERT_DEFAULTS.signatureImageBottom, yMin: -30, yMax: 70, yInvert: true
             },
             numbers: [
-                { key: `${block}SignatureImageWidth`, label: 'Max width (mm)', def: CERT_DEFAULTS.signatureImageWidth, min: 5, max: 120 },
-                { key: `${block}SignatureImageHeight`, label: 'Max height (mm)', def: CERT_DEFAULTS.signatureImageHeight, min: 5, max: 80 },
-                { key: `${block}SignatureImageBottom`, label: 'Height above name (mm)', def: CERT_DEFAULTS.signatureImageBottom, min: -30, max: 70 },
-                { key: `${block}SignatureImageOffsetX`, label: 'Nudge left/right (mm)', def: CERT_DEFAULTS.signatureImageOffsetX, min: -80, max: 80 }
+                { key: `${block}SignatureImageWidth`, label: t('certificates.elements.max_width', 'Max width (mm)'), def: CERT_DEFAULTS.signatureImageWidth, min: 5, max: 120 },
+                { key: `${block}SignatureImageHeight`, label: t('certificates.elements.max_height', 'Max height (mm)'), def: CERT_DEFAULTS.signatureImageHeight, min: 5, max: 80 },
+                { key: `${block}SignatureImageBottom`, label: t('certificates.elements.height_above_name', 'Height above name (mm)'), def: CERT_DEFAULTS.signatureImageBottom, min: -30, max: 70 },
+                { key: `${block}SignatureImageOffsetX`, label: t('certificates.elements.nudge_lr', 'Nudge left/right (mm)'), def: CERT_DEFAULTS.signatureImageOffsetX, min: -80, max: 80 }
             ],
-            note: 'Drag the image itself on the canvas, or use the boxes here. Width and height are limits — the scan keeps its own aspect ratio.'
+            note: t('certificates.elements.image_note', 'Drag the image itself on the canvas, or use the boxes here. Width and height are limits — the scan keeps its own aspect ratio.')
         })),
         {
-            id: 'sealNotice', label: 'Seal-required notice',
+            id: 'sealNotice', label: t('certificates.elements.seal_notice', 'Seal-required notice'),
             topKey: 'sealNoticeTop', topDef: CERT_DEFAULTS.sealNoticeTop,
             leftKey: 'sealNoticeLeft', leftDef: CERT_DEFAULTS.sealNoticeLeft,
             widthKey: 'sealNoticeWidth', widthDef: CERT_DEFAULTS.sealNoticeWidth,
             box: { widthPct: 60, heightMm: 8 },
             inactive: !showSealNotice,
-            inactiveNote: 'Not printing. Tick “Print this notice” below to add it.',
-            checks: [{ key: 'showSealNotice', label: 'Print this notice' }],
+            inactiveNote: t('certificates.elements.seal_inactive', 'Not printing. Tick “Print this notice” below to add it.'),
+            checks: [{ key: 'showSealNotice', label: t('certificates.elements.print_notice', 'Print this notice') }],
             texts: [
-                { key: 'sealNoticeEn', label: 'Text (English)', placeholder: CERT_DEFAULTS.sealNoticeEn },
-                { key: 'sealNoticeAr', label: 'Text (Arabic)', rtl: true, placeholder: CERT_DEFAULTS.sealNoticeAr }
+                { key: 'sealNoticeEn', label: t('certificates.elements.text_en', 'Text (English)'), placeholder: CERT_DEFAULTS.sealNoticeEn },
+                { key: 'sealNoticeAr', label: t('certificates.elements.text_ar', 'Text (Arabic)'), rtl: true, placeholder: CERT_DEFAULTS.sealNoticeAr }
             ],
-            colors: [{ key: 'sealNoticeColor', label: 'Text colour' }],
+            colors: [{ key: 'sealNoticeColor', label: t('certificates.elements.text_colour', 'Text colour') }],
             fontKey: 'sealNoticeFontSize', fontDef: CERT_DEFAULTS.sealNoticeFontSize,
-            note: 'For workflows where the paper is sealed by hand: states on the page that an unsealed printout is not valid.'
+            note: t('certificates.elements.seal_note', 'For workflows where the paper is sealed by hand: states on the page that an unsealed printout is not valid.')
         },
         {
-            id: 'qr', label: 'QR code',
+            id: 'qr', label: t('certificates.elements.qr_code', 'QR code'),
             topKey: 'qrTop', topDef: CERT_DEFAULTS.qrTop,
             leftKey: 'qrLeft', leftDef: isArabic ? 100 - CERT_DEFAULTS.qrLeft : CERT_DEFAULTS.qrLeft,
             box: { widthPct: 16, heightMm: 34 },
-            numbers: [{ key: 'qrSize', label: 'QR size (px)', def: CERT_DEFAULTS.qrSize, min: 40, max: 200 }]
+            numbers: [{ key: 'qrSize', label: t('certificates.elements.qr_size', 'QR size (px)'), def: CERT_DEFAULTS.qrSize, min: 40, max: 200 }]
         },
         ...(hasStamp ? [{
-            id: 'stamp', label: 'Program stamp',
+            id: 'stamp', label: t('certificates.elements.program_stamp', 'Program stamp'),
             topKey: 'stampTop', topDef: CERT_DEFAULTS.stampTop,
             leftKey: 'stampLeft', leftDef: CERT_DEFAULTS.stampLeft,
             box: { widthMm: 40, heightMm: 40 },
             numbers: [
-                { key: 'stampWidth', label: 'Stamp width (mm)', def: CERT_DEFAULTS.stampWidth, min: 10, max: 120 },
-                { key: 'stampOpacity', label: 'Opacity (0-1)', def: CERT_DEFAULTS.stampOpacity, min: 0, max: 1, step: 0.05 }
+                { key: 'stampWidth', label: t('certificates.elements.stamp_width_mm', 'Stamp width (mm)'), def: CERT_DEFAULTS.stampWidth, min: 10, max: 120 },
+                { key: 'stampOpacity', label: t('certificates.elements.opacity', 'Opacity (0-1)'), def: CERT_DEFAULTS.stampOpacity, min: 0, max: 1, step: 0.05 }
             ]
         }] : [])
     ];
@@ -2401,7 +2409,9 @@ const PropRow = ({ label, children, hint }) => (
     </div>
 );
 
-const ColorField = ({ value, defaultValue, onChange }) => (
+const ColorField = ({ value, defaultValue, onChange }) => {
+    const { t } = useTranslation();
+    return (
     <div className="flex items-center gap-2">
         <input
             type="color"
@@ -2417,10 +2427,11 @@ const ColorField = ({ value, defaultValue, onChange }) => (
             className="flex-1 border rounded px-2 py-1 text-xs font-mono"
         />
         {value && (
-            <button type="button" onClick={() => onChange('')} className="text-[11px] text-gray-500 hover:text-red-600" title="Reset to default">reset</button>
+            <button type="button" onClick={() => onChange('')} className="text-[11px] text-gray-500 hover:text-red-600" title={t('certificates.designer.reset_to_default', 'Reset to default')}>{t('certificates.designer.reset_lower', 'reset')}</button>
         )}
     </div>
-);
+    );
+};
 
 const StepField = ({ value, defaultValue, min, max, step = 1, unit, onChange }) => {
     const current = value === '' || value === undefined || value === null ? defaultValue : Number(value);
@@ -2539,6 +2550,7 @@ const SAMPLE_PARTICIPANT = {
 const subCourseFor = (course, participant) => certificateSubCourseOf(course, participant);
 
 export function CertificatePreviewModal({ course, federalProgramManagerName = '', onClose, defaultLanguage = 'en', note = '' }) {
+    const { t } = useTranslation();
     const [language, setLanguage] = useState(defaultLanguage);
     const [participants, setParticipants] = useState([]);
     const [participantId, setParticipantId] = useState('__sample');
@@ -2582,7 +2594,7 @@ export function CertificatePreviewModal({ course, federalProgramManagerName = ''
                 language
             );
             if (run !== runRef.current) return; // a newer render started
-            if (!canvas) throw new Error('The certificate could not be drawn. See the console for details.');
+            if (!canvas) throw new Error(t('certificates.preview.draw_failed', 'The certificate could not be drawn. See the console for details.'));
             canvasRef.current = canvas;
             setImageUrl(canvas.toDataURL('image/jpeg', 0.92));
         } catch (err) {
@@ -2590,7 +2602,7 @@ export function CertificatePreviewModal({ course, federalProgramManagerName = ''
         } finally {
             if (run === runRef.current) setBusy(false);
         }
-    }, [course, participant, federalProgramManagerName, language]);
+    }, [course, participant, federalProgramManagerName, language, t]);
 
     // Redraw whenever the language or participant changes.
     useEffect(() => { render(); }, [language, participantId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2629,12 +2641,12 @@ export function CertificatePreviewModal({ course, federalProgramManagerName = ''
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-[70] bg-slate-900/80 flex flex-col" role="dialog" aria-modal="true" aria-label="Certificate preview">
+        <div className="fixed inset-0 z-[70] bg-slate-900/80 flex flex-col" role="dialog" aria-modal="true" aria-label={t('certificates.preview.title', 'Certificate preview')}>
             <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-white border-b border-gray-200 shadow">
                 <Eye className="h-4 w-4 text-sky-700" />
-                <h2 className="font-bold text-gray-900 text-sm mr-2">Certificate preview</h2>
+                <h2 className="font-bold text-gray-900 text-sm mr-2">{t('certificates.preview.title', 'Certificate preview')}</h2>
                 <span className="text-[11px] text-gray-500 hidden md:inline">
-                    Drawn by the same engine as the download — this is exactly what will be produced.
+                    {t('certificates.preview.same_engine', 'Drawn by the same engine as the download — this is exactly what will be produced.')}
                 </span>
 
                 <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -2648,22 +2660,22 @@ export function CertificatePreviewModal({ course, federalProgramManagerName = ''
                         onChange={e => setParticipantId(e.target.value)}
                         disabled={busy}
                         className="border border-gray-300 rounded px-2 py-1 text-xs bg-white max-w-[14rem]"
-                        title="Whose certificate to draw"
+                        title={t('certificates.preview.whose', 'Whose certificate to draw')}
                     >
-                        <option value="__sample">Sample name</option>
+                        <option value="__sample">{t('certificates.preview.sample_name', 'Sample name')}</option>
                         {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
 
-                    <button type="button" onClick={render} disabled={busy} className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50" title="Draw again">
-                        <RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} /> Refresh
+                    <button type="button" onClick={render} disabled={busy} className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50" title={t('certificates.preview.draw_again', 'Draw again')}>
+                        <RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} /> {t('certificates.preview.refresh', 'Refresh')}
                     </button>
                     <button type="button" onClick={openPdf} disabled={busy || !imageUrl} className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-50">
-                        <Eye className="h-3.5 w-3.5" /> Open as PDF
+                        <Eye className="h-3.5 w-3.5" /> {t('certificates.preview.open_pdf', 'Open as PDF')}
                     </button>
                     <button type="button" onClick={downloadPdf} disabled={busy || !imageUrl} className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50">
-                        <Download className="h-3.5 w-3.5" /> Download
+                        <Download className="h-3.5 w-3.5" /> {t('certificates.preview.download', 'Download')}
                     </button>
-                    <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-gray-100" aria-label="Close preview">
+                    <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-gray-100" aria-label={t('certificates.preview.close', 'Close preview')}>
                         <X className="h-4 w-4" />
                     </button>
                 </div>
@@ -2676,16 +2688,16 @@ export function CertificatePreviewModal({ course, federalProgramManagerName = ''
             <div className="flex-1 overflow-auto p-6 flex items-start justify-center">
                 {error ? (
                     <div className="bg-white rounded-lg p-6 max-w-md text-center">
-                        <p className="font-semibold text-red-700 mb-2">Preview failed</p>
+                        <p className="font-semibold text-red-700 mb-2">{t('certificates.preview.failed', 'Preview failed')}</p>
                         <p className="text-sm text-gray-600 mb-4">{error}</p>
-                        <Button onClick={render}>Try again</Button>
+                        <Button onClick={render}>{t('certificates.preview.try_again', 'Try again')}</Button>
                     </div>
                 ) : (
                     <div className="relative" style={{ width: zoomed ? 'min(1600px, 200%)' : 'min(100%, calc((100vh - 140px) * 297 / 210))' }}>
                         {imageUrl && (
                             <img
                                 src={imageUrl}
-                                alt="Certificate preview"
+                                alt={t('certificates.preview.title', 'Certificate preview')}
                                 onClick={() => setZoomed(z => !z)}
                                 className={`w-full h-auto bg-white shadow-2xl ${zoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'} ${busy ? 'opacity-40' : ''}`}
                             />
@@ -2693,13 +2705,13 @@ export function CertificatePreviewModal({ course, federalProgramManagerName = ''
                         {busy && (
                             <div className={`${imageUrl ? 'absolute inset-0' : 'bg-white rounded-lg shadow-2xl'} flex flex-col items-center justify-center gap-2`} style={imageUrl ? undefined : { aspectRatio: '297 / 210' }}>
                                 <Spinner />
-                                <span className="text-xs font-semibold text-gray-700 bg-white/90 rounded px-2 py-0.5">Rendering certificate…</span>
+                                <span className="text-xs font-semibold text-gray-700 bg-white/90 rounded px-2 py-0.5">{t('certificates.preview.rendering', 'Rendering certificate…')}</span>
                             </div>
                         )}
                     </div>
                 )}
             </div>
-            <p className="text-center text-[11px] text-slate-300 pb-2">Click the page to zoom. Esc closes.</p>
+            <p className="text-center text-[11px] text-slate-300 pb-2">{t('certificates.preview.zoom_hint', 'Click the page to zoom. Esc closes.')}</p>
         </div>
     );
 }
@@ -2721,6 +2733,7 @@ export function CertificateDesigner({
     // Only used for the preview, so the manager's name matches a real download.
     federalProgramManagerName = ''
 }) {
+    const { t } = useTranslation();
     const scopeKind = scope?.kind || 'course';
     const isTemplateScope = scopeKind !== 'course';
     const templateDocId = scopeKind === 'general'
@@ -2730,8 +2743,8 @@ export function CertificateDesigner({
         ? GENERAL_TEMPLATE_EXCLUDED_KEYS
         : scopeKind === 'courseType' ? TEMPLATE_EXCLUDED_KEYS : [];
     const scopeLabel = scopeKind === 'general'
-        ? 'General template (all courses)'
-        : scopeKind === 'courseType' ? `Course-type template: ${scope.courseType}` : 'This course only';
+        ? t('certificates.designer.scope_general', 'General template (all courses)')
+        : scopeKind === 'courseType' ? t('certificates.designer.scope_type', 'Course-type template: {{type}}', { type: scope.courseType }) : t('certificates.designer.scope_course', 'This course only');
 
     const startingOwn = () => (isTemplateScope ? (initialConfig || {}) : (course?.customCertificate || {}));
 
@@ -2876,12 +2889,12 @@ export function CertificateDesigner({
         const mgrLeftDef = slotFor(isArabic ? sigCount - 1 : 0);
         const dirLeftDef = slotFor(isArabic ? 0 : sigCount - 1);
         return [
-            managerImg && { block: 'manager', label: 'Program Manager', blockLeftKey: mgrLeftKey, blockLeftDef: mgrLeftDef },
-            directorImg && { block: 'director', label: 'Course Director', blockLeftKey: dirLeftKey, blockLeftDef: dirLeftDef },
-            thirdImg && hasThirdParty && { block: 'third', label: 'Third signature', blockLeftKey: 'sigThirdLeft', blockLeftDef: slotFor(1) },
-            fourthImg && hasFourthParty && { block: 'fourth', label: 'Fourth signature', blockLeftKey: 'sigFourthLeft', blockLeftDef: slotFor(hasFourthParty ? 2 : 1) }
+            managerImg && { block: 'manager', label: t('certificates.designer.program_manager', 'Program Manager'), blockLeftKey: mgrLeftKey, blockLeftDef: mgrLeftDef },
+            directorImg && { block: 'director', label: t('certificates.designer.course_director', 'Course Director'), blockLeftKey: dirLeftKey, blockLeftDef: dirLeftDef },
+            thirdImg && hasThirdParty && { block: 'third', label: t('certificates.designer.third_signature', 'Third signature'), blockLeftKey: 'sigThirdLeft', blockLeftDef: slotFor(1) },
+            fourthImg && hasFourthParty && { block: 'fourth', label: t('certificates.designer.fourth_signature', 'Fourth signature'), blockLeftKey: 'sigFourthLeft', blockLeftDef: slotFor(hasFourthParty ? 2 : 1) }
         ].filter(Boolean);
-    }, [isArabic, slotFor, sigCount, managerImg, directorImg, thirdImg, fourthImg, hasThirdParty, hasFourthParty]);
+    }, [isArabic, slotFor, sigCount, managerImg, directorImg, thirdImg, fourthImg, hasThirdParty, hasFourthParty, t]);
 
     // Values a per-element override falls back to. They are read from the live
     // edits, so the placeholder in each box always shows what the certificate
@@ -2920,7 +2933,7 @@ export function CertificateDesigner({
     };
 
     const deleteExtraLogo = async (id) => {
-        if (!await confirmDialog('Delete this logo from the template?')) return;
+        if (!await confirmDialog(t('certificates.designer.confirm_delete_logo', 'Delete this logo from the template?'))) return;
         setOwnData(prev => {
             const next = {};
             Object.entries(prev).forEach(([k, v]) => { if (!k.startsWith(`xlogo_${id}_`)) next[k] = v; });
@@ -2939,11 +2952,11 @@ export function CertificateDesigner({
             showSealNotice: !!data.showSealNotice, signatureImages,
             logoTopDef, logoLeftFor, hiddenLogos, extraLogos,
             sharedSigTop, sharedNameFs, sharedRoleFs,
-            sideWidthDef: defaultSideWidth, thirdWidthDef
+            sideWidthDef: defaultSideWidth, thirdWidthDef, t
         }),
         [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, subCourseMode, autoSubCourse,
          data.hideManager, data.hideDirector, data.showSealNotice, signatureImages,
-         logoTopDef, logoLeftFor, hiddenLogos, extraLogos, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef]
+         logoTopDef, logoLeftFor, hiddenLogos, extraLogos, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef, t]
     );
 
     const selected = elements.find(e => e.id === selectedId) || elements[0];
@@ -3173,7 +3186,7 @@ export function CertificateDesigner({
             set(activeUploadKey, url);
         } catch (err) {
             console.error(err);
-            notify('Upload failed. Please try again.');
+            notify(t('certificates.designer.upload_failed', 'Upload failed. Please try again.'));
         } finally {
             setUploadingAsset(null);
             setActiveUploadKey(null);
@@ -3191,9 +3204,7 @@ export function CertificateDesigner({
             const approxBytes = new Blob([JSON.stringify(cleaned)]).size;
             if (approxBytes > MAX_CUSTOM_CERT_BYTES) {
                 notify(
-                    `This template is too large to save (${Math.round(approxBytes / 1024)} KB, limit ${Math.round(MAX_CUSTOM_CERT_BYTES / 1024)} KB). ` +
-                    `Signature images are stored inside the course record for security. ` +
-                    `Remove or re-crop one of the signature images and try again.`
+                    t('certificates.designer.too_large', 'This template is too large to save ({{size}} KB, limit {{limit}} KB). Signature images are stored inside the course record for security. Remove or re-crop one of the signature images and try again.', { size: Math.round(approxBytes / 1024), limit: Math.round(MAX_CUSTOM_CERT_BYTES / 1024) })
                 );
                 setIsSaving(false);
                 return;
@@ -3215,10 +3226,10 @@ export function CertificateDesigner({
             }
             setDirty(false);
             if (onSaveSuccess) onSaveSuccess();
-            notify('Template saved.');
+            notify(t('certificates.designer.template_saved', 'Template saved.'));
         } catch (err) {
             console.error(err);
-            notify('Could not save the template. Please try again.');
+            notify(t('certificates.designer.save_failed', 'Could not save the template. Please try again.'));
         } finally {
             setIsSaving(false);
         }
@@ -3232,8 +3243,8 @@ export function CertificateDesigner({
         const kind = target === 'general' ? 'general' : 'courseType';
         if (kind === 'courseType' && !course.course_type) return;
         const id = kind === 'general' ? GENERAL_TEMPLATE_ID : courseTypeTemplateId(course.course_type);
-        const targetName = kind === 'general' ? 'the GENERAL template (all courses)' : `the "${course.course_type}" template`;
-        if (!await confirmDialog(`Copy this course's layout into ${targetName}? Settings already in that template are kept unless this course changes them.`)) return;
+        const targetName = kind === 'general' ? t('certificates.designer.target_general', 'the GENERAL template (all courses)') : t('certificates.designer.target_type', 'the "{{type}}" template', { type: course.course_type });
+        if (!await confirmDialog(t('certificates.designer.confirm_promote', "Copy this course's layout into {{target}}? Settings already in that template are kept unless this course changes them.", { target: targetName }))) return;
 
         setIsSaving(true);
         try {
@@ -3248,7 +3259,7 @@ export function CertificateDesigner({
             });
             invalidateCertificateTemplateCache();
 
-            if (await confirmDialog('Saved to the template. Clear this course\'s own overrides so it simply follows the template now?')) {
+            if (await confirmDialog(t('certificates.designer.confirm_clear_own', "Saved to the template. Clear this course's own overrides so it simply follows the template now?"))) {
                 // Whatever the template could not take stays on the course.
                 const courseOnlyKeys = kind === 'general' ? GENERAL_TEMPLATE_EXCLUDED_KEYS : TEMPLATE_EXCLUDED_KEYS;
                 const keep = cleanCertificateConfig(
@@ -3264,14 +3275,14 @@ export function CertificateDesigner({
             if (onSaveSuccess) onSaveSuccess();
         } catch (err) {
             console.error(err);
-            notify('Could not save to the template. Please try again.');
+            notify(t('certificates.designer.save_to_template_failed', 'Could not save to the template. Please try again.'));
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleBack = async () => {
-        if (dirty && !await confirmDialog('You have unsaved changes. Leave without saving?')) return;
+        if (dirty && !await confirmDialog(t('certificates.designer.confirm_leave', 'You have unsaved changes. Leave without saving?'))) return;
         onBack?.();
     };
 
@@ -3296,7 +3307,7 @@ export function CertificateDesigner({
     const removeSignatureImage = async (block) => {
         const field = IMAGE_FIELDS[block];
         if (!field || !course?.id || isTemplateScope) return;
-        if (!await confirmDialog('Remove this signature image? The stored image is deleted immediately and will have to be uploaded again.')) return;
+        if (!await confirmDialog(t('certificates.designer.confirm_remove_sig', 'Remove this signature image? The stored image is deleted immediately and will have to be uploaded again.'))) return;
 
         setRemovingImage(block);
         try {
@@ -3309,7 +3320,7 @@ export function CertificateDesigner({
             if (onSaveSuccess) onSaveSuccess();
         } catch (err) {
             console.error(err);
-            notify('Could not remove the image. Please try again.');
+            notify(t('certificates.designer.remove_failed', 'Could not remove the image. Please try again.'));
         } finally {
             setRemovingImage(null);
         }
@@ -3376,7 +3387,7 @@ export function CertificateDesigner({
                     </div>
                     <div className="ml-auto flex items-center gap-2 text-[11px] text-sky-100">
                         <Award className="h-4 w-4" />
-                        <span className="hidden sm:inline">Certificate Designer</span>
+                        <span className="hidden sm:inline">{t('certificates.designer.certificate_designer', 'Certificate Designer')}</span>
                     </div>
                 </div>
             </div>
@@ -3388,16 +3399,16 @@ export function CertificateDesigner({
                     onClick={handleBack}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold text-gray-700 hover:bg-gray-100 border border-gray-300"
                 >
-                    <ArrowLeft className="h-4 w-4" /> Back
+                    <ArrowLeft className="h-4 w-4" /> {t('certificates.designer.back', 'Back')}
                 </button>
 
                 <div className="h-6 w-px bg-gray-200" />
 
                 <nav className="min-w-0 text-xs text-gray-500 flex items-center gap-1.5 truncate">
-                    <span className="hover:text-gray-700 cursor-pointer" onClick={handleBack}>Certificate Approvals</span>
+                    <span className="hover:text-gray-700 cursor-pointer" onClick={handleBack}>{t('certificates.approvals.title', 'Certificate Approvals')}</span>
                     <span className="text-gray-300">/</span>
                     <span className="font-semibold text-gray-800 truncate">
-                        {scopeKind === 'general' ? 'General template' : scopeKind === 'courseType' ? `${scope.courseType} template` : (course?.course_type || 'Course')}
+                        {scopeKind === 'general' ? t('certificates.templates.general_template', 'General template') : scopeKind === 'courseType' ? t('certificates.designer.type_template', '{{type}} template', { type: scope.courseType }) : (course?.course_type || t('certificates.designer.course', 'Course'))}
                     </span>
                     <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${isTemplateScope ? 'bg-violet-100 text-violet-700' : 'bg-sky-100 text-sky-700'}`}>
                         <Layers className="inline h-3 w-3 mr-0.5 -mt-0.5" />{scopeLabel}
@@ -3408,7 +3419,7 @@ export function CertificateDesigner({
                 </nav>
 
                 <div className="ml-auto flex items-center gap-2">
-                    {dirty && <span className="text-[11px] font-semibold text-amber-600">Unsaved changes</span>}
+                    {dirty && <span className="text-[11px] font-semibold text-amber-600">{t('certificates.designer.unsaved', 'Unsaved changes')}</span>}
 
                     <div className="flex rounded overflow-hidden border border-gray-300">
                         <button type="button" onClick={() => setLanguage('en')} className={`px-2.5 py-1 text-xs font-semibold ${!isArabic ? 'bg-sky-600 text-white' : 'bg-white text-gray-700'}`}>EN</button>
@@ -3420,41 +3431,41 @@ export function CertificateDesigner({
                         onChange={e => setZoom(e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-xs bg-white"
                     >
-                        <option value="fit">Fit</option>
+                        <option value="fit">{t('certificates.designer.fit', 'Fit')}</option>
                         <option value="0.5">50%</option>
                         <option value="0.75">75%</option>
                         <option value="1">100%</option>
                     </select>
 
                     <div className="flex items-center gap-1.5 border border-gray-300 rounded px-2 py-0.5 bg-white">
-                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="Show the grid, rulers and centre lines">
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title={t('certificates.designer.grid_title', 'Show the grid, rulers and centre lines')}>
                             <input type="checkbox" checked={showGuides} onChange={e => setShowGuides(e.target.checked)} />
-                            Grid
+                            {t('certificates.designer.grid', 'Grid')}
                         </label>
                         <select
                             value={String(gridPrefs.gridSize)}
                             onChange={e => updateGridPrefs({ gridSize: Number(e.target.value) })}
                             className="text-xs bg-transparent outline-none"
-                            title="Grid spacing"
+                            title={t('certificates.designer.grid_spacing', 'Grid spacing')}
                         >
-                            <option value="0">Centre lines only</option>
+                            <option value="0">{t('certificates.designer.centre_lines_only', 'Centre lines only')}</option>
                             <option value="2">2 mm</option>
                             <option value="5">5 mm</option>
                             <option value="10">10 mm</option>
                             <option value="20">20 mm</option>
                         </select>
                         <span className="h-4 w-px bg-gray-200" />
-                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="Moved elements jump to the nearest grid line">
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title={t('certificates.designer.snap_title', 'Moved elements jump to the nearest grid line')}>
                             <input type="checkbox" checked={!!gridPrefs.snapToGrid} disabled={!gridPrefs.gridSize} onChange={e => updateGridPrefs({ snapToGrid: e.target.checked })} />
-                            Snap
+                            {t('certificates.designer.snap', 'Snap')}
                         </label>
-                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="Pink lines appear and the element locks on when it lines up with another element or the page centre">
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title={t('certificates.designer.smart_guides_title', 'Pink lines appear and the element locks on when it lines up with another element or the page centre')}>
                             <input type="checkbox" checked={!!gridPrefs.smartGuides} onChange={e => updateGridPrefs({ smartGuides: e.target.checked })} />
-                            Smart guides
+                            {t('certificates.designer.smart_guides', 'Smart guides')}
                         </label>
-                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="Millimetre labels along the edges">
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title={t('certificates.designer.rulers_title', 'Millimetre labels along the edges')}>
                             <input type="checkbox" checked={!!gridPrefs.showRulers} onChange={e => updateGridPrefs({ showRulers: e.target.checked })} />
-                            mm
+                            {t('certificates.designer.mm', 'mm')}
                         </label>
                     </div>
 
@@ -3464,11 +3475,11 @@ export function CertificateDesigner({
                             disabled={isSaving}
                             onChange={e => { const v = e.target.value; e.target.value = ''; if (v) promoteToTemplate(v); }}
                             className="border border-gray-300 rounded px-2 py-1 text-xs bg-white"
-                            title="Copy this layout into a shared template"
+                            title={t('certificates.designer.promote_title', 'Copy this layout into a shared template')}
                         >
-                            <option value="">Save as template…</option>
-                            {course?.course_type && <option value="courseType">For all {course.course_type} courses</option>}
-                            <option value="general">As the general template</option>
+                            <option value="">{t('certificates.designer.save_as_template', 'Save as template…')}</option>
+                            {course?.course_type && <option value="courseType">{t('certificates.designer.for_all_type', 'For all {{type}} courses', { type: course.course_type })}</option>}
+                            <option value="general">{t('certificates.designer.as_general', 'As the general template')}</option>
                         </select>
                     )}
 
@@ -3477,14 +3488,14 @@ export function CertificateDesigner({
                         onClick={() => setShowRealPreview(true)}
                         disabled={!!uploadingAsset}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold border border-sky-600 text-sky-700 bg-white hover:bg-sky-50 disabled:opacity-50"
-                        title="Render the actual certificate, exactly as the PDF will be"
+                        title={t('certificates.designer.preview_title', 'Render the actual certificate, exactly as the PDF will be')}
                     >
-                        <Eye className="h-4 w-4" /> Preview certificate
+                        <Eye className="h-4 w-4" /> {t('certificates.designer.preview_certificate', 'Preview certificate')}
                     </button>
 
-                    <Button variant="secondary" onClick={handleBack} disabled={isSaving}>Cancel</Button>
+                    <Button variant="secondary" onClick={handleBack} disabled={isSaving}>{t('certificates.common.cancel', 'Cancel')}</Button>
                     <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingAsset}>
-                        {isSaving ? <Spinner size="sm" /> : 'Save Template'}
+                        {isSaving ? <Spinner size="sm" /> : t('certificates.common.save_template', 'Save Template')}
                     </Button>
                 </div>
             </header>
@@ -3496,8 +3507,8 @@ export function CertificateDesigner({
                     defaultLanguage={language}
                     onClose={() => setShowRealPreview(false)}
                     note={[
-                        dirty ? 'Includes your unsaved changes.' : '',
-                        isTemplateScope ? 'Template preview: uses a sample course, so no signatures or stamp are shown.' : ''
+                        dirty ? t('certificates.designer.note_unsaved', 'Includes your unsaved changes.') : '',
+                        isTemplateScope ? t('certificates.designer.note_template', 'Template preview: uses a sample course, so no signatures or stamp are shown.') : ''
                     ].filter(Boolean).join(' ')}
                 />
             )}
@@ -3506,20 +3517,20 @@ export function CertificateDesigner({
                 {/* ---- Element list ---- */}
                 <aside className="w-52 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
                     <div className="px-3 py-2 border-b flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Elements</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t('certificates.designer.elements', 'Elements')}</span>
                         <button
                             type="button"
                             onClick={addExtraLogo}
                             className="flex items-center gap-1 text-[11px] font-semibold text-sky-700 hover:text-sky-900 border border-sky-200 rounded px-1.5 py-0.5 hover:bg-sky-50"
-                            title="Add a logo placeholder"
+                            title={t('certificates.designer.add_logo_title', 'Add a logo placeholder')}
                         >
-                            <Plus className="h-3 w-3" /> Add logo
+                            <Plus className="h-3 w-3" /> {t('certificates.designer.add_logo', 'Add logo')}
                         </button>
                     </div>
                     <p className="px-3 py-2 text-[10px] leading-snug text-gray-500 bg-gray-50 border-b">
-                        {scopeKind === 'general' && 'Applies to every course unless a course-type template or the course itself changes it.'}
-                        {scopeKind === 'courseType' && `Applies to every ${scope.courseType} course. Blank boxes follow the general template.`}
-                        {scopeKind === 'course' && 'Changes here apply to this course only. Blank boxes follow the course-type and general templates.'}
+                        {scopeKind === 'general' && t('certificates.designer.scope_general_help', 'Applies to every course unless a course-type template or the course itself changes it.')}
+                        {scopeKind === 'courseType' && t('certificates.designer.scope_type_help', 'Applies to every {{type}} course. Blank boxes follow the general template.', { type: scope.courseType })}
+                        {scopeKind === 'course' && t('certificates.designer.scope_course_help', 'Changes here apply to this course only. Blank boxes follow the course-type and general templates.')}
                     </p>
                     {elements.map(el => (
                         <button
@@ -3529,8 +3540,8 @@ export function CertificateDesigner({
                             className={`w-full text-left px-3 py-2 text-sm border-b border-gray-100 flex items-center gap-2 ${selectedId === el.id ? 'bg-sky-50 text-sky-800 font-semibold border-l-4 border-l-sky-600' : el.inactive ? 'text-gray-400 hover:bg-gray-50' : 'text-gray-700 hover:bg-gray-50'}`}
                         >
                             <span className="truncate">{el.label}</span>
-                            {el.inactive && <span className="ml-auto text-[10px] border border-gray-300 rounded px-1 text-gray-500">add</span>}
-                            {!el.inactive && overlappingIds.has(el.id) && <span className="ml-auto text-[10px] font-bold text-red-600" title="Overlaps another element">overlap</span>}
+                            {el.inactive && <span className="ml-auto text-[10px] border border-gray-300 rounded px-1 text-gray-500">{t('certificates.designer.add_badge', 'add')}</span>}
+                            {!el.inactive && overlappingIds.has(el.id) && <span className="ml-auto text-[10px] font-bold text-red-600" title={t('certificates.designer.overlaps_title', 'Overlaps another element')}>{t('certificates.designer.overlap', 'overlap')}</span>}
                         </button>
                     ))}
                 </aside>
@@ -3617,7 +3628,7 @@ export function CertificateDesigner({
                                 <div
                                     key={el.id}
                                     onPointerDown={(e) => startDrag(e, el)}
-                                    title={`${el.label} — drag to move`}
+                                    title={t('certificates.designer.drag_to_move', '{{label}} — drag to move', { label: el.label })}
                                     style={{
                                         position: 'absolute',
                                         top: topMm * MM_TO_PX * scale,
@@ -3639,7 +3650,7 @@ export function CertificateDesigner({
                                             borderRadius: '3px 3px 0 0', whiteSpace: 'nowrap'
                                         }}>
                                             {el.imageOf
-                                                ? `${el.label} · ${readNum(data, el.axes.yKey, el.axes.yDef)}mm up · ${readNum(data, el.axes.xKey, el.axes.xDef)}mm across`
+                                                ? t('certificates.designer.image_pos', '{{label}} · {{up}}mm up · {{across}}mm across', { label: el.label, up: readNum(data, el.axes.yKey, el.axes.yDef), across: readNum(data, el.axes.xKey, el.axes.xDef) })
                                                 : `${el.label} · ${Math.round(topMm)}mm${el.leftKey ? ` · ${Math.round(leftPct)}%` : ''}`}
                                         </span>
                                     )}
@@ -3650,22 +3661,21 @@ export function CertificateDesigner({
 
                     {overlaps.length > 0 && (
                         <div className="max-w-3xl mx-auto mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-                            <span className="font-bold">Overlapping on the certificate: </span>
+                            <span className="font-bold">{t('certificates.designer.overlapping', 'Overlapping on the certificate:')} </span>
                             {overlaps.map(([a, b], i) => (
                                 <span key={`${a.id}-${b.id}`}>
                                     {i > 0 && ' · '}
                                     <button type="button" className="underline font-semibold" onClick={() => setSelectedId(a.id)}>{a.label}</button>
-                                    {' and '}
+                                    {` ${t('certificates.designer.and', 'and')} `}
                                     <button type="button" className="underline font-semibold" onClick={() => setSelectedId(b.id)}>{b.label}</button>
                                 </span>
                             ))}
-                            <span className="text-red-600"> — move one of them, or hide the line you don’t need.</span>
+                            <span className="text-red-600"> — {t('certificates.designer.overlap_fix', 'move one of them, or hide the line you don’t need.')}</span>
                         </div>
                     )}
 
                     <p className="text-center text-xs text-gray-500 mt-3">
-                        Drag any box to move it — pink lines show when it lines up with something (hold Alt to move freely).
-                        Arrow keys nudge by 1mm, Shift+Arrow by one grid step.
+                        {t('certificates.designer.canvas_help', 'Drag any box to move it — pink lines show when it lines up with something (hold Alt to move freely). Arrow keys nudge by 1mm, Shift+Arrow by one grid step.')}
                     </p>
                 </main>
 
@@ -3675,18 +3685,18 @@ export function CertificateDesigner({
                         <>
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="font-bold text-gray-900">{selected.label}</h3>
-                                <button type="button" onClick={resetSelected} className="text-[11px] text-gray-500 hover:text-red-600 underline">Reset</button>
+                                <button type="button" onClick={resetSelected} className="text-[11px] text-gray-500 hover:text-red-600 underline">{t('certificates.designer.reset', 'Reset')}</button>
                             </div>
 
                             {selected.inactive && (
                                 <p className="text-[11px] font-semibold text-amber-700 mb-3 bg-amber-50 border border-amber-200 rounded p-2">
-                                    {selected.inactiveNote || 'Not on the certificate yet. Enter a name below (or upload a signature image) and it will appear.'}
+                                    {selected.inactiveNote || t('certificates.designer.not_on_cert', 'Not on the certificate yet. Enter a name below (or upload a signature image) and it will appear.')}
                                 </p>
                             )}
 
                             {selected.note && <p className="text-[11px] text-gray-500 mb-3 bg-gray-50 border border-gray-200 rounded p-2">{selected.note}</p>}
 
-                            <PropRow label="Vertical position" hint="Millimetres from the top of the page (0–210)">
+                            <PropRow label={t('certificates.designer.vertical_position', 'Vertical position')} hint={t('certificates.designer.vertical_hint', 'Millimetres from the top of the page (0–210)')}>
                                 <StepField
                                     value={ownData[selected.topKey]}
                                     defaultValue={inh(selected.topKey, selected.topDef)}
@@ -3696,7 +3706,7 @@ export function CertificateDesigner({
                             </PropRow>
 
                             {selected.leftKey && (
-                                <PropRow label="Horizontal position" hint="Centre of the element, as % of page width">
+                                <PropRow label={t('certificates.designer.horizontal_position', 'Horizontal position')} hint={t('certificates.designer.horizontal_hint', 'Centre of the element, as % of page width')}>
                                     <StepField
                                         value={ownData[selected.leftKey]}
                                         defaultValue={inh(selected.leftKey, selected.leftDef)}
@@ -3732,11 +3742,11 @@ export function CertificateDesigner({
                                     </select>
                                 );
                                 return (
-                                    <PropRow label="Align" hint="Lines this element up with another one. Logos align best by top or bottom edge.">
+                                    <PropRow label={t('certificates.designer.align', 'Align')} hint={t('certificates.designer.align_hint', 'Lines this element up with another one. Logos align best by top or bottom edge.')}>
                                         <div className="grid grid-cols-2 gap-1.5">
                                             {selected.leftKey && (
                                                 <button type="button" onClick={() => set(selected.leftKey, '50')} className="border rounded px-1.5 py-1 text-xs hover:bg-gray-100">
-                                                    ⇔ Centre on page
+                                                    ⇔ {t('certificates.designer.centre_on_page', 'Centre on page')}
                                                 </button>
                                             )}
                                             {gridPrefs.gridSize > 0 && (
@@ -3750,15 +3760,15 @@ export function CertificateDesigner({
                                                     }}
                                                     className="border rounded px-1.5 py-1 text-xs hover:bg-gray-100"
                                                 >
-                                                    ⌗ Snap to grid
+                                                    ⌗ {t('certificates.designer.snap_to_grid', 'Snap to grid')}
                                                 </button>
                                             )}
-                                            <AlignSelect mode="top" label="Top with…" options={targets} />
+                                            <AlignSelect mode="top" label={t('certificates.designer.top_with', 'Top with…')} options={targets} />
                                             {selected.leftKey && (
-                                                <AlignSelect mode="centre" label="Centre with…" options={targets.filter(o => o.leftKey)} />
+                                                <AlignSelect mode="centre" label={t('certificates.designer.centre_with', 'Centre with…')} options={targets.filter(o => o.leftKey)} />
                                             )}
                                             {selected.boxHeightKey && withHeight.length > 0 && (
-                                                <AlignSelect mode="bottom" label="Bottom with…" options={withHeight} />
+                                                <AlignSelect mode="bottom" label={t('certificates.designer.bottom_with', 'Bottom with…')} options={withHeight} />
                                             )}
                                         </div>
                                     </PropRow>
@@ -3766,7 +3776,7 @@ export function CertificateDesigner({
                             })()}
 
                             {selected.widthKey && (
-                                <PropRow label="Block width" hint="Wider blocks wrap less; narrower blocks wrap sooner">
+                                <PropRow label={t('certificates.designer.block_width', 'Block width')} hint={t('certificates.designer.block_width_hint', 'Wider blocks wrap less; narrower blocks wrap sooner')}>
                                     <StepField
                                         value={ownData[selected.widthKey]}
                                         defaultValue={inh(selected.widthKey, selected.widthDef)}
@@ -3777,7 +3787,7 @@ export function CertificateDesigner({
                             )}
 
                             {selected.fontKey && (
-                                <PropRow label="Font size">
+                                <PropRow label={t('certificates.designer.font_size', 'Font size')}>
                                     <StepField
                                         value={ownData[selected.fontKey]}
                                         defaultValue={inh(selected.fontKey, selected.fontDef)}
@@ -3808,7 +3818,7 @@ export function CertificateDesigner({
                                             onChange={e => set(sel.key, e.target.value)}
                                             className="w-full border rounded px-2 py-1 text-sm bg-white"
                                         >
-                                            <option value="">{isTemplateScope && scopeKind === 'general' ? 'Default' : 'Inherit'}: {inheritedLabel}</option>
+                                            <option value="">{isTemplateScope && scopeKind === 'general' ? t('certificates.designer.default', 'Default') : t('certificates.designer.inherit', 'Inherit')}: {inheritedLabel}</option>
                                             {sel.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                         </select>
                                     </PropRow>
@@ -3860,15 +3870,15 @@ export function CertificateDesigner({
 
                             {selected.dates && !isTemplateScope && (
                                 <div className="border-t pt-3 mt-3">
-                                    <PropRow label="Start date">
+                                    <PropRow label={t('certificates.common.start_date', 'Start date')}>
                                         <input type="date" value={data.dateStart || ''} onChange={e => set('dateStart', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
                                     </PropRow>
-                                    <PropRow label="End date">
+                                    <PropRow label={t('certificates.common.end_date', 'End date')}>
                                         <input type="date" value={data.dateEnd || ''} min={data.dateStart || undefined} onChange={e => set('dateEnd', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
                                     </PropRow>
                                     {data.dateStart && (
                                         <p className="text-xs bg-gray-50 border rounded p-2">
-                                            <span className="text-gray-500 mr-1">Prints as</span>
+                                            <span className="text-gray-500 mr-1">{t('certificates.common.prints_as', 'Prints as')}</span>
                                             <span dangerouslySetInnerHTML={{ __html: formatCertificateDateRange(data.dateStart, data.dateEnd, isArabic) }} />
                                         </p>
                                     )}
@@ -3882,18 +3892,18 @@ export function CertificateDesigner({
                                                 setOwnData(prev => ({ ...prev, dateStart: start, dateEnd: addDaysISO(start, dur - 1) }));
                                                 setDirty(true);
                                             }}
-                                        >Fill from course</button>
+                                        >{t('certificates.designer.fill_from_course', 'Fill from course')}</button>
                                         <button
                                             type="button"
                                             className="text-[11px] underline text-gray-500"
                                             onClick={() => { setOwnData(prev => ({ ...prev, dateStart: '', dateEnd: '' })); setDirty(true); }}
-                                        >Clear</button>
+                                        >{t('certificates.common.clear', 'Clear')}</button>
                                     </div>
                                 </div>
                             )}
 
                             {!isTemplateScope && (selected.imageOf || selected.id === 'stamp') && (
-                                <PropRow label="Stored image">
+                                <PropRow label={t('certificates.designer.stored_image', 'Stored image')}>
                                     <div className="flex items-center gap-2 flex-wrap">
                                         {(() => {
                                             const blk = selected.imageOf || 'stamp';
@@ -3901,7 +3911,7 @@ export function CertificateDesigner({
                                             const src = (f.customKey && data[f.customKey]) || liveCourse[f.courseKey] || null;
                                             return src
                                                 ? <img src={src} alt="" className="h-10 border rounded bg-white px-1" />
-                                                : <span className="text-xs text-gray-400">None</span>;
+                                                : <span className="text-xs text-gray-400">{t('certificates.designer.none', 'None')}</span>;
                                         })()}
                                         <Button
                                             size="sm"
@@ -3910,18 +3920,18 @@ export function CertificateDesigner({
                                             disabled={!!removingImage}
                                             onClick={() => removeSignatureImage(selected.imageOf || 'stamp')}
                                         >
-                                            {removingImage === (selected.imageOf || 'stamp') ? <Spinner size="sm" /> : 'Remove image'}
+                                            {removingImage === (selected.imageOf || 'stamp') ? <Spinner size="sm" /> : t('certificates.designer.remove_image', 'Remove image')}
                                         </Button>
                                     </div>
                                     <p className="text-[11px] text-gray-500 mt-1">
-                                        Deletes the stored image straight away — it is not part of Save. The name and title stay.
+                                        {t('certificates.designer.remove_image_help', 'Deletes the stored image straight away — it is not part of Save. The name and title stay.')}
                                     </p>
                                 </PropRow>
                             )}
 
                             {isTemplateScope && selected.signatureKey && (
                                 <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mb-3">
-                                    Signature images are never stored in a shared template. Upload them on each course.
+                                    {t('certificates.designer.no_sig_in_template', 'Signature images are never stored in a shared template. Upload them on each course.')}
                                 </p>
                             )}
 
@@ -3930,20 +3940,20 @@ export function CertificateDesigner({
                                 const courseKey = IMAGE_FIELDS[blk].courseKey;
                                 const src = data[selected.signatureKey] || liveCourse[courseKey] || null;
                                 return (
-                                    <PropRow label="Signature image">
+                                    <PropRow label={t('certificates.designer.signature_image', 'Signature image')}>
                                         <div className="flex items-center gap-2 flex-wrap">
                                             {src
                                                 ? <img src={src} alt="" className="h-8 border rounded bg-white px-1" />
-                                                : <span className="text-xs text-gray-400">None</span>}
+                                                : <span className="text-xs text-gray-400">{t('certificates.designer.none', 'None')}</span>}
                                             <Button size="sm" variant="secondary" className="text-xs" onClick={() => triggerUpload(selected.signatureKey)} disabled={!!uploadingAsset || !!removingImage}>
-                                                {uploadingAsset === selected.signatureKey ? <Spinner size="sm" /> : (src ? 'Replace' : 'Upload')}
+                                                {uploadingAsset === selected.signatureKey ? <Spinner size="sm" /> : (src ? t('certificates.designer.replace', 'Replace') : t('certificates.designer.upload', 'Upload'))}
                                             </Button>
                                             {src && (
                                                 // Clears BOTH copies. Clearing only the customCertificate
                                                 // key would leave the approved* fallback in place and the
                                                 // signature would keep printing.
                                                 <Button size="sm" variant="danger" className="text-xs" disabled={!!removingImage} onClick={() => removeSignatureImage(blk)}>
-                                                    {removingImage === blk ? <Spinner size="sm" /> : 'Remove'}
+                                                    {removingImage === blk ? <Spinner size="sm" /> : t('certificates.designer.remove', 'Remove')}
                                                 </Button>
                                             )}
                                         </div>
@@ -3953,28 +3963,28 @@ export function CertificateDesigner({
 
                             {selected.logoKey && (
                                 <div className="border-t pt-3 mt-3">
-                                    <PropRow label="Image" hint="Blank uses the built-in default logo.">
+                                    <PropRow label={t('certificates.designer.image', 'Image')} hint={t('certificates.designer.image_hint', 'Blank uses the built-in default logo.')}>
                                         <div className="flex items-center gap-2">
                                             {data[selected.logoKey] && <img src={data[selected.logoKey]} alt="" className="h-8 border rounded bg-white" />}
                                             <Button size="sm" variant="secondary" className="text-xs" onClick={() => triggerUpload(selected.logoKey)} disabled={!!uploadingAsset}>
-                                                {uploadingAsset === selected.logoKey ? <Spinner size="sm" /> : (data[selected.logoKey] ? 'Replace' : 'Upload')}
+                                                {uploadingAsset === selected.logoKey ? <Spinner size="sm" /> : (data[selected.logoKey] ? t('certificates.designer.replace', 'Replace') : t('certificates.designer.upload', 'Upload'))}
                                             </Button>
                                             {ownData[selected.logoKey] && (
-                                                <button type="button" onClick={() => set(selected.logoKey, '')} className="text-[11px] text-red-600 underline">Remove</button>
+                                                <button type="button" onClick={() => set(selected.logoKey, '')} className="text-[11px] text-red-600 underline">{t('certificates.designer.remove', 'Remove')}</button>
                                             )}
                                         </div>
                                         {!ownData[selected.logoKey] && inherited[selected.logoKey] && (
-                                            <p className="text-[11px] text-gray-400 mt-1">Image comes from a template. Upload to replace it here, or tick “Hide this logo”.</p>
+                                            <p className="text-[11px] text-gray-400 mt-1">{t('certificates.designer.image_from_template', 'Image comes from a template. Upload to replace it here, or tick “Hide this logo”.')}</p>
                                         )}
                                     </PropRow>
                                     {selected.extraLogoId && (
                                         selected.extraInherited ? (
                                             <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded p-2">
-                                                Added by a template. Edit that template to delete it, or hide it here.
+                                                {t('certificates.designer.added_by_template', 'Added by a template. Edit that template to delete it, or hide it here.')}
                                             </p>
                                         ) : (
                                             <Button size="sm" variant="danger" className="text-xs flex items-center gap-1" onClick={() => deleteExtraLogo(selected.extraLogoId)}>
-                                                <Trash2 className="h-3 w-3" /> Delete this logo
+                                                <Trash2 className="h-3 w-3" /> {t('certificates.designer.delete_logo', 'Delete this logo')}
                                             </Button>
                                         )
                                     )}
@@ -3992,6 +4002,7 @@ export function CertificateDesigner({
 // COMPONENT: CertificateCustomizerModal
 // -----------------------------------------------------------------------------
 export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSuccess, onOpenDesigner }) {
+    const { t } = useTranslation();
     const [data, setData] = useState({});
     
     const [isSaving, setIsSaving] = useState(false);
@@ -4034,7 +4045,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                 : await uploadFile(file, `courses/${course.id}/logos/${key}_${Date.now()}`);
             setData(prev => ({ ...prev, [key]: url }));
         } catch (err) {
-            notify("Upload failed: " + err.message);
+            notify(t('certificates.customizer.upload_failed', 'Upload failed: {{error}}', { error: err.message }));
         } finally {
             setUploadingAsset(null);
             setActiveUploadKey(null);
@@ -4057,14 +4068,14 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
             if (onSaveSuccess) onSaveSuccess();
             onClose();
         } catch (err) {
-            notify("Failed to save template: " + err.message);
+            notify(t('certificates.customizer.save_failed', 'Failed to save template: {{error}}', { error: err.message }));
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleClear = async () => {
-        if (await confirmDialog("Revert to the default template? This erases every custom override for this course.")) {
+        if (await confirmDialog(t('certificates.customizer.confirm_revert', 'Revert to the default template? This erases every custom override for this course.'))) {
             setData({});
         }
     };
@@ -4072,7 +4083,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
     if (!isOpen) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={isSaving ? null : onClose} title="Customize Certificate Template" size="2xl">
+        <Modal isOpen={isOpen} onClose={isSaving ? null : onClose} title={t('certificates.customizer.title', 'Customize Certificate Template')} size="2xl">
             <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
             <CardBody className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
 
@@ -4081,12 +4092,12 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                         type="button"
                         onClick={() => setEditorMode('form')}
                         className={`px-3 py-1.5 text-sm font-semibold rounded-t border-b-2 ${editorMode === 'form' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                    >Edit fields</button>
+                    >{t('certificates.customizer.edit_fields', 'Edit fields')}</button>
                     <button
                         type="button"
                         onClick={() => setEditorMode('drag')}
                         className={`px-3 py-1.5 text-sm font-semibold rounded-t border-b-2 ${editorMode === 'drag' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                    >Designer (full screen)</button>
+                    >{t('certificates.customizer.designer_full', 'Designer (full screen)')}</button>
                     <div className="ml-auto flex rounded overflow-hidden border border-gray-300 mb-1">
                         <button
                             type="button"
@@ -4103,49 +4114,47 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 
                 {editorMode === 'drag' ? (
                     <div className="text-center py-10">
-                        <p className="text-sm text-gray-700 mb-1 font-semibold">Full-screen Certificate Designer</p>
+                        <p className="text-sm text-gray-700 mb-1 font-semibold">{t('certificates.customizer.full_designer', 'Full-screen Certificate Designer')}</p>
                         <p className="text-xs text-gray-500 mb-5 max-w-md mx-auto">
-                            Drag elements on a large canvas, pick colours, resize logos and edit text with everything
-                            visible at once. Unsaved changes here are kept.
+                            {t('certificates.customizer.designer_help', 'Drag elements on a large canvas, pick colours, resize logos and edit text with everything visible at once. Unsaved changes here are kept.')}
                         </p>
-                        <Button variant="primary" onClick={() => onOpenDesigner?.()}>Open the Designer</Button>
+                        <Button variant="primary" onClick={() => onOpenDesigner?.()}>{t('certificates.customizer.open_designer', 'Open the Designer')}</Button>
                     </div>
                 ) : (
                 <>
 
                 <div className="rounded border border-gray-200 bg-gray-50 p-3">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-gray-600">Live Preview</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-600">{t('certificates.customizer.live_preview', 'Live Preview')}</span>
                         <button
                             type="button"
                             onClick={() => setShowPreview(p => !p)}
                             className="text-xs font-semibold text-sky-700 hover:underline"
-                        >{showPreview ? 'Hide' : 'Show'}</button>
+                        >{showPreview ? t('certificates.customizer.hide', 'Hide') : t('certificates.customizer.show', 'Show')}</button>
                     </div>
                     {showPreview && <LiveCertificatePreview course={course} data={data} language={previewLang} />}
                     {showPreview && (
                         <p className="text-[11px] text-gray-500 mt-1">
-                            Updates as you type. Participant name and QR code are placeholders. Use the “Drag &amp; drop layout” tab to move things by hand.
+                            {t('certificates.customizer.preview_help', 'Updates as you type. Participant name and QR code are placeholders. Use the “Drag & drop layout” tab to move things by hand.')}
                         </p>
                     )}
                 </div>
                 
                 <div className="bg-sky-50 p-4 rounded-lg text-sm text-sky-800 mb-4 border border-sky-100">
-                    <p className="font-semibold mb-1">Customize Template for: {course?.course_type}</p>
-                    <p>Leave a field blank to use the default system value (FMOH/NCHP logos, computed place and date, default text). Everything set here applies to this course only.</p>
+                    <p className="font-semibold mb-1">{t('certificates.customizer.customize_for', 'Customize Template for: {{type}}', { type: course?.course_type })}</p>
+                    <p>{t('certificates.customizer.intro', 'Leave a field blank to use the default system value (FMOH/NCHP logos, computed place and date, default text). Everything set here applies to this course only.')}</p>
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3">1. Custom Logos</h3>
+                    <h3 className="font-bold border-b pb-2 mb-3">{t('certificates.customizer.s1', '1. Custom Logos')}</h3>
                     <p className="text-xs text-gray-500 mb-3">
-                        Every logo is uploaded, moved and sized on its own. Leave a position box blank and that logo
-                        follows the shared logo row (section 8) and the centre of its side of the page.
+                        {t('certificates.customizer.s1_help', 'Every logo is uploaded, moved and sized on its own. Leave a position box blank and that logo follows the shared logo row (section 8) and the centre of its side of the page.')}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         {LOGO_SLOTS.map(slot => (
                             <div key={slot.imageKey} className="space-y-2">
                                 <AssetUploader
-                                    label={`${slot.label} (Default: ${slot.defaultName})`}
+                                    label={t('certificates.customizer.logo_slot', 'Logo {{n}} (Default: {{name}})', { n: slot.n, name: slot.defaultName })}
                                     fieldKey={slot.imageKey}
                                     value={data[slot.imageKey]}
                                     uploading={uploadingAsset === slot.imageKey}
@@ -4153,7 +4162,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                     onClear={k => handleInputChange(k, '')}
                                 />
                                 <div className="grid grid-cols-3 gap-2">
-                                    <FormGroup label="Top mm">
+                                    <FormGroup label={t('certificates.customizer.top_mm', 'Top mm')}>
                                         <Input
                                             type="number"
                                             value={data[`logo${slot.n}Top`] ?? ''}
@@ -4161,7 +4170,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                             placeholder={String(defaultLogoTop(data))}
                                         />
                                     </FormGroup>
-                                    <FormGroup label="Left %">
+                                    <FormGroup label={t('certificates.customizer.left_pct', 'Left %')}>
                                         <Input
                                             type="number"
                                             value={data[`logo${slot.n}Left`] ?? ''}
@@ -4169,7 +4178,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                             placeholder={String(Math.round(defaultLogoLeft(data, slot, previewLang === 'ar')))}
                                         />
                                     </FormGroup>
-                                    <FormGroup label="Height mm">
+                                    <FormGroup label={t('certificates.customizer.height_mm', 'Height mm')}>
                                         <Input
                                             type="number"
                                             value={data[slot.heightKey] ?? ''}
@@ -4184,66 +4193,62 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">2. Headers & Main Titles</h3>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">{t('certificates.customizer.s2', '2. Headers & Main Titles')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Header Text (English)">
+                        <FormGroup label={t('certificates.customizer.header_en', 'Header Text (English)')}>
                             <textarea className="w-full border rounded p-2 text-sm h-24" value={data.headerEn || ''} onChange={e => handleInputChange('headerEn', e.target.value)} placeholder="Republic of Sudan&#10;Federal Ministry of Health..." />
                         </FormGroup>
-                        <FormGroup label="Header Text (Arabic) - نص الرأسية">
+                        <FormGroup label={t('certificates.customizer.header_ar', 'Header Text (Arabic) - نص الرأسية')}>
                             <textarea className="w-full border rounded p-2 text-sm h-24 text-right" dir="rtl" value={data.headerAr || ''} onChange={e => handleInputChange('headerAr', e.target.value)} placeholder="جمهورية السودان&#10;وزارة الصحة الاتحادية..." />
                         </FormGroup>
-                        <FormGroup label="Certificate Label (English)"><Input value={data.titleEn || ''} onChange={e => handleInputChange('titleEn', e.target.value)} placeholder="CERTIFICATE" /></FormGroup>
-                        <FormGroup label="Certificate Label (Arabic) - عنوان الشهادة"><Input dir="rtl" value={data.titleAr || ''} onChange={e => handleInputChange('titleAr', e.target.value)} placeholder="شهادة" /></FormGroup>
-                        <FormGroup label="Completion Text (English)"><Input value={data.completionTextEn || ''} onChange={e => handleInputChange('completionTextEn', e.target.value)} placeholder="Has successfully completed:" /></FormGroup>
-                        <FormGroup label="Completion Text (Arabic) - نص الإكمال"><Input dir="rtl" value={data.completionTextAr || ''} onChange={e => handleInputChange('completionTextAr', e.target.value)} placeholder="أكمل/ت بنجاح الدورة التدريبية على : " /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.cert_label_en', 'Certificate Label (English)')}><Input value={data.titleEn || ''} onChange={e => handleInputChange('titleEn', e.target.value)} placeholder="CERTIFICATE" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.cert_label_ar', 'Certificate Label (Arabic) - عنوان الشهادة')}><Input dir="rtl" value={data.titleAr || ''} onChange={e => handleInputChange('titleAr', e.target.value)} placeholder="شهادة" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.completion_en', 'Completion Text (English)')}><Input value={data.completionTextEn || ''} onChange={e => handleInputChange('completionTextEn', e.target.value)} placeholder="Has successfully completed:" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.completion_ar', 'Completion Text (Arabic) - نص الإكمال')}><Input dir="rtl" value={data.completionTextAr || ''} onChange={e => handleInputChange('completionTextAr', e.target.value)} placeholder="أكمل/ت بنجاح الدورة التدريبية على : " /></FormGroup>
                     </div>
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">3. Course Name Overrides</h3>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">{t('certificates.customizer.s3', '3. Course Name Overrides')}</h3>
                     <p className="text-xs text-gray-500 mb-3">
-                        The sub-course line prints in brackets under the course title. It works on any course, not only
-                        the ones that carry a sub-type, and filling in one language alone makes that wording print in both.
+                        {t('certificates.customizer.s3_help', 'The sub-course line prints in brackets under the course title. It works on any course, not only the ones that carry a sub-type, and filling in one language alone makes that wording print in both.')}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Main Course Title (English)"><Input value={data.courseTitleEn || ''} onChange={e => handleInputChange('courseTitleEn', e.target.value)} placeholder="Default used if empty" /></FormGroup>
-                        <FormGroup label="Main Course Title (Arabic)"><Input dir="rtl" value={data.courseTitleAr || ''} onChange={e => handleInputChange('courseTitleAr', e.target.value)} placeholder="الافتراضي يستخدم اذا كان فارغ" /></FormGroup>
-                        <FormGroup label="Sub-course Title (English)"><Input value={data.subCourseEn || ''} onChange={e => handleInputChange('subCourseEn', e.target.value)} placeholder="Leave blank for default" /></FormGroup>
-                        <FormGroup label="Sub-course Title (Arabic)"><Input dir="rtl" value={data.subCourseAr || ''} onChange={e => handleInputChange('subCourseAr', e.target.value)} placeholder="يترك فارغاً للافتراضي" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.main_title_en', 'Main Course Title (English)')}><Input value={data.courseTitleEn || ''} onChange={e => handleInputChange('courseTitleEn', e.target.value)} placeholder={t('certificates.customizer.default_if_empty', 'Default used if empty')} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.main_title_ar', 'Main Course Title (Arabic)')}><Input dir="rtl" value={data.courseTitleAr || ''} onChange={e => handleInputChange('courseTitleAr', e.target.value)} placeholder="الافتراضي يستخدم اذا كان فارغ" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.sub_title_en', 'Sub-course Title (English)')}><Input value={data.subCourseEn || ''} onChange={e => handleInputChange('subCourseEn', e.target.value)} placeholder={t('certificates.customizer.blank_for_default', 'Leave blank for default')} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.sub_title_ar', 'Sub-course Title (Arabic)')}><Input dir="rtl" value={data.subCourseAr || ''} onChange={e => handleInputChange('subCourseAr', e.target.value)} placeholder="يترك فارغاً للافتراضي" /></FormGroup>
                     </div>
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">4. Place & Date</h3>
-                    <p className="text-xs text-gray-500 mb-3">Blank keeps the automatic values: place comes from the course state and hall, date is calculated from the start date and duration.</p>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">{t('certificates.customizer.s4', '4. Place & Date')}</h3>
+                    <p className="text-xs text-gray-500 mb-3">{t('certificates.customizer.s4_help', 'Blank keeps the automatic values: place comes from the course state and hall, date is calculated from the start date and duration.')}</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Place (English)"><Input value={data.placeEn || ''} onChange={e => handleInputChange('placeEn', e.target.value)} placeholder="e.g. Khartoum - Grand Hall" /></FormGroup>
-                        <FormGroup label="Place (Arabic) - المكان"><Input dir="rtl" value={data.placeAr || ''} onChange={e => handleInputChange('placeAr', e.target.value)} placeholder="مثال: الخرطوم - القاعة الكبرى" /></FormGroup>
-                        <FormGroup label="Place Label (English)"><Input value={data.placeLabelEn || ''} onChange={e => handleInputChange('placeLabelEn', e.target.value)} placeholder="Place : " /></FormGroup>
-                        <FormGroup label="Place Label (Arabic)"><Input dir="rtl" value={data.placeLabelAr || ''} onChange={e => handleInputChange('placeLabelAr', e.target.value)} placeholder="المكان : " /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.place_en', 'Place (English)')}><Input value={data.placeEn || ''} onChange={e => handleInputChange('placeEn', e.target.value)} placeholder="e.g. Khartoum - Grand Hall" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.place_ar', 'Place (Arabic) - المكان')}><Input dir="rtl" value={data.placeAr || ''} onChange={e => handleInputChange('placeAr', e.target.value)} placeholder="مثال: الخرطوم - القاعة الكبرى" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.place_label_en', 'Place Label (English)')}><Input value={data.placeLabelEn || ''} onChange={e => handleInputChange('placeLabelEn', e.target.value)} placeholder="Place : " /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.place_label_ar', 'Place Label (Arabic)')}><Input dir="rtl" value={data.placeLabelAr || ''} onChange={e => handleInputChange('placeLabelAr', e.target.value)} placeholder="المكان : " /></FormGroup>
 
-                        <FormGroup label="Date Label (English)"><Input value={data.dateLabelEn || ''} onChange={e => handleInputChange('dateLabelEn', e.target.value)} placeholder="Date : " /></FormGroup>
-                        <FormGroup label="Date Label (Arabic)"><Input dir="rtl" value={data.dateLabelAr || ''} onChange={e => handleInputChange('dateLabelAr', e.target.value)} placeholder="التاريخ : " /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.date_label_en', 'Date Label (English)')}><Input value={data.dateLabelEn || ''} onChange={e => handleInputChange('dateLabelEn', e.target.value)} placeholder="Date : " /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.date_label_ar', 'Date Label (Arabic)')}><Input dir="rtl" value={data.dateLabelAr || ''} onChange={e => handleInputChange('dateLabelAr', e.target.value)} placeholder="التاريخ : " /></FormGroup>
                     </div>
 
                     <div className="mt-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <p className="text-sm font-semibold text-gray-800 mb-1">Course dates</p>
+                        <p className="text-sm font-semibold text-gray-800 mb-1">{t('certificates.customizer.course_dates', 'Course dates')}</p>
                         <p className="text-xs text-gray-500 mb-3">
-                            Pick the start and end dates from the calendar. They are formatted automatically for each
-                            language — ordinal suffixes in English, Arabic month names in Arabic — and the month or year
-                            is collapsed when both dates share one. Leave blank to use the dates calculated from the
-                            course record.
+                            {t('certificates.customizer.dates_help', 'Pick the start and end dates from the calendar. They are formatted automatically for each language — ordinal suffixes in English, Arabic month names in Arabic — and the month or year is collapsed when both dates share one. Leave blank to use the dates calculated from the course record.')}
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormGroup label="Start date">
+                            <FormGroup label={t('certificates.common.start_date', 'Start date')}>
                                 <Input
                                     type="date"
                                     value={data.dateStart || ''}
                                     onChange={e => handleInputChange('dateStart', e.target.value)}
                                 />
                             </FormGroup>
-                            <FormGroup label="End date">
+                            <FormGroup label={t('certificates.common.end_date', 'End date')}>
                                 <Input
                                     type="date"
                                     value={data.dateEnd || ''}
@@ -4255,13 +4260,13 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 
                         {data.dateStart && data.dateEnd && data.dateEnd < data.dateStart && (
                             <p className="text-xs font-semibold text-red-600 mt-2">
-                                The end date is before the start date.
+                                {t('certificates.customizer.end_before_start', 'The end date is before the start date.')}
                             </p>
                         )}
 
                         {data.dateStart && (
                             <div className="mt-3 text-sm bg-white border border-gray-200 rounded p-2">
-                                <span className="text-xs text-gray-500 uppercase tracking-wide mr-2">Prints as</span>
+                                <span className="text-xs text-gray-500 uppercase tracking-wide mr-2">{t('certificates.common.prints_as', 'Prints as')}</span>
                                 <span dangerouslySetInnerHTML={{ __html: formatCertificateDateRange(data.dateStart, data.dateEnd, previewLang === 'ar') }} />
                             </div>
                         )}
@@ -4277,86 +4282,85 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                     const dur = Number(course?.course_duration) || 1;
                                     setData(prev => ({ ...prev, dateStart: start, dateEnd: addDaysISO(start, dur - 1) }));
                                 }}
-                            >Fill from course record</Button>
+                            >{t('certificates.customizer.fill_from_record', 'Fill from course record')}</Button>
                             <Button
                                 size="sm"
                                 variant="secondary"
                                 className="text-xs"
                                 onClick={() => setData(prev => ({ ...prev, dateStart: '', dateEnd: '' }))}
-                            >Clear dates</Button>
+                            >{t('certificates.customizer.clear_dates', 'Clear dates')}</Button>
                         </div>
 
                         <details className="mt-3">
-                            <summary className="text-xs text-gray-600 cursor-pointer">Type the date manually instead</summary>
+                            <summary className="text-xs text-gray-600 cursor-pointer">{t('certificates.customizer.type_date_manually', 'Type the date manually instead')}</summary>
                             <p className="text-xs text-gray-500 mt-2 mb-2">
-                                Only used when no start date is picked above. Useful for wording the calendar can't
-                                produce, such as “Every Tuesday, January – June 2026”.
+                                {t('certificates.customizer.manual_date_help', "Only used when no start date is picked above. Useful for wording the calendar can't produce, such as “Every Tuesday, January – June 2026”.")}
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormGroup label="Date text (English)"><Input value={data.dateEn || ''} onChange={e => handleInputChange('dateEn', e.target.value)} placeholder="e.g. 3rd - 7th March 2026" disabled={!!data.dateStart} /></FormGroup>
-                                <FormGroup label="Date text (Arabic) - التاريخ"><Input dir="rtl" value={data.dateAr || ''} onChange={e => handleInputChange('dateAr', e.target.value)} placeholder="مثال: 3 - 7 مارس 2026" disabled={!!data.dateStart} /></FormGroup>
+                                <FormGroup label={t('certificates.customizer.date_text_en', 'Date text (English)')}><Input value={data.dateEn || ''} onChange={e => handleInputChange('dateEn', e.target.value)} placeholder="e.g. 3rd - 7th March 2026" disabled={!!data.dateStart} /></FormGroup>
+                                <FormGroup label={t('certificates.customizer.date_text_ar', 'Date text (Arabic) - التاريخ')}><Input dir="rtl" value={data.dateAr || ''} onChange={e => handleInputChange('dateAr', e.target.value)} placeholder="مثال: 3 - 7 مارس 2026" disabled={!!data.dateStart} /></FormGroup>
                             </div>
                         </details>
                     </div>
                     <div className="flex flex-wrap gap-6 mt-3">
-                        <CheckRow label="Hide place line" checked={data.hidePlace} onChange={v => handleInputChange('hidePlace', v)} />
-                        <CheckRow label="Hide date line" checked={data.hideDate} onChange={v => handleInputChange('hideDate', v)} />
+                        <CheckRow label={t('certificates.customizer.hide_place', 'Hide place line')} checked={data.hidePlace} onChange={v => handleInputChange('hidePlace', v)} />
+                        <CheckRow label={t('certificates.customizer.hide_date', 'Hide date line')} checked={data.hideDate} onChange={v => handleInputChange('hideDate', v)} />
                     </div>
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">5. Signatories</h3>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">{t('certificates.customizer.s5', '5. Signatories')}</h3>
 
                     <div className="flex flex-wrap gap-6 mb-4">
-                        <CheckRow label="No honorific prefix" hint="Removes Dr. / د. in front of both names" checked={data.hideHonorific} onChange={v => handleInputChange('hideHonorific', v)} />
-                        <CheckRow label="Hide course director" checked={data.hideDirector} onChange={v => handleInputChange('hideDirector', v)} />
-                        <CheckRow label="Hide national program manager" checked={data.hideManager} onChange={v => handleInputChange('hideManager', v)} />
+                        <CheckRow label={t('certificates.customizer.no_honorific', 'No honorific prefix')} hint={t('certificates.customizer.no_honorific_hint', 'Removes Dr. / د. in front of both names')} checked={data.hideHonorific} onChange={v => handleInputChange('hideHonorific', v)} />
+                        <CheckRow label={t('certificates.customizer.hide_director', 'Hide course director')} checked={data.hideDirector} onChange={v => handleInputChange('hideDirector', v)} />
+                        <CheckRow label={t('certificates.customizer.hide_manager', 'Hide national program manager')} checked={data.hideManager} onChange={v => handleInputChange('hideManager', v)} />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Honorific (English)"><Input value={data.honorificEn || ''} onChange={e => handleInputChange('honorificEn', e.target.value)} placeholder="Dr." disabled={!!data.hideHonorific} /></FormGroup>
-                        <FormGroup label="Honorific (Arabic)"><Input dir="rtl" value={data.honorificAr || ''} onChange={e => handleInputChange('honorificAr', e.target.value)} placeholder="د." disabled={!!data.hideHonorific} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.honorific_en', 'Honorific (English)')}><Input value={data.honorificEn || ''} onChange={e => handleInputChange('honorificEn', e.target.value)} placeholder="Dr." disabled={!!data.hideHonorific} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.honorific_ar', 'Honorific (Arabic)')}><Input dir="rtl" value={data.honorificAr || ''} onChange={e => handleInputChange('honorificAr', e.target.value)} placeholder="د." disabled={!!data.hideHonorific} /></FormGroup>
 
-                        <FormGroup label="Course Director Name (English)"><Input value={data.directorTitleEn || ''} onChange={e => handleInputChange('directorTitleEn', e.target.value)} placeholder="e.g. Omer Ali" /></FormGroup>
-                        <FormGroup label="Course Director Name (Arabic)"><Input dir="rtl" value={data.directorTitleAr || ''} onChange={e => handleInputChange('directorTitleAr', e.target.value)} placeholder="اسم مدير الدورة" /></FormGroup>
-                        <FormGroup label="Course Director Title (English)"><Input value={data.directorRoleEn || ''} onChange={e => handleInputChange('directorRoleEn', e.target.value)} placeholder="Course Director" /></FormGroup>
-                        <FormGroup label="Course Director Title (Arabic)"><Input dir="rtl" value={data.directorRoleAr || ''} onChange={e => handleInputChange('directorRoleAr', e.target.value)} placeholder="مدير الدورة" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.director_name_en', 'Course Director Name (English)')}><Input value={data.directorTitleEn || ''} onChange={e => handleInputChange('directorTitleEn', e.target.value)} placeholder="e.g. Omer Ali" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.director_name_ar', 'Course Director Name (Arabic)')}><Input dir="rtl" value={data.directorTitleAr || ''} onChange={e => handleInputChange('directorTitleAr', e.target.value)} placeholder="اسم مدير الدورة" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.director_title_en', 'Course Director Title (English)')}><Input value={data.directorRoleEn || ''} onChange={e => handleInputChange('directorRoleEn', e.target.value)} placeholder="Course Director" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.director_title_ar', 'Course Director Title (Arabic)')}><Input dir="rtl" value={data.directorRoleAr || ''} onChange={e => handleInputChange('directorRoleAr', e.target.value)} placeholder="مدير الدورة" /></FormGroup>
 
-                        <FormGroup label="National Program Manager Name (English)"><Input value={data.managerTitleEn || ''} onChange={e => handleInputChange('managerTitleEn', e.target.value)} placeholder="e.g. Ali Ahmed" /></FormGroup>
-                        <FormGroup label="National Program Manager Name (Arabic)"><Input dir="rtl" value={data.managerTitleAr || ''} onChange={e => handleInputChange('managerTitleAr', e.target.value)} placeholder="اسم مدير البرنامج" /></FormGroup>
-                        <FormGroup label="National Program Manager Title (English)"><Input value={data.managerRoleEn || ''} onChange={e => handleInputChange('managerRoleEn', e.target.value)} placeholder="National Program Manager" /></FormGroup>
-                        <FormGroup label="National Program Manager Title (Arabic)"><Input dir="rtl" value={data.managerRoleAr || ''} onChange={e => handleInputChange('managerRoleAr', e.target.value)} placeholder="مدير البرنامج" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.manager_name_en', 'National Program Manager Name (English)')}><Input value={data.managerTitleEn || ''} onChange={e => handleInputChange('managerTitleEn', e.target.value)} placeholder="e.g. Ali Ahmed" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.manager_name_ar', 'National Program Manager Name (Arabic)')}><Input dir="rtl" value={data.managerTitleAr || ''} onChange={e => handleInputChange('managerTitleAr', e.target.value)} placeholder="اسم مدير البرنامج" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.manager_title_en', 'National Program Manager Title (English)')}><Input value={data.managerRoleEn || ''} onChange={e => handleInputChange('managerRoleEn', e.target.value)} placeholder="National Program Manager" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.manager_title_ar', 'National Program Manager Title (Arabic)')}><Input dir="rtl" value={data.managerRoleAr || ''} onChange={e => handleInputChange('managerRoleAr', e.target.value)} placeholder="مدير البرنامج" /></FormGroup>
                     </div>
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">6. Third Signature (centre bottom)</h3>
-                    <p className="text-xs text-gray-500 mb-3">Adds a third signatory between the director and the program manager — for a partner organisation, donor, or state ministry.</p>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">{t('certificates.customizer.s6', '6. Third Signature (centre bottom)')}</h3>
+                    <p className="text-xs text-gray-500 mb-3">{t('certificates.customizer.s6_help', 'Adds a third signatory between the director and the program manager — for a partner organisation, donor, or state ministry.')}</p>
 
                     <CheckRow
-                        label="Add a third signature"
-                        hint="Prints as soon as a name or a signature image is provided"
+                        label={t('certificates.customizer.add_third', 'Add a third signature')}
+                        hint={t('certificates.customizer.add_third_hint', 'Prints as soon as a name or a signature image is provided')}
                         checked={thirdPartyWillPrint || !!data.thirdPartyEnabled}
                         onChange={v => handleInputChange('thirdPartyEnabled', v)}
                     />
 
                     <div className={`mt-2 text-xs font-semibold ${thirdPartyWillPrint ? 'text-green-700' : 'text-amber-700'}`}>
                         {thirdPartyWillPrint
-                            ? 'This third signature WILL be printed on the certificate.'
+                            ? t('certificates.customizer.third_will_print', 'This third signature WILL be printed on the certificate.')
                             : data.thirdPartyEnabled === false
-                                ? 'Turned off — it will not be printed.'
-                                : 'Not printed yet: enter a name or upload a signature image below.'}
+                                ? t('certificates.customizer.third_off', 'Turned off — it will not be printed.')
+                                : t('certificates.customizer.third_not_yet', 'Not printed yet: enter a name or upload a signature image below.')}
                     </div>
 
                     {(data.thirdPartyEnabled || thirdPartyHasContent) && (
                         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormGroup label="Third Party Name (English)"><Input value={data.thirdPartyNameEn || ''} onChange={e => handleInputChange('thirdPartyNameEn', e.target.value)} placeholder="e.g. Dr. Sara Mohamed" /></FormGroup>
-                            <FormGroup label="Third Party Name (Arabic)"><Input dir="rtl" value={data.thirdPartyNameAr || ''} onChange={e => handleInputChange('thirdPartyNameAr', e.target.value)} placeholder="اسم ممثل الجهة" /></FormGroup>
-                            <FormGroup label="Third Party Title (English)"><Input value={data.thirdPartyRoleEn || ''} onChange={e => handleInputChange('thirdPartyRoleEn', e.target.value)} placeholder="Partner Representative" /></FormGroup>
-                            <FormGroup label="Third Party Title (Arabic)"><Input dir="rtl" value={data.thirdPartyRoleAr || ''} onChange={e => handleInputChange('thirdPartyRoleAr', e.target.value)} placeholder="ممثل الجهة الشريكة" /></FormGroup>
+                            <FormGroup label={t('certificates.customizer.third_name_en', 'Third Party Name (English)')}><Input value={data.thirdPartyNameEn || ''} onChange={e => handleInputChange('thirdPartyNameEn', e.target.value)} placeholder="e.g. Dr. Sara Mohamed" /></FormGroup>
+                            <FormGroup label={t('certificates.customizer.third_name_ar', 'Third Party Name (Arabic)')}><Input dir="rtl" value={data.thirdPartyNameAr || ''} onChange={e => handleInputChange('thirdPartyNameAr', e.target.value)} placeholder="اسم ممثل الجهة" /></FormGroup>
+                            <FormGroup label={t('certificates.customizer.third_title_en', 'Third Party Title (English)')}><Input value={data.thirdPartyRoleEn || ''} onChange={e => handleInputChange('thirdPartyRoleEn', e.target.value)} placeholder="Partner Representative" /></FormGroup>
+                            <FormGroup label={t('certificates.customizer.third_title_ar', 'Third Party Title (Arabic)')}><Input dir="rtl" value={data.thirdPartyRoleAr || ''} onChange={e => handleInputChange('thirdPartyRoleAr', e.target.value)} placeholder="ممثل الجهة الشريكة" /></FormGroup>
                             <div className="md:col-span-2">
                                 <AssetUploader
-                                    label="Third Party Signature Image"
+                                    label={t('certificates.customizer.third_sig_image', 'Third Party Signature Image')}
                                     fieldKey="thirdPartySignatureUrl"
                                     value={data.thirdPartySignatureUrl}
                                     uploading={uploadingAsset === 'thirdPartySignatureUrl'}
@@ -4370,45 +4374,44 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">7. Font Sizes (pixels)</h3>
-                    <p className="text-xs text-gray-500 mb-3">Leave blank to use the default size for each title.</p>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">{t('certificates.customizer.s7', '7. Font Sizes (pixels)')}</h3>
+                    <p className="text-xs text-gray-500 mb-3">{t('certificates.customizer.s7_help', 'Leave blank to use the default size for each title.')}</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <FormGroup label={`Header text (default ${CERT_DEFAULTS.headerFontSizeEn}/${CERT_DEFAULTS.headerFontSizeAr})`}>
+                        <FormGroup label={t('certificates.customizer.fs_header', 'Header text (default {{en}}/{{ar}})', { en: CERT_DEFAULTS.headerFontSizeEn, ar: CERT_DEFAULTS.headerFontSizeAr })}>
                             <Input type="number" min="8" value={data.headerFontSize ?? ''} onChange={e => handleInputChange('headerFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.headerFontSizeEn)} />
                         </FormGroup>
-                        <FormGroup label={`"CERTIFICATE" title (default ${CERT_DEFAULTS.titleFontSize})`}>
+                        <FormGroup label={t('certificates.customizer.fs_title', '"CERTIFICATE" title (default {{value}})', { value: CERT_DEFAULTS.titleFontSize })}>
                             <Input type="number" min="8" value={data.titleFontSize ?? ''} onChange={e => handleInputChange('titleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.titleFontSize)} />
                         </FormGroup>
-                        <FormGroup label={`Participant name (default ${CERT_DEFAULTS.nameFontSize})`}>
+                        <FormGroup label={t('certificates.customizer.fs_name', 'Participant name (default {{value}})', { value: CERT_DEFAULTS.nameFontSize })}>
                             <Input type="number" min="8" value={data.nameFontSize ?? ''} onChange={e => handleInputChange('nameFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.nameFontSize)} />
                         </FormGroup>
-                        <FormGroup label={`Completion line (default ${CERT_DEFAULTS.completionFontSize})`}>
+                        <FormGroup label={t('certificates.customizer.fs_completion', 'Completion line (default {{value}})', { value: CERT_DEFAULTS.completionFontSize })}>
                             <Input type="number" min="8" value={data.completionFontSize ?? ''} onChange={e => handleInputChange('completionFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.completionFontSize)} />
                         </FormGroup>
-                        <FormGroup label={`Course title (default ${CERT_DEFAULTS.courseTitleFontSize})`}>
+                        <FormGroup label={t('certificates.customizer.fs_course_title', 'Course title (default {{value}})', { value: CERT_DEFAULTS.courseTitleFontSize })}>
                             <Input type="number" min="8" value={data.courseTitleFontSize ?? ''} onChange={e => handleInputChange('courseTitleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.courseTitleFontSize)} />
                         </FormGroup>
-                        <FormGroup label={`Sub-course line (default ${CERT_DEFAULTS.subCourseFontSize})`}>
+                        <FormGroup label={t('certificates.customizer.fs_sub_course', 'Sub-course line (default {{value}})', { value: CERT_DEFAULTS.subCourseFontSize })}>
                             <Input type="number" min="8" value={data.subCourseFontSize ?? ''} onChange={e => handleInputChange('subCourseFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.subCourseFontSize)} />
                         </FormGroup>
-                        <FormGroup label={`Place & date (default ${CERT_DEFAULTS.placeDateFontSize})`}>
+                        <FormGroup label={t('certificates.customizer.fs_place_date', 'Place & date (default {{value}})', { value: CERT_DEFAULTS.placeDateFontSize })}>
                             <Input type="number" min="8" value={data.placeDateFontSize ?? ''} onChange={e => handleInputChange('placeDateFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.placeDateFontSize)} />
                         </FormGroup>
-                        <FormGroup label={`Signature names (default ${CERT_DEFAULTS.signatureNameFontSize})`}>
+                        <FormGroup label={t('certificates.customizer.fs_sig_names', 'Signature names (default {{value}})', { value: CERT_DEFAULTS.signatureNameFontSize })}>
                             <Input type="number" min="8" value={data.signatureNameFontSize ?? ''} onChange={e => handleInputChange('signatureNameFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.signatureNameFontSize)} />
                         </FormGroup>
-                        <FormGroup label={`Signature titles (default ${CERT_DEFAULTS.signatureRoleFontSize})`}>
+                        <FormGroup label={t('certificates.customizer.fs_sig_titles', 'Signature titles (default {{value}})', { value: CERT_DEFAULTS.signatureRoleFontSize })}>
                             <Input type="number" min="8" value={data.signatureRoleFontSize ?? ''} onChange={e => handleInputChange('signatureRoleFontSize', e.target.value)} placeholder={String(CERT_DEFAULTS.signatureRoleFontSize)} />
                         </FormGroup>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">Signature sizes apply to all three signatories. Lower the title size if a long role caption wraps past the border.</p>
+                    <p className="text-xs text-gray-500 mt-2">{t('certificates.customizer.s7_footer', 'Signature sizes apply to all three signatories. Lower the title size if a long role caption wraps past the border.')}</p>
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">8. Vertical Spacing (millimetres from top)</h3>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">{t('certificates.customizer.s8', '8. Vertical Spacing (millimetres from top)')}</h3>
                     <p className="text-xs text-gray-500 mb-3">
-                        Use ▲ / ▼ to nudge a line up or down by 1mm, or type an exact value. Blank uses the default.
-                        The page is 210mm tall, so keep values between 0 and 210 and in increasing order down the page.
+                        {t('certificates.customizer.s8_help', 'Use ▲ / ▼ to nudge a line up or down by 1mm, or type an exact value. Blank uses the default. The page is 210mm tall, so keep values between 0 and 210 and in increasing order down the page.')}
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -4422,7 +4425,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                 placeDateTop: '145', qrTop: '55', signatureTop: '172'
                             }))}
                             className="text-xs"
-                        >Preset: more breathing room</Button>
+                        >{t('certificates.customizer.preset_room', 'Preset: more breathing room')}</Button>
                         <Button
                             size="sm"
                             variant="secondary"
@@ -4439,52 +4442,51 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                 return next;
                             })}
                             className="text-xs"
-                        >Reset spacing to defaults</Button>
+                        >{t('certificates.customizer.reset_spacing', 'Reset spacing to defaults')}</Button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                         <div>
-                            <NudgeRow label="Logos" fieldKey="logoTop" value={data.logoTop} defaultValue={CERT_DEFAULTS.logoTop} onChange={handleInputChange} />
-                            <NudgeRow label="Header text" fieldKey="headerTop" value={data.headerTop} defaultValue={CERT_DEFAULTS.headerTop} onChange={handleInputChange} />
-                            <NudgeRow label='"CERTIFICATE" title' fieldKey="titleTop" value={data.titleTop} defaultValue={CERT_DEFAULTS.titleTop} onChange={handleInputChange} />
-                            <NudgeRow label="Participant name" fieldKey="nameTop" value={data.nameTop} defaultValue={CERT_DEFAULTS.nameTop} onChange={handleInputChange} />
-                            <NudgeRow label="QR code" fieldKey="qrTop" value={data.qrTop} defaultValue={CERT_DEFAULTS.qrTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_logos', 'Logos')} fieldKey="logoTop" value={data.logoTop} defaultValue={CERT_DEFAULTS.logoTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_header', 'Header text')} fieldKey="headerTop" value={data.headerTop} defaultValue={CERT_DEFAULTS.headerTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_title', '"CERTIFICATE" title')} fieldKey="titleTop" value={data.titleTop} defaultValue={CERT_DEFAULTS.titleTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_name', 'Participant name')} fieldKey="nameTop" value={data.nameTop} defaultValue={CERT_DEFAULTS.nameTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_qr', 'QR code')} fieldKey="qrTop" value={data.qrTop} defaultValue={CERT_DEFAULTS.qrTop} onChange={handleInputChange} />
                         </div>
                         <div>
-                            <NudgeRow label="Completion line" fieldKey="completionTop" value={data.completionTop} defaultValue={CERT_DEFAULTS.completionTop} onChange={handleInputChange} />
-                            <NudgeRow label="Course title" fieldKey="courseTitleTop" value={data.courseTitleTop} defaultValue={CERT_DEFAULTS.courseTitleTop} onChange={handleInputChange} />
-                            <NudgeRow label="Sub-course line" fieldKey="subCourseTop" value={data.subCourseTop} defaultValue={CERT_DEFAULTS.subCourseTop} onChange={handleInputChange} />
-                            <NudgeRow label="Place & date" fieldKey="placeDateTop" value={data.placeDateTop} defaultValue={CERT_DEFAULTS.placeDateTop} onChange={handleInputChange} />
-                            <NudgeRow label="Signature row" fieldKey="signatureTop" value={data.signatureTop} defaultValue={CERT_DEFAULTS.signatureTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_completion', 'Completion line')} fieldKey="completionTop" value={data.completionTop} defaultValue={CERT_DEFAULTS.completionTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_course_title', 'Course title')} fieldKey="courseTitleTop" value={data.courseTitleTop} defaultValue={CERT_DEFAULTS.courseTitleTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_sub_course', 'Sub-course line')} fieldKey="subCourseTop" value={data.subCourseTop} defaultValue={CERT_DEFAULTS.subCourseTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_place_date', 'Place & date')} fieldKey="placeDateTop" value={data.placeDateTop} defaultValue={CERT_DEFAULTS.placeDateTop} onChange={handleInputChange} />
+                            <NudgeRow label={t('certificates.customizer.nr_sig_row', 'Signature row')} fieldKey="signatureTop" value={data.signatureTop} defaultValue={CERT_DEFAULTS.signatureTop} onChange={handleInputChange} />
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">9. Signature & Stamp Layout (millimetres)</h3>
+                    <h3 className="font-bold border-b pb-2 mb-3 mt-6">{t('certificates.customizer.s9', '9. Signature & Stamp Layout (millimetres)')}</h3>
 
                     <p className="text-xs text-gray-500 mb-2">
-                        Each signature can sit at its own height, width and text size. Blank boxes follow the shared
-                        signature row above, so you only fill in the ones you want to move.
+                        {t('certificates.customizer.s9_help', 'Each signature can sit at its own height, width and text size. Blank boxes follow the shared signature row above, so you only fill in the ones you want to move.')}
                     </p>
                     <div className="overflow-x-auto mb-5">
                         <table className="w-full text-xs border border-gray-200 rounded">
                             <thead className="bg-gray-50 text-gray-600">
                                 <tr>
-                                    <th className="text-left font-semibold px-2 py-1.5">Signature</th>
-                                    <th className="font-semibold px-2 py-1.5">Top (mm)</th>
-                                    <th className="font-semibold px-2 py-1.5">Width (mm)</th>
-                                    <th className="font-semibold px-2 py-1.5">Name (px)</th>
-                                    <th className="font-semibold px-2 py-1.5">Title (px)</th>
-                                    <th className="font-semibold px-2 py-1.5">Image lift (mm)</th>
+                                    <th className="text-left font-semibold px-2 py-1.5">{t('certificates.customizer.th_signature', 'Signature')}</th>
+                                    <th className="font-semibold px-2 py-1.5">{t('certificates.customizer.th_top', 'Top (mm)')}</th>
+                                    <th className="font-semibold px-2 py-1.5">{t('certificates.customizer.th_width', 'Width (mm)')}</th>
+                                    <th className="font-semibold px-2 py-1.5">{t('certificates.customizer.th_name', 'Name (px)')}</th>
+                                    <th className="font-semibold px-2 py-1.5">{t('certificates.customizer.th_title', 'Title (px)')}</th>
+                                    <th className="font-semibold px-2 py-1.5">{t('certificates.customizer.th_lift', 'Image lift (mm)')}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {[
-                                    { block: 'manager', label: 'Program Manager' },
-                                    { block: 'director', label: 'Course Director' },
-                                    { block: 'third', label: 'Third signature' },
-                                    { block: 'fourth', label: 'Fourth signature' }
+                                    { block: 'manager', label: t('certificates.designer.program_manager', 'Program Manager') },
+                                    { block: 'director', label: t('certificates.designer.course_director', 'Course Director') },
+                                    { block: 'third', label: t('certificates.designer.third_signature', 'Third signature') },
+                                    { block: 'fourth', label: t('certificates.designer.fourth_signature', 'Fourth signature') }
                                 ].map(({ block, label }) => (
                                     <tr key={block} className="border-t border-gray-100">
                                         <td className="px-2 py-1.5 font-medium text-gray-700 whitespace-nowrap">{label}</td>
@@ -4510,19 +4512,18 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                             </tbody>
                         </table>
                         <p className="text-[11px] text-gray-500 mt-1">
-                            “Image lift” is how far the scanned signature is raised above its name — smaller sits closer
-                            to the name, larger floats it higher.
+                            {t('certificates.customizer.lift_help', '“Image lift” is how far the scanned signature is raised above its name — smaller sits closer to the name, larger floats it higher.')}
                         </p>
                     </div>
 
-                    <p className="text-xs text-gray-500 mb-3">Fine-tune the shared widths if the third signature and the stamp overlap. The page is 297 × 210 mm.</p>
+                    <p className="text-xs text-gray-500 mb-3">{t('certificates.customizer.widths_help', 'Fine-tune the shared widths if the third signature and the stamp overlap. The page is 297 × 210 mm.')}</p>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <FormGroup label="Side signature width"><Input type="number" value={data.signatureWidth ?? ''} onChange={e => handleInputChange('signatureWidth', e.target.value)} placeholder={thirdPartyWillPrint ? '80' : String(CERT_DEFAULTS.signatureWidth)} /></FormGroup>
-                        <FormGroup label="Third signature width"><Input type="number" value={data.thirdSignatureWidth ?? ''} onChange={e => handleInputChange('thirdSignatureWidth', e.target.value)} placeholder={String(CERT_DEFAULTS.thirdSignatureWidth)} /></FormGroup>
-                        <FormGroup label="Stamp top"><Input type="number" value={data.stampTop ?? ''} onChange={e => handleInputChange('stampTop', e.target.value)} placeholder={data.thirdPartyEnabled ? '168' : '162'} /></FormGroup>
-                        <FormGroup label="Stamp left (%)"><Input type="number" value={data.stampLeft ?? ''} onChange={e => handleInputChange('stampLeft', e.target.value)} placeholder="50" /></FormGroup>
-                        <FormGroup label="Stamp width"><Input type="number" value={data.stampWidth ?? ''} onChange={e => handleInputChange('stampWidth', e.target.value)} placeholder={data.thirdPartyEnabled ? '32' : '40'} /></FormGroup>
-                        <FormGroup label="Stamp opacity"><Input type="number" step="0.05" min="0" max="1" value={data.stampOpacity ?? ''} onChange={e => handleInputChange('stampOpacity', e.target.value)} placeholder={data.thirdPartyEnabled ? '0.55' : '0.9'} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.side_sig_width', 'Side signature width')}><Input type="number" value={data.signatureWidth ?? ''} onChange={e => handleInputChange('signatureWidth', e.target.value)} placeholder={thirdPartyWillPrint ? '80' : String(CERT_DEFAULTS.signatureWidth)} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.third_sig_width', 'Third signature width')}><Input type="number" value={data.thirdSignatureWidth ?? ''} onChange={e => handleInputChange('thirdSignatureWidth', e.target.value)} placeholder={String(CERT_DEFAULTS.thirdSignatureWidth)} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.stamp_top', 'Stamp top')}><Input type="number" value={data.stampTop ?? ''} onChange={e => handleInputChange('stampTop', e.target.value)} placeholder={data.thirdPartyEnabled ? '168' : '162'} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.stamp_left', 'Stamp left (%)')}><Input type="number" value={data.stampLeft ?? ''} onChange={e => handleInputChange('stampLeft', e.target.value)} placeholder="50" /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.stamp_width', 'Stamp width')}><Input type="number" value={data.stampWidth ?? ''} onChange={e => handleInputChange('stampWidth', e.target.value)} placeholder={data.thirdPartyEnabled ? '32' : '40'} /></FormGroup>
+                        <FormGroup label={t('certificates.customizer.stamp_opacity', 'Stamp opacity')}><Input type="number" step="0.05" min="0" max="1" value={data.stampOpacity ?? ''} onChange={e => handleInputChange('stampOpacity', e.target.value)} placeholder={data.thirdPartyEnabled ? '0.55' : '0.9'} /></FormGroup>
                     </div>
                 </div>
                 </>
@@ -4530,11 +4531,11 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 
             </CardBody>
             <CardFooter className="flex justify-between items-center bg-gray-50 border-t">
-                <Button variant="danger" onClick={handleClear} disabled={isSaving}>Revert to Defaults</Button>
+                <Button variant="danger" onClick={handleClear} disabled={isSaving}>{t('certificates.customizer.revert', 'Revert to Defaults')}</Button>
                 <div className="flex gap-2">
-                    <Button variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={isSaving}>{t('certificates.common.cancel', 'Cancel')}</Button>
                     <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingAsset}>
-                        {isSaving ? <Spinner size="sm" /> : 'Save Template'}
+                        {isSaving ? <Spinner size="sm" /> : t('certificates.common.save_template', 'Save Template')}
                     </Button>
                 </div>
             </CardFooter>
@@ -4547,25 +4548,27 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 // ============================================================================
 
 export function CertificateVerificationView({ participant, course }) {
-    if (!participant || !course) return <EmptyState message="Invalid certificate data." />;
+    const { t } = useTranslation();
+    if (!participant || !course) return <EmptyState message={t('certificates.verify.invalid', 'Invalid certificate data.')} />;
     return (
         <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg text-center border border-gray-100">
             <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 mb-6 shadow-inner">
                 <CheckCircle className="h-10 w-10 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Certificate Verified</h2>
-            <p className="text-gray-600 mb-4 font-medium">This certificate was authentically issued to:</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('certificates.verify.verified', 'Certificate Verified')}</h2>
+            <p className="text-gray-600 mb-4 font-medium">{t('certificates.verify.issued_to', 'This certificate was authentically issued to:')}</p>
             <h3 className="text-2xl font-black text-sky-700 mb-2">{participant.name}</h3>
-            <p className="text-sm text-gray-500 mb-6 font-semibold uppercase tracking-wider">For completing: {course.course_type}</p>
+            <p className="text-sm text-gray-500 mb-6 font-semibold uppercase tracking-wider">{t('certificates.verify.for_completing', 'For completing: {{type}}', { type: course.course_type })}</p>
             <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 text-left text-sm text-gray-700 space-y-2">
-                <p className="flex justify-between border-b border-gray-200 pb-2"><strong className="text-gray-500 uppercase tracking-wide text-xs">Course Location:</strong> <span className="font-bold">{course.state} - {course.locality}</span></p>
-                <p className="flex justify-between"><strong className="text-gray-500 uppercase tracking-wide text-xs">Date:</strong> <span className="font-bold">{course.start_date}</span></p>
+                <p className="flex justify-between border-b border-gray-200 pb-2"><strong className="text-gray-500 uppercase tracking-wide text-xs">{t('certificates.verify.location', 'Course Location:')}</strong> <span className="font-bold">{course.state} - {course.locality}</span></p>
+                <p className="flex justify-between"><strong className="text-gray-500 uppercase tracking-wide text-xs">{t('certificates.verify.date', 'Date:')}</strong> <span className="font-bold">{course.start_date}</span></p>
             </div>
         </div>
     );
 }
 
 export function PublicCertificateDownloadView({ participantId }) {
+    const { t } = useTranslation();
     const { facilitators, federalCoordinators, fetchFacilitators, fetchFederalCoordinators } = useDataCache();
     useEffect(() => { fetchFacilitators(); fetchFederalCoordinators(); }, []);
     const [data, setData] = useState(null);
@@ -4577,17 +4580,16 @@ export function PublicCertificateDownloadView({ participantId }) {
         const load = async () => {
             try {
                 const p = await getParticipantById(participantId, 'server');
-                if (!p) throw new Error("Participant not found.");
+                if (!p) throw new Error(i18n.t('certificates.public.participant_not_found', 'Participant not found.'));
                 const c = await getCourseById(p.courseId, 'server');
-                if (!c) throw new Error("Course not found.");
-                if (!c.isCertificateApproved) throw new Error("Certificates for this course are not yet approved or have been revoked.");
+                if (!c) throw new Error(i18n.t('certificates.public.course_not_found', 'Course not found.'));
+                if (!c.isCertificateApproved) throw new Error(i18n.t('certificates.public.not_approved', 'Certificates for this course are not yet approved or have been revoked.'));
                 // Approval was given for a particular name and sub-course. If
                 // either has been changed since, this certificate has not been
                 // signed in the form it would now print.
                 if (certificateApprovalState(p, c).state === 'stale') {
                     throw new Error(
-                        "This certificate is waiting to be approved again, because the participant's " +
-                        "details were changed after the course was approved. Please contact the course director."
+                        i18n.t('certificates.public.awaiting_reapproval_error', "This certificate is waiting to be approved again, because the participant's details were changed after the course was approved. Please contact the course director.")
                     );
                 }
                 setData({ participant: p, course: c });
@@ -4608,7 +4610,7 @@ export function PublicCertificateDownloadView({ participantId }) {
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
                 await saveAndOpenPdf(doc, `Certificate_${data.participant.name.replace(/\s+/g, '_')}_${lang}.pdf`);
             }
-        } catch(e) { notify("Download failed: " + e.message); }
+        } catch(e) { notify(t('certificates.public.download_failed', 'Download failed: {{error}}', { error: e.message })); }
         finally { setDownloading(false); }
     };
 
@@ -4620,15 +4622,15 @@ export function PublicCertificateDownloadView({ participantId }) {
             <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-sky-100 mb-6 shadow-inner">
                 <Award className="h-10 w-10 text-sky-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Download Certificate</h2>
-            <p className="text-gray-500 mb-6 text-sm">Participant:</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('certificates.public.download_certificate', 'Download Certificate')}</h2>
+            <p className="text-gray-500 mb-6 text-sm">{t('certificates.public.participant', 'Participant:')}</p>
             <h3 className="text-xl font-bold text-sky-700 mb-8">{data.participant.name}</h3>
             <div className="flex flex-col gap-3">
                 <Button onClick={() => handleDownload('en')} disabled={downloading} className="w-full justify-center shadow-md">
-                    {downloading ? <Spinner size="sm" /> : 'Download (English)'}
+                    {downloading ? <Spinner size="sm" /> : t('certificates.public.download_en', 'Download (English)')}
                 </Button>
                 <Button onClick={() => handleDownload('ar')} disabled={downloading} variant="secondary" className="w-full justify-center">
-                    {downloading ? <Spinner size="sm" /> : 'Download (Arabic - عربي)'}
+                    {downloading ? <Spinner size="sm" /> : t('certificates.public.download_ar', 'Download (Arabic - عربي)')}
                 </Button>
             </div>
         </div>
@@ -4636,6 +4638,7 @@ export function PublicCertificateDownloadView({ participantId }) {
 }
 
 export function PublicCourseCertificatesView({ courseId }) {
+    const { t } = useTranslation();
     const { facilitators, federalCoordinators, fetchFacilitators, fetchFederalCoordinators } = useDataCache();
     useEffect(() => { fetchFacilitators(); fetchFederalCoordinators(); }, []);
     const [data, setData] = useState(null);
@@ -4647,8 +4650,8 @@ export function PublicCourseCertificatesView({ courseId }) {
         const load = async () => {
             try {
                 const c = await getCourseById(courseId, 'server');
-                if (!c) throw new Error("Course not found.");
-                if (!c.isCertificateApproved) throw new Error("Certificates for this course are not yet approved or have been revoked.");
+                if (!c) throw new Error(i18n.t('certificates.public.course_not_found', 'Course not found.'));
+                if (!c.isCertificateApproved) throw new Error(i18n.t('certificates.public.not_approved', 'Certificates for this course are not yet approved or have been revoked.'));
                 const parts = await listAllParticipantsForCourse(courseId, { source: 'server' });
                 // Anyone altered since approval is listed but not downloadable:
                 // removing them from the page entirely would look like a lost
@@ -4666,7 +4669,7 @@ export function PublicCourseCertificatesView({ courseId }) {
 
     const handleDownload = async (p, lang) => {
         if (p.awaitingReapproval) {
-            notify("This certificate is waiting to be approved again and cannot be downloaded yet.");
+            notify(t('certificates.public.awaiting_toast', 'This certificate is waiting to be approved again and cannot be downloaded yet.'));
             return;
         }
         setDownloadingId(p.id);
@@ -4679,7 +4682,7 @@ export function PublicCourseCertificatesView({ courseId }) {
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
                 await saveAndOpenPdf(doc, `Certificate_${p.name.replace(/\s+/g, '_')}_${lang}.pdf`);
             }
-        } catch(e) { notify("Download failed: " + e.message); }
+        } catch(e) { notify(t('certificates.public.download_failed', 'Download failed: {{error}}', { error: e.message })); }
         finally { setDownloadingId(null); }
     };
 
@@ -4688,26 +4691,26 @@ export function PublicCourseCertificatesView({ courseId }) {
 
     return (
         <Card className="p-4 sm:p-6">
-            <PageHeader title="Course Certificates" subtitle={`${data.course.course_type} - ${data.course.state} / ${data.course.locality}`} />
+            <PageHeader title={t('certificates.public.course_certificates', 'Course Certificates')} subtitle={`${data.course.course_type} - ${data.course.state} / ${data.course.locality}`} />
             
             <div className="bg-sky-50 text-sky-800 p-4 rounded-lg text-sm border border-sky-100 mb-6 flex items-start">
                 <Award className="w-5 h-5 mr-3 shrink-0" />
-                <p>Welcome. You can download certificates for any active participant from this course using the buttons below.</p>
+                <p>{t('certificates.public.welcome', 'Welcome. You can download certificates for any active participant from this course using the buttons below.')}</p>
             </div>
 
             <div className="hidden sm:block overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-                <Table headers={["Participant Name", "Job Title", "Download Action"]}>
+                <Table headers={[t('certificates.public.th_name', 'Participant Name'), t('certificates.public.th_job', 'Job Title'), t('certificates.public.th_action', 'Download Action')]}>
                     {data.participants.map(p => (
                         <tr key={p.id} className="hover:bg-sky-50/50 transition-colors">
                             <td className="p-4 font-bold text-gray-800">{p.name}</td>
                             <td className="p-4 text-gray-600 font-medium">{p.job_title}</td>
                             <td className="p-4 text-right">
                                 {p.awaitingReapproval ? (
-                                    <span className="text-xs font-semibold text-amber-700">Awaiting re-approval</span>
+                                    <span className="text-xs font-semibold text-amber-700">{t('certificates.public.awaiting', 'Awaiting re-approval')}</span>
                                 ) : (
                                     <div className="flex justify-end gap-2">
                                         <Button size="sm" onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId}>
-                                            {downloadingId === p.id ? <Spinner size="sm" /> : 'English'}
+                                            {downloadingId === p.id ? <Spinner size="sm" /> : t('certificates.public.english', 'English')}
                                         </Button>
                                         <Button size="sm" variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId}>
                                             {downloadingId === p.id ? <Spinner size="sm" /> : 'عربي'}
@@ -4730,13 +4733,12 @@ export function PublicCourseCertificatesView({ courseId }) {
                         <div className="text-xs text-gray-500 mb-2 break-words">{p.job_title}</div>
                         {p.awaitingReapproval ? (
                             <div className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                                Awaiting re-approval — the details on this certificate changed after the course
-                                was approved.
+                                {t('certificates.public.awaiting_long', 'Awaiting re-approval — the details on this certificate changed after the course was approved.')}
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-2">
                                 <Button onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId} className="w-full justify-center">
-                                    {downloadingId === p.id ? <Spinner size="sm" /> : 'English'}
+                                    {downloadingId === p.id ? <Spinner size="sm" /> : t('certificates.public.english', 'English')}
                                 </Button>
                                 <Button variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId} className="w-full justify-center">
                                     {downloadingId === p.id ? <Spinner size="sm" /> : 'عربي'}
@@ -4754,71 +4756,77 @@ export function PublicCourseCertificatesView({ courseId }) {
 // APPROVAL DIALOG: signatory preview row
 // -----------------------------------------------------------------------------
 
-const ApprovalSignatoryRow = ({ position, roleEn, roleAr, nameEn, nameAr, isCustom, isHidden }) => (
+const ApprovalSignatoryRow = ({ position, roleEn, roleAr, nameEn, nameAr, isCustom, isHidden }) => {
+    const { t } = useTranslation();
+    return (
     <div className={`p-3 rounded-lg border ${isHidden ? 'bg-gray-100 border-gray-200 opacity-70' : 'bg-white border-gray-200'}`}>
         <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{position}</span>
             {isCustom && !isHidden && (
-                <span className="text-[9px] font-bold uppercase tracking-wider bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded">Customized</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded">{t('certificates.signatory.customized', 'Customized')}</span>
             )}
             {isHidden && (
-                <span className="text-[9px] font-bold uppercase tracking-wider bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">Hidden</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">{t('certificates.signatory.hidden', 'Hidden')}</span>
             )}
         </div>
         {isHidden ? (
-            <p className="text-sm text-gray-500 italic">Not printed on this certificate.</p>
+            <p className="text-sm text-gray-500 italic">{t('certificates.signatory.not_printed', 'Not printed on this certificate.')}</p>
         ) : (
             <>
-                <p className="text-sm font-bold text-gray-900">{nameEn || <span className="text-red-600 font-medium">Missing</span>}</p>
+                <p className="text-sm font-bold text-gray-900">{nameEn || <span className="text-red-600 font-medium">{t('certificates.signatory.missing', 'Missing')}</span>}</p>
                 <p className="text-xs text-gray-500">{roleEn}</p>
                 <p className="text-sm font-bold text-gray-900 mt-2 text-right" dir="rtl">{nameAr || <span className="text-red-600 font-medium">غير محدد</span>}</p>
                 <p className="text-xs text-gray-500 text-right" dir="rtl">{roleAr}</p>
             </>
         )}
     </div>
-);
+    );
+};
 
 // -----------------------------------------------------------------------------
 // TEMPLATES PANEL — general template + one template per course type
 // -----------------------------------------------------------------------------
 
-const templateSummary = (tpl) => {
+const templateSummary = (tpl, t) => {
     const cfg = tpl?.config || {};
     const n = Object.keys(cfg).filter(k => k !== 'extraLogoIds').length;
     const logos = getExtraLogoIds(cfg).length;
-    if (!tpl) return 'Not set — built-in layout';
-    return `${n} setting${n === 1 ? '' : 's'}${logos ? ` · ${logos} extra logo${logos === 1 ? '' : 's'}` : ''}`;
+    if (!tpl) return t('certificates.templates.not_set', 'Not set — built-in layout');
+    const settings = n === 1 ? t('certificates.templates.one_setting', '{{count}} setting', { count: n }) : t('certificates.templates.n_settings', '{{count}} settings', { count: n });
+    const extra = logos === 1 ? t('certificates.templates.one_extra_logo', '{{count}} extra logo', { count: logos }) : t('certificates.templates.n_extra_logos', '{{count}} extra logos', { count: logos });
+    return `${settings}${logos ? ` · ${extra}` : ''}`;
 };
 
 const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit, onClear, busy }) => {
+    const { t } = useTranslation();
     const [newType, setNewType] = useState('');
     const general = templateDocs[GENERAL_TEMPLATE_ID];
-    const rows = courseTypes.map(t => ({ type: t, tpl: templateDocs[courseTypeTemplateId(t)] }));
+    const rows = courseTypes.map(ct => ({ type: ct, tpl: templateDocs[courseTypeTemplateId(ct)] }));
 
     return (
         <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50/40">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-violet-200">
                 <Layers className="h-4 w-4 text-violet-700" />
-                <h3 className="font-bold text-gray-800 text-sm">Certificate templates</h3>
+                <h3 className="font-bold text-gray-800 text-sm">{t('certificates.templates.title', 'Certificate templates')}</h3>
                 <span className="text-[11px] text-gray-500 hidden md:inline">
-                    Each certificate is built from: General → Course type → the course’s own changes.
+                    {t('certificates.templates.layers', 'Each certificate is built from: General → Course type → the course’s own changes.')}
                 </span>
             </div>
 
             <div className="p-4 space-y-4">
                 <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-lg p-3">
                     <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-gray-800 text-sm">General template</div>
-                        <div className="text-[11px] text-gray-500">{templateSummary(general)} · used by every course</div>
+                        <div className="font-semibold text-gray-800 text-sm">{t('certificates.templates.general_template', 'General template')}</div>
+                        <div className="text-[11px] text-gray-500">{templateSummary(general, t)} · {t('certificates.templates.used_by_every', 'used by every course')}</div>
                     </div>
                     {canEdit && (
                         <div className="flex gap-2">
                             <Button size="sm" variant="primary" className="text-xs" disabled={busy} onClick={() => onEdit({ kind: 'general' })}>
-                                {general ? 'Edit' : 'Set up'}
+                                {general ? t('certificates.templates.edit', 'Edit') : t('certificates.templates.set_up', 'Set up')}
                             </Button>
                             {general && (
-                                <Button size="sm" variant="danger" className="text-xs" disabled={busy} onClick={() => onClear(GENERAL_TEMPLATE_ID, 'the general template')}>
-                                    Clear
+                                <Button size="sm" variant="danger" className="text-xs" disabled={busy} onClick={() => onClear(GENERAL_TEMPLATE_ID, t('certificates.templates.the_general', 'the general template'))}>
+                                    {t('certificates.common.clear', 'Clear')}
                                 </Button>
                             )}
                         </div>
@@ -4829,31 +4837,31 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit,
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500">
                             <tr>
-                                <th className="text-left px-3 py-2 font-semibold">Course type</th>
-                                <th className="text-left px-3 py-2 font-semibold">Template</th>
+                                <th className="text-left px-3 py-2 font-semibold">{t('certificates.templates.course_type', 'Course type')}</th>
+                                <th className="text-left px-3 py-2 font-semibold">{t('certificates.templates.template', 'Template')}</th>
                                 {canEdit && <th className="px-3 py-2" />}
                             </tr>
                         </thead>
                         <tbody>
                             {rows.length === 0 && (
-                                <tr><td colSpan={3} className="px-3 py-3 text-xs text-gray-500">No course types yet.</td></tr>
+                                <tr><td colSpan={3} className="px-3 py-3 text-xs text-gray-500">{t('certificates.templates.no_types', 'No course types yet.')}</td></tr>
                             )}
                             {rows.map(({ type, tpl }) => (
                                 <tr key={type} className="border-t border-gray-100">
                                     <td className="px-3 py-2 font-medium text-gray-800">{type}</td>
                                     <td className="px-3 py-2 text-xs">
                                         {tpl
-                                            ? <span className="text-violet-700 font-semibold">{templateSummary(tpl)}</span>
-                                            : <span className="text-gray-400">Uses general template</span>}
+                                            ? <span className="text-violet-700 font-semibold">{templateSummary(tpl, t)}</span>
+                                            : <span className="text-gray-400">{t('certificates.templates.uses_general', 'Uses general template')}</span>}
                                     </td>
                                     {canEdit && (
                                         <td className="px-3 py-2 text-right whitespace-nowrap">
                                             <Button size="sm" variant="secondary" className="text-xs mr-1" disabled={busy} onClick={() => onEdit({ kind: 'courseType', courseType: type })}>
-                                                {tpl ? 'Edit' : 'Create'}
+                                                {tpl ? t('certificates.templates.edit', 'Edit') : t('certificates.templates.create', 'Create')}
                                             </Button>
                                             {tpl && (
-                                                <Button size="sm" variant="danger" className="text-xs" disabled={busy} onClick={() => onClear(courseTypeTemplateId(type), `the ${type} template`)}>
-                                                    Clear
+                                                <Button size="sm" variant="danger" className="text-xs" disabled={busy} onClick={() => onClear(courseTypeTemplateId(type), t('certificates.templates.the_type', 'the {{type}} template', { type }))}>
+                                                    {t('certificates.common.clear', 'Clear')}
                                                 </Button>
                                             )}
                                         </td>
@@ -4866,8 +4874,8 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit,
 
                 {canEdit && (
                     <div className="flex flex-wrap items-end gap-2">
-                        <FormGroup label="Template for another course type">
-                            <Input value={newType} onChange={e => setNewType(e.target.value)} placeholder="Course type exactly as stored, e.g. ETAT" />
+                        <FormGroup label={t('certificates.templates.another_type', 'Template for another course type')}>
+                            <Input value={newType} onChange={e => setNewType(e.target.value)} placeholder={t('certificates.templates.type_ph', 'Course type exactly as stored, e.g. ETAT')} />
                         </FormGroup>
                         <Button
                             size="sm"
@@ -4876,12 +4884,12 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit,
                             disabled={busy || !newType.trim()}
                             onClick={() => { onEdit({ kind: 'courseType', courseType: newType.trim() }); setNewType(''); }}
                         >
-                            <Plus className="inline h-3 w-3 mr-1" />Create
+                            <Plus className="inline h-3 w-3 mr-1" />{t('certificates.templates.create', 'Create')}
                         </Button>
                     </div>
                 )}
                 {!canEdit && (
-                    <p className="text-[11px] text-gray-500">Only the Federal Program Manager can change shared templates.</p>
+                    <p className="text-[11px] text-gray-500">{t('certificates.templates.only_fpm', 'Only the Federal Program Manager can change shared templates.')}</p>
                 )}
             </div>
         </div>
@@ -4901,6 +4909,7 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit,
  * thousands of reads to render a table.
  */
 const CertificateChangesModal = ({ course, managerName, onClose, onDone, setToast }) => {
+    const { t } = useTranslation();
     const [state, setState] = React.useState({ loading: true, error: '', stale: [] });
     const [busyId, setBusyId] = React.useState(null);
 
@@ -4910,7 +4919,7 @@ const CertificateChangesModal = ({ course, managerName, onClose, onDone, setToas
             const parts = await listAllParticipantsForCourse(course.id, { source: 'server' });
             setState({ loading: false, error: '', stale: staleCertificateParticipants(parts, course) });
         } catch (err) {
-            setState({ loading: false, error: err.message || 'The participants could not be read.', stale: [] });
+            setState({ loading: false, error: err.message || i18n.t('certificates.changes.read_failed', 'The participants could not be read.'), stale: [] });
         }
     }, [course]);
 
@@ -4921,7 +4930,7 @@ const CertificateChangesModal = ({ course, managerName, onClose, onDone, setToas
         try {
             await approveParticipantCertificate(p, course, managerName);
             setState((s) => ({ ...s, stale: s.stale.filter((x) => x.id !== p.id) }));
-            setToast({ show: true, message: `${p.name}'s certificate approved.`, type: 'success' });
+            setToast({ show: true, message: t('certificates.changes.one_approved', "{{name}}'s certificate approved.", { name: p.name }), type: 'success' });
             onDone?.();
         } catch (err) {
             setToast({ show: true, message: err.message, type: 'error' });
@@ -4930,15 +4939,12 @@ const CertificateChangesModal = ({ course, managerName, onClose, onDone, setToas
 
     const approveAll = async () => {
         if (!await confirmDialog(
-            `Approve all ${state.stale.length} changed certificate(s) for this course?`
-            + `
-
-You are signing the details as they now stand.`
+            t('certificates.changes.confirm_all', "Approve all {{count}} changed certificate(s) for this course?\n\nYou are signing the details as they now stand.", { count: state.stale.length })
         )) return;
         setBusyId('all');
         try {
             await recordCertificateApprovals(course, state.stale, managerName);
-            setToast({ show: true, message: `${state.stale.length} certificate(s) approved.`, type: 'success' });
+            setToast({ show: true, message: t('certificates.changes.n_approved', '{{count}} certificate(s) approved.', { count: state.stale.length }), type: 'success' });
             setState((s) => ({ ...s, stale: [] }));
             onDone?.();
         } catch (err) {
@@ -4947,12 +4953,10 @@ You are signing the details as they now stand.`
     };
 
     return (
-        <Modal isOpen onClose={onClose} title="Changes since approval" size="lg">
+        <Modal isOpen onClose={onClose} title={t('certificates.changes.title', 'Changes since approval')} size="lg">
             <CardBody className="p-4 sm:p-6 space-y-4">
                 <p className="text-sm text-slate-600">
-                    A certificate prints the participant&rsquo;s name and sub-course. Where either has
-                    changed since this course was approved, the certificate is held back until it is
-                    approved again &mdash; only for that participant.
+                    {t('certificates.changes.intro', 'A certificate prints the participant’s name and sub-course. Where either has changed since this course was approved, the certificate is held back until it is approved again — only for that participant.')}
                 </p>
 
                 {state.loading && <div className="flex justify-center p-6"><Spinner /></div>}
@@ -4964,7 +4968,7 @@ You are signing the details as they now stand.`
                 {!state.loading && !state.error && state.stale.length === 0 && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded text-sm text-green-800 flex items-center gap-2">
                         <CheckCircle size={16} className="shrink-0" />
-                        Nothing has changed since this course was approved.
+                        {t('certificates.changes.nothing', 'Nothing has changed since this course was approved.')}
                     </div>
                 )}
 
@@ -4978,7 +4982,7 @@ You are signing the details as they now stand.`
                             <div className="text-xs space-y-1">
                                 {info.changed.includes('name') && (
                                     <div className="flex flex-col sm:flex-row sm:gap-2">
-                                        <span className="font-semibold text-slate-500 w-24 shrink-0">Name</span>
+                                        <span className="font-semibold text-slate-500 w-24 shrink-0">{t('certificates.changes.name', 'Name')}</span>
                                         <span className="break-words">
                                             <span className="line-through text-slate-500">{info.signedName || '—'}</span>
                                             {' → '}
@@ -4988,7 +4992,7 @@ You are signing the details as they now stand.`
                                 )}
                                 {info.changed.includes('subCourse') && (
                                     <div className="flex flex-col sm:flex-row sm:gap-2">
-                                        <span className="font-semibold text-slate-500 w-24 shrink-0">Sub-course</span>
+                                        <span className="font-semibold text-slate-500 w-24 shrink-0">{t('certificates.changes.sub_course', 'Sub-course')}</span>
                                         <span className="break-words">
                                             <span className="line-through text-slate-500">{info.signedSubCourse || '—'}</span>
                                             {' → '}
@@ -5004,17 +5008,17 @@ You are signing the details as they now stand.`
                                 disabled={!!busyId}
                                 className="w-full sm:w-auto justify-center text-xs"
                             >
-                                {busyId === p.id ? <Spinner size="sm" /> : 'Approve this certificate'}
+                                {busyId === p.id ? <Spinner size="sm" /> : t('certificates.changes.approve_one', 'Approve this certificate')}
                             </Button>
                         </div>
                     );
                 })}
             </CardBody>
             <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
-                <Button variant="secondary" onClick={onClose} disabled={!!busyId} className="w-full sm:w-auto justify-center">Close</Button>
+                <Button variant="secondary" onClick={onClose} disabled={!!busyId} className="w-full sm:w-auto justify-center">{t('certificates.changes.close', 'Close')}</Button>
                 {state.stale.length > 1 && (
                     <Button variant="success" onClick={approveAll} disabled={!!busyId} className="w-full sm:w-auto justify-center">
-                        {busyId === 'all' ? <Spinner size="sm" /> : `Approve all ${state.stale.length}`}
+                        {busyId === 'all' ? <Spinner size="sm" /> : t('certificates.changes.approve_all', 'Approve all {{count}}', { count: state.stale.length })}
                     </Button>
                 )}
             </CardFooter>
@@ -5023,6 +5027,7 @@ You are signing the details as they now stand.`
 };
 
 export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole, canUseFederalManagerAdvancedFeatures, singleCourseMode = false, title = 'Certificate Approvals' }) => {
+    const { t } = useTranslation();
     const { fetchCourses } = useDataCache(); 
     const [managerName, setManagerName] = React.useState('');
     const [loadingApprovals, setLoadingApprovals] = React.useState(false);
@@ -5069,14 +5074,14 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     };
 
     const clearTemplate = async (id, label) => {
-        if (!await confirmDialog(`Delete ${label}? Courses that rely on it go back to the next layer down.`)) return;
+        if (!await confirmDialog(t('certificates.approvals.confirm_delete_template', 'Delete {{label}}? Courses that rely on it go back to the next layer down.', { label }))) return;
         setTemplatesBusy(true);
         try {
             await deleteDoc(doc(db, CERT_TEMPLATES_COLLECTION, id));
             await reloadTemplates();
-            setToast({ show: true, message: 'Template cleared.', type: 'info' });
+            setToast({ show: true, message: t('certificates.approvals.template_cleared', 'Template cleared.'), type: 'info' });
         } catch (err) {
-            setToast({ show: true, message: `Could not clear the template: ${err.message}`, type: 'error' });
+            setToast({ show: true, message: t('certificates.approvals.clear_failed', 'Could not clear the template: {{error}}', { error: err.message }), type: 'error' });
         } finally { setTemplatesBusy(false); }
     };
 
@@ -5133,7 +5138,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             const manager = coords.find(c => c.role === 'مدير البرنامج' || c.role === 'Federal Program Manager');
             if (manager) setManagerName(manager.name);
         } catch (err) {
-            setToast({ show: true, message: "Error loading approval data", type: 'error' });
+            setToast({ show: true, message: t('certificates.approvals.load_error', 'Error loading approval data'), type: 'error' });
         } finally {
             setLoadingApprovals(false);
         }
@@ -5197,8 +5202,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 setToast({
                     show: true,
                     type: 'info',
-                    message: 'Approved, but the per-participant record failed to save. ' +
-                        'Approve again to enable change tracking.'
+                    message: t('certificates.approvals.partial_approve', 'Approved, but the per-participant record failed to save. Approve again to enable change tracking.')
                 });
                 await fetchCourses(true);
                 setCourseToApprove(null);
@@ -5207,21 +5211,21 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
 
             setToast({
                 show: true,
-                message: `Certificates approved for ${signedCount} participant${signedCount === 1 ? '' : 's'}.`,
+                message: signedCount === 1
+                    ? t('certificates.approvals.approved_one', 'Certificates approved for {{count}} participant.', { count: signedCount })
+                    : t('certificates.approvals.approved_n', 'Certificates approved for {{count}} participants.', { count: signedCount }),
                 type: 'success'
             });
             await fetchCourses(true); 
             setCourseToApprove(null);
         } catch (err) {
-            setToast({ show: true, message: `Error: ${err.message}`, type: 'error' });
+            setToast({ show: true, message: t('certificates.approvals.error', 'Error: {{error}}', { error: err.message }), type: 'error' });
         } finally { setIsProcessing(false); }
     };
 
     const handleUnapprove = async (course) => {
         if (await confirmDialog(
-            `Revoke approval for ${course.course_type}?\n\n` +
-            `This also ERASES every stored signature and stamp image for this course. ` +
-            `They will have to be uploaded again before certificates can be re-approved.`
+            t('certificates.approvals.confirm_revoke', "Revoke approval for {{type}}?\n\nThis also ERASES every stored signature and stamp image for this course. They will have to be uploaded again before certificates can be re-approved.", { type: course.course_type })
         )) {
             setIsProcessing(true);
             try {
@@ -5253,7 +5257,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 SIGNATURE_FIELDS.customLevel.forEach(f => { purge[`customCertificate.${f}`] = deleteField(); });
                 await updateDoc(doc(db, 'courses', course.id), purge);
 
-                setToast({ show: true, message: "Approval revoked and signatures erased.", type: 'info' });
+                setToast({ show: true, message: t('certificates.approvals.revoked', 'Approval revoked and signatures erased.'), type: 'info' });
                 await fetchCourses(true); 
             } catch (err) { setToast({ show: true, message: err.message, type: 'error' }); } 
             finally { setIsProcessing(false); }
@@ -5278,14 +5282,14 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         };
         const field = map[assetType];
         if (!field) return;
-        if (!await confirmDialog('Remove this stored image? It will have to be uploaded again.')) return;
+        if (!await confirmDialog(t('certificates.approvals.confirm_remove_image', 'Remove this stored image? It will have to be uploaded again.'))) return;
 
         setIsProcessing(true);
         try {
             const payload = { lastUpdatedAt: serverTimestamp(), [field.courseKey]: null };
             if (field.customKey) payload[`customCertificate.${field.customKey}`] = deleteField();
             await updateDoc(doc(db, 'courses', course.id), payload);
-            setToast({ show: true, message: "Image removed.", type: 'info' });
+            setToast({ show: true, message: t('certificates.approvals.image_removed', 'Image removed.'), type: 'info' });
             await fetchCourses(true);
         } catch (err) {
             setToast({ show: true, message: err.message, type: 'error' });
@@ -5330,10 +5334,10 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             }));
 
             await updateDoc(doc(db, 'courses', course.id), updatePayload);
-            setToast({ show: true, message: `Asset uploaded successfully!`, type: 'success' });
+            setToast({ show: true, message: t('certificates.approvals.uploaded', 'Asset uploaded successfully!'), type: 'success' });
             
             await fetchCourses(true);
-        } catch (err) { setToast({ show: true, message: `Upload failed: ${err.message}`, type: 'error' }); } 
+        } catch (err) { setToast({ show: true, message: t('certificates.approvals.upload_failed', 'Upload failed: {{error}}', { error: err.message }), type: 'error' }); } 
         finally { setIsProcessing(false); setUploadContext({ course: null, assetType: null }); fileInputRef.current.value = ""; }
     };
 
@@ -5362,15 +5366,15 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     const StatusPill = ({ approved }) => (
         <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
             approved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-            {approved ? 'Ready' : 'Pending'}
+            {approved ? t('certificates.approvals.ready', 'Ready') : t('certificates.approvals.pending', 'Pending')}
         </span>
     );
 
     const TemplateBadges = ({ row }) => (
         <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
-            {row.hasCustomTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-sky-600">Course changes</span>}
-            {row.hasTypeTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600">Type template</span>}
-            {!row.hasTypeTemplate && row.hasGeneralTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500">General template</span>}
+            {row.hasCustomTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-sky-600">{t('certificates.approvals.badge_course', 'Course changes')}</span>}
+            {row.hasTypeTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600">{t('certificates.approvals.badge_type', 'Type template')}</span>}
+            {!row.hasTypeTemplate && row.hasGeneralTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500">{t('certificates.templates.general_template', 'General template')}</span>}
         </div>
     );
 
@@ -5393,51 +5397,51 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         return (
             <>
                 <Button onClick={() => openCourseDesigner(c)} disabled={isProcessing} variant="secondary" className={`${btn} border-gray-300`}>
-                    <Settings size={12} /> Customize
+                    <Settings size={12} /> {t('certificates.approvals.customize', 'Customize')}
                 </Button>
 
-                <Button onClick={() => setCourseToPreview(c)} disabled={isProcessing} variant="secondary" className={`${btn} border-gray-300`} title="See the real certificate">
-                    <Eye size={12} /> Preview
+                <Button onClick={() => setCourseToPreview(c)} disabled={isProcessing} variant="secondary" className={`${btn} border-gray-300`} title={t('certificates.approvals.see_real', 'See the real certificate')}>
+                    <Eye size={12} /> {t('certificates.approvals.preview', 'Preview')}
                 </Button>
 
                 {row.isApproved ? (
-                    <Button onClick={() => handleUnapprove(c)} disabled={!row.canModify || isProcessing} variant="danger" className={btn}>Revoke</Button>
+                    <Button onClick={() => handleUnapprove(c)} disabled={!row.canModify || isProcessing} variant="danger" className={btn}>{t('certificates.approvals.revoke', 'Revoke')}</Button>
                 ) : (
-                    <Button onClick={() => setCourseToApprove(c)} disabled={isProcessing} variant="success" className={`${btn} font-bold bg-green-600 text-white hover:bg-green-700 border-transparent`}>Approve</Button>
+                    <Button onClick={() => setCourseToApprove(c)} disabled={isProcessing} variant="success" className={`${btn} font-bold bg-green-600 text-white hover:bg-green-700 border-transparent`}>{t('certificates.approvals.approve', 'Approve')}</Button>
                 )}
 
                 {/* Only meaningful once something has been signed. */}
                 {row.isApproved && (
-                    <Button onClick={() => setCourseToReview(c)} disabled={isProcessing} variant="secondary" className={`${btn} border-amber-300 text-amber-800 hover:bg-amber-50`} title="Participants altered since approval">
-                        <RefreshCw size={12} /> Changes
+                    <Button onClick={() => setCourseToReview(c)} disabled={isProcessing} variant="secondary" className={`${btn} border-amber-300 text-amber-800 hover:bg-amber-50`} title={t('certificates.approvals.altered_title', 'Participants altered since approval')}>
+                        <RefreshCw size={12} /> {t('certificates.approvals.changes', 'Changes')}
                     </Button>
                 )}
 
                 <Pair>
                     <Button onClick={() => triggerUpload(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} variant={c.approvedByManagerSignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(c.approvedByManagerSignatureUrl)} ${block ? 'flex-1' : ''}`}>
-                        {c.approvedByManagerSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} PM Signature
+                        {c.approvedByManagerSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} {t('certificates.approvals.pm_signature', 'PM Signature')}
                     </Button>
                     {c.approvedByManagerSignatureUrl && (
-                        <button type="button" title="Remove PM signature image" onClick={() => removeAsset(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} className={kill}>&times;</button>
+                        <button type="button" title={t('certificates.approvals.remove_pm', 'Remove PM signature image')} onClick={() => removeAsset(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} className={kill}>&times;</button>
                     )}
                 </Pair>
 
                 <Pair>
                     <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={c.approvedDirectorSignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(c.approvedDirectorSignatureUrl)} ${block ? 'flex-1' : ''}`}>
-                        {c.approvedDirectorSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} Dir Signature
+                        {c.approvedDirectorSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} {t('certificates.approvals.dir_signature', 'Dir Signature')}
                     </Button>
                     {c.approvedDirectorSignatureUrl && (
-                        <button type="button" title="Remove director signature image" onClick={() => removeAsset(c, 'directorSignature')} disabled={isProcessing} className={kill}>&times;</button>
+                        <button type="button" title={t('certificates.approvals.remove_dir', 'Remove director signature image')} onClick={() => removeAsset(c, 'directorSignature')} disabled={isProcessing} className={kill}>&times;</button>
                     )}
                 </Pair>
 
                 {rowSig.thirdPartyEnabled && (
                     <Pair>
                         <Button onClick={() => triggerUpload(c, 'thirdSignature')} disabled={isProcessing} variant={rowSig.thirdPartySignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(rowSig.thirdPartySignatureUrl)} ${block ? 'flex-1' : ''}`}>
-                            {rowSig.thirdPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} 3rd Signature
+                            {rowSig.thirdPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} {t('certificates.approvals.third_signature', '3rd Signature')}
                         </Button>
                         {rowSig.thirdPartySignatureUrl && (
-                            <button type="button" title="Remove third signature image" onClick={() => removeAsset(c, 'thirdSignature')} disabled={isProcessing} className={kill}>&times;</button>
+                            <button type="button" title={t('certificates.approvals.remove_third', 'Remove third signature image')} onClick={() => removeAsset(c, 'thirdSignature')} disabled={isProcessing} className={kill}>&times;</button>
                         )}
                     </Pair>
                 )}
@@ -5445,10 +5449,10 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 {rowSig.fourthPartyEnabled && (
                     <Pair>
                         <Button onClick={() => triggerUpload(c, 'fourthSignature')} disabled={isProcessing} variant={rowSig.fourthPartySignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(rowSig.fourthPartySignatureUrl)} ${block ? 'flex-1' : ''}`}>
-                            {rowSig.fourthPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} 4th Signature
+                            {rowSig.fourthPartySignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} {t('certificates.approvals.fourth_signature', '4th Signature')}
                         </Button>
                         {rowSig.fourthPartySignatureUrl && (
-                            <button type="button" title="Remove fourth signature image" onClick={() => removeAsset(c, 'fourthSignature')} disabled={isProcessing} className={kill}>&times;</button>
+                            <button type="button" title={t('certificates.approvals.remove_fourth', 'Remove fourth signature image')} onClick={() => removeAsset(c, 'fourthSignature')} disabled={isProcessing} className={kill}>&times;</button>
                         )}
                     </Pair>
                 )}
@@ -5457,11 +5461,11 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                     <Pair>
                         {!row.isCustomized && (
                             <Button onClick={() => triggerUpload(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} variant={c.approvedProgramStampUrl ? "success" : "secondary"} className={`${btn} ${uploaded(c.approvedProgramStampUrl)} ${block ? 'flex-1' : ''}`}>
-                                {c.approvedProgramStampUrl ? <CheckCircle size={12} /> : <Stamp size={12} />} Stamp
+                                {c.approvedProgramStampUrl ? <CheckCircle size={12} /> : <Stamp size={12} />} {t('certificates.approvals.stamp', 'Stamp')}
                             </Button>
                         )}
                         {c.approvedProgramStampUrl && (
-                            <button type="button" title="Remove stamp image" onClick={() => removeAsset(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} className={kill}>&times;</button>
+                            <button type="button" title={t('certificates.approvals.remove_stamp', 'Remove stamp image')} onClick={() => removeAsset(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} className={kill}>&times;</button>
                         )}
                     </Pair>
                 )}
@@ -5482,7 +5486,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                     course={courseToPreview}
                     federalProgramManagerName={managerName}
                     onClose={() => setCourseToPreview(null)}
-                    note={courseToPreview.isCertificateApproved ? '' : 'Not approved yet — participants cannot download this until it is approved.'}
+                    note={courseToPreview.isCertificateApproved ? '' : t('certificates.approvals.not_approved_note', 'Not approved yet — participants cannot download this until it is approved.')}
                 />
             )}
 
@@ -5504,7 +5508,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                     federalProgramManagerName={managerName}
                     onBack={() => setDesignTarget(null)}
                     onSaveSuccess={() => {
-                        setToast({ show: true, message: "Certificate template saved.", type: 'success' });
+                        setToast({ show: true, message: t('certificates.approvals.template_saved', 'Certificate template saved.'), type: 'success' });
                         reloadTemplates();
                         fetchCourses(true);
                     }}
@@ -5512,13 +5516,13 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             )}
 
 
-            <Modal isOpen={!!courseToApprove} onClose={() => setCourseToApprove(null)} title="Confirm Approval">
+            <Modal isOpen={!!courseToApprove} onClose={() => setCourseToApprove(null)} title={t('certificates.approvals.confirm_title', 'Confirm Approval')}>
                 <CardBody className="p-4 sm:p-6 space-y-4">
-                    <p className="text-sm text-gray-600">These are the exact signatories that will be printed on every certificate for this course, in both languages.</p>
+                    <p className="text-sm text-gray-600">{t('certificates.approvals.confirm_intro', 'These are the exact signatories that will be printed on every certificate for this course, in both languages.')}</p>
 
                     <div className="space-y-3 bg-gray-50 border rounded-lg p-4">
                         <ApprovalSignatoryRow
-                            position="Course Director"
+                            position={t('certificates.designer.course_director', 'Course Director')}
                             roleEn={approvalPreview?.directorRoleEn}
                             roleAr={approvalPreview?.directorRoleAr}
                             nameEn={approvalPreview?.directorDisplayEn}
@@ -5527,7 +5531,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                             isHidden={approvalPreview?.hideDirector}
                         />
                         <ApprovalSignatoryRow
-                            position="National Program Manager"
+                            position={t('certificates.approvals.national_pm', 'National Program Manager')}
                             roleEn={approvalPreview?.managerRoleEn}
                             roleAr={approvalPreview?.managerRoleAr}
                             nameEn={approvalPreview?.managerDisplayEn}
@@ -5537,7 +5541,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                         />
                         {approvalPreview?.thirdPartyEnabled && (
                             <ApprovalSignatoryRow
-                                position="Third Signature"
+                                position={t('certificates.approvals.third_signature_pos', 'Third Signature')}
                                 roleEn={approvalPreview?.thirdPartyRoleEn}
                                 roleAr={approvalPreview?.thirdPartyRoleAr}
                                 nameEn={approvalPreview?.thirdPartyEn}
@@ -5547,7 +5551,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                         )}
                         {approvalPreview?.fourthPartyEnabled && (
                             <ApprovalSignatoryRow
-                                position="Fourth Signature"
+                                position={t('certificates.approvals.fourth_signature_pos', 'Fourth Signature')}
                                 roleEn={approvalPreview?.fourthPartyRoleEn}
                                 roleAr={approvalPreview?.fourthPartyRoleAr}
                                 nameEn={approvalPreview?.fourthPartyEn}
@@ -5559,24 +5563,24 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
 
                     <div className="flex flex-wrap gap-2 text-[11px]">
                         <span className={`px-2 py-1 rounded font-semibold ${courseToApprove?.approvedDirectorSignatureUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                            {courseToApprove?.approvedDirectorSignatureUrl ? 'Director signature uploaded' : 'No director signature'}
+                            {courseToApprove?.approvedDirectorSignatureUrl ? t('certificates.approvals.dir_uploaded', 'Director signature uploaded') : t('certificates.approvals.no_dir', 'No director signature')}
                         </span>
                         <span className={`px-2 py-1 rounded font-semibold ${courseToApprove?.approvedByManagerSignatureUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                            {courseToApprove?.approvedByManagerSignatureUrl ? 'Manager signature uploaded' : 'No manager signature'}
+                            {courseToApprove?.approvedByManagerSignatureUrl ? t('certificates.approvals.mgr_uploaded', 'Manager signature uploaded') : t('certificates.approvals.no_mgr', 'No manager signature')}
                         </span>
                         {approvalPreview?.fourthPartyEnabled && (
                             <span className={`px-2 py-1 rounded font-semibold ${approvalPreview?.fourthPartySignatureUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                                {approvalPreview?.fourthPartySignatureUrl ? 'Fourth signature uploaded' : 'No fourth signature image'}
+                                {approvalPreview?.fourthPartySignatureUrl ? t('certificates.approvals.fourth_uploaded', 'Fourth signature uploaded') : t('certificates.approvals.no_fourth', 'No fourth signature image')}
                             </span>
                         )}
 
                         {approvalPreview?.thirdPartyEnabled && (
                             <span className={`px-2 py-1 rounded font-semibold ${approvalPreview?.thirdPartySignatureUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                                {approvalPreview?.thirdPartySignatureUrl ? 'Third signature uploaded' : 'No third signature image'}
+                                {approvalPreview?.thirdPartySignatureUrl ? t('certificates.approvals.third_uploaded', 'Third signature uploaded') : t('certificates.approvals.no_third', 'No third signature image')}
                             </span>
                         )}
                         <span className={`px-2 py-1 rounded font-semibold ${courseToApprove?.approvedProgramStampUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                            {courseToApprove?.approvedProgramStampUrl ? 'Stamp uploaded' : 'No stamp'}
+                            {courseToApprove?.approvedProgramStampUrl ? t('certificates.approvals.stamp_uploaded', 'Stamp uploaded') : t('certificates.approvals.no_stamp', 'No stamp')}
                         </span>
                     </div>
 
@@ -5585,26 +5589,26 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                         onClick={() => { openCourseDesigner(courseToApprove); setCourseToApprove(null); }}
                         className="text-sm text-sky-700 font-semibold hover:underline flex items-center gap-1"
                     >
-                        <Settings size={14} /> Edit these names first
+                        <Settings size={14} /> {t('certificates.approvals.edit_names_first', 'Edit these names first')}
                     </button>
                     <button
                         type="button"
                         onClick={() => setCourseToPreview(courseToApprove)}
                         className="text-sm text-sky-700 font-semibold hover:underline flex items-center gap-1"
                     >
-                        <Eye size={14} /> Preview the certificate before approving
+                        <Eye size={14} /> {t('certificates.approvals.preview_before', 'Preview the certificate before approving')}
                     </button>
                 </CardBody>
                 <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
-                    <Button variant="secondary" onClick={() => setCourseToApprove(null)} disabled={isProcessing} className="w-full sm:w-auto justify-center">Cancel</Button>
+                    <Button variant="secondary" onClick={() => setCourseToApprove(null)} disabled={isProcessing} className="w-full sm:w-auto justify-center">{t('certificates.common.cancel', 'Cancel')}</Button>
                     <Button variant="success" onClick={executeApprove} disabled={isProcessing} className="w-full sm:w-auto justify-center">
-                        {isProcessing ? <Spinner size="sm" /> : 'Confirm & Approve'}
+                        {isProcessing ? <Spinner size="sm" /> : t('certificates.approvals.confirm_approve', 'Confirm & Approve')}
                     </Button>
                 </CardFooter>
             </Modal>
 
             <Card>
-                <PageHeader title={title} />
+                <PageHeader title={title === 'Certificate Approvals' ? t('certificates.approvals.title', 'Certificate Approvals') : title} />
                 
                 {/* In single-course mode the list is already one row, so the filters
                     would only be noise. */}
@@ -5621,9 +5625,9 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
 
                 {!singleCourseMode && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-                        <FormGroup label="State"><Select value={filterState} onChange={e => setFilterState(e.target.value)}>{states.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                        <FormGroup label="Course Type"><Select value={filterCourseType} onChange={e => setFilterCourseType(e.target.value)}>{courseTypes.map(c => <option key={c} value={c}>{c}</option>)}</Select></FormGroup>
-                        <FormGroup label="Status"><Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}><option value="All">All</option><option value="Approved">Approved</option><option value="Pending">Pending</option></Select></FormGroup>
+                        <FormGroup label={t('certificates.approvals.state', 'State')}><Select value={filterState} onChange={e => setFilterState(e.target.value)}>{states.map(s => <option key={s} value={s}>{s === 'All' ? t('certificates.approvals.all', 'All') : s}</option>)}</Select></FormGroup>
+                        <FormGroup label={t('certificates.approvals.course_type', 'Course Type')}><Select value={filterCourseType} onChange={e => setFilterCourseType(e.target.value)}>{courseTypes.map(c => <option key={c} value={c}>{c === 'All' ? t('certificates.approvals.all', 'All') : c}</option>)}</Select></FormGroup>
+                        <FormGroup label={t('certificates.approvals.status', 'Status')}><Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}><option value="All">{t('certificates.approvals.all', 'All')}</option><option value="Approved">{t('certificates.approvals.approved', 'Approved')}</option><option value="Pending">{t('certificates.approvals.pending', 'Pending')}</option></Select></FormGroup>
                     </div>
                 )}
 
@@ -5639,10 +5643,10 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                     <table className="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600">
-                                <th className="p-3 font-semibold border-b border-slate-300">Course</th>
-                                <th className="p-3 font-semibold border-b border-slate-300">Location & Date</th>
-                                <th className="p-3 font-semibold border-b border-slate-300">Status</th>
-                                <th className="p-3 font-semibold border-b border-slate-300 text-right">Actions</th>
+                                <th className="p-3 font-semibold border-b border-slate-300">{t('certificates.approvals.th_course', 'Course')}</th>
+                                <th className="p-3 font-semibold border-b border-slate-300">{t('certificates.approvals.th_location_date', 'Location & Date')}</th>
+                                <th className="p-3 font-semibold border-b border-slate-300">{t('certificates.approvals.status', 'Status')}</th>
+                                <th className="p-3 font-semibold border-b border-slate-300 text-right">{t('certificates.approvals.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -5693,7 +5697,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 </div>
 
                 {rows.length === 0 && (
-                    <div className="p-6 text-center text-sm text-gray-500">No courses match the current filters.</div>
+                    <div className="p-6 text-center text-sm text-gray-500">{t('certificates.approvals.no_courses', 'No courses match the current filters.')}</div>
                 )}
             </Card>
         </>

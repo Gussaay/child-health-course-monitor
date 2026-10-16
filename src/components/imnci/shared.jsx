@@ -23,6 +23,7 @@ import {
     AlignRight, ImagePlus, Link2, Palette, Type, Eraser, Heading2, Table2,
 } from 'lucide-react';
 
+import { useTranslation } from 'react-i18next';
 import { promptDialog } from '../dialogs';
 import { ONLINE_SUB_COURSE } from './exercises';
 import { loadAllExercises } from './exercises.jsx';
@@ -232,28 +233,28 @@ export function RichText({ html, className = '' }) {
 }
 
 const FONTS = [
-    { label: 'Default', value: '' },
-    { label: 'Serif', value: 'Georgia, serif' },
-    { label: 'Sans', value: 'system-ui, sans-serif' },
-    { label: 'Mono', value: 'ui-monospace, monospace' },
+    { key: 'default', label: 'Default', value: '' },
+    { key: 'serif', label: 'Serif', value: 'Georgia, serif' },
+    { key: 'sans', label: 'Sans', value: 'system-ui, sans-serif' },
+    { key: 'mono', label: 'Mono', value: 'ui-monospace, monospace' },
 ];
 
 // Named rather than a colour wheel: these are the ones that mean something in
 // this programme, and the IMNCI three are the classification colours.
 const COLOURS = [
-    { label: 'Text', value: '#0f172a' },
-    { label: 'Muted', value: '#64748b' },
-    { label: 'Severe (pink)', value: '#be123c' },
-    { label: 'Treat (yellow)', value: '#b45309' },
-    { label: 'Home care (green)', value: '#047857' },
-    { label: 'Link blue', value: '#0369a1' },
+    { key: 'text', label: 'Text', value: '#0f172a' },
+    { key: 'muted', label: 'Muted', value: '#64748b' },
+    { key: 'severe', label: 'Severe (pink)', value: '#be123c' },
+    { key: 'treat', label: 'Treat (yellow)', value: '#b45309' },
+    { key: 'home_care', label: 'Home care (green)', value: '#047857' },
+    { key: 'link_blue', label: 'Link blue', value: '#0369a1' },
 ];
 
 const SIZES = [
-    { label: 'Normal', value: '1rem' },
-    { label: 'Small', value: '0.875rem' },
-    { label: 'Large', value: '1.25rem' },
-    { label: 'Extra large', value: '1.5rem' },
+    { key: 'normal', label: 'Normal', value: '1rem' },
+    { key: 'small', label: 'Small', value: '0.875rem' },
+    { key: 'large', label: 'Large', value: '1.25rem' },
+    { key: 'extra_large', label: 'Extra large', value: '1.5rem' },
 ];
 
 function ToolButton({ onClick, title, active = false, children }) {
@@ -282,8 +283,9 @@ function ToolButton({ onClick, title, active = false, children }) {
  */
 export function RichTextEditor({
     value, onChange, onInsertImage, onInsertChart, registerInsert,
-    placeholder = 'Write here…', className = '', autoFocus = false,
+    placeholder, className = '', autoFocus = false,
 }) {
+    const { t } = useTranslation();
     const ref = useRef(null);
     const file = useRef(null);
     const saved = useRef(null);
@@ -394,56 +396,56 @@ export function RichTextEditor({
                 three screens down should not leave the author without a bold
                 button. */}
             <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-slate-50 border-b border-slate-200 sticky top-16 z-10">
-                <ToolButton title="Bold" onClick={() => cmd('bold')}><Bold size={15} /></ToolButton>
-                <ToolButton title="Italic" onClick={() => cmd('italic')}><Italic size={15} /></ToolButton>
-                <ToolButton title="Underline" onClick={() => cmd('underline')}><Underline size={15} /></ToolButton>
-                <ToolButton title="Heading" onClick={() => cmd('formatBlock', 'H3')}><Heading2 size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.bold', 'Bold')} onClick={() => cmd('bold')}><Bold size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.italic', 'Italic')} onClick={() => cmd('italic')}><Italic size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.underline', 'Underline')} onClick={() => cmd('underline')}><Underline size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.heading', 'Heading')} onClick={() => cmd('formatBlock', 'H3')}><Heading2 size={15} /></ToolButton>
 
                 <span className="w-px h-5 bg-slate-300 mx-1" />
 
-                <ToolButton title="Bulleted list" onClick={() => cmd('insertUnorderedList')}><List size={15} /></ToolButton>
-                <ToolButton title="Numbered list" onClick={() => cmd('insertOrderedList')}><ListOrdered size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.bulleted_list', 'Bulleted list')} onClick={() => cmd('insertUnorderedList')}><List size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.numbered_list', 'Numbered list')} onClick={() => cmd('insertOrderedList')}><ListOrdered size={15} /></ToolButton>
 
                 <span className="w-px h-5 bg-slate-300 mx-1" />
 
-                <ToolButton title="Align start" onClick={() => cmd('justifyLeft')}><AlignLeft size={15} /></ToolButton>
-                <ToolButton title="Centre" onClick={() => cmd('justifyCenter')}><AlignCenter size={15} /></ToolButton>
-                <ToolButton title="Align end" onClick={() => cmd('justifyRight')}><AlignRight size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.align_start', 'Align start')} onClick={() => cmd('justifyLeft')}><AlignLeft size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.centre', 'Centre')} onClick={() => cmd('justifyCenter')}><AlignCenter size={15} /></ToolButton>
+                <ToolButton title={t('imnci_ui.shared.editor.align_end', 'Align end')} onClick={() => cmd('justifyRight')}><AlignRight size={15} /></ToolButton>
 
                 <span className="w-px h-5 bg-slate-300 mx-1" />
 
-                <label className="inline-flex items-center gap-1 text-slate-600" title="Colour">
+                <label className="inline-flex items-center gap-1 text-slate-600" title={t('imnci_ui.shared.editor.colour', 'Colour')}>
                     <Palette size={15} />
                     <select onMouseDown={(e) => e.stopPropagation()} defaultValue=""
                         onChange={(e) => { if (e.target.value) style('color', e.target.value); e.target.value = ''; }}
                         className="text-xs border border-slate-300 rounded px-1 py-0.5 bg-white max-w-[7.5rem]">
-                        <option value="">Colour</option>
-                        {COLOURS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        <option value="">{t('imnci_ui.shared.editor.colour', 'Colour')}</option>
+                        {COLOURS.map((c) => <option key={c.value} value={c.value}>{t(`imnci_ui.shared.colours.${c.key}`, c.label)}</option>)}
                     </select>
                 </label>
 
-                <label className="inline-flex items-center gap-1 text-slate-600 ms-1" title="Font">
+                <label className="inline-flex items-center gap-1 text-slate-600 ms-1" title={t('imnci_ui.shared.editor.font', 'Font')}>
                     <Type size={15} />
                     <select defaultValue=""
                         onChange={(e) => { if (e.target.value) style('fontFamily', e.target.value); e.target.value = ''; }}
                         className="text-xs border border-slate-300 rounded px-1 py-0.5 bg-white">
-                        <option value="">Font</option>
-                        {FONTS.filter((f) => f.value).map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                        <option value="">{t('imnci_ui.shared.editor.font', 'Font')}</option>
+                        {FONTS.filter((f) => f.value).map((f) => <option key={f.value} value={f.value}>{t(`imnci_ui.shared.fonts.${f.key}`, f.label)}</option>)}
                     </select>
                 </label>
 
-                <select defaultValue="" title="Size"
+                <select defaultValue="" title={t('imnci_ui.shared.editor.size', 'Size')}
                     onChange={(e) => { if (e.target.value) style('fontSize', e.target.value); e.target.value = ''; }}
                     className="text-xs border border-slate-300 rounded px-1 py-0.5 bg-white ms-1">
-                    <option value="">Size</option>
-                    {SIZES.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
+                    <option value="">{t('imnci_ui.shared.editor.size', 'Size')}</option>
+                    {SIZES.map((z) => <option key={z.value} value={z.value}>{t(`imnci_ui.shared.sizes.${z.key}`, z.label)}</option>)}
                 </select>
 
                 <span className="w-px h-5 bg-slate-300 mx-1" />
 
                 {onInsertImage && (
                     <>
-                        <ToolButton title="Insert a picture" onClick={() => { remember(); file.current?.click(); }}>
+                        <ToolButton title={t('imnci_ui.shared.editor.insert_picture', 'Insert a picture')} onClick={() => { remember(); file.current?.click(); }}>
                             <ImagePlus size={15} />
                         </ToolButton>
                         <input ref={file} type="file" accept="image/*" className="hidden"
@@ -451,21 +453,21 @@ export function RichTextEditor({
                     </>
                 )}
                 {onInsertChart && (
-                    <ToolButton title="Insert a classification chart"
+                    <ToolButton title={t('imnci_ui.shared.editor.insert_chart', 'Insert a classification chart')}
                         onClick={() => { remember(); onInsertChart(); }}>
                         <Table2 size={15} />
                     </ToolButton>
                 )}
-                <ToolButton title="Add a link" onClick={async () => {
+                <ToolButton title={t('imnci_ui.shared.editor.add_link', 'Add a link')} onClick={async () => {
                     remember();
-                    const url = await promptDialog('Address to link to', { title: 'Add a link' });
+                    const url = await promptDialog(t('imnci_ui.shared.editor.link_address', 'Address to link to'), { title: t('imnci_ui.shared.editor.add_link', 'Add a link') });
                     if (url) cmd('createLink', url);
                 }}><Link2 size={15} /></ToolButton>
-                <ToolButton title="Clear the formatting" onClick={() => cmd('removeFormat')}>
+                <ToolButton title={t('imnci_ui.shared.editor.clear_formatting', 'Clear the formatting')} onClick={() => cmd('removeFormat')}>
                     <Eraser size={15} />
                 </ToolButton>
 
-                {busy && <span className="text-xs text-sky-700 ms-2">Uploading…</span>}
+                {busy && <span className="text-xs text-sky-700 ms-2">{t('imnci_ui.shared.editor.uploading', 'Uploading…')}</span>}
             </div>
 
             <div
@@ -474,7 +476,7 @@ export function RichTextEditor({
                 suppressContentEditableWarning
                 role="textbox"
                 aria-multiline="true"
-                data-placeholder={placeholder}
+                data-placeholder={placeholder ?? t('imnci_ui.shared.editor.placeholder', 'Write here…')}
                 onInput={commit}
                 onBlur={() => { remember(); commit(); }}
                 onKeyUp={remember}

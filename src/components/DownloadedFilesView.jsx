@@ -6,8 +6,10 @@ import { Capacitor } from '@capacitor/core';
 import { Trash2, File, ExternalLink, ArrowLeft, RefreshCw, HardDrive } from 'lucide-react';
 import { Card, PageHeader, Button, Spinner, EmptyState } from './CommonComponents';
 import { confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 export default function DownloadedFilesView({ onBack, setToast }) {
+    const { t } = useTranslation();
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -53,7 +55,7 @@ export default function DownloadedFilesView({ onBack, setToast }) {
             if (error.message.includes('Folder does not exist')) {
                 setFiles([]); // No files downloaded yet
             } else {
-                setToast({ show: true, message: "Failed to load files.", type: "error" });
+                setToast({ show: true, message: t('admin_pages.downloaded_files.load_failed', 'Failed to load files.'), type: "error" });
             }
         } finally {
             setLoading(false);
@@ -90,23 +92,23 @@ export default function DownloadedFilesView({ onBack, setToast }) {
             });
         } catch (error) {
             console.error("Error opening file:", error);
-            setToast({ show: true, message: "Failed to open file. Device might not support this file type.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.downloaded_files.open_failed', 'Failed to open file. Device might not support this file type.'), type: "error" });
         }
     };
 
     const handleDeleteFile = async (fileName) => {
-        if (await confirmDialog(`Are you sure you want to delete ${fileName}?`)) {
+        if (await confirmDialog(t('admin_pages.downloaded_files.confirm_delete', 'Are you sure you want to delete {{name}}?', { name: fileName }))) {
             try {
                 // Delete from the correct directory
                 await Filesystem.deleteFile({
                     path: `NCHP_Downloads/${fileName}`,
                     directory: Directory.Documents
                 });
-                setToast({ show: true, message: "File deleted successfully.", type: "success" });
+                setToast({ show: true, message: t('admin_pages.downloaded_files.deleted', 'File deleted successfully.'), type: "success" });
                 loadFiles(); 
             } catch (error) {
                 console.error("Error deleting file:", error);
-                setToast({ show: true, message: "Failed to delete file.", type: "error" });
+                setToast({ show: true, message: t('admin_pages.downloaded_files.delete_failed', 'Failed to delete file.'), type: "error" });
             }
         }
     };
@@ -115,10 +117,10 @@ export default function DownloadedFilesView({ onBack, setToast }) {
         return (
             <div className="space-y-4">
                 <Button variant="secondary" onClick={onBack} className="mb-4 flex items-center gap-2">
-                    <ArrowLeft className="w-4 h-4" /> Back
+                    <ArrowLeft className="w-4 h-4" /> {t('admin_pages.downloaded_files.back', 'Back')}
                 </Button>
                 <Card>
-                    <EmptyState message="File management is only available on the Native App." />
+                    <EmptyState message={t('admin_pages.downloaded_files.native_only', 'File management is only available on the Native App.')} />
                 </Card>
             </div>
         );
@@ -128,21 +130,21 @@ export default function DownloadedFilesView({ onBack, setToast }) {
         <div className="space-y-4 pb-20">
             <div className="flex items-center justify-between mb-4">
                 <Button variant="secondary" onClick={onBack} className="flex items-center gap-2">
-                    <ArrowLeft className="w-4 h-4" /> Back
+                    <ArrowLeft className="w-4 h-4" /> {t('admin_pages.downloaded_files.back', 'Back')}
                 </Button>
                 <Button onClick={loadFiles} variant="secondary" className="flex items-center gap-2" disabled={loading}>
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('admin_pages.downloaded_files.refresh', 'Refresh')}
                 </Button>
             </div>
 
             <Card>
-                <PageHeader title="Downloaded Files" subtitle="Manage APK updates and downloaded reports" />
+                <PageHeader title={t('admin_pages.downloaded_files.title', 'Downloaded Files')} subtitle={t('admin_pages.downloaded_files.subtitle', 'Manage APK updates and downloaded reports')} />
                 
                 <div className="p-4">
                     {loading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
                     ) : files.length === 0 ? (
-                        <EmptyState message="No downloaded files found on this device." />
+                        <EmptyState message={t('admin_pages.downloaded_files.empty', 'No downloaded files found on this device.')} />
                     ) : (
                         <div className="space-y-3">
                             {files.map((file, index) => (
@@ -164,14 +166,14 @@ export default function DownloadedFilesView({ onBack, setToast }) {
                                         <button 
                                             onClick={() => handleOpenFile(file)}
                                             className="p-2 text-sky-600 hover:bg-sky-100 rounded-md transition-colors"
-                                            title="Open File"
+                                            title={t('admin_pages.downloaded_files.open_file', 'Open File')}
                                         >
                                             <ExternalLink className="w-5 h-5" />
                                         </button>
                                         <button 
                                             onClick={() => handleDeleteFile(file.name)}
                                             className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                                            title="Delete File"
+                                            title={t('admin_pages.downloaded_files.delete_file', 'Delete File')}
                                         >
                                             <Trash2 className="w-5 h-5" />
                                         </button>

@@ -41,6 +41,8 @@ import {
   reportRequestFailure,
 } from '../firebase';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
+import i18n from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 const IS_NATIVE = Capacitor.isNativePlatform();
 
@@ -122,11 +124,11 @@ function withTimeout(promise, ms, label) {
 /** Returns a reason string when an update must not run now, otherwise null. */
 function whyNotNow() {
   const net = getConnectivity();
-  if (net.status === 'offline') return 'No network connection.';
-  if (net.status === 'no-internet') return 'Connected to a network, but there is no internet.';
-  if (net.status === 'checking') return 'Checking the connection. Please try again in a moment.';
-  if (net.saveData) return 'Data Saver is on, so updates are not downloaded.';
-  if (WIFI_ONLY_DOWNLOADS && net.type === 'cellular') return 'Updates only download on Wi-Fi.';
+  if (net.status === 'offline') return i18n.t('admin_pages.app_update.why.offline', 'No network connection.');
+  if (net.status === 'no-internet') return i18n.t('admin_pages.app_update.why.no_internet', 'Connected to a network, but there is no internet.');
+  if (net.status === 'checking') return i18n.t('admin_pages.app_update.why.checking', 'Checking the connection. Please try again in a moment.');
+  if (net.saveData) return i18n.t('admin_pages.app_update.why.save_data', 'Data Saver is on, so updates are not downloaded.');
+  if (WIFI_ONLY_DOWNLOADS && net.type === 'cellular') return i18n.t('admin_pages.app_update.why.wifi_only', 'Updates only download on Wi-Fi.');
   return null;
 }
 
@@ -246,8 +248,8 @@ async function runOtaCheck(reason, { force = false } = {}) {
   } catch (e) {
     const message =
       e?.code === 'timeout'
-        ? 'The connection is too slow. The update will be tried again later.'
-        : e?.message || 'The update could not be downloaded.';
+        ? i18n.t('admin_pages.app_update.too_slow', 'The connection is too slow. The update will be tried again later.')
+        : e?.message || i18n.t('admin_pages.app_update.download_failed_generic', 'The update could not be downloaded.');
     console.warn('[OTA] Update failed:', message);
     setOta({ downloading: false, progress: 0, lastError: message });
     reportRequestFailure();
@@ -275,7 +277,7 @@ async function installNow() {
     }
   } catch (e) {
     console.error('[Update] Install failed:', e);
-    setOta({ installing: false, lastError: e?.message || 'Install failed' });
+    setOta({ installing: false, lastError: e?.message || i18n.t('admin_pages.app_update.install_failed', 'Install failed') });
   }
 }
 
@@ -299,7 +301,7 @@ function startEngine() {
   });
   CapacitorUpdater.addListener('updateFailed', (info) => {
     console.error('[OTA] ❌ Bundle rolled back:', JSON.stringify(info));
-    setOta({ lastError: 'The new version failed to start, so the previous one was restored.' });
+    setOta({ lastError: i18n.t('admin_pages.app_update.rolled_back', 'The new version failed to start, so the previous one was restored.') });
   });
   CapacitorUpdater.addListener('downloadFailed', (info) =>
     console.error('[OTA] ❌ Download failed:', JSON.stringify(info))
@@ -329,6 +331,7 @@ function startEngine() {
 // HOOK
 // =========================================================================
 export function useAppUpdate() {
+  const { t } = useTranslation();
   const ota = useSyncExternalStore(otaStore.subscribe, otaStore.getSnapshot);
   const net = useConnectivity();
 
@@ -389,7 +392,7 @@ export function useAppUpdate() {
       setManualModal({
         isOpen: true,
         status: 'info',
-        message: 'The web version updates itself when you refresh the page.',
+        message: t('admin_pages.app_update.web_refresh', 'The web version updates itself when you refresh the page.'),
       });
       setTimeout(() => setManualModal({ isOpen: false, status: 'idle', message: '' }), 3000);
       return;
@@ -400,7 +403,7 @@ export function useAppUpdate() {
       setManualModal({
         isOpen: true,
         status: 'error',
-        message: 'No network connection. Turn off airplane mode, or turn on mobile data or Wi-Fi.',
+        message: t('admin_pages.app_update.manual_offline', 'No network connection. Turn off airplane mode, or turn on mobile data or Wi-Fi.'),
       });
       return;
     }
@@ -410,13 +413,13 @@ export function useAppUpdate() {
         status: 'error',
         message:
           current.type === 'wifi'
-            ? 'Connected to Wi-Fi, but it has no internet.'
-            : 'There is no internet. Check your signal or data balance.',
+            ? t('admin_pages.app_update.wifi_no_internet', 'Connected to Wi-Fi, but it has no internet.')
+            : t('admin_pages.app_update.no_internet_signal', 'There is no internet. Check your signal or data balance.'),
       });
       return;
     }
 
-    setManualModal({ isOpen: true, status: 'checking', message: 'Checking for updates...' });
+    setManualModal({ isOpen: true, status: 'checking', message: t('admin_pages.app_update.checking_updates', 'Checking for updates...') });
 
     // A new APK always wins: OTA cannot deliver changed native code.
     if (promptRef.current) {
@@ -432,16 +435,16 @@ export function useAppUpdate() {
       setManualModal({
         isOpen: true,
         status: 'success',
-        message: `The app is up to date (version ${result.version}).`,
+        message: t('admin_pages.app_update.up_to_date_version', 'The app is up to date (version {{version}}).', { version: result.version }),
       });
       setTimeout(() => setManualModal({ isOpen: false, status: 'idle', message: '' }), 3000);
     } else if (result.status === 'blocked' || result.status === 'error') {
       setManualModal({ isOpen: true, status: 'error', message: result.message });
     } else {
-      setManualModal({ isOpen: true, status: 'info', message: 'A check is already running.' });
+      setManualModal({ isOpen: true, status: 'info', message: t('admin_pages.app_update.check_running', 'A check is already running.') });
       setTimeout(() => setManualModal({ isOpen: false, status: 'idle', message: '' }), 2500);
     }
-  }, []);
+  }, [t]);
 
   // --- HEADER UPDATE BUTTON -------------------------------------------
   // One value the UI can colour on. Order matters: an in-flight download wins
@@ -488,37 +491,37 @@ export function useAppUpdate() {
       downloading: {
         style: 'text-sky-300 bg-slate-600 border-slate-500',
         icon: <RefreshCw size={18} className="animate-spin" />,
-        label: `Downloading the update… ${progress}%`,
+        label: t('admin_pages.app_update.btn.downloading', 'Downloading the update… {{progress}}%', { progress }),
       },
       checking: {
         style: 'text-slate-300 bg-slate-600 border-slate-500',
         icon: <RefreshCw size={18} className="animate-spin" />,
-        label: 'Checking for updates…',
+        label: t('admin_pages.app_update.btn.checking', 'Checking for updates…'),
       },
       'update-available': {
         style: 'text-white bg-red-600 border-red-400 hover:bg-red-500',
         icon: <ArrowUp size={18} />,
-        label: 'An update is ready. Tap to install.',
+        label: t('admin_pages.app_update.btn.available', 'An update is ready. Tap to install.'),
       },
       'up-to-date': {
         style: 'text-white bg-green-700 border-green-500 hover:bg-green-600',
         icon: <ArrowUp size={18} />,
-        label: 'Up to date. Tap to check again.',
+        label: t('admin_pages.app_update.btn.up_to_date', 'Up to date. Tap to check again.'),
       },
       offline: {
         style: 'text-slate-400 bg-slate-600 border-slate-500',
         icon: <WifiOff size={18} />,
-        label: 'No internet, so updates cannot be checked.',
+        label: t('admin_pages.app_update.btn.offline', 'No internet, so updates cannot be checked.'),
       },
       web: {
         style: 'text-sky-400 bg-slate-600 border-slate-500 hover:bg-slate-500',
         icon: <ArrowUp size={18} />,
-        label: 'Refresh the page to get the latest version.',
+        label: t('admin_pages.app_update.btn.web', 'Refresh the page to get the latest version.'),
       },
       unknown: {
         style: 'text-sky-400 bg-slate-600 border-slate-500 hover:bg-slate-500',
         icon: <ArrowUp size={18} />,
-        label: 'Tap to check for updates.',
+        label: t('admin_pages.app_update.btn.unknown', 'Tap to check for updates.'),
       },
     }[updateStatus];
 
@@ -539,7 +542,7 @@ export function useAppUpdate() {
         {showVersion && <span className="font-mono text-[10px]">v{ota.currentVersion}</span>}
       </button>
     );
-  }, [updateStatus, handleUpdateButton, ota.currentVersion, ota.progress, apkDownloading, apkProgress]);
+  }, [updateStatus, handleUpdateButton, ota.currentVersion, ota.progress, apkDownloading, apkProgress, t]);
 
   const downloadApk = useCallback((config) => {
     if (!config?.apkUrl) return;
@@ -552,17 +555,17 @@ export function useAppUpdate() {
         setManualModal({
           isOpen: true,
           status: 'error',
-          message: `The download failed: ${e?.message || 'unknown error'}`,
+          message: t('admin_pages.app_update.download_failed', 'The download failed: {{message}}', { message: e?.message || t('admin_pages.app_update.unknown_error', 'unknown error') }),
         }),
       onOpenError: () =>
         setManualModal({
           isOpen: true,
           status: 'info',
           message:
-            'The file was downloaded. Open it from your Downloads and allow installing from this app if asked.',
+            t('admin_pages.app_update.open_from_downloads', 'The file was downloaded. Open it from your Downloads and allow installing from this app if asked.'),
         }),
     });
-  }, []);
+  }, [t]);
 
   const skipNativeBuild = useCallback(() => {
     const build = promptRef.current?.serverBuild;
@@ -580,18 +583,18 @@ export function useAppUpdate() {
       net.status === 'offline'
         ? {
             tone: 'bg-gray-800 text-white',
-            text: 'No network. Turn off airplane mode or turn on mobile data / Wi-Fi. You are seeing saved data; your changes will upload later.',
+            text: t('admin_pages.app_update.banner.offline', 'No network. Turn off airplane mode or turn on mobile data / Wi-Fi. You are seeing saved data; your changes will upload later.'),
           }
         : net.status === 'no-internet'
         ? {
             tone: 'bg-amber-100 text-amber-900',
             text:
               (net.type === 'wifi'
-                ? 'Connected to Wi-Fi, but it has no internet.'
+                ? t('admin_pages.app_update.wifi_no_internet', 'Connected to Wi-Fi, but it has no internet.')
                 : net.type === 'cellular'
-                ? 'Mobile data is on, but there is no internet. Check signal or data balance.'
-                : 'Connected to a network, but there is no internet.') +
-              ' Showing saved data; changes will upload later.',
+                ? t('admin_pages.app_update.banner.cellular_no_internet', 'Mobile data is on, but there is no internet. Check signal or data balance.')
+                : t('admin_pages.app_update.why.no_internet', 'Connected to a network, but there is no internet.')) +
+              ' ' + t('admin_pages.app_update.banner.saved_data', 'Showing saved data; changes will upload later.'),
           }
         : null; // A slow connection still works, so nothing is shown for it.
 
@@ -612,7 +615,7 @@ export function useAppUpdate() {
                 disabled={net.checking}
                 className="shrink-0 rounded-md border border-current px-3 py-1 font-medium disabled:opacity-50"
               >
-                {net.checking ? 'Checking…' : 'Retry'}
+                {net.checking ? t('admin_pages.app_update.checking', 'Checking…') : t('admin_pages.app_update.retry', 'Retry')}
               </button>
             )}
           </div>
@@ -631,11 +634,11 @@ export function useAppUpdate() {
                 <Download className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">
-                    {nativeUpdatePrompt.mandatory ? 'Update required' : 'New app version'}
+                    {nativeUpdatePrompt.mandatory ? t('admin_pages.app_update.update_required', 'Update required') : t('admin_pages.app_update.new_app_version', 'New app version')}
                   </h2>
                   <p className="mt-1 text-sm text-gray-600">
                     {nativeUpdatePrompt.message ||
-                      'A new version of the app is available. Download and install it to keep receiving updates.'}
+                      t('admin_pages.app_update.new_version_available', 'A new version of the app is available. Download and install it to keep receiving updates.')}
                   </p>
                 </div>
               </div>
@@ -645,7 +648,7 @@ export function useAppUpdate() {
                   <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                     <div className="h-full bg-blue-600 transition-all" style={{ width: `${apkProgress}%` }} />
                   </div>
-                  <p className="mt-1 text-xs text-gray-500">Downloading… {apkProgress}%</p>
+                  <p className="mt-1 text-xs text-gray-500">{t('admin_pages.app_update.downloading_progress', 'Downloading… {{progress}}%', { progress: apkProgress })}</p>
                 </div>
               )}
 
@@ -657,7 +660,7 @@ export function useAppUpdate() {
                     disabled={apkDownloading}
                     className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Not now
+                    {t('admin_pages.app_update.not_now', 'Not now')}
                   </button>
                 )}
                 <button
@@ -666,7 +669,7 @@ export function useAppUpdate() {
                   disabled={apkDownloading}
                   className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
                 >
-                  {apkDownloading ? 'Downloading…' : 'Download and install'}
+                  {apkDownloading ? t('admin_pages.app_update.downloading', 'Downloading…') : t('admin_pages.app_update.download_install', 'Download and install')}
                 </button>
               </div>
             </div>
@@ -690,12 +693,12 @@ export function useAppUpdate() {
           >
             <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl my-auto max-h-full overflow-y-auto">
               <h2 id="ota-title" className="text-lg font-semibold text-gray-900">
-                Update ready{ota.version ? ` (${ota.version})` : ''}
+                {ota.version ? t('admin_pages.app_update.update_ready_version', 'Update ready ({{version}})', { version: ota.version }) : t('admin_pages.app_update.update_ready', 'Update ready')}
               </h2>
               <p className="mt-2 text-sm text-gray-600">
                 {ota.mandatory
-                  ? 'A required update has been downloaded. The app must restart to install it.'
-                  : 'A new version has been downloaded. Restart now to install it, or choose Later and it will install by itself the next time you open the app.'}
+                  ? t('admin_pages.app_update.required_downloaded', 'A required update has been downloaded. The app must restart to install it.')
+                  : t('admin_pages.app_update.new_downloaded', 'A new version has been downloaded. Restart now to install it, or choose Later and it will install by itself the next time you open the app.')}
               </p>
               {/* The manifest's `notes` is not shown. It carried the release
                   description from the commit, which arrived on a phone as
@@ -704,7 +707,7 @@ export function useAppUpdate() {
 
               {onDataEntryPage && (
                 <p className="mt-3 rounded-md bg-amber-50 p-2 text-sm text-amber-800">
-                  You are on a data entry page. Save your work before restarting, or choose Later.
+                  {t('admin_pages.app_update.data_entry_warning', 'You are on a data entry page. Save your work before restarting, or choose Later.')}
                 </p>
               )}
 
@@ -717,7 +720,7 @@ export function useAppUpdate() {
                     disabled={ota.installing}
                     className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Later
+                    {t('admin_pages.app_update.later', 'Later')}
                   </button>
                 )}
                 <button
@@ -726,7 +729,7 @@ export function useAppUpdate() {
                   disabled={ota.installing}
                   className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
                 >
-                  {ota.installing ? 'Installing…' : 'Restart and install'}
+                  {ota.installing ? t('admin_pages.app_update.installing', 'Installing…') : t('admin_pages.app_update.restart_install', 'Restart and install')}
                 </button>
               </div>
             </div>
@@ -751,18 +754,18 @@ export function useAppUpdate() {
                 )}
                 <p className="flex-1 text-sm text-gray-700">{manualModal.message}</p>
                 {manualModal.status !== 'checking' && (
-                  <button type="button" onClick={closeManual} aria-label="Close">
+                  <button type="button" onClick={closeManual} aria-label={t('admin_pages.app_update.close', 'Close')}>
                     <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   </button>
                 )}
               </div>
-              <p className="mt-3 text-xs text-gray-400">Current version: {ota.currentVersion}</p>
+              <p className="mt-3 text-xs text-gray-400">{t('admin_pages.app_update.current_version', 'Current version: {{version}}', { version: ota.currentVersion })}</p>
             </div>
           </div>
         )}
       </>
     );
-  }, [ota, net, nativeUpdatePrompt, apkDownloading, apkProgress, manualModal, downloadApk, skipNativeBuild]);
+  }, [ota, net, nativeUpdatePrompt, apkDownloading, apkProgress, manualModal, downloadApk, skipNativeBuild, t]);
 
   return {
     appVersion: ota.currentVersion,

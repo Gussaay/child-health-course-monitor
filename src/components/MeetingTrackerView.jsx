@@ -11,18 +11,19 @@ import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Ta
 import { upsertUnitMeeting, deleteUnitMeeting } from '../data';
 import { useDataCache } from '../DataContext';
 import { promptDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 import { 
     Users, Baby, Stethoscope, Activity, Package, HeartPulse, 
     Calendar, Edit, Trash2, Plus, Download, UserPlus, BarChart2
 } from 'lucide-react';
 
 const PROGRAM_UNITS_DATA = [
-    { id: "Neonatal Health Unit", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100" },
-    { id: "IMNCI unit", title: "IMNCI", icon: Stethoscope, color: "text-green-500", bg: "bg-green-100" },
-    { id: "Adolescent unit", title: "Adolescent Health", icon: Users, color: "text-purple-500", bg: "bg-purple-100" },
-    { id: "Monitoring and evaluation", title: "Monitoring & Eval (M&E)", icon: Activity, color: "text-orange-500", bg: "bg-orange-100" },
-    { id: "Supply", title: "Supply & Logistics", icon: Package, color: "text-amber-500", bg: "bg-amber-100" },
-    { id: "Health promotion", title: "Health Promotion", icon: HeartPulse, color: "text-rose-500", bg: "bg-rose-100" }
+    { id: "Neonatal Health Unit", key: "neonatal", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100" },
+    { id: "IMNCI unit", key: "imnci", title: "IMNCI", icon: Stethoscope, color: "text-green-500", bg: "bg-green-100" },
+    { id: "Adolescent unit", key: "adolescent", title: "Adolescent Health", icon: Users, color: "text-purple-500", bg: "bg-purple-100" },
+    { id: "Monitoring and evaluation", key: "me", title: "Monitoring & Eval (M&E)", icon: Activity, color: "text-orange-500", bg: "bg-orange-100" },
+    { id: "Supply", key: "supply", title: "Supply & Logistics", icon: Package, color: "text-amber-500", bg: "bg-amber-100" },
+    { id: "Health promotion", key: "promotion", title: "Health Promotion", icon: HeartPulse, color: "text-rose-500", bg: "bg-rose-100" }
 ];
 
 const getInviteeDetails = (baseName, allTeamMembers) => {
@@ -38,17 +39,19 @@ const getInviteeDetails = (baseName, allTeamMembers) => {
 };
 
 const getStatusDetails = (attended, totalSessions) => {
-    if (totalSessions === 0) return { text: '-', textAr: '-', class: 'bg-gray-100 text-gray-800' };
+    if (totalSessions === 0) return { key: null, text: '-', textAr: '-', class: 'bg-gray-100 text-gray-800' };
     const percentage = (attended / totalSessions) * 100;
-    if (percentage === 100) return { text: 'Excellent', textAr: 'ممتاز', class: 'bg-green-100 text-green-800' };
-    if (percentage >= 80) return { text: 'Adequate', textAr: 'جيد', class: 'bg-yellow-100 text-yellow-800' };
-    if (percentage >= 50) return { text: 'Poor', textAr: 'ضعيف', class: 'bg-orange-100 text-orange-800' };
-    return { text: 'Not Accepted', textAr: 'غير مقبول', class: 'bg-red-100 text-red-800' };
+    if (percentage === 100) return { key: 'excellent', text: 'Excellent', textAr: 'ممتاز', class: 'bg-green-100 text-green-800' };
+    if (percentage >= 80) return { key: 'adequate', text: 'Adequate', textAr: 'جيد', class: 'bg-yellow-100 text-yellow-800' };
+    if (percentage >= 50) return { key: 'poor', text: 'Poor', textAr: 'ضعيف', class: 'bg-orange-100 text-orange-800' };
+    return { key: 'not_accepted', text: 'Not Accepted', textAr: 'غير مقبول', class: 'bg-red-100 text-red-800' };
 };
 
 const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 
 export default function MeetingTrackerView({ permissions }) {
+    const { t } = useTranslation();
+    const unitTitle = (u) => t(`trackers.meetings.units.${u.key}`, u.title);
     const { 
         unitMeetings: rawMeetings, 
         fetchUnitMeetings, 
@@ -130,17 +133,17 @@ export default function MeetingTrackerView({ permissions }) {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Federal Meeting Tracker" subtitle="Manage meeting series, schedules, and attendance tracking." />
+            <PageHeader title={t('trackers.meetings.title', 'Federal Meeting Tracker')} subtitle={t('trackers.meetings.subtitle', 'Manage meeting series, schedules, and attendance tracking.')} />
 
             <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-max mb-4 border border-gray-200">
                 <Button variant={viewMode === 'dashboard' ? 'primary' : 'ghost'} onClick={() => setViewMode('dashboard')}>
-                    <BarChart2 className="w-4 h-4 mr-2" /> Dashboard Overview
+                    <BarChart2 className="w-4 h-4 mr-2" /> {t('trackers.meetings.tabs.dashboard', 'Dashboard Overview')}
                 </Button>
                 <Button variant={viewMode === 'entry' ? 'primary' : 'ghost'} onClick={() => { setViewMode('entry'); setSelectedMeetingId(''); setActiveMeeting(null); }}>
-                    <Edit className="w-4 h-4 mr-2" /> Data Entry
+                    <Edit className="w-4 h-4 mr-2" /> {t('trackers.meetings.tabs.entry', 'Data Entry')}
                 </Button>
                 <Button variant={viewMode === 'deleted' ? 'primary' : 'ghost'} onClick={() => setViewMode('deleted')}>
-                    Deleted Items
+                    {t('trackers.meetings.tabs.deleted', 'Deleted Items')}
                 </Button>
             </div>
 
@@ -152,17 +155,17 @@ export default function MeetingTrackerView({ permissions }) {
                 <Card>
                     <CardBody className="p-6">
                         <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                            <Users className="text-sky-600" /> Federal Meetings Overview
+                            <Users className="text-sky-600" /> {t('trackers.meetings.overview', 'Federal Meetings Overview')}
                         </h3>
                         {rawMeetings?.length === 0 ? (
-                            <EmptyState message="No meetings recorded across units." />
+                            <EmptyState message={t('trackers.meetings.no_meetings', 'No meetings recorded across units.')} />
                         ) : (
-                            <Table headers={["Meeting Title", "Unit", "Schedule", "Attendees", "Sessions"]}>
+                            <Table headers={[t('trackers.meetings.table.title', 'Meeting Title'), t('trackers.meetings.table.unit', 'Unit'), t('trackers.meetings.table.schedule', 'Schedule'), t('trackers.meetings.table.attendees', 'Attendees'), t('trackers.meetings.table.sessions', 'Sessions')]}>
                                 {(rawMeetings || []).filter(m => !m.isDeleted).map(m => (
                                     <tr key={m.id} className="hover:bg-gray-50">
                                         <td className="p-3 border font-medium">{m.title}</td>
-                                        <td className="p-3 border text-sm">{PROGRAM_UNITS_DATA.find(u => u.id === m.unit)?.title || m.unit}</td>
-                                        <td className="p-3 border text-sm text-gray-600">{m.schedule || 'Not specified'}</td>
+                                        <td className="p-3 border text-sm">{(() => { const u = PROGRAM_UNITS_DATA.find(x => x.id === m.unit); return u ? unitTitle(u) : m.unit; })()}</td>
+                                        <td className="p-3 border text-sm text-gray-600">{m.schedule || t('trackers.meetings.not_specified', 'Not specified')}</td>
                                         <td className="p-3 border text-sm text-gray-600 font-bold">{(m.invitees?.length || 0) + (m.guests?.length || 0)}</td>
                                         <td className="p-3 border text-sm text-gray-600 font-bold">{m.sessionDates?.length || 0}</td>
                                     </tr>
@@ -175,22 +178,22 @@ export default function MeetingTrackerView({ permissions }) {
                 <Card>
                     <CardBody className="p-6 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded border border-gray-200">
-                            <FormGroup label="Select Program Unit">
+                            <FormGroup label={t('trackers.meetings.select_unit', 'Select Program Unit')}>
                                 <Select value={selectedUnit} onChange={(e) => { setSelectedUnit(e.target.value); setSelectedMeetingId(''); setActiveMeeting(null); }}>
-                                    <option value="">-- Choose Unit --</option>
-                                    {PROGRAM_UNITS_DATA.map(u => <option key={u.id} value={u.id}>{u.title}</option>)}
+                                    <option value="">{t('trackers.meetings.choose_unit', '-- Choose Unit --')}</option>
+                                    {PROGRAM_UNITS_DATA.map(u => <option key={u.id} value={u.id}>{unitTitle(u)}</option>)}
                                 </Select>
                             </FormGroup>
                             
                             {selectedUnit && (
-                                <FormGroup label="Select or Add Meeting">
+                                <FormGroup label={t('trackers.meetings.select_meeting', 'Select or Add Meeting')}>
                                     <Select value={selectedMeetingId} onChange={(e) => { 
                                         setSelectedMeetingId(e.target.value); 
                                         setActiveMeeting(meetings.find(m => m.id === e.target.value) || null); 
                                     }}>
-                                        <option value="">-- Choose Meeting --</option>
+                                        <option value="">{t('trackers.meetings.choose_meeting', '-- Choose Meeting --')}</option>
                                         {meetings.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
-                                        <option value="NEW" className="font-bold text-sky-600">+ Add New Meeting</option>
+                                        <option value="NEW" className="font-bold text-sky-600">{t('trackers.meetings.add_new_meeting', '+ Add New Meeting')}</option>
                                     </Select>
                                 </FormGroup>
                             )}
@@ -198,28 +201,28 @@ export default function MeetingTrackerView({ permissions }) {
 
                         {selectedMeetingId === 'NEW' && (
                             <div className="bg-sky-50 p-4 rounded border border-sky-200 flex gap-4 items-end animate-in">
-                                <FormGroup label="New Meeting Title" className="flex-1">
-                                    <Input value={newMeetingTitle} onChange={(e) => setNewMeetingTitle(e.target.value)} placeholder="e.g., Q3 Federal Strategy Review" />
+                                <FormGroup label={t('trackers.meetings.new_title', 'New Meeting Title')} className="flex-1">
+                                    <Input value={newMeetingTitle} onChange={(e) => setNewMeetingTitle(e.target.value)} placeholder={t('trackers.meetings.new_title_ph', 'e.g., Q3 Federal Strategy Review')} />
                                 </FormGroup>
-                                <Button onClick={handleCreateMeeting} disabled={!newMeetingTitle.trim()}>Create Meeting</Button>
+                                <Button onClick={handleCreateMeeting} disabled={!newMeetingTitle.trim()}>{t('trackers.meetings.create', 'Create Meeting')}</Button>
                             </div>
                         )}
 
                         {activeMeeting && (
                             <div className="space-y-6 animate-in">
                                 <div className="p-4 border rounded-lg shadow-sm border-l-4 border-l-indigo-500">
-                                    <h4 className="font-bold text-gray-800 border-b pb-2 mb-4">Meeting Settings</h4>
+                                    <h4 className="font-bold text-gray-800 border-b pb-2 mb-4">{t('trackers.meetings.settings', 'Meeting Settings')}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                        <FormGroup label="Schedule / Frequency">
-                                            <Input value={activeMeeting.schedule || ''} onChange={(e) => handleUpdateActiveMeeting({...activeMeeting, schedule: e.target.value})} placeholder="e.g., Weekly Mondays"/>
+                                        <FormGroup label={t('trackers.meetings.schedule_freq', 'Schedule / Frequency')}>
+                                            <Input value={activeMeeting.schedule || ''} onChange={(e) => handleUpdateActiveMeeting({...activeMeeting, schedule: e.target.value})} placeholder={t('trackers.meetings.schedule_ph', 'e.g., Weekly Mondays')}/>
                                         </FormGroup>
-                                        <FormGroup label="Location">
-                                            <Input value={activeMeeting.place || ''} onChange={(e) => handleUpdateActiveMeeting({...activeMeeting, place: e.target.value})} placeholder="Room / Link"/>
+                                        <FormGroup label={t('trackers.meetings.location', 'Location')}>
+                                            <Input value={activeMeeting.place || ''} onChange={(e) => handleUpdateActiveMeeting({...activeMeeting, place: e.target.value})} placeholder={t('trackers.meetings.location_ph', 'Room / Link')}/>
                                         </FormGroup>
-                                        <FormGroup label="Inviter">
+                                        <FormGroup label={t('trackers.meetings.inviter', 'Inviter')}>
                                             <Select value={activeMeeting.inviter || ''} onChange={(e) => handleUpdateActiveMeeting({...activeMeeting, inviter: e.target.value})}>
-                                                <option value="">-- Select --</option>
-                                                {allTeamMembers.map(t=><option key={t.id} value={t.name}>{t.nameAr || t.name}</option>)}
+                                                <option value="">{t('trackers.meetings.select', '-- Select --')}</option>
+                                                {allTeamMembers.map(tm=><option key={tm.id} value={tm.name}>{tm.nameAr || tm.name}</option>)}
                                             </Select>
                                         </FormGroup>
                                     </div>
@@ -227,13 +230,13 @@ export default function MeetingTrackerView({ permissions }) {
 
                                 <div className="p-4 border rounded-lg shadow-sm border-l-4 border-l-green-500">
                                     <div className="flex justify-between items-center border-b pb-2 mb-4">
-                                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-4 h-4"/> Attendance Tracking</h4>
+                                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-4 h-4"/> {t('trackers.meetings.attendance', 'Attendance Tracking')}</h4>
                                         <Button size="sm" onClick={async () => {
-                                            const newDate = await promptDialog("Session date", { title: "Add a session date", defaultValue: new Date().toISOString().split('T')[0], inputType: "date" });
+                                            const newDate = await promptDialog(t('trackers.meetings.session_date', 'Session date'), { title: t('trackers.meetings.add_session_date_title', 'Add a session date'), defaultValue: new Date().toISOString().split('T')[0], inputType: "date" });
                                             if (newDate && !activeMeeting.sessionDates?.includes(newDate)) {
                                                 handleUpdateActiveMeeting({ ...activeMeeting, sessionDates: [...(activeMeeting.sessionDates || []), newDate].sort() });
                                             }
-                                        }}>+ Add Session Date</Button>
+                                        }}>{t('trackers.meetings.add_session_date', '+ Add Session Date')}</Button>
                                     </div>
                                     
                                     {activeMeeting.sessionDates?.length > 0 ? (
@@ -241,11 +244,11 @@ export default function MeetingTrackerView({ permissions }) {
                                             <table className="w-full text-left text-sm border-collapse">
                                                 <thead className="bg-gray-100 text-gray-600">
                                                     <tr>
-                                                        <th className="p-3 border font-semibold">Invitee Name</th>
+                                                        <th className="p-3 border font-semibold">{t('trackers.meetings.invitee_name', 'Invitee Name')}</th>
                                                         {activeMeeting.sessionDates.map(date => (
                                                             <th key={date} className="p-3 border font-semibold text-center text-xs">{date}</th>
                                                         ))}
-                                                        <th className="p-3 border font-semibold text-center">Status</th>
+                                                        <th className="p-3 border font-semibold text-center">{t('trackers.meetings.status_col', 'Status')}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -265,7 +268,7 @@ export default function MeetingTrackerView({ permissions }) {
                                                                         />
                                                                     </td>
                                                                 ))}
-                                                                <td className="p-3 border text-center"><span className={`px-2 py-1 rounded text-xs ${status.class}`}>{status.text}</span></td>
+                                                                <td className="p-3 border text-center"><span className={`px-2 py-1 rounded text-xs ${status.class}`}>{status.key ? t(`trackers.meetings.status.${status.key}`, status.text) : status.text}</span></td>
                                                             </tr>
                                                         );
                                                     })}
@@ -273,7 +276,7 @@ export default function MeetingTrackerView({ permissions }) {
                                             </table>
                                         </div>
                                     ) : (
-                                        <EmptyState message="No sessions recorded yet." />
+                                        <EmptyState message={t('trackers.meetings.no_sessions', 'No sessions recorded yet.')} />
                                     )}
                                 </div>
                             </div>

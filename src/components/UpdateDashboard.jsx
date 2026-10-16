@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Activity, Calendar, BarChart3, Filter, MapPin, UserCheck, TrendingUp } from 'lucide-react';
 import { Card, Table, Button, FormGroup, Select } from './CommonComponents';
 import { STATE_LOCALITIES } from './constants';
+import { useTranslation } from 'react-i18next';
 
 // Helper to translate locality to Arabic
 const getLocalityName = (locKey) => {
@@ -85,6 +86,7 @@ const normalizeUpdater = (raw, emailMap) => {
 };
 
 export const UpdateDashboard = ({ facilities, onBack }) => {
+    const { t } = useTranslation();
     // Filter States - Defaulting timeFilter to THIS_MONTH
     const [stateFilter, setStateFilter] = useState('');
     const [localityFilter, setLocalityFilter] = useState('');
@@ -252,7 +254,7 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
                     <div>
                         <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">تحديثات هذا الشهر</p>
                         <h3 className="text-lg font-extrabold text-gray-800 leading-tight">{updatedThisMonth}</h3>
-                        <p className="text-sm font-semibold text-emerald-600 mt-1">Activity in current month</p>
+                        <p className="text-sm font-semibold text-emerald-600 mt-1">{t('admin_pages.update_dashboard.activity_month', 'Activity in current month')}</p>
                     </div>
                 </Card>
 
@@ -283,7 +285,7 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
                     <div>
                         <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">أكثر مستخدم نشاطاً</p>
                         <h3 className="text-lg font-extrabold text-gray-800 leading-tight truncate max-w-[150px]" title={topUpdater ? topUpdater[0] : ''}>
-                            {topUpdater ? topUpdater[0] : 'لا يوجد'}
+                            {topUpdater ? (topUpdater[0] === 'System / Unknown' ? t('admin_pages.update_dashboard.system_unknown', 'System / Unknown') : topUpdater[0]) : 'لا يوجد'}
                         </h3>
                         {topUpdater && <p className="text-sm font-semibold text-pink-600 mt-1">{topUpdater[1].total} عملية تحديث</p>}
                     </div>
@@ -341,7 +343,7 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
                     <h3 className="text-lg font-bold text-gray-800">التحديثات حسب الولاية (Disaggregated by State)</h3>
                 </div>
                 <div className="p-0">
-                    <Table headers={['الولاية (State)', 'إجمالي التحديثات', 'IMNCI Service', 'EENC Service', 'Neonatal Service', 'ETAT Service']}>
+                    <Table headers={['الولاية (State)', 'إجمالي التحديثات', t('admin_pages.update_dashboard.svc.imnci', 'IMNCI Service'), t('admin_pages.update_dashboard.svc.eenc', 'EENC Service'), t('admin_pages.update_dashboard.svc.neonatal', 'Neonatal Service'), t('admin_pages.update_dashboard.svc.etat', 'ETAT Service')]}>
                         {Object.entries(stateStats).length === 0 ? (
                             <tr><td colSpan="6" className="text-center py-8 text-gray-500 font-medium">لا توجد بيانات مطابقة للبحث</td></tr>
                         ) : (
@@ -369,14 +371,14 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
                     <h3 className="text-lg font-bold text-gray-800">التحديثات حسب المستخدم (Updates by User)</h3>
                 </div>
                 <div className="p-0">
-                    <Table headers={['المستخدم (Updater)', 'إجمالي التحديثات', 'IMNCI Service', 'EENC Service', 'Neonatal Service', 'ETAT Service']}>
+                    <Table headers={['المستخدم (Updater)', 'إجمالي التحديثات', t('admin_pages.update_dashboard.svc.imnci', 'IMNCI Service'), t('admin_pages.update_dashboard.svc.eenc', 'EENC Service'), t('admin_pages.update_dashboard.svc.neonatal', 'Neonatal Service'), t('admin_pages.update_dashboard.svc.etat', 'ETAT Service')]}>
                         {Object.entries(updaterStats).length === 0 ? (
                             <tr><td colSpan="6" className="text-center py-8 text-gray-500 font-medium">لا توجد بيانات مطابقة للبحث</td></tr>
                         ) : (
                             Object.entries(updaterStats).sort((a, b) => b[1].total - a[1].total).map(([updater, stats]) => (
                                 <tr key={updater} className="hover:bg-emerald-50 transition-colors">
                                     <td className="font-bold text-gray-800 align-middle truncate max-w-xs" title={updater}>
-                                        {updater}
+                                        {updater === 'System / Unknown' ? t('admin_pages.update_dashboard.system_unknown', 'System / Unknown') : updater}
                                     </td>
                                     <td className="align-middle text-center font-extrabold text-emerald-700 bg-emerald-50/50">{stats.total}</td>
                                     <td className="align-middle">{formatCell(stats.IMNCI, stats.total)}</td>

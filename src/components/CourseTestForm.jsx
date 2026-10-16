@@ -15,6 +15,7 @@ import {
 } from '../data.js';
 import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X, AlertTriangle } from 'lucide-react'; 
 import { notify, confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -590,10 +591,47 @@ export const getParticipantTestModule = (participant, course, tests) => {
     return taken.length === 1 ? taken[0] : null;
 };
 
-const formatTestLabel = (storedOrBaseType, module) => {
-    const base = getBaseTestType(storedOrBaseType);
-    const typeLabel = base === 'pre-test' ? 'Pre-Test' : base === 'post-test' ? 'Post-Test' : (base || '');
-    return module ? `${typeLabel} - ${MODULE_SHORT_LABELS[module] || module}` : typeLabel;
+// On-screen labels (translated). The stored values and MODULE_SHORT_LABELS stay in English.
+const moduleShortLabel = (module, t) => {
+    if (module === 'Emergency Newborn Care') return t('course_tests.tests.modules.newborn_short', 'Newborn');
+    if (module === 'Emergency Maternal Care') return t('course_tests.tests.modules.maternal_short', 'Maternal / Obstetric');
+    if (module === EENC_ONLY_MODULE) return t('course_tests.tests.modules.eenc_only', 'EENC only');
+    return module;
+};
+
+const moduleFullLabel = (module, t) => {
+    if (module === 'Emergency Newborn Care') return t('course_tests.tests.modules.newborn_full', 'Emergency Newborn Care');
+    if (module === 'Emergency Maternal Care') return t('course_tests.tests.modules.maternal_full', 'Emergency Maternal Care (Obstetric)');
+    return module;
+};
+
+const ssnbModuleLabel = (module, t) => ({
+    'Portable warmer training': t('course_tests.tests.ssnb.warmer', 'Portable warmer training'),
+    'CPAP training': t('course_tests.tests.ssnb.cpap', 'CPAP training'),
+    'Kangaroo mother Care': t('course_tests.tests.ssnb.kmc', 'Kangaroo mother Care'),
+    'Sepsis surveillance and management': t('course_tests.tests.ssnb.sepsis', 'Sepsis surveillance and management'),
+})[module] || module;
+
+const testTypeLabel = (base, t) => (
+    base === 'pre-test' ? t('course_tests.tests.pre_test', 'Pre-Test') : base === 'post-test' ? t('course_tests.tests.post_test', 'Post-Test') : (base || '')
+);
+
+const formatTestLabel = (storedOrBaseType, module, t) => {
+    const typeLabel = testTypeLabel(getBaseTestType(storedOrBaseType), t);
+    return module ? `${typeLabel} - ${moduleShortLabel(module, t)}` : typeLabel;
+};
+
+const sectionTitleLabel = (sec, t) => {
+    if (sec.key === 'eenc') return t('course_tests.tests.sections.eenc', 'Early Essential Newborn Care (EENC)');
+    if (sec.key === 'newborn') return moduleFullLabel('Emergency Newborn Care', t);
+    if (sec.key === 'maternal') return moduleFullLabel('Emergency Maternal Care', t);
+    return sec.title;
+};
+
+const sectionShortLabel = (sec, t) => {
+    if (sec.key === 'newborn') return moduleShortLabel('Emergency Newborn Care', t);
+    if (sec.key === 'maternal') return moduleShortLabel('Emergency Maternal Care', t);
+    return sec.shortTitle;
 };
 
 // --- EmONC test parts --------------------------------------------------------
@@ -801,6 +839,7 @@ export function reviseEencOnlyTest(test, participant) {
 
 // Per-part score cards (Part 1 EENC / Part 2 Newborn or Maternal).
 const SectionScoreBreakdown = ({ sectionScores, compact = false }) => {
+    const { t } = useTranslation();
     if (!Array.isArray(sectionScores) || sectionScores.length === 0) return null;
 
     if (compact) {
@@ -808,7 +847,7 @@ const SectionScoreBreakdown = ({ sectionScores, compact = false }) => {
             <div className="flex flex-col gap-0.5">
                 {sectionScores.map(sec => (
                     <span key={sec.key} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${getSectionTheme(sec.key).chip}`}>
-                        P{sec.part} {sec.shortTitle}: {sec.score}/{sec.total}
+                        P{sec.part} {sectionShortLabel(sec, t)}: {sec.score}/{sec.total}
                     </span>
                 ))}
             </div>
@@ -819,10 +858,10 @@ const SectionScoreBreakdown = ({ sectionScores, compact = false }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4 text-left">
             {sectionScores.map(sec => (
                 <div key={sec.key} className={`border-2 rounded-lg p-3 ${getSectionTheme(sec.key).chip}`}>
-                    <div className="text-xs font-bold uppercase tracking-wider opacity-80">Part {sec.part}</div>
-                    <div className="font-semibold">{sec.title}</div>
+                    <div className="text-xs font-bold uppercase tracking-wider opacity-80">{t('course_tests.tests.part_n', 'Part {{part}}', { part: sec.part })}</div>
+                    <div className="font-semibold">{sectionTitleLabel(sec, t)}</div>
                     <div className="text-2xl font-bold mt-1">{Number(sec.percentage || 0).toFixed(1)}%</div>
-                    <div className="text-xs opacity-80">{sec.score} / {sec.total} points</div>
+                    <div className="text-xs opacity-80">{t('course_tests.tests.n_of_total_points', '{{score}} / {{total}} points', { score: sec.score, total: sec.total })}</div>
                 </div>
             ))}
         </div>
@@ -888,6 +927,7 @@ const TestResultScreen = ({
     participantName, testType, score, total, percentage, onBack, 
     canManageTests, onEdit, onDelete, isExistingResult, resultData, sectionScores
 }) => {
+    const { t } = useTranslation();
     const showMcqOnly = resultData?.hasOpenQuestions && !resultData?.isGraded;
     const displayPercent = showMcqOnly ? (resultData.mcqPercentage || 0) : percentage;
     const displayScore = showMcqOnly ? (resultData.mcqScore || 0) : score;
@@ -899,16 +939,16 @@ const TestResultScreen = ({
     return (
         <Card style={{ direction: 'ltr', textAlign: 'left' }}>
             <div className="p-6 text-center">
-                <PageHeader title="Test Result" subtitle={`Score for ${participantName} (${testType})`} />
+                <PageHeader title={t('course_tests.tests.test_result', 'Test Result')} subtitle={t('course_tests.tests.score_for', 'Score for {{name}} ({{testType}})', { name: participantName, testType })} />
                 {isExistingResult && (
                     <div className="mb-6 p-3 bg-blue-50 text-blue-800 rounded-md border border-blue-200 inline-block">
-                        You already solved the test.
+                        {t('course_tests.tests.already_solved', 'You already solved the test.')}
                     </div>
                 )}
                 <div className="my-8">
                     <div className={`text-6xl font-bold ${scoreClass}`}>{percent}%</div>
                     {!resultData?.isLegacy && (
-                        <div className="text-xl text-gray-700 mt-2">({displayScore} / {displayTotal} Total Points)</div>
+                        <div className="text-xl text-gray-700 mt-2">{t('course_tests.tests.total_points', '({{score}} / {{total}} Total Points)', { score: displayScore, total: displayTotal })}</div>
                     )}
                     {!resultData?.isLegacy && sectionScores && (
                         <div className="max-w-xl mx-auto mt-4">
@@ -918,20 +958,20 @@ const TestResultScreen = ({
                     
                     {showMcqOnly ? (
                         <p className="text-sm text-blue-600 mt-4 font-medium max-w-lg mx-auto">
-                            * Score reflects auto-graded multiple choice questions only. Open-ended questions will be graded later by a facilitator.
+                            {t('course_tests.tests.mcq_only_note', '* Score reflects auto-graded multiple choice questions only. Open-ended questions will be graded later by a facilitator.')}
                         </p>
                     ) : (
                         !resultData?.isLegacy && (
-                            <p className="text-sm text-gray-500 mt-4">Score includes both multiple-choice and manually graded questions.</p>
+                            <p className="text-sm text-gray-500 mt-4">{t('course_tests.tests.score_includes_both', 'Score includes both multiple-choice and manually graded questions.')}</p>
                         )
                     )}
                 </div>
                 <div className="flex justify-center gap-3">
-                    <Button variant="secondary" onClick={onBack}>Back</Button>
+                    <Button variant="secondary" onClick={onBack}>{t('course_tests.tests.back', 'Back')}</Button>
                     {canManageTests && !resultData?.isLegacy && (
                         <>
-                            <Button variant="primary" onClick={onEdit}>Edit / Grade Test</Button>
-                            <Button variant="danger" onClick={onDelete}>Delete Test</Button>
+                            <Button variant="primary" onClick={onEdit}>{t('course_tests.tests.edit_grade_test', 'Edit / Grade Test')}</Button>
+                            <Button variant="danger" onClick={onDelete}>{t('course_tests.tests.delete_test', 'Delete Test')}</Button>
                         </>
                     )}
                 </div>
@@ -1005,6 +1045,7 @@ const TestScoresDashboard = ({
     onScoreFieldsRepaired,
     canManageTests
 }) => {
+    const { t } = useTranslation();
     const isModuleSeparated = modules.some(Boolean);
 
     const scoreFieldFixes = useMemo(
@@ -1035,12 +1076,12 @@ const TestScoresDashboard = ({
     const [assigningId, setAssigningId] = useState(null);
     const [showRepairDetails, setShowRepairDetails] = useState(false);
     const SCORE_FIELD_LABELS = {
-        pre_test_score: 'Pre-Test box',
-        post_test_score: 'Post-Test box',
-        pre_test_score_maternal: 'Extra "Maternal Pre-Test" box (not used)',
-        post_test_score_maternal: 'Extra "Maternal Post-Test" box (not used)'
+        pre_test_score: t('course_tests.tests.repair.field_pre', 'Pre-Test box'),
+        post_test_score: t('course_tests.tests.repair.field_post', 'Post-Test box'),
+        pre_test_score_maternal: t('course_tests.tests.repair.field_pre_maternal', 'Extra "Maternal Pre-Test" box (not used)'),
+        post_test_score_maternal: t('course_tests.tests.repair.field_post_maternal', 'Extra "Maternal Post-Test" box (not used)')
     };
-    const fmtFieldValue = (v) => (v === null || v === undefined || v === '') ? 'empty' : `${Number(v).toFixed(1)}%`;
+    const fmtFieldValue = (v) => (v === null || v === undefined || v === '') ? t('course_tests.tests.repair.empty', 'empty') : `${Number(v).toFixed(1)}%`;
 
     const handleRepairScoreFields = async () => {
         setRepairState('working');
@@ -1098,7 +1139,7 @@ const TestScoresDashboard = ({
                     onClick={() => onOpenEntry(type, p.id, false, module)}
                     className="text-xs"
                 >
-                    + Add Score
+                    {t('course_tests.tests.add_score', '+ Add Score')}
                 </Button>
             ) : <span className="text-gray-400">-</span>;
         }
@@ -1117,13 +1158,13 @@ const TestScoresDashboard = ({
                     </span>
                     <SectionScoreBreakdown sectionScores={sectionScores} compact />
                     {test.isLegacy && (
-                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" title="Score recorded using older version">
-                            Legacy Record
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" title={t('course_tests.tests.legacy_title', 'Score recorded using older version')}>
+                            {t('course_tests.tests.legacy_record', 'Legacy Record')}
                         </span>
                     )}
                     {test.hasOpenQuestions && !test.isGraded && (
                         <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                            Pending Grade
+                            {t('course_tests.tests.pending_grade', 'Pending Grade')}
                         </span>
                     )}
                 </div>
@@ -1133,7 +1174,7 @@ const TestScoresDashboard = ({
                             <Button 
                                 variant="icon" 
                                 onClick={() => onEdit(p.id, type, module)}
-                                title="View/Edit Test"
+                                title={t('course_tests.tests.view_edit_test', 'View/Edit Test')}
                                 className="text-gray-500 hover:text-blue-600"
                             >
                                 <Eye size={18} />
@@ -1142,7 +1183,7 @@ const TestScoresDashboard = ({
                                 <Button 
                                     variant="icon" 
                                     onClick={() => onDelete(p.id, type, module)}
-                                    title="Delete Test"
+                                    title={t('course_tests.tests.delete_test', 'Delete Test')}
                                     className="text-gray-500 hover:text-red-600"
                                 >
                                     <Trash2 size={18} />
@@ -1156,9 +1197,9 @@ const TestScoresDashboard = ({
                                 variant="secondary" 
                                 onClick={() => onOpenEntry(type, p.id, false, module)}
                                 className="text-xs"
-                                title="Override legacy score with new detailed test"
+                                title={t('course_tests.tests.override_title', 'Override legacy score with new detailed test')}
                             >
-                                Override
+                                {t('course_tests.tests.override', 'Override')}
                             </Button>
                         )
                     )}
@@ -1167,12 +1208,12 @@ const TestScoresDashboard = ({
         );
     };
 
-    const headers = ["Name", "Group", ...columns.map(c => `${formatTestLabel(c.type, c.module)} Result`)];
+    const headers = [t('course_tests.tests.table.name', 'Name'), t('course_tests.tests.table.group', 'Group'), ...columns.map(c => t('course_tests.tests.table.result', '{{label}} Result', { label: formatTestLabel(c.type, c.module, t) }))];
 
     return (
         <div className="space-y-4" style={{ direction: 'ltr', textAlign: 'left' }}>
              <div className="flex justify-between items-center">
-                 <h2 className="text-xl font-bold text-gray-800">Test Scores Overview</h2>
+                 <h2 className="text-xl font-bold text-gray-800">{t('course_tests.tests.overview_title', 'Test Scores Overview')}</h2>
                  <div className="flex gap-2">
                      {/* Every shared link defines the test type (and module for EmONC), so participants cannot change it */}
                      <div className="inline-flex items-center gap-2">
@@ -1187,15 +1228,15 @@ const TestScoresDashboard = ({
                                 if (module) params.set('module', module);
                                 const link = `${window.location.origin}/public/test/course/${courseId}?${params.toString()}`;
                                 navigator.clipboard.writeText(link)
-                                    .then(() => notify(`${formatTestLabel(type, module || null)} link copied to clipboard!`))
-                                    .catch(() => notify('Failed to copy link.'));
+                                    .then(() => notify(t('course_tests.tests.link_copied_label', '{{label}} link copied to clipboard!', { label: formatTestLabel(type, module || null, t) })))
+                                    .catch(() => notify(t('course_tests.tests.copy_link_failed', 'Failed to copy link.')));
                             }}
-                            title="Copy public link for test entry"
+                            title={t('course_tests.tests.copy_public_link', 'Copy public link for test entry')}
                         >
-                            <option value="">Share Test Form...</option>
+                            <option value="">{t('course_tests.tests.share_test_form_menu', 'Share Test Form...')}</option>
                             {['pre-test', 'post-test'].flatMap(type => modules.map(module => (
                                 <option key={`${type}-${module || 'default'}`} value={`${type}|${module || ''}`}>
-                                    Copy {formatTestLabel(type, module)} link
+                                    {t('course_tests.tests.copy_label_link', 'Copy {{label}} link', { label: formatTestLabel(type, module, t) })}
                                 </option>
                             )))}
                         </Select>
@@ -1203,7 +1244,7 @@ const TestScoresDashboard = ({
                      {canManageTests && (
                          <Button onClick={() => onOpenEntry('pre-test', null, true)}>
                              <PlusCircle size={16} className="mr-2" />
-                             Register New Participant
+                             {t('course_tests.tests.register_new_participant', 'Register New Participant')}
                          </Button>
                      )}
                  </div>
@@ -1212,36 +1253,34 @@ const TestScoresDashboard = ({
              {isModuleSeparated && scoreFieldFixes.length > 0 && repairState !== 'done' && (
                  <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 flex flex-wrap items-center justify-between gap-3">
                      <div className="text-sm">
-                         <div className="font-bold">{scoreFieldFixes.length} participant(s) show a wrong Pre/Post-Test score in the Participants list.</div>
+                         <div className="font-bold">{t('course_tests.tests.repair.headline', '{{count}} participant(s) show a wrong Pre/Post-Test score in the Participants list.', { count: scoreFieldFixes.length })}</div>
                          <div>
-                             Their test results below are correct. Only the copy on the participant profile is wrong: an older version
-                             put the Maternal pre-test score in the <b>Post-Test</b> box instead of the <b>Pre-Test</b> box.
-                             "Fix now" copies each participant's own module result into the right box.
+                             {t('course_tests.tests.repair.explanation', 'Their test results below are correct. Only the copy on the participant profile is wrong: an older version put the Maternal pre-test score in the Post-Test box instead of the Pre-Test box. "Fix now" copies each participant\'s own module result into the right box.')}
                          </div>
-                         {repairState === 'error' && <div className="text-red-700 font-semibold mt-1">Repair failed. Please try again.</div>}
+                         {repairState === 'error' && <div className="text-red-700 font-semibold mt-1">{t('course_tests.tests.repair.failed', 'Repair failed. Please try again.')}</div>}
                      </div>
                      <div className="flex gap-2">
                          <Button variant="secondary" onClick={() => setShowRepairDetails(v => !v)}>
-                             {showRepairDetails ? 'Hide changes' : 'Show what will change'}
+                             {showRepairDetails ? t('course_tests.tests.repair.hide_changes', 'Hide changes') : t('course_tests.tests.repair.show_changes', 'Show what will change')}
                          </Button>
                          <Button onClick={handleRepairScoreFields} disabled={repairState === 'working'}>
-                             {repairState === 'working' ? 'Fixing...' : 'Fix now'}
+                             {repairState === 'working' ? t('course_tests.tests.repair.fixing', 'Fixing...') : t('course_tests.tests.repair.fix_now', 'Fix now')}
                          </Button>
                      </div>
                      {showRepairDetails && (
                          <div className="w-full bg-white rounded border border-amber-200 overflow-x-auto">
                              <div className="text-xs text-gray-600 p-2 border-b">
-                                 Only these profile fields change. Test records, answers and scores in the tables below are not touched.
+                                 {t('course_tests.tests.repair.only_fields', 'Only these profile fields change. Test records, answers and scores in the tables below are not touched.')}
                              </div>
                              <table className="w-full text-sm">
                                  <thead className="bg-amber-100">
                                      <tr>
-                                         <th className="p-2 text-left">Participant</th>
-                                         <th className="p-2 text-left">Group</th>
-                                         <th className="p-2 text-left">Module</th>
-                                         <th className="p-2 text-left">Profile field</th>
-                                         <th className="p-2 text-center">Now</th>
-                                         <th className="p-2 text-center">After fix</th>
+                                         <th className="p-2 text-left">{t('course_tests.tests.table.participant', 'Participant')}</th>
+                                         <th className="p-2 text-left">{t('course_tests.tests.table.group', 'Group')}</th>
+                                         <th className="p-2 text-left">{t('course_tests.tests.table.module', 'Module')}</th>
+                                         <th className="p-2 text-left">{t('course_tests.tests.repair.profile_field', 'Profile field')}</th>
+                                         <th className="p-2 text-center">{t('course_tests.tests.repair.now', 'Now')}</th>
+                                         <th className="p-2 text-center">{t('course_tests.tests.repair.after_fix', 'After fix')}</th>
                                      </tr>
                                  </thead>
                                  <tbody>
@@ -1249,10 +1288,10 @@ const TestScoresDashboard = ({
                                          <tr key={`${fix.participantId}-${c.field}`} className="border-t">
                                              <td className="p-2 font-medium">{idx === 0 ? fix.name : ''}</td>
                                              <td className="p-2">{idx === 0 ? (fix.group || '-') : ''}</td>
-                                             <td className="p-2">{idx === 0 ? (fix.module ? (MODULE_SHORT_LABELS[fix.module] || fix.module) : '-') : ''}</td>
+                                             <td className="p-2">{idx === 0 ? (fix.module ? moduleShortLabel(fix.module, t) : '-') : ''}</td>
                                              <td className="p-2">{SCORE_FIELD_LABELS[c.field] || c.field}</td>
                                              <td className={`p-2 text-center ${c.to === null ? 'text-red-700 line-through' : 'text-gray-500'}`}>{fmtFieldValue(c.from)}</td>
-                                             <td className={`p-2 text-center font-semibold ${c.to === null ? 'text-gray-500' : 'text-green-700'}`}>{c.to === null ? 'removed' : fmtFieldValue(c.to)}</td>
+                                             <td className={`p-2 text-center font-semibold ${c.to === null ? 'text-gray-500' : 'text-green-700'}`}>{c.to === null ? t('course_tests.tests.repair.removed', 'removed') : fmtFieldValue(c.to)}</td>
                                          </tr>
                                      )))}
                                  </tbody>
@@ -1263,7 +1302,7 @@ const TestScoresDashboard = ({
              )}
              {repairState === 'done' && (
                  <div className="p-3 rounded-lg border border-green-300 bg-green-50 text-green-800 text-sm font-semibold">
-                     Participant score fields fixed. Refresh the page to see the corrected values in the Participants list.
+                     {t('course_tests.tests.repair.done', 'Participant score fields fixed. Refresh the page to see the corrected values in the Participants list.')}
                  </div>
              )}
 
@@ -1273,7 +1312,7 @@ const TestScoresDashboard = ({
                      {modules.map(module => {
                          const theme = getSectionTheme(module === 'Emergency Maternal Care' ? 'maternal' : 'newborn');
                          const moduleColumns = columns.filter(c => c.module === module);
-                         const moduleHeaders = ["Name", "Group", ...moduleColumns.map(c => `${c.type === 'pre-test' ? 'Pre-Test' : 'Post-Test'} Result`)];
+                         const moduleHeaders = [t('course_tests.tests.table.name', 'Name'), t('course_tests.tests.table.group', 'Group'), ...moduleColumns.map(c => t('course_tests.tests.table.result', '{{label}} Result', { label: testTypeLabel(c.type, t) }))];
                          const statsFor = (type) => {
                              const tests = participants.map(p => getTest(p, type, module)).filter(Boolean);
                              const avg = tests.length ? tests.reduce((acc, t) => acc + Number(t.percentage || 0), 0) / tests.length : null;
@@ -1291,18 +1330,18 @@ const TestScoresDashboard = ({
                              <section key={module} className={`rounded-xl border-2 ${theme.wrapper} overflow-hidden shadow-sm`}>
                                  <div className={`${theme.header} text-white px-5 py-3 flex flex-wrap justify-between items-center gap-2`}>
                                      <h3 className="text-lg md:text-xl font-extrabold">
-                                         {module === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : module}
+                                         {moduleFullLabel(module, t)}
                                      </h3>
                                      <div className="text-xs md:text-sm font-semibold flex flex-wrap gap-4">
-                                         <span>{moduleParticipants.length} participants with results</span>
-                                         <span>Pre-Test: {preStats.count} done{preStats.avg !== null ? ` · avg ${preStats.avg.toFixed(1)}%` : ''}</span>
-                                         <span>Post-Test: {postStats.count} done{postStats.avg !== null ? ` · avg ${postStats.avg.toFixed(1)}%` : ''}</span>
+                                         <span>{t('course_tests.tests.participants_with_results', '{{count}} participants with results', { count: moduleParticipants.length })}</span>
+                                         <span>t('course_tests.tests.pre_test', 'Pre-Test'): {t('course_tests.tests.n_done', '{{count}} done', { count: preStats.count })}{preStats.avg !== null ? ` · ${t('course_tests.tests.avg_pct', 'avg {{pct}}%', { pct: preStats.avg.toFixed(1) })}` : ''}</span>
+                                         <span>t('course_tests.tests.post_test', 'Post-Test'): {t('course_tests.tests.n_done', '{{count}} done', { count: postStats.count })}{postStats.avg !== null ? ` · ${t('course_tests.tests.avg_pct', 'avg {{pct}}%', { pct: postStats.avg.toFixed(1) })}` : ''}</span>
                                      </div>
                                  </div>
                                  <div className="bg-white">
                                      <Table headers={moduleHeaders}>
                                         {moduleParticipants.length === 0 ? (
-                                            <tr><td colSpan={moduleHeaders.length} className="text-center p-4">No results recorded for this module yet.</td></tr>
+                                            <tr><td colSpan={moduleHeaders.length} className="text-center p-4">{t('course_tests.tests.no_module_results', 'No results recorded for this module yet.')}</td></tr>
                                         ) : (
                                             moduleParticipants.map(p => (
                                                 <tr key={p.id} className="hover:bg-gray-50">
@@ -1327,14 +1366,13 @@ const TestScoresDashboard = ({
                      {participantsByModule.unassigned.length > 0 && (
                          <section className="rounded-xl border-2 border-gray-300 overflow-hidden shadow-sm">
                              <div className="bg-gray-600 text-white px-5 py-3">
-                                 <h3 className="text-lg font-extrabold">No test result yet ({participantsByModule.unassigned.length} participants)</h3>
+                                 <h3 className="text-lg font-extrabold">{t('course_tests.tests.no_result_yet', 'No test result yet ({{count}} participants)', { count: participantsByModule.unassigned.length })}</h3>
                                  <div className="text-xs md:text-sm">
-                                     They have not sat the Newborn or the Maternal test. Once a result is recorded they move to that module's table.
-                                     The Module column shows the test they are expected to take, and can be set here.
+                                     {t('course_tests.tests.no_result_yet_help', 'They have not sat the Newborn or the Maternal test. Once a result is recorded they move to that module\'s table. The Module column shows the test they are expected to take, and can be set here.')}
                                  </div>
                              </div>
                              <div className="bg-white">
-                                 <Table headers={["Name", "Group", "Expected module", ...modules.map(m => `Add ${MODULE_SHORT_LABELS[m] || m} Test`)]}>
+                                 <Table headers={[t('course_tests.tests.table.name', 'Name'), t('course_tests.tests.table.group', 'Group'), t('course_tests.tests.table.expected_module', 'Expected module'), ...modules.map(m => t('course_tests.tests.table.add_module_test', 'Add {{module}} Test', { module: moduleShortLabel(m, t) }))]}>
                                      {participantsByModule.unassigned.map(p => {
                                          const expected = getParticipantAssignedModule(p, course);
                                          return (
@@ -1353,18 +1391,18 @@ const TestScoresDashboard = ({
                                                                  try { await onAssignModule(p, value); } finally { setAssigningId(null); }
                                                              }}
                                                          >
-                                                             <option value="">{assigningId === p.id ? 'Saving...' : '-- Not set --'}</option>
+                                                             <option value="">{assigningId === p.id ? t('course_tests.tests.saving', 'Saving...') : t('course_tests.tests.not_set_option', '-- Not set --')}</option>
                                                              {modules.map(m => (
-                                                                 <option key={m} value={m}>{m === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : m}</option>
+                                                                 <option key={m} value={m}>{moduleFullLabel(m, t)}</option>
                                                              ))}
                                                          </Select>
-                                                     ) : <span className="text-gray-400">{expected ? (MODULE_SHORT_LABELS[expected] || expected) : 'Not set'}</span>}
+                                                     ) : <span className="text-gray-400">{expected ? moduleShortLabel(expected, t) : t('course_tests.tests.not_set', 'Not set')}</span>}
                                                  </td>
                                                  {modules.map(m => (
                                                      <td key={m} className="p-4 border">
                                                          {canManageTests ? (
                                                              <Button size="sm" variant="secondary" className="text-xs" onClick={() => onOpenEntry('pre-test', p.id, false, m)}>
-                                                                 + Add Pre-Test
+                                                                 {t('course_tests.tests.add_pre_test', '+ Add Pre-Test')}
                                                              </Button>
                                                          ) : <span className="text-gray-400">-</span>}
                                                      </td>
@@ -1380,7 +1418,7 @@ const TestScoresDashboard = ({
              ) : (
              <Table headers={headers}>
                 {participants.length === 0 ? (
-                    <tr><td colSpan={headers.length} className="text-center p-4">No participants found.</td></tr>
+                    <tr><td colSpan={headers.length} className="text-center p-4">{t('course_tests.tests.no_participants', 'No participants found.')}</td></tr>
                 ) : (
                     participants.map(p => (
                         <tr key={p.id} className="hover:bg-gray-50">
@@ -1408,6 +1446,7 @@ const FacilitySelectionModal = ({
     options, 
     onSelect
 }) => {
+    const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
@@ -1422,11 +1461,11 @@ const FacilitySelectionModal = ({
     }, [options, searchTerm]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Select Health Facility">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('course_tests.tests.select_facility', 'Select Health Facility')}>
             <div className="p-4 flex flex-col h-[60vh]" style={{ direction: 'ltr', textAlign: 'left' }}>
                 <div className="mb-4">
                     <Input 
-                        placeholder="Search for a facility..." 
+                        placeholder={t('course_tests.tests.search_facility', 'Search for a facility...')} 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         autoFocus
@@ -1449,7 +1488,7 @@ const FacilitySelectionModal = ({
                         ))
                     ) : (
                         <div className="p-4 text-center text-gray-500">
-                            No facilities found matching "{searchTerm}"
+                            {t('course_tests.tests.no_facilities_match', 'No facilities found matching "{{term}}"', { term: searchTerm })}
                         </div>
                     )}
                 </div>
@@ -1466,6 +1505,7 @@ const FacilitySelectionModal = ({
 // be able to press by accident, and the person running it knows which course
 // was mis-scored.
 function EencResultCorrection({ course, participants, participantTests, onSaveTest, onSaveParticipant }) {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [done, setDone] = useState(null);
@@ -1519,39 +1559,35 @@ function EencResultCorrection({ course, participants, participantTests, onSaveTe
                 <AlertTriangle size={18} className="text-amber-700 shrink-0" />
                 <div className="flex-1 text-sm text-amber-900">
                     {done !== null ? (
-                        <>{done} result{done === 1 ? '' : 's'} corrected.</>
+                        <>{done === 1 ? t('course_tests.tests.eenc_fix.one_corrected', '1 result corrected.') : t('course_tests.tests.eenc_fix.n_corrected', '{{count}} results corrected.', { count: done })}</>
                     ) : (
                         <>
-                            <strong>{pending.length} result{pending.length === 1 ? '' : 's'}</strong> on this
-                            course were scored on neonatal questions the participants were never taught,
-                            because their sub-course is EENC only.
+                            <strong>{pending.length === 1 ? t('course_tests.tests.eenc_fix.one_result', '1 result') : t('course_tests.tests.eenc_fix.n_results', '{{count}} results', { count: pending.length })}</strong>{' '}
+                            {t('course_tests.tests.eenc_fix.banner', 'on this course were scored on neonatal questions the participants were never taught, because their sub-course is EENC only.')}
                         </>
                     )}
                 </div>
                 {done === null && (
                     <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-                        Review and correct
+                        {t('course_tests.tests.eenc_fix.review', 'Review and correct')}
                     </Button>
                 )}
             </div>
 
-            <Modal isOpen={open} onClose={() => setOpen(false)} title="Correct the EENC-only results">
+            <Modal isOpen={open} onClose={() => setOpen(false)} title={t('course_tests.tests.eenc_fix.modal_title', 'Correct the EENC-only results')}>
                 <div className="space-y-4">
                     <p className="text-sm text-gray-600">
-                        Each result below is re-scored over the EENC questions only, using the answers
-                        already recorded. No answer is changed — the questions the participant was never
-                        asked simply stop counting against them. What each record said before is kept on
-                        it.
+                        {t('course_tests.tests.eenc_fix.explanation', 'Each result below is re-scored over the EENC questions only, using the answers already recorded. No answer is changed — the questions the participant was never asked simply stop counting against them. What each record said before is kept on it.')}
                     </p>
 
                     <div className="border rounded max-h-72 overflow-y-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-slate-100 sticky top-0">
                                 <tr>
-                                    <th className="p-2">Participant</th>
-                                    <th className="p-2">Test</th>
-                                    <th className="p-2 text-center">Before</th>
-                                    <th className="p-2 text-center">After</th>
+                                    <th className="p-2">{t('course_tests.tests.table.participant', 'Participant')}</th>
+                                    <th className="p-2">{t('course_tests.tests.table.test', 'Test')}</th>
+                                    <th className="p-2 text-center">{t('course_tests.tests.table.before', 'Before')}</th>
+                                    <th className="p-2 text-center">{t('course_tests.tests.table.after', 'After')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
@@ -1574,9 +1610,9 @@ function EencResultCorrection({ course, participants, participantTests, onSaveTe
                     </div>
 
                     <div className="flex justify-end gap-2 pt-2 border-t">
-                        <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+                        <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>{t('course_tests.tests.cancel', 'Cancel')}</Button>
                         <Button onClick={apply} disabled={busy}>
-                            {busy ? 'Correcting…' : `Correct ${pending.length} result${pending.length === 1 ? '' : 's'}`}
+                            {busy ? t('course_tests.tests.eenc_fix.correcting', 'Correcting…') : (pending.length === 1 ? t('course_tests.tests.eenc_fix.correct_one', 'Correct 1 result') : t('course_tests.tests.eenc_fix.correct_n', 'Correct {{count}} results', { count: pending.length }))}
                         </Button>
                     </div>
                 </div>
@@ -1598,6 +1634,7 @@ export function CourseTestForm({
     canManageTests = false,
     testType: initialTestType
 }) {
+    const { t } = useTranslation();
     const normalizeTestType = normalizeTestTypeValue;
 
     const courseType = course?.course_type;
@@ -1854,19 +1891,19 @@ export function CourseTestForm({
             setLocalParticipants(prev => prev.map(p => (p.id === participant.id ? { ...p, imci_sub_type: module } : p)));
         } catch (e) {
             console.error(e);
-            notify('Could not save the module for this participant. Please try again.');
+            notify(t('course_tests.tests.assign_module_failed', 'Could not save the module for this participant. Please try again.'));
         }
     };
 
     const handleDashboardDelete = async (pId, type, module = null) => {
-        if (!await confirmDialog(`Are you sure you want to delete the ${formatTestLabel(type, module)} result?`)) return;
+        if (!await confirmDialog(t('course_tests.tests.confirm_delete_label', 'Are you sure you want to delete the {{label}} result?', { label: formatTestLabel(type, module, t) }))) return;
         try {
             const record = findParticipantTest(participantTests, pId, type, module, courseType);
             await deleteParticipantTest(course.id, pId, record?.testType || getStoredTestType(type, module));
             const refreshPayload = { participantId: pId, deleted: true };
             if (onSaveTest) await onSaveTest(refreshPayload); else onSave(refreshPayload);
         } catch (err) {
-            notify(`Failed to delete: ${err.message}`);
+            notify(t('course_tests.tests.delete_failed', 'Failed to delete: {{message}}', { message: err.message }));
         }
     };
 
@@ -1902,11 +1939,11 @@ export function CourseTestForm({
                 try {
                     const facilities = await listHealthFacilities({ state: newParticipantState, locality: newParticipantLocality }, 'server');
                     setFacilitiesInLocality(facilities);
-                } catch (err) { setError("Failed to load health facilities."); setFacilitiesInLocality([]); } finally { setIsLoadingFacilities(false); }
+                } catch (err) { setError(t('course_tests.tests.load_facilities_failed', 'Failed to load health facilities.')); setFacilitiesInLocality([]); } finally { setIsLoadingFacilities(false); }
             } else { setFacilitiesInLocality([]); setIsLoadingFacilities(false); }
         };
         if (isNewParticipantModalOpen) fetchFacilities();
-    }, [newParticipantState, newParticipantLocality, isIccm, isProgramManagement, isNewParticipantModalOpen]);
+    }, [newParticipantState, newParticipantLocality, isIccm, isProgramManagement, isNewParticipantModalOpen, t]);
 
     useEffect(() => {
         if (selectedParticipantId && selectedParticipantId !== 'addNew') {
@@ -1959,20 +1996,20 @@ export function CourseTestForm({
     }, [facilitiesInLocality, isIccm, isProgramManagement]);
 
     const handleSaveParticipantInfo = async () => {
-        if (!onSaveParticipant) { setError("Participant saving function is not provided."); return; }
+        if (!onSaveParticipant) { setError(t('course_tests.tests.no_save_function', 'Participant saving function is not provided.')); return; }
         setError(''); setIsSaving(true);
         try {
             const finalJobTitle = newParticipantJob === 'Other' ? newParticipantJobOther : newParticipantJob;
-            const centerNameLabel = isIccm ? 'Village Name' : (isProgramManagement ? 'Department' : 'Facility Name');
+            const centerNameLabel = isIccm ? t('course_tests.tests.village_name', 'Village Name') : (isProgramManagement ? t('course_tests.tests.department', 'Department') : t('course_tests.tests.facility_name', 'Facility Name'));
             
-            if (!isProgramManagement && !newParticipantState) throw new Error('State is required.');
-            if (!isProgramManagement && !newParticipantLocality) throw new Error('Locality is required.');
-            if (!isProgramManagement && !newParticipantCenter.trim()) throw new Error(`${centerNameLabel} is required.`);
-            if (isProgramManagement && !newParticipantDepartment.trim()) throw new Error('Department is required.');
+            if (!isProgramManagement && !newParticipantState) throw new Error(t('course_tests.tests.errors.state_required', 'State is required.'));
+            if (!isProgramManagement && !newParticipantLocality) throw new Error(t('course_tests.tests.errors.locality_required', 'Locality is required.'));
+            if (!isProgramManagement && !newParticipantCenter.trim()) throw new Error(t('course_tests.tests.errors.field_required', '{{field}} is required.', { field: centerNameLabel }));
+            if (isProgramManagement && !newParticipantDepartment.trim()) throw new Error(t('course_tests.tests.errors.department_required', 'Department is required.'));
             
-            if (!newParticipantName.trim()) throw new Error('Participant Name is required.');
-            if (!finalJobTitle) throw new Error('Job Title is required.');
-            if (!newParticipantPhone.trim()) throw new Error('Phone Number is required.');
+            if (!newParticipantName.trim()) throw new Error(t('course_tests.tests.errors.name_required', 'Participant Name is required.'));
+            if (!finalJobTitle) throw new Error(t('course_tests.tests.errors.job_required', 'Job Title is required.'));
+            if (!newParticipantPhone.trim()) throw new Error(t('course_tests.tests.errors.phone_required', 'Phone Number is required.'));
             
             const participantPayload = {
                 name: newParticipantName.trim(),
@@ -2049,7 +2086,7 @@ export function CourseTestForm({
                 id: savedData?.id || savedData 
             };
             
-            if (!safeParticipantForState.id) throw new Error("Participant saved, but no ID was returned. Please refresh.");
+            if (!safeParticipantForState.id) throw new Error(t('course_tests.tests.errors.no_id', 'Participant saved, but no ID was returned. Please refresh.'));
 
             setLocalParticipants(prev => [...prev, safeParticipantForState]);
             setSelectedParticipantId(safeParticipantForState.id); 
@@ -2061,7 +2098,7 @@ export function CourseTestForm({
             setIsParticipantInfoSaved(true); 
             setIsNewParticipantModalOpen(false);
             setShowParticipantSuccessModal(true);
-        } catch (err) { setError(`Failed to save participant: ${err.message}`); } finally { setIsSaving(false); }
+        } catch (err) { setError(t('course_tests.tests.errors.save_participant_failed', 'Failed to save participant: {{message}}', { message: err.message })); } finally { setIsSaving(false); }
     };
 
     const handleEditTest = () => {
@@ -2075,7 +2112,7 @@ export function CourseTestForm({
     };
 
     const handleDeleteTest = async () => {
-        if (!await confirmDialog("Are you sure you want to delete this test record?")) return;
+        if (!await confirmDialog(t('course_tests.tests.confirm_delete_record', 'Are you sure you want to delete this test record?'))) return;
         setIsSaving(true);
         try {
             const storedType = existingResults[testType]?.testType || getStoredTestType(testType, currentModule);
@@ -2087,17 +2124,17 @@ export function CourseTestForm({
             setIsEditing(false);
             setSubmissionResult(null);
             setSelectedParticipantId('');
-        } catch (err) { setError(`Failed to delete test: ${err.message}`); } finally { setIsSaving(false); }
+        } catch (err) { setError(t('course_tests.tests.errors.delete_test_failed', 'Failed to delete test: {{message}}', { message: err.message })); } finally { setIsSaving(false); }
     };
 
     const handleSubmit = async () => {
         setError('');
-        if (!selectedParticipantId) { setError('A participant must be selected or saved before submitting the test.'); return; }
+        if (!selectedParticipantId) { setError(t('course_tests.tests.errors.select_participant_first', 'A participant must be selected or saved before submitting the test.')); return; }
         
         const mcQuestions = testQuestions.filter(q => q.type === 'mc');
         const unanswered = mcQuestions.filter(q => !answers[q.id]);
         
-        if (isPublicView && unanswered.length > 0) { setError(`Please answer all multiple-choice questions.`); return; }
+        if (isPublicView && unanswered.length > 0) { setError(t('course_tests.tests.errors.answer_all_mc', 'Please answer all multiple-choice questions.')); return; }
         
         setIsSaving(true);
         try {
@@ -2177,7 +2214,7 @@ export function CourseTestForm({
             setLastSubmissionStats(payload);
             setShowTestSubmitSuccessModal(true);
             setIsEditing(false); 
-        } catch (err) { setError(`Failed to save test: ${err.message}`); } finally { setIsSaving(false); }
+        } catch (err) { setError(t('course_tests.tests.errors.save_test_failed', 'Failed to save test: {{message}}', { message: err.message })); } finally { setIsSaving(false); }
     };
 
     const handleBackToDashboard = () => {
@@ -2234,7 +2271,7 @@ export function CourseTestForm({
                         }}
                     />
                     <div className="mt-4 border-t pt-4">
-                        <Button variant="secondary" onClick={onCancel}>Back to Course</Button>
+                        <Button variant="secondary" onClick={onCancel}>{t('course_tests.tests.back_to_course', 'Back to Course')}</Button>
                     </div>
                 </div>
             </Card>
@@ -2245,7 +2282,7 @@ export function CourseTestForm({
         return (
             <TestResultScreen
                 participantName={submissionResult.participantName}
-                testType={formatTestLabel(submissionResult.testType, submissionResult.module || null)}
+                testType={formatTestLabel(submissionResult.testType, submissionResult.module || null, t)}
                 sectionScores={submissionResult.sectionScores || null}
                 score={submissionResult.score}
                 total={submissionResult.total}
@@ -2261,11 +2298,11 @@ export function CourseTestForm({
     
     const existingTestResult = existingResults[testType];
     if (!isSetupModalOpen && existingTestResult && !isNewParticipantModalOpen && !isEditing && viewMode === 'entry') {
-        const participantName = localParticipants.find(p => p.id === existingTestResult.participantId)?.name || 'Participant';
+        const participantName = localParticipants.find(p => p.id === existingTestResult.participantId)?.name || t('course_tests.tests.table.participant', 'Participant');
         return (
             <TestResultScreen
                 participantName={participantName}
-                testType={formatTestLabel(existingTestResult.testType, currentModule)}
+                testType={formatTestLabel(existingTestResult.testType, currentModule, t)}
                 sectionScores={alignSectionScores(testSections, existingTestResult.sectionScores) || (testSections && existingTestResult.answers ? computeSectionScores(testSections, existingTestResult.answers, existingTestResult.manualScores) : null)}
                 score={existingTestResult.score}
                 total={existingTestResult.total}
@@ -2288,12 +2325,12 @@ export function CourseTestForm({
                     
                     {canManageTests && isEditing && q.type === 'mc' && (
                         <div className={`px-2 py-1 rounded text-xs font-bold border ${answers[q.id] === q.correctAnswer ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-                            {answers[q.id] === q.correctAnswer ? 'Correct (+1)' : 'Incorrect (0)'}
+                            {answers[q.id] === q.correctAnswer ? t('course_tests.tests.correct_plus1', 'Correct (+1)') : t('course_tests.tests.incorrect_zero', 'Incorrect (0)')}
                         </div>
                     )}
                 </div>
 
-                {q.imageSrc && <div className="my-3"><img src={q.imageSrc} alt="Visual" className="max-w-full h-auto rounded-lg border border-gray-200" /></div>}
+                {q.imageSrc && <div className="my-3"><img src={q.imageSrc} alt={t('course_tests.tests.question_image_alt', 'Visual')} className="max-w-full h-auto rounded-lg border border-gray-200" /></div>}
                 
                 {q.type === 'mc' && (<div className="flex flex-col gap-2 mt-2">{q.options.map(opt => (<label key={opt.id} className="flex items-center gap-3 p-2 rounded hover:bg-sky-50 cursor-pointer"><input type="radio" name={q.id} value={opt.id} checked={answers[q.id] === opt.id} onChange={() => handleRadioChange(q.id, opt.id)} className="w-4 h-4" /><span className="text-sm text-gray-700">{opt.text}</span></label>))}</div>)}
                 
@@ -2308,7 +2345,7 @@ export function CourseTestForm({
                                     <div className="flex-1 relative">
                                         <Input 
                                             type="text" 
-                                            placeholder={`Answer line ${index + 1}...`} 
+                                            placeholder={t('course_tests.tests.answer_line', 'Answer line {{n}}...', { n: index + 1 })} 
                                             value={answers[q.id]?.[index] || ''} 
                                             onChange={(e) => handleTextChange(q.id, index, e.target.value)} 
                                             className={`w-full transition-colors ${isGradingMode ? (currentScore === 1 ? 'border-green-400 bg-green-50/10' : 'border-red-300 bg-red-50/10') : ''}`}
@@ -2322,7 +2359,7 @@ export function CourseTestForm({
                                                 type="button"
                                                 onClick={() => handleLineScoreChange(q.id, index, 1)}
                                                 className={`p-1.5 rounded-full border transition-all ${currentScore === 1 ? 'bg-green-100 border-green-500 text-green-600 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-300 hover:border-green-300 hover:text-green-400'}`}
-                                                title="Mark Correct (+1)"
+                                                title={t('course_tests.tests.mark_correct', 'Mark Correct (+1)')}
                                             >
                                                 <Check size={16} strokeWidth={3} />
                                             </button>
@@ -2330,7 +2367,7 @@ export function CourseTestForm({
                                                 type="button"
                                                 onClick={() => handleLineScoreChange(q.id, index, 0)}
                                                 className={`p-1.5 rounded-full border transition-all ${currentScore === 0 ? 'bg-red-100 border-red-500 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-300 hover:border-red-300 hover:text-red-400'}`}
-                                                title="Mark Incorrect (0)"
+                                                title={t('course_tests.tests.mark_incorrect', 'Mark Incorrect (0)')}
                                             >
                                                 <X size={16} strokeWidth={3} />
                                             </button>
@@ -2341,18 +2378,18 @@ export function CourseTestForm({
                         })}
                     </div>
                 )}
-                {q.type === 'unsupported' && (<div className="p-3 text-sm text-gray-500 bg-gray-100 rounded-md">Unsupported question type.</div>)}
+                {q.type === 'unsupported' && (<div className="p-3 text-sm text-gray-500 bg-gray-100 rounded-md">{t('course_tests.tests.unsupported_question', 'Unsupported question type.')}</div>)}
             </div>
     );
 
-    if (testQuestions.length === 0) return <Card><div className="p-6">No questions</div></Card>;
-    const centerNameLabel = isIccm ? "Village Name" : "Facility Name";
+    if (testQuestions.length === 0) return <Card><div className="p-6">{t('course_tests.tests.no_questions', 'No questions')}</div></Card>;
+    const centerNameLabel = isIccm ? t('course_tests.tests.village_name', 'Village Name') : t('course_tests.tests.facility_name', 'Facility Name');
     const showQuestions = !isSetupModalOpen; 
     const submitDisabled = isSaving || !showQuestions;
 
     return (
         <Card style={{ direction: 'ltr', textAlign: 'left' }}>
-            <Modal isOpen={isSetupModalOpen && !isNewParticipantModalOpen && viewMode === 'entry'} onClose={handleBackToDashboard} title="Select Test Details" size="lg">
+            <Modal isOpen={isSetupModalOpen && !isNewParticipantModalOpen && viewMode === 'entry'} onClose={handleBackToDashboard} title={t('course_tests.tests.select_test_details', 'Select Test Details')} size="lg">
                 <CardBody className="p-6" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="grid gap-6">
                         
@@ -2362,80 +2399,80 @@ export function CourseTestForm({
                                 {((isPublicView && effectiveLockedModule && (isEmoncCourseType(courseType) || isSsnbCourseType(courseType))) || selectedParticipantModule) && (
                                     <div className="border-2 border-sky-200 bg-sky-50 rounded-lg px-4 py-3">
                                         <div className="text-xs font-bold uppercase tracking-wider text-sky-700">
-                                            Module{selectedParticipantModule && !(isPublicView && effectiveLockedModule) ? " (from participant's group)" : ''}
+                                            {selectedParticipantModule && !(isPublicView && effectiveLockedModule) ? t('course_tests.tests.module_from_group', 'Module (from participant\'s group)') : t('course_tests.tests.table.module', 'Module')}
                                         </div>
                                         <div className="font-semibold text-gray-800">
                                             {isEmoncCourseType(courseType)
-                                                ? (activeEmoncModule === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : activeEmoncModule)
-                                                : ssnbSubCourse}
+                                                ? moduleFullLabel(activeEmoncModule, t)
+                                                : ssnbModuleLabel(ssnbSubCourse, t)}
                                         </div>
                                     </div>
                                 )}
                                 {isTestTypeLocked && (
                                     <div className="border-2 border-indigo-200 bg-indigo-50 rounded-lg px-4 py-3">
-                                        <div className="text-xs font-bold uppercase tracking-wider text-indigo-700">Test Type</div>
-                                        <div className="font-semibold text-gray-800">{testType === 'post-test' ? 'Post-Test' : 'Pre-Test'}</div>
+                                        <div className="text-xs font-bold uppercase tracking-wider text-indigo-700">{t('course_tests.tests.test_type', 'Test Type')}</div>
+                                        <div className="font-semibold text-gray-800">{testType === 'post-test' ? t('course_tests.tests.post_test', 'Post-Test') : t('course_tests.tests.pre_test', 'Pre-Test')}</div>
                                     </div>
                                 )}
                             </div>
                         )}
 
                         {(course?.course_type === 'EmONC' || course?.course_type === 'EENC') && !(isPublicView && effectiveLockedModule) && !selectedParticipantModule && (
-                            <FormGroup label="Select EmONC Module">
+                            <FormGroup label={t('course_tests.tests.select_emonc_module', 'Select EmONC Module')}>
                                 <Select 
                                     value={emoncSubCourse} 
                                     onChange={(e) => setEmoncSubCourse(e.target.value)}
                                 >
-                                    <option value="Emergency Newborn Care">Emergency Newborn Care</option>
-                                    <option value="Emergency Maternal Care">Emergency Maternal Care (Obstetric)</option>
+                                    <option value="Emergency Newborn Care">{moduleFullLabel('Emergency Newborn Care', t)}</option>
+                                    <option value="Emergency Maternal Care">{moduleFullLabel('Emergency Maternal Care', t)}</option>
                                 </Select>
                             </FormGroup>
                         )}
 
                         {(course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && !(isPublicView && effectiveLockedModule) && (
-                            <FormGroup label="Select Small & Sick Newborn Module">
+                            <FormGroup label={t('course_tests.tests.select_ssnb_module', 'Select Small & Sick Newborn Module')}>
                                 <Select 
                                     value={ssnbSubCourse} 
                                     onChange={(e) => setSsnbSubCourse(e.target.value)}
                                 >
-                                    <option value="Portable warmer training">Portable warmer training</option>
-                                    <option value="CPAP training">CPAP training</option>
-                                    <option value="Kangaroo mother Care">Kangaroo mother Care</option>
-                                    <option value="Sepsis surveillance and management">Sepsis surveillance and management</option>
+                                    <option value="Portable warmer training">{ssnbModuleLabel('Portable warmer training', t)}</option>
+                                    <option value="CPAP training">{ssnbModuleLabel('CPAP training', t)}</option>
+                                    <option value="Kangaroo mother Care">{ssnbModuleLabel('Kangaroo mother Care', t)}</option>
+                                    <option value="Sepsis surveillance and management">{ssnbModuleLabel('Sepsis surveillance and management', t)}</option>
                                 </Select>
                             </FormGroup>
                         )}
                         
                         {!isTestTypeLocked && (
-                            <FormGroup label="Select Test Type">
+                            <FormGroup label={t('course_tests.tests.select_test_type', 'Select Test Type')}>
                                 <Select 
                                     value={testType} 
                                     onChange={(e) => setTestType(e.target.value)}
                                 >
-                                    <option value="">-- Select Test Type --</option>
-                                    <option value="pre-test">Pre-Test</option>
-                                    <option value="post-test">Post-Test</option>
+                                    <option value="">{t('course_tests.tests.select_test_type_option', '-- Select Test Type --')}</option>
+                                    <option value="pre-test">{t('course_tests.tests.pre_test', 'Pre-Test')}</option>
+                                    <option value="post-test">{t('course_tests.tests.post_test', 'Post-Test')}</option>
                                 </Select>
                             </FormGroup>
                         )}
 
                         {((isPublicView && testType) || !isPublicView) && (
                             <>
-                                <FormGroup label="Select Group (Optional)">
+                                <FormGroup label={t('course_tests.tests.select_group_optional', 'Select Group (Optional)')}>
                                     <Select value={selectedSetupGroup} onChange={handleSetupGroupChange}>
-                                        <option value="">-- All Groups --</option>
+                                        <option value="">{t('course_tests.tests.all_groups_option', '-- All Groups --')}</option>
                                         {setupGroups.map(group => <option key={group} value={group}>{group}</option>)}
                                     </Select>
                                 </FormGroup>
 
                                 <FormGroup label={setupModule
-                                    ? `Select Participant (${MODULE_SHORT_LABELS[setupModule] || setupModule} test only)`
-                                    : 'Select Participant'}>
+                                    ? t('course_tests.tests.select_participant_module', 'Select Participant ({{module}} test only)', { module: moduleShortLabel(setupModule, t) })
+                                    : t('course_tests.tests.select_participant', 'Select Participant')}>
                                     <Select value={selectedParticipantId} onChange={handleParticipantSelectChange}>
-                                        <option value="">-- Select a Participant --</option>
+                                        <option value="">{t('course_tests.tests.select_participant_option', '-- Select a Participant --')}</option>
                                         {onSaveParticipant && testType === 'pre-test' && (
                                             <option value="addNew" className="font-bold text-sky-600">
-                                                + Register New Participant
+                                                {t('course_tests.tests.register_new_participant_option', '+ Register New Participant')}
                                             </option>
                                         )}
                                         {filteredSetupParticipants.map(p => (
@@ -2448,18 +2485,18 @@ export function CourseTestForm({
                     </div>
                 </CardBody>
                 <CardFooter className="p-4 border-t flex justify-end gap-3" style={{ direction: 'ltr' }}>
-                    <Button variant="secondary" onClick={handleBackToDashboard}>Cancel</Button>
-                    <Button onClick={() => setIsSetupModalOpen(false)} disabled={!testType || !selectedParticipantId}>Start</Button>
+                    <Button variant="secondary" onClick={handleBackToDashboard}>{t('course_tests.tests.cancel', 'Cancel')}</Button>
+                    <Button onClick={() => setIsSetupModalOpen(false)} disabled={!testType || !selectedParticipantId}>{t('course_tests.tests.start', 'Start')}</Button>
                 </CardFooter>
             </Modal>
 
-            <Modal isOpen={isNewParticipantModalOpen} onClose={() => setIsNewParticipantModalOpen(false)} title="Register New Participant" size="2xl">
+            <Modal isOpen={isNewParticipantModalOpen} onClose={() => setIsNewParticipantModalOpen(false)} title={t('course_tests.tests.register_new_participant', 'Register New Participant')} size="2xl">
                  <div className="p-4 border-b" style={{ direction: 'ltr', textAlign: 'left' }}>
-                     <h3 className="text-lg font-medium">New Participant Information</h3>
-                     <p className="text-sm text-gray-500">Please fill out the details below.</p>
+                     <h3 className="text-lg font-medium">{t('course_tests.tests.new_participant_info', 'New Participant Information')}</h3>
+                     <p className="text-sm text-gray-500">{t('course_tests.tests.fill_details', 'Please fill out the details below.')}</p>
                      {isFederal && (
                          <p className="mt-1 text-sm text-sky-700">
-                             Federal-level course &mdash; participants can be registered from any state.
+                             {t('course_tests.tests.federal_note', 'Federal-level course — participants can be registered from any state.')}
                          </p>
                      )}
                  </div>
@@ -2468,7 +2505,7 @@ export function CourseTestForm({
                             
                             {!isProgramManagement && (
                                 <>
-                                    <FormGroup label="State">
+                                    <FormGroup label={t('course_tests.tests.state', 'State')}>
                                         <Select value={newParticipantState} disabled={!isFederal && selectableStates.length === 1} onChange={(e) => {
                                             setNewParticipantState(e.target.value); 
                                             setNewParticipantLocality(''); 
@@ -2476,37 +2513,37 @@ export function CourseTestForm({
                                             setSelectedFacilityId(null); 
                                             setFacilitiesInLocality([]); 
                                         }}>
-                                            <option value="">— Select State —</option>
+                                            <option value="">{t('course_tests.tests.select_state_option', '— Select State —')}</option>
                                             {selectableStates.map(s => <option key={s} value={s}>{s}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Locality">
+                                    <FormGroup label={t('course_tests.tests.locality', 'Locality')}>
                                         <Select value={newParticipantLocality} disabled={!newParticipantState} onChange={(e) => { 
                                             setNewParticipantLocality(e.target.value); 
                                             setNewParticipantCenter(''); 
                                             setSelectedFacilityId(null); 
                                         }}>
-                                            <option value="">— Select Locality —</option>
+                                            <option value="">{t('course_tests.tests.select_locality_option', '— Select Locality —')}</option>
                                             {selectableLocalities.map(l => (
                                                 <option key={l.en} value={l.en}>{l.en}</option>
                                             ))}
                                         </Select>
                                     </FormGroup>
                                     
-                                    <FormGroup label="Group">
+                                    <FormGroup label={t('course_tests.tests.table.group', 'Group')}>
                                         <Select value={newParticipantGroup} onChange={(e) => setNewParticipantGroup(e.target.value)}><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select>
                                     </FormGroup>
                                 </>
                             )}
                             
                             {isProgramManagement ? (
-                                <FormGroup label="Department">
-                                    <Input value={newParticipantDepartment} onChange={(e) => setNewParticipantDepartment(e.target.value)} placeholder="Enter department name" />
+                                <FormGroup label={t('course_tests.tests.department', 'Department')}>
+                                    <Input value={newParticipantDepartment} onChange={(e) => setNewParticipantDepartment(e.target.value)} placeholder={t('course_tests.tests.enter_department', 'Enter department name')} />
                                 </FormGroup>
                             ) : isIccm ? (
                                 <FormGroup label={centerNameLabel}>
-                                    <Input value={newParticipantCenter} onChange={(e) => setNewParticipantCenter(e.target.value)} placeholder={`Enter ${centerNameLabel}`} disabled={!newParticipantLocality} />
+                                    <Input value={newParticipantCenter} onChange={(e) => setNewParticipantCenter(e.target.value)} placeholder={t('course_tests.tests.enter_field', 'Enter {{field}}', { field: centerNameLabel })} disabled={!newParticipantLocality} />
                                 </FormGroup>
                             ) : (
                                 <FormGroup label={centerNameLabel}>
@@ -2523,10 +2560,10 @@ export function CourseTestForm({
                                     >
                                         <span className="truncate">
                                             {isLoadingFacilities 
-                                                ? "Loading..." 
+                                                ? t('course_tests.tests.loading', 'Loading...') 
                                                 : (!newParticipantLocality 
-                                                    ? "Select Locality first" 
-                                                    : (newParticipantCenter || "Click to search facility...")
+                                                    ? t('course_tests.tests.select_locality_first', 'Select Locality first') 
+                                                    : (newParticipantCenter || t('course_tests.tests.click_to_search_facility', 'Click to search facility...'))
                                                 )
                                             }
                                         </span>
@@ -2535,15 +2572,15 @@ export function CourseTestForm({
                                 </FormGroup>
                             )}
 
-                            <FormGroup label="Participant Name"><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="Enter name" disabled={!isProgramManagement && !newParticipantLocality} /></FormGroup>
-                            <FormGroup label="Phone Number"><Input type="tel" value={newParticipantPhone} onChange={(e) => setNewParticipantPhone(e.target.value)} placeholder="0xxxxxxxxx" /></FormGroup>
-                            <FormGroup label="Job Title"><Select value={newParticipantJob} onChange={(e) => setNewParticipantJob(e.target.value)}><option value="">— Select Job —</option>{jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}<option value="Other">Other</option></Select></FormGroup>
-                            {newParticipantJob === 'Other' && (<FormGroup label="Specify Job Title"><Input value={newParticipantJobOther} onChange={(e) => setNewParticipantJobOther(e.target.value)} placeholder="Please specify" /></FormGroup>)}
+                            <FormGroup label={t('course_tests.tests.participant_name', 'Participant Name')}><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder={t('course_tests.tests.enter_name', 'Enter name')} disabled={!isProgramManagement && !newParticipantLocality} /></FormGroup>
+                            <FormGroup label={t('course_tests.tests.phone_number', 'Phone Number')}><Input type="tel" value={newParticipantPhone} onChange={(e) => setNewParticipantPhone(e.target.value)} placeholder="0xxxxxxxxx" /></FormGroup>
+                            <FormGroup label={t('course_tests.tests.job_title', 'Job Title')}><Select value={newParticipantJob} onChange={(e) => setNewParticipantJob(e.target.value)}><option value="">{t('course_tests.tests.select_job_option', '— Select Job —')}</option>{jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}<option value="Other">{t('course_tests.tests.other', 'Other')}</option></Select></FormGroup>
+                            {newParticipantJob === 'Other' && (<FormGroup label={t('course_tests.tests.specify_job_title', 'Specify Job Title')}><Input value={newParticipantJobOther} onChange={(e) => setNewParticipantJobOther(e.target.value)} placeholder={t('course_tests.tests.please_specify', 'Please specify')} /></FormGroup>)}
                         </div>
                  </CardBody>
                  <CardFooter className="p-4 border-t flex justify-end gap-3" style={{ direction: 'ltr' }}>
-                     <Button variant="secondary" onClick={() => setIsNewParticipantModalOpen(false)} disabled={isSaving}>Cancel</Button>
-                     <Button onClick={handleSaveParticipantInfo} disabled={isSaving}>{isSaving ? <Spinner /> : "Save Participant"}</Button>
+                     <Button variant="secondary" onClick={() => setIsNewParticipantModalOpen(false)} disabled={isSaving}>{t('course_tests.tests.cancel', 'Cancel')}</Button>
+                     <Button onClick={handleSaveParticipantInfo} disabled={isSaving}>{isSaving ? <Spinner /> : t('course_tests.tests.save_participant', 'Save Participant')}</Button>
                  </CardFooter>
             </Modal>
 
@@ -2554,14 +2591,14 @@ export function CourseTestForm({
                 onSelect={handleFacilitySelect}
             />
 
-            <Modal isOpen={showParticipantSuccessModal} onClose={() => {}} title="Registration Successful" size="sm">
+            <Modal isOpen={showParticipantSuccessModal} onClose={() => {}} title={t('course_tests.tests.registration_successful', 'Registration Successful')} size="sm">
                 <div className="p-6 text-center" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                         <CheckCircle className="h-10 w-10 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">Participant Registered!</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">{t('course_tests.tests.participant_registered', 'Participant Registered!')}</h3>
                     <p className="text-gray-500 mb-6 text-center">
-                        {participantNameForDisplay} has been successfully registered to the course.
+                        {t('course_tests.tests.registered_message', '{{name}} has been successfully registered to the course.', { name: participantNameForDisplay })}
                     </p>
                     <Button 
                         className="w-full justify-center" 
@@ -2571,22 +2608,22 @@ export function CourseTestForm({
                             setIsSetupModalOpen(separatelyStoredModules.length > 0 && !isPublicView); 
                         }}
                     >
-                        Start Pre-Test
+                        {t('course_tests.tests.start_pre_test', 'Start Pre-Test')}
                     </Button>
                 </div>
             </Modal>
 
-            <Modal isOpen={showTestSubmitSuccessModal} onClose={() => {}} title="Test Submitted" size="sm">
+            <Modal isOpen={showTestSubmitSuccessModal} onClose={() => {}} title={t('course_tests.tests.test_submitted', 'Test Submitted')} size="sm">
                 <div className="p-6 text-center" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                         <CheckCircle className="h-10 w-10 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">Submission Successful!</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2 text-center">{t('course_tests.tests.submission_successful', 'Submission Successful!')}</h3>
                     
                     {course.course_type !== 'ETAT' ? (
                         lastSubmissionStats && (
                             <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
-                                <p className="text-sm text-gray-500 mb-1">Score Achieved</p>
+                                <p className="text-sm text-gray-500 mb-1">{t('course_tests.tests.score_achieved', 'Score Achieved')}</p>
                                 {(() => {
                                     const showMcqOnly = lastSubmissionStats.hasOpenQuestions && !lastSubmissionStats.isGraded;
                                     const displayPercent = showMcqOnly ? lastSubmissionStats.mcqPercentage : lastSubmissionStats.percentage;
@@ -2599,11 +2636,11 @@ export function CourseTestForm({
                                                 {displayPercent.toFixed(1)}%
                                             </div>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                ({displayScore} out of {displayTotal} Total Points)
+                                                {t('course_tests.tests.out_of_total_points', '({{score}} out of {{total}} Total Points)', { score: displayScore, total: displayTotal })}
                                             </p>
                                             {showMcqOnly && (
                                                 <p className="text-xs text-blue-600 mt-2 font-medium">
-                                                    * Auto-graded MCQs only. Open questions pending review.
+                                                    {t('course_tests.tests.mcq_only_short', '* Auto-graded MCQs only. Open questions pending review.')}
                                                 </p>
                                             )}
                                             <SectionScoreBreakdown sectionScores={lastSubmissionStats.sectionScores} />
@@ -2615,7 +2652,7 @@ export function CourseTestForm({
                     ) : (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-center">
                             <p className="text-sm text-blue-800">
-                                Your test has been submitted for manual grading. Your score will be available once reviewed by a facilitator.
+                                {t('course_tests.tests.manual_grading_note', 'Your test has been submitted for manual grading. Your score will be available once reviewed by a facilitator.')}
                             </p>
                         </div>
                     )}
@@ -2631,7 +2668,7 @@ export function CourseTestForm({
                             }
                         }}
                     >
-                        {course.course_type === 'ETAT' ? 'Return to Dashboard' : 'View Result Details'}
+                        {course.course_type === 'ETAT' ? t('course_tests.tests.return_to_dashboard', 'Return to Dashboard') : t('course_tests.tests.view_result_details', 'View Result Details')}
                     </Button>
                 </div>
             </Modal>
@@ -2640,8 +2677,8 @@ export function CourseTestForm({
                 <div className="p-6" style={{ direction: 'ltr', textAlign: 'left' }}>
                     <div className="flex flex-wrap justify-between items-start gap-4">
                         <PageHeader 
-                            title={`${isEditing ? 'Editing' : 'Enter'} ${testType === 'pre-test' ? 'Pre-Test' : 'Post-Test'}`} 
-                            subtitle={`${participantNameForDisplay || 'Unknown Participant'} - ${testTitle}`} 
+                            title={isEditing ? t('course_tests.tests.editing_label', 'Editing {{label}}', { label: testTypeLabel(testType, t) }) : t('course_tests.tests.enter_label', 'Enter {{label}}', { label: testTypeLabel(testType, t) })} 
+                            subtitle={`${participantNameForDisplay || t('course_tests.tests.unknown_participant', 'Unknown Participant')} - ${testTitle}`} 
                             className="p-0 m-0" 
                         />
                         <div>
@@ -2656,11 +2693,11 @@ export function CourseTestForm({
                                         params.set('module', ssnbSubCourse);
                                     }
                                     const link = `${window.location.origin}/public/test/course/${course.id}?${params.toString()}`;
-                                    navigator.clipboard.writeText(link).then(() => notify('Link copied!')).catch(() => notify('Failed to copy.')); 
+                                    navigator.clipboard.writeText(link).then(() => notify(t('course_tests.tests.link_copied', 'Link copied!'))).catch(() => notify(t('course_tests.tests.copy_failed', 'Failed to copy.'))); 
                                 }} 
-                                title="Copy link"
+                                title={t('course_tests.tests.copy_link', 'Copy link')}
                             >
-                                Share Test Form
+                                {t('course_tests.tests.share_test_form', 'Share Test Form')}
                             </Button>
                         </div>
                     </div>
@@ -2668,15 +2705,15 @@ export function CourseTestForm({
                     {testSections && (
                         <div className="mt-6 mb-2 p-5 bg-white border-2 border-gray-200 rounded-xl shadow-sm">
                             <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800 uppercase tracking-wide text-center">
-                                {activeEmoncModule === 'Emergency Maternal Care' ? 'Emergency Maternal Care (Obstetric)' : activeEmoncModule} Module
+                                {t('course_tests.tests.module_heading', '{{module}} Module', { module: moduleFullLabel(activeEmoncModule, t) })}
                             </h2>
-                            <p className="text-gray-600 font-medium mt-1 text-center">This test has {testSections.length} separate parts. Please answer all questions in both parts.</p>
+                            <p className="text-gray-600 font-medium mt-1 text-center">{t('course_tests.tests.separate_parts', 'This test has {{count}} separate parts. Please answer all questions in both parts.', { count: testSections.length })}</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                                 {testSections.map(section => (
                                     <div key={section.key} className={`border-2 rounded-lg px-4 py-3 ${getSectionTheme(section.key).chip}`}>
-                                        <div className="text-xs font-bold uppercase tracking-wider opacity-80">Part {section.part}</div>
-                                        <div className="font-semibold">{section.title}</div>
-                                        <div className="text-xs opacity-80">Questions {section.from} &ndash; {section.to} ({section.questions.length} questions)</div>
+                                        <div className="text-xs font-bold uppercase tracking-wider opacity-80">{t('course_tests.tests.part_n', 'Part {{part}}', { part: section.part })}</div>
+                                        <div className="font-semibold">{sectionTitleLabel(section, t)}</div>
+                                        <div className="text-xs opacity-80">{t('course_tests.tests.questions_range_count', 'Questions {{from}} – {{to}} ({{count}} questions)', { from: section.from, to: section.to, count: section.questions.length })}</div>
                                     </div>
                                 ))}
                             </div>
@@ -2686,9 +2723,9 @@ export function CourseTestForm({
                     {(course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && (
                         <div className="mt-6 mb-2 text-center p-5 bg-sky-50 border-2 border-sky-300 rounded-xl shadow-sm">
                             <h2 className="text-3xl md:text-4xl font-extrabold text-sky-800 uppercase tracking-wide">
-                                {course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC' ? ssnbSubCourse : emoncSubCourse} Part
+                                {t('course_tests.tests.part_heading', '{{module}} Part', { module: course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC' ? ssnbModuleLabel(ssnbSubCourse, t) : emoncSubCourse })}
                             </h2>
-                            <p className="text-sky-600 font-medium mt-1">Please answer the questions below for this specific module.</p>
+                            <p className="text-sky-600 font-medium mt-1">{t('course_tests.tests.answer_module_questions', 'Please answer the questions below for this specific module.')}</p>
                         </div>
                     )}
                     
@@ -2698,10 +2735,10 @@ export function CourseTestForm({
                         <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 mb-6 rounded-md flex justify-between items-center mt-4">
                             <div className="font-semibold flex items-center gap-2">
                                 <Edit size={20} />
-                                <span>Grading Mode Enabled</span>
+                                <span>{t('course_tests.tests.grading_mode', 'Grading Mode Enabled')}</span>
                             </div>
                             <div className="text-sm">
-                                Review answers and use the checks/crosses to grade open-ended questions.
+                                {t('course_tests.tests.grading_help', 'Review answers and use the checks/crosses to grade open-ended questions.')}
                             </div>
                         </div>
                     )}
@@ -2709,8 +2746,8 @@ export function CourseTestForm({
                     <hr className="my-6" />
 
                     <fieldset disabled={isSaving}>
-                        <legend className="text-xl font-semibold mb-4 text-gray-800">Test Questions</legend>
-                        {isEditing && !canManageTests && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 mb-4 rounded-md font-semibold">Editing existing {testType} submission.</div>}
+                        <legend className="text-xl font-semibold mb-4 text-gray-800">{t('course_tests.tests.test_questions', 'Test Questions')}</legend>
+                        {isEditing && !canManageTests && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 mb-4 rounded-md font-semibold">{t('course_tests.tests.editing_existing', 'Editing existing {{type}} submission.', { type: testTypeLabel(testType, t) })}</div>}
                         
                         {testSections ? (
                             <div>
@@ -2724,7 +2761,7 @@ export function CourseTestForm({
                                                 <div className="flex items-center gap-3 my-10" aria-hidden="true">
                                                     <div className={`flex-1 border-t-4 border-dashed ${getSectionTheme(testSections[idx - 1].key).divider}`} />
                                                     <span className="text-xs font-bold uppercase tracking-widest text-gray-500 whitespace-nowrap">
-                                                        End of Part {testSections[idx - 1].part} &middot; Start of Part {section.part}
+                                                        {t('course_tests.tests.end_start_part', 'End of Part {{prev}} · Start of Part {{next}}', { prev: testSections[idx - 1].part, next: section.part })}
                                                     </span>
                                                     <div className={`flex-1 border-t-4 border-dashed ${theme.divider}`} />
                                                 </div>
@@ -2733,15 +2770,15 @@ export function CourseTestForm({
                                                 <div className={`${theme.header} text-white px-5 py-4 flex flex-wrap justify-between items-center gap-3`}>
                                                     <div>
                                                         <div className="text-xs font-bold uppercase tracking-widest opacity-90">
-                                                            Part {section.part} of {testSections.length}
+                                                            {t('course_tests.tests.part_of', 'Part {{part}} of {{count}}', { part: section.part, count: testSections.length })}
                                                         </div>
-                                                        <h3 className="text-xl md:text-2xl font-extrabold leading-tight">{section.title}</h3>
+                                                        <h3 className="text-xl md:text-2xl font-extrabold leading-tight">{sectionTitleLabel(section, t)}</h3>
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-sm font-semibold">Questions {section.from} &ndash; {section.to}</div>
-                                                        <div className="text-xs opacity-90">{answeredCount} / {section.questions.length} answered</div>
+                                                        <div className="text-sm font-semibold">{t('course_tests.tests.questions_range', 'Questions {{from}} – {{to}}', { from: section.from, to: section.to })}</div>
+                                                        <div className="text-xs opacity-90">{t('course_tests.tests.n_answered', '{{answered}} / {{total}} answered', { answered: answeredCount, total: section.questions.length })}</div>
                                                         {liveScore && (
-                                                            <div className="text-xs font-bold mt-1">Part score: {liveScore.score} / {liveScore.total}</div>
+                                                            <div className="text-xs font-bold mt-1">{t('course_tests.tests.part_score', 'Part score: {{score}} / {{total}}', { score: liveScore.score, total: liveScore.total })}</div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -2761,9 +2798,9 @@ export function CourseTestForm({
                     </fieldset>
 
                     <div className="flex gap-2 justify-end mt-8 border-t pt-6">
-                        <Button variant="secondary" onClick={handleBackToDashboard} disabled={isSaving}>Cancel</Button>
+                        <Button variant="secondary" onClick={handleBackToDashboard} disabled={isSaving}>{t('course_tests.tests.cancel', 'Cancel')}</Button>
                         <Button onClick={handleSubmit} disabled={submitDisabled}>
-                            {isSaving ? <Spinner /> : (isEditing ? 'Save Grading & Score' : 'Submit & View Score')}
+                            {isSaving ? <Spinner /> : (isEditing ? t('course_tests.tests.save_grading', 'Save Grading & Score') : t('course_tests.tests.submit_view_score', 'Submit & View Score'))}
                         </Button>
                     </div>
                 </div>

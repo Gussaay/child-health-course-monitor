@@ -29,6 +29,7 @@ import {
     PERMISSION_DESCRIPTIONS
 } from './permissions';
 import { confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // -----------------------------------------------------------------------------
 // LOCAL CONSTANTS
@@ -46,6 +47,7 @@ const getRoleBadgeStyle = (role) => {
 
 // --- Helper Components ---
 const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
+    const { t } = useTranslation();
     const tabs = [
         { key: 'roles', label: 'Manage User Roles', icon: Users },
         { key: 'permissions', label: 'Manage Role Permissions', icon: Shield },
@@ -75,7 +77,7 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
                         }`}
                     >
                         <Icon className={`w-4 h-4 mr-2 ${isActive ? 'text-sky-500' : 'text-gray-400'}`} />
-                        {tab.label}
+                        {t(`admin_pages.admin_dashboard.tabs.${tab.key}`, tab.label)}
                     </button>
                 );
             })}
@@ -84,13 +86,14 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
 };
 
 const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermissionChange, disabled }) => {
+    const { t } = useTranslation();
     const PERMISSION_CATEGORIES = useMemo(() => [
-        { title: 'A. Course Management', keys: ['canViewCourse', 'canAddCourse', 'canManageCourse', 'canManageCertificates'] },
-        { title: 'B. Child Health Service Facility Management', keys: ['canViewFacilities', 'canManageFacilities'] },
-        { title: 'C. Human Resource (HR) Management', keys: ['canViewHumanResource', 'canManageHumanResource'] },
-        { title: 'D. Skills Mentorship', keys: ['canViewSkillsMentorship', 'canManageSkillsMentorship', 'canAddMentorshipVisit'] },
-        { title: 'E. System / Advanced / Scope', keys: ['canUseSuperUserAdvancedFeatures', 'canUseFederalManagerAdvancedFeatures', 'manageLocation', 'manageTimePeriod', 'canViewAdmin', 'canViewDashboard'] }
-    ], []);
+        { title: t('admin_pages.admin_dashboard.categories.course', 'A. Course Management'), keys: ['canViewCourse', 'canAddCourse', 'canManageCourse', 'canManageCertificates'] },
+        { title: t('admin_pages.admin_dashboard.categories.facilities', 'B. Child Health Service Facility Management'), keys: ['canViewFacilities', 'canManageFacilities'] },
+        { title: t('admin_pages.admin_dashboard.categories.hr', 'C. Human Resource (HR) Management'), keys: ['canViewHumanResource', 'canManageHumanResource'] },
+        { title: t('admin_pages.admin_dashboard.categories.mentorship', 'D. Skills Mentorship'), keys: ['canViewSkillsMentorship', 'canManageSkillsMentorship', 'canAddMentorshipVisit'] },
+        { title: t('admin_pages.admin_dashboard.categories.system', 'E. System / Advanced / Scope'), keys: ['canUseSuperUserAdvancedFeatures', 'canUseFederalManagerAdvancedFeatures', 'manageLocation', 'manageTimePeriod', 'canViewAdmin', 'canViewDashboard'] }
+    ], [t]);
     
     const handlePermissionChangeInternal = (key, value) => {
         onPermissionChange(role, key, value);
@@ -114,7 +117,8 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                 if (!currentPermissions.hasOwnProperty(permission)) return null;
                                 const value = currentPermissions[permission];
                                 const isBoolean = typeof allPermissions[permission] === 'boolean';
-                                const formattedTitle = permission.replace(/([A-Z])/g, ' $1').trim();
+                                const formattedTitle = t(`admin_pages.admin_dashboard.perm_titles.${permission}`, permission.replace(/([A-Z])/g, ' $1').trim());
+                                const description = PERMISSION_DESCRIPTIONS[permission] ? t(`admin_pages.admin_dashboard.perm_desc.${permission}`, PERMISSION_DESCRIPTIONS[permission]) : PERMISSION_DESCRIPTIONS[permission];
                                 
                                 if (['canViewDashboard', 'canApproveSubmissions'].includes(permission)) {
                                     return (
@@ -122,13 +126,13 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                             <div className="flex-1 pr-4">
                                                 <div className="text-lg font-bold capitalize text-gray-700 flex items-center gap-3">
                                                     {formattedTitle}
-                                                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 border border-gray-300 shadow-sm">Derived</span>
+                                                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 border border-gray-300 shadow-sm">{t('admin_pages.admin_dashboard.derived', 'Derived')}</span>
                                                 </div>
-                                                <div className="text-sm mt-1 text-gray-500">{PERMISSION_DESCRIPTIONS[permission] || 'Derived permission.'}</div>
+                                                <div className="text-sm mt-1 text-gray-500">{description || t('admin_pages.admin_dashboard.derived_permission', 'Derived permission.')}</div>
                                             </div>
                                             <div className="shrink-0">
                                                 <span className={`text-xs uppercase font-bold tracking-wide px-3 py-1.5 rounded-full border shadow-sm ${value ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                                                    Effective: {value ? 'Yes' : 'No'}
+                                                    {t('admin_pages.admin_dashboard.effective', 'Effective:')} {value ? t('admin_pages.admin_dashboard.yes', 'Yes') : t('admin_pages.admin_dashboard.no', 'No')}
                                                 </span>
                                             </div>
                                         </div>
@@ -142,7 +146,7 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                                 {formattedTitle}
                                             </div>
                                             <div className="text-sm text-gray-500 mt-1">
-                                                {PERMISSION_DESCRIPTIONS[permission]}
+                                                {description}
                                             </div>
                                         </div>
                                         <div className="shrink-0 md:min-w-[200px]">
@@ -154,7 +158,7 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                                         disabled={disabled || isStandardUser} 
                                                     />
                                                     <span className={`ml-3 font-bold text-sm ${value ? 'text-green-700' : 'text-gray-600'}`}>
-                                                        {value ? 'Allowed' : 'Denied'}
+                                                        {value ? t('admin_pages.admin_dashboard.allowed', 'Allowed') : t('admin_pages.admin_dashboard.denied', 'Denied')}
                                                     </span>
                                                 </label>
                                             ) : (
@@ -164,9 +168,9 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                                     disabled={disabled || isStandardUser} 
                                                     className="w-full text-sm font-bold bg-white border-gray-300 shadow-sm rounded-lg py-2"
                                                 >
-                                                    {permission === 'manageScope' && (<><option value="none">None (Standard)</option><option value="federal">Federal Level</option><option value="state">State Manager</option><option value="locality">Locality Manager</option><option value="course">Course Coordinator</option></>)}
-                                                    {permission === 'manageTimePeriod' && (<><option value="anytime">Anytime</option><option value="course_period_only">Course Period Only</option><option value="course_period_plus_3_days">Course Period + 3 Days</option></>)}
-                                                    {permission === 'manageLocation' && (<><option value="">N/A (Federal/Course)</option><option value="user_state">User's State</option><option value="user_locality">User's Locality</option></>)}
+                                                    {permission === 'manageScope' && (<><option value="none">{t('admin_pages.admin_dashboard.scope.none', 'None (Standard)')}</option><option value="federal">{t('admin_pages.admin_dashboard.scope.federal', 'Federal Level')}</option><option value="state">{t('admin_pages.admin_dashboard.scope.state', 'State Manager')}</option><option value="locality">{t('admin_pages.admin_dashboard.scope.locality', 'Locality Manager')}</option><option value="course">{t('admin_pages.admin_dashboard.scope.course', 'Course Coordinator')}</option></>)}
+                                                    {permission === 'manageTimePeriod' && (<><option value="anytime">{t('admin_pages.admin_dashboard.time.anytime', 'Anytime')}</option><option value="course_period_only">{t('admin_pages.admin_dashboard.time.course_period_only', 'Course Period Only')}</option><option value="course_period_plus_3_days">{t('admin_pages.admin_dashboard.time.course_period_plus_3_days', 'Course Period + 3 Days')}</option></>)}
+                                                    {permission === 'manageLocation' && (<><option value="">{t('admin_pages.admin_dashboard.location.na', 'N/A (Federal/Course)')}</option><option value="user_state">{t('admin_pages.admin_dashboard.location.user_state', 'User\'s State')}</option><option value="user_locality">{t('admin_pages.admin_dashboard.location.user_locality', 'User\'s Locality')}</option></>)}
                                                 </Select>
                                             )}
                                         </div>
@@ -181,16 +185,16 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
     );
 };
 
-const formatDuration = (milliseconds) => {
+const formatDuration = (milliseconds, t) => {
     if (!milliseconds || milliseconds < 60000) {
-        return '0 minutes';
+        return t('admin_pages.admin_dashboard.duration.zero', '0 minutes');
     }
     const totalMinutes = Math.floor(milliseconds / 60000);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     let parts = [];
-    if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
-    if (minutes > 0) parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
+    if (hours > 0) parts.push(hours > 1 ? t('admin_pages.admin_dashboard.duration.hours', '{{count}} hours', { count: hours }) : t('admin_pages.admin_dashboard.duration.one_hour', '1 hour'));
+    if (minutes > 0) parts.push(minutes > 1 ? t('admin_pages.admin_dashboard.duration.minutes', '{{count}} minutes', { count: minutes }) : t('admin_pages.admin_dashboard.duration.one_minute', '1 minute'));
     return parts.join(', ');
 };
 
@@ -198,6 +202,8 @@ const formatDuration = (milliseconds) => {
 // Main AdminDashboard Component
 // -----------------------------------------------------------------------------
 export function AdminDashboard() {
+    const { t } = useTranslation();
+    const roleLabel = (r) => (ROLES[r] ? t(`admin_pages.admin_dashboard.roles.${r}`, ROLES[r]) : r);
     const [users, setUsers] = useState([]);
     const [rolesAndPermissions, setRolesAndPermissions] = useState({});
     const [usageStats, setUsageStats] = useState([]);
@@ -232,7 +238,7 @@ export function AdminDashboard() {
     const [tempUserPermissions, setTempUserPermissions] = useState({});
 
     // --- APP UPDATE STATES ---
-    const [otaVersion, setOtaVersion] = useState("Checking Server...");
+    const [otaVersion, setOtaVersion] = useState(() => t('admin_pages.admin_dashboard.ota.checking_server', 'Checking Server...'));
     const [serverNativeConfig, setServerNativeConfig] = useState(null); 
     const [isUpdateActive, setIsUpdateActive] = useState(false); 
 
@@ -304,7 +310,7 @@ export function AdminDashboard() {
                 return {
                     id: doc.id,
                     ...data,
-                    displayName: data.displayName || data.name || (data.email ? data.email.split('@')[0] : 'Unknown'), 
+                    displayName: data.displayName || data.name || (data.email ? data.email.split('@')[0] : t('admin_pages.admin_dashboard.unknown', 'Unknown')), 
                     assignedLocality: data.assignedLocality || '',
                 };
             });
@@ -359,12 +365,12 @@ export function AdminDashboard() {
                     const res = await fetch("https://imnci-courses-monitor.web.app/latest/update.json?t=" + Date.now());
                     if (res.ok) {
                         const otaData = await res.json();
-                        setOtaVersion(otaData.version || "Unknown");
+                        setOtaVersion(otaData.version || t('admin_pages.admin_dashboard.unknown', 'Unknown'));
                     } else {
-                        setOtaVersion("No Capgo Payload Found");
+                        setOtaVersion(t('admin_pages.admin_dashboard.ota.no_payload', 'No Capgo Payload Found'));
                     }
                 } catch(e) {
-                    setOtaVersion("Offline");
+                    setOtaVersion(t('admin_pages.admin_dashboard.ota.offline', 'Offline'));
                 }
 
                 try {
@@ -378,7 +384,7 @@ export function AdminDashboard() {
                 }
             }
         } catch (error) {
-            setToast({ show: true, message: "Error loading data. Please try again.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.load_error', 'Error loading data. Please try again.'), type: "error" });
         }
         setLoading(false);
     };
@@ -387,7 +393,7 @@ export function AdminDashboard() {
     // REMOTE CACHE WIPE HANDLERS
     // =========================================================================
     const handleForceCacheReset = async (userId, userEmail) => {
-        if (!await confirmDialog(`Are you sure you want to wipe the local storage on ${userEmail}'s device? This will happen the next time they open the app while online.`)) {
+        if (!await confirmDialog(t('admin_pages.admin_dashboard.confirm.wipe_user', 'Are you sure you want to wipe the local storage on {{email}}\'s device? This will happen the next time they open the app while online.', { email: userEmail }))) {
             return;
         }
         
@@ -396,15 +402,15 @@ export function AdminDashboard() {
             await updateDoc(userRef, {
                 forceCacheReset: serverTimestamp() 
             });
-            setToast({ show: true, message: `Cache reset command sent to ${userEmail}.`, type: 'success' });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.cache_reset_sent', 'Cache reset command sent to {{email}}.', { email: userEmail }), type: 'success' });
         } catch (error) {
             console.error("Error sending cache reset command:", error);
-            setToast({ show: true, message: `Failed to send command: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.command_failed', 'Failed to send command: {{message}}', { message: error.message }), type: 'error' });
         }
     };
 
     const handleForceCacheResetAll = async () => {
-        if (!await confirmDialog(`WARNING: Are you sure you want to wipe the local storage for ALL users?`)) return;
+        if (!await confirmDialog(t('admin_pages.admin_dashboard.confirm.wipe_all', 'WARNING: Are you sure you want to wipe the local storage for ALL users?'))) return;
         
         try {
             const usersSnap = await getDocs(collection(db, 'users'));
@@ -413,10 +419,10 @@ export function AdminDashboard() {
                 batch.update(userDoc.ref, { forceCacheReset: serverTimestamp() });
             });
             await batch.commit();
-            setToast({ show: true, message: `Cache reset command sent to all users.`, type: 'success' });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.cache_reset_all', 'Cache reset command sent to all users.'), type: 'success' });
         } catch (error) {
             console.error("Error sending bulk cache reset:", error);
-            setToast({ show: true, message: `Failed to send command: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.command_failed', 'Failed to send command: {{message}}', { message: error.message }), type: 'error' });
         }
     };
 
@@ -424,7 +430,7 @@ export function AdminDashboard() {
         const { versionData, mandatory, notify } = historyPushModal;
         if (!versionData) return;
     
-        if (!await confirmDialog(`Are you sure you want to deploy v${versionData.versionString} to users?`)) return;
+        if (!await confirmDialog(t('admin_pages.admin_dashboard.confirm.deploy', 'Are you sure you want to deploy v{{version}} to users?', { version: versionData.versionString }))) return;
         
         setLoading(true);
         try {
@@ -478,11 +484,11 @@ export function AdminDashboard() {
                 }
             }
     
-            setToast({show: true, message: `Version ${versionData.versionString} successfully pushed!`, type: 'success'});
+            setToast({show: true, message: t('admin_pages.admin_dashboard.toast.pushed', 'Version {{version}} successfully pushed!', { version: versionData.versionString }), type: 'success'});
             setHistoryPushModal({ isOpen: false, versionData: null, mandatory: true, notify: false });
         } catch(e) {
             console.error("Failed to push history version", e);
-            setToast({show: true, message: 'Failed to deploy historical version.', type: 'error'});
+            setToast({show: true, message: t('admin_pages.admin_dashboard.toast.deploy_failed', 'Failed to deploy historical version.'), type: 'error'});
         }
         setLoading(false);
     };
@@ -505,11 +511,11 @@ export function AdminDashboard() {
             }
         }
     
-        let confirmMessage = "Are you sure you want to cancel the current update?";
+        let confirmMessage = t('admin_pages.admin_dashboard.confirm.cancel_update', 'Are you sure you want to cancel the current update?');
         if (fallbackVersion) {
-            confirmMessage += `\n\nUsers will fall back to the previously configured update version: v${fallbackVersion.versionString} (Build ${fallbackVersion.latestNativeBuild}).`;
+            confirmMessage += '\n\n' + t('admin_pages.admin_dashboard.confirm.fallback', 'Users will fall back to the previously configured update version: v{{version}} (Build {{build}}).', { version: fallbackVersion.versionString, build: fallbackVersion.latestNativeBuild });
         } else {
-            confirmMessage += `\n\nNo alternative configured updates found. The update block will be completely deactivated for everyone.`;
+            confirmMessage += '\n\n' + t('admin_pages.admin_dashboard.confirm.no_fallback', 'No alternative configured updates found. The update block will be completely deactivated for everyone.');
         }
     
         if (!await confirmDialog(confirmMessage)) return;
@@ -527,11 +533,11 @@ export function AdminDashboard() {
                     releaseNotes: fallbackVersion.releaseNotes || `Fallback to version ${fallbackVersion.versionString}.`,
                     mandatoryStack: validStack 
                 };
-                setToast({show: true, message: `Update cancelled. Reverted to alternative active version v${fallbackVersion.versionString}.`, type: 'success'});
+                setToast({show: true, message: t('admin_pages.admin_dashboard.toast.reverted', 'Update cancelled. Reverted to alternative active version v{{version}}.', { version: fallbackVersion.versionString }), type: 'success'});
                 setIsUpdateActive(true);
             } else {
                 newConfig = { ...updateConfig, latestNativeBuild: 1, mandatory: false, mandatoryStack: [] };
-                setToast({show: true, message: 'Update completely stopped. Users will no longer be prompted.', type: 'success'});
+                setToast({show: true, message: t('admin_pages.admin_dashboard.toast.stopped', 'Update completely stopped. Users will no longer be prompted.'), type: 'success'});
                 setIsUpdateActive(false);
             }
     
@@ -540,13 +546,13 @@ export function AdminDashboard() {
             
         } catch(e) {
             console.error("Stop config error", e);
-            setToast({show: true, message: 'Failed to stop/revert update configuration.', type: 'error'});
+            setToast({show: true, message: t('admin_pages.admin_dashboard.toast.stop_failed', 'Failed to stop/revert update configuration.'), type: 'error'});
         }
         setLoading(false);
     };
 
     const handleDeleteHistoryRecord = async (stat) => {
-        const confirmMessage = `WARNING:\n\nAre you sure you want to delete version v${stat.versionString}?\n\nThis will permanently delete the visual record from this table AND permanently delete the physical .apk file from Firebase Storage.`;
+        const confirmMessage = t('admin_pages.admin_dashboard.confirm.delete_version', 'WARNING:\n\nAre you sure you want to delete version v{{version}}?\n\nThis will permanently delete the visual record from this table AND permanently delete the physical .apk file from Firebase Storage.', { version: stat.versionString });
         
         if (!await confirmDialog(confirmMessage)) return;
         
@@ -562,16 +568,16 @@ export function AdminDashboard() {
             await deleteDoc(doc(db, "update_history", stat.id));
     
             setUpdateHistory(updateHistory.filter(item => item.id !== stat.id));
-            setToast({show: true, message: 'File and history record permanently deleted.', type: 'success'});
+            setToast({show: true, message: t('admin_pages.admin_dashboard.toast.file_deleted', 'File and history record permanently deleted.'), type: 'success'});
             
         } catch (e) {
             console.error("Failed to delete file/history:", e);
             if (e.code === 'storage/object-not-found') {
                  await deleteDoc(doc(db, "update_history", stat.id));
                  setUpdateHistory(updateHistory.filter(item => item.id !== stat.id));
-                 setToast({show: true, message: 'Storage file was missing, but history record removed.', type: 'success'});
+                 setToast({show: true, message: t('admin_pages.admin_dashboard.toast.storage_missing', 'Storage file was missing, but history record removed.'), type: 'success'});
             } else {
-                 setToast({show: true, message: 'Failed to delete file. Check console for details.', type: 'error'});
+                 setToast({show: true, message: t('admin_pages.admin_dashboard.toast.delete_file_failed', 'Failed to delete file. Check console for details.'), type: 'error'});
             }
         } finally {
             setLoading(false);
@@ -582,12 +588,12 @@ export function AdminDashboard() {
         const userToUpdate = users.find(u => u.id === userId);
         
         if (selectedRoles.length === 0) {
-            setToast({ show: true, message: "A user must have at least one role.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.need_role', 'A user must have at least one role.'), type: "error" });
             return;
         }
 
         if (currentUser.email === userToUpdate.email && !selectedRoles.includes('super_user') && (userToUpdate.roles || [userToUpdate.role]).includes('super_user')) {
-            setToast({ show: true, message: "You cannot remove your own super_user access.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.own_super', 'You cannot remove your own super_user access.'), type: "error" });
             return;
         }
 
@@ -619,9 +625,9 @@ export function AdminDashboard() {
             const userRef = doc(db, "users", userId);
             await updateDoc(userRef, updatePayload);
             setUsers(users.map(user => user.id === userId ? { ...user, ...updatePayload } : user));
-            setToast({ show: true, message: `Successfully updated user roles and boundaries.`, type: "success" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.roles_updated', 'Successfully updated user roles and boundaries.'), type: "success" });
         } catch (error) {
-            setToast({ show: true, message: "Failed to update user roles.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.roles_failed', 'Failed to update user roles.'), type: "error" });
         }
     };
 
@@ -629,16 +635,16 @@ export function AdminDashboard() {
         const userToUpdate = users.find(u => u.id === userId);
         const userRoles = userToUpdate.roles || [userToUpdate.role];
         if (!userRoles.some(r => ['states_manager', 'state_coordinator', 'locality_manager'].includes(r))) {
-            setToast({ show: true, message: "State can only be assigned to a State Manager, State Coordinator, or Locality Manager.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.state_only', 'State can only be assigned to a State Manager, State Coordinator, or Locality Manager.'), type: "error" });
             return;
         }
         const userRef = doc(db, "users", userId);
         try {
             await updateDoc(userRef, { assignedState: newState, assignedLocality: '' }); 
             setUsers(users.map(user => user.id === userId ? { ...user, assignedState: newState, assignedLocality: '' } : user));
-            setToast({ show: true, message: "User's state updated successfully.", type: "success" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.state_updated', 'User\'s state updated successfully.'), type: "success" });
         } catch (error) {
-            setToast({ show: true, message: "Failed to update user state. Please try again.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.state_failed', 'Failed to update user state. Please try again.'), type: "error" });
         }
     };
 
@@ -646,20 +652,20 @@ export function AdminDashboard() {
         const userToUpdate = users.find(u => u.id === userId);
         const userRoles = userToUpdate.roles || [userToUpdate.role];
         if (!userRoles.includes('locality_manager')) {
-            setToast({ show: true, message: "Locality can only be assigned to a Locality Manager.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.locality_only', 'Locality can only be assigned to a Locality Manager.'), type: "error" });
             return;
         }
         if (!newState) {
-            setToast({ show: true, message: "Please select a State before assigning a Locality.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.select_state_first', 'Please select a State before assigning a Locality.'), type: "error" });
             return;
         }
         const userRef = doc(db, "users", userId);
         try {
             await updateDoc(userRef, { assignedState: newState, assignedLocality: newLocality });
             setUsers(users.map(user => user.id === userId ? { ...user, assignedState: newState, assignedLocality: newLocality } : user));
-            setToast({ show: true, message: "User's locality updated successfully.", type: "success" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.locality_updated', 'User\'s locality updated successfully.'), type: "success" });
         } catch (error) {
-            setToast({ show: true, message: "Failed to update user locality. Please try again.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.locality_failed', 'Failed to update user locality. Please try again.'), type: "error" });
         }
     };
 
@@ -712,11 +718,11 @@ export function AdminDashboard() {
             setUsers(users.map(u => 
                 u.id === editingUserPermissions.id ? { ...u, permissions: tempUserPermissions } : u
             ));
-            setToast({ show: true, message: `Custom permissions updated for ${editingUserPermissions.displayName}.`, type: "success" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.custom_updated', 'Custom permissions updated for {{name}}.', { name: editingUserPermissions.displayName }), type: "success" });
             setEditingUserPermissions(null);
         } catch (error) {
             console.error("Error updating individual permissions:", error);
-            setToast({ show: true, message: "Failed to update custom permissions.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.custom_failed', 'Failed to update custom permissions.'), type: "error" });
         } finally {
             setLoading(false);
         }
@@ -761,10 +767,10 @@ export function AdminDashboard() {
             setRolesAndPermissions(rolesAndPermissionsWithDerived);
             setUsers(updatedUsers); 
             
-            setToast({ show: true, message: `Permissions saved and incrementally synced to ${updateCount} users!`, type: "success" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.synced', 'Permissions saved and incrementally synced to {{count}} users!', { count: updateCount }), type: "success" });
         } catch (error) {
             console.error("Error saving and syncing permissions:", error);
-            setToast({ show: true, message: "Failed to save and sync permissions. Please try again.", type: "error" });
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.sync_failed', 'Failed to save and sync permissions. Please try again.'), type: "error" });
         } finally {
             setLoading(false);
             setEditingPermissionRole(null); 
@@ -773,13 +779,13 @@ export function AdminDashboard() {
 
     const handleSendPasswordReset = async (email) => {
         if (!email) return;
-        if (await confirmDialog(`Send a password reset email to ${email}?`)) {
+        if (await confirmDialog(t('admin_pages.admin_dashboard.confirm.reset_password', 'Send a password reset email to {{email}}?', { email }))) {
             try {
                 await sendPasswordResetEmail(auth, email);
-                setToast({ show: true, message: `Password reset email sent to ${email}.`, type: 'success' });
+                setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.reset_sent', 'Password reset email sent to {{email}}.', { email }), type: 'success' });
             } catch (error) {
                 console.error("Password reset error:", error);
-                setToast({ show: true, message: `Failed to send reset email: ${error.message}`, type: 'error' });
+                setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.reset_failed', 'Failed to send reset email: {{message}}', { message: error.message }), type: 'error' });
             }
         }
     };
@@ -787,20 +793,20 @@ export function AdminDashboard() {
     const handleDeleteAccount = async (userId, userEmail) => {
         if (!userId) return;
         
-        const confirmMessage = `CRITICAL WARNING:\n\nAre you sure you want to delete the database profile for ${userEmail}?\n\nNote: This removes their permissions and profile from the app. For total removal, their Firebase Authentication account must also be deleted via the Firebase Console or a Cloud Function.`;
+        const confirmMessage = t('admin_pages.admin_dashboard.confirm.delete_account', 'CRITICAL WARNING:\n\nAre you sure you want to delete the database profile for {{email}}?\n\nNote: This removes their permissions and profile from the app. For total removal, their Firebase Authentication account must also be deleted via the Firebase Console or a Cloud Function.', { email: userEmail });
         
         if (await confirmDialog(confirmMessage)) {
             setLoading(true);
             try {
                 await deleteDoc(doc(db, "users", userId));
                 setUsers(users.filter(u => u.id !== userId));
-                setToast({ show: true, message: `User profile for ${userEmail} deleted successfully.`, type: 'success' });
+                setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.profile_deleted', 'User profile for {{email}} deleted successfully.', { email: userEmail }), type: 'success' });
                 if (viewingUser && viewingUser.id === userId) {
                     setViewingUser(null);
                 }
             } catch (error) {
                 console.error("Error deleting user profile:", error);
-                setToast({ show: true, message: `Failed to delete account: ${error.message}`, type: 'error' });
+                setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.delete_account_failed', 'Failed to delete account: {{message}}', { message: error.message }), type: 'error' });
             } finally {
                 setLoading(false);
             }
@@ -851,13 +857,13 @@ export function AdminDashboard() {
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
                     <div className="p-3 bg-emerald-50 rounded-full shrink-0"><CloudDownload className="w-6 h-6 text-emerald-500" /></div>
                     <div>
-                        <h3 className="text-lg font-bold text-gray-800">Over-The-Air (OTA) Status</h3>
+                        <h3 className="text-lg font-bold text-gray-800">{t('admin_pages.admin_dashboard.updates.ota_status', 'Over-The-Air (OTA) Status')}</h3>
                         <p className="text-sm text-gray-500 mt-0.5 max-w-lg">
-                            OTA updates happen entirely automatically. Whenever GitHub Actions finishes a build, Capgo serves these UI changes to users instantly in the background.
+                            {t('admin_pages.admin_dashboard.updates.ota_desc', 'OTA updates happen entirely automatically. Whenever GitHub Actions finishes a build, Capgo serves these UI changes to users instantly in the background.')}
                         </p>
                     </div>
                     <div className="ml-auto text-right">
-                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Live OTA Version</div>
+                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">{t('admin_pages.admin_dashboard.updates.live_ota', 'Live OTA Version')}</div>
                         <div className="text-2xl font-black text-emerald-600 border border-emerald-100 bg-emerald-50 px-3 py-1 rounded-lg">v{otaVersion}</div>
                     </div>
                 </div>
@@ -867,9 +873,9 @@ export function AdminDashboard() {
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-emerald-100 rounded-full shrink-0"><Smartphone className="w-6 h-6 text-emerald-600" /></div>
                             <div>
-                                <h3 className="text-lg font-bold text-emerald-900">New APK Available for Deployment!</h3>
+                                <h3 className="text-lg font-bold text-emerald-900">{t('admin_pages.admin_dashboard.updates.new_apk', 'New APK Available for Deployment!')}</h3>
                                 <p className="text-sm text-emerald-700 mt-0.5 max-w-xl">
-                                    GitHub Actions has built a newer native app (<strong>v{serverNativeConfig.versionString}</strong>). Click the button to configure and trigger this update.
+                                    {t('admin_pages.admin_dashboard.updates.new_apk_before', 'GitHub Actions has built a newer native app (')}<strong>v{serverNativeConfig.versionString}</strong>{t('admin_pages.admin_dashboard.updates.new_apk_after', '). Click the button to configure and trigger this update.')}
                                 </p>
                             </div>
                         </div>
@@ -889,7 +895,7 @@ export function AdminDashboard() {
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
                         >
-                            <CloudDownload className="w-4 h-4 mr-2" /> 1-Click Load Latest APK
+                            <CloudDownload className="w-4 h-4 mr-2" /> {t('admin_pages.admin_dashboard.updates.load_latest', '1-Click Load Latest APK')}
                         </Button>
                     </div>
                 )}
@@ -898,7 +904,7 @@ export function AdminDashboard() {
                     <div className="bg-green-50 border border-green-200 p-4 rounded-xl shadow-inner flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
                         <div className="text-sm text-green-800 font-medium">
-                            <strong>System Status:</strong> Version <span className="font-mono font-bold bg-green-100 text-green-900 px-1.5 py-0.5 rounded">v{updateConfig.versionString}</span> (Build ID: {updateConfig.latestNativeBuild}) is currently running as the **Active Update** ({updateConfig.mandatory ? "Mandatory Lock" : "Optional Prompt"}).
+                            <strong>{t('admin_pages.admin_dashboard.updates.system_status', 'System Status:')}</strong> {t('admin_pages.admin_dashboard.updates.version', 'Version')} <span className="font-mono font-bold bg-green-100 text-green-900 px-1.5 py-0.5 rounded">v{updateConfig.versionString}</span> ({t('admin_pages.admin_dashboard.updates.build_id', 'Build ID:')} {updateConfig.latestNativeBuild}) {t('admin_pages.admin_dashboard.updates.running_as', 'is currently running as the **Active Update**')} ({updateConfig.mandatory ? t('admin_pages.admin_dashboard.updates.mandatory_lock', 'Mandatory Lock') : t('admin_pages.admin_dashboard.updates.optional_prompt', 'Optional Prompt')}).
                         </div>
                     </div>
                 )}
@@ -907,13 +913,13 @@ export function AdminDashboard() {
                     <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center">
                         <History className="w-5 h-5 text-gray-500 mr-3 shrink-0" />
                         <div>
-                            <h3 className="text-md font-bold text-gray-800">Deployment History Log</h3>
-                            <p className="text-xs text-gray-500">Record of previously configured Native APK versions automatically tracked by GitHub Actions.</p>
+                            <h3 className="text-md font-bold text-gray-800">{t('admin_pages.admin_dashboard.updates.history_title', 'Deployment History Log')}</h3>
+                            <p className="text-xs text-gray-500">{t('admin_pages.admin_dashboard.updates.history_desc', 'Record of previously configured Native APK versions automatically tracked by GitHub Actions.')}</p>
                         </div>
                     </div>
                     {updateHistory.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <Table headers={["Version", "Build ID", "Deployment Date", "Release Notes", "Actions"]}>
+                            <Table headers={[t('admin_pages.admin_dashboard.updates.col.version', 'Version'), t('admin_pages.admin_dashboard.updates.col.build', 'Build ID'), t('admin_pages.admin_dashboard.updates.col.date', 'Deployment Date'), t('admin_pages.admin_dashboard.updates.col.notes', 'Release Notes'), t('admin_pages.admin_dashboard.updates.col.actions', 'Actions')]}>
                                 {updateHistory.map((stat) => {
                                     const isActiveUpdate = isUpdateActive && (parseInt(updateConfig?.latestNativeBuild, 10) === parseInt(stat.latestNativeBuild, 10));
 
@@ -928,7 +934,7 @@ export function AdminDashboard() {
                                             <td className="py-3 text-sm text-gray-500 font-medium">
                                                 {stat.timestamp?.seconds 
                                                     ? new Date(stat.timestamp.seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-                                                    : 'Unknown'}
+                                                    : t('admin_pages.admin_dashboard.unknown', 'Unknown')}
                                             </td>
                                             <td className="py-3 text-xs text-gray-500 max-w-xs truncate">
                                                 {stat.releaseNotes || '-'}
@@ -938,7 +944,7 @@ export function AdminDashboard() {
                                                     
                                                     {isActiveUpdate ? (
                                                         <span className="inline-flex items-center bg-green-600 border border-green-700 text-white font-bold text-xs px-2.5 py-1.5 rounded shadow-sm select-none">
-                                                            <CheckCircle className="w-3.5 h-3.5 mr-1" /> Active Update
+                                                            <CheckCircle className="w-3.5 h-3.5 mr-1" /> {t('admin_pages.admin_dashboard.updates.active_update', 'Active Update')}
                                                         </span>
                                                     ) : (
                                                         <Button 
@@ -946,7 +952,7 @@ export function AdminDashboard() {
                                                             onClick={() => setHistoryPushModal({ isOpen: true, versionData: stat, mandatory: true, notify: false })}
                                                             className="bg-sky-600 border-sky-700 hover:bg-sky-700 text-xs px-2 py-1 shadow-sm text-white border"
                                                         >
-                                                            Push APK Update
+                                                            {t('admin_pages.admin_dashboard.updates.push_apk', 'Push APK Update')}
                                                         </Button>
                                                     )}
 
@@ -961,7 +967,7 @@ export function AdminDashboard() {
                                                             : 'opacity-50 cursor-not-allowed'
                                                         }`}
                                                     >
-                                                        Cancel APK Update
+                                                        {t('admin_pages.admin_dashboard.updates.cancel_apk', 'Cancel APK Update')}
                                                     </Button>
 
                                                     <a 
@@ -969,17 +975,17 @@ export function AdminDashboard() {
                                                         target="_blank" 
                                                         rel="noopener noreferrer"
                                                         className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
-                                                        title="Download APK"
+                                                        title={t('admin_pages.admin_dashboard.updates.download_apk', 'Download APK')}
                                                     >
-                                                        Download
+                                                        {t('admin_pages.admin_dashboard.updates.download', 'Download')}
                                                     </a>
                                                     
                                                     <button 
                                                         onClick={() => handleDeleteHistoryRecord(stat)}
                                                         className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-red-500 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
-                                                        title="Permanently remove file and history"
+                                                        title={t('admin_pages.admin_dashboard.updates.remove_title', 'Permanently remove file and history')}
                                                     >
-                                                        Delete
+                                                        {t('admin_pages.admin_dashboard.delete', 'Delete')}
                                                     </button>
                                                 </div>
                                             </td>
@@ -991,7 +997,7 @@ export function AdminDashboard() {
                     ) : (
                         <div className="text-center py-10 bg-white">
                             <History className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500">No deployment history recorded yet.</p>
+                            <p className="text-sm text-gray-500">{t('admin_pages.admin_dashboard.updates.no_history', 'No deployment history recorded yet.')}</p>
                         </div>
                     )}
                 </Card>
@@ -1007,42 +1013,42 @@ export function AdminDashboard() {
                     <div className="flex items-center gap-3">
                         <Smartphone className="w-6 h-6 text-orange-600 shrink-0" />
                         <div>
-                            <h4 className="font-bold text-orange-900 text-base">Bulk Operational Maintenance Controls</h4>
-                            <p className="text-xs text-orange-700 mt-0.5 font-medium">Perform immediate diagnostic overrides across all systems.</p>
+                            <h4 className="font-bold text-orange-900 text-base">{t('admin_pages.admin_dashboard.roles_tab.bulk_title', 'Bulk Operational Maintenance Controls')}</h4>
+                            <p className="text-xs text-orange-700 mt-0.5 font-medium">{t('admin_pages.admin_dashboard.roles_tab.bulk_desc', 'Perform immediate diagnostic overrides across all systems.')}</p>
                         </div>
                     </div>
                     <Button
                         onClick={handleForceCacheResetAll}
                         className="bg-orange-600 hover:bg-orange-700 border-orange-700 text-white shadow-md text-xs sm:text-sm whitespace-nowrap"
                     >
-                        Wipe Storage Cache for ALL Users
+                        {t('admin_pages.admin_dashboard.roles_tab.wipe_all', 'Wipe Storage Cache for ALL Users')}
                     </Button>
                 </div>
             )}
 
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex items-center text-gray-800 font-bold mb-4">
-                    <Filter className="w-5 h-5 mr-2 text-sky-500" /> Filter & Search Directory
+                    <Filter className="w-5 h-5 mr-2 text-sky-500" /> {t('admin_pages.admin_dashboard.roles_tab.filter_search', 'Filter & Search Directory')}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-                    <FormGroup label="Search Directory">
-                        <Input type="search" placeholder="Search by name or email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-gray-50 border-gray-200" />
+                    <FormGroup label={t('admin_pages.admin_dashboard.roles_tab.search_directory', 'Search Directory')}>
+                        <Input type="search" placeholder={t('admin_pages.admin_dashboard.roles_tab.search_placeholder', 'Search by name or email...')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-gray-50 border-gray-200" />
                     </FormGroup>
-                    <FormGroup label="Filter by Role">
+                    <FormGroup label={t('admin_pages.admin_dashboard.roles_tab.filter_role', 'Filter by Role')}>
                         <Select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="bg-gray-50 border-gray-200">
-                            <option value="">All Roles</option>
-                            {Object.entries(ROLES).map(([key, label]) => (<option key={key} value={key}>{label}</option>))}
+                            <option value="">{t('admin_pages.admin_dashboard.roles_tab.all_roles', 'All Roles')}</option>
+                            {Object.keys(ROLES).map((key) => (<option key={key} value={key}>{roleLabel(key)}</option>))}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Filter by State">
+                    <FormGroup label={t('admin_pages.admin_dashboard.roles_tab.filter_state', 'Filter by State')}>
                         <Select value={filterState} onChange={(e) => { setFilterState(e.target.value); setFilterLocality(''); }} className="bg-gray-50 border-gray-200">
-                            <option value="">All States</option>
+                            <option value="">{t('admin_pages.admin_dashboard.roles_tab.all_states', 'All States')}</option>
                             {STATES.map(state => (<option key={state} value={state}>{state}</option>))}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Filter by Locality">
+                    <FormGroup label={t('admin_pages.admin_dashboard.roles_tab.filter_locality', 'Filter by Locality')}>
                         <Select value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)} disabled={!filterState || allLocalitiesInFilterState.length === 0} className="bg-gray-50 border-gray-200 disabled:opacity-50">
-                            <option value="">All Localities</option>
+                            <option value="">{t('admin_pages.admin_dashboard.all_localities', 'All Localities')}</option>
                             {allLocalitiesInFilterState.map(locEn => {
                                 const locAr = STATE_LOCALITIES[filterState]?.localities.find(l => l.en === locEn)?.ar || locEn;
                                 return <option key={locEn} value={locEn}>{locAr}</option>
@@ -1054,11 +1060,11 @@ export function AdminDashboard() {
 
             <Card className="overflow-hidden shadow-sm border border-gray-100">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold text-gray-800">User Directory <span className="text-sm font-normal text-gray-500 ml-2">({filteredUsers.length} users)</span></h3>
+                    <h3 className="text-lg font-bold text-gray-800">{t('admin_pages.admin_dashboard.roles_tab.user_directory', 'User Directory')} <span className="text-sm font-normal text-gray-500 ml-2">{t('admin_pages.admin_dashboard.roles_tab.n_users', '({{count}} users)', { count: filteredUsers.length })}</span></h3>
                 </div>
                 {filteredUsers.length > 0 ? (
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
-                        <Table headers={["Name & Email", "Current Roles", "Manage Roles", "Assigned Area", "App Status", "Web Status"]}>
+                        <Table headers={[t('admin_pages.admin_dashboard.roles_tab.col.name', 'Name & Email'), t('admin_pages.admin_dashboard.roles_tab.col.roles', 'Current Roles'), t('admin_pages.admin_dashboard.roles_tab.col.manage', 'Manage Roles'), t('admin_pages.admin_dashboard.roles_tab.col.area', 'Assigned Area'), t('admin_pages.admin_dashboard.roles_tab.col.app', 'App Status'), t('admin_pages.admin_dashboard.roles_tab.col.web', 'Web Status')]}>
                             {filteredUsers.map((user) => {
                                 const userRoles = user.roles || [user.role || 'user'];
                                 const isStateAssignable = userRoles.some(r => ['states_manager', 'state_coordinator', 'locality_manager'].includes(r));
@@ -1074,9 +1080,9 @@ export function AdminDashboard() {
                                 const lastWebAccess = user.lastWebAccess || userStats.lastWebAccess;
 
                                 const renderVersionInfo = (version, timestamp) => {
-                                    if (!version && !timestamp) return <span className="text-gray-400 text-[10px] italic">No record</span>;
+                                    if (!version && !timestamp) return <span className="text-gray-400 text-[10px] italic">{t('admin_pages.admin_dashboard.roles_tab.no_record', 'No record')}</span>;
                                     
-                                    let dateStr = 'Unknown date';
+                                    let dateStr = t('admin_pages.admin_dashboard.roles_tab.unknown_date', 'Unknown date');
                                     if (timestamp?.seconds) {
                                         dateStr = new Date(timestamp.seconds * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                                     } else if (timestamp && typeof timestamp === 'string') {
@@ -1088,7 +1094,7 @@ export function AdminDashboard() {
                                     return (
                                         <div className="flex flex-col gap-1 items-start min-w-[90px]">
                                             <div className="font-mono text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100 shadow-sm">
-                                                {version ? `v${version}` : 'Unknown v'}
+                                                {version ? `v${version}` : t('admin_pages.admin_dashboard.roles_tab.unknown_version', 'Unknown v')}
                                             </div>
                                             <div className="text-[9px] text-gray-500 flex items-center font-medium whitespace-nowrap">
                                                 <Clock className="w-2.5 h-2.5 mr-1" /> {dateStr}
@@ -1103,7 +1109,7 @@ export function AdminDashboard() {
                                             <div 
                                                 className="font-bold text-sky-700 cursor-pointer group-hover:text-sky-600 transition-colors"
                                                 onClick={() => setViewingUser(user)}
-                                                title="View Profile Details"
+                                                title={t('admin_pages.admin_dashboard.roles_tab.view_profile', 'View Profile Details')}
                                             >
                                                 {user.displayName}
                                             </div>
@@ -1113,7 +1119,7 @@ export function AdminDashboard() {
                                             <div className="flex flex-wrap gap-1.5 max-w-[200px]">
                                                 {userRoles.map(r => (
                                                     <span key={r} className={`border text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm whitespace-nowrap ${getRoleBadgeStyle(r)}`}>
-                                                        {ROLES[r] || r}
+                                                        {roleLabel(r)}
                                                     </span>
                                                 ))}
                                             </div>
@@ -1131,7 +1137,7 @@ export function AdminDashboard() {
                                                     }}
                                                     className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-sky-600 w-full justify-start"
                                                 >
-                                                    <Edit3 className="w-3 h-3 mr-2" /> Edit Roles
+                                                    <Edit3 className="w-3 h-3 mr-2" /> {t('admin_pages.admin_dashboard.roles_tab.edit_roles', 'Edit Roles')}
                                                 </Button>
                                                 <Button 
                                                     size="sm" 
@@ -1142,7 +1148,7 @@ export function AdminDashboard() {
                                                     }}
                                                     className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-purple-600 w-full justify-start"
                                                 >
-                                                    <Shield className="w-3 h-3 mr-2" /> Custom Perms
+                                                    <Shield className="w-3 h-3 mr-2" /> {t('admin_pages.admin_dashboard.roles_tab.custom_perms', 'Custom Perms')}
                                                 </Button>
                                                 <Button 
                                                     size="sm" 
@@ -1153,7 +1159,7 @@ export function AdminDashboard() {
                                                     }}
                                                     className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-emerald-600 w-full justify-start"
                                                 >
-                                                    <Bell className="w-3 h-3 mr-2" /> Message
+                                                    <Bell className="w-3 h-3 mr-2" /> {t('admin_pages.admin_dashboard.roles_tab.message', 'Message')}
                                                 </Button>
                                             </div>
                                         </td>
@@ -1161,25 +1167,25 @@ export function AdminDashboard() {
                                             <div className="flex flex-col gap-2 max-w-[180px]">
                                                 {isStateAssignable ? (
                                                     <Select value={user.assignedState || ''} onChange={(e) => handleUserStateChange(user.id, e.target.value)} className="text-xs py-1">
-                                                        <option value="">-- State --</option>
+                                                        <option value="">{t('admin_pages.admin_dashboard.roles_tab.state_option', '-- State --')}</option>
                                                         {STATES.map(state => (<option key={state} value={state}>{state}</option>))}
                                                     </Select>
-                                                ) : (<span className="text-xs text-gray-400 font-medium">{user.assignedState || 'Global (No State)'}</span>)}
+                                                ) : (<span className="text-xs text-gray-400 font-medium">{user.assignedState || t('admin_pages.admin_dashboard.roles_tab.global_no_state', 'Global (No State)')}</span>)}
                                                 
                                                 {isLocalityAssignable && (
                                                     <Select value={user.assignedLocality || ''} onChange={(e) => handleLocalityChange(user.id, user.assignedState, e.target.value)} disabled={!user.assignedState} className="text-xs py-1 disabled:opacity-50 bg-gray-50">
-                                                        <option value="">-- Locality --</option>
+                                                        <option value="">{t('admin_pages.admin_dashboard.roles_tab.locality_option', '-- Locality --')}</option>
                                                         {currentLocalities.map(loc => (<option key={loc.en} value={loc.en}>{loc.ar}</option>))}
                                                     </Select>
                                                 )}
-                                                {!isLocalityAssignable && isStateAssignable && <span className="text-[10px] text-gray-400">All Localities</span>}
+                                                {!isLocalityAssignable && isStateAssignable && <span className="text-[10px] text-gray-400">{t('admin_pages.admin_dashboard.all_localities', 'All Localities')}</span>}
                                             </div>
                                         </td>
                                         <td className="py-3">
                                             {renderVersionInfo(appVersion, lastAppAccess)}
                                             {user.fcmToken && (
                                                 <div className="mt-1 flex items-center text-[9px] font-bold text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded shadow-sm max-w-fit">
-                                                    <Bell className="w-2.5 h-2.5 mr-1" /> Push Ready
+                                                    <Bell className="w-2.5 h-2.5 mr-1" /> {t('admin_pages.admin_dashboard.roles_tab.push_ready', 'Push Ready')}
                                                 </div>
                                             )}
                                         </td>
@@ -1194,8 +1200,8 @@ export function AdminDashboard() {
                 ) : (
                     <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
                         <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                        <div className="text-gray-500 font-medium">No users found matching your filters.</div>
-                        <Button variant="secondary" size="sm" className="mt-4" onClick={() => { setSearchQuery(''); setFilterRole(''); setFilterState(''); }}>Clear Filters</Button>
+                        <div className="text-gray-500 font-medium">{t('admin_pages.admin_dashboard.roles_tab.no_users', 'No users found matching your filters.')}</div>
+                        <Button variant="secondary" size="sm" className="mt-4" onClick={() => { setSearchQuery(''); setFilterRole(''); setFilterState(''); }}>{t('admin_pages.admin_dashboard.roles_tab.clear_filters', 'Clear Filters')}</Button>
                     </div>
                 )}
             </Card>
@@ -1207,10 +1213,10 @@ export function AdminDashboard() {
             <div className="bg-sky-50 border border-sky-100 p-5 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h3 className="text-lg font-bold text-sky-900 flex items-center">
-                        <Shield className="w-5 h-5 mr-2 text-sky-500" /> Global Role Definitions
+                        <Shield className="w-5 h-5 mr-2 text-sky-500" /> {t('admin_pages.admin_dashboard.perm_tab.title', 'Global Role Definitions')}
                     </h3>
                     <p className="text-sm text-sky-700 mt-1 max-w-2xl">
-                        Adjusting permissions here defines the default blueprint for each role. Changes are <strong>automatically saved and incrementally synced</strong> to affected users when you close the configuration menu.
+                        {t('admin_pages.admin_dashboard.perm_tab.desc_before', 'Adjusting permissions here defines the default blueprint for each role. Changes are')} <strong>{t('admin_pages.admin_dashboard.perm_tab.desc_strong', 'automatically saved and incrementally synced')}</strong> {t('admin_pages.admin_dashboard.perm_tab.desc_after', 'to affected users when you close the configuration menu.')}
                     </p>
                 </div>
             </div>
@@ -1220,9 +1226,9 @@ export function AdminDashboard() {
                     <div key={role} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col p-5">
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-sky-400 to-blue-600"></div>
                         <div className="flex-grow pt-1">
-                            <h4 className="text-lg font-bold text-gray-800 mb-2">{ROLES[role]}</h4>
+                            <h4 className="text-lg font-bold text-gray-800 mb-2">{roleLabel(role)}</h4>
                             <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${getRoleBadgeStyle(role)} border shadow-sm`}>
-                                Blueprint Definition
+                                {t('admin_pages.admin_dashboard.perm_tab.blueprint', 'Blueprint Definition')}
                             </span>
                         </div>
                         <Button 
@@ -1231,7 +1237,7 @@ export function AdminDashboard() {
                             size="sm"
                             className="mt-6 w-full justify-center bg-gray-50 border-gray-200 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 shadow-sm"
                         >
-                            <Settings className="w-4 h-4 mr-2" /> Configure Permissions
+                            <Settings className="w-4 h-4 mr-2" /> {t('admin_pages.admin_dashboard.perm_tab.configure', 'Configure Permissions')}
                         </Button>
                     </div>
                 ))}
@@ -1241,7 +1247,7 @@ export function AdminDashboard() {
 
     const renderUsageTab = () => {
         const formatTimestamp = (timestamp) => {
-            if (!timestamp) return 'N/A';
+            if (!timestamp) return t('admin_pages.admin_dashboard.usage.na', 'N/A');
             return new Date(timestamp.seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
         };
 
@@ -1250,8 +1256,8 @@ export function AdminDashboard() {
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
                     <div className="p-3 bg-indigo-50 rounded-full shrink-0"><Activity className="w-6 h-6 text-indigo-500" /></div>
                     <div>
-                        <h3 className="text-lg font-bold text-gray-800">System Analytics</h3>
-                        <p className="text-sm text-gray-500 mt-0.5">Aggregate reading, writing, and active time tracking across all users.</p>
+                        <h3 className="text-lg font-bold text-gray-800">{t('admin_pages.admin_dashboard.usage.title', 'System Analytics')}</h3>
+                        <p className="text-sm text-gray-500 mt-0.5">{t('admin_pages.admin_dashboard.usage.desc', 'Aggregate reading, writing, and active time tracking across all users.')}</p>
                     </div>
                 </div>
 
@@ -1260,7 +1266,7 @@ export function AdminDashboard() {
                         <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity"><Database className="w-32 h-32 text-emerald-600" /></div>
                         <div className="p-3 bg-emerald-100 rounded-xl mr-4 z-10"><Database className="text-emerald-600 w-6 h-6" /></div>
                         <div className="z-10">
-                            <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">Total System Reads</div>
+                            <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">{t('admin_pages.admin_dashboard.usage.total_reads', 'Total System Reads')}</div>
                             <div className="text-3xl font-black text-emerald-900">{aggregates.totalReads.toLocaleString()}</div>
                         </div>
                     </div>
@@ -1269,7 +1275,7 @@ export function AdminDashboard() {
                         <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity"><Edit3 className="w-32 h-32 text-amber-600" /></div>
                         <div className="p-3 bg-amber-100 rounded-xl mr-4 z-10"><Edit3 className="text-amber-600 w-6 h-6" /></div>
                         <div className="z-10">
-                            <div className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">Total System Writes</div>
+                            <div className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">{t('admin_pages.admin_dashboard.usage.total_writes', 'Total System Writes')}</div>
                             <div className="text-3xl font-black text-amber-900">{aggregates.totalWrites.toLocaleString()}</div>
                         </div>
                     </div>
@@ -1278,23 +1284,23 @@ export function AdminDashboard() {
                         <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity"><Clock className="w-32 h-32 text-blue-600" /></div>
                         <div className="p-3 bg-blue-100 rounded-xl mr-4 z-10"><Clock className="text-blue-600 w-6 h-6" /></div>
                         <div className="z-10">
-                            <div className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">Mean Active Time</div>
-                            <div className="text-3xl font-black text-blue-900">{formatDuration(aggregates.meanDurationMs)}</div>
-                            <div className="text-[10px] font-semibold text-blue-500 mt-1 uppercase">Sum: {formatDuration(aggregates.totalDurationMs)}</div>
+                            <div className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">{t('admin_pages.admin_dashboard.usage.mean_time', 'Mean Active Time')}</div>
+                            <div className="text-3xl font-black text-blue-900">{formatDuration(aggregates.meanDurationMs, t)}</div>
+                            <div className="text-[10px] font-semibold text-blue-500 mt-1 uppercase">{t('admin_pages.admin_dashboard.usage.sum', 'Sum: {{value}}', { value: formatDuration(aggregates.totalDurationMs, t) })}</div>
                         </div>
                     </div>
                 </div>
 
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
-                    <h3 className="text-md font-bold text-gray-800 mb-4 px-1">Detailed User Telemetry</h3>
+                    <h3 className="text-md font-bold text-gray-800 mb-4 px-1">{t('admin_pages.admin_dashboard.usage.detailed', 'Detailed User Telemetry')}</h3>
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
-                        <Table headers={['User Identity', 'Total Reads', 'Total Writes', 'Active Duration', 'Last Recorded']}>
+                        <Table headers={[t('admin_pages.admin_dashboard.usage.col.user', 'User Identity'), t('admin_pages.admin_dashboard.usage.col.reads', 'Total Reads'), t('admin_pages.admin_dashboard.usage.col.writes', 'Total Writes'), t('admin_pages.admin_dashboard.usage.col.duration', 'Active Duration'), t('admin_pages.admin_dashboard.usage.col.last', 'Last Recorded')]}>
                             {usageStats.map((stat) => (
                                 <tr key={stat.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="font-medium text-gray-800">{stat.email || 'N/A'}</td>
+                                    <td className="font-medium text-gray-800">{stat.email || t('admin_pages.admin_dashboard.usage.na', 'N/A')}</td>
                                     <td className="font-mono text-emerald-700 font-bold bg-emerald-50/50">{stat.totalReads ? stat.totalReads.toLocaleString() : 0}</td>
                                     <td className="font-mono text-amber-700 font-bold bg-amber-50/50">{stat.totalWrites ? stat.totalWrites.toLocaleString() : 0}</td>
-                                    <td className="text-gray-600">{formatDuration(stat.totalActiveDurationMs)}</td>
+                                    <td className="text-gray-600">{formatDuration(stat.totalActiveDurationMs, t)}</td>
                                     <td className="text-sm text-gray-500">{formatTimestamp(stat.lastUpdated)}</td>
                                 </tr>
                             ))}
@@ -1302,7 +1308,7 @@ export function AdminDashboard() {
                         {usageStats.length === 0 && (
                             <div className="text-center py-12 text-gray-400 bg-gray-50">
                                 <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                No telemetry data accumulated yet.
+                                {t('admin_pages.admin_dashboard.usage.no_data', 'No telemetry data accumulated yet.')}
                             </div>
                         )}
                     </div>
@@ -1314,8 +1320,8 @@ export function AdminDashboard() {
     return (
         <div className="space-y-6 pb-12 max-w-7xl mx-auto">
             <PageHeader
-                title="System Administration"
-                subtitle="Securely manage user profiles, roles, broad permissions, and monitor telemetry."
+                title={t('admin_pages.admin_dashboard.page_title', 'System Administration')}
+                subtitle={t('admin_pages.admin_dashboard.page_subtitle', 'Securely manage user profiles, roles, broad permissions, and monitor telemetry.')}
             />
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
@@ -1333,15 +1339,15 @@ export function AdminDashboard() {
             </div>
 
             {/* PUSH HISTORICAL VERSION MODAL */}
-            <Modal isOpen={historyPushModal.isOpen} onClose={() => setHistoryPushModal({ ...historyPushModal, isOpen: false })} title="Deploy Historical Version">
+            <Modal isOpen={historyPushModal.isOpen} onClose={() => setHistoryPushModal({ ...historyPushModal, isOpen: false })} title={t('admin_pages.admin_dashboard.push_modal.title', 'Deploy Historical Version')}>
                 <div className="p-6 space-y-5 bg-gray-50/50">
                     <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-start gap-4">
                         <div className="p-3 bg-emerald-100 text-emerald-600 rounded-full shrink-0">
                             <Smartphone className="w-6 h-6" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-gray-900 text-lg">Target: v{historyPushModal.versionData?.versionString}</h4>
-                            <p className="text-sm text-gray-500 font-medium">Build ID: {historyPushModal.versionData?.latestNativeBuild}</p>
+                            <h4 className="font-bold text-gray-900 text-lg">{t('admin_pages.admin_dashboard.push_modal.target', 'Target: v{{version}}', { version: historyPushModal.versionData?.versionString })}</h4>
+                            <p className="text-sm text-gray-500 font-medium">{t('admin_pages.admin_dashboard.push_modal.build_id', 'Build ID: {{build}}', { build: historyPushModal.versionData?.latestNativeBuild })}</p>
                             {historyPushModal.versionData?.releaseNotes && (
                                 <p className="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded border border-gray-100 italic">
                                     "{historyPushModal.versionData.releaseNotes}"
@@ -1359,8 +1365,8 @@ export function AdminDashboard() {
                                 />
                             </div>
                             <div className="ml-3">
-                                <span className="block font-bold text-gray-800 text-sm">Enforce Mandatory Update</span>
-                                <span className="block text-xs text-gray-500 mt-0.5">If checked, users cannot dismiss the prompt and must download the APK.</span>
+                                <span className="block font-bold text-gray-800 text-sm">{t('admin_pages.admin_dashboard.push_modal.mandatory', 'Enforce Mandatory Update')}</span>
+                                <span className="block text-xs text-gray-500 mt-0.5">{t('admin_pages.admin_dashboard.push_modal.mandatory_desc', 'If checked, users cannot dismiss the prompt and must download the APK.')}</span>
                             </div>
                         </label>
 
@@ -1372,32 +1378,32 @@ export function AdminDashboard() {
                                 />
                             </div>
                             <div className="ml-3">
-                                <span className="block font-bold text-gray-800 text-sm">Send Push Notification</span>
-                                <span className="block text-xs text-gray-500 mt-0.5">Alert all outdated users via FCM that this specific version is available.</span>
+                                <span className="block font-bold text-gray-800 text-sm">{t('admin_pages.admin_dashboard.push_modal.notify', 'Send Push Notification')}</span>
+                                <span className="block text-xs text-gray-500 mt-0.5">{t('admin_pages.admin_dashboard.push_modal.notify_desc', 'Alert all outdated users via FCM that this specific version is available.')}</span>
                             </div>
                         </label>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                        <Button variant="secondary" onClick={() => setHistoryPushModal({ ...historyPushModal, isOpen: false })}>Cancel</Button>
+                        <Button variant="secondary" onClick={() => setHistoryPushModal({ ...historyPushModal, isOpen: false })}>{t('admin_pages.admin_dashboard.cancel', 'Cancel')}</Button>
                         <Button variant="primary" onClick={handlePushHistoryVersion} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 shadow-md border-emerald-700">
-                            <CloudDownload className="w-4 h-4 mr-2" /> Push Version Now
+                            <CloudDownload className="w-4 h-4 mr-2" /> {t('admin_pages.admin_dashboard.push_modal.push_now', 'Push Version Now')}
                         </Button>
                     </div>
                 </div>
             </Modal>
 
             {/* EDIT ROLES MODAL */}
-            <Modal isOpen={!!editingRolesUser} onClose={() => setEditingRolesUser(null)} title="Modify User Access Roles">
+            <Modal isOpen={!!editingRolesUser} onClose={() => setEditingRolesUser(null)} title={t('admin_pages.admin_dashboard.roles_modal.title', 'Modify User Access Roles')}>
                 <CardBody className="p-0 bg-gray-50/50">
                     <div className="p-6 bg-white border-b border-gray-200">
-                        <p className="text-sm text-gray-600 mb-1">Adjusting roles for:</p>
+                        <p className="text-sm text-gray-600 mb-1">{t('admin_pages.admin_dashboard.roles_modal.adjusting', 'Adjusting roles for:')}</p>
                         <div className="font-bold text-gray-800 flex items-center text-xl"><Users className="w-5 h-5 mr-2 text-sky-500"/> {editingRolesUser?.displayName || editingRolesUser?.email}</div>
                     </div>
                     <div className="p-4">
                         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                             <div className="divide-y divide-gray-100">
-                                {Object.entries(ROLES).map(([key, label]) => {
+                                {Object.keys(ROLES).map((key) => {
                                     const isChecked = tempSelectedRoles.includes(key);
                                     const isDisabled = currentUser?.uid === editingRolesUser?.id && key === 'super_user';
                                     
@@ -1419,8 +1425,8 @@ export function AdminDashboard() {
                                                 }}
                                                 className="form-checkbox h-5 w-5 text-sky-600 rounded border-gray-300 transition duration-150 ease-in-out focus:ring-sky-500"
                                             />
-                                            <span className={`font-bold ${isChecked ? 'text-sky-900' : 'text-gray-700'}`}>{label}</span>
-                                            {isChecked && <div className={`ml-auto text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${getRoleBadgeStyle(key)}`}>Active</div>}
+                                            <span className={`font-bold ${isChecked ? 'text-sky-900' : 'text-gray-700'}`}>{roleLabel(key)}</span>
+                                            {isChecked && <div className={`ml-auto text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${getRoleBadgeStyle(key)}`}>{t('admin_pages.admin_dashboard.roles_modal.active', 'Active')}</div>}
                                         </label>
                                     );
                                 })}
@@ -1438,13 +1444,13 @@ export function AdminDashboard() {
 
                             return (
                                 <div className="mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl shadow-inner space-y-3 animate-in fade-in zoom-in duration-200">
-                                    <h4 className="text-sm font-bold text-sky-900 flex items-center"><Filter className="w-4 h-4 mr-2"/> Required Geographic Assignment</h4>
-                                    <p className="text-xs text-sky-700 font-medium">The selected roles require you to assign a specific geographic boundary.</p>
+                                    <h4 className="text-sm font-bold text-sky-900 flex items-center"><Filter className="w-4 h-4 mr-2"/> {t('admin_pages.admin_dashboard.roles_modal.geo_title', 'Required Geographic Assignment')}</h4>
+                                    <p className="text-xs text-sky-700 font-medium">{t('admin_pages.admin_dashboard.roles_modal.geo_desc', 'The selected roles require you to assign a specific geographic boundary.')}</p>
                                     
                                     <div className="pt-2 space-y-3">
                                         <FormGroup>
                                             <Select value={tempSelectedState} onChange={(e) => { setTempSelectedState(e.target.value); setTempSelectedLocality(''); }} className="w-full bg-white font-bold text-sm shadow-sm">
-                                                <option value="">-- Select Required State --</option>
+                                                <option value="">{t('admin_pages.admin_dashboard.roles_modal.select_state', '-- Select Required State --')}</option>
                                                 {STATES.map(state => (<option key={state} value={state}>{state}</option>))}
                                             </Select>
                                         </FormGroup>
@@ -1452,7 +1458,7 @@ export function AdminDashboard() {
                                         {needsLocality && (
                                             <FormGroup>
                                                 <Select value={tempSelectedLocality} onChange={(e) => setTempSelectedLocality(e.target.value)} disabled={!tempSelectedState} className="w-full bg-white font-bold text-sm shadow-sm disabled:opacity-50">
-                                                    <option value="">-- Select Required Locality --</option>
+                                                    <option value="">{t('admin_pages.admin_dashboard.roles_modal.select_locality', '-- Select Required Locality --')}</option>
                                                     {availableLocalities.map(loc => (<option key={loc.en} value={loc.en}>{loc.ar}</option>))}
                                                 </Select>
                                             </FormGroup>
@@ -1462,42 +1468,42 @@ export function AdminDashboard() {
                             );
                         })()}
 
-                        <p className="text-xs text-gray-500 mt-4 flex items-start px-1"><Shield className="w-3.5 h-3.5 mr-1.5 mt-0.5 shrink-0"/> Assigning multiple roles will automatically grant the highest level of permissions derived from all selected blueprints.</p>
+                        <p className="text-xs text-gray-500 mt-4 flex items-start px-1"><Shield className="w-3.5 h-3.5 mr-1.5 mt-0.5 shrink-0"/> {t('admin_pages.admin_dashboard.roles_modal.multi_note', 'Assigning multiple roles will automatically grant the highest level of permissions derived from all selected blueprints.')}</p>
                     </div>
                 </CardBody>
                 <CardFooter className="bg-white border-t border-gray-100">
                     <div className="flex justify-end gap-3 w-full pt-1">
-                        <Button variant="secondary" onClick={() => setEditingRolesUser(null)} className="px-5">Cancel</Button>
+                        <Button variant="secondary" onClick={() => setEditingRolesUser(null)} className="px-5">{t('admin_pages.admin_dashboard.cancel', 'Cancel')}</Button>
                         <Button variant="primary" onClick={() => {
                             const LOCATION_ASSIGNMENT_ROLES = ['states_manager', 'state_coordinator', 'locality_manager'];
                             const needsLocation = tempSelectedRoles.some(r => LOCATION_ASSIGNMENT_ROLES.includes(r));
                             const needsLocality = tempSelectedRoles.includes('locality_manager');
                             
                             if (needsLocation && !tempSelectedState) {
-                                setToast({ show: true, message: "You must select a State for this role configuration.", type: "error" });
+                                setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.must_state', 'You must select a State for this role configuration.'), type: "error" });
                                 return;
                             }
                             if (needsLocality && !tempSelectedLocality) {
-                                setToast({ show: true, message: "You must select a Locality for this role configuration.", type: "error" });
+                                setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.must_locality', 'You must select a Locality for this role configuration.'), type: "error" });
                                 return;
                             }
 
                             handleUserRolesChange(editingRolesUser.id, tempSelectedRoles, tempSelectedState, tempSelectedLocality);
                             setEditingRolesUser(null);
                         }} className="px-6 shadow-md">
-                            Confirm & Apply Roles
+                            {t('admin_pages.admin_dashboard.roles_modal.confirm', 'Confirm & Apply Roles')}
                         </Button>
                     </div>
                 </CardFooter>
             </Modal>
 
             {/* CONFIGURE ROLE PERMISSIONS MODAL */}
-            <Modal isOpen={!!editingPermissionRole} onClose={() => {}} title="Configure Blueprint Permissions">
+            <Modal isOpen={!!editingPermissionRole} onClose={() => {}} title={t('admin_pages.admin_dashboard.blueprint_modal.title', 'Configure Blueprint Permissions')}>
                 <CardBody className="p-0 bg-gray-50/50">
                     <div className="p-6 border-b border-gray-200 bg-white">
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">Editing Permissions Blueprint for:</p>
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">{t('admin_pages.admin_dashboard.blueprint_modal.editing', 'Editing Permissions Blueprint for:')}</p>
                         <div className="font-black text-sky-900 flex items-center text-3xl">
-                            <Shield className="w-8 h-8 mr-3 text-sky-500"/> {editingPermissionRole && ROLES[editingPermissionRole]}
+                            <Shield className="w-8 h-8 mr-3 text-sky-500"/> {editingPermissionRole && roleLabel(editingPermissionRole)}
                         </div>
                     </div>
                     {editingPermissionRole && (
@@ -1515,22 +1521,22 @@ export function AdminDashboard() {
                 <CardFooter className="bg-white border-t border-gray-100">
                     <div className="flex justify-end gap-3 w-full pt-1">
                         <Button variant="primary" onClick={handleCloseAndSyncBlueprint} disabled={loading} className="px-8 shadow-sm">
-                            {loading ? <><Spinner size="sm" className="mr-2" /> Saving...</> : "Done & Sync"}
+                            {loading ? <><Spinner size="sm" className="mr-2" /> {t('admin_pages.admin_dashboard.saving', 'Saving...')}</> : t('admin_pages.admin_dashboard.blueprint_modal.done', 'Done & Sync')}
                         </Button>
                     </div>
                 </CardFooter>
             </Modal>
 
             {/* CONFIGURE INDIVIDUAL USER PERMISSIONS MODAL */}
-            <Modal isOpen={!!editingUserPermissions} onClose={() => setEditingUserPermissions(null)} title="Configure Custom User Permissions">
+            <Modal isOpen={!!editingUserPermissions} onClose={() => setEditingUserPermissions(null)} title={t('admin_pages.admin_dashboard.custom_modal.title', 'Configure Custom User Permissions')}>
                 <CardBody className="p-0 bg-gray-50/50">
                     <div className="p-6 border-b border-gray-200 bg-white">
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">Editing Custom Permissions For:</p>
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">{t('admin_pages.admin_dashboard.custom_modal.editing', 'Editing Custom Permissions For:')}</p>
                         <div className="font-black text-purple-900 flex items-center text-2xl">
                             <Shield className="w-6 h-6 mr-3 text-purple-500"/> {editingUserPermissions?.displayName || editingUserPermissions?.email}
                         </div>
                         <p className="text-xs text-amber-600 mt-2 font-medium flex items-center">
-                            ⚠️ Changing this user's role later will reset these custom permissions back to the role defaults.
+                            {t('admin_pages.admin_dashboard.custom_modal.warning', "⚠️ Changing this user's role later will reset these custom permissions back to the role defaults.")}
                         </p>
                     </div>
                     {editingUserPermissions && (
@@ -1547,16 +1553,16 @@ export function AdminDashboard() {
                 </CardBody>
                 <CardFooter className="bg-white border-t border-gray-100">
                     <div className="flex justify-end gap-3 w-full pt-1">
-                        <Button variant="secondary" onClick={() => setEditingUserPermissions(null)} className="px-5">Cancel</Button>
+                        <Button variant="secondary" onClick={() => setEditingUserPermissions(null)} className="px-5">{t('admin_pages.admin_dashboard.cancel', 'Cancel')}</Button>
                         <Button variant="primary" onClick={handleSaveIndividualPermissions} className="px-8 shadow-sm">
-                            Save Custom Permissions
+                            {t('admin_pages.admin_dashboard.custom_modal.save', 'Save Custom Permissions')}
                         </Button>
                     </div>
                 </CardFooter>
             </Modal>
 
             {/* USER PROFILE MODAL */}
-            <Modal isOpen={!!viewingUser} onClose={() => setViewingUser(null)} title="Full User Profile">
+            <Modal isOpen={!!viewingUser} onClose={() => setViewingUser(null)} title={t('admin_pages.admin_dashboard.profile.title', 'Full User Profile')}>
                 {viewingUser && (
                     <div className="p-6 space-y-6">
                         <div className="flex items-start space-x-5 border-b border-gray-100 pb-6">
@@ -1564,11 +1570,11 @@ export function AdminDashboard() {
                                 {(viewingUser.displayName || viewingUser.email || 'U')[0].toUpperCase()}
                             </div>
                             <div className="flex-1 pt-1">
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">{viewingUser.displayName || 'No Name Set'}</h3>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">{viewingUser.displayName || t('admin_pages.admin_dashboard.profile.no_name', 'No Name Set')}</h3>
                                 <div className="flex flex-wrap gap-1.5">
                                     {(viewingUser.roles || [viewingUser.role]).map(r => (
                                         <span key={r} className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full shadow-sm border ${getRoleBadgeStyle(r)}`}>
-                                            {ROLES[r] || r}
+                                            {roleLabel(r)}
                                         </span>
                                     ))}
                                 </div>
@@ -1577,36 +1583,36 @@ export function AdminDashboard() {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
-                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">Email Identity</span>
+                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.email', 'Email Identity')}</span>
                                 <span className="text-gray-800 font-medium">{viewingUser.email}</span>
                             </div>
 
                             <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
-                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">Last Active Login</span>
+                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.last_login', 'Last Active Login')}</span>
                                 <span className="text-gray-800 font-medium flex items-center">
                                     <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400"/>
-                                    {viewingUser.lastLogin ? new Date(viewingUser.lastLogin.seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Never Logged In'}
+                                    {viewingUser.lastLogin ? new Date(viewingUser.lastLogin.seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : t('admin_pages.admin_dashboard.profile.never', 'Never Logged In')}
                                 </span>
                             </div>
 
                             <div className="bg-sky-50 border border-sky-100 p-4 rounded-xl md:col-span-2">
-                                <span className="block text-xs text-sky-600 font-bold uppercase tracking-wide mb-2">Aggregate System Access</span>
+                                <span className="block text-xs text-sky-600 font-bold uppercase tracking-wide mb-2">{t('admin_pages.admin_dashboard.profile.access', 'Aggregate System Access')}</span>
                                 <span className="text-sky-900 font-bold capitalize text-base">
-                                    {(viewingUser.roles || [viewingUser.role]).map(r => ROLES[r] || r).join(' • ') || 'Standard User'}
+                                    {(viewingUser.roles || [viewingUser.role]).map(r => roleLabel(r)).join(' • ') || t('admin_pages.admin_dashboard.roles.user', 'Standard User')}
                                 </span>
                             </div>
                             
                             <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
-                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">Geographic State</span>
+                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.geo_state', 'Geographic State')}</span>
                                 <span className="text-gray-900 font-bold">
-                                    {viewingUser.assignedState || 'Global (No Restrictions)'}
+                                    {viewingUser.assignedState || t('admin_pages.admin_dashboard.profile.global', 'Global (No Restrictions)')}
                                   </span>
                             </div>
                             
                             <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
-                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">Geographic Locality</span>
+                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.geo_locality', 'Geographic Locality')}</span>
                                 <span className="text-gray-900 font-bold">
-                                    {viewingUser.assignedLocality || 'All Localities in Area'}
+                                    {viewingUser.assignedLocality || t('admin_pages.admin_dashboard.profile.all_in_area', 'All Localities in Area')}
                                 </span>
                             </div>
                         </div>
@@ -1620,7 +1626,7 @@ export function AdminDashboard() {
                                     variant="outline" 
                                     className="text-xs sm:text-sm px-3 border-orange-200 text-orange-700 hover:bg-orange-50"
                                 >
-                                    Wipe Device Cache
+                                    {t('admin_pages.admin_dashboard.profile.wipe_cache', 'Wipe Device Cache')}
                                 </Button>
 
                                 <Button 
@@ -1628,7 +1634,7 @@ export function AdminDashboard() {
                                     variant="secondary" 
                                     className="text-xs sm:text-sm px-3 bg-white border-sky-200 text-sky-700 hover:bg-sky-50"
                                 >
-                                    Reset Password
+                                    {t('admin_pages.admin_dashboard.profile.reset_password', 'Reset Password')}
                                 </Button>
                                 
                                 {currentUserRoles.includes('super_user') && (
@@ -1637,13 +1643,13 @@ export function AdminDashboard() {
                                         variant="danger" 
                                         className="text-xs sm:text-sm px-3 bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800"
                                     >
-                                        Delete Profile
+                                        {t('admin_pages.admin_dashboard.profile.delete', 'Delete Profile')}
                                     </Button>
                                 )}
                             </div>
 
                             <Button onClick={() => setViewingUser(null)} variant="secondary" className="px-6 w-full sm:w-auto">
-                                Close Profile
+                                {t('admin_pages.admin_dashboard.profile.close', 'Close Profile')}
                             </Button>
                         </div>
                     </div>

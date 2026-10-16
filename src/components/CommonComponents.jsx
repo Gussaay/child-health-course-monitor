@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // =============================================================================
 // Card & Page Layout Components
@@ -19,11 +20,14 @@ export const PageHeader = ({ title, subtitle, actions }) => (
     </div>
 );
 
-export const Footer = () => (
-    <footer className="bg-slate-800 text-slate-400 text-center p-4 mt-8">
-        <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:underline">Gussaay@gmail.com</a></p>
-    </footer>
-);
+export const Footer = () => {
+    const { t } = useTranslation();
+    return (
+        <footer className="bg-slate-800 text-slate-400 text-center p-4 mt-8">
+            <p>{t('shared_ui.common.footer_credit', 'App developed by Dr Qusay Mohamed')} - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:underline">Gussaay@gmail.com</a></p>
+        </footer>
+    );
+};
 
 
 // =============================================================================
@@ -131,10 +135,11 @@ export function Checkbox(props) {
 }
 
 export function FileUpload({ accept, onChange, ...props }) {
+    const { t } = useTranslation();
     return (
         <div className="flex items-center">
             <label className="block">
-                <span className="sr-only">Choose file</span>
+                <span className="sr-only">{t('shared_ui.common.choose_file', 'Choose file')}</span>
                 <input
                     type="file"
                     accept={accept}
@@ -162,12 +167,13 @@ export const ActionGroup = ({ children, className = '' }) => (
     </div>
 );
 
-export const Table = ({ headers, children }) => {
+export const Table = ({ headers, children, cardsOnPhone = false }) => {
   const tableHeaders = Array.isArray(headers) ? headers : [];
   const cellClassName = 'px-4 py-3'; // Standardized padding for all cells
 
+  const Wrapper = cardsOnPhone ? PhoneCards : 'div';
   return (
-    <div className="overflow-x-auto border border-gray-200 rounded-lg my-4">
+    <Wrapper className="overflow-x-auto border border-gray-200 rounded-lg my-4">
       <table className="min-w-full text-sm divide-y divide-gray-200 table-fixed">
         <thead className="bg-gray-100">
           <tr className="text-left text-gray-700">
@@ -202,10 +208,33 @@ export const Table = ({ headers, children }) => {
           })}
         </tbody>
       </table>
-    </div>
+    </Wrapper>
   );
 };
 
+
+// Shows each table row as a card on phones, with the column name beside each
+// value, so wide lists need no sideways scrolling (styles in index.css). The
+// labels are copied from the table's header cells after every render, so it
+// works for any table inside it, including ones whose headers are components.
+export const PhoneCards = ({ children, className = '' }) => {
+    const ref = useRef(null);
+    useLayoutEffect(() => {
+        ref.current?.querySelectorAll('table').forEach((table) => {
+            const labels = [...table.querySelectorAll(':scope > thead th')].map((th) => th.textContent.trim());
+            table.querySelectorAll(':scope > tbody > tr').forEach((tr) => {
+                let col = 0;
+                [...tr.children].forEach((cell) => {
+                    const span = Number(cell.getAttribute('colspan')) || 1;
+                    if (span === 1 && labels[col]) cell.setAttribute('data-label', labels[col]);
+                    else cell.removeAttribute('data-label');
+                    col += span;
+                });
+            });
+        });
+    });
+    return <div ref={ref} className={`cards-on-phone ${className}`}>{children}</div>;
+};
 
 // --- MODIFICATION: Updated EmptyState to render a table row ---
 export const EmptyState = ({ message, colSpan = 1 }) => (
@@ -216,6 +245,50 @@ export const EmptyState = ({ message, colSpan = 1 }) => (
     </tr>
 );
 // --- END MODIFICATION ---
+
+// Shimmer placeholders for content that is still loading (styles in index.css).
+export const Skeleton = ({ className = '' }) => <div className={`shimmer rounded ${className}`} aria-hidden="true" />;
+
+export const SkeletonCard = ({ lines = 3 }) => (
+    <Card className="p-4 md:p-6">
+        <div className="flex items-center gap-3 mb-4">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-1/4" />
+            </div>
+        </div>
+        <div className="space-y-2">
+            {Array.from({ length: lines }, (_, i) => <Skeleton key={i} className={`h-3 ${i === lines - 1 ? 'w-2/3' : 'w-full'}`} />)}
+        </div>
+    </Card>
+);
+
+export const SkeletonTable = ({ rows = 6, columns = 4 }) => (
+    <div className="space-y-3" aria-hidden="true">
+        <div className="flex gap-3">{Array.from({ length: columns }, (_, i) => <Skeleton key={i} className="h-4 flex-1" />)}</div>
+        {Array.from({ length: rows }, (_, r) => (
+            <div key={r} className="flex gap-3">{Array.from({ length: columns }, (_, c) => <Skeleton key={c} className="h-8 flex-1" />)}</div>
+        ))}
+    </div>
+);
+
+// Stands in for a whole page while its code or data loads.
+export const PageSkeleton = () => {
+    const { t } = useTranslation();
+    return (
+    <div className="space-y-4" role="status" aria-busy="true" aria-label={t('shared_ui.common.loading', 'Loading')}>
+        <div className="space-y-2">
+            <Skeleton className="h-7 w-1/2 sm:w-1/3" />
+            <Skeleton className="h-4 w-1/3 sm:w-1/5" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+        </div>
+        <Card className="p-4 md:p-6"><SkeletonTable /></Card>
+    </div>
+    );
+};
 
 export const Spinner = () => <div className="flex justify-center items-center p-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div></div>;
 
@@ -240,6 +313,7 @@ export const CourseIcon = ({ course }) => {
 // div-based modal had. showModal() also makes the rest of the page inert, so
 // background content can no longer be tabbed into or scrolled behind it.
 export function Modal({ isOpen, onClose, title, children }) {
+    const { t } = useTranslation();
     const dialogRef = useRef(null);
 
     useEffect(() => {
@@ -301,7 +375,7 @@ export function Modal({ isOpen, onClose, title, children }) {
         >
             <div className="flex items-center justify-between p-4 border-b">
                 <h3 id="modal-title" className="text-lg font-semibold">{title}</h3>
-                <button type="button" onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-700">
+                <button type="button" onClick={onClose} aria-label={t('shared_ui.common.close', 'Close')} className="text-gray-500 hover:text-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -315,6 +389,7 @@ export function Modal({ isOpen, onClose, title, children }) {
 }
 
 export function Toast({ message, type, onClose }) {
+    const { t } = useTranslation();
     const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'; // Added default/info case
     const borderColor = type === 'success' ? 'border-green-600' : type === 'error' ? 'border-red-600' : 'border-blue-600'; // Added default/info case
     const icon = type === 'success' ? (
@@ -343,7 +418,7 @@ export function Toast({ message, type, onClose }) {
             {icon}
             <div className="ml-3 text-sm font-medium">{message}</div>
             <button onClick={onClose} className="ml-auto -mx-1.5 -my-1.5 bg-transparent rounded-lg p-1.5 inline-flex h-8 w-8 text-white hover:bg-white hover:bg-opacity-20 focus:outline-none focus:ring-2 focus:ring-white">
-                <span className="sr-only">Dismiss</span>
+                <span className="sr-only">{t('shared_ui.common.dismiss', 'Dismiss')}</span>
                 <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
@@ -368,19 +443,20 @@ export const finalReportStatus = (report) => {
 };
 
 export function FinalReportStatusBadges({ report, className = '' }) {
+    const { t } = useTranslation();
     const s = finalReportStatus(report);
     const pill = 'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap';
     return (
         <div className={`flex flex-wrap gap-1 ${className}`}>
             {s.uploaded
-                ? <span className={`${pill} bg-blue-50 text-blue-700 border-blue-200`}>Report uploaded</span>
-                : <span className={`${pill} bg-slate-50 text-slate-500 border-slate-200`}>No report</span>}
+                ? <span className={`${pill} bg-blue-50 text-blue-700 border-blue-200`}>{t('shared_ui.common.report_uploaded', 'Report uploaded')}</span>
+                : <span className={`${pill} bg-slate-50 text-slate-500 border-slate-200`}>{t('shared_ui.common.no_report', 'No report')}</span>}
             {s.uploaded && (s.signed
-                ? <span className={`${pill} bg-emerald-50 text-emerald-700 border-emerald-200`}>Signed</span>
-                : <span className={`${pill} bg-amber-50 text-amber-700 border-amber-200`}>Not signed</span>)}
+                ? <span className={`${pill} bg-emerald-50 text-emerald-700 border-emerald-200`}>{t('shared_ui.common.signed', 'Signed')}</span>
+                : <span className={`${pill} bg-amber-50 text-amber-700 border-amber-200`}>{t('shared_ui.common.not_signed', 'Not signed')}</span>)}
             {s.pending > 0
-                ? <span className={`${pill} bg-red-50 text-red-700 border-red-200`}>{s.pending} pending recommendation{s.pending === 1 ? '' : 's'}</span>
-                : s.recommendations > 0 && <span className={`${pill} bg-emerald-50 text-emerald-700 border-emerald-200`}>Recommendations done</span>}
+                ? <span className={`${pill} bg-red-50 text-red-700 border-red-200`}>{s.pending === 1 ? t('shared_ui.common.pending_recommendation', '{{count}} pending recommendation', { count: s.pending }) : t('shared_ui.common.pending_recommendations', '{{count}} pending recommendations', { count: s.pending })}</span>
+                : s.recommendations > 0 && <span className={`${pill} bg-emerald-50 text-emerald-700 border-emerald-200`}>{t('shared_ui.common.recommendations_done', 'Recommendations done')}</span>}
         </div>
     );
 }

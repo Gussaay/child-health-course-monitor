@@ -195,7 +195,7 @@ export function annualNeed(quantification, cohortSize, facilityCount) {
 // =============================================================================
 
 function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defaultService, section = 'list' }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const [form, setForm] = useState(() => item || emptySupplyItem(defaultCategory, defaultService));
     const [saving, setSaving] = useState(false);
@@ -224,22 +224,22 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
 
     const handleSave = async () => {
         if (!form.name?.trim()) {
-            notify('Please enter the item name.', 'error');
+            notify(t('trackers.supply.form.err_name', 'Please enter the item name.'), 'error');
             return;
         }
         if (!form.service) {
-            notify('Please choose the service this item belongs to.', 'error');
+            notify(t('trackers.supply.form.err_service', 'Please choose the service this item belongs to.'), 'error');
             return;
         }
         setSaving(true);
         try {
             await upsertSupplyItem({ ...form, name: form.name.trim() });
-            notify(item?.id ? 'Item updated.' : 'Item added to the essential list.', 'success');
+            notify(item?.id ? t('trackers.supply.form.updated', 'Item updated.') : t('trackers.supply.form.added', 'Item added to the essential list.'), 'success');
             onSaved();
             onClose();
         } catch (error) {
             console.error('Failed to save supply item:', error);
-            notify('Could not save the item. Please try again.', 'error');
+            notify(t('trackers.supply.form.save_failed', 'Could not save the item. Please try again.'), 'error');
         } finally {
             setSaving(false);
         }
@@ -250,8 +250,8 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
             isOpen={isOpen}
             onClose={onClose}
             title={item?.id
-                ? (section === 'quantification' ? 'Quantification parameters' : 'Edit supply item')
-                : 'Add supply item'}
+                ? (section === 'quantification' ? t('trackers.supply.form.quant_params', 'Quantification parameters') : t('trackers.supply.form.edit_title', 'Edit supply item'))
+                : t('trackers.supply.form.add_title', 'Add supply item')}
         >
             <div className="space-y-6">
                 {/* Strictly one half or the other, never both. Adding an item is
@@ -260,11 +260,11 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                     exists. A new item therefore gets its category's default
                     parameters and is refined from the Quantification tab. */}
                 <section className={`space-y-4 ${section === 'quantification' ? 'hidden' : ''}`}>
-                    <h4 className="font-semibold text-gray-800 border-b pb-2">Item details</h4>
+                    <h4 className="font-semibold text-gray-800 border-b pb-2">{t('trackers.supply.form.item_details', 'Item details')}</h4>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Select
-                            label="Category"
+                            label={t('trackers.supply.form.category', 'Category')}
                             value={form.category}
                             onChange={(e) => {
                                 const category = e.target.value;
@@ -286,43 +286,43 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                             ))}
                         </Select>
 
-                        <Select label="Service" value={form.service} onChange={(e) => setField('service', e.target.value)}>
+                        <Select label={t('trackers.supply.form.service', 'Service')} value={form.service} onChange={(e) => setField('service', e.target.value)}>
                             {SUPPLY_SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </Select>
 
                         <Input
-                            label="Item name (English)"
+                            label={t('trackers.supply.form.name_en', 'Item name (English)')}
                             value={form.name}
                             onChange={(e) => setField('name', e.target.value)}
-                            placeholder="e.g. Amoxicillin dispersible"
+                            placeholder={t('trackers.supply.form.name_ph', 'e.g. Amoxicillin dispersible')}
                         />
                         <Input
-                            label="Item name (Arabic)"
+                            label={t('trackers.supply.form.name_ar', 'Item name (Arabic)')}
                             value={form.nameAr || ''}
                             onChange={(e) => setField('nameAr', e.target.value)}
                             dir="rtl"
                         />
 
                         <Input
-                            label="Item code"
+                            label={t('trackers.supply.form.code', 'Item code')}
                             value={form.code || ''}
                             onChange={(e) => setField('code', e.target.value)}
-                            placeholder="Optional"
+                            placeholder={t('trackers.supply.form.optional', 'Optional')}
                         />
 
-                        <Select label="Unit of measure" value={form.unit || ''} onChange={(e) => setField('unit', e.target.value)}>
-                            <option value="">Select a unit…</option>
+                        <Select label={t('trackers.supply.form.unit', 'Unit of measure')} value={form.unit || ''} onChange={(e) => setField('unit', e.target.value)}>
+                            <option value="">{t('trackers.supply.form.select_unit', 'Select a unit…')}</option>
                             {UNITS_OF_MEASURE.map((u) => <option key={u} value={u}>{u}</option>)}
                         </Select>
 
                         <Input
-                            label="Indicative price (per unit)"
+                            label={t('trackers.supply.form.price', 'Indicative price (per unit)')}
                             type="number" min="0" step="any"
                             value={form.indicativePrice ?? ''}
                             onChange={(e) => setField('indicativePrice', e.target.value)}
-                            placeholder="e.g. 0.85"
+                            placeholder={t('trackers.supply.form.price_ph', 'e.g. 0.85')}
                         />
-                        <Select label="Currency" value={form.currency || 'USD'}
+                        <Select label={t('trackers.supply.form.currency', 'Currency')} value={form.currency || 'USD'}
                             onChange={(e) => setField('currency', e.target.value)}>
                             {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                         </Select>
@@ -330,13 +330,13 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                         {isDrug && (
                             <>
                                 <Input
-                                    label="Strength"
+                                    label={t('trackers.supply.form.strength', 'Strength')}
                                     value={form.strength || ''}
                                     onChange={(e) => setField('strength', e.target.value)}
-                                    placeholder="e.g. 250 mg"
+                                    placeholder={t('trackers.supply.form.strength_ph', 'e.g. 250 mg')}
                                 />
-                                <Select label="Dosage form" value={form.form || ''} onChange={(e) => setField('form', e.target.value)}>
-                                    <option value="">Select a form…</option>
+                                <Select label={t('trackers.supply.form.dosage_form', 'Dosage form')} value={form.form || ''} onChange={(e) => setField('form', e.target.value)}>
+                                    <option value="">{t('trackers.supply.form.select_form', 'Select a form…')}</option>
                                     {DOSAGE_FORMS.map((f) => <option key={f} value={f}>{f}</option>)}
                                 </Select>
                             </>
@@ -344,14 +344,14 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                     </div>
 
                     <Textarea
-                        label="Description"
+                        label={t('trackers.supply.form.description', 'Description')}
                         rows={2}
                         value={form.description || ''}
                         onChange={(e) => setField('description', e.target.value)}
-                        placeholder="Specification, presentation or any detail a procurement officer needs"
+                        placeholder={t('trackers.supply.form.description_ph', 'Specification, presentation or any detail a procurement officer needs')}
                     />
 
-                    <FormGroup label="Required at">
+                    <FormGroup label={t('trackers.supply.form.required_at', 'Required at')}>
                         <div className="flex flex-wrap gap-4">
                             {FACILITY_LEVELS.map((level) => (
                                 <label key={level.id} className="flex items-center gap-2 text-sm text-gray-700">
@@ -370,21 +370,20 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                             checked={form.isEssential !== false}
                             onChange={(e) => setField('isEssential', e.target.checked)}
                         />
-                        On the essential list
+                        {t('trackers.supply.form.on_list', 'On the essential list')}
                     </label>
                 </section>
 
                 <section className={`space-y-4 ${section === 'list' ? 'hidden' : ''}`}>
                     <h4 className="font-semibold text-gray-800 border-b pb-2">
-                        Quantification parameters
+                        {t('trackers.supply.form.quant_params', 'Quantification parameters')}
                     </h4>
                     <p className="text-sm text-gray-600">
-                        These drive the forecast. They are estimates for this item and can be
-                        revised at any time.
+                        {t('trackers.supply.form.quant_help', 'These drive the forecast. They are estimates for this item and can be revised at any time.')}
                     </p>
 
                     <Select
-                        label="Quantification basis"
+                        label={t('trackers.supply.form.basis', 'Quantification basis')}
                         value={form.quantification?.targetCohort || 'under_5'}
                         onChange={(e) => setQuant('targetCohort', e.target.value)}
                     >
@@ -397,13 +396,13 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input
                                 type="number" min="0" step="any"
-                                label="Quantity per facility"
+                                label={t('trackers.supply.form.qty_per_facility', 'Quantity per facility')}
                                 value={form.quantification?.quantityPerFacility ?? 0}
                                 onChange={(e) => setQuant('quantityPerFacility', e.target.value)}
                             />
                             <Input
                                 type="number" min="1" step="1"
-                                label="Replacement period (months)"
+                                label={t('trackers.supply.form.replacement_period', 'Replacement period (months)')}
                                 value={form.quantification?.reviewPeriodMonths ?? 12}
                                 onChange={(e) => setQuant('reviewPeriodMonths', e.target.value)}
                             />
@@ -412,25 +411,25 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input
                                 type="number" min="0" step="any"
-                                label="Incidence per 1000 per year"
+                                label={t('trackers.supply.form.incidence', 'Incidence per 1000 per year')}
                                 value={form.quantification?.incidencePer1000 ?? 0}
                                 onChange={(e) => setQuant('incidencePer1000', e.target.value)}
                             />
                             <Input
                                 type="number" min="0" max="100" step="any"
-                                label="Share of cases reaching care (%)"
+                                label={t('trackers.supply.form.reach', 'Share of cases reaching care (%)')}
                                 value={form.quantification?.attendanceRatePercent ?? 100}
                                 onChange={(e) => setQuant('attendanceRatePercent', e.target.value)}
                             />
                             <Input
                                 type="number" min="0" step="any"
-                                label="Treatment courses per case"
+                                label={t('trackers.supply.form.courses_per_case', 'Treatment courses per case')}
                                 value={form.quantification?.coursesPerCase ?? 1}
                                 onChange={(e) => setQuant('coursesPerCase', e.target.value)}
                             />
                             <Input
                                 type="number" min="0" step="any"
-                                label="Units per treatment course"
+                                label={t('trackers.supply.form.units_per_course', 'Units per treatment course')}
                                 value={form.quantification?.unitsPerCourse ?? 1}
                                 onChange={(e) => setQuant('unitsPerCourse', e.target.value)}
                             />
@@ -440,20 +439,20 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Input
                             type="number" min="0" max="100" step="any"
-                            label="Wastage allowance (%)"
+                            label={t('trackers.supply.form.wastage', 'Wastage allowance (%)')}
                             value={form.quantification?.wastagePercent ?? 10}
                             onChange={(e) => setQuant('wastagePercent', e.target.value)}
                         />
                         <Input
                             type="number" min="0" max="100" step="any"
-                            label="Buffer stock (%)"
+                            label={t('trackers.supply.form.buffer', 'Buffer stock (%)')}
                             value={form.quantification?.bufferPercent ?? 25}
                             onChange={(e) => setQuant('bufferPercent', e.target.value)}
                         />
                         {!perFacility && (
                             <Input
                                 type="number" min="1" step="1"
-                                label="Forecast period (months)"
+                                label={t('trackers.supply.form.forecast_period', 'Forecast period (months)')}
                                 value={form.quantification?.reviewPeriodMonths ?? 12}
                                 onChange={(e) => setQuant('reviewPeriodMonths', e.target.value)}
                             />
@@ -461,33 +460,23 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                     </div>
 
                     <div className="bg-sky-50 border border-sky-200 rounded p-3 text-sm text-sky-900">
-                        <strong>How this item will be forecast:</strong>{' '}
+                        <strong>{t('trackers.supply.form.how_forecast', 'How this item will be forecast:')}</strong>{' '}
                         {perFacility ? (
                             <>
-                                {form.quantification?.quantityPerFacility || 0} per facility ×
-                                number of facilities offering {form.service}, plus{' '}
-                                {form.quantification?.wastagePercent ?? 10}% wastage and{' '}
-                                {form.quantification?.bufferPercent ?? 25}% buffer.
+                                {t('trackers.supply.form.formula_facility', '{{qty}} per facility × number of facilities offering {{service}}, plus {{wastage}}% wastage and {{buffer}}% buffer.', { qty: form.quantification?.quantityPerFacility || 0, service: form.service, wastage: form.quantification?.wastagePercent ?? 10, buffer: form.quantification?.bufferPercent ?? 25 })}
                             </>
                         ) : (
                             <>
-                                {cohortLabel(form.quantification?.targetCohort, isArabic)} ×{' '}
-                                {form.quantification?.incidencePer1000 || 0} per 1000 ×{' '}
-                                {form.quantification?.attendanceRatePercent ?? 100}% reaching care ×{' '}
-                                {form.quantification?.coursesPerCase ?? 1} course(s) ×{' '}
-                                {form.quantification?.unitsPerCourse ?? 1} unit(s), plus{' '}
-                                {form.quantification?.wastagePercent ?? 10}% wastage and{' '}
-                                {form.quantification?.bufferPercent ?? 25}% buffer.
+                                {t('trackers.supply.form.formula_cohort', '{{cohort}} × {{incidence}} per 1000 × {{reach}}% reaching care × {{courses}} course(s) × {{units}} unit(s), plus {{wastage}}% wastage and {{buffer}}% buffer.', { cohort: cohortLabel(form.quantification?.targetCohort, isArabic), incidence: form.quantification?.incidencePer1000 || 0, reach: form.quantification?.attendanceRatePercent ?? 100, courses: form.quantification?.coursesPerCase ?? 1, units: form.quantification?.unitsPerCourse ?? 1, wastage: form.quantification?.wastagePercent ?? 10, buffer: form.quantification?.bufferPercent ?? 25 })}
                             </>
                         )}
                         <div className="mt-1 text-sky-700">
-                            Population figures come from the dashboard demographic data, so the
-                            forecast screen will fill in the cohort size.
+                            {t('trackers.supply.form.population_note', 'Population figures come from the dashboard demographic data, so the forecast screen will fill in the cohort size.')}
                         </div>
                     </div>
 
                     <Textarea
-                        label="Notes"
+                        label={t('trackers.supply.form.notes', 'Notes')}
                         rows={2}
                         value={form.notes || ''}
                         onChange={(e) => setField('notes', e.target.value)}
@@ -495,9 +484,9 @@ function SupplyItemModal({ isOpen, onClose, onSaved, item, defaultCategory, defa
                 </section>
 
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={saving}>{t('trackers.supply.cancel', 'Cancel')}</Button>
                     <Button onClick={handleSave} disabled={saving}>
-                        {saving ? 'Saving…' : 'Save item'}
+                        {saving ? t('trackers.supply.form.saving', 'Saving…') : t('trackers.supply.form.save', 'Save item')}
                     </Button>
                 </div>
             </div>
@@ -551,7 +540,7 @@ function matchService(value) {
 
 export function parseSupplyRows(rows) {
     if (!Array.isArray(rows) || rows.length < 2) {
-        return { rows: [], unknown: [], error: 'The sheet needs a header row and at least one item.' };
+        return { rows: [], unknown: [], errorKey: 'no_rows', error: 'The sheet needs a header row and at least one item.' };
     }
 
     // Find the header row: the first that mentions an item-name column.
@@ -561,7 +550,7 @@ export function parseSupplyRows(rows) {
         if (cells.some((c) => c === 'itemname' || c === 'name' || c === 'item')) { headerAt = i; break; }
     }
     if (headerAt === -1) {
-        return { rows: [], unknown: [], error: 'Could not find a header row containing an "Item name" column.' };
+        return { rows: [], unknown: [], errorKey: 'no_header', error: 'Could not find a header row containing an "Item name" column.' };
     }
 
     const header = (rows[headerAt] || []).map(normKey);
@@ -572,7 +561,7 @@ export function parseSupplyRows(rows) {
 
     const missing = IMPORT_COLUMNS.filter((c) => c.required && columns[c.id] < 0).map((c) => c.label);
     if (missing.length) {
-        return { rows: [], unknown: [], error: `These required columns are missing: ${missing.join(', ')}.` };
+        return { rows: [], unknown: [], errorKey: 'missing_columns', missing: missing.join(', '), error: `These required columns are missing: ${missing.join(', ')}.` };
     }
 
     const parsed = [];
@@ -667,6 +656,7 @@ export async function downloadSupplyTemplate() {
 }
 
 function SupplyImportModal({ isOpen, onClose, onImported }) {
+    const { t } = useTranslation();
     const [preview, setPreview] = useState(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
@@ -683,11 +673,11 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
             const sheet = wb.SheetNames.find((n) => /item|list|supply/i.test(n)) || wb.SheetNames[0];
             const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { header: 1, defval: null });
             const result = parseSupplyRows(rows);
-            if (result.error) setError(result.error);
+            if (result.error) setError(result.errorKey ? t(`trackers.supply.import.errors.${result.errorKey}`, result.error, { missing: result.missing }) : result.error);
             setPreview({ ...result, sheet, fileName: file.name });
         } catch (err) {
             console.error('Failed to read supply workbook:', err);
-            setError('Could not read that file. Is it a valid Excel workbook?');
+            setError(t('trackers.supply.import.read_failed', 'Could not read that file. Is it a valid Excel workbook?'));
         } finally {
             setBusy(false);
             event.target.value = '';
@@ -697,29 +687,29 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
     const commit = async () => {
         if (!preview?.rows?.length) return;
         const ok = await confirmDialog(
-            `Add ${preview.rows.length} items to the essential list? Existing items are not removed.`,
-            { title: 'Import essential list', confirmLabel: 'Import' }
+            t('trackers.supply.import.confirm', 'Add {{count}} items to the essential list? Existing items are not removed.', { count: preview.rows.length }),
+            { title: t('trackers.supply.import.confirm_title', 'Import essential list'), confirmLabel: t('trackers.supply.import.import', 'Import') }
         );
         if (!ok) return;
         setBusy(true); setError('');
         try {
             const count = await bulkUpsertSupplyItems(preview.rows);
-            notify(`Imported ${count} items.`, 'success');
+            notify(t('trackers.supply.import.done', 'Imported {{count}} items.', { count }), 'success');
             onImported();
             onClose();
         } catch (err) {
             console.error('Supply import failed:', err);
             const raw = String(err?.message || err);
             setError(/insufficient permissions|permission-denied/i.test(raw)
-                ? 'Firestore refused the write. Your account needs federal manager or super user rights. Nothing was saved.'
-                : `The import failed and nothing was saved. ${raw}`);
+                ? t('trackers.supply.import.permission_denied', 'Firestore refused the write. Your account needs federal manager or super user rights. Nothing was saved.')
+                : t('trackers.supply.import.failed', 'The import failed and nothing was saved. {{error}}', { error: raw }));
         } finally {
             setBusy(false);
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Import essential supply list">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('trackers.supply.import.title', 'Import essential supply list')}>
             <div className="space-y-4">
                 {error && (
                     <div className="flex gap-2 bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-sm">
@@ -730,17 +720,16 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
 
                 <div className="p-3 bg-sky-50 border border-sky-200 rounded space-y-2">
                     <div className="text-sm text-sky-900">
-                        The template lists the exact category and service names the system
-                        accepts, with one worked example per category.
+                        {t('trackers.supply.import.template_help', 'The template lists the exact category and service names the system accepts, with one worked example per category.')}
                     </div>
                     <Button variant="secondary" onClick={downloadSupplyTemplate}>
-                        <Download size={16} /> Download template
+                        <Download size={16} /> {t('trackers.supply.import.download_template', 'Download template')}
                     </Button>
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Choose an Excel workbook
+                        {t('trackers.supply.import.choose_file', 'Choose an Excel workbook')}
                     </label>
                     <input
                         type="file"
@@ -758,10 +747,9 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                         <div className="flex gap-2 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-900">
                             <CheckCircle2 size={18} className="shrink-0 mt-0.5" />
                             <div>
-                                <strong>{preview.rows.length} items</strong> read from
-                                {' '}&ldquo;{preview.sheet}&rdquo;.
+                                {t('trackers.supply.import.read_summary', '{{count}} items read from “{{sheet}}”.', { count: preview.rows.length, sheet: preview.sheet })}
                                 {preview.duplicates?.length > 0 && (
-                                    <> {preview.duplicates.length} duplicate row(s) ignored.</>
+                                    <> {t('trackers.supply.import.duplicates', '{{count}} duplicate row(s) ignored.', { count: preview.duplicates.length })}</>
                                 )}
                                 <div className="mt-1 text-xs">
                                     {SUPPLY_CATEGORIES.map((c) => {
@@ -776,12 +764,12 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">
                                 <div className="font-semibold flex items-center gap-2">
                                     <AlertTriangle size={16} />
-                                    {preview.unknown.length} row(s) skipped
+                                    {t('trackers.supply.import.skipped', '{{count}} row(s) skipped', { count: preview.unknown.length })}
                                 </div>
                                 <ul className="mt-2 ml-5 list-disc space-y-0.5 max-h-32 overflow-y-auto">
                                     {preview.unknown.slice(0, 10).map((u, i) => (
                                         <li key={i}>
-                                            Row {u.row}: &ldquo;{u.name}&rdquo; — {u.reason}
+                                            {t('trackers.supply.import.row_issue', 'Row {{row}}: “{{name}}” — {{reason}}', { row: u.row, name: u.name, reason: u.reason.includes('category') ? t('trackers.supply.import.unrecognised_category', 'unrecognised category') : t('trackers.supply.import.unrecognised_service', 'unrecognised service') })}
                                             {u.reason.includes('category')
                                                 ? ` ("${u.rawCategory}")`
                                                 : ` ("${u.rawService}")`}
@@ -789,8 +777,8 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                                     ))}
                                 </ul>
                                 <div className="mt-2 text-xs">
-                                    Category must be one of: {SUPPLY_CATEGORIES.map((c) => c.label).join(', ')}.
-                                    Service must be one of: {SUPPLY_SERVICES.join(', ')}.
+                                    {t('trackers.supply.import.category_must', 'Category must be one of: {{list}}.', { list: SUPPLY_CATEGORIES.map((c) => c.label).join(', ') })}
+                                    {' '}{t('trackers.supply.import.service_must', 'Service must be one of: {{list}}.', { list: SUPPLY_SERVICES.join(', ') })}
                                 </div>
                             </div>
                         )}
@@ -799,7 +787,7 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                             <table className="min-w-full text-xs">
                                 <thead className="bg-gray-100 sticky top-0">
                                     <tr>
-                                        {['Category', 'Service', 'Item', 'Code', 'Unit'].map((h) => (
+                                        {[t('trackers.supply.form.category', 'Category'), t('trackers.supply.form.service', 'Service'), t('trackers.supply.table.item', 'Item'), t('trackers.supply.table.code', 'Code'), t('trackers.supply.table.unit', 'Unit')].map((h) => (
                                             <th key={h} className="border-b p-2 text-left">{h}</th>
                                         ))}
                                     </tr>
@@ -821,9 +809,9 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                 )}
 
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={busy}>{t('trackers.supply.cancel', 'Cancel')}</Button>
                     <Button onClick={commit} disabled={busy || !preview?.rows?.length}>
-                        Import {preview?.rows?.length || 0} items
+                        {t('trackers.supply.import.button', 'Import {{count}} items', { count: preview?.rows?.length || 0 })}
                     </Button>
                 </div>
             </div>
@@ -838,7 +826,7 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
 const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 
 export default function SupplyManagementView({ permissions = {} }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const canManage = !!permissions.canManageSupplyChain;
 
@@ -888,17 +876,17 @@ export default function SupplyManagementView({ permissions = {} }) {
 
     const handleDelete = async (item) => {
         const ok = await confirmDialog(
-            `Remove "${item.name}" from the essential list? It will no longer appear in forecasts.`,
-            { title: 'Remove item', confirmLabel: 'Remove', danger: true }
+            t('trackers.supply.remove_confirm', 'Remove "{{name}}" from the essential list? It will no longer appear in forecasts.', { name: item.name }),
+            { title: t('trackers.supply.remove_title', 'Remove item'), confirmLabel: t('trackers.supply.remove', 'Remove'), danger: true }
         );
         if (!ok) return;
         try {
             await deleteSupplyItem(item.id);
-            notify('Item removed.', 'success');
+            notify(t('trackers.supply.removed', 'Item removed.'), 'success');
             reload();
         } catch (error) {
             console.error('Failed to delete supply item:', error);
-            notify('Could not remove the item.', 'error');
+            notify(t('trackers.supply.remove_failed', 'Could not remove the item.'), 'error');
         }
     };
 
@@ -912,23 +900,23 @@ export default function SupplyManagementView({ permissions = {} }) {
     // tab there is nothing to add: you are revising parameters on items that
     // already exist, which is why the action buttons are gated on the section.
     const headers = isQuant
-        ? ['Item', 'Service', 'Basis', 'Incidence /1000', 'Reach %', 'Units/case',
-            'Wastage %', 'Buffer %', ...(canManage ? ['Actions'] : [])]
-        : ['Item', 'Description', 'Code', isDrugTab ? 'Strength / form' : 'Required at',
-            'Unit', 'Indicative price', 'Service', ...(canManage ? ['Actions'] : [])];
+        ? [t('trackers.supply.table.item', 'Item'), t('trackers.supply.form.service', 'Service'), t('trackers.supply.table.basis', 'Basis'), t('trackers.supply.table.incidence', 'Incidence /1000'), t('trackers.supply.table.reach', 'Reach %'), t('trackers.supply.table.units_case', 'Units/case'),
+            t('trackers.supply.table.wastage', 'Wastage %'), t('trackers.supply.table.buffer', 'Buffer %'), ...(canManage ? [t('trackers.supply.table.actions', 'Actions')] : [])]
+        : [t('trackers.supply.table.item', 'Item'), t('trackers.supply.form.description', 'Description'), t('trackers.supply.table.code', 'Code'), isDrugTab ? t('trackers.supply.table.strength_form', 'Strength / form') : t('trackers.supply.form.required_at', 'Required at'),
+            t('trackers.supply.table.unit', 'Unit'), t('trackers.supply.table.price', 'Indicative price'), t('trackers.supply.form.service', 'Service'), ...(canManage ? [t('trackers.supply.table.actions', 'Actions')] : [])];
 
     return (
         <div className="space-y-4">
             <PageHeader
-                title="Supply Management"
-                subtitle="Essential supply lists for child health services"
+                title={t('trackers.supply.title', 'Supply Management')}
+                subtitle={t('trackers.supply.subtitle', 'Essential supply lists for child health services')}
                 actions={canManage && section === 'list' ? (
                     <div className="flex gap-2">
                         <Button variant="secondary" onClick={() => setImportOpen(true)}>
-                            <Upload size={16} /> Bulk upload
+                            <Upload size={16} /> {t('trackers.supply.bulk_upload', 'Bulk upload')}
                         </Button>
                         <Button onClick={openAdd}>
-                            <Plus size={16} /> Add item
+                            <Plus size={16} /> {t('trackers.supply.add_item', 'Add item')}
                         </Button>
                     </div>
                 ) : null}
@@ -966,11 +954,11 @@ export default function SupplyManagementView({ permissions = {} }) {
                     <div className="flex flex-wrap gap-3 items-end">
                         <div className="min-w-[200px]">
                             <Select
-                                label="Service"
+                                label={t('trackers.supply.form.service', 'Service')}
                                 value={service}
                                 onChange={(e) => setService(e.target.value)}
                             >
-                                <option value="all">All services</option>
+                                <option value="all">{t('trackers.supply.all_services', 'All services')}</option>
                                 {SUPPLY_SERVICES.map((s) => (
                                     <option key={s} value={s}>
                                         {s}{countsByService[s] ? ` (${countsByService[s]})` : ''}
@@ -980,15 +968,15 @@ export default function SupplyManagementView({ permissions = {} }) {
                         </div>
                         <div className="flex-1 min-w-[200px]">
                             <Input
-                                label="Search"
+                                label={t('trackers.supply.search', 'Search')}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Item name or code"
+                                placeholder={t('trackers.supply.search_ph', 'Item name or code')}
                             />
                         </div>
                         <div className="text-sm text-gray-600 pb-2">
                             <Package size={16} className="inline mr-1" />
-                            {visibleItems.length} item{visibleItems.length === 1 ? '' : 's'}
+                            {t('trackers.supply.item_count', '{{count}} item(s)', { count: visibleItems.length })}
                         </div>
                     </div>
 
@@ -999,8 +987,8 @@ export default function SupplyManagementView({ permissions = {} }) {
                                     colSpan={headers.length}
                                     message={
                                         search || service !== 'all'
-                                            ? 'No items match this filter.'
-                                            : `No ${categoryLabel(category, isArabic).toLowerCase()} on the list yet.`
+                                            ? t('trackers.supply.no_match', 'No items match this filter.')
+                                            : t('trackers.supply.empty_category', 'No {{category}} on the list yet.', { category: categoryLabel(category, isArabic).toLowerCase() })
                                     }
                                 />
                             ) : visibleItems.map((item) => (
@@ -1023,7 +1011,7 @@ export default function SupplyManagementView({ permissions = {} }) {
                                             </td>
                                             {item.quantification?.targetCohort === 'per_facility' ? (
                                                 <td className="text-gray-600" colSpan={3}>
-                                                    {item.quantification?.quantityPerFacility || 0} per facility
+                                                    {t('trackers.supply.per_facility_qty', '{{qty}} per facility', { qty: item.quantification?.quantityPerFacility || 0 })}
                                                 </td>
                                             ) : (
                                                 <>
@@ -1064,7 +1052,7 @@ export default function SupplyManagementView({ permissions = {} }) {
                                                     {item.service}
                                                 </span>
                                                 {item.isEssential === false && (
-                                                    <span className="ml-1 text-gray-400 text-xs">(not on list)</span>
+                                                    <span className="ml-1 text-gray-400 text-xs">{t('trackers.supply.not_on_list', '(not on list)')}</span>
                                                 )}
                                             </td>
                                         </>

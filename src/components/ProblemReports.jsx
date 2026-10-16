@@ -23,6 +23,7 @@ import { notify, confirmDialog } from './dialogs';
 import {
     submitProblemReport, listProblemReports, setProblemReportStatus, deleteProblemReport,
 } from '../data';
+import { useTranslation } from 'react-i18next';
 
 const STATUSES = {
     new: { label: 'New', chip: 'bg-amber-100 text-amber-800 border-amber-300' },
@@ -59,6 +60,7 @@ async function shrinkImage(file, maxEdge = 1400) {
 // =============================================================================
 
 export function ReportProblemButton({ user, currentView, className = '' }) {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const [what, setWhat] = useState('');
     const [expected, setExpected] = useState('');
@@ -75,18 +77,18 @@ export function ReportProblemButton({ user, currentView, className = '' }) {
         try {
             const data = await shrinkImage(file);
             if (!data) {
-                notify('That picture is too large even after shrinking. Try a screenshot rather than a photo.', 'error');
+                notify(t('admin_pages.problem_reports.too_large', 'That picture is too large even after shrinking. Try a screenshot rather than a photo.'), 'error');
                 return;
             }
             setShot(data);
         } catch (e) {
             console.error('Could not read that image:', e);
-            notify('That file could not be read as a picture.', 'error');
+            notify(t('admin_pages.problem_reports.unreadable_image', 'That file could not be read as a picture.'), 'error');
         }
     };
 
     const send = async () => {
-        if (!what.trim()) { notify('Describe what happened.', 'error'); return; }
+        if (!what.trim()) { notify(t('admin_pages.problem_reports.describe_required', 'Describe what happened.'), 'error'); return; }
         setBusy(true);
         try {
             await submitProblemReport({
@@ -106,7 +108,7 @@ export function ReportProblemButton({ user, currentView, className = '' }) {
             setSent(true);
         } catch (e) {
             console.error('Could not send the report:', e);
-            notify(`Could not send that. ${e?.message || ''}`.trim(), 'error');
+            notify(`${t('admin_pages.problem_reports.send_failed', 'Could not send that.')} ${e?.message || ''}`.trim(), 'error');
         } finally {
             setBusy(false);
         }
@@ -114,33 +116,32 @@ export function ReportProblemButton({ user, currentView, className = '' }) {
 
     return (
         <>
-            <button onClick={() => { reset(); setOpen(true); }} title="Report a problem"
+            <button onClick={() => { reset(); setOpen(true); }} title={t('admin_pages.problem_reports.report_problem', 'Report a problem')}
                 className={className || 'p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors'}>
                 <MessageSquareWarning size={20} />
             </button>
 
-            <Modal isOpen={open} onClose={() => setOpen(false)} title="Report a problem">
+            <Modal isOpen={open} onClose={() => setOpen(false)} title={t('admin_pages.problem_reports.report_problem', 'Report a problem')}>
                 {sent ? (
                     <div className="text-center py-6 space-y-3">
                         <Check size={40} className="mx-auto text-emerald-600" />
-                        <p className="text-slate-700 font-semibold">Thank you — that has been sent.</p>
+                        <p className="text-slate-700 font-semibold">{t('admin_pages.problem_reports.thanks', 'Thank you — that has been sent.')}</p>
                         <p className="text-sm text-slate-500">
-                            The team can see what you described, along with the screen you were on
-                            and which version you are using.
+                            {t('admin_pages.problem_reports.thanks_body', 'The team can see what you described, along with the screen you were on and which version you are using.')}
                         </p>
-                        <Button onClick={() => setOpen(false)}>Close</Button>
+                        <Button onClick={() => setOpen(false)}>{t('admin_pages.problem_reports.close', 'Close')}</Button>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         <Textarea
-                            label="What happened?"
+                            label={t('admin_pages.problem_reports.what_happened', 'What happened?')}
                             rows={3}
                             value={what}
                             onChange={(e) => setWhat(e.target.value)}
-                            placeholder="The report shows no participants after I pick a state…"
+                            placeholder={t('admin_pages.problem_reports.what_placeholder', 'The report shows no participants after I pick a state…')}
                         />
                         <Textarea
-                            label="What did you expect instead? (optional)"
+                            label={t('admin_pages.problem_reports.expected_label', 'What did you expect instead? (optional)')}
                             rows={2}
                             value={expected}
                             onChange={(e) => setExpected(e.target.value)}
@@ -148,13 +149,13 @@ export function ReportProblemButton({ user, currentView, className = '' }) {
 
                         <div>
                             <span className="block text-sm font-medium text-gray-700 mb-1">
-                                A picture of the problem (optional)
+                                {t('admin_pages.problem_reports.picture_label', 'A picture of the problem (optional)')}
                             </span>
                             {shot ? (
                                 <div className="relative">
-                                    <img src={shot} alt="Attached screenshot"
+                                    <img src={shot} alt={t('admin_pages.problem_reports.attached_screenshot', 'Attached screenshot')}
                                         className="max-h-48 rounded border mx-auto" />
-                                    <button onClick={() => setShot(null)}
+                                    <button onClick={() => setShot(null)} aria-label={t('admin_pages.problem_reports.remove_screenshot', 'Remove screenshot')}
                                         className="absolute top-1 end-1 p-1 rounded-full bg-white/90 border text-red-600">
                                         <X size={14} />
                                     </button>
@@ -162,7 +163,7 @@ export function ReportProblemButton({ user, currentView, className = '' }) {
                             ) : (
                                 <label className="flex items-center justify-center gap-2 border-2 border-dashed rounded-lg py-6 cursor-pointer text-slate-500 hover:border-sky-400 hover:text-sky-700">
                                     <Camera size={18} />
-                                    <span className="text-sm">Choose a screenshot</span>
+                                    <span className="text-sm">{t('admin_pages.problem_reports.choose_screenshot', 'Choose a screenshot')}</span>
                                     <input type="file" accept="image/*" className="hidden"
                                         onChange={(e) => { attach(e.target.files?.[0]); e.target.value = ''; }} />
                                 </label>
@@ -170,15 +171,14 @@ export function ReportProblemButton({ user, currentView, className = '' }) {
                         </div>
 
                         <p className="text-xs text-slate-500">
-                            Sent with your name, the screen you are on and the app version, so the
-                            team does not have to ask. Nothing else from the app is included.
+                            {t('admin_pages.problem_reports.sent_with', 'Sent with your name, the screen you are on and the app version, so the team does not have to ask. Nothing else from the app is included.')}
                         </p>
 
                         <div className="flex justify-end gap-2 pt-2 border-t">
-                            <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>{t('admin_pages.problem_reports.cancel', 'Cancel')}</Button>
                             <Button onClick={send} disabled={busy || !what.trim()}>
                                 {busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                                {busy ? 'Sending…' : 'Send'}
+                                {busy ? t('admin_pages.problem_reports.sending', 'Sending…') : t('admin_pages.problem_reports.send', 'Send')}
                             </Button>
                         </div>
                     </div>
@@ -193,6 +193,7 @@ export function ReportProblemButton({ user, currentView, className = '' }) {
 // =============================================================================
 
 export function ProblemReportsTab() {
+    const { t } = useTranslation();
     const [reports, setReports] = useState(null);
     const [filter, setFilter] = useState('open');
     const [openId, setOpenId] = useState(null);
@@ -203,10 +204,10 @@ export function ProblemReportsTab() {
             setReports(await listProblemReports());
         } catch (e) {
             console.error('Could not load the reports:', e);
-            notify('Could not load the problem reports.', 'error');
+            notify(t('admin_pages.problem_reports.load_failed', 'Could not load the problem reports.'), 'error');
             setReports([]);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -224,20 +225,20 @@ export function ProblemReportsTab() {
             setReports((p) => p.map((r) => (r.id === report.id ? { ...r, status } : r)));
         } catch (e) {
             console.error('Could not update that report:', e);
-            notify('Could not update that report.', 'error');
+            notify(t('admin_pages.problem_reports.update_failed', 'Could not update that report.'), 'error');
         } finally { setBusy(null); }
     };
 
     const remove = async (report) => {
-        if (!await confirmDialog('Delete this report permanently?',
-            { title: 'Delete report', confirmLabel: 'Delete', danger: true })) return;
+        if (!await confirmDialog(t('admin_pages.problem_reports.confirm_delete', 'Delete this report permanently?'),
+            { title: t('admin_pages.problem_reports.delete_report', 'Delete report'), confirmLabel: t('admin_pages.problem_reports.delete', 'Delete'), danger: true })) return;
         setBusy(report.id);
         try {
             await deleteProblemReport(report.id);
             setReports((p) => p.filter((r) => r.id !== report.id));
         } catch (e) {
             console.error('Could not delete that report:', e);
-            notify('Could not delete that report.', 'error');
+            notify(t('admin_pages.problem_reports.delete_failed', 'Could not delete that report.'), 'error');
         } finally { setBusy(null); }
     };
 
@@ -253,9 +254,9 @@ export function ProblemReportsTab() {
         <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
                 {[
-                    ['open', `Open (${counts.open})`],
-                    ['crashes', `Crashes (${counts.crashes})`],
-                    ['all', `All (${counts.all})`],
+                    ['open', t('admin_pages.problem_reports.filter_open', 'Open ({{count}})', { count: counts.open })],
+                    ['crashes', t('admin_pages.problem_reports.filter_crashes', 'Crashes ({{count}})', { count: counts.crashes })],
+                    ['all', t('admin_pages.problem_reports.filter_all', 'All ({{count}})', { count: counts.all })],
                 ].map(([key, label]) => (
                     <button key={key} onClick={() => setFilter(key)}
                         className={`px-3 py-1.5 rounded-md text-sm font-semibold border ${
@@ -269,7 +270,7 @@ export function ProblemReportsTab() {
             {shown.length === 0 ? (
                 <Card><CardBody className="text-center py-12 text-slate-500">
                     <Bug size={28} className="mx-auto mb-2 text-slate-300" />
-                    Nothing here.
+                    {t('admin_pages.problem_reports.nothing_here', 'Nothing here.')}
                 </CardBody></Card>
             ) : (
                 <div className="space-y-2">
@@ -286,11 +287,11 @@ export function ProblemReportsTab() {
 
                                     <div className="flex-1 min-w-0">
                                         <div className="font-medium text-slate-800 truncate">
-                                            {r.what || r.message || '(no description)'}
+                                            {r.what || r.message || t('admin_pages.problem_reports.no_description', '(no description)')}
                                         </div>
                                         <div className="text-xs text-slate-500 flex flex-wrap gap-x-3 mt-0.5">
-                                            <span>{r.reporterEmail || r.reporterName || 'unknown'}</span>
-                                            {r.screen && <span>on {r.screen}</span>}
+                                            <span>{r.reporterEmail || r.reporterName || t('admin_pages.problem_reports.unknown', 'unknown')}</span>
+                                            {r.screen && <span>{t('admin_pages.problem_reports.on_screen', 'on {{screen}}', { screen: r.screen })}</span>}
                                             {r.appVersion && <span>v{r.appVersion}</span>}
                                             {at && <span>{at.toLocaleDateString()} {at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                                         </div>
@@ -298,7 +299,7 @@ export function ProblemReportsTab() {
 
                                     <span className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold shrink-0 ${
                                         (STATUSES[r.status] || STATUSES.new).chip}`}>
-                                        {(STATUSES[r.status] || STATUSES.new).label}
+                                        {t(`admin_pages.problem_reports.status.${STATUSES[r.status] ? r.status : 'new'}`, (STATUSES[r.status] || STATUSES.new).label)}
                                     </span>
                                     {expanded ? <ChevronDown size={18} className="text-slate-400 shrink-0" />
                                         : <ChevronRight size={18} className="text-slate-400 shrink-0" />}
@@ -308,7 +309,7 @@ export function ProblemReportsTab() {
                                     <div className="px-4 pb-4 space-y-3 border-t pt-3">
                                         {r.expected && (
                                             <div className="text-sm">
-                                                <span className="font-semibold text-slate-600">Expected: </span>
+                                                <span className="font-semibold text-slate-600">{t('admin_pages.problem_reports.expected', 'Expected:')} </span>
                                                 {r.expected}
                                             </div>
                                         )}
@@ -321,14 +322,14 @@ export function ProblemReportsTab() {
 
                                         {r.screenshot && (
                                             <a href={r.screenshot} target="_blank" rel="noreferrer">
-                                                <img src={r.screenshot} alt="What the reporter saw"
+                                                <img src={r.screenshot} alt={t('admin_pages.problem_reports.reporter_saw', 'What the reporter saw')}
                                                     className="max-h-80 rounded border" />
                                             </a>
                                         )}
 
                                         <div className="text-xs text-slate-500 space-y-0.5">
                                             {r.userAgent && <div className="break-all">{r.userAgent}</div>}
-                                            <div>{r.online === false ? 'Offline when it happened' : 'Online'}</div>
+                                            <div>{r.online === false ? t('admin_pages.problem_reports.offline_when', 'Offline when it happened') : t('admin_pages.problem_reports.online', 'Online')}</div>
                                         </div>
 
                                         <div className="flex flex-wrap gap-2 pt-2 border-t">
@@ -337,7 +338,7 @@ export function ProblemReportsTab() {
                                                     variant={r.status === key ? 'primary' : 'secondary'}
                                                     disabled={busy === r.id}
                                                     onClick={() => setStatus(r, key)}>
-                                                    {s.label}
+                                                    {t(`admin_pages.problem_reports.status.${key}`, s.label)}
                                                 </Button>
                                             ))}
                                             <Button size="sm" variant="danger" disabled={busy === r.id}

@@ -1,4 +1,5 @@
 import React from 'react';
+import i18n from 'i18next';
 
 /**
  * Catches render errors so one broken screen does not blank the whole app.
@@ -52,10 +53,9 @@ export class ErrorBoundary extends React.Component {
         return (
             <div className="flex min-h-[60vh] items-center justify-center p-6">
                 <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-md text-center">
-                    <h2 className="text-lg font-semibold text-gray-800">This screen could not be displayed</h2>
+                    <h2 className="text-lg font-semibold text-gray-800">{i18n.t('admin_pages.error_boundary.title', 'This screen could not be displayed')}</h2>
                     <p className="mt-2 text-sm text-gray-600">
-                        Something went wrong while drawing this page. Anything you saved is still
-                        stored on this device and will upload when you are back online.
+                        {i18n.t('admin_pages.error_boundary.body', 'Something went wrong while drawing this page. Anything you saved is still stored on this device and will upload when you are back online.')}
                     </p>
                     <pre className="mt-4 max-h-32 overflow-auto rounded bg-gray-50 p-2 text-left text-xs text-gray-500">
                         {this.state.error?.message || String(this.state.error)}
@@ -66,7 +66,7 @@ export class ErrorBoundary extends React.Component {
                             onClick={this.handleReload}
                             className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
                         >
-                            Reload the app
+                            {i18n.t('admin_pages.error_boundary.reload', 'Reload the app')}
                         </button>
                         {this.props.onGoHome && (
                             <button
@@ -74,7 +74,7 @@ export class ErrorBoundary extends React.Component {
                                 onClick={this.handleGoHome}
                                 className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                             >
-                                Go to home
+                                {i18n.t('admin_pages.error_boundary.go_home', 'Go to home')}
                             </button>
                         )}
                     </div>

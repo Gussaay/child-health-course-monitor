@@ -17,6 +17,7 @@
 //   if (!(await confirmDialog('Delete this course?'))) return;
 //
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // --- tiny external store, so module functions can reach the mounted host ---
 
@@ -63,7 +64,7 @@ export function alertDialog(message, options = {}) {
     if (!text) return Promise.resolve();
     // eslint-disable-next-line no-alert -- last-resort fallback before DialogHost mounts
     if (!host) { window.alert(text); return Promise.resolve(); }
-    return host.pushConfirm(text, { title: 'Error', confirmLabel: 'OK', danger: true, ...options, hideCancel: true }).then(() => undefined);
+    return host.pushConfirm(text, { danger: true, ...options, hideCancel: true }).then(() => undefined);
 }
 
 /**
@@ -84,6 +85,7 @@ export function promptDialog(message, options = {}) {
 let nextId = 1;
 
 function Toast({ toast, onDismiss }) {
+    const { t } = useTranslation();
     useEffect(() => {
         const timer = setTimeout(onDismiss, toast.type === 'error' ? 8000 : 4500);
         return () => clearTimeout(timer);
@@ -103,7 +105,7 @@ function Toast({ toast, onDismiss }) {
             <button
                 type="button"
                 onClick={onDismiss}
-                aria-label="Dismiss"
+                aria-label={t('shared_ui.dialogs.dismiss', 'Dismiss')}
                 className="shrink-0 text-white/80 hover:text-white"
             >
                 &times;
@@ -113,6 +115,7 @@ function Toast({ toast, onDismiss }) {
 }
 
 function ConfirmDialog({ request, onAnswer }) {
+    const { t } = useTranslation();
     const dialogRef = useRef(null);
     const confirmRef = useRef(null);
 
@@ -129,12 +132,17 @@ function ConfirmDialog({ request, onAnswer }) {
     }, [onAnswer]);
 
     const {
-        title = 'Please confirm',
-        confirmLabel = 'Confirm',
-        cancelLabel = 'Cancel',
         danger = false,
         hideCancel = false,
     } = request.options;
+    // alertDialog (hideCancel) defaults to an "Error" title with an OK button.
+    const title = request.options.title ?? (hideCancel
+        ? t('shared_ui.dialogs.error', 'Error')
+        : t('shared_ui.dialogs.please_confirm', 'Please confirm'));
+    const confirmLabel = request.options.confirmLabel ?? (hideCancel
+        ? t('shared_ui.dialogs.ok', 'OK')
+        : t('shared_ui.dialogs.confirm', 'Confirm'));
+    const cancelLabel = request.options.cancelLabel ?? t('shared_ui.dialogs.cancel', 'Cancel');
 
     return (
         <dialog
@@ -174,6 +182,7 @@ function ConfirmDialog({ request, onAnswer }) {
 }
 
 function PromptDialog({ request, onAnswer }) {
+    const { t } = useTranslation();
     const dialogRef = useRef(null);
     const inputRef = useRef(null);
     const [value, setValue] = useState(request.options.defaultValue ?? '');
@@ -191,10 +200,10 @@ function PromptDialog({ request, onAnswer }) {
     }, [onAnswer]);
 
     const {
-        title = 'Enter a value',
+        title = t('shared_ui.dialogs.enter_value', 'Enter a value'),
         inputType = 'text',
-        confirmLabel = 'OK',
-        cancelLabel = 'Cancel',
+        confirmLabel = t('shared_ui.dialogs.ok', 'OK'),
+        cancelLabel = t('shared_ui.dialogs.cancel', 'Cancel'),
     } = request.options;
 
     const submit = (event) => {

@@ -1,6 +1,7 @@
 // MentorshipBulkUpload.jsx
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Timestamp } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { getAuth } from "firebase/auth";
@@ -713,6 +714,8 @@ const DetailedMentorshipBulkUploadModal = ({
     const [failedRows, setFailedRows] = useState([]);
     const fileInputRef = useRef(null);
     const auth = getAuth();
+    const { t } = useTranslation();
+    const fieldLabel = (field) => t(`mentorship_extra.bulk_upload.fields.${field.key}`, field.label);
 
     const BASE_FIELDS = [
         { key: 'session_date', label: 'Session Date (YYYY-MM-DD)', required: true },
@@ -913,7 +916,7 @@ const DetailedMentorshipBulkUploadModal = ({
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", cellDates: true });
                 if (jsonData.length < 1) {
-                    setError('Excel file appears to be empty.');
+                    setError(t('mentorship_extra.bulk_upload.errors.empty_file', 'Excel file appears to be empty.'));
                     return;
                 }
                 setHeaders(jsonData[0].map(h => String(h).trim()));
@@ -921,7 +924,7 @@ const DetailedMentorshipBulkUploadModal = ({
                 setCurrentPage(1);
                 setError('');
             } catch (err) {
-                setError('Error reading Excel file: ' + err.message);
+                setError(t('mentorship_extra.bulk_upload.errors.read_error', 'Error reading Excel file: {{message}}', { message: err.message }));
             }
         };
         reader.readAsArrayBuffer(file);
@@ -1081,19 +1084,19 @@ const DetailedMentorshipBulkUploadModal = ({
         // ... (handleValidation implementation unchanged) ...
         const missingMappings = BASE_FIELDS
             .filter(field => field.required && !fieldMappings[field.key])
-            .map(field => field.label);
+            .map(field => fieldLabel(field));
         
         // --- START: EENC Validation ---
         if (activeService === 'EENC') {
             const missingEenc = EENC_BASE_FIELDS
                 .filter(field => field.required && !fieldMappings[field.key])
-                .map(field => field.label);
+                .map(field => fieldLabel(field));
             missingMappings.push(...missingEenc);
         }
         // --- END: EENC Validation ---
 
         if (missingMappings.length > 0) {
-            setError(`The following base fields must be mapped: ${missingMappings.join(', ')}.`);
+            setError(t('mentorship_extra.bulk_upload.errors.missing_mappings', 'The following base fields must be mapped: {{fields}}.', { fields: missingMappings.join(', ') }));
             return;
         }
         setError('');
@@ -1103,7 +1106,7 @@ const DetailedMentorshipBulkUploadModal = ({
     const processAndStartImport = (dataForProcessing, originalRawData, allSubmissions) => {
         const user = auth.currentUser;
         if (!user) {
-            setError('You must be logged in to import data.');
+            setError(t('mentorship_extra.bulk_upload.errors.not_logged_in', 'You must be logged in to import data.'));
             return;
         }
 
@@ -1459,7 +1462,7 @@ const DetailedMentorshipBulkUploadModal = ({
         }); // --- End of preProcessedData.forEach loop ---
 
         if (processedSessions.length === 0) {
-            setError('No valid sessions could be processed from the Excel file. Check required fields and formats.');
+            setError(t('mentorship_extra.bulk_upload.errors.no_valid_sessions', 'No valid sessions could be processed from the Excel file. Check required fields and formats.'));
             setCurrentPage(1);
             return;
         }
@@ -1484,7 +1487,7 @@ const DetailedMentorshipBulkUploadModal = ({
     };
     const renderPreview = () => (excelData.length === 0) ? null : (
         <div className="mt-4 overflow-auto max-h-60">
-            <h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4>
+            <h4 className="font-medium mb-2">{t('mentorship_extra.bulk_upload.preview_title', 'Data Preview (first 5 rows)')}</h4>
             <table className="min-w-full border border-gray-200">
                 <thead><tr className="bg-gray-100">{headers.map((header, idx) => <th key={idx} className="border border-gray-300 p-2 text-left text-xs">{header}</th>)}</tr></thead>
                 <tbody>{excelData.slice(0, 5).map((row, rowIdx) => <tr key={rowIdx}>{row.map((cell, cellIdx) => <td key={cellIdx} className="border border-gray-300 p-2 text-xs">{cell instanceof Date ? cell.toLocaleDateString() : cell}</td>)}</tr>)}</tbody>
@@ -1494,7 +1497,7 @@ const DetailedMentorshipBulkUploadModal = ({
     const MappingRow = ({ field, headers, selectedValue, onMappingChange }) => (
         <div className="flex flex-col">
             <label htmlFor={field.key} className="text-sm font-medium mb-1">
-                {field.label} {field.required && <span className="text-red-500">*</span>}
+                {fieldLabel(field)} {field.required && <span className="text-red-500">*</span>}
             </label>
             <Select
                 id={field.key}
@@ -1502,7 +1505,7 @@ const DetailedMentorshipBulkUploadModal = ({
                 onChange={(e) => onMappingChange(field.key, e.target.value)}
                 className="text-sm"
             >
-                <option value="">-- Do not import --</option>
+                <option value="">{t('mentorship_extra.bulk_upload.do_not_import', '-- Do not import --')}</option>
                 {headers.map(header => (
                     <option key={header} value={header}>{header}</option>
                 ))}
@@ -1511,8 +1514,8 @@ const DetailedMentorshipBulkUploadModal = ({
     );
     const renderProgressView = () => (
         <div>
-            <h4 className="font-medium text-lg mb-2">Import in Progress...</h4>
-            <p className="text-sm text-gray-600 mb-4">Please wait while the sessions are being uploaded.</p>
+            <h4 className="font-medium text-lg mb-2">{t('mentorship_extra.bulk_upload.progress.title', 'Import in Progress...')}</h4>
+            <p className="text-sm text-gray-600 mb-4">{t('mentorship_extra.bulk_upload.progress.wait', 'Please wait while the sessions are being uploaded.')}</p>
             <div className="w-full bg-gray-200 rounded-full h-4">
                 <div className="bg-blue-600 h-4 rounded-full transition-all duration-500" style={{ width: `${uploadStatus.total > 0 ? (uploadStatus.processed / uploadStatus.total) * 100 : 0}%` }}></div>
             </div>
@@ -1521,23 +1524,23 @@ const DetailedMentorshipBulkUploadModal = ({
     );
     const renderResultView = () => (
          <div>
-            <h4 className="font-medium text-lg mb-2">Import Complete</h4>
+            <h4 className="font-medium text-lg mb-2">{t('mentorship_extra.bulk_upload.result.title', 'Import Complete')}</h4>
             <div className="bg-gray-50 p-4 rounded-md">
                 <p className="font-semibold whitespace-pre-wrap">{uploadStatus.message}</p>
                  {uploadStatus.errors && uploadStatus.errors.some(e => e.rowData) && (
                     <div className="mt-4 max-h-40 overflow-y-auto">
-                        <h5 className="font-semibold text-red-700">Rows with Errors:</h5>
+                        <h5 className="font-semibold text-red-700">{t('mentorship_extra.bulk_upload.result.rows_with_errors', 'Rows with Errors:')}</h5>
                         <ul className="list-disc list-inside text-sm text-red-600">
                             {uploadStatus.errors.filter(e => e.rowData).map((err, index) =>
-                                <li key={index}>Row {err.rowIndex + 2}: {err.message}</li>
+                                <li key={index}>{t('mentorship_extra.bulk_upload.result.row_error', 'Row {{row}}: {{message}}', { row: err.rowIndex + 2, message: err.message })}</li>
                             )}
                         </ul>
-                         <p className="text-sm mt-2">Go back to the 'Correction Screen' to fix these rows.</p>
+                         <p className="text-sm mt-2">{t('mentorship_extra.bulk_upload.result.go_back_hint', "Go back to the 'Correction Screen' to fix these rows.")}</p>
                     </div>
                 )}
                  {uploadStatus.errors && !uploadStatus.errors.some(e => e.rowData) && uploadStatus.errors.length > 0 && (
                      <div className="mt-4 max-h-40 overflow-y-auto">
-                         <h5 className="font-semibold text-red-700">Errors encountered:</h5>
+                         <h5 className="font-semibold text-red-700">{t('mentorship_extra.bulk_upload.result.errors_encountered', 'Errors encountered:')}</h5>
                          <ul className="list-disc list-inside text-sm text-red-600">
                              {uploadStatus.errors.map((err, index) => <li key={index}>{err.message || err.toString()}</li>)}
                          </ul>
@@ -1547,23 +1550,23 @@ const DetailedMentorshipBulkUploadModal = ({
             <div className="flex justify-end mt-6">
                  {failedRows.length > 0 && (
                      <Button variant="secondary" onClick={() => setCurrentPage('correction')} className="mr-2">
-                         Go to Correction Screen ({failedRows.length})
+                         {t('mentorship_extra.bulk_upload.result.go_to_correction', 'Go to Correction Screen ({{count}})', { count: failedRows.length })}
                      </Button>
                  )}
-                 <Button onClick={onClose}>Close</Button>
+                 <Button onClick={onClose}>{t('mentorship_extra.bulk_upload.close', 'Close')}</Button>
             </div>
         </div>
     );
     const renderCorrectionScreen = () => (
         <div>
-            <h4 className="font-medium text-lg text-red-700 mb-2">Import Errors</h4>
-            <p className="text-sm text-gray-600 mb-4">Some rows failed to import. You can correct the data below and retry uploading only the failed rows.</p>
+            <h4 className="font-medium text-lg text-red-700 mb-2">{t('mentorship_extra.bulk_upload.correction.title', 'Import Errors')}</h4>
+            <p className="text-sm text-gray-600 mb-4">{t('mentorship_extra.bulk_upload.correction.desc', 'Some rows failed to import. You can correct the data below and retry uploading only the failed rows.')}</p>
             <div className="overflow-x-auto max-h-[60vh] border rounded-md">
                 <table className="min-w-full text-sm">
                     <thead className="bg-gray-100 sticky top-0">
                         <tr>
-                            <th className="p-2 border-r text-left">Row #</th>
-                            <th className="p-2 border-r text-left">Error</th>
+                            <th className="p-2 border-r text-left">{t('mentorship_extra.bulk_upload.correction.row_no', 'Row #')}</th>
+                            <th className="p-2 border-r text-left">{t('mentorship_extra.bulk_upload.correction.error', 'Error')}</th>
                             {headers.map(header => <th key={header} className="p-2 border-r text-left whitespace-nowrap">{header}</th>)}
                         </tr>
                     </thead>
@@ -1588,29 +1591,29 @@ const DetailedMentorshipBulkUploadModal = ({
                 </table>
             </div>
             <div className="flex justify-end mt-6 space-x-2">
-                <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                <Button onClick={handleRetryUpload}>Retry Upload for {failedRows.length} Corrected Row(s)</Button>
+                <Button variant="secondary" onClick={onClose}>{t('mentorship_extra.bulk_upload.cancel', 'Cancel')}</Button>
+                <Button onClick={handleRetryUpload}>{t('mentorship_extra.bulk_upload.correction.retry', 'Retry Upload for {{count}} Corrected Row(s)', { count: failedRows.length })}</Button>
             </div>
         </div>
     );
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Bulk Upload (Detailed) for ${activeService}`} size="full">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('mentorship_extra.bulk_upload.modal_title', 'Bulk Upload (Detailed) for {{service}}', { service: activeService })} size="full">
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
                 {currentPage === 0 && (
                     <div dir="ltr" className="text-left">
-                        <p className="mb-4">Download the detailed template for {activeService}. If data exists, it will be pre-filled. Use Arabic or English names for State. Use Arabic names for Locality. Use 'yes', 'no', 'na' (or 'partial' for EENC) for skill checks. For IMNCI, use comma-separated values for multi-select classifications (e.g., "بعض الجفاف,دسنتاريا").</p>
-                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">Download Template / Data</Button>
+                        <p className="mb-4">{t('mentorship_extra.bulk_upload.step0.instructions', `Download the detailed template for {{service}}. If data exists, it will be pre-filled. Use Arabic or English names for State. Use Arabic names for Locality. Use 'yes', 'no', 'na' (or 'partial' for EENC) for skill checks. For IMNCI, use comma-separated values for multi-select classifications (e.g., "بعض الجفاف,دسنتاريا").`, { service: activeService })}</p>
+                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">{t('mentorship_extra.bulk_upload.step0.download', 'Download Template / Data')}</Button>
                         <hr className="my-4" />
-                        <p className="mb-2">Or, upload your completed Excel file (first row must be headers).</p>
+                        <p className="mb-2">{t('mentorship_extra.bulk_upload.step0.or_upload', 'Or, upload your completed Excel file (first row must be headers).')}</p>
                         <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                     </div>
                 )}
                 {currentPage === 1 && (
                     <div dir="ltr" className="text-left">
-                        <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
-                        <p className="text-sm text-gray-600 mb-4">Match columns to fields. Base fields marked * are required for basic processing. **Note: Input standardization is applied (case/space insensitive) to 'yes/no/na' and classification fields.**</p>
+                        <h4 className="font-medium mb-4">{t('mentorship_extra.bulk_upload.step1.title', 'Map Excel columns to application fields')}</h4>
+                        <p className="text-sm text-gray-600 mb-4">{t('mentorship_extra.bulk_upload.step1.desc', "Match columns to fields. Base fields marked * are required for basic processing. **Note: Input standardization is applied (case/space insensitive) to 'yes/no/na' and classification fields.**")}</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-4 max-h-[50vh] overflow-y-auto p-2 border rounded">
                             {ALL_MENTORSHIP_FIELDS.map(field =>
                                 <MappingRow
@@ -1624,8 +1627,8 @@ const DetailedMentorshipBulkUploadModal = ({
                         </div>
                         {renderPreview()}
                         <div className="flex justify-end mt-6 space-x-2">
-                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button>
-                            <Button onClick={handleValidation}>Validate and Continue</Button>
+                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>{t('mentorship_extra.bulk_upload.back', 'Back')}</Button>
+                            <Button onClick={handleValidation}>{t('mentorship_extra.bulk_upload.validate_continue', 'Validate and Continue')}</Button>
                         </div>
                     </div>
                 )}

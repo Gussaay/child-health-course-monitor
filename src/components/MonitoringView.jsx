@@ -43,6 +43,7 @@ import {
 // training copy inside course records instead of the mentorship collection.
 import { IMNCIVisitReport, EENCVisitReport } from './mentorship/VisitReports.jsx';
 import { notify, confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // The mentorship practice tab now opens the same forms the facility mentorship
 // view opens, for every training rather than only IMNCI and EENC, and saves the
@@ -90,6 +91,7 @@ function ActionToggle({ options, currentValue, onClick }) {
 }
 
 export function ObservationView({ course, participant, participants, onChangeParticipant, initialCaseToEdit, isPublicView = false }) {
+    const { t } = useTranslation();
     const [observations, setObservations] = useState([]);
     const [cases, setCases] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -148,7 +150,7 @@ export function ObservationView({ course, participant, participants, onChangePar
                 setCases(casesData);
             } catch (err) {
                 console.error("Failed to fetch monitoring data:", err);
-                setError("Could not load participant's data. Please check your internet connection and try again.");
+                setError(true);
                 setObservations([]);
                 setCases([]);
             } finally {
@@ -186,7 +188,7 @@ export function ObservationView({ course, participant, participants, onChangePar
                 const duplicateCase = cases.find(c => c.contentHash === newHash);
                 if (duplicateCase) {
                     const confirmSubmit = await confirmDialog(
-                        `WARNING: This case appears to be an exact duplicate of a case previously submitted on ${duplicateCase.encounter_date} (Serial #${duplicateCase.case_serial}).\n\nAre you sure you want to submit this duplicate case?`
+                        t('monitoring_page.observation.duplicate_confirm', 'WARNING: This case appears to be an exact duplicate of a case previously submitted on {{date}} (Serial #{{serial}}).\n\nAre you sure you want to submit this duplicate case?', { date: duplicateCase.encounter_date, serial: duplicateCase.case_serial })
                     );
                     if (!confirmSubmit) return; 
                 }
@@ -203,14 +205,14 @@ export function ObservationView({ course, participant, participants, onChangePar
 
             const totalSkills = Object.values(skillsMap || {}).reduce((acc, domain) => acc + domain.length, 0);
             if (entries.length < totalSkills) {
-                notify('Please complete the form before submission');
+                notify(t('monitoring_page.observation.complete_form', 'Please complete the form before submission'));
                 setIsSaving(false);
                 return;
             }
         }
 
         if (entries.length === 0) { 
-            notify('No skills/classifications selected.'); 
+            notify(t('monitoring_page.observation.nothing_selected', 'No skills/classifications selected.')); 
             setIsSaving(false);
             return; 
         }
@@ -272,14 +274,14 @@ export function ObservationView({ course, participant, participants, onChangePar
             setEditingCase(null);
         } catch (error) {
             console.error("ERROR saving to Firestore:", error);
-            notify(`Failed to save case: ${error.message}`);
+            notify(t('monitoring_page.observation.save_failed', 'Failed to save case: {{message}}', { message: error.message }));
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDeleteCase = async (caseToDelete) => {
-        if (!await confirmDialog('Delete this case and all its observations? This cannot be undone.')) return;
+        if (!await confirmDialog(t('monitoring_page.observation.delete_confirm', 'Delete this case and all its observations? This cannot be undone.'))) return;
 
         // 1. Capture the current state in case we need to revert
         const previousCases = [...cases];
@@ -299,18 +301,18 @@ export function ObservationView({ course, participant, participants, onChangePar
             setCases(previousCases);
             setObservations(previousObservations);
             
-            notify(`Failed to delete case: ${error.message}. The case has been restored in your view.`);
+            notify(t('monitoring_page.observation.delete_failed', 'Failed to delete case: {{message}}. The case has been restored in your view.', { message: error.message }));
         }
     };
 
     return (
         <div className="grid gap-2">
-            <PageHeader title="Clinical Monitoring" subtitle={`Observing: ${participant.name}`} />
+            <PageHeader title={t('monitoring_page.observation.title', 'Clinical Monitoring')} subtitle={t('monitoring_page.observation.observing', 'Observing: {{name}}', { name: participant.name })} />
             
-            {error && <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div></Card>}
+            {error && <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{t('monitoring_page.observation.load_error', "Could not load participant's data. Please check your internet connection and try again.")}</div></Card>}
             
             {/* Success Modal Pop-up */}
-            <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} title="Submission Successful">
+            <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} title={t('monitoring_page.observation.success_title', 'Submission Successful')}>
                 <div className="p-6 text-center">
                     <div className="flex justify-center mb-4">
                         <div className="rounded-full bg-green-100 p-3">
@@ -319,48 +321,48 @@ export function ObservationView({ course, participant, participants, onChangePar
                             </svg>
                         </div>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Case Saved Successfully!</h3>
-                    <p className="text-gray-600 mb-6">The clinical observation has been recorded.</p>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{t('monitoring_page.observation.success_heading', 'Case Saved Successfully!')}</h3>
+                    <p className="text-gray-600 mb-6">{t('monitoring_page.observation.success_body', 'The clinical observation has been recorded.')}</p>
                     <Button onClick={() => { setShowSuccessModal(false); setShowGrid(false); setShowSetupModal(true); }} className="w-full bg-green-600 hover:bg-green-700 border-green-600">
-                        Continue to Next Case
+                        {t('monitoring_page.observation.continue_next', 'Continue to Next Case')}
                     </Button>
                 </div>
             </Modal>
 
             {/* Case Setup Modal */}
-            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Case Setup Configuration" size="lg">
+            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title={t('monitoring_page.observation.setup_title', 'Case Setup Configuration')} size="lg">
                 <div className="p-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {!isPublicView && (
-                            <FormGroup label="Select participant" className="sm:col-span-2">
+                            <FormGroup label={t('monitoring_page.common.select_participant', 'Select participant')} className="sm:col-span-2">
                                 <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
                                     {participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
                                 </Select>
                             </FormGroup>
                         )}
-                        {isImnci && <FormGroup label="Setting"><Select value={setting} onChange={(e) => setSetting(e.target.value)}><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>}
-                        {isImnci && <FormGroup label="Age Band">
+                        {isImnci && <FormGroup label={t('monitoring_page.observation.setting', 'Setting')}><Select value={setting} onChange={(e) => setSetting(e.target.value)}><option value="OPD">{t('monitoring_page.common.out_patient', 'Out-patient')}</option><option value="IPD">{t('monitoring_page.common.in_patient', 'In-patient')}</option></Select></FormGroup>}
+                        {isImnci && <FormGroup label={t('monitoring_page.common.age_band', 'Age Band')}>
                             <Select value={age} onChange={(e) => { setAge(e.target.value); if (editingCase) { setBuffer({}); } }}>
-                                <option value="GE2M_LE5Y">Sick Child (2-59 mos)</option>
-                                <option value="LT2M">Young Infant (0-59 days)</option>
+                                <option value="GE2M_LE5Y">{t('monitoring_page.observation.sick_child', 'Sick Child (2-59 mos)')}</option>
+                                <option value="LT2M">{t('monitoring_page.observation.young_infant', 'Young Infant (0-59 days)')}</option>
                             </Select>
                         </FormGroup>}
-                        {isEenc && <FormGroup label="EENC Scenario">
+                        {isEenc && <FormGroup label={t('monitoring_page.observation.eenc_scenario', 'EENC Scenario')}>
                             <Select value={eencScenario} onChange={(e) => setEencScenario(e.target.value)} disabled={!!editingCase}>
-                                <option value="breathing">Essential Newborn Care (Breathing)</option>
-                                <option value="not_breathing">Essential Newborn Care (Not Breathing)</option>
+                                <option value="breathing">{t('monitoring_page.observation.enc_breathing_full', 'Essential Newborn Care (Breathing)')}</option>
+                                <option value="not_breathing">{t('monitoring_page.observation.enc_not_breathing_full', 'Essential Newborn Care (Not Breathing)')}</option>
                             </Select>
                         </FormGroup>}
-                        <FormGroup label="Encounter Date"><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
-                        <FormGroup label="Course Day"><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
-                        <FormGroup label={isImnci && age === 'LT2M' ? "Age (wks)" : "Age (mos)"}>
-                            <Input type="number" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Optional" />
+                        <FormGroup label={t('monitoring_page.observation.encounter_date', 'Encounter Date')}><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
+                        <FormGroup label={t('monitoring_page.observation.course_day', 'Course Day')}><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
+                        <FormGroup label={isImnci && age === 'LT2M' ? t('monitoring_page.observation.age_wks', 'Age (wks)') : t('monitoring_page.observation.age_mos', 'Age (mos)')}>
+                            <Input type="number" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder={t('monitoring_page.common.optional', 'Optional')} />
                         </FormGroup>
                     </div>
                 </div>
                 <div className="p-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-gray-50 rounded-b-lg">
-                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowGrid(false); }}>Close</Button>
-                    <Button className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowGrid(true); }}>Confirm & Start</Button>
+                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowGrid(false); }}>{t('monitoring_page.common.close', 'Close')}</Button>
+                    <Button className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowGrid(true); }}>{t('monitoring_page.observation.confirm_start', 'Confirm & Start')}</Button>
                 </div>
             </Modal>
 
@@ -368,11 +370,11 @@ export function ObservationView({ course, participant, participants, onChangePar
             {!showGrid && !loading && (
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
                     <div className="min-w-0">
-                        <h3 className="text-lg font-bold text-slate-800">Ready to monitor?</h3>
-                        <p className="text-sm text-slate-500">Start a new observation case for {participant.name}.</p>
+                        <h3 className="text-lg font-bold text-slate-800">{t('monitoring_page.observation.ready', 'Ready to monitor?')}</h3>
+                        <p className="text-sm text-slate-500">{t('monitoring_page.observation.start_for', 'Start a new observation case for {{name}}.', { name: participant.name })}</p>
                     </div>
                     <Button className="w-full sm:w-auto flex-shrink-0" onClick={() => { setBuffer({}); setEditingCase(null); setShowSetupModal(true); }}>
-                        + Start New Case
+                        {t('monitoring_page.observation.start_new', '+ Start New Case')}
                     </Button>
                 </div>
             )}
@@ -381,27 +383,27 @@ export function ObservationView({ course, participant, participants, onChangePar
                 <Card className="p-3 sm:p-4 mb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
                         <div className="min-w-0">
-                            <h3 className="text-base sm:text-lg font-semibold break-words">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
+                            <h3 className="text-base sm:text-lg font-semibold break-words">{editingCase ? t('monitoring_page.observation.editing_case', 'Editing Case #{{serial}}', { serial: editingCase.case_serial }) : t('monitoring_page.observation.new_case', 'New Case Observation')}</h3>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600 mt-1">
-                                <span><span className="font-semibold">Day:</span> {dayOfCourse}</span>
-                                <span><span className="font-semibold">Date:</span> {encounterDate}</span>
+                                <span><span className="font-semibold">{t('monitoring_page.common.day_label', 'Day:')}</span> {dayOfCourse}</span>
+                                <span><span className="font-semibold">{t('monitoring_page.common.date_label', 'Date:')}</span> {encounterDate}</span>
                                 {isImnci && <>
-                                    <span><span className="font-semibold">Setting:</span> {setting}</span>
-                                    <span><span className="font-semibold">Age:</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</span>
+                                    <span><span className="font-semibold">{t('monitoring_page.common.setting_label', 'Setting:')}</span> {setting}</span>
+                                    <span><span className="font-semibold">{t('monitoring_page.observation.age_label', 'Age:')}</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</span>
                                 </>}
-                                {isEenc && <span><span className="font-semibold">Scenario:</span> {
-                                    eencScenario === 'breathing' ? 'ENC (Breathing)' :
-                                    eencScenario === 'not_breathing' ? 'ENC (Not Breathing)' :
-                                    eencScenario === 'neonatal_emergency' ? 'Neonatal Emergency' : 'Maternal Emergency'
+                                {isEenc && <span><span className="font-semibold">{t('monitoring_page.common.scenario_label', 'Scenario:')}</span> {
+                                    eencScenario === 'breathing' ? t('monitoring_page.common.enc_breathing', 'ENC (Breathing)') :
+                                    eencScenario === 'not_breathing' ? t('monitoring_page.common.enc_not_breathing', 'ENC (Not Breathing)') :
+                                    eencScenario === 'neonatal_emergency' ? t('monitoring_page.observation.neonatal_emergency', 'Neonatal Emergency') : t('monitoring_page.observation.maternal_emergency', 'Maternal Emergency')
                                 }</span>}
                             </div>
                         </div>
                         <Button variant="secondary" size="sm" className="w-full sm:w-auto flex-shrink-0" onClick={() => setShowSetupModal(true)}>
-                            Edit Setup
+                            {t('monitoring_page.observation.edit_setup', 'Edit Setup')}
                         </Button>
                     </div>
 
-                    <p className="text-sm text-gray-600 mb-3">Click a domain title to expand/collapse. Select an action for each item.</p>
+                    <p className="text-sm text-gray-600 mb-3">{t('monitoring_page.observation.grid_help', 'Click a domain title to expand/collapse. Select an action for each item.')}</p>
                     <div className="rounded-lg border border-slate-300">
                         {isImnci && <ImnciMonitoringGrid age={age} buffer={buffer} toggle={toggle} />}
                         {isEenc && <EencMonitoringGrid scenario={eencScenario} buffer={buffer} toggle={toggle} />}
@@ -410,10 +412,10 @@ export function ObservationView({ course, participant, participants, onChangePar
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 border-t pt-4">
                         <Button onClick={submitCase} className="w-full sm:w-auto" disabled={isSaving}>
-                            {isSaving ? 'Saving...' : (editingCase ? 'Update Case' : 'Submit Case')}
+                            {isSaving ? t('monitoring_page.common.saving', 'Saving...') : (editingCase ? t('monitoring_page.observation.update_case', 'Update Case') : t('monitoring_page.observation.submit_case', 'Submit Case'))}
                         </Button>
                         <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setCaseAgeMonths(''); setShowGrid(false); }} className="w-full sm:w-auto" disabled={isSaving}>
-                            {editingCase ? 'Cancel Edit' : 'Discard Case'}
+                            {editingCase ? t('monitoring_page.observation.cancel_edit', 'Cancel Edit') : t('monitoring_page.observation.discard_case', 'Discard Case')}
                         </Button>
                     </div>
                 </Card>
@@ -425,6 +427,7 @@ export function ObservationView({ course, participant, participants, onChangePar
 }
 
 function ImnciMonitoringGrid({ age, buffer, toggle }) {
+    const { t } = useTranslation();
     const [expandedDomains, setExpandedDomains] = useState(new Set());
     const allDomains = DOMAINS_BY_AGE_IMNCI[age]; 
 
@@ -443,17 +446,17 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
     };
 
     const toggleOptions = [
-        ['Correct', 1, 'bg-green-600 border-green-600'],
-        ['Incorrect', 0, 'bg-red-600 border-red-600']
+        [t('monitoring_page.grid.correct', 'Correct'), 1, 'bg-green-600 border-green-600'],
+        [t('monitoring_page.grid.incorrect', 'Incorrect'), 0, 'bg-red-600 border-red-600']
     ];
 
     return (
         <div className="space-y-4">
             <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
-                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
+                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">{t('monitoring_page.grid.click_domains', 'Click domains to expand/collapse')}</span>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>{t('monitoring_page.grid.expand_all', 'Expand All')}</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>{t('monitoring_page.grid.collapse_all', 'Collapse All')}</Button>
                 </div>
             </div>
 
@@ -501,6 +504,7 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
 }
 
 function EtatMonitoringGrid({ buffer, toggle }) {
+    const { t } = useTranslation();
     const allDomains = ETAT_DOMAINS; 
     const [expandedDomains, setExpandedDomains] = useState(new Set(allDomains.slice(0, 2)));
 
@@ -514,17 +518,17 @@ function EtatMonitoringGrid({ buffer, toggle }) {
     };
 
     const toggleOptions = [
-        ['Correct', 1, 'bg-green-600 border-green-600'],
-        ['Incorrect', 0, 'bg-red-600 border-red-600']
+        [t('monitoring_page.grid.correct', 'Correct'), 1, 'bg-green-600 border-green-600'],
+        [t('monitoring_page.grid.incorrect', 'Incorrect'), 0, 'bg-red-600 border-red-600']
     ];
 
     return (
         <div className="space-y-4">
             <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
-                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
+                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">{t('monitoring_page.grid.click_domains', 'Click domains to expand/collapse')}</span>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>{t('monitoring_page.grid.expand_all', 'Expand All')}</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>{t('monitoring_page.grid.collapse_all', 'Collapse All')}</Button>
                 </div>
             </div>
 
@@ -572,6 +576,7 @@ function EtatMonitoringGrid({ buffer, toggle }) {
 }
 
 function EencMonitoringGrid({ scenario, buffer, toggle }) {
+    const { t } = useTranslation();
     let domains, skillsMap, labelsMap;
 
     if (scenario === 'not_breathing') {
@@ -601,18 +606,18 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     };
 
     const toggleOptions = [
-        ['Yes', 2, 'bg-green-600 border-green-600'],
-        ['Partial', 1, 'bg-yellow-500 border-yellow-500'],
-        ['No', 0, 'bg-red-600 border-red-600']
+        [t('monitoring_page.grid.yes', 'Yes'), 2, 'bg-green-600 border-green-600'],
+        [t('monitoring_page.grid.partial', 'Partial'), 1, 'bg-yellow-500 border-yellow-500'],
+        [t('monitoring_page.grid.no', 'No'), 0, 'bg-red-600 border-red-600']
     ];
 
     return (
         <div className="space-y-4">
             <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
-                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
+                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">{t('monitoring_page.grid.click_domains', 'Click domains to expand/collapse')}</span>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>{t('monitoring_page.grid.expand_all', 'Expand All')}</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>{t('monitoring_page.grid.collapse_all', 'Collapse All')}</Button>
                 </div>
             </div>
 
@@ -660,6 +665,7 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
 }
 
 function IccmMonitoringGrid({ buffer, toggle }) {
+    const { t } = useTranslation();
     const allDomains = ICCM_DOMAINS; 
     const [expandedDomains, setExpandedDomains] = useState(new Set(allDomains.slice(0, 2)));
 
@@ -673,17 +679,17 @@ function IccmMonitoringGrid({ buffer, toggle }) {
     };
 
     const toggleOptions = [
-        ['Correct', 1, 'bg-green-600 border-green-600'],
-        ['Incorrect', 0, 'bg-red-600 border-red-600']
+        [t('monitoring_page.grid.correct', 'Correct'), 1, 'bg-green-600 border-green-600'],
+        [t('monitoring_page.grid.incorrect', 'Incorrect'), 0, 'bg-red-600 border-red-600']
     ];
 
     return (
         <div className="space-y-4">
             <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
-                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
+                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">{t('monitoring_page.grid.click_domains', 'Click domains to expand/collapse')}</span>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set(allDomains))}>{t('monitoring_page.grid.expand_all', 'Expand All')}</Button>
+                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpandedDomains(new Set())}>{t('monitoring_page.grid.collapse_all', 'Collapse All')}</Button>
                 </div>
             </div>
 
@@ -731,6 +737,7 @@ function IccmMonitoringGrid({ buffer, toggle }) {
 }
 
 function SubmittedCases({ course, participant, observations, cases, onEditCase, onDeleteCase }) {
+    const { t } = useTranslation();
     const isImnci = course.course_type === 'IMNCI';
     const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC';
 
@@ -770,72 +777,72 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
     const getAgeLabel = (age) => {
         if (isImnci) return age === 'LT2M' ? '0-59 d' : '2-59 m';
         if (isEenc) {
-            if (age?.includes('breathing') && !age.includes('not_')) return 'ENC (Breathing)';
-            if (age?.includes('not_breathing')) return 'ENC (Not Breathing)';
+            if (age?.includes('breathing') && !age.includes('not_')) return t('monitoring_page.common.enc_breathing', 'ENC (Breathing)');
+            if (age?.includes('not_breathing')) return t('monitoring_page.common.enc_not_breathing', 'ENC (Not Breathing)');
             // Legacy rows: EmONC cases used to be recorded here before the
             // dedicated Maternal / Neonatal monitors took over.
-            if (age?.includes('neonatal_emergency')) return 'Neonatal Emergency (legacy)';
-            if (age?.includes('maternal_emergency')) return 'Maternal Emergency (legacy)';
+            if (age?.includes('neonatal_emergency')) return t('monitoring_page.submitted.neonatal_legacy', 'Neonatal Emergency (legacy)');
+            if (age?.includes('maternal_emergency')) return t('monitoring_page.submitted.maternal_legacy', 'Maternal Emergency (legacy)');
         }
         return age;
     };
 
     const headers = isEenc
-        ? ["Date", "Day", "Scenario", "Score", "% Score", "Actions"]
-        : ["Date", "Day", ...(isImnci ? ["Setting"] : []), "Age Band", "% Correct", "Actions"];
+        ? [t('monitoring_page.common.date', 'Date'), t('monitoring_page.common.day', 'Day'), t('monitoring_page.submitted.scenario', 'Scenario'), t('monitoring_page.common.score', 'Score'), t('monitoring_page.submitted.pct_score', '% Score'), t('monitoring_page.common.actions', 'Actions')]
+        : [t('monitoring_page.common.date', 'Date'), t('monitoring_page.common.day', 'Day'), ...(isImnci ? [t('monitoring_page.observation.setting', 'Setting')] : []), t('monitoring_page.common.age_band', 'Age Band'), t('monitoring_page.submitted.pct_correct', '% Correct'), t('monitoring_page.common.actions', 'Actions')];
 
     return (
         <Card>
-            <PageHeader title={`Submitted Cases for ${participant.name}`} />
+            <PageHeader title={t('monitoring_page.submitted.title', 'Submitted Cases for {{name}}', { name: participant.name })} />
             <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3 sm:gap-4 p-4 border-b border-slate-300 bg-slate-50 sm:items-center">
-                <FormGroup label="Filter by Day" className="!mb-0">
+                <FormGroup label={t('monitoring_page.submitted.filter_day', 'Filter by Day')} className="!mb-0">
                     <Select value={dayFilter} onChange={e => setDayFilter(e.target.value)}>
-                        <option value="all">All</option>
-                        {[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}
+                        <option value="all">{t('monitoring_page.submitted.all', 'All')}</option>
+                        {[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{t('monitoring_page.submitted.day_n', 'Day {{day}}', { day: d })}</option>)}
                     </Select>
                 </FormGroup>
                 {isImnci && (
-                    <FormGroup label="Filter by Setting" className="!mb-0">
+                    <FormGroup label={t('monitoring_page.submitted.filter_setting', 'Filter by Setting')} className="!mb-0">
                         <Select value={settingFilter} onChange={e => setSettingFilter(e.target.value)}>
-                            <option value="all">All</option>
-                            <option value="OPD">Out-patient</option>
-                            <option value="IPD">In-patient</option>
+                            <option value="all">{t('monitoring_page.submitted.all', 'All')}</option>
+                            <option value="OPD">{t('monitoring_page.common.out_patient', 'Out-patient')}</option>
+                            <option value="IPD">{t('monitoring_page.common.in_patient', 'In-patient')}</option>
                         </Select>
                     </FormGroup>
                 )}
-                <FormGroup label="Filter by Result" className="!mb-0">
+                <FormGroup label={t('monitoring_page.submitted.filter_result', 'Filter by Result')} className="!mb-0">
                     <Select value={correctnessFilter} onChange={e => setCorrectnessFilter(e.target.value)}>
-                        <option value="all">All</option>
-                        <option value="correct">All Items Correct</option>
-                        <option value="incorrect">Has Incorrect Items</option>
+                        <option value="all">{t('monitoring_page.submitted.all', 'All')}</option>
+                        <option value="correct">{t('monitoring_page.submitted.all_correct', 'All Items Correct')}</option>
+                        <option value="incorrect">{t('monitoring_page.submitted.has_incorrect', 'Has Incorrect Items')}</option>
                     </Select>
                 </FormGroup>
             </div>
             
             {/* Mobile View */}
             <div className="md:hidden">
-                {caseRows.length === 0 ? <div className="p-4 text-center text-gray-500">No cases match the current filters.</div> : 
+                {caseRows.length === 0 ? <div className="p-4 text-center text-gray-500">{t('monitoring_page.submitted.no_match', 'No cases match the current filters.')}</div> : 
                     <div className="space-y-3 p-3">
                         {caseRows.map((c) => (
                             <div key={c.id} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm space-y-2">
                                 <div className="flex justify-between items-start gap-3">
                                     <div className="min-w-0">
                                         <span className="font-bold text-slate-700">{c.date}</span>
-                                        <span className="text-sm text-slate-500"> (Day {c.day})</span>
+                                        <span className="text-sm text-slate-500"> {t('monitoring_page.submitted.day_paren', '(Day {{day}})', { day: c.day })}</span>
                                     </div>
                                     <span className={`text-sm font-mono p-1 rounded flex-shrink-0 ${pctBgClass(c.percentage)}`}>{fmtPct(c.percentage)}</span>
                                 </div>
                                 <div className="text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1">
-                                    {isImnci && <span><span className="font-semibold">Setting:</span> {c.setting}</span>}
-                                    <span><span className="font-semibold">Scenario:</span> {getAgeLabel(c.age)}</span>
+                                    {isImnci && <span><span className="font-semibold">{t('monitoring_page.common.setting_label', 'Setting:')}</span> {c.setting}</span>}
+                                    <span><span className="font-semibold">{t('monitoring_page.common.scenario_label', 'Scenario:')}</span> {getAgeLabel(c.age)}</span>
                                     {isEenc ? 
-                                      <span><span className="font-semibold">Score:</span> {c.score}</span>
-                                      : <span><span className="font-semibold">Items:</span> {c.total} ({c.correct} correct)</span>
+                                      <span><span className="font-semibold">{t('monitoring_page.submitted.score_label', 'Score:')}</span> {c.score}</span>
+                                      : <span><span className="font-semibold">{t('monitoring_page.submitted.items_label', 'Items:')}</span> {t('monitoring_page.submitted.items_value', '{{total}} ({{correct}} correct)', { total: c.total, correct: c.correct })}</span>
                                     }
                                 </div>
                                 <div className="flex gap-2 justify-end pt-2 border-t border-slate-200 mt-2">
-                                    <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>Edit</Button>
-                                    <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>Delete</Button>
+                                    <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>{t('monitoring_page.common.edit', 'Edit')}</Button>
+                                    <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>{t('monitoring_page.common.delete', 'Delete')}</Button>
                                 </div>
                             </div>
                         ))}
@@ -846,7 +853,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
             {/* Desktop View */}
             <div className="hidden md:block overflow-x-auto p-4">
                 <Table headers={headers}>
-                    {caseRows.length === 0 ? <EmptyState message="No cases match the current filters." colSpan={headers.length} /> : caseRows.map((c, idx) => (
+                    {caseRows.length === 0 ? <EmptyState message={t('monitoring_page.submitted.no_match', 'No cases match the current filters.')} colSpan={headers.length} /> : caseRows.map((c, idx) => (
                         <tr key={idx} className="odd:bg-white even:bg-slate-50 hover:bg-sky-100 text-sm">
                             <td className="p-2 border-b border-slate-300">{c.date}</td>
                             <td className="p-2 border-b border-slate-300 text-center">{c.day ?? ''}</td>
@@ -864,8 +871,8 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                             )}
                             <td className="p-2 border-b border-slate-300">
                                 <div className="flex gap-2 justify-end">
-                                    <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>Edit</Button>
-                                    <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>Delete</Button>
+                                    <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>{t('monitoring_page.common.edit', 'Edit')}</Button>
+                                    <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>{t('monitoring_page.common.delete', 'Delete')}</Button>
                                 </div>
                             </td>
                         </tr>
@@ -1177,15 +1184,16 @@ function MentorshipRunningScore({ scores }) {
 }
 
 function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
+    const { t } = useTranslation();
     // EmptyState renders a <tr>, so it is only valid inside a table body. Using
     // it inside a Card produced a DOM nesting warning; plain markup instead.
     if (!cases.length) {
         return (
             <Card>
                 <div className="p-8 text-center">
-                    <h3 className="text-base font-semibold text-slate-700">No mentorship sessions yet</h3>
+                    <h3 className="text-base font-semibold text-slate-700">{t('monitoring_page.sessions.empty_title', 'No mentorship sessions yet')}</h3>
                     <p className="text-sm text-slate-500 mt-1">
-                        Completed sessions are recorded here and feed the participant's course report.
+                        {t('monitoring_page.sessions.empty_body', "Completed sessions are recorded here and feed the participant's course report.")}
                     </p>
                 </div>
             </Card>
@@ -1228,7 +1236,7 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
 
     return (
         <Card className="p-3 sm:p-4">
-            <h3 className="text-lg font-semibold mb-3">Recorded mentorship sessions</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('monitoring_page.sessions.title', 'Recorded mentorship sessions')}</h3>
 
             {/* Phone view. A seven-column table cannot be read at 360px, so each
                 session becomes a card and nothing has to scroll sideways. */}
@@ -1239,14 +1247,14 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
                             <div className="min-w-0">
                                 <span className="font-bold text-slate-700">#{c.case_serial}</span>
                                 <span className="text-sm text-slate-500"> · {c.encounter_date}</span>
-                                <div className="text-sm text-slate-500">Day {c.day_of_course} · {skills} skills scored</div>
+                                <div className="text-sm text-slate-500">{t('monitoring_page.sessions.day_skills', 'Day {{day}} · {{count}} skills scored', { day: c.day_of_course, count: skills })}</div>
                             </div>
                             <span className={`font-semibold text-sm flex-shrink-0 ${tone}`}>{earned}/{possible} ({pct}%)</span>
                         </div>
                         <div className="mt-2">{caseBadge(c)}</div>
                         <div className="flex gap-2 justify-end pt-2 mt-2 border-t border-slate-200">
-                            <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>Edit</Button>
-                            <Button variant="danger" size="sm" onClick={() => onDelete(c)}>Delete</Button>
+                            <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>{t('monitoring_page.common.edit', 'Edit')}</Button>
+                            <Button variant="danger" size="sm" onClick={() => onDelete(c)}>{t('monitoring_page.common.delete', 'Delete')}</Button>
                         </div>
                     </div>
                 ))}
@@ -1258,12 +1266,12 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
                     <thead>
                         <tr className="bg-slate-100 text-left">
                             <th className="p-2">#</th>
-                            <th className="p-2">Date</th>
-                            <th className="p-2">Day</th>
-                            <th className="p-2">Skills scored</th>
-                            <th className="p-2">Score</th>
-                            <th className="p-2">Case</th>
-                            <th className="p-2 text-right">Actions</th>
+                            <th className="p-2">{t('monitoring_page.common.date', 'Date')}</th>
+                            <th className="p-2">{t('monitoring_page.common.day', 'Day')}</th>
+                            <th className="p-2">{t('monitoring_page.sessions.skills_scored', 'Skills scored')}</th>
+                            <th className="p-2">{t('monitoring_page.common.score', 'Score')}</th>
+                            <th className="p-2">{t('monitoring_page.sessions.case', 'Case')}</th>
+                            <th className="p-2 text-right">{t('monitoring_page.common.actions', 'Actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1276,8 +1284,8 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
                                 <td className={`p-2 font-semibold ${tone}`}>{earned}/{possible} ({pct}%)</td>
                                 <td className="p-2 whitespace-nowrap">{caseBadge(c)}</td>
                                 <td className="p-2 text-right whitespace-nowrap">
-                                    <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>Edit</Button>
-                                    <Button variant="danger" size="sm" className="ml-2" onClick={() => onDelete(c)}>Delete</Button>
+                                    <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>{t('monitoring_page.common.edit', 'Edit')}</Button>
+                                    <Button variant="danger" size="sm" className="ml-2" onClick={() => onDelete(c)}>{t('monitoring_page.common.delete', 'Delete')}</Button>
                                 </td>
                             </tr>
                         ))}
@@ -1294,6 +1302,7 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
 export function LegacyMentorshipMonitoringView({
     course, participant, participants = [], onChangeParticipant, isPublicView = false,
 }) {
+    const { t } = useTranslation();
     const subCourse = useMemo(() => getMentorshipSubType(course, participant), [course, participant]);
     const service = useMemo(() => getCourseMentorshipService(course, participant), [course, participant]);
     const isEenc = service === 'EENC';
@@ -1417,7 +1426,7 @@ export function LegacyMentorshipMonitoringView({
             } catch (err) {
                 if (cancelled) return;
                 console.error('Failed to load mentorship monitoring data:', err);
-                setError("Could not load this participant's mentorship records. Check the connection and reload.");
+                setError(true);
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -1599,7 +1608,7 @@ export function LegacyMentorshipMonitoringView({
             setVisibleStep(1);
         } catch (err) {
             console.error('Failed to save mentorship session:', err);
-            notify(`Could not save this session: ${err.message}`);
+            notify(t('monitoring_page.legacy.save_failed', 'Could not save this session: {{message}}', { message: err.message }));
         } finally {
             setIsSaving(false);
         }
@@ -1649,7 +1658,7 @@ export function LegacyMentorshipMonitoringView({
     }, []);
 
     const handleDeleteSession = async (caseToDelete) => {
-        if (!await confirmDialog('Delete this mentorship session and everything recorded in it? This cannot be undone.')) return;
+        if (!await confirmDialog(t('monitoring_page.legacy.delete_confirm', 'Delete this mentorship session and everything recorded in it? This cannot be undone.'))) return;
 
         const prevCases = [...cases];
         const prevObs = [...observations];
@@ -1662,7 +1671,7 @@ export function LegacyMentorshipMonitoringView({
             console.error('Failed to delete mentorship session:', err);
             setCases(prevCases);
             setObservations(prevObs);
-            notify(`Could not delete this session: ${err.message}. It has been restored in your view.`);
+            notify(t('monitoring_page.legacy.delete_failed', 'Could not delete this session: {{message}}. It has been restored in your view.', { message: err.message }));
         }
     };
 
@@ -1672,8 +1681,8 @@ export function LegacyMentorshipMonitoringView({
         return (
             <Card>
                 <EmptyState
-                    title="No mentorship form for this sub-course"
-                    message={`${subCourse || 'This sub-course'} has no skills assessment form yet. Use the standard monitoring grid instead.`}
+                    title={t('monitoring_page.legacy.no_form_title', 'No mentorship form for this sub-course')}
+                    message={t('monitoring_page.legacy.no_form_message', '{{subCourse}} has no skills assessment form yet. Use the standard monitoring grid instead.', { subCourse: subCourse || t('monitoring_page.legacy.this_sub_course', 'This sub-course') })}
                 />
             </Card>
         );
@@ -1681,20 +1690,20 @@ export function LegacyMentorshipMonitoringView({
 
     return (
         <div className="grid gap-2">
-            <PageHeader title="Mentorship Practice" subtitle={`${subCourse || 'Mentorship'} — ${participant?.name || ''}`} />
+            <PageHeader title={t('monitoring_page.legacy.title', 'Mentorship Practice')} subtitle={`${subCourse || t('monitoring_page.legacy.mentorship', 'Mentorship')} — ${participant?.name || ''}`} />
 
             {showForm && <MentorshipRunningScore scores={scores} />}
 
             {error && (
-                <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div></Card>
+                <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{t('monitoring_page.legacy.load_error', "Could not load this participant's mentorship records. Check the connection and reload.")}</div></Card>
             )}
 
-            <Modal isOpen={showSuccess} onClose={() => { setShowSuccess(false); setSavedComparison(null); }} title="Session recorded">
+            <Modal isOpen={showSuccess} onClose={() => { setShowSuccess(false); setSavedComparison(null); }} title={t('monitoring_page.legacy.success_title', 'Session recorded')}>
                 <div className="p-6">
                     <div className="text-center">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">Mentorship session saved</h3>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">{t('monitoring_page.legacy.success_heading', 'Mentorship session saved')}</h3>
                         <p className="text-gray-600">
-                            It is now part of {participant?.name}'s course record and will appear in the course report.
+                            {t('monitoring_page.legacy.success_body', "It is now part of {{name}}'s course record and will appear in the course report.", { name: participant?.name })}
                         </p>
                     </div>
 
@@ -1702,10 +1711,10 @@ export function LegacyMentorshipMonitoringView({
                         <div className="mt-5 p-3 border rounded-lg bg-slate-50 text-left">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2 sm:gap-3">
                                 <h4 className="min-w-0 font-bold text-slate-800 break-words">
-                                    Mentor vs stored standard — case {savedComparison.scenarioId}
+                                    {t('monitoring_page.legacy.vs_standard', 'Mentor vs stored standard — case {{id}}', { id: savedComparison.scenarioId })}
                                     {savedComparison.setBy && (
                                         <span className="block text-xs font-normal text-slate-500">
-                                            Standard set by {savedComparison.setBy}
+                                            {t('monitoring_page.legacy.set_by', 'Standard set by {{name}}', { name: savedComparison.setBy })}
                                         </span>
                                     )}
                                 </h4>
@@ -1713,20 +1722,20 @@ export function LegacyMentorshipMonitoringView({
                                     savedComparison.withinTolerance ? 'bg-green-600'
                                         : savedComparison.agreementPct >= 80 ? 'bg-yellow-500' : 'bg-red-600'
                                 }`}>
-                                    {savedComparison.agreementPct}% agreement
+                                    {t('monitoring_page.legacy.agreement', '{{pct}}% agreement', { pct: savedComparison.agreementPct })}
                                 </span>
                             </div>
                             <div className="grid grid-cols-3 gap-2 sm:gap-3 text-sm">
                                 <div>
-                                    <div className="text-slate-500 text-xs">Mentor scored</div>
+                                    <div className="text-slate-500 text-xs">{t('monitoring_page.legacy.mentor_scored', 'Mentor scored')}</div>
                                     <div className="font-semibold">{savedComparison.mentorScore}/{savedComparison.mentorMax}</div>
                                 </div>
                                 <div>
-                                    <div className="text-slate-500 text-xs">System standard</div>
+                                    <div className="text-slate-500 text-xs">{t('monitoring_page.legacy.system_standard', 'System standard')}</div>
                                     <div className="font-semibold">{savedComparison.standardScore}/{savedComparison.standardMax}</div>
                                 </div>
                                 <div>
-                                    <div className="text-slate-500 text-xs">Difference</div>
+                                    <div className="text-slate-500 text-xs">{t('monitoring_page.legacy.difference', 'Difference')}</div>
                                     <div className={`font-semibold ${savedComparison.withinTolerance ? 'text-green-700' : 'text-red-700'}`}>
                                         {savedComparison.difference > 0 ? '+' : ''}{savedComparison.difference}
                                     </div>
@@ -1734,21 +1743,21 @@ export function LegacyMentorshipMonitoringView({
                             </div>
                             <p className="text-xs text-slate-600 mt-2">
                                 {savedComparison.withinTolerance
-                                    ? 'The mentor applied the mentoring standard consistently for this case.'
+                                    ? t('monitoring_page.legacy.consistent', 'The mentor applied the mentoring standard consistently for this case.')
                                     : savedComparison.difference > 0
-                                        ? 'The mentor scored this case higher than the standard.'
-                                        : 'The mentor scored this case lower than the standard.'}
+                                        ? t('monitoring_page.legacy.higher', 'The mentor scored this case higher than the standard.')
+                                        : t('monitoring_page.legacy.lower', 'The mentor scored this case lower than the standard.')}
                             </p>
                             {savedComparison.source === 'configured' && savedComparison.standardBreakdown && (
                                 <details className="mt-2">
                                     <summary className="text-xs text-slate-500 cursor-pointer">
-                                        How this standard was derived
+                                        {t('monitoring_page.legacy.how_derived', 'How this standard was derived')}
                                     </summary>
                                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                                         {savedComparison.standardBreakdown}
                                     </p>
                                     <p className="text-xs text-slate-500 mt-1">
-                                        Recording this case with a master mentor will replace it.
+                                        {t('monitoring_page.legacy.replace_note', 'Recording this case with a master mentor will replace it.')}
                                     </p>
                                 </details>
                             )}
@@ -1759,25 +1768,25 @@ export function LegacyMentorshipMonitoringView({
                         onClick={() => { setShowSuccess(false); setSavedComparison(null); setShowForm(false); }}
                         className="w-full mt-6 bg-green-600 hover:bg-green-700 border-green-600"
                     >
-                        Done
+                        {t('monitoring_page.legacy.done', 'Done')}
                     </Button>
                 </div>
             </Modal>
 
-            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Session setup" size="lg">
+            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title={t('monitoring_page.legacy.setup_title', 'Session setup')} size="lg">
                 <div className="p-4">
-                    <FormGroup label="Which form?" className="mb-4">
+                    <FormGroup label={t('monitoring_page.legacy.which_form', 'Which form?')} className="mb-4">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {[
-                                { key: 'SKILLS', title: 'Skills assessment', desc: `Observe the participant managing a ${isEenc ? 'delivery' : 'case'}.` },
-                                { key: 'MOTHERS', title: 'Mothers interview', desc: 'Interview a mother about the care received.' },
-                                { key: 'VISIT', title: 'Visit report', desc: 'Practise completing the visit report.' },
+                                { key: 'SKILLS', title: t('monitoring_page.legacy.form_skills', 'Skills assessment'), desc: isEenc ? t('monitoring_page.legacy.form_skills_desc_delivery', 'Observe the participant managing a delivery.') : t('monitoring_page.legacy.form_skills_desc_case', 'Observe the participant managing a case.') },
+                                { key: 'MOTHERS', title: t('monitoring_page.legacy.form_mothers', 'Mothers interview'), desc: t('monitoring_page.legacy.form_mothers_desc', 'Interview a mother about the care received.') },
+                                { key: 'VISIT', title: t('monitoring_page.legacy.form_visit', 'Visit report'), desc: t('monitoring_page.legacy.form_visit_desc', 'Practise completing the visit report.') },
                             ].map(opt => (
                                 <button
                                     key={opt.key}
                                     type="button"
                                     disabled={opt.disabled}
-                                    title={opt.disabled ? 'A visit report summarises a whole facility visit, so it has no course participant equivalent.' : undefined}
+                                    title={opt.disabled ? t('monitoring_page.legacy.visit_disabled', 'A visit report summarises a whole facility visit, so it has no course participant equivalent.') : undefined}
                                     onClick={() => !opt.disabled && setRecordType(opt.key)}
                                     className={`text-left p-3 rounded-lg border transition-colors ${
                                         opt.disabled
@@ -1798,18 +1807,18 @@ export function LegacyMentorshipMonitoringView({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {!isPublicView && (
-                            <FormGroup label="Select participant" className="sm:col-span-2">
+                            <FormGroup label={t('monitoring_page.common.select_participant', 'Select participant')} className="sm:col-span-2">
                                 <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
                                     {participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
                                 </Select>
                             </FormGroup>
                         )}
-                        <FormGroup label="Session date">
+                        <FormGroup label={t('monitoring_page.legacy.session_date', 'Session date')}>
                             <Input type="date" value={formData.session_date}
                                 onChange={(e) => handleFormChange({ target: { name: 'session_date', value: e.target.value } })} />
                         </FormGroup>
                         {!isMothers && !isVisit && !isEenc && (
-                            <FormGroup label="Standard case" className="sm:col-span-2">
+                            <FormGroup label={t('monitoring_page.legacy.standard_case', 'Standard case')} className="sm:col-span-2">
                                 <Select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
                                     {IMNCI_CASE_SCENARIOS.map(sc => (
                                         <option key={sc.id} value={sc.id}>
@@ -1819,35 +1828,35 @@ export function LegacyMentorshipMonitoringView({
                                 </Select>
                             </FormGroup>
                         )}
-                        <FormGroup label="Course day">
+                        <FormGroup label={t('monitoring_page.legacy.course_day', 'Course day')}>
                             <Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>
                                 {[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}
                             </Select>
                         </FormGroup>
                         {!isEenc && !isMothers && (
-                            <FormGroup label="Child age (months)">
+                            <FormGroup label={t('monitoring_page.legacy.child_age', 'Child age (months)')}>
                                 <Input type="number" value={caseAgeMonths}
                                     onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))}
-                                    placeholder="Optional" />
+                                    placeholder={t('monitoring_page.common.optional', 'Optional')} />
                             </FormGroup>
                         )}
                     </div>
                 </div>
                 <div className="p-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-gray-50 rounded-b-lg">
-                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowForm(false); }}>Close</Button>
-                    <Button className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowForm(true); }}>Start session</Button>
+                    <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowForm(false); }}>{t('monitoring_page.common.close', 'Close')}</Button>
+                    <Button className="w-full sm:w-auto" onClick={() => { setShowSetupModal(false); setShowForm(true); }}>{t('monitoring_page.legacy.start_session', 'Start session')}</Button>
                 </div>
             </Modal>
 
             {!showForm && !loading && (
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
                     <div className="min-w-0">
-                        <h3 className="text-lg font-bold text-slate-800">Start a mentorship session</h3>
+                        <h3 className="text-lg font-bold text-slate-800">{t('monitoring_page.legacy.start_heading', 'Start a mentorship session')}</h3>
                         <p className="text-sm text-slate-500">
-                            Record a skills assessment or a mothers interview for {participant?.name} against the course.
+                            {t('monitoring_page.legacy.start_body', 'Record a skills assessment or a mothers interview for {{name}} against the course.', { name: participant?.name })}
                         </p>
                     </div>
-                    <Button className="w-full sm:w-auto flex-shrink-0" onClick={startNewSession}>+ New session</Button>
+                    <Button className="w-full sm:w-auto flex-shrink-0" onClick={startNewSession}>{t('monitoring_page.legacy.new_session', '+ New session')}</Button>
                 </div>
             )}
 
@@ -1857,16 +1866,20 @@ export function LegacyMentorshipMonitoringView({
                         <div className="min-w-0">
                             <h3 className="text-base sm:text-lg font-semibold break-words">
                                 {editingCase
-                                    ? `Editing ${isMothers ? 'interview' : 'session'} #${editingCase.case_serial}`
-                                    : `New ${isMothers ? 'interview' : 'session'} #${nextSerial}`}
+                                    ? (isMothers
+                                        ? t('monitoring_page.legacy.editing_interview', 'Editing interview #{{serial}}', { serial: editingCase.case_serial })
+                                        : t('monitoring_page.legacy.editing_session', 'Editing session #{{serial}}', { serial: editingCase.case_serial }))
+                                    : (isMothers
+                                        ? t('monitoring_page.legacy.new_interview', 'New interview #{{serial}}', { serial: nextSerial })
+                                        : t('monitoring_page.legacy.new_session_n', 'New session #{{serial}}', { serial: nextSerial }))}
                             </h3>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600 mt-1">
-                                <span><span className="font-semibold">Day:</span> {dayOfCourse}</span>
-                                <span><span className="font-semibold">Date:</span> {formData.session_date}</span>
-                                <span><span className="font-semibold">Sub-course:</span> {subCourse || '—'}</span>
+                                <span><span className="font-semibold">{t('monitoring_page.common.day_label', 'Day:')}</span> {dayOfCourse}</span>
+                                <span><span className="font-semibold">{t('monitoring_page.common.date_label', 'Date:')}</span> {formData.session_date}</span>
+                                <span><span className="font-semibold">{t('monitoring_page.legacy.sub_course_label', 'Sub-course:')}</span> {subCourse || '—'}</span>
                             </div>
                         </div>
-                        <Button variant="secondary" size="sm" className="w-full sm:w-auto flex-shrink-0" onClick={() => setShowSetupModal(true)}>Edit setup</Button>
+                        <Button variant="secondary" size="sm" className="w-full sm:w-auto flex-shrink-0" onClick={() => setShowSetupModal(true)}>{t('monitoring_page.legacy.edit_setup', 'Edit setup')}</Button>
                     </div>
 
                     {isVisit ? (
@@ -1933,13 +1946,11 @@ export function LegacyMentorshipMonitoringView({
                                 // would let the mentor score towards the standard rather
                                 // than towards the case in front of them.
                                 <p className="text-sm text-slate-600">
-                                    A standard answer exists for case {scenario.id}. Your total will be compared
-                                    against it and the result shown once you save this session.
+                                    {t('monitoring_page.legacy.standard_exists', 'A standard answer exists for case {{id}}. Your total will be compared against it and the result shown once you save this session.', { id: scenario.id })}
                                 </p>
                             ) : (
                                 <p className="text-sm text-slate-600">
-                                    No standard answer is configured for case {scenario.id}, so this session will be
-                                    recorded without a comparison.
+                                    {t('monitoring_page.legacy.no_standard', 'No standard answer is configured for case {{id}}, so this session will be recorded without a comparison.', { id: scenario.id })}
                                 </p>
                             )}
                         </div>
@@ -1948,7 +1959,7 @@ export function LegacyMentorshipMonitoringView({
                     {!isVisit && (
                     <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 border-t pt-4">
                         <Button onClick={handleSaveSession} className="w-full sm:w-auto" disabled={isSaving}>
-                            {isSaving ? 'Saving…' : editingCase ? 'Update session' : 'Save session'}
+                            {isSaving ? t('monitoring_page.legacy.saving', 'Saving…') : editingCase ? t('monitoring_page.legacy.update_session', 'Update session') : t('monitoring_page.legacy.save_session', 'Save session')}
                         </Button>
                         <Button variant="secondary" className="w-full sm:w-auto" disabled={isSaving}
                             onClick={() => {
@@ -1958,7 +1969,7 @@ export function LegacyMentorshipMonitoringView({
                                 setShowForm(false);
                                 setVisibleStep(1);
                             }}>
-                            {editingCase ? 'Cancel edit' : 'Discard session'}
+                            {editingCase ? t('monitoring_page.legacy.cancel_edit', 'Cancel edit') : t('monitoring_page.legacy.discard_session', 'Discard session')}
                         </Button>
                     </div>
                     )}

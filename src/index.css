@@ -25,3 +25,96 @@ html, body, #root {
     font-size: 16px;
   }
 }
+
+/*
+  Shimmer placeholders shown while a page or list loads (Skeleton in
+  CommonComponents). A light band sweeps across a grey block; the sweep runs
+  the other way in Arabic, and stops for people who ask for less motion.
+*/
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: #e5e7eb;
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: shimmer-sweep 1.4s infinite;
+}
+[dir='rtl'] .shimmer::after {
+  animation-name: shimmer-sweep-rtl;
+}
+.shimmer-light {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+.shimmer-light::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+}
+@keyframes shimmer-sweep {
+  100% { transform: translateX(100%); }
+}
+@keyframes shimmer-sweep-rtl {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after { animation: none; }
+}
+
+/*
+  Phone card layout for wide lists (PhoneCards in CommonComponents). Below the
+  `sm` width each row becomes a card and each cell shows its column name.
+*/
+@media (max-width: 639px) {
+  .cards-on-phone {
+    overflow: visible !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  .cards-on-phone table,
+  .cards-on-phone tbody,
+  .cards-on-phone tbody > tr,
+  .cards-on-phone tbody > tr > td {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+  }
+  .cards-on-phone table { table-layout: auto; border: 0 !important; }
+  .cards-on-phone thead { display: none; }
+  .cards-on-phone tbody { border: 0 !important; }
+  .cards-on-phone tbody > tr {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.875rem;
+    background: #fff;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+  .cards-on-phone tbody > tr > td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.4rem 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    text-align: end !important;
+    white-space: normal !important;
+  }
+  .cards-on-phone tbody > tr > td:last-child { border-bottom: 0 !important; }
+  .cards-on-phone tbody > tr > td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-align: start;
+  }
+  .cards-on-phone tbody > tr > td:empty { display: none; }
+  .cards-on-phone tbody > tr > td[colspan] { display: block; text-align: center !important; }
+}

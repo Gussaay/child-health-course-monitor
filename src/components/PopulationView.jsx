@@ -259,7 +259,7 @@ export function analyseSheet(rows) {
     const headerAt = findHeaderRow(rows);
     if (headerAt === -1) {
         return {
-            headerRowIndex: -1, headers: [], mapping: {},
+            headerRowIndex: -1, headers: [], mapping: {}, errorKey: 'no_header',
             error: 'Could not find a header row containing both "State" and "Localities". '
                 + 'Pick the sheet that lists localities, or use the template.',
         };
@@ -286,7 +286,7 @@ export function parsePopulationRows(rows, year, options = {}) {
         : analyseSheet(rows);
 
     if (analysis.error) {
-        return { rows: [], skipped: [], unknown: [], duplicates: [], columns: null, error: analysis.error };
+        return { rows: [], skipped: [], unknown: [], duplicates: [], columns: null, errorKey: analysis.errorKey, error: analysis.error };
     }
 
     const headerAt = analysis.headerRowIndex;
@@ -307,6 +307,7 @@ export function parsePopulationRows(rows, year, options = {}) {
     if (missing.length) {
         return {
             rows: [], skipped: [], unknown: [], duplicates: [], columns, detected,
+            errorKey: 'missing_columns', missing: missing.join(', '),
             error: `These required columns are not mapped: ${missing.join(', ')}.`,
         };
     }
@@ -583,8 +584,11 @@ function ImportModal({
     isOpen, year, onClose, onImported,
     draft, setDraft,
 }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
+    const errText = (res) => (res.errorKey
+        ? t(`trackers.population.import.errors.${res.errorKey}`, res.error, { missing: res.missing })
+        : res.error);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const fileInputRef = useRef(null);
@@ -597,7 +601,9 @@ function ImportModal({
     const loadSheet = useCallback((allRows, name) => {
         const analysis = analyseSheet(allRows);
         if (analysis.error) {
-            setError(analysis.error);
+            setError(analysis.errorKey
+                ? t(`trackers.population.import.errors.${analysis.errorKey}`, analysis.error)
+                : analysis.error);
             patch({ sheetName: name, rows: allRows, headers: [], mapping: {}, headerRowIndex: -1, page: 1, fixes: {} });
             return;
         }
@@ -607,7 +613,7 @@ function ImportModal({
             mapping: analysis.mapping, headerRowIndex: analysis.headerRowIndex,
             page: 1, fixes: {},
         });
-    }, [patch]);
+    }, [patch, t]);
 
     const handleFileUpload = async (event) => {
         const file = event.target.files?.[0];
@@ -623,7 +629,7 @@ function ImportModal({
             loadSheet(allRows, preferred);
         } catch (err) {
             console.error('Failed to read workbook:', err);
-            setError('Could not read that file. Is it a valid Excel workbook?');
+            setError(t('trackers.population.import.read_failed', 'Could not read that file. Is it a valid Excel workbook?'));
         } finally {
             setBusy(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -673,28 +679,28 @@ function ImportModal({
     const getTemplate = async () => {
         try {
             const count = await downloadPopulationTemplate(year);
-            notify(`Template downloaded with ${count} localities already filled in.`, 'success');
+            notify(t('trackers.population.import.template_done', 'Template downloaded with {{count}} localities already filled in.', { count }), 'success');
         } catch (err) {
             console.error('Template download failed:', err);
-            notify('Could not build the template.', 'error');
+            notify(t('trackers.population.import.template_failed', 'Could not build the template.'), 'error');
         }
     };
 
     const handleImport = async () => {
-        if (!finalRows.length) { setError('There is nothing to import.'); return; }
+        if (!finalRows.length) { setError(t('trackers.population.import.nothing', 'There is nothing to import.')); return; }
         const skippedCount = Object.values(fixes).filter((f) => f === 'skip').length;
         const ok = await confirmDialog(
-            `Import ${finalRows.length} localities as the ${year} population targets?`
-            + (skippedCount ? ` ${skippedCount} row(s) will be skipped.` : '')
-            + ' Existing figures for this year will be replaced.',
-            { title: `Import ${year} targets`, confirmLabel: 'Import' }
+            t('trackers.population.import.confirm', 'Import {{count}} localities as the {{year}} population targets?', { count: finalRows.length, year })
+            + (skippedCount ? ' ' + t('trackers.population.import.confirm_skipped', '{{count}} row(s) will be skipped.', { count: skippedCount }) : '')
+            + ' ' + t('trackers.population.import.confirm_replace', 'Existing figures for this year will be replaced.'),
+            { title: t('trackers.population.import.confirm_title', 'Import {{year}} targets', { year }), confirmLabel: t('trackers.population.import.import', 'Import') }
         );
         if (!ok) return;
         setBusy(true);
         setError('');
         try {
             const count = await bulkUpsertPopulationTargets(finalRows);
-            notify(`Imported ${count} localities for ${year}.`, 'success');
+            notify(t('trackers.population.import.done', 'Imported {{count}} localities for {{year}}.', { count, year }), 'success');
             onImported();
             setDraft({});
             onClose();
@@ -706,10 +712,10 @@ function ImportModal({
             const raw = String(err?.message || err);
             setError(
                 /insufficient permissions|permission-denied/i.test(raw)
-                    ? 'Firestore refused the write: the security rules for populationTargets are not deployed yet. Ask a developer to run "npm run deploy:rules". Nothing was saved.'
+                    ? t('trackers.population.import.err_rules', 'Firestore refused the write: the security rules for populationTargets are not deployed yet. Ask a developer to run "npm run deploy:rules". Nothing was saved.')
                     : /even number of segments|Invalid document reference/i.test(raw)
-                        ? 'A locality name contains a character Firestore cannot use in a document id. Please report this — it needs a code fix. Nothing was saved.'
-                        : `The import failed and nothing was saved. ${raw}`
+                        ? t('trackers.population.import.err_char', 'A locality name contains a character Firestore cannot use in a document id. Please report this — it needs a code fix. Nothing was saved.')
+                        : t('trackers.population.import.failed', 'The import failed and nothing was saved. {{error}}', { error: raw })
             );
         } finally {
             setBusy(false);
@@ -722,13 +728,13 @@ function ImportModal({
     ));
 
     const mappableFields = [
-        { id: 'state', label: 'State', required: true },
-        { id: 'locality', label: 'Locality', required: true },
-        ...POPULATION_FIELDS.map((f) => ({ id: f.id, label: f.label, required: !!f.required })),
+        { id: 'state', label: t('trackers.population.state', 'State'), required: true },
+        { id: 'locality', label: t('trackers.population.locality', 'Locality'), required: true },
+        ...POPULATION_FIELDS.map((f) => ({ id: f.id, label: isArabic ? f.labelAr : f.label, required: !!f.required })),
     ];
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Import population targets — ${year}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={t('trackers.population.import.title', 'Import population targets — {{year}}', { year })}>
             <div className="space-y-4">
                 {error && (
                     <div className="flex gap-2 bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-sm">
@@ -741,19 +747,15 @@ function ImportModal({
                     <>
                         <div className="p-3 bg-sky-50 border border-sky-200 rounded space-y-2">
                             <div className="text-sm text-sky-900">
-                                <strong>No file ready?</strong> The template already contains every
-                                state and locality under the names the system expects, so you only
-                                enter numbers.
+                                <strong>{t('trackers.population.import.no_file', 'No file ready?')}</strong> {t('trackers.population.import.template_help', 'The template already contains every state and locality under the names the system expects, so you only enter numbers.')}
                             </div>
                             <Button variant="secondary" onClick={getTemplate}>
-                                <Download size={16} /> Download template
+                                <Download size={16} /> {t('trackers.population.import.download_template', 'Download template')}
                             </Button>
                         </div>
 
                         <p className="text-sm text-gray-600">
-                            Upload the EPI projected-denominator workbook. You will be able to
-                            check and change which column feeds which field before anything is
-                            saved.
+                            {t('trackers.population.import.upload_help', 'Upload the EPI projected-denominator workbook. You will be able to check and change which column feeds which field before anything is saved.')}
                         </p>
 
                         <input
@@ -768,8 +770,7 @@ function ImportModal({
                             className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
                         />
                         <div className="text-xs text-gray-500">
-                            If your file appears greyed out, it may be an online-only Google Drive
-                            file — open it once so it downloads locally, then try again.
+                            {t('trackers.population.import.greyed_help', 'If your file appears greyed out, it may be an online-only Google Drive file — open it once so it downloads locally, then try again.')}
                         </div>
                         {busy && <Spinner />}
                     </>
@@ -781,7 +782,7 @@ function ImportModal({
                             <div className="text-gray-700">
                                 <strong>{fileName}</strong>
                                 {headerRowIndex >= 0 && (
-                                    <span className="text-gray-500"> · header on row {headerRowIndex + 1}</span>
+                                    <span className="text-gray-500"> · {t('trackers.population.import.header_row', 'header on row {{row}}', { row: headerRowIndex + 1 })}</span>
                                 )}
                             </div>
                             {sheetNames.length > 1 && (
@@ -796,7 +797,7 @@ function ImportModal({
                         </div>
 
                         <div>
-                            <h4 className="font-medium mb-2">Map Excel columns to population fields</h4>
+                            <h4 className="font-medium mb-2">{t('trackers.population.import.map_title', 'Map Excel columns to population fields')}</h4>
                             <div className="grid gap-2">
                                 {mappableFields.map((field) => (
                                     <div key={field.id} className="flex items-center gap-3">
@@ -812,7 +813,7 @@ function ImportModal({
                                             }`}
                                         >
                                             <option value="">
-                                                {field.required ? '-- Select Excel column --' : '-- Not in this file (saved as 0) --'}
+                                                {field.required ? t('trackers.population.import.select_column', '-- Select Excel column --') : t('trackers.population.import.not_in_file', '-- Not in this file (saved as 0) --')}
                                             </option>
                                             {headerOptions}
                                         </select>
@@ -825,14 +826,14 @@ function ImportModal({
                             <div className="flex gap-2 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-900">
                                 <CheckCircle2 size={18} className="shrink-0 mt-0.5" />
                                 <div>
-                                    <strong>{finalRows.length} localities</strong> ready.
+                                    {t('trackers.population.import.ready', '{{count}} localities ready.', { count: finalRows.length })}
                                     {preview.skipped?.length > 0 && (
-                                        <> {preview.skipped.length} subtotal or empty rows ignored.</>
+                                        <> {t('trackers.population.import.skipped_rows', '{{count}} subtotal or empty rows ignored.', { count: preview.skipped.length })}</>
                                     )}
                                     <div className="mt-1">
-                                        Total population{' '}
+                                        {t('trackers.population.total_population', 'Total population')}{' '}
                                         <strong>{fmt(finalRows.reduce((s, r) => s + r.totalPopulation, 0))}</strong>
-                                        {' · '}under 5{' '}
+                                        {' · '}{t('trackers.population.import.under5', 'under 5')}{' '}
                                         <strong>{fmt(finalRows.reduce((s, r) => s + r.under5, 0))}</strong>
                                     </div>
                                 </div>
@@ -841,7 +842,7 @@ function ImportModal({
 
                         {preview?.error && (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">
-                                {preview.error}
+                                {errText(preview)}
                             </div>
                         )}
 
@@ -881,8 +882,8 @@ function ImportModal({
                             <div className="border border-amber-300 rounded overflow-hidden">
                                 <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 text-sm font-semibold text-amber-900 flex items-center gap-2">
                                     <AlertTriangle size={16} />
-                                    {preview.unknown.length} name(s) not recognised
-                                    {unresolved.length === 0 ? ' — all resolved' : ` — ${unresolved.length} to resolve`}
+                                    {t('trackers.population.import.not_recognised', '{{count}} name(s) not recognised', { count: preview.unknown.length })}
+                                    {' — '}{unresolved.length === 0 ? t('trackers.population.import.all_resolved', 'all resolved') : t('trackers.population.import.to_resolve', '{{count}} to resolve', { count: unresolved.length })}
                                 </div>
                                 <div className="divide-y max-h-60 overflow-y-auto">
                                     {preview.unknown.map((u) => {
@@ -895,11 +896,11 @@ function ImportModal({
                                             <div key={u.row} className="px-3 py-2 text-sm space-y-2">
                                                 <div className="flex items-baseline justify-between gap-2">
                                                     <span>
-                                                        Row {u.row}: <strong>&ldquo;{u.locality}&rdquo;</strong>
-                                                        <span className="text-gray-500"> in {u.state}</span>
+                                                        {t('trackers.population.import.row', 'Row {{row}}:', { row: u.row })} <strong>&ldquo;{u.locality}&rdquo;</strong>
+                                                        <span className="text-gray-500"> {t('trackers.population.import.in_state', 'in {{state}}', { state: u.state })}</span>
                                                     </span>
                                                     <span className="text-gray-500 text-xs shrink-0">
-                                                        pop {fmt(u.values?.totalPopulation)}
+                                                        {t('trackers.population.import.pop', 'pop {{value}}', { value: fmt(u.values?.totalPopulation) })}
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-wrap gap-2 items-center">
@@ -908,7 +909,7 @@ function ImportModal({
                                                         onChange={(e) => setFix(u.row, { stateKey: e.target.value, localityKey: '' })}
                                                         className="border rounded px-2 py-1 text-sm"
                                                     >
-                                                        <option value="">Select state…</option>
+                                                        <option value="">{t('trackers.population.import.select_state', 'Select state…')}</option>
                                                         {stateKeys.map((k) => (
                                                             <option key={k} value={k}>{stateLabel(k, isArabic)}</option>
                                                         ))}
@@ -921,7 +922,7 @@ function ImportModal({
                                                             : undefined)}
                                                         className="border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                                                     >
-                                                        <option value="">Select locality…</option>
+                                                        <option value="">{t('trackers.population.import.select_locality', 'Select locality…')}</option>
                                                         {options.map((l) => (
                                                             <option key={l.en} value={l.en}>{isArabic ? l.ar : l.en}</option>
                                                         ))}
@@ -935,11 +936,11 @@ function ImportModal({
                                                                 : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
                                                         }`}
                                                     >
-                                                        {fix === 'skip' ? 'Skipped' : 'Skip row'}
+                                                        {fix === 'skip' ? t('trackers.population.import.skipped', 'Skipped') : t('trackers.population.import.skip_row', 'Skip row')}
                                                     </button>
                                                     {fix && fix !== 'skip' && fix.localityKey && (
                                                         <span className="text-green-700 text-xs flex items-center gap-1">
-                                                            <CheckCircle2 size={14} /> mapped
+                                                            <CheckCircle2 size={14} /> {t('trackers.population.import.mapped', 'mapped')}
                                                         </span>
                                                     )}
                                                 </div>
@@ -948,30 +949,28 @@ function ImportModal({
                                     })}
                                 </div>
                                 <div className="px-3 py-2 bg-amber-50 border-t border-amber-200 text-xs text-amber-900">
-                                    Corrections apply to this import only. To make a spelling
-                                    permanent, add it to LOCALITY_ALIASES in constants.js.
+                                    {t('trackers.population.import.corrections_note', 'Corrections apply to this import only. To make a spelling permanent, add it to LOCALITY_ALIASES in constants.js.')}
                                 </div>
                             </div>
                         )}
 
                         {preview?.duplicates?.length > 0 && (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">
-                                {preview.duplicates.length} locality appears more than once and only
-                                the first was kept. Check the file if that is not what you expect.
+                                {t('trackers.population.import.duplicates', '{{count}} locality appears more than once and only the first was kept. Check the file if that is not what you expect.', { count: preview.duplicates.length })}
                             </div>
                         )}
 
                         <div className="flex justify-end gap-2 pt-2 border-t">
                             <Button variant="secondary" onClick={() => patch({ page: 0 })} disabled={busy}>
-                                Back
+                                {t('trackers.population.import.back', 'Back')}
                             </Button>
                             <Button
                                 onClick={handleImport}
                                 disabled={busy || !preview || !!preview.error || unresolved.length > 0 || !finalRows.length}
                             >
                                 {unresolved.length > 0
-                                    ? `Resolve ${unresolved.length} name(s) first`
-                                    : `Import ${finalRows.length} localities`}
+                                    ? t('trackers.population.import.resolve_first', 'Resolve {{count}} name(s) first', { count: unresolved.length })
+                                    : t('trackers.population.import.button', 'Import {{count}} localities', { count: finalRows.length })}
                             </Button>
                         </div>
                     </>
@@ -990,7 +989,7 @@ function ImportModal({
 // =============================================================================
 
 function EditModal({ isOpen, onClose, target, year, onSaved }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const [form, setForm] = useState(target || {});
     const [saving, setSaving] = useState(false);
@@ -1003,12 +1002,12 @@ function EditModal({ isOpen, onClose, target, year, onSaved }) {
             const payload = { ...form, year, source: 'manual' };
             POPULATION_FIELD_IDS.forEach((id) => { payload[id] = Number(form[id]) || 0; });
             await upsertPopulationTarget(payload);
-            notify('Population figures updated.', 'success');
+            notify(t('trackers.population.edit.updated', 'Population figures updated.'), 'success');
             onSaved();
             onClose();
         } catch (error) {
             console.error('Failed to save population target:', error);
-            notify('Could not save the figures.', 'error');
+            notify(t('trackers.population.edit.save_failed', 'Could not save the figures.'), 'error');
         } finally {
             setSaving(false);
         }
@@ -1040,8 +1039,8 @@ function EditModal({ isOpen, onClose, target, year, onSaved }) {
                     ))}
                 </div>
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-                    <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={saving}>{t('trackers.population.cancel', 'Cancel')}</Button>
+                    <Button onClick={save} disabled={saving}>{saving ? t('trackers.population.saving', 'Saving…') : t('trackers.population.save', 'Save')}</Button>
                 </div>
             </div>
         </Modal>
@@ -1053,7 +1052,7 @@ function EditModal({ isOpen, onClose, target, year, onSaved }) {
 // =============================================================================
 
 export default function PopulationManagementView({ permissions = {} }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     // canManagePopulation is new, so accounts whose stored permissions map was
     // written before it existed have no value for it. Those maps are not
@@ -1099,8 +1098,8 @@ export default function PopulationManagementView({ permissions = {} }) {
     }, [activeYear]);
 
     const headers = [
-        'State', 'Locality', 'Total population', 'Births', 'Surviving infants',
-        'Under 5', 'Pregnant women', ...(canEdit ? [''] : []),
+        t('trackers.population.state', 'State'), t('trackers.population.locality', 'Locality'), t('trackers.population.total_population', 'Total population'), t('trackers.population.births', 'Births'), t('trackers.population.surviving_infants', 'Surviving infants'),
+        t('trackers.population.under5', 'Under 5'), t('trackers.population.pregnant_women', 'Pregnant women'), ...(canEdit ? [''] : []),
     ];
 
     return (
@@ -1109,20 +1108,20 @@ export default function PopulationManagementView({ permissions = {} }) {
                 <div className="flex flex-wrap gap-3 items-end">
                     <div className="w-32">
                         <Select
-                            label="Target year"
+                            label={t('trackers.population.target_year', 'Target year')}
                             value={activeYear}
                             onChange={(e) => setYear(Number(e.target.value))}
                         >
                             {yearOptions.map((y) => (
                                 <option key={y} value={y}>
-                                    {y}{population.availableYears.includes(y) ? '' : ' (empty)'}
+                                    {y}{population.availableYears.includes(y) ? '' : ' ' + t('trackers.population.empty_year', '(empty)')}
                                 </option>
                             ))}
                         </Select>
                     </div>
                     <div className="w-48">
-                        <Select label="State" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
-                            <option value="all">All states</option>
+                        <Select label={t('trackers.population.state', 'State')} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+                            <option value="all">{t('trackers.population.all_states', 'All states')}</option>
                             {Object.keys(STATE_LOCALITIES)
                                 .filter((k) => k !== 'Federal')
                                 .map((k) => <option key={k} value={k}>{stateLabel(k, isArabic)}</option>)}
@@ -1130,7 +1129,7 @@ export default function PopulationManagementView({ permissions = {} }) {
                     </div>
                     <div className="w-56">
                         <Input
-                            label="Search locality"
+                            label={t('trackers.population.search_locality', 'Search locality')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -1141,11 +1140,11 @@ export default function PopulationManagementView({ permissions = {} }) {
                         has moved past rows that are in Firestore but not on
                         screen — otherwise a sync can never fetch them again. */}
                     <Button variant="secondary" onClick={() => population.refresh('full')}>
-                        <RefreshCw size={16} /> Reload
+                        <RefreshCw size={16} /> {t('trackers.population.reload', 'Reload')}
                     </Button>
                     {canEdit && (
                         <Button onClick={() => setImportOpen(true)}>
-                            <Upload size={16} /> Bulk upload
+                            <Upload size={16} /> {t('trackers.population.bulk_upload', 'Bulk upload')}
                         </Button>
                     )}
                 </div>
@@ -1154,10 +1153,10 @@ export default function PopulationManagementView({ permissions = {} }) {
             {population.hasData && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
-                        { label: 'Localities with data', value: population.national.localities },
-                        { label: 'Total population', value: fmt(population.national.totalPopulation) },
-                        { label: 'Children under 5', value: fmt(population.national.under5) },
-                        { label: 'Pregnant women', value: fmt(population.national.pregnantWomen) },
+                        { label: t('trackers.population.kpi.localities_with_data', 'Localities with data'), value: population.national.localities },
+                        { label: t('trackers.population.total_population', 'Total population'), value: fmt(population.national.totalPopulation) },
+                        { label: t('trackers.population.children_under5', 'Children under 5'), value: fmt(population.national.under5) },
+                        { label: t('trackers.population.pregnant_women', 'Pregnant women'), value: fmt(population.national.pregnantWomen) },
                     ].map((kpi) => (
                         <Card key={kpi.label}>
                             <CardBody className="py-3">
@@ -1173,7 +1172,7 @@ export default function PopulationManagementView({ permissions = {} }) {
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">
                     <div className="font-semibold flex items-center gap-2">
                         <AlertTriangle size={16} />
-                        {population.missingLocalities.length} localities have no {activeYear} figures
+                        {t('trackers.population.missing', '{{count}} localities have no {{year}} figures', { count: population.missingLocalities.length, year: activeYear })}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                         {population.missingLocalities.slice(0, 10).map((gap) => (
@@ -1189,7 +1188,7 @@ export default function PopulationManagementView({ permissions = {} }) {
                         ))}
                         {population.missingLocalities.length > 10 && (
                             <span className="text-xs self-center">
-                                and {population.missingLocalities.length - 10} more
+                                {t('trackers.population.and_more', 'and {{count}} more', { count: population.missingLocalities.length - 10 })}
                             </span>
                         )}
                     </div>
@@ -1204,8 +1203,8 @@ export default function PopulationManagementView({ permissions = {} }) {
                                 <EmptyState
                                     colSpan={headers.length}
                                     message={population.hasData
-                                        ? 'No localities match this filter.'
-                                        : `No population targets for ${activeYear} yet. Use Bulk upload to import them.`}
+                                        ? t('trackers.population.no_match', 'No localities match this filter.')
+                                        : t('trackers.population.empty', 'No population targets for {{year}} yet. Use Bulk upload to import them.', { year: activeYear })}
                                 />
                             ) : visible.map((row) => (
                                 <tr key={row.id || `${row.stateKey}|${row.localityKey}`}>
@@ -1285,7 +1284,7 @@ function Kpi({ icon: Icon, label, value, sub, tone = 'sky' }) {
 }
 
 export function PopulationDashboard() {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
 
     const [year, setYear] = useState(null);
@@ -1305,11 +1304,10 @@ export function PopulationDashboard() {
                 <CardBody className="text-center py-12 text-gray-500">
                     <Users size={32} className="mx-auto mb-3 text-gray-400" />
                     <div className="font-medium text-gray-700">
-                        No population targets for {activeYear}
+                        {t('trackers.population.dash.no_targets', 'No population targets for {{year}}', { year: activeYear })}
                     </div>
                     <div className="text-sm mt-1">
-                        Import them from Planning → Population to enable coverage denominators
-                        and supply forecasting.
+                        {t('trackers.population.dash.import_hint', 'Import them from Planning → Population to enable coverage denominators and supply forecasting.')}
                     </div>
                 </CardBody>
             </Card>
@@ -1320,12 +1318,12 @@ export function PopulationDashboard() {
         <div className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div className="w-32">
-                    <Select label="Year" value={activeYear} onChange={(e) => setYear(Number(e.target.value))}>
+                    <Select label={t('trackers.population.dash.year', 'Year')} value={activeYear} onChange={(e) => setYear(Number(e.target.value))}>
                         {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
                     </Select>
                 </div>
                 <div className="text-sm text-gray-600">
-                    {national.localities} localities across {national.states} states
+                    {t('trackers.population.dash.summary', '{{localities}} localities across {{states}} states', { localities: national.localities, states: national.states })}
                 </div>
             </div>
 
@@ -1334,27 +1332,27 @@ export function PopulationDashboard() {
                     icon={Users}
                     label={isArabic ? 'إجمالي السكان' : 'Total population'}
                     value={fmt(national.totalPopulation)}
-                    sub={`${activeYear} projection`}
+                    sub={t('trackers.population.dash.projection', '{{year}} projection', { year: activeYear })}
                 />
                 <Kpi
                     icon={Baby}
                     label={isArabic ? 'الأطفال دون الخامسة' : 'Children under 5'}
                     value={fmt(national.under5)}
-                    sub={`${pct(national.under5, national.totalPopulation)} of population`}
+                    sub={t('trackers.population.dash.of_population', '{{pct}} of population', { pct: pct(national.under5, national.totalPopulation) })}
                     tone="emerald"
                 />
                 <Kpi
                     icon={HeartPulse}
                     label={isArabic ? 'الرضع الباقون' : 'Surviving infants'}
                     value={fmt(national.survivingInfants)}
-                    sub={`${fmt(national.births)} births`}
+                    sub={t('trackers.population.dash.births', '{{count}} births', { count: fmt(national.births) })}
                     tone="amber"
                 />
                 <Kpi
                     icon={Users}
                     label={isArabic ? 'النساء الحوامل' : 'Pregnant women'}
                     value={fmt(national.pregnantWomen)}
-                    sub={`${fmt(national.cbaw)} of childbearing age`}
+                    sub={t('trackers.population.dash.cbaw', '{{count}} of childbearing age', { count: fmt(national.cbaw) })}
                     tone="rose"
                 />
             </div>
@@ -1362,8 +1360,7 @@ export function PopulationDashboard() {
             {missingLocalities.length > 0 && (
                 <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">
                     <AlertTriangle size={16} className="shrink-0" />
-                    {missingLocalities.length} localities have no {activeYear} figures, so any
-                    coverage or forecast covering them will be understated.
+                    {t('trackers.population.dash.missing', '{{count}} localities have no {{year}} figures, so any coverage or forecast covering them will be understated.', { count: missingLocalities.length, year: activeYear })}
                 </div>
             )}
 
@@ -1383,7 +1380,7 @@ export function PopulationDashboard() {
                         '% ' + (isArabic ? 'من السكان' : 'of national'),
                     ]}>
                         {stateRows.length === 0 ? (
-                            <EmptyState colSpan={7} message="No data." />
+                            <EmptyState colSpan={7} message={t('trackers.population.dash.no_data', 'No data.')} />
                         ) : stateRows.map((row) => (
                             <tr key={row.stateKey}>
                                 <td className="font-medium">{stateLabel(row.stateKey, isArabic)}</td>

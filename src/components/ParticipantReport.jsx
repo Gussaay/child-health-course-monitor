@@ -15,6 +15,7 @@ import {
     EMONC_DOMAIN_LABEL_NEONATAL, EMONC_DOMAIN_LABEL_MATERNAL
 } from './constants.js';
 import { notify } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // --- Reusable Share Icon for the button ---
 const ShareIcon = () => (
@@ -36,6 +37,7 @@ export function ParticipantReportView({
     onShare, 
     isSharedView = false 
 }) {
+    const { t } = useTranslation();
     const [selectedDay, setSelectedDay] = useState(null);
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
     
@@ -288,7 +290,7 @@ export function ParticipantReportView({
             pdf.save(fileName);
         } catch (error) {
             console.error("Failed to generate PDF:", error);
-            notify("An error occurred while generating the PDF.");
+            notify(t('shared_ui.participant_report.pdf_error', 'An error occurred while generating the PDF.'));
         } finally {
             setIsPdfGenerating(false);
         }
@@ -305,7 +307,7 @@ export function ParticipantReportView({
         plugins: { legend: { display: true, position: 'top' }, title: { display: true, text: '' } },
         scales: { 
             x: { stacked: true },
-            y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Number of Cases'} }
+            y: { stacked: true, beginAtZero: true, title: { display: true, text: t('shared_ui.participant_report.number_of_cases', 'Number of Cases')} }
         }
     };
 
@@ -327,12 +329,12 @@ export function ParticipantReportView({
                           (!['IMNCI', 'ICCM'].includes(course.course_type) && detailedPerformance.length > 0);
     const hasCaseData = casesWithCorrectness.length > 0;
     
-    const centerNameLabel = course.course_type === 'ICCM' ? 'Village' : 'Setting';
+    const centerNameLabel = course.course_type === 'ICCM' ? t('shared_ui.participant_report.village', 'Village') : t('shared_ui.participant_report.setting', 'Setting');
 
     return (
         <div className="flex flex-col gap-6 w-full max-w-full min-w-0 pb-20">
             <PageHeader
-                title="Participant Performance Report"
+                title={t('shared_ui.participant_report.title', 'Participant Performance Report')}
                 subtitle={participant.name}
                 actions={!isSharedView && <div id="report-actions" className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                     <div className="w-full sm:w-48">
@@ -341,27 +343,27 @@ export function ParticipantReportView({
                         </Select>
                     </div>
                      <Button onClick={() => onShare(participant)} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto">
-                        <ShareIcon /> Share
+                        <ShareIcon /> {t('shared_ui.participant_report.share', 'Share')}
                      </Button>
                      {isPdfGenerating ? (
-                        <Button disabled variant="secondary" className="w-full sm:w-auto"><Spinner /> Generating...</Button>
+                        <Button disabled variant="secondary" className="w-full sm:w-auto"><Spinner /> {t('shared_ui.participant_report.generating', 'Generating...')}</Button>
                      ) : (
                         <>
-                            <Button onClick={() => handleExportPdf('print')} variant="secondary" className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
-                            <Button onClick={() => handleExportPdf('screen')} variant="secondary" className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
+                            <Button onClick={() => handleExportPdf('print')} variant="secondary" className="w-full sm:w-auto"><PdfIcon /> {t('shared_ui.participant_report.export_print', 'Export for Print')}</Button>
+                            <Button onClick={() => handleExportPdf('screen')} variant="secondary" className="w-full sm:w-auto"><PdfIcon /> {t('shared_ui.participant_report.export_share', 'Export for Sharing')}</Button>
                         </>
                      )}
-                    <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto">Back to List</Button>
+                    <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto">{t('shared_ui.participant_report.back_to_list', 'Back to List')}</Button>
                 </div>}
             />
 
             <div ref={reportContentRef} className="flex flex-col gap-6 bg-white p-4 sm:p-6 w-full max-w-full min-w-0">
                 {selectedDay && (
-                    <Modal isOpen={!!selectedDay} onClose={() => setSelectedDay(null)} title={`Case Details for Day ${selectedDay}`}>
+                    <Modal isOpen={!!selectedDay} onClose={() => setSelectedDay(null)} title={t('shared_ui.participant_report.case_details_day', 'Case Details for Day {{day}}', { day: selectedDay })}>
                         <div className="p-4 max-h-[70vh] w-full max-w-full overflow-y-auto overflow-x-auto touch-pan-x">
-                            <Table headers={["Case #", "Final Classification", "Skills Observed", "Overall Status"]}>
+                            <Table headers={[t('shared_ui.participant_report.col_case_no', 'Case #'), t('shared_ui.participant_report.col_final_classification', 'Final Classification'), t('shared_ui.participant_report.col_skills_observed', 'Skills Observed'), t('shared_ui.participant_report.col_overall_status', 'Overall Status')]}>
                             {casesWithCorrectness.filter(c => (c.day_of_course || 1) === selectedDay).length === 0 ? (
-                                <EmptyState message="No cases found for this day." />
+                                <EmptyState message={t('shared_ui.participant_report.no_cases_day', 'No cases found for this day.')} />
                             ) : (
                                     casesWithCorrectness
                                         .filter(c => (c.day_of_course || 1) === selectedDay)
@@ -370,7 +372,7 @@ export function ParticipantReportView({
                                             return (
                                                 <tr key={c.id} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleCaseClick(c)}>
                                                     <td className="p-2 border align-top">{index + 1}</td>
-                                                    <td className="p-2 border align-top min-w-[150px]">{c.final_classification || 'N/A'}</td>
+                                                    <td className="p-2 border align-top min-w-[150px]">{c.final_classification || t('shared_ui.participant_report.na', 'N/A')}</td>
                                                     <td className="p-2 border align-top min-w-[200px]">
                                                         {caseObservations.length > 0 ? (
                                                             <ul className="list-disc pl-5 space-y-1">
@@ -380,10 +382,10 @@ export function ParticipantReportView({
                                                                     </li>
                                                                 ))}
                                                             </ul>
-                                                        ) : 'No skills recorded'}
+                                                        ) : t('shared_ui.participant_report.no_skills', 'No skills recorded')}
                                                     </td>
                                                     <td className={`p-2 border align-top font-semibold ${c.is_correct ? 'text-green-600' : 'text-red-600'}`}>
-                                                        {c.is_correct ? 'Correct' : 'Incorrect'}
+                                                        {c.is_correct ? t('shared_ui.participant_report.correct', 'Correct') : t('shared_ui.participant_report.incorrect', 'Incorrect')}
                                                     </td>
                                                 </tr>
                                             );
@@ -396,34 +398,34 @@ export function ParticipantReportView({
 
                 {(hasKpiData || hasTestScores) && (
                     <Card>
-                        <h3 className="text-xl font-bold mb-4">Performance KPIs</h3>
+                        <h3 className="text-xl font-bold mb-4">{t('shared_ui.participant_report.performance_kpis', 'Performance KPIs')}</h3>
                         {hasKpiData && (
                             <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
                                 <div>
-                                    <h4 className="text-lg font-semibold mb-2 text-gray-700">Case KPIs</h4>
+                                    <h4 className="text-lg font-semibold mb-2 text-gray-700">{t('shared_ui.participant_report.case_kpis', 'Case KPIs')}</h4>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Cases</div><div className="text-3xl font-bold text-sky-700">{kpiStats.totalCases}</div></div>
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Correct Cases</div><div className="text-3xl font-bold text-sky-700">{kpiStats.correctCases}</div></div>
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Avg Cases / Day</div><div className="text-3xl font-bold text-sky-700">{kpiStats.avgCasesPerDay.toFixed(1)}</div></div>
-                                        <div className={`p-4 rounded-lg ${pctBgClass(kpiStats.caseCorrectnessPct)}`}><div className="text-sm font-semibold">Correctness %</div><div className="text-3xl font-bold">{fmtPct(kpiStats.caseCorrectnessPct)}</div></div>
+                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('shared_ui.participant_report.total_cases', 'Total Cases')}</div><div className="text-3xl font-bold text-sky-700">{kpiStats.totalCases}</div></div>
+                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('shared_ui.participant_report.correct_cases', 'Correct Cases')}</div><div className="text-3xl font-bold text-sky-700">{kpiStats.correctCases}</div></div>
+                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('shared_ui.participant_report.avg_cases_day', 'Avg Cases / Day')}</div><div className="text-3xl font-bold text-sky-700">{kpiStats.avgCasesPerDay.toFixed(1)}</div></div>
+                                        <div className={`p-4 rounded-lg ${pctBgClass(kpiStats.caseCorrectnessPct)}`}><div className="text-sm font-semibold">{t('shared_ui.participant_report.correctness_pct', 'Correctness %')}</div><div className="text-3xl font-bold">{fmtPct(kpiStats.caseCorrectnessPct)}</div></div>
                                     </div>
                                 </div>
                                 <div>
-                                    <h4 className="text-lg font-semibold mb-2 text-gray-700">Skill KPIs</h4>
+                                    <h4 className="text-lg font-semibold mb-2 text-gray-700">{t('shared_ui.participant_report.skill_kpis', 'Skill KPIs')}</h4>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Skills</div><div className="text-3xl font-bold text-sky-700">{kpiStats.totalSkills}</div></div>
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Correct Skills</div><div className="text-3xl font-bold text-sky-700">{kpiStats.correctSkills}</div></div>
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Avg Skills / Day</div><div className="text-3xl font-bold text-sky-700">{kpiStats.avgSkillsPerDay.toFixed(1)}</div></div>
-                                        <div className={`p-4 rounded-lg ${pctBgClass(kpiStats.skillCorrectnessPct)}`}><div className="text-sm font-semibold">Correctness %</div><div className="text-3xl font-bold">{fmtPct(kpiStats.skillCorrectnessPct)}</div></div>
+                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('shared_ui.participant_report.total_skills', 'Total Skills')}</div><div className="text-3xl font-bold text-sky-700">{kpiStats.totalSkills}</div></div>
+                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('shared_ui.participant_report.correct_skills', 'Correct Skills')}</div><div className="text-3xl font-bold text-sky-700">{kpiStats.correctSkills}</div></div>
+                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('shared_ui.participant_report.avg_skills_day', 'Avg Skills / Day')}</div><div className="text-3xl font-bold text-sky-700">{kpiStats.avgSkillsPerDay.toFixed(1)}</div></div>
+                                        <div className={`p-4 rounded-lg ${pctBgClass(kpiStats.skillCorrectnessPct)}`}><div className="text-sm font-semibold">{t('shared_ui.participant_report.correctness_pct', 'Correctness %')}</div><div className="text-3xl font-bold">{fmtPct(kpiStats.skillCorrectnessPct)}</div></div>
                                     </div>
                                 </div>
                             </div>
                         )}
                         {hasTestScores && (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mt-6 border-t pt-6">
-                                <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold">Pre-Test Score</div><div className="text-3xl font-bold">{preScore || 'N/A'}%</div></div>
-                                <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold">Post-Test Score</div><div className="text-3xl font-bold">{postScore || 'N/A'}%</div></div>
-                                <div className={`p-4 rounded-lg sm:col-span-2 md:col-span-1 ${getImprovementBgClass(improvement)}`}><div className="text-sm font-semibold">Improvement</div><div className="text-3xl font-bold">{improvement.toFixed(1)}%</div></div>
+                                <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold">{t('shared_ui.participant_report.pre_test', 'Pre-Test Score')}</div><div className="text-3xl font-bold">{preScore || t('shared_ui.participant_report.na', 'N/A')}%</div></div>
+                                <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold">{t('shared_ui.participant_report.post_test', 'Post-Test Score')}</div><div className="text-3xl font-bold">{postScore || t('shared_ui.participant_report.na', 'N/A')}%</div></div>
+                                <div className={`p-4 rounded-lg sm:col-span-2 md:col-span-1 ${getImprovementBgClass(improvement)}`}><div className="text-sm font-semibold">{t('shared_ui.participant_report.improvement', 'Improvement')}</div><div className="text-3xl font-bold">{improvement.toFixed(1)}%</div></div>
                             </div>
                         )}
                     </Card>
@@ -433,14 +435,14 @@ export function ParticipantReportView({
                     <div className="flex flex-col lg:flex-row gap-6 w-full max-w-full min-w-0">
                         <div className="w-full min-w-0 flex-1">
                             <Card>
-                                <h3 className="text-xl font-bold mb-4">Daily Case Distribution (OPD vs IPD)</h3>
+                                <h3 className="text-xl font-bold mb-4">{t('shared_ui.participant_report.daily_distribution', 'Daily Case Distribution (OPD vs IPD)')}</h3>
                                 <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                     <div style={{ height: '300px', minWidth: '400px' }} className="min-w-[400px]">
                                         <Bar ref={caseChartByDayRef} options={chartOptions} data={{
-                                                labels: casePerformanceByDay.map(d => `Day ${d.day}`),
+                                                labels: casePerformanceByDay.map(d => t('shared_ui.participant_report.day_n', 'Day {{day}}', { day: d.day })),
                                                 datasets: [
-                                                    { label: 'Out-Patient (OPD)', data: casePerformanceByDay.map(d => d.opdTotal), backgroundColor: '#3b82f6' },
-                                                    { label: 'In-Patient (IPD)', data: casePerformanceByDay.map(d => d.ipdTotal), backgroundColor: '#10b981' }
+                                                    { label: t('shared_ui.participant_report.opd', 'Out-Patient (OPD)'), data: casePerformanceByDay.map(d => d.opdTotal), backgroundColor: '#3b82f6' },
+                                                    { label: t('shared_ui.participant_report.ipd', 'In-Patient (IPD)'), data: casePerformanceByDay.map(d => d.ipdTotal), backgroundColor: '#10b981' }
                                                 ]
                                             }} 
                                             onClick={handleChartClick}
@@ -451,12 +453,12 @@ export function ParticipantReportView({
                         </div>
                         <div className="w-full min-w-0 flex-1">
                             <Card>
-                                <h3 className="text-xl font-bold mb-4">Daily Case Performance</h3>
+                                <h3 className="text-xl font-bold mb-4">{t('shared_ui.participant_report.daily_performance', 'Daily Case Performance')}</h3>
                                 <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                    <Table headers={["Day", "Out-Patient (OPD)", "In-Patient (IPD)", "Total Cases"]}>
+                                    <Table headers={[t('shared_ui.participant_report.col_day', 'Day'), t('shared_ui.participant_report.opd', 'Out-Patient (OPD)'), t('shared_ui.participant_report.ipd', 'In-Patient (IPD)'), t('shared_ui.participant_report.total_cases', 'Total Cases')]}>
                                         {casePerformanceByDay.map(dayData => (
                                             <tr key={dayData.day} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleDaySelect(dayData.day)}>
-                                                <td className="p-2 border font-bold min-w-[80px]">Day {dayData.day}</td>
+                                                <td className="p-2 border font-bold min-w-[80px]">{t('shared_ui.participant_report.day_n', 'Day {{day}}', { day: dayData.day })}</td>
                                                 <td className={`p-2 border text-center font-mono min-w-[120px] ${pctBgClass(dayData.opdPct)}`}>{dayData.opdTotal} ({fmtPct(dayData.opdPct)})</td>
                                                 <td className={`p-2 border text-center font-mono min-w-[120px] ${pctBgClass(dayData.ipdPct)}`}>{dayData.ipdTotal} ({fmtPct(dayData.ipdPct)})</td>
                                                 <td className={`p-2 border text-center font-mono min-w-[100px] ${pctBgClass(dayData.totalPct)}`}>{dayData.total} ({fmtPct(dayData.totalPct)})</td>
@@ -471,28 +473,28 @@ export function ParticipantReportView({
 
                 {hasDomainData && (
                     <Card>
-                        <h3 className="text-xl font-bold mb-4">Detailed Skill Performance by Domain</h3>
+                        <h3 className="text-xl font-bold mb-4">{t('shared_ui.participant_report.detailed_by_domain', 'Detailed Skill Performance by Domain')}</h3>
                         <div className="space-y-4 w-full max-w-full min-w-0">
                         {(course.course_type === 'IMNCI' || course.course_type === 'ICCM') ? (
                             Object.entries(detailedPerformance).map(([ageGroup, domains]) => (
                                 (domains.length > 0 &&
                                 <div key={ageGroup} className="p-4 border rounded-lg bg-white space-y-3 shadow-sm w-full max-w-full min-w-0">
                                     <h4 className="text-lg font-bold text-sky-800 border-b pb-2">
-                                        {ageGroup === 'LT2M' ? 'Age Group: 0-59 days' : 'Age Group: 2-59 months'}
+                                        {ageGroup === 'LT2M' ? t('shared_ui.participant_report.age_group_lt2m', 'Age Group: 0-59 days') : t('shared_ui.participant_report.age_group_ge2m', 'Age Group: 2-59 months')}
                                     </h4>
                                     {domains.map(domain => (
                                         <details key={domain.label} className="bg-gray-50 p-3 rounded-lg w-full max-w-full min-w-0">
                                             <summary className="font-semibold cursor-pointer flex justify-between items-center flex-wrap gap-x-4">
                                                 <span>{domain.label}</span>
                                                 <div className="flex items-center gap-4 mt-2 sm:mt-0">
-                                                    <span className="text-sm font-normal text-gray-600">Cases: {domain.totalCases}</span>
+                                                    <span className="text-sm font-normal text-gray-600">{t('shared_ui.participant_report.cases_n', 'Cases: {{count}}', { count: domain.totalCases })}</span>
                                                     <span className={`font-mono text-sm px-2 py-1 rounded ${pctBgClass(calcPct(domain.correct, domain.total))}`}>
                                                         {fmtPct(calcPct(domain.correct, domain.total))}
                                                     </span>
                                                 </div>
                                             </summary>
                                             <div className="mt-2 pl-2 sm:pl-4 border-l-2 border-gray-200 w-full max-w-full overflow-x-auto touch-pan-x">
-                                                <Table headers={["Skill/Classification", "Performance", "%"]}>
+                                                <Table headers={[t('shared_ui.participant_report.col_skill', 'Skill/Classification'), t('shared_ui.participant_report.col_performance', 'Performance'), "%"]}>
                                                     {Object.entries(domain.skills).map(([skill, data]) => {
                                                         const pct = calcPct(data.correct, data.total);
                                                         return (
@@ -515,14 +517,14 @@ export function ParticipantReportView({
                                     <summary className="font-semibold cursor-pointer flex justify-between items-center flex-wrap gap-x-4">
                                         <span>{domain.label}</span>
                                         <div className="flex items-center gap-4 mt-2 sm:mt-0">
-                                            <span className="text-sm font-normal text-gray-600">Cases: {domain.totalCases}</span>
+                                            <span className="text-sm font-normal text-gray-600">{t('shared_ui.participant_report.cases_n', 'Cases: {{count}}', { count: domain.totalCases })}</span>
                                             <span className={`font-mono text-sm px-2 py-1 rounded ${pctBgClass(course.course_type === 'EENC' || course.course_type === 'EmONC' ? calcPct(domain.score, domain.maxScore) : calcPct(domain.correct, domain.total))}`}>
                                                 {fmtPct(course.course_type === 'EENC' || course.course_type === 'EmONC' ? calcPct(domain.score, domain.maxScore) : calcPct(domain.correct, domain.total))}
                                             </span>
                                         </div>
                                     </summary>
                                     <div className="mt-2 pl-2 sm:pl-4 border-l-2 border-gray-200 w-full max-w-full overflow-x-auto touch-pan-x">
-                                        <Table headers={["Skill/Classification", "Performance", "%"]}>
+                                        <Table headers={[t('shared_ui.participant_report.col_skill', 'Skill/Classification'), t('shared_ui.participant_report.col_performance', 'Performance'), "%"]}>
                                             {Object.entries(domain.skills).map(([skill, data]) => {
                                                 const pct = course.course_type === 'EENC' || course.course_type === 'EmONC' ? calcPct(data.score, data.maxScore) : calcPct(data.correct, data.total);
                                                 return (
@@ -544,30 +546,30 @@ export function ParticipantReportView({
 
                 {hasCaseData && (
                     <Card>
-                        <h3 className="text-xl font-bold mb-4">All Cases Summary</h3>
+                        <h3 className="text-xl font-bold mb-4">{t('shared_ui.participant_report.all_cases_summary', 'All Cases Summary')}</h3>
                         
                         {course.course_type !== 'ICCM' && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
-                                <FormGroup label="Filter by Setting">
+                                <FormGroup label={t('shared_ui.participant_report.filter_setting', 'Filter by Setting')}>
                                     <Select value={settingFilter} onChange={e => setSettingFilter(e.target.value)} className="w-full">
-                                        <option value="all">All Settings</option>
-                                        <option value="OPD">Out-Patient (OPD)</option>
-                                        <option value="IPD">In-Patient (IPD)</option>
+                                        <option value="all">{t('shared_ui.participant_report.all_settings', 'All Settings')}</option>
+                                        <option value="OPD">{t('shared_ui.participant_report.opd', 'Out-Patient (OPD)')}</option>
+                                        <option value="IPD">{t('shared_ui.participant_report.ipd', 'In-Patient (IPD)')}</option>
                                     </Select>
                                 </FormGroup>
-                                <FormGroup label="Filter by Day">
+                                <FormGroup label={t('shared_ui.participant_report.filter_day', 'Filter by Day')}>
                                     <Select value={dayFilter} onChange={e => setDayFilter(e.target.value)} className="w-full">
-                                        <option value="all">All Days</option>
+                                        <option value="all">{t('shared_ui.participant_report.all_days', 'All Days')}</option>
                                         {uniqueCourseDays.map(day => (
-                                            <option key={day} value={day}>Day {day}</option>
+                                            <option key={day} value={day}>{t('shared_ui.participant_report.day_n', 'Day {{day}}', { day })}</option>
                                         ))}
                                     </Select>
                                 </FormGroup>
-                                <FormGroup label="Filter by Status">
+                                <FormGroup label={t('shared_ui.participant_report.filter_status', 'Filter by Status')}>
                                     <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="w-full">
-                                        <option value="all">All Cases</option>
-                                        <option value="correct">Correct Only</option>
-                                        <option value="incorrect">Incorrect Only</option>
+                                        <option value="all">{t('shared_ui.participant_report.all_cases', 'All Cases')}</option>
+                                        <option value="correct">{t('shared_ui.participant_report.correct_only', 'Correct Only')}</option>
+                                        <option value="incorrect">{t('shared_ui.participant_report.incorrect_only', 'Incorrect Only')}</option>
                                     </Select>
                                 </FormGroup>
                                 <div className="flex items-end">
@@ -575,54 +577,54 @@ export function ParticipantReportView({
                                         setSettingFilter('all');
                                         setDayFilter('all');
                                         setStatusFilter('all');
-                                    }}>Reset Filters</Button>
+                                    }}>{t('shared_ui.participant_report.reset_filters', 'Reset Filters')}</Button>
                                 </div>
                             </div>
                         )}
                         {course.course_type === 'ICCM' && (
                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
-                                <FormGroup label="Filter by Day">
+                                <FormGroup label={t('shared_ui.participant_report.filter_day', 'Filter by Day')}>
                                     <Select value={dayFilter} onChange={e => setDayFilter(e.target.value)} className="w-full">
-                                        <option value="all">All Days</option>
+                                        <option value="all">{t('shared_ui.participant_report.all_days', 'All Days')}</option>
                                         {uniqueCourseDays.map(day => (
-                                            <option key={day} value={day}>Day {day}</option>
+                                            <option key={day} value={day}>{t('shared_ui.participant_report.day_n', 'Day {{day}}', { day })}</option>
                                         ))}
                                     </Select>
                                 </FormGroup>
-                                <FormGroup label="Filter by Status">
+                                <FormGroup label={t('shared_ui.participant_report.filter_status', 'Filter by Status')}>
                                     <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="w-full">
-                                        <option value="all">All Cases</option>
-                                        <option value="correct">Correct Only</option>
-                                        <option value="incorrect">Incorrect Only</option>
+                                        <option value="all">{t('shared_ui.participant_report.all_cases', 'All Cases')}</option>
+                                        <option value="correct">{t('shared_ui.participant_report.correct_only', 'Correct Only')}</option>
+                                        <option value="incorrect">{t('shared_ui.participant_report.incorrect_only', 'Incorrect Only')}</option>
                                     </Select>
                                 </FormGroup>
                                 <div className="flex items-end sm:col-span-2 md:col-span-2">
                                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => {
                                         setDayFilter('all');
                                         setStatusFilter('all');
-                                    }}>Reset Filters</Button>
+                                    }}>{t('shared_ui.participant_report.reset_filters', 'Reset Filters')}</Button>
                                 </div>
                             </div>
                         )}
 
 
                         <div className="w-full max-w-full overflow-x-auto touch-pan-x">
-                            <Table headers={["Case #", "Age Group", ...(course.course_type !== 'ICCM' ? [centerNameLabel] : []), "Day of Course", "Overall Status", "Classifications"]}>
+                            <Table headers={[t('shared_ui.participant_report.col_case_no', 'Case #'), t('shared_ui.participant_report.col_age_group', 'Age Group'), ...(course.course_type !== 'ICCM' ? [centerNameLabel] : []), t('shared_ui.participant_report.col_day_of_course', 'Day of Course'), t('shared_ui.participant_report.col_overall_status', 'Overall Status'), t('shared_ui.participant_report.col_classifications', 'Classifications')]}>
                                 {filteredCases.length > 0 ? (
                                     filteredCases.map((c, index) => {
                                         const caseObservations = observations.filter(obs => obs.caseId === c.id);
                                         const ageGroupLabel = c.age_group === 'LT2M' 
-                                            ? '0-59 days' 
-                                            : (c.age_group === 'GE2M_LE5Y' ? '2-59 months' : c.age_group || 'N/A');
+                                            ? t('shared_ui.participant_report.age_0_59d', '0-59 days') 
+                                            : (c.age_group === 'GE2M_LE5Y' ? t('shared_ui.participant_report.age_2_59m', '2-59 months') : c.age_group || t('shared_ui.participant_report.na', 'N/A'));
 
                                         return (
                                             <tr key={c.id} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleCaseClick(c)}>
                                                 <td className="p-2 border align-top font-medium">{index + 1}</td>
                                                 <td className="p-2 border align-top min-w-[100px]">{ageGroupLabel}</td>
-                                                {course.course_type !== 'ICCM' && <td className="p-2 border align-top">{c.setting || 'N/A'}</td>}
+                                                {course.course_type !== 'ICCM' && <td className="p-2 border align-top">{c.setting || t('shared_ui.participant_report.na', 'N/A')}</td>}
                                                 <td className="p-2 border align-top text-center">{c.day_of_course || '1'}</td>
                                                 <td className={`p-2 border align-top font-semibold min-w-[100px] ${c.is_correct ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {c.is_correct ? 'Correct' : 'Incorrect'}
+                                                    {c.is_correct ? t('shared_ui.participant_report.correct', 'Correct') : t('shared_ui.participant_report.incorrect', 'Incorrect')}
                                                 </td>
                                                 <td className="p-2 border align-top min-w-[200px]">
                                                     {caseObservations.length > 0 ? (
@@ -633,7 +635,7 @@ export function ParticipantReportView({
                                                                 </li>
                                                             ))}
                                                         </ul>
-                                                    ) : 'No classifications recorded'}
+                                                    ) : t('shared_ui.participant_report.no_classifications', 'No classifications recorded')}
                                                 </td>
                                             </tr>
                                         );
@@ -641,7 +643,7 @@ export function ParticipantReportView({
                                 ) : (
                                     <tr>
                                         <td colSpan={course.course_type !== 'ICCM' ? 6 : 5} className="text-center p-4">
-                                            <EmptyState message="No cases match the current filters." />
+                                            <EmptyState message={t('shared_ui.participant_report.no_cases_filter', 'No cases match the current filters.')} />
                                         </td>
                                     </tr>
                                 )}

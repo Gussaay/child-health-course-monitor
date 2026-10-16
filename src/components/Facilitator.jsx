@@ -30,6 +30,7 @@ import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './permissions';
 import SudanMap from '../SudanMap'; 
 import { Capacitor } from '@capacitor/core';
 import { notify } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // --- Helper Functions ---
 const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
@@ -75,43 +76,44 @@ export const getDeclarationRenewalDate = (signedDate) => {
     return d.toISOString().split('T')[0];
 };
 
-const getCertificateName = (key) => {
+const getCertificateName = (key, t) => {
     const names = {
-        IMNCI: 'IMNCI ToT Certificate',
-        ETAT: 'ETAT ToT Certificate',
-        EENC: 'EENC ToT Certificate',
-        IPC: 'IPC ToT Certificate',
-        SSNC: 'SSNC ToT Certificate',
-        'Comprehensive Package For Community Midwives': 'CPCM ToT Certificate',
-        directorCourseCert: 'IMNCI Course Director Certificate',
-        followUpCourseCert: 'IMNCI Follow-up Course Certificate',
-        teamLeaderCourseCert: 'IMNCI Team Leader Certificate',
-        mentorCourseCert: 'IMNCI Mentor Training Certificate',
-        mentorDeclarationCert: 'Signed Mentor Code of Conduct Declaration (Annex C)',
+        IMNCI: t('facilitators_page.cert_names.imnci', 'IMNCI ToT Certificate'),
+        ETAT: t('facilitators_page.cert_names.etat', 'ETAT ToT Certificate'),
+        EENC: t('facilitators_page.cert_names.eenc', 'EENC ToT Certificate'),
+        IPC: t('facilitators_page.cert_names.ipc', 'IPC ToT Certificate'),
+        SSNC: t('facilitators_page.cert_names.ssnc', 'SSNC ToT Certificate'),
+        'Comprehensive Package For Community Midwives': t('facilitators_page.cert_names.cpcm', 'CPCM ToT Certificate'),
+        directorCourseCert: t('facilitators_page.cert_names.director', 'IMNCI Course Director Certificate'),
+        followUpCourseCert: t('facilitators_page.cert_names.follow_up', 'IMNCI Follow-up Course Certificate'),
+        teamLeaderCourseCert: t('facilitators_page.cert_names.team_leader', 'IMNCI Team Leader Certificate'),
+        mentorCourseCert: t('facilitators_page.cert_names.mentor', 'IMNCI Mentor Training Certificate'),
+        mentorDeclarationCert: t('facilitators_page.cert_names.mentor_declaration', 'Signed Mentor Code of Conduct Declaration (Annex C)'),
     };
     return names[key] || key;
 };
 
 function ViewCertificatesModal({ isOpen, onClose, facilitator }) {
+    const { t } = useTranslation();
     if (!facilitator) return null;
     const certs = facilitator.certificateUrls ? Object.entries(facilitator.certificateUrls) : [];
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Certificates for ${facilitator.name}`} size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('facilitators_page.certs.modal_title', 'Certificates for {{name}}', { name: facilitator.name })} size="lg">
             {certs.length > 0 ? (
                 <ul className="space-y-3">
                     {certs.map(([key, url]) => (
                         <li key={key} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 hover:bg-gray-100">
-                            <span className="font-medium text-gray-700">{getCertificateName(key)}</span>
+                            <span className="font-medium text-gray-700">{getCertificateName(key, t)}</span>
                             <a href={url} target="_blank" rel="noopener noreferrer">
-                                <Button variant="secondary">View Certificate</Button>
+                                <Button variant="secondary">{t('facilitators_page.certs.view_certificate', 'View Certificate')}</Button>
                             </a>
                         </li>
                     ))}
                 </ul>
             ) : (
                 <div className="p-4">
-                    <EmptyState message="No certificates have been uploaded for this facilitator." />
+                    <EmptyState message={t('facilitators_page.certs.none', 'No certificates have been uploaded for this facilitator.')} />
                 </div>
             )}
         </Modal>
@@ -119,41 +121,42 @@ function ViewCertificatesModal({ isOpen, onClose, facilitator }) {
 }
 
 function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
+    const { t } = useTranslation();
     const [showLinkCopied, setShowLinkCopied] = useState(false);
     const link = `${getBaseUrl()}/public/facilitator-application`;
 
     const handleCopyLink = () => {
         const textToShare = `*Facilitator Registration*\n\nPlease submit your facilitator application via this link:\n${link}`;
-        shareViaWhatsApp(textToShare, 'Link copied!');
+        shareViaWhatsApp(textToShare, t('facilitators_page.common.link_copied', 'Link copied!'));
         setShowLinkCopied(true);
         setTimeout(() => setShowLinkCopied(false), 2500);
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Manage Public Submission Link">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('facilitators_page.link_modal.title', 'Manage Public Submission Link')}>
             {isLoading ? <Spinner /> : (
                 <>
                     <div>
-                        <FormGroup label="Public URL">
+                        <FormGroup label={t('facilitators_page.link_modal.public_url', 'Public URL')}>
                             <div className="relative">
                                 <Input type="text" value={link} readOnly className="pr-24" />
                                 <Button onClick={handleCopyLink} className="absolute right-1 top-1/2 -translate-y-1/2" variant="secondary" size="sm">
-                                    {showLinkCopied ? 'Shared!' : 'Share'}
+                                    {showLinkCopied ? t('facilitators_page.common.shared', 'Shared!') : t('facilitators_page.common.share', 'Share')}
                                 </Button>
                             </div>
                         </FormGroup>
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg mt-6">
                         <div className="flex items-center gap-4">
-                            <div>Status:
+                            <div>{t('facilitators_page.link_modal.status', 'Status:')}
                                 <span className={`font-bold px-2 py-1 rounded-full text-xs ml-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    {settings.isActive ? 'Active' : 'Inactive'}
+                                    {settings.isActive ? t('facilitators_page.link_modal.active', 'Active') : t('facilitators_page.link_modal.inactive', 'Inactive')}
                                 </span>
                             </div>
-                            <div><span className="font-medium">Link Opened:</span> {settings.openCount || 0} times</div>
+                            <div><span className="font-medium">{t('facilitators_page.link_modal.link_opened', 'Link Opened:')}</span> {t('facilitators_page.link_modal.times', '{{n}} times', { n: settings.openCount || 0 })}</div>
                         </div>
                         <Button variant={settings.isActive ? 'danger' : 'success'} onClick={onToggleStatus}>
-                            {settings.isActive ? 'Deactivate Link' : 'Activate Link'}
+                            {settings.isActive ? t('facilitators_page.link_modal.deactivate', 'Deactivate Link') : t('facilitators_page.link_modal.activate', 'Activate Link')}
                         </Button>
                     </div>
                 </>
@@ -163,6 +166,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 }
 
 const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
+    const { t } = useTranslation();
     const [excelData, setExcelData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [fieldMappings, setFieldMappings] = useState({});
@@ -171,26 +175,26 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     const fileInputRef = useRef(null);
 
     const allFields = [
-        { key: 'id', label: 'ID', required: false, hidden: true },
-        { key: 'name', label: 'Name' },
-        { key: 'arabicName', label: 'Arabic Name' },
-        { key: 'phone', label: 'Phone Number' },
-        { key: 'email', label: 'Email' },
-        { key: 'currentState', label: 'Current State' },
-        { key: 'currentLocality', label: 'Current Locality' },
-        { key: 'directorCourse', label: 'IMNCI Course Director' },
-        { key: 'directorCourseDate', label: 'Director Course Date' },
-        { key: 'followUpCourse', label: 'IMNCI Follow-up Course' },
-        { key: 'followUpCourseDate', label: 'Follow-up Course Date' },
-        { key: 'teamLeaderCourse', label: 'IMNCI Team Leader Course' },
-        { key: 'teamLeaderCourseDate', label: 'Team Leader Course Date' },
-        { key: 'mentorCourse', label: 'IMNCI Mentor Training' },
-        { key: 'mentorCourseDate', label: 'Mentor Training Date' },
-        { key: 'mentorDeclarationSigned', label: 'Mentor Declaration Signed' },
-        { key: 'mentorDeclarationName', label: 'Mentor Declaration Signatory' },
-        { key: 'mentorDeclarationDate', label: 'Mentor Declaration Date Signed' },
-        { key: 'isClinicalInstructor', label: 'Clinical Instructor' },
-        { key: 'comments', label: 'Comments' },
+        { key: 'id', label: 'ID', display: t('facilitators_page.import.fields.id', 'ID'), required: false, hidden: true },
+        { key: 'name', label: 'Name', display: t('facilitators_page.import.fields.name', 'Name') },
+        { key: 'arabicName', label: 'Arabic Name', display: t('facilitators_page.import.fields.arabic_name', 'Arabic Name') },
+        { key: 'phone', label: 'Phone Number', display: t('facilitators_page.import.fields.phone_number', 'Phone Number') },
+        { key: 'email', label: 'Email', display: t('facilitators_page.import.fields.email', 'Email') },
+        { key: 'currentState', label: 'Current State', display: t('facilitators_page.import.fields.current_state', 'Current State') },
+        { key: 'currentLocality', label: 'Current Locality', display: t('facilitators_page.import.fields.current_locality', 'Current Locality') },
+        { key: 'directorCourse', label: 'IMNCI Course Director', display: t('facilitators_page.import.fields.director_course', 'IMNCI Course Director') },
+        { key: 'directorCourseDate', label: 'Director Course Date', display: t('facilitators_page.import.fields.director_course_date', 'Director Course Date') },
+        { key: 'followUpCourse', label: 'IMNCI Follow-up Course', display: t('facilitators_page.import.fields.follow_up_course', 'IMNCI Follow-up Course') },
+        { key: 'followUpCourseDate', label: 'Follow-up Course Date', display: t('facilitators_page.import.fields.follow_up_course_date', 'Follow-up Course Date') },
+        { key: 'teamLeaderCourse', label: 'IMNCI Team Leader Course', display: t('facilitators_page.import.fields.team_leader_course', 'IMNCI Team Leader Course') },
+        { key: 'teamLeaderCourseDate', label: 'Team Leader Course Date', display: t('facilitators_page.import.fields.team_leader_course_date', 'Team Leader Course Date') },
+        { key: 'mentorCourse', label: 'IMNCI Mentor Training', display: t('facilitators_page.import.fields.mentor_course', 'IMNCI Mentor Training') },
+        { key: 'mentorCourseDate', label: 'Mentor Training Date', display: t('facilitators_page.import.fields.mentor_course_date', 'Mentor Training Date') },
+        { key: 'mentorDeclarationSigned', label: 'Mentor Declaration Signed', display: t('facilitators_page.import.fields.mentor_declaration_signed', 'Mentor Declaration Signed') },
+        { key: 'mentorDeclarationName', label: 'Mentor Declaration Signatory', display: t('facilitators_page.import.fields.mentor_declaration_name', 'Mentor Declaration Signatory') },
+        { key: 'mentorDeclarationDate', label: 'Mentor Declaration Date Signed', display: t('facilitators_page.import.fields.mentor_declaration_date', 'Mentor Declaration Date Signed') },
+        { key: 'isClinicalInstructor', label: 'Clinical Instructor', display: t('facilitators_page.import.fields.clinical_instructor', 'Clinical Instructor') },
+        { key: 'comments', label: 'Comments', display: t('facilitators_page.import.fields.comments', 'Comments') },
     ];
     
     const handleDownloadTemplate = () => {
@@ -222,12 +226,12 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
                 const workbook = XLSX.read(data, { type: 'array' });
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                if (jsonData.length < 2) { setError('Excel file must contain at least a header row and one data row'); return; }
+                if (jsonData.length < 2) { setError(t('facilitators_page.import.err_min_rows', 'Excel file must contain at least a header row and one data row')); return; }
                 setHeaders(jsonData[0]);
                 setExcelData(jsonData.slice(1));
                 setCurrentPage(1);
                 setError('');
-            } catch (err) { setError('Error reading Excel file: ' + err.message); }
+            } catch (err) { setError(t('facilitators_page.import.err_read', 'Error reading Excel file: {{message}}', { message: err.message })); }
         };
         reader.readAsArrayBuffer(file);
     };
@@ -237,7 +241,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     };
 
     const handleImport = () => {
-        if (!fieldMappings['name']) { setError('The "Name" field must be mapped to an Excel column.'); return; }
+        if (!fieldMappings['name']) { setError(t('facilitators_page.import.err_name_map', 'The "Name" field must be mapped to an Excel column.')); return; }
         
         const importedFacilitators = excelData.map(row => {
             const facilitator = {};
@@ -251,7 +255,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
             return facilitator;
         }).filter(f => f.name);
 
-        if (importedFacilitators.length === 0) { setError('No valid facilitators found with a name after mapping.'); return; }
+        if (importedFacilitators.length === 0) { setError(t('facilitators_page.import.err_no_valid', 'No valid facilitators found with a name after mapping.')); return; }
 
         // --- Duplicate Prevention Check ---
         const validFacilitators = [];
@@ -273,10 +277,10 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
 
         if (duplicates.length > 0) {
             if (validFacilitators.length === 0) {
-                setError(`All imported facilitators are already in the system (${duplicates.join(', ')}). Duplicate check applies to Phone and Email.`);
+                setError(t('facilitators_page.import.err_all_dup', 'All imported facilitators are already in the system ({{names}}). Duplicate check applies to Phone and Email.', { names: duplicates.join(', ') }));
                 return;
             } else {
-                notify(`The following facilitators were skipped because they are duplicates: ${duplicates.join(', ')}`);
+                notify(t('facilitators_page.import.skipped_dup', 'The following facilitators were skipped because they are duplicates: {{names}}', { names: duplicates.join(', ') }));
             }
         }
 
@@ -288,7 +292,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
         if (excelData.length === 0) return null;
         return (
             <div className="mt-4 overflow-auto max-h-60">
-                <h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4>
+                <h4 className="font-medium mb-2">{t('facilitators_page.import.preview', 'Data Preview (first 5 rows)')}</h4>
                 <Table headers={headers}>
                     {excelData.slice(0, 5).map((row, rowIdx) => (
                         <tr key={rowIdx}>
@@ -301,27 +305,27 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Import Facilitators from Excel" size="2xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('facilitators_page.import.title', 'Import Facilitators from Excel')} size="2xl">
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
                 {currentPage === 0 && (
                     <div>
-                        <p className="mb-4">You can download an Excel template with existing data to update records, or upload your own file.</p>
-                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">Download Template</Button>
-                        <p className="mb-2">Or, upload your own Excel file (first row must be headers).</p>
+                        <p className="mb-4">{t('facilitators_page.import.intro', 'You can download an Excel template with existing data to update records, or upload your own file.')}</p>
+                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">{t('facilitators_page.import.download_template', 'Download Template')}</Button>
+                        <p className="mb-2">{t('facilitators_page.import.upload_own', 'Or, upload your own Excel file (first row must be headers).')}</p>
                         <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                     </div>
                 )}
                 {currentPage === 1 && (
                     <div>
-                        <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
-                        <p className="text-sm text-gray-600 mb-4">Map columns to fields. To update, ensure the 'ID' field is mapped.</p>
+                        <h4 className="font-medium mb-4">{t('facilitators_page.import.map_title', 'Map Excel columns to application fields')}</h4>
+                        <p className="text-sm text-gray-600 mb-4">{t("facilitators_page.import.map_help", "Map columns to fields. To update, ensure the 'ID' field is mapped.")}</p>
                         <div className="grid gap-3 mb-4">
                             {allFields.map(field => (
                                 <div key={field.key} className="flex items-center" style={{ display: field.hidden ? 'none' : 'flex' }}>
-                                    <label className="w-40 font-medium">{field.label}{field.required && '*'}</label>
+                                    <label className="w-40 font-medium">{field.display}{field.required && '*'}</label>
                                     <Select value={fieldMappings[field.key] || ''} onChange={(e) => handleMappingChange(field.key, e.target.value)} className="flex-1">
-                                        <option value="">-- Select Excel Column --</option>
+                                        <option value="">{t('facilitators_page.import.select_column', '-- Select Excel Column --')}</option>
                                         {headers.map(header => ( <option key={header} value={header}>{header}</option> ))}
                                     </Select>
                                 </div>
@@ -329,8 +333,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
                         </div>
                         {renderPreview()}
                         <div className="flex justify-end mt-6 space-x-2">
-                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button>
-                            <Button onClick={handleImport}>Import Facilitators</Button>
+                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>{t('facilitators_page.common.back', 'Back')}</Button>
+                            <Button onClick={handleImport}>{t('facilitators_page.import.submit', 'Import Facilitators')}</Button>
                         </div>
                     </div>
                 )}
@@ -340,14 +344,15 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
 };
 
 function SubmissionDetails({ submission }) {
+    const { t } = useTranslation();
     const fieldsToShow = {
-        name: "Name", arabicName: "Arabic Name", phone: "Phone", email: "Email", currentState: "State",
-        currentLocality: "Locality", courses: "Courses Taught", totDates: "ToT Dates", directorCourse: "Attended Director Course",
-        directorCourseDate: "Director Course Date", followUpCourse: "Attended Follow-up Course", followUpCourseDate: "Follow-up Course Date",
-        teamLeaderCourse: "Attended Team Leader Course", teamLeaderCourseDate: "Team Leader Course Date",
-        mentorCourse: "Attended Mentor Training", mentorCourseDate: "Mentor Training Date",
-        mentorDeclarationSigned: "Mentor Declaration (Annex C) Signed", mentorDeclarationName: "Declaration Signatory", mentorDeclarationDate: "Declaration Date Signed",
-        isClinicalInstructor: "Is Clinical Instructor", comments: "Comments",
+        name: t('facilitators_page.common.name', 'Name'), arabicName: t('facilitators_page.import.fields.arabic_name', 'Arabic Name'), phone: t('facilitators_page.common.phone', 'Phone'), email: t('facilitators_page.import.fields.email', 'Email'), currentState: t('facilitators_page.common.state', 'State'),
+        currentLocality: t('facilitators_page.submission.locality', 'Locality'), courses: t('facilitators_page.submission.courses_taught', 'Courses Taught'), totDates: t('facilitators_page.submission.tot_dates', 'ToT Dates'), directorCourse: t('facilitators_page.submission.attended_director', 'Attended Director Course'),
+        directorCourseDate: t('facilitators_page.import.fields.director_course_date', 'Director Course Date'), followUpCourse: t('facilitators_page.submission.attended_follow_up', 'Attended Follow-up Course'), followUpCourseDate: t('facilitators_page.import.fields.follow_up_course_date', 'Follow-up Course Date'),
+        teamLeaderCourse: t('facilitators_page.submission.attended_team_leader', 'Attended Team Leader Course'), teamLeaderCourseDate: t('facilitators_page.import.fields.team_leader_course_date', 'Team Leader Course Date'),
+        mentorCourse: t('facilitators_page.submission.attended_mentor', 'Attended Mentor Training'), mentorCourseDate: t('facilitators_page.import.fields.mentor_course_date', 'Mentor Training Date'),
+        mentorDeclarationSigned: t('facilitators_page.submission.declaration_signed', 'Mentor Declaration (Annex C) Signed'), mentorDeclarationName: t('facilitators_page.submission.declaration_signatory', 'Declaration Signatory'), mentorDeclarationDate: t('facilitators_page.submission.declaration_date', 'Declaration Date Signed'),
+        isClinicalInstructor: t('facilitators_page.submission.is_clinical_instructor', 'Is Clinical Instructor'), comments: t('facilitators_page.import.fields.comments', 'Comments'),
     };
 
     return (
@@ -358,7 +363,7 @@ function SubmissionDetails({ submission }) {
                     if (!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0)) return null;
                     if (key === 'courses' && Array.isArray(value)) value = value.join(', ');
                     if (key === 'totDates' && typeof value === 'object') value = Object.entries(value).map(([course, date]) => `${course}: ${date}`).join('; ');
-                    if (typeof value === 'boolean') value = value ? 'Yes' : 'No';
+                    if (typeof value === 'boolean') value = value ? t('facilitators_page.common.yes', 'Yes') : t('facilitators_page.common.no', 'No');
                     
                     return (
                         <div key={key} className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
@@ -375,6 +380,7 @@ function SubmissionDetails({ submission }) {
 export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = false }) {
     const { name, arabicName, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, mentorCourse, mentorCourseDate, mentorDeclarationSigned, mentorDeclarationName, mentorDeclarationDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
 
+    const { t } = useTranslation();
     const mentorDeclarationRenewalDate = getDeclarationRenewalDate(mentorDeclarationDate);
     const mentorDeclarationExpired = Boolean(mentorDeclarationRenewalDate) && mentorDeclarationRenewalDate < new Date().toISOString().split('T')[0];
 
@@ -395,43 +401,43 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
     return (
         <div className="space-y-6">
             <Card className="shadow-none border">
-                <CardHeader>Personal Information</CardHeader>
+                <CardHeader>{t('facilitators_page.form.personal_info', 'Personal Information')}</CardHeader>
                 <CardBody>
                     <div className="grid md:grid-cols-2 gap-4">
-                        <FormGroup label="Facilitator Name (English)"><Input value={name} onChange={e => handleFieldChange('name', e.target.value)} required /></FormGroup>
-                        <FormGroup label="Facilitator Name (Arabic)"><Input value={arabicName || ''} onChange={e => handleFieldChange('arabicName', e.target.value)} placeholder="الاسم بالعربي" /></FormGroup>
+                        <FormGroup label={t('facilitators_page.form.name_en', 'Facilitator Name (English)')}><Input value={name} onChange={e => handleFieldChange('name', e.target.value)} required /></FormGroup>
+                        <FormGroup label={t('facilitators_page.form.name_ar', 'Facilitator Name (Arabic)')}><Input value={arabicName || ''} onChange={e => handleFieldChange('arabicName', e.target.value)} placeholder="الاسم بالعربي" /></FormGroup>
                     </div>
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
-                        <FormGroup label="Phone Number"><Input value={phone} onChange={e => handleFieldChange('phone', e.target.value)} required /></FormGroup>
-                        <FormGroup label="Email"><Input type="email" value={email} onChange={e => handleFieldChange('email', e.target.value)} disabled={isPublicForm && isUserEmail} /></FormGroup>
+                        <FormGroup label={t('facilitators_page.import.fields.phone_number', 'Phone Number')}><Input value={phone} onChange={e => handleFieldChange('phone', e.target.value)} required /></FormGroup>
+                        <FormGroup label={t('facilitators_page.import.fields.email', 'Email')}><Input type="email" value={email} onChange={e => handleFieldChange('email', e.target.value)} disabled={isPublicForm && isUserEmail} /></FormGroup>
                     </div>
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
-                        <FormGroup label="Background Qualification">
+                        <FormGroup label={t('facilitators_page.form.background_qualification', 'Background Qualification')}>
                             <Select value={backgroundQualification} onChange={e => handleFieldChange('backgroundQualification', e.target.value)}>
-                                <option value="">— Select Qualification —</option><option>General Practitioner</option><option>Pediatric</option><option>Family Medicine</option><option>Medicine</option><option>Oncology</option><option>Pathology</option><option>Community Medicine</option><option>Surgery</option><option>Other</option>
+                                <option value="">{t('facilitators_page.form.select_qualification', '— Select Qualification —')}</option><option value="General Practitioner">{t('facilitators_page.form.qualifications.general_practitioner', 'General Practitioner')}</option><option value="Pediatric">{t('facilitators_page.form.qualifications.pediatric', 'Pediatric')}</option><option value="Family Medicine">{t('facilitators_page.form.qualifications.family_medicine', 'Family Medicine')}</option><option value="Medicine">{t('facilitators_page.form.qualifications.medicine', 'Medicine')}</option><option value="Oncology">{t('facilitators_page.form.qualifications.oncology', 'Oncology')}</option><option value="Pathology">{t('facilitators_page.form.qualifications.pathology', 'Pathology')}</option><option value="Community Medicine">{t('facilitators_page.form.qualifications.community_medicine', 'Community Medicine')}</option><option value="Surgery">{t('facilitators_page.form.qualifications.surgery', 'Surgery')}</option><option value="Other">{t('facilitators_page.form.qualifications.other', 'Other')}</option>
                             </Select>
                         </FormGroup>
                         {backgroundQualification === 'Other' && (
-                            <FormGroup label="Please Specify Qualification"><Input value={backgroundQualificationOther} onChange={e => handleFieldChange('backgroundQualificationOther', e.target.value)} /></FormGroup>
+                            <FormGroup label={t('facilitators_page.form.specify_qualification', 'Please Specify Qualification')}><Input value={backgroundQualificationOther} onChange={e => handleFieldChange('backgroundQualificationOther', e.target.value)} /></FormGroup>
                         )}
                     </div>
                 </CardBody>
             </Card>
 
             <Card className="shadow-none border">
-                 <CardHeader>Location</CardHeader>
+                 <CardHeader>{t('facilitators_page.common.location', 'Location')}</CardHeader>
                  <CardBody>
                     <div className="grid md:grid-cols-2 gap-4">
-                         <FormGroup label="Current State">
+                         <FormGroup label={t('facilitators_page.import.fields.current_state', 'Current State')}>
                              <Select value={currentState} onChange={e => onDataChange({ ...data, currentState: e.target.value, currentLocality: '' })}>
-                                 <option value="">— Select State —</option>
+                                 <option value="">{t('facilitators_page.form.select_state', '— Select State —')}</option>
                                  {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
-                                 <option value="Out of Sudan">Out of Sudan</option>
+                                 <option value="Out of Sudan">{t('facilitators_page.form.out_of_sudan', 'Out of Sudan')}</option>
                              </Select>
                          </FormGroup>
-                         <FormGroup label="Current Locality">
+                         <FormGroup label={t('facilitators_page.import.fields.current_locality', 'Current Locality')}>
                             <Select value={currentLocality} onChange={e => handleFieldChange('currentLocality', e.target.value)} disabled={!currentState || currentState === 'Out of Sudan'}>
-                                <option value="">— Select Locality —</option>
+                                <option value="">{t('facilitators_page.form.select_locality', '— Select Locality —')}</option>
                                 {(STATE_LOCALITIES[currentState]?.localities || []).sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                             </Select>
                         </FormGroup>
@@ -440,7 +446,7 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
             </Card>
             
              <Card className="shadow-none border">
-                 <CardHeader>Course Qualifications & Certificates</CardHeader>
+                 <CardHeader>{t('facilitators_page.form.course_qualifications', 'Course Qualifications & Certificates')}</CardHeader>
                  <CardBody>
                     <div className="space-y-4">
                         {displayCourseTypes.map(course => (
@@ -453,14 +459,14 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                                         </div>
                                         <div className="min-w-0">
                                             {courses.includes(course) && (
-                                                <FormGroup label="ToT Date"><Input type="date" value={totDates[course] || ''} onChange={e => handleTotDateChange(course, e.target.value)} required /></FormGroup>
+                                                <FormGroup label={t('facilitators_page.form.tot_date', 'ToT Date')}><Input type="date" value={totDates[course] || ''} onChange={e => handleTotDateChange(course, e.target.value)} required /></FormGroup>
                                             )}
                                         </div>
                                         <div className="min-w-0">
                                             {courses.includes(course) && (
-                                                <FormGroup label="Certificate (Optional)">
+                                                <FormGroup label={t('facilitators_page.form.certificate_optional', 'Certificate (Optional)')}>
                                                     {!isPublicForm && certificateUrls[course] && (
-                                                        <a href={certificateUrls[course]} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current Certificate</a>
+                                                        <a href={certificateUrls[course]} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">{t('facilitators_page.form.view_current_certificate', 'View Current Certificate')}</a>
                                                     )}
                                                     <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange(course, e.target.files[0])} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                                                 </FormGroup>
@@ -470,8 +476,8 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                                 </div>
                                 {course === 'IMNCI' && courses.includes('IMNCI') && (
                                      <div className="p-4 border-t border-indigo-200 bg-indigo-50 rounded-b-lg -mt-4">
-                                        <FormGroup label="Selected as Clinical Instructor?">
-                                            <Select value={isClinicalInstructor} onChange={e => handleFieldChange('isClinicalInstructor', e.target.value)}><option>No</option><option>Yes</option></Select>
+                                        <FormGroup label={t('facilitators_page.form.selected_clinical_instructor', 'Selected as Clinical Instructor?')}>
+                                            <Select value={isClinicalInstructor} onChange={e => handleFieldChange('isClinicalInstructor', e.target.value)}><option value="No">{t('facilitators_page.common.no', 'No')}</option><option value="Yes">{t('facilitators_page.common.yes', 'Yes')}</option></Select>
                                         </FormGroup>
                                      </div>
                                 )}
@@ -482,53 +488,53 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
             </Card>
 
              <Card className="shadow-none border">
-                 <CardHeader>IMNCI Specific Qualifications</CardHeader>
+                 <CardHeader>{t('facilitators_page.form.imnci_specific', 'IMNCI Specific Qualifications')}</CardHeader>
                  <CardBody>
                     <div className="space-y-4">
                          <div className="grid md:grid-cols-3 gap-4 items-end">
-                            <FormGroup label="Attended IMNCI Course Director Course?">
-                                <Select value={directorCourse} onChange={e => handleFieldChange('directorCourse', e.target.value)}><option>No</option><option>Yes</option></Select>
+                            <FormGroup label={t('facilitators_page.form.attended_director', 'Attended IMNCI Course Director Course?')}>
+                                <Select value={directorCourse} onChange={e => handleFieldChange('directorCourse', e.target.value)}><option value="No">{t('facilitators_page.common.no', 'No')}</option><option value="Yes">{t('facilitators_page.common.yes', 'Yes')}</option></Select>
                             </FormGroup>
                             {directorCourse === 'Yes' && <>
-                                <FormGroup label="Date of Course"><Input type="date" value={directorCourseDate} onChange={e => handleFieldChange('directorCourseDate', e.target.value)} /></FormGroup>
-                                <FormGroup label="Certificate">
-                                    {!isPublicForm && certificateUrls['directorCourseCert'] && ( <a href={certificateUrls['directorCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
+                                <FormGroup label={t('facilitators_page.form.date_of_course', 'Date of Course')}><Input type="date" value={directorCourseDate} onChange={e => handleFieldChange('directorCourseDate', e.target.value)} /></FormGroup>
+                                <FormGroup label={t('facilitators_page.form.certificate', 'Certificate')}>
+                                    {!isPublicForm && certificateUrls['directorCourseCert'] && ( <a href={certificateUrls['directorCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">{t('facilitators_page.form.view_current', 'View Current')}</a> )}
                                     <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('directorCourseCert', e.target.files[0])} />
                                 </FormGroup>
                             </>}
                         </div>
                          <div className="grid md:grid-cols-3 gap-4 items-end">
-                            <FormGroup label="Attended IMNCI Follow-up Course?">
-                                <Select value={followUpCourse} onChange={e => handleFieldChange('followUpCourse', e.target.value)}><option>No</option><option>Yes</option></Select>
+                            <FormGroup label={t('facilitators_page.form.attended_follow_up', 'Attended IMNCI Follow-up Course?')}>
+                                <Select value={followUpCourse} onChange={e => handleFieldChange('followUpCourse', e.target.value)}><option value="No">{t('facilitators_page.common.no', 'No')}</option><option value="Yes">{t('facilitators_page.common.yes', 'Yes')}</option></Select>
                             </FormGroup>
                             {followUpCourse === 'Yes' && <>
-                                <FormGroup label="Date of Course"><Input type="date" value={followUpCourseDate} onChange={e => handleFieldChange('followUpCourseDate', e.target.value)} /></FormGroup>
-                                <FormGroup label="Certificate">
-                                     {!isPublicForm && certificateUrls['followUpCourseCert'] && ( <a href={certificateUrls['followUpCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
+                                <FormGroup label={t('facilitators_page.form.date_of_course', 'Date of Course')}><Input type="date" value={followUpCourseDate} onChange={e => handleFieldChange('followUpCourseDate', e.target.value)} /></FormGroup>
+                                <FormGroup label={t('facilitators_page.form.certificate', 'Certificate')}>
+                                     {!isPublicForm && certificateUrls['followUpCourseCert'] && ( <a href={certificateUrls['followUpCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">{t('facilitators_page.form.view_current', 'View Current')}</a> )}
                                     <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('followUpCourseCert', e.target.files[0])} />
                                  </FormGroup>
                             </>}
                         </div>
                         <div className="grid md:grid-cols-3 gap-4 items-end">
-                            <FormGroup label="Attended IMNCI Team Leader Course?">
-                                <Select value={teamLeaderCourse} onChange={e => handleFieldChange('teamLeaderCourse', e.target.value)}><option>No</option><option>Yes</option></Select>
+                            <FormGroup label={t('facilitators_page.form.attended_team_leader', 'Attended IMNCI Team Leader Course?')}>
+                                <Select value={teamLeaderCourse} onChange={e => handleFieldChange('teamLeaderCourse', e.target.value)}><option value="No">{t('facilitators_page.common.no', 'No')}</option><option value="Yes">{t('facilitators_page.common.yes', 'Yes')}</option></Select>
                             </FormGroup>
                             {teamLeaderCourse === 'Yes' && <>
-                                <FormGroup label="Date of Course"><Input type="date" value={teamLeaderCourseDate} onChange={e => handleFieldChange('teamLeaderCourseDate', e.target.value)} /></FormGroup>
-                                 <FormGroup label="Certificate">
-                                     {!isPublicForm && certificateUrls['teamLeaderCourseCert'] && ( <a href={certificateUrls['teamLeaderCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
+                                <FormGroup label={t('facilitators_page.form.date_of_course', 'Date of Course')}><Input type="date" value={teamLeaderCourseDate} onChange={e => handleFieldChange('teamLeaderCourseDate', e.target.value)} /></FormGroup>
+                                 <FormGroup label={t('facilitators_page.form.certificate', 'Certificate')}>
+                                     {!isPublicForm && certificateUrls['teamLeaderCourseCert'] && ( <a href={certificateUrls['teamLeaderCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">{t('facilitators_page.form.view_current', 'View Current')}</a> )}
                                     <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('teamLeaderCourseCert', e.target.files[0])} />
                                 </FormGroup>
                             </>}
                         </div>
                         <div className="grid md:grid-cols-3 gap-4 items-end">
-                            <FormGroup label="Attended IMNCI Mentor Training?">
-                                <Select value={mentorCourse} onChange={e => handleFieldChange('mentorCourse', e.target.value)}><option>No</option><option>Yes</option></Select>
+                            <FormGroup label={t('facilitators_page.form.attended_mentor', 'Attended IMNCI Mentor Training?')}>
+                                <Select value={mentorCourse} onChange={e => handleFieldChange('mentorCourse', e.target.value)}><option value="No">{t('facilitators_page.common.no', 'No')}</option><option value="Yes">{t('facilitators_page.common.yes', 'Yes')}</option></Select>
                             </FormGroup>
                             {mentorCourse === 'Yes' && <>
-                                <FormGroup label="Date of Training"><Input type="date" value={mentorCourseDate} onChange={e => handleFieldChange('mentorCourseDate', e.target.value)} /></FormGroup>
-                                <FormGroup label="Certificate">
-                                    {!isPublicForm && certificateUrls['mentorCourseCert'] && ( <a href={certificateUrls['mentorCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
+                                <FormGroup label={t('facilitators_page.form.date_of_training', 'Date of Training')}><Input type="date" value={mentorCourseDate} onChange={e => handleFieldChange('mentorCourseDate', e.target.value)} /></FormGroup>
+                                <FormGroup label={t('facilitators_page.form.certificate', 'Certificate')}>
+                                    {!isPublicForm && certificateUrls['mentorCourseCert'] && ( <a href={certificateUrls['mentorCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">{t('facilitators_page.form.view_current', 'View Current')}</a> )}
                                     <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('mentorCourseCert', e.target.files[0])} />
                                 </FormGroup>
                             </>}
@@ -537,21 +543,21 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                             <div className="p-4 border border-amber-300 bg-amber-50 rounded-lg space-y-3">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                        <h4 className="font-semibold text-gray-800">{MENTOR_DECLARATION_TITLE}</h4>
-                                        <p className="text-xs text-gray-600 mt-1">{MENTOR_DECLARATION_SUBTITLE}</p>
+                                        <h4 className="font-semibold text-gray-800">{t('facilitators_page.declaration.title', 'Annex C: Mentor Code of Conduct and Safeguarding Declaration')}</h4>
+                                        <p className="text-xs text-gray-600 mt-1">{t('facilitators_page.declaration.subtitle', 'Signed by every mentor on certification and renewed annually with re-certification. A copy is held in the national mentor registry.')}</p>
                                     </div>
                                     {mentorDeclarationSigned === 'Yes' && mentorDeclarationRenewalDate && (
                                         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${mentorDeclarationExpired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                                            {mentorDeclarationExpired ? `Renewal overdue since ${mentorDeclarationRenewalDate}` : `Valid until ${mentorDeclarationRenewalDate}`}
+                                            {mentorDeclarationExpired ? t('facilitators_page.declaration.renewal_overdue', 'Renewal overdue since {{date}}', { date: mentorDeclarationRenewalDate }) : t('facilitators_page.declaration.valid_until', 'Valid until {{date}}', { date: mentorDeclarationRenewalDate })}
                                         </span>
                                     )}
                                 </div>
                                 <div className="max-h-64 overflow-y-auto bg-white border border-amber-200 rounded-md p-3 text-sm text-gray-700">
                                     <p className="mb-2">
-                                        I, <span className="font-semibold underline underline-offset-2">{mentorDeclarationName || name || '______________________'}</span>, acting as an IMNCI clinical mentor for the National Child Health Program, undertake that:
+                                        {t('facilitators_page.declaration.intro_before', 'I,')}{' '}<span className="font-semibold underline underline-offset-2">{mentorDeclarationName || name || '______________________'}</span>{t('facilitators_page.declaration.intro_after', ', acting as an IMNCI clinical mentor for the National Child Health Program, undertake that:')}
                                     </p>
                                     <ul className="list-disc pl-5 space-y-1.5">
-                                        {MENTOR_DECLARATION_CLAUSES.map((clause, i) => <li key={i}>{clause}</li>)}
+                                        {MENTOR_DECLARATION_CLAUSES.map((clause, i) => <li key={i}>{t(`facilitators_page.declaration.clauses.c${i + 1}`, clause)}</li>)}
                                     </ul>
                                 </div>
                                 <label className="flex items-start gap-3 cursor-pointer">
@@ -561,18 +567,18 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                                         onChange={e => onDataChange({ ...data, mentorDeclarationSigned: e.target.checked ? 'Yes' : 'No', mentorDeclarationName: e.target.checked ? (mentorDeclarationName || name || '') : mentorDeclarationName, mentorDeclarationDate: e.target.checked ? (mentorDeclarationDate || new Date().toISOString().split('T')[0]) : mentorDeclarationDate })}
                                         className="mt-0.5 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                     />
-                                    <span className="text-sm text-gray-800">I have read the declaration above, I accept it in full, and I understand that it must be renewed annually with re-certification.</span>
+                                    <span className="text-sm text-gray-800">{t('facilitators_page.declaration.accept', 'I have read the declaration above, I accept it in full, and I understand that it must be renewed annually with re-certification.')}</span>
                                 </label>
                                 {mentorDeclarationSigned === 'Yes' && (
                                     <div className="grid md:grid-cols-3 gap-4 items-end">
-                                        <FormGroup label="Full Name (as signed)">
-                                            <Input value={mentorDeclarationName || ''} onChange={e => handleFieldChange('mentorDeclarationName', e.target.value)} placeholder="Full name of mentor" />
+                                        <FormGroup label={t('facilitators_page.declaration.full_name', 'Full Name (as signed)')}>
+                                            <Input value={mentorDeclarationName || ''} onChange={e => handleFieldChange('mentorDeclarationName', e.target.value)} placeholder={t('facilitators_page.declaration.full_name_placeholder', 'Full name of mentor')} />
                                         </FormGroup>
-                                        <FormGroup label="Date Signed">
+                                        <FormGroup label={t('facilitators_page.declaration.date_signed', 'Date Signed')}>
                                             <Input type="date" value={mentorDeclarationDate || ''} onChange={e => handleFieldChange('mentorDeclarationDate', e.target.value)} />
                                         </FormGroup>
-                                        <FormGroup label="Signed Copy (Optional)">
-                                            {!isPublicForm && certificateUrls['mentorDeclarationCert'] && ( <a href={certificateUrls['mentorDeclarationCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
+                                        <FormGroup label={t('facilitators_page.declaration.signed_copy', 'Signed Copy (Optional)')}>
+                                            {!isPublicForm && certificateUrls['mentorDeclarationCert'] && ( <a href={certificateUrls['mentorDeclarationCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">{t('facilitators_page.form.view_current', 'View Current')}</a> )}
                                             <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('mentorDeclarationCert', e.target.files[0])} />
                                         </FormGroup>
                                     </div>
@@ -584,9 +590,9 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
             </Card>
 
              <Card className="shadow-none border">
-                 <CardHeader>Additional Information</CardHeader>
+                 <CardHeader>{t('facilitators_page.form.additional_info', 'Additional Information')}</CardHeader>
                  <CardBody>
-                    <FormGroup label={isPublicForm ? "Other comments or qualifications" : "Other comments from Program Manager"}>
+                    <FormGroup label={isPublicForm ? t('facilitators_page.form.other_comments_public', 'Other comments or qualifications') : t('facilitators_page.form.other_comments_manager', 'Other comments from Program Manager')}>
                         <Textarea rows={4} value={comments} onChange={e => handleFieldChange('comments', e.target.value)} />
                     </FormGroup>
                  </CardBody>
@@ -596,6 +602,7 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
 }
 
 function ShareLinkModal({ isOpen, onClose, title, link }) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     const handleCopy = () => {
         const textToShare = `${title}\n\nيرجى زيارة الرابط التالي:\n${link}`;
@@ -606,14 +613,14 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
-            <p className="text-sm text-gray-600 mb-4">Share this public link with anyone. They will be able to view a read-only version of the profile.</p>
-            <FormGroup label="Public Link">
+            <p className="text-sm text-gray-600 mb-4">{t('facilitators_page.share.help', 'Share this public link with anyone. They will be able to view a read-only version of the profile.')}</p>
+            <FormGroup label={t('facilitators_page.share.public_link', 'Public Link')}>
                 <div className="flex gap-2">
                     <Input type="text" value={link} readOnly />
-                    <Button onClick={handleCopy} variant="secondary" className="w-24">{copied ? 'Copied!' : 'Share'}</Button>
+                    <Button onClick={handleCopy} variant="secondary" className="w-24">{copied ? t('facilitators_page.common.copied', 'Copied!') : t('facilitators_page.common.share', 'Share')}</Button>
                 </div>
             </FormGroup>
-            <FormGroup label="QR Code">
+            <FormGroup label={t('facilitators_page.share.qr_code', 'QR Code')}>
                 <div className="flex justify-center p-4 bg-white rounded-md border">
                     <QRCodeCanvas value={link} size={256} bgColor={"#ffffff"} fgColor={"#000000"} level={"Q"} />
                 </div>
@@ -627,6 +634,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
         facilitators: rawFacilitators, courses: rawCourses, pendingFacilitatorSubmissions: pendingSubmissions,
         facilitatorApplicationSettings, isLoading, fetchFacilitators, fetchCourses, fetchPendingFacilitatorSubmissions, fetchFacilitatorApplicationSettings
     } = useDataCache();
+    const { t } = useTranslation();
 
     // --- Soft Delete Filters ---
     const facilitators = useMemo(() => (rawFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilitators]);
@@ -684,7 +692,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
         );
         
         if (isDuplicate) {
-            notify("Cannot approve: A facilitator with this phone number or email already exists in the system. Please reject this submission to avoid duplicates.");
+            notify(t('facilitators_page.list.cannot_approve_dup', 'Cannot approve: A facilitator with this phone number or email already exists in the system. Please reject this submission to avoid duplicates.'));
             return;
         }
 
@@ -836,7 +844,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
             return row;
         });
 
-        const totalRow = ["Total"];
+        const totalRow = [t('facilitators_page.common.total', 'Total')];
         let grandTotal = 0;
         allCourseTypes.forEach(courseType => {
             const columnTotal = allStatesInFilter.reduce((sum, state) => sum + (data[state]?.[courseType] || 0), 0);
@@ -845,8 +853,8 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
         });
         totalRow.push(grandTotal);
 
-        return { tableHeaders: ["State", ...allCourseTypes, "Total"], tableBody, tableTotals: totalRow };
-    }, [filteredFacilitators]);
+        return { tableHeaders: [t('facilitators_page.common.state', 'State'), ...allCourseTypes, t('facilitators_page.common.total', 'Total')], tableBody, tableTotals: totalRow };
+    }, [filteredFacilitators, t]);
 
     const dashboardMapData = useMemo(() => {
         const mapCoordinates = {
@@ -872,25 +880,25 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
     return (
         <Card>
             <CardBody>
-                <PageHeader title="Manage Facilitators" />
+                <PageHeader title={t('facilitators_page.list.title', 'Manage Facilitators')} />
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex gap-2 flex-wrap items-center">
-                        {permissions.canManageHumanResource && <Button onClick={onAdd}>Add New Facilitator</Button>}
-                        {permissions.canManageHumanResource && <Button variant="secondary" onClick={() => setImportModalOpen(true)}>Import from Excel</Button>}
-                        {permissions.canApproveSubmissions && <Button variant="secondary" onClick={() => setIsLinkModalOpen(true)}>Manage Submission Link</Button>}
+                        {permissions.canManageHumanResource && <Button onClick={onAdd}>{t('facilitators_page.list.add_new', 'Add New Facilitator')}</Button>}
+                        {permissions.canManageHumanResource && <Button variant="secondary" onClick={() => setImportModalOpen(true)}>{t('facilitators_page.list.import_excel', 'Import from Excel')}</Button>}
+                        {permissions.canApproveSubmissions && <Button variant="secondary" onClick={() => setIsLinkModalOpen(true)}>{t('facilitators_page.list.manage_link', 'Manage Submission Link')}</Button>}
                         {/* NEW: Refresh Button */}
                         <Button variant="secondary" onClick={() => fetchFacilitators(true)} disabled={isLoading.facilitators}>
-                            {isLoading.facilitators ? 'Refreshing...' : 'Refresh Data'}
+                            {isLoading.facilitators ? t('facilitators_page.list.refreshing', 'Refreshing...') : t('facilitators_page.list.refresh', 'Refresh Data')}
                         </Button>
                     </div>
                     <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
                         {/* NEW: Sort Dropdown */}
                         <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-48">
-                            <option value="score">Sort by Score (Highest)</option>
-                            <option value="name">Sort by Name (A-Z)</option>
+                            <option value="score">{t('facilitators_page.list.sort_score', 'Sort by Score (Highest)')}</option>
+                            <option value="name">{t('facilitators_page.list.sort_name', 'Sort by Name (A-Z)')}</option>
                         </Select>
                         <div className="w-full md:w-64">
-                            <Input type="text" placeholder="Search by name, email, phone..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                            <Input type="text" placeholder={t('facilitators_page.list.search_placeholder', 'Search by name, email, phone...')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                         </div>
                     </div>
                 </div>
@@ -898,16 +906,16 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                 <ExcelImportModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} onImport={handleImportWrapper} facilitators={facilitators} />
                 <LinkManagementModal isOpen={isLinkModalOpen} onClose={() => setIsLinkModalOpen(false)} settings={facilitatorApplicationSettings} isLoading={isLoadingSettings} onToggleStatus={handleToggleLinkStatus} />
                 <ViewCertificatesModal isOpen={!!viewingCertsFor} onClose={() => setViewingCertsFor(null)} facilitator={viewingCertsFor} />
-                <ShareLinkModal isOpen={shareModalInfo.isOpen} onClose={() => setShareModalInfo({ isOpen: false, link: '' })} title="Share Facilitator Report" link={shareModalInfo.link} />
+                <ShareLinkModal isOpen={shareModalInfo.isOpen} onClose={() => setShareModalInfo({ isOpen: false, link: '' })} title={t('facilitators_page.share.title', 'Share Facilitator Report')} link={shareModalInfo.link} />
 
                 <div className="mt-6">
                     <div className="border-b border-gray-200">
-                        <nav className="-mb-px flex gap-6" aria-label="Tabs">
-                            <Button variant="tab" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>Dashboard</Button>
-                            <Button variant="tab" isActive={activeTab === 'current'} onClick={() => setActiveTab('current')}>Current Facilitators</Button>
+                        <nav className="-mb-px flex gap-6" aria-label={t('facilitators_page.tabs.aria', 'Tabs')}>
+                            <Button variant="tab" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>{t('facilitators_page.tabs.dashboard', 'Dashboard')}</Button>
+                            <Button variant="tab" isActive={activeTab === 'current'} onClick={() => setActiveTab('current')}>{t('facilitators_page.tabs.current', 'Current Facilitators')}</Button>
                             {permissions.canApproveSubmissions && (
                                 <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
-                                    Pending Submissions <span className={`ml-2 text-xs font-bold px-2 py-1 rounded-full ${activeTab === 'pending' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-200 text-gray-600'}`}>{displayPendingSubmissions.length}</span>
+                                    {t('facilitators_page.tabs.pending', 'Pending Submissions')} <span className={`ml-2 text-xs font-bold px-2 py-1 rounded-full ${activeTab === 'pending' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-200 text-gray-600'}`}>{displayPendingSubmissions.length}</span>
                                 </Button>
                             )}
                         </nav>
@@ -916,28 +924,28 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                     <div className="mt-4">
                         {activeTab === 'dashboard' && (
                             <div className="mt-4">
-                                <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
+                                <h3 className="text-xl font-bold mb-4">{t('facilitators_page.kpi.title', 'Facilitator KPIs')}</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center mb-6">
-                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Facilitators</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.totalFacilitators}</div></div>
-                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Course Directors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.directors}</div></div>
-                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Clinical Instructors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.clinicalInstructors}</div></div>
-                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Team Leaders</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.teamLeaders}</div></div>
-                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Follow-up Supervisors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.followUpSupervisors}</div></div>
-                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Trained Mentors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentors}</div></div>
-                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Mentors: Declaration Current</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentorsDeclarationCurrent}</div><div className="text-[11px] text-gray-500 mt-1">of {dashboardKpis.mentors} trained</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.total', 'Total Facilitators')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.totalFacilitators}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.directors', 'Course Directors')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.directors}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.clinical_instructors', 'Clinical Instructors')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.clinicalInstructors}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.team_leaders', 'Team Leaders')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.teamLeaders}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.follow_up_supervisors', 'Follow-up Supervisors')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.followUpSupervisors}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.mentors', 'Trained Mentors')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentors}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.declaration_current', 'Mentors: Declaration Current')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentorsDeclarationCurrent}</div><div className="text-[11px] text-gray-500 mt-1">{t('facilitators_page.kpi.of_trained', 'of {{n}} trained', { n: dashboardKpis.mentors })}</div></div>
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-6 mb-6">
                                     <Card className="p-0 border-0 shadow-none">
-                                        <h3 className="text-xl font-bold mb-4">Facilitator Availability by State</h3>
+                                        <h3 className="text-xl font-bold mb-4">{t('facilitators_page.kpi.availability_by_state', 'Facilitator Availability by State')}</h3>
                                         <Table headers={dashboardAvailabilityByState.tableHeaders}>
-                                            {dashboardAvailabilityByState.tableBody.length === 0 ? <EmptyState message="No data to display." colSpan={dashboardAvailabilityByState.tableHeaders.length} /> : <> 
+                                            {dashboardAvailabilityByState.tableBody.length === 0 ? <EmptyState message={t('facilitators_page.kpi.no_data', 'No data to display.')} colSpan={dashboardAvailabilityByState.tableHeaders.length} /> : <> 
                                                 {dashboardAvailabilityByState.tableBody.map((row, index) => (<tr key={index}>{row.map((cell, cellIndex) => (<td key={cellIndex} className="p-2 border text-center">{cell}</td>))}</tr>))} 
                                                 <tr className="font-bold bg-gray-100 text-center">{dashboardAvailabilityByState.tableTotals.map((cell, index) => (<td key={index} className="p-2 border">{cell}</td>))}</tr>
                                             </>}
                                         </Table>
                                     </Card>
                                     <Card className="p-0 border-0 shadow-none">
-                                        <h3 className="text-xl font-bold mb-4">Geographical Distribution</h3>
+                                        <h3 className="text-xl font-bold mb-4">{t('facilitators_page.kpi.geo_distribution', 'Geographical Distribution')}</h3>
                                         <SudanMap data={dashboardMapData} center={[30, 15.5]} scale={2000} isMovable={false} pannable={false} />
                                     </Card>
                                 </div>
@@ -945,7 +953,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                         )}
 
                         {activeTab === 'current' && (
-                             <Table headers={["Name", "Phone", "Courses", "Score", "Actions"]}>
+                             <Table cardsOnPhone headers={[t('facilitators_page.common.name', 'Name'), t('facilitators_page.common.phone', 'Phone'), t('facilitators_page.common.courses', 'Courses'), t('facilitators_page.common.score', 'Score'), t('facilitators_page.common.actions', 'Actions')]}>
                                 {isLoading.facilitators ? (
                                     <tr><td colSpan={5} className="p-8 text-center"><Spinner /></td></tr>
                                 ) : filteredFacilitators.length > 0 ? (
@@ -959,44 +967,44 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                                                 <td className="p-4 font-bold text-indigo-600">{Number.isInteger(f.score) ? f.score : f.score.toFixed(1)}</td>
                                                 <td className="p-4">
                                                     <div className="flex gap-2 justify-end whitespace-nowrap">
-                                                        <Button size="sm" onClick={() => onOpenReport(f.id)}>Report</Button>
-                                                        <Button size="sm" variant="secondary" onClick={() => handleShare(f)}>Share</Button>
-                                                        <Button size="sm" variant="secondary" onClick={() => setViewingCertsFor(f)} disabled={!hasCerts} title={hasCerts ? "View Certificates" : "No certificates available"}>Certs</Button>
-                                                        {permissions.canManageHumanResource && <Button size="sm" variant="secondary" onClick={() => onEdit(f)}>Edit</Button>}
-                                                        {permissions.canManageHumanResource && <Button size="sm" variant="danger" onClick={() => handleDelete(f.id)}>Delete</Button>}
+                                                        <Button size="sm" onClick={() => onOpenReport(f.id)}>{t('facilitators_page.list.report', 'Report')}</Button>
+                                                        <Button size="sm" variant="secondary" onClick={() => handleShare(f)}>{t('facilitators_page.common.share', 'Share')}</Button>
+                                                        <Button size="sm" variant="secondary" onClick={() => setViewingCertsFor(f)} disabled={!hasCerts} title={hasCerts ? t('facilitators_page.list.view_certificates', 'View Certificates') : t('facilitators_page.list.no_certificates', 'No certificates available')}>{t('facilitators_page.list.certs', 'Certs')}</Button>
+                                                        {permissions.canManageHumanResource && <Button size="sm" variant="secondary" onClick={() => onEdit(f)}>{t('facilitators_page.common.edit', 'Edit')}</Button>}
+                                                        {permissions.canManageHumanResource && <Button size="sm" variant="danger" onClick={() => handleDelete(f.id)}>{t('facilitators_page.common.delete', 'Delete')}</Button>}
                                                     </div>
                                                 </td>
                                             </tr>
                                         );
                                     })
-                                ) : ( <EmptyState key="empty-facilitators" message="No facilitators found matching your search." colSpan={5} /> )}
+                                ) : ( <EmptyState key="empty-facilitators" message={t('facilitators_page.list.no_match', 'No facilitators found matching your search.')} colSpan={5} /> )}
                             </Table>
                         )}
 
                         {activeTab === 'pending' && permissions.canApproveSubmissions && (
                             isSubmissionsLoading ? <Spinner /> : (
-                                <Table headers={["Name", "Phone", "State", "Submitted At", "Actions"]}>
+                                <Table cardsOnPhone headers={[t('facilitators_page.common.name', 'Name'), t('facilitators_page.common.phone', 'Phone'), t('facilitators_page.common.state', 'State'), t('facilitators_page.list.submitted_at', 'Submitted At'), t('facilitators_page.common.actions', 'Actions')]}>
                                     {displayPendingSubmissions.length > 0 ? (
                                         displayPendingSubmissions.map(sub => (
                                             <tr key={sub.id}>
                                                 <td className="p-2">{sub.name}</td>
                                                 <td className="p-2">{sub.phone}</td>
                                                 <td className="p-2">{sub.currentState}</td>
-                                                <td className="p-2">{sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                                                <td className="p-2">{sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleDateString() : t('facilitators_page.common.na', 'N/A')}</td>
                                                 <td className="p-2">
                                                     <div className="flex gap-2 whitespace-nowrap">
-                                                        <Button size="sm" variant="secondary" onClick={() => setViewingSubmission(sub)}>View</Button>
+                                                        <Button size="sm" variant="secondary" onClick={() => setViewingSubmission(sub)}>{t('facilitators_page.list.view', 'View')}</Button>
                                                         <Button size="sm" variant="success" onClick={() => handleApprove(sub)} disabled={processingId === sub.id}>
-                                                            {processingId === sub.id ? 'Processing...' : 'Approve'}
+                                                            {processingId === sub.id ? t('facilitators_page.list.processing', 'Processing...') : t('facilitators_page.list.approve', 'Approve')}
                                                         </Button>
                                                         <Button size="sm" variant="danger" onClick={() => handleReject(sub.id)} disabled={processingId === sub.id}>
-                                                            {processingId === sub.id ? 'Processing...' : 'Reject'}
+                                                            {processingId === sub.id ? t('facilitators_page.list.processing', 'Processing...') : t('facilitators_page.list.reject', 'Reject')}
                                                         </Button>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ))
-                                    ) : ( <EmptyState message="No pending facilitator submissions." colSpan={5} /> )}
+                                    ) : ( <EmptyState message={t('facilitators_page.list.no_pending', 'No pending facilitator submissions.')} colSpan={5} /> )}
                                 </Table>
                             )
                         )}
@@ -1004,7 +1012,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                 </div>
 
                 {viewingSubmission && (
-                    <Modal isOpen={!!viewingSubmission} onClose={() => setViewingSubmission(null)} title="Submission Details" size="lg">
+                    <Modal isOpen={!!viewingSubmission} onClose={() => setViewingSubmission(null)} title={t('facilitators_page.list.submission_details', 'Submission Details')} size="lg">
                         <SubmissionDetails submission={viewingSubmission} />
                     </Modal>
                 )}
@@ -1015,6 +1023,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
 
 export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLoading }) {
     const { facilitators, fetchFacilitators } = useDataCache();
+    const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
@@ -1037,23 +1046,23 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
 
     const handleSubmit = async () => {
         if (!formData.name || !formData.phone) {
-            setError('Facilitator Name and Phone Number are required.');
+            setError(t('facilitators_page.form.err_required', 'Facilitator Name and Phone Number are required.'));
             return;
         }
 
         const missingDates = formData.courses.filter(course => !formData.totDates[course]);
         if (missingDates.length > 0) {
-            setError(`Please provide a ToT date for the following selected course(s): ${missingDates.join(', ')}.`);
+            setError(t('facilitators_page.form.err_tot_date', 'Please provide a ToT date for the following selected course(s): {{courses}}.', { courses: missingDates.join(', ') }));
             return;
         }
 
         if (formData.mentorCourse === 'Yes' && formData.mentorDeclarationSigned !== 'Yes') {
-            setError('Mentors must read and accept the Mentor Code of Conduct and Safeguarding Declaration (Annex C).');
+            setError(t('facilitators_page.form.err_declaration', 'Mentors must read and accept the Mentor Code of Conduct and Safeguarding Declaration (Annex C).'));
             return;
         }
 
         if (formData.mentorCourse === 'Yes' && (!formData.mentorDeclarationName || !formData.mentorDeclarationDate)) {
-            setError('Please provide the signatory name and the date signed for the Mentor Code of Conduct Declaration.');
+            setError(t('facilitators_page.form.err_declaration_details', 'Please provide the signatory name and the date signed for the Mentor Code of Conduct Declaration.'));
             return;
         }
         
@@ -1064,7 +1073,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
         );
 
         if (isDuplicate) {
-            setError('A facilitator with this phone number or email already exists.');
+            setError(t('facilitators_page.form.err_duplicate', 'A facilitator with this phone number or email already exists.'));
             return;
         }
 
@@ -1129,7 +1138,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
             onSave(); 
 
         } catch (error) { 
-            setToast({ show: true, message: `Error saving: ${error.message}`, type: 'error' }); 
+            setToast({ show: true, message: t('facilitators_page.form.err_saving', 'Error saving: {{message}}', { message: error.message }), type: 'error' }); 
         } finally { 
             setLoading(false); 
         } 
@@ -1139,8 +1148,8 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
         <Card>
             <CardBody>
                 <PageHeader 
-                    title={initialData ? 'Edit Facilitator' : 'Add New Facilitator'} 
-                    actions={initialData && <Button variant="secondary" onClick={() => setIsCertsModalOpen(true)} disabled={!hasCerts}>View All Certificates</Button>}
+                    title={initialData ? t('facilitators_page.form.edit_title', 'Edit Facilitator') : t('facilitators_page.list.add_new', 'Add New Facilitator')} 
+                    actions={initialData && <Button variant="secondary" onClick={() => setIsCertsModalOpen(true)} disabled={!hasCerts}>{t('facilitators_page.form.view_all_certificates', 'View All Certificates')}</Button>}
                 />
                 {error && <div className="p-3 mb-4 rounded-md bg-red-50 text-red-800">{error}</div>}
                 
@@ -1151,8 +1160,8 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
                 />
             </CardBody>
             <CardFooter>
-                <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                <Button onClick={handleSubmit}>Save Facilitator</Button>
+                <Button variant="secondary" onClick={onCancel}>{t('facilitators_page.common.cancel', 'Cancel')}</Button>
+                <Button onClick={handleSubmit}>{t('facilitators_page.form.save', 'Save Facilitator')}</Button>
             </CardFooter>
             <ViewCertificatesModal isOpen={isCertsModalOpen} onClose={() => setIsCertsModalOpen(false)} facilitator={initialData} />
         </Card>
@@ -1160,6 +1169,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
 }
 
 export function FacilitatorApplicationForm() {
+    const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
@@ -1223,23 +1233,23 @@ export function FacilitatorApplicationForm() {
     
     const handleSubmit = async () => {
         if (!formData.name || !formData.phone) {
-            setError('Facilitator Name and Phone Number are required.');
+            setError(t('facilitators_page.form.err_required', 'Facilitator Name and Phone Number are required.'));
             return;
         }
         
         const missingDates = formData.courses.filter(course => !formData.totDates[course]);
         if (missingDates.length > 0) {
-            setError(`Please provide a ToT date for the following selected course(s): ${missingDates.join(', ')}.`);
+            setError(t('facilitators_page.form.err_tot_date', 'Please provide a ToT date for the following selected course(s): {{courses}}.', { courses: missingDates.join(', ') }));
             return;
         }
 
         if (formData.mentorCourse === 'Yes' && formData.mentorDeclarationSigned !== 'Yes') {
-            setError('Mentors must read and accept the Mentor Code of Conduct and Safeguarding Declaration (Annex C).');
+            setError(t('facilitators_page.form.err_declaration', 'Mentors must read and accept the Mentor Code of Conduct and Safeguarding Declaration (Annex C).'));
             return;
         }
 
         if (formData.mentorCourse === 'Yes' && (!formData.mentorDeclarationName || !formData.mentorDeclarationDate)) {
-            setError('Please provide the signatory name and the date signed for the Mentor Code of Conduct Declaration.');
+            setError(t('facilitators_page.form.err_declaration_details', 'Please provide the signatory name and the date signed for the Mentor Code of Conduct Declaration.'));
             return;
         }
 
@@ -1263,7 +1273,7 @@ export function FacilitatorApplicationForm() {
             }
 
             if (isPhoneDup || isEmailDup) {
-                setError('A facilitator with this phone number or email already exists in our system.');
+                setError(t('facilitators_page.application.err_duplicate', 'A facilitator with this phone number or email already exists in our system.'));
                 setSubmitting(false);
                 return;
             }
@@ -1289,26 +1299,26 @@ export function FacilitatorApplicationForm() {
             setSubmitted(true);
         } catch (err) {
             console.error("Submission failed:", err);
-            setError("There was an error submitting your information. Please try again later.");
+            setError(t('facilitators_page.application.err_submit', 'There was an error submitting your information. Please try again later.'));
         } finally {
             setSubmitting(false);
         }
     };
 
     if (isLoadingStatus) return <Card><Spinner /></Card>;
-    if (!isLinkActive) return <Card><PageHeader title="Facilitator Application" /><EmptyState message="Submissions for new facilitators are currently closed." /></Card>;
+    if (!isLinkActive) return <Card><PageHeader title={t('facilitators_page.application.title', 'Facilitator Application')} /><EmptyState message={t('facilitators_page.application.closed', 'Submissions for new facilitators are currently closed.')} /></Card>;
     
     if (submitted) {
-        const title = isUpdate ? "Profile Updated" : "Submission Received";
+        const title = isUpdate ? t('facilitators_page.application.profile_updated', 'Profile Updated') : t('facilitators_page.application.submission_received', 'Submission Received');
         const message = isUpdate 
-            ? "Your profile has been updated successfully."
-            : "Your information has been submitted successfully for review.";
+            ? t('facilitators_page.application.profile_updated_msg', 'Your profile has been updated successfully.')
+            : t('facilitators_page.application.submitted_msg', 'Your information has been submitted successfully for review.');
             
         return (
             <Card>
                 <PageHeader title={title} />
                 <div className="p-8 text-center">
-                    <h3 className="text-2xl font-bold text-green-600 mb-4">Thank You!</h3>
+                    <h3 className="text-2xl font-bold text-green-600 mb-4">{t('facilitators_page.application.thank_you', 'Thank You!')}</h3>
                     <p className="text-gray-700">{message}</p>
                 </div>
             </Card>
@@ -1319,8 +1329,8 @@ export function FacilitatorApplicationForm() {
         <Card>
             <CardBody>
                 <PageHeader 
-                    title={isUpdate ? "Update Your Facilitator Profile" : "Facilitator Application Form"}
-                    subtitle={isUpdate ? "Please review and update your information below." : "Submit your details to be considered as a facilitator for the National Child Health Program."} 
+                    title={isUpdate ? t('facilitators_page.application.update_title', 'Update Your Facilitator Profile') : t('facilitators_page.application.form_title', 'Facilitator Application Form')}
+                    subtitle={isUpdate ? t('facilitators_page.application.update_subtitle', 'Please review and update your information below.') : t('facilitators_page.application.form_subtitle', 'Submit your details to be considered as a facilitator for the National Child Health Program.')} 
                 />
                 {error && <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
                 <FacilitatorDataForm 
@@ -1332,7 +1342,7 @@ export function FacilitatorApplicationForm() {
             </CardBody>
             <CardFooter>
                  <Button onClick={handleSubmit} disabled={submitting}>
-                    {submitting ? 'Submitting...' : (isUpdate ? 'Update Profile' : 'Submit Application')}
+                    {submitting ? t('facilitators_page.application.submitting', 'Submitting...') : (isUpdate ? t('facilitators_page.application.update_profile', 'Update Profile') : t('facilitators_page.application.submit', 'Submit Application'))}
                 </Button>
             </CardFooter>
         </Card>
@@ -1340,6 +1350,7 @@ export function FacilitatorApplicationForm() {
 }
 
 export function FacilitatorReportView({ facilitator, allCourses, onBack, isSharedView = false }) {
+    const { t } = useTranslation();
     const combinedChartRef = useRef(null);
     const imciSubcoursePieRef = useRef(null);
     const [isCertsModalOpen, setIsCertsModalOpen] = useState(false);
@@ -1403,8 +1414,8 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack, isShare
         const finalCombinedChartData = {
             labels: Object.keys(summary),
             datasets: [
-                { label: 'Courses Instructed', data: Object.values(summary).map(s => s.instructed), backgroundColor: 'rgba(54, 162, 235, 0.6)' },
-                { label: 'Courses Directed', data: Object.values(summary).map(s => s.directed), backgroundColor: 'rgba(255, 99, 132, 0.6)' },
+                { label: t('facilitators_page.report.courses_instructed', 'Courses Instructed'), data: Object.values(summary).map(s => s.instructed), backgroundColor: 'rgba(54, 162, 235, 0.6)' },
+                { label: t('facilitators_page.report.courses_directed', 'Courses Directed'), data: Object.values(summary).map(s => s.directed), backgroundColor: 'rgba(255, 99, 132, 0.6)' },
             ],
         };
         
@@ -1422,45 +1433,45 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack, isShare
         }
         
         return { directedCourses: directed, facilitatedCourses: facilitated, courseSummary: Object.entries(summary), combinedChartData: finalCombinedChartData, imciSubcourseData: finalImciSubcourseData, totalInstructed: facilitated.length, totalDirected: directed.length, totalScore: scoreCounter };
-    }, [facilitator, allCourses]);
+    }, [facilitator, allCourses, t]);
     
     if (!facilitator) {
-        return <Card><CardBody><EmptyState message="Facilitator not found." /></CardBody></Card>;
+        return <Card><CardBody><EmptyState message={t('facilitators_page.report.not_found', 'Facilitator not found.')} /></CardBody></Card>;
     }
     
     return (
         <div className="space-y-6">
             <ViewCertificatesModal isOpen={isCertsModalOpen} onClose={() => setIsCertsModalOpen(false)} facilitator={facilitator} />
-            <ShareLinkModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} title="Share Facilitator Report" link={publicLink} />
+            <ShareLinkModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} title={t('facilitators_page.share.title', 'Share Facilitator Report')} link={publicLink} />
             
-            <PageHeader title="Facilitator Report" subtitle={facilitator.name} actions={<>
-                <Button variant="secondary" onClick={() => setIsCertsModalOpen(true)} disabled={!hasCerts}>View Certificates</Button>
-                {isSharedView ? <Button variant="secondary" onClick={() => setIsShareModalOpen(true)}>Share</Button> : <Button onClick={onBack}>Back to List</Button>}
+            <PageHeader title={t('facilitators_page.report.title', 'Facilitator Report')} subtitle={facilitator.name} actions={<>
+                <Button variant="secondary" onClick={() => setIsCertsModalOpen(true)} disabled={!hasCerts}>{t('facilitators_page.list.view_certificates', 'View Certificates')}</Button>
+                {isSharedView ? <Button variant="secondary" onClick={() => setIsShareModalOpen(true)}>{t('facilitators_page.common.share', 'Share')}</Button> : <Button onClick={onBack}>{t('facilitators_page.report.back_to_list', 'Back to List')}</Button>}
             </>} />
 
             <Card>
-                <CardHeader>Facilitator Details</CardHeader>
+                <CardHeader>{t('facilitators_page.report.details', 'Facilitator Details')}</CardHeader>
                 <CardBody>
                     <dl className="divide-y divide-gray-200">
-                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Name (English)</dt><dd className="md:col-span-2">{facilitator.name}</dd></div>
-                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Name (Arabic)</dt><dd className="md:col-span-2 font-arabic">{facilitator.arabicName || '-'}</dd></div>
-                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Phone</dt><dd className="md:col-span-2">{facilitator.phone}</dd></div>
-                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Location</dt><dd className="md:col-span-2">{facilitator.currentState ? `${facilitator.currentState}${facilitator.currentLocality ? `, ${facilitator.currentLocality}` : ''}` : 'N/A'}</dd></div>
-                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Courses (ToT)</dt><dd className="md:col-span-2">{(Array.isArray(facilitator.courses) ? facilitator.courses : []).join(', ')}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">{t('facilitators_page.report.name_en', 'Name (English)')}</dt><dd className="md:col-span-2">{facilitator.name}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">{t('facilitators_page.report.name_ar', 'Name (Arabic)')}</dt><dd className="md:col-span-2 font-arabic">{facilitator.arabicName || '-'}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">{t('facilitators_page.common.phone', 'Phone')}</dt><dd className="md:col-span-2">{facilitator.phone}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">{t('facilitators_page.common.location', 'Location')}</dt><dd className="md:col-span-2">{facilitator.currentState ? `${facilitator.currentState}${facilitator.currentLocality ? `, ${facilitator.currentLocality}` : ''}` : t('facilitators_page.common.na', 'N/A')}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">{t('facilitators_page.report.courses_tot', 'Courses (ToT)')}</dt><dd className="md:col-span-2">{(Array.isArray(facilitator.courses) ? facilitator.courses : []).join(', ')}</dd></div>
                     </dl>
                 </CardBody>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card><CardHeader>Total Courses Instructed</CardHeader><CardBody className="flex items-center justify-center"><div className="text-5xl font-bold text-indigo-600">{totalInstructed}</div></CardBody></Card>
-                <Card><CardHeader>Total Courses Directed</CardHeader><CardBody className="flex items-center justify-center"><div className="text-5xl font-bold text-pink-600">{totalDirected}</div></CardBody></Card>
-                <Card><CardHeader>Overall Score</CardHeader><CardBody className="flex items-center justify-center"><div className="text-5xl font-bold text-green-600">{Number.isInteger(totalScore) ? totalScore : totalScore.toFixed(1)}</div></CardBody></Card>
+                <Card><CardHeader>{t('facilitators_page.report.total_instructed', 'Total Courses Instructed')}</CardHeader><CardBody className="flex items-center justify-center"><div className="text-5xl font-bold text-indigo-600">{totalInstructed}</div></CardBody></Card>
+                <Card><CardHeader>{t('facilitators_page.report.total_directed', 'Total Courses Directed')}</CardHeader><CardBody className="flex items-center justify-center"><div className="text-5xl font-bold text-pink-600">{totalDirected}</div></CardBody></Card>
+                <Card><CardHeader>{t('facilitators_page.report.overall_score', 'Overall Score')}</CardHeader><CardBody className="flex items-center justify-center"><div className="text-5xl font-bold text-green-600">{Number.isInteger(totalScore) ? totalScore : totalScore.toFixed(1)}</div></CardBody></Card>
             </div>
 
             <Card>
-                <CardHeader>Course Involvement Summary</CardHeader>
+                <CardHeader>{t('facilitators_page.report.involvement_summary', 'Course Involvement Summary')}</CardHeader>
                 <CardBody>
-                    <Table headers={["Course Type", "Instructed", "Directed", "Total Days"]}>
+                    <Table headers={[t('facilitators_page.report.course_type', 'Course Type'), t('facilitators_page.report.instructed', 'Instructed'), t('facilitators_page.report.directed', 'Directed'), t('facilitators_page.report.total_days', 'Total Days')]}>
                         {courseSummary.map(([type, data]) => (
                             <tr key={type}>
                                 <td className="p-2 border">{type}</td>
@@ -1476,19 +1487,19 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack, isShare
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {imciSubcourseData && (
                     <Card>
-                        <CardHeader>IMNCI Sub-course Distribution</CardHeader>
+                        <CardHeader>{t('facilitators_page.report.imnci_subcourse', 'IMNCI Sub-course Distribution')}</CardHeader>
                         <CardBody><div className="h-64 flex justify-center"><Pie data={imciSubcourseData} options={{ responsive: true, maintainAspectRatio: false }} ref={imciSubcoursePieRef} /></div></CardBody>
                     </Card>
                 )}
                  <Card>
-                    <CardHeader>Course Overview (All Types)</CardHeader>
+                    <CardHeader>{t('facilitators_page.report.course_overview', 'Course Overview (All Types)')}</CardHeader>
                     <CardBody><div className="h-64 flex justify-center"><Bar data={combinedChartData} options={{ responsive: true, maintainAspectRatio: false }} ref={combinedChartRef} /></div></CardBody>
                 </Card>
             </div>
             
             <div className="grid md:grid-cols-2 gap-6">
-                 <Card><CardHeader>Directed Courses</CardHeader><CardBody><Table headers={["Course", "Date", "Location"]}>{directedCourses.length > 0 ? directedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message="No courses directed." colSpan={3} />}</Table></CardBody></Card>
-                 <Card><CardHeader>Facilitated Courses</CardHeader><CardBody><Table headers={["Course", "Date", "Location"]}>{facilitatedCourses.length > 0 ? facilitatedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message="No courses facilitated." colSpan={3} />}</Table></CardBody></Card>
+                 <Card><CardHeader>{t('facilitators_page.report.directed_courses', 'Directed Courses')}</CardHeader><CardBody><Table headers={[t('facilitators_page.common.course', 'Course'), t('facilitators_page.common.date', 'Date'), t('facilitators_page.common.location', 'Location')]}>{directedCourses.length > 0 ? directedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message={t('facilitators_page.report.no_directed', 'No courses directed.')} colSpan={3} />}</Table></CardBody></Card>
+                 <Card><CardHeader>{t('facilitators_page.report.facilitated_courses', 'Facilitated Courses')}</CardHeader><CardBody><Table headers={[t('facilitators_page.common.course', 'Course'), t('facilitators_page.common.date', 'Date'), t('facilitators_page.common.location', 'Location')]}>{facilitatedCourses.length > 0 ? facilitatedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message={t('facilitators_page.report.no_facilitated', 'No courses facilitated.')} colSpan={3} />}</Table></CardBody></Card>
             </div>
         </div>
     );

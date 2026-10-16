@@ -48,6 +48,7 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { notify, confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // Standard job titles for normalization
 const STANDARD_JOB_TITLES = ['صحة عامة', 'طبيب', 'ممرض', 'ظابط تغذية', 'مساعد طبي', 'صيدلي', 'إحصائي', 'إدارة اعمال'];
@@ -83,6 +84,7 @@ const shareViaWhatsApp = (textToShare, successMessage) => {
 
 // Reusable Share Link Modal
 function ShareLinkModal({ isOpen, onClose, title, link }) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
@@ -94,18 +96,18 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
-            <p className="text-sm text-gray-600 mb-4">Share this public link with anyone. They will be able to view a read-only version of the profile.</p>
+            <p className="text-sm text-gray-600 mb-4">{t('program_teams.share.description', 'Share this public link with anyone. They will be able to view a read-only version of the profile.')}</p>
             
-            <FormGroup label="Public Link">
+            <FormGroup label={t('program_teams.share.public_link', 'Public Link')}>
                 <div className="flex gap-2">
                     <Input type="text" value={link} readOnly />
                     <Button onClick={handleCopy} variant="secondary" className="w-24">
-                        {copied ? 'Copied!' : 'Share'}
+                        {copied ? t('program_teams.common.copied', 'Copied!') : t('program_teams.common.share', 'Share')}
                     </Button>
                 </div>
             </FormGroup>
 
-            <FormGroup label="QR Code">
+            <FormGroup label={t('program_teams.share.qr_code', 'QR Code')}>
                 <div className="flex justify-center p-4 bg-white rounded-md border">
                     <QRCodeCanvas
                         value={link}
@@ -162,6 +164,7 @@ function DynamicExperienceFields({ experiences, onChange }) {
 
 // A single, reusable component for displaying form fields with DEDICATED BORDERS AND STYLED BLUE HEADERS
 function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChange, onImageUpload, isUploadingImage }) {
+    const { t } = useTranslation();
     const states = Object.keys(STATE_LOCALITIES);
     const localities = formData.state ? (STATE_LOCALITIES[formData.state]?.localities || []) : [];
     const joinDateLabels = { state: 'تاريخ الانضمام لبرنامج صحة الطفل بالولاية', federal: 'تاريخ الانضمام لبرنامج صحة الطفل بالاتحادية' };
@@ -171,15 +174,15 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
             
             {/* NEW IMAGE UPLOAD SECTION */}
             <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
-                <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">الصورة الشخصية (Profile Photo)</h3>
+                <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">{t('program_teams.form.profile_photo', 'الصورة الشخصية (Profile Photo)')}</h3>
                 <div className="flex items-center gap-6">
                     <div className="w-24 h-24 bg-gray-100 rounded-full border-4 border-gray-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0 relative">
                         {isUploadingImage ? (
                             <Spinner size="sm" />
                         ) : formData.imageUrl ? (
-                            <img src={formData.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                            <img src={formData.imageUrl} alt={t('program_teams.common.profile_alt', 'Profile')} className="w-full h-full object-cover" />
                         ) : (
-                            <span className="text-gray-400 text-xs">No Photo</span>
+                            <span className="text-gray-400 text-xs">{t('program_teams.common.no_photo', 'No Photo')}</span>
                         )}
                     </div>
                     <div className="flex-grow">
@@ -258,6 +261,7 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
 
 // A single, configurable form for all team levels (internal use)
 function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
+    const { t } = useTranslation();
     const [selectedLevel, setSelectedLevel] = useState(member?.level || (member ? (member.locality ? 'locality' : member.state ? 'state' : 'federal') : ''));
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     
@@ -292,7 +296,7 @@ function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
             setFormData(prev => ({ ...prev, imageUrl: downloadUrl }));
         } catch (error) {
             console.error("Upload failed:", error);
-            notify("Failed to upload image. Please try again.");
+            notify(t('program_teams.messages.upload_failed', 'Failed to upload image. Please try again.'));
         } finally {
             setIsUploadingImage(false);
         }
@@ -335,7 +339,7 @@ function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
         <form onSubmit={handleSubmit} className="space-y-4" dir="rtl" autoComplete="off">
             <CardBody>
                 <h2 className="text-xl font-bold text-gray-800 text-center border-b pb-4 mb-6">{member?.id ? `تعديل بيانات العضو` : `إضافة عضو جديد`}</h2>
-                {!member?.id && ( <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required disabled={isSaving}><option value="">-- Select Level --</option><option value="federal">Federal</option><option value="state">State</option><option value="locality">Locality</option></Select> )}
+                {!member?.id && ( <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required disabled={isSaving}><option value="">{t('program_teams.form.select_level', '-- Select Level --')}</option><option value="federal">{t('program_teams.levels.federal', 'Federal')}</option><option value="state">{t('program_teams.levels.state', 'State')}</option><option value="locality">{t('program_teams.levels.locality', 'Locality')}</option></Select> )}
                 
                 {selectedLevel && (
                     <MemberFormFieldset 
@@ -369,13 +373,13 @@ function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
             </CardBody>
             {selectedLevel && (
                 <CardFooter>
-                    <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                    <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>{t('program_teams.common.cancel', 'Cancel')}</Button>
                     <Button type="submit" disabled={isSaving}>
                         {isSaving ? (
                             <span className="flex items-center gap-2">
                                 <Spinner size="sm" /> جاري الحفظ...
                             </span>
-                        ) : 'Save'}
+                        ) : t('program_teams.common.save', 'Save')}
                     </Button>
                 </CardFooter>
             )}
@@ -385,6 +389,7 @@ function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
 
 // Internal View Component
 function TeamMemberView({ level, member, originalMember, onBack }) {
+    const { t } = useTranslation();
     const renderDetail = (label, newValue, fieldKey) => {
         const originalValue = originalMember ? originalMember[fieldKey] : undefined;
         const hasChanged = originalMember && String(originalValue || '').trim() !== String(newValue || '').trim();
@@ -397,11 +402,11 @@ function TeamMemberView({ level, member, originalMember, onBack }) {
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                     {hasChanged && (
                         <div className="text-xs text-red-500 line-through mb-1">
-                            {originalValue || '(فارغ - Empty)'}
+                            {originalValue || t('program_teams.view.empty_value', '(فارغ - Empty)')}
                         </div>
                     )}
                     <div className={hasChanged ? 'text-green-700 font-semibold' : ''}>
-                        {newValue || '(فارغ - Empty)'}
+                        {newValue || t('program_teams.view.empty_value', '(فارغ - Empty)')}
                     </div>
                 </dd>
             </div>
@@ -433,15 +438,15 @@ function TeamMemberView({ level, member, originalMember, onBack }) {
         <>
             <CardBody dir="rtl">
                 <PageHeader 
-                    title={originalMember ? "Review Pending Updates" : "View Team Member Details"} 
-                    subtitle={originalMember ? "Yellow highlights indicate changed fields waiting for approval." : ""}
+                    title={originalMember ? t('program_teams.view.review_pending_title', 'Review Pending Updates') : t('program_teams.view.details_title', 'View Team Member Details')} 
+                    subtitle={originalMember ? t('program_teams.view.review_pending_subtitle', 'Yellow highlights indicate changed fields waiting for approval.') : ""}
                 />
                 <div className="mt-6">
                     {/* Display Photo if available */}
                     {member.imageUrl && (
                         <div className="flex justify-center mb-6">
                             <div className="w-32 h-32 bg-gray-100 rounded-full border-4 border-gray-200 shadow-sm overflow-hidden">
-                                <img src={member.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                                <img src={member.imageUrl} alt={t('program_teams.common.profile_alt', 'Profile')} className="w-full h-full object-cover" />
                             </div>
                         </div>
                     )}
@@ -483,7 +488,7 @@ function TeamMemberView({ level, member, originalMember, onBack }) {
                                     <p className="text-xs font-bold mb-2">الخبرات السابقة (القديمة):</p>
                                     <ul className="list-disc pl-5 pr-5 space-y-1 text-sm line-through">
                                         {Array.isArray(originalMember.previousRoles) && originalMember.previousRoles.length > 0 ? 
-                                            originalMember.previousRoles.map((exp, i) => exp.role && <li key={i}>{exp.role} ({exp.duration || 'N/A'})</li>) 
+                                            originalMember.previousRoles.map((exp, i) => exp.role && <li key={i}>{exp.role} ({exp.duration || t('program_teams.common.na', 'N/A')})</li>) 
                                             : <li>لا توجد خبرات مسجلة</li>}
                                     </ul>
                                 </div>
@@ -492,7 +497,7 @@ function TeamMemberView({ level, member, originalMember, onBack }) {
                             {Array.isArray(member.previousRoles) && member.previousRoles.some(e => e.role) ? (
                                 <ul className={`list-disc pl-5 pr-5 space-y-1 text-sm ${experiencesChanged ? 'text-green-700 font-semibold' : 'text-gray-900'}`}>
                                     {member.previousRoles.map((exp, index) => (
-                                        exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || 'N/A'})</li>
+                                        exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || t('program_teams.common.na', 'N/A')})</li>
                                     ))}
                                 </ul>
                             ) : <span className="text-sm text-gray-500">لا توجد خبرات مسجلة</span>}
@@ -507,14 +512,15 @@ function TeamMemberView({ level, member, originalMember, onBack }) {
                 </div>
             </CardBody>
             <CardFooter>
-                <Button onClick={onBack}>Close</Button>
+                <Button onClick={onBack}>{t('program_teams.common.close', 'Close')}</Button>
             </CardFooter>
         </>
     );
 }
 
 function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onView, isActionDisabled }) {
-    const headers = ['Name', 'Email', 'Actions'];
+    const { t } = useTranslation();
+    const headers = [t('program_teams.pending.name', 'Name'), t('program_teams.pending.email', 'Email'), t('program_teams.common.actions', 'Actions')];
     
     // We intentionally don't show the spinner if there's already data so optimistic updates don't flicker the screen
     if (isLoading && (!submissions || submissions.length === 0)) return <Card><Spinner /></Card>;
@@ -530,9 +536,9 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
                                 <td className="p-4 text-sm">{s.email}</td>
                                 <td className="p-4 text-sm">
                                     <div className="flex gap-2">
-                                        <Button variant="secondary" onClick={() => onView(s, true)}>View</Button>
-                                        <Button variant="success" onClick={() => onApprove(s)} disabled={isActionDisabled}>Approve</Button>
-                                        <Button variant="danger" onClick={() => onReject(s.id)} disabled={isActionDisabled}>Reject</Button>
+                                        <Button variant="secondary" onClick={() => onView(s, true)}>{t('program_teams.common.view', 'View')}</Button>
+                                        <Button variant="success" onClick={() => onApprove(s)} disabled={isActionDisabled}>{t('program_teams.pending.approve', 'Approve')}</Button>
+                                        <Button variant="danger" onClick={() => onReject(s.id)} disabled={isActionDisabled}>{t('program_teams.pending.reject', 'Reject')}</Button>
                                     </div>
                                 </td>
                             </tr>
@@ -540,7 +546,7 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
                     ) : (
                         <tr>
                             <td colSpan={headers.length} className="p-8 text-center text-gray-500">
-                                No pending submissions found.
+                                {t('program_teams.pending.empty', 'No pending submissions found.')}
                             </td>
                         </tr>
                     )}
@@ -551,30 +557,31 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
 }
 
 function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
+    const { t } = useTranslation();
     const [copiedState, setCopiedState] = useState('');
     
     const baseUrl = `${getBaseUrl()}/public/team-member-application`;
     
     const links = {
-        'General (Select Level manually)': baseUrl,
-        'Federal Level': `${baseUrl}?level=federal`,
-        'State Level': `${baseUrl}?level=state`,
-        'Locality Level': `${baseUrl}?level=locality`
+        [t('program_teams.links.general', 'General (Select Level manually)')]: baseUrl,
+        [t('program_teams.levels.federal_level', 'Federal Level')]: `${baseUrl}?level=federal`,
+        [t('program_teams.levels.state_level', 'State Level')]: `${baseUrl}?level=state`,
+        [t('program_teams.levels.locality_level', 'Locality Level')]: `${baseUrl}?level=locality`
     };
 
     const handleCopyLink = (levelName, link) => {
-        const textToShare = `*Registration Form for ${levelName}*\n\nPlease complete your application via this link:\n${link}`;
-        shareViaWhatsApp(textToShare, 'Link copied!');
+        const textToShare = t('program_teams.links.share_text', '*Registration Form for {{level}}*\n\nPlease complete your application via this link:\n{{link}}', { level: levelName, link });
+        shareViaWhatsApp(textToShare, t('program_teams.links.link_copied', 'Link copied!'));
         setCopiedState(levelName);
         setTimeout(() => setCopiedState(''), 2500);
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Manage Team Member Submission Link`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={t('program_teams.links.modal_title', 'Manage Team Member Submission Link')}>
             {isLoading ? <Spinner /> : ( 
                 <div className="space-y-4"> 
                     <div className="space-y-4 mb-4">
-                        <p className="text-sm text-gray-600">Share these links to direct users to a specific application form.</p>
+                        <p className="text-sm text-gray-600">{t('program_teams.links.description', 'Share these links to direct users to a specific application form.')}</p>
                         {Object.entries(links).map(([levelName, link]) => (
                             <FormGroup key={levelName} label={levelName}>
                                 <div className="relative">
@@ -585,7 +592,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
                                         variant="secondary" 
                                         size="sm"
                                     >
-                                        {copiedState === levelName ? 'Shared!' : 'Share'}
+                                        {copiedState === levelName ? t('program_teams.links.shared', 'Shared!') : t('program_teams.common.share', 'Share')}
                                     </Button>
                                 </div>
                             </FormGroup>
@@ -594,11 +601,11 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 
                     <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-4">
-                            <div>Status: <span className={`font-bold px-2 py-1 rounded-full text-xs ml-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{settings.isActive ? 'Active' : 'Inactive'}</span></div>
-                            <div><span className="font-medium">Links Opened:</span> {settings.openCount || 0} times</div>
+                            <div>{t('program_teams.links.status', 'Status:')} <span className={`font-bold px-2 py-1 rounded-full text-xs ml-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{settings.isActive ? t('program_teams.links.active', 'Active') : t('program_teams.links.inactive', 'Inactive')}</span></div>
+                            <div><span className="font-medium">{t('program_teams.links.links_opened', 'Links Opened:')}</span> {t('program_teams.links.times', '{{n}} times', { n: settings.openCount || 0 })}</div>
                         </div>
                         <Button variant={settings.isActive ? 'danger' : 'success'} onClick={onToggleStatus}>
-                            {settings.isActive ? 'Deactivate Links' : 'Activate Links'}
+                            {settings.isActive ? t('program_teams.links.deactivate', 'Deactivate Links') : t('program_teams.links.activate', 'Activate Links')}
                         </Button>
                     </div>
                 </div> 
@@ -608,7 +615,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 }
 
 // --- NEW PDF EXPORT LOGIC FOR DASHBOARD ---
-const generateHrReportPdf = async (quality, onSuccess, onError, groupedByState, showLocality, getOverallExp) => {
+const generateHrReportPdf = async (quality, onSuccess, onError, groupedByState, showLocality, getOverallExp, t) => {
     const qualityProfiles = {
         print: { scale: 2 },
         screen: { scale: 1.5 }
@@ -723,19 +730,20 @@ const generateHrReportPdf = async (quality, onSuccess, onError, groupedByState, 
             const base64Data = doc.output('datauristring').split('base64,')[1];
             const writeResult = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Downloads });
             await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
-            onSuccess(`PDF saved to Downloads folder: ${fileName}`);
+            onSuccess(t('program_teams.pdf.saved_to_downloads', 'PDF saved to Downloads folder: {{fileName}}', { fileName }));
         } else {
             doc.save(fileName);
-            onSuccess("PDF download initiated.");
+            onSuccess(t('program_teams.pdf.download_initiated', 'PDF download initiated.'));
         }
     } catch (e) {
         console.error("Error generating or saving PDF:", e);
-        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
+        onError(t('program_teams.pdf.save_failed', 'Failed to save PDF: {{error}}', { error: e.message || t('program_teams.pdf.unknown_error', 'Unknown error') }));
     }
 };
 
 // --- NEW DASHBOARD COMPONENT ---
 function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, localityCoordinators, filters, setToast }) {
+    const { t } = useTranslation();
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
 
@@ -831,7 +839,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
     // 3. Job Distribution Data
     const jobDist = {};
     filteredMembers.forEach(m => {
-        const job = m.jobTitle === 'اخرى' ? (m.jobTitleOther || 'Other') : (m.jobTitle || 'Unknown');
+        const job = m.jobTitle === 'اخرى' ? (m.jobTitleOther || t('program_teams.dashboard.other', 'Other')) : (m.jobTitle || t('program_teams.dashboard.unknown', 'Unknown'));
         jobDist[job] = (jobDist[job] || 0) + 1;
     });
     const maxJobCount = Math.max(0, ...Object.values(jobDist));
@@ -846,6 +854,12 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
         else expDist['10+ Years'] += 1;
     });
     const maxExpCount = Math.max(0, ...Object.values(expDist));
+    const expRangeLabels = {
+        '0-2 Years': t('program_teams.dashboard.exp_range.r0_2', '0-2 Years'),
+        '3-5 Years': t('program_teams.dashboard.exp_range.r3_5', '3-5 Years'),
+        '6-10 Years': t('program_teams.dashboard.exp_range.r6_10', '6-10 Years'),
+        '10+ Years': t('program_teams.dashboard.exp_range.r10_plus', '10+ Years'),
+    };
 
     // Check if Locality column is applicable in the detailed HR list
     const showLocality = useMemo(() => {
@@ -905,11 +919,12 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                 (message) => notify(message, 'error'),
                 groupedByState,
                 showLocality,
-                getOverallExp
+                getOverallExp,
+                t
             );
         } catch (error) {
             console.error("Failed to generate PDF:", error);
-            notify("Sorry, there was an error generating the PDF.", 'error');
+            notify(t('program_teams.pdf.generate_error', 'Sorry, there was an error generating the PDF.'), 'error');
         } finally {
             setIsPdfGenerating(false);
         }
@@ -922,15 +937,15 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
             {/* KPI Cards (At the Top) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-white border rounded-lg p-5 shadow-sm border-l-4 border-l-blue-600">
-                    <div className="text-gray-500 text-sm font-medium">Federal Level</div>
+                    <div className="text-gray-500 text-sm font-medium">{t('program_teams.levels.federal_level', 'Federal Level')}</div>
                     <div className="mt-2 text-3xl font-bold text-gray-900">{federalCount}</div>
                 </div>
                 <div className="bg-white border rounded-lg p-5 shadow-sm border-l-4 border-l-green-600">
-                    <div className="text-gray-500 text-sm font-medium">State Level</div>
+                    <div className="text-gray-500 text-sm font-medium">{t('program_teams.levels.state_level', 'State Level')}</div>
                     <div className="mt-2 text-3xl font-bold text-gray-900">{stateCount}</div>
                 </div>
                 <div className="bg-white border rounded-lg p-5 shadow-sm border-l-4 border-l-purple-600">
-                    <div className="text-gray-500 text-sm font-medium">Locality Level</div>
+                    <div className="text-gray-500 text-sm font-medium">{t('program_teams.levels.locality_level', 'Locality Level')}</div>
                     <div className="mt-2 text-3xl font-bold text-gray-900">{localityCount}</div>
                 </div>
             </div>
@@ -942,18 +957,18 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                 <div className="xl:col-span-2 flex flex-col">
                     <Card className="flex-1">
                         <CardBody>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">HR Distribution by State</h3>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('program_teams.dashboard.hr_by_state', 'HR Distribution by State')}</h3>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200 border">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">HR in State Level</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('program_teams.dashboard.table.state', 'State')}</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">{t('program_teams.dashboard.hr_state_level', 'HR in State Level')}</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 border-l border-gray-200">مدير البرنامج</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">رئيس وحدة</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">عضو في وحدة</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">سكرتارية</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">HR in Locality Level</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">{t('program_teams.dashboard.hr_locality_level', 'HR in Locality Level')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -986,7 +1001,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                                             </tr>
                                         )})}
                                         {Object.keys(stateCounts).length === 0 && (
-                                            <tr><td colSpan="7" className="px-6 py-4 text-center text-gray-500">No data matching filters.</td></tr>
+                                            <tr><td colSpan="7" className="px-6 py-4 text-center text-gray-500">{t('program_teams.dashboard.no_data_filters', 'No data matching filters.')}</td></tr>
                                         )}
                                     </tbody>
                                 </table>
@@ -1000,7 +1015,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                     {/* Job Distribution */}
                     <Card className="flex-1">
                         <CardBody>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Job Description Distribution</h3>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('program_teams.dashboard.job_distribution', 'Job Description Distribution')}</h3>
                             <div className="space-y-3">
                                 {Object.entries(jobDist).sort((a,b) => b[1] - a[1]).map(([job, count]) => (
                                     <div key={job}>
@@ -1013,7 +1028,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                                         </div>
                                     </div>
                                 ))}
-                                {Object.keys(jobDist).length === 0 && <span className="text-sm text-gray-500">No data available.</span>}
+                                {Object.keys(jobDist).length === 0 && <span className="text-sm text-gray-500">{t('program_teams.dashboard.no_data', 'No data available.')}</span>}
                             </div>
                         </CardBody>
                     </Card>
@@ -1021,12 +1036,12 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                     {/* Experience Distribution */}
                     <Card className="flex-1">
                         <CardBody>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Years of Experience</h3>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('program_teams.dashboard.years_of_experience', 'Years of Experience')}</h3>
                             <div className="space-y-3">
                                 {Object.entries(expDist).map(([range, count]) => (
                                     <div key={range}>
                                         <div className="flex justify-between text-sm mb-1">
-                                            <span className="font-medium text-gray-700">{range}</span>
+                                            <span className="font-medium text-gray-700">{expRangeLabels[range] || range}</span>
                                             <span className="text-gray-500">{count}</span>
                                         </div>
                                         <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -1044,18 +1059,18 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
             <Card>
                 <CardBody>
                     <div className="flex flex-wrap justify-between items-center mb-4 border-b pb-2 gap-4">
-                        <h3 className="text-lg font-semibold text-gray-800">Human Resources List</h3>
+                        <h3 className="text-lg font-semibold text-gray-800">{t('program_teams.dashboard.hr_list', 'Human Resources List')}</h3>
                         <div className="flex items-center gap-2">
-                            <Button size="sm" variant="secondary" onClick={handleExportCSV}>Export Excel (CSV)</Button>
+                            <Button size="sm" variant="secondary" onClick={handleExportCSV}>{t('program_teams.dashboard.export_csv', 'Export Excel (CSV)')}</Button>
                             
                             {/* Updated PDF export buttons styled exactly like course report */}
                             <Button size="sm" variant="secondary" onClick={() => handleGeneratePdf('print')} disabled={isPdfGenerating}>
-                                <PdfIcon /> Print PDF
+                                <PdfIcon /> {t('program_teams.dashboard.print_pdf', 'Print PDF')}
                             </Button>
                             
                             {isPdfGenerating && (
                                 <div className="flex items-center gap-2 text-gray-500 text-sm">
-                                    <Spinner size="sm" /><span>Generating...</span>
+                                    <Spinner size="sm" /><span>{t('program_teams.dashboard.generating', 'Generating...')}</span>
                                 </div>
                             )}
                         </div>
@@ -1065,12 +1080,12 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                         <table id="hr-list-table" className="min-w-full border-collapse border border-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">State</th>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Phone Number</th>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Job Description</th>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Overall Experience</th>
-                                    {showLocality && <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Locality</th>}
+                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.state', 'State')}</th>
+                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.name', 'Name')}</th>
+                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.phone', 'Phone Number')}</th>
+                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.job', 'Job Description')}</th>
+                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.experience', 'Overall Experience')}</th>
+                                    {showLocality && <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.locality', 'Locality')}</th>}
                                 </tr>
                             </thead>
                             <tbody className="bg-white">
@@ -1094,13 +1109,13 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                                                 <td className="border p-3 text-sm text-gray-900">{m.nameAr || m.name}</td>
                                                 <td className="border p-3 text-sm text-gray-700" dir="ltr" style={{ textAlign: 'right' }}>{m.phone || '-'}</td>
                                                 <td className="border p-3 text-sm text-gray-700">{m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle}</td>
-                                                <td className="border p-3 text-sm text-gray-700">{getOverallExp(m)} Years</td>
+                                                <td className="border p-3 text-sm text-gray-700">{t('program_teams.dashboard.years_n', '{{n}} Years', { n: getOverallExp(m) })}</td>
                                                 {showLocality && <td className="border p-3 text-sm text-gray-700">{locArabic}</td>}
                                             </tr>
                                         );
                                     })
                                 )) : (
-                                    <tr><td colSpan={showLocality ? "6" : "5"} className="p-6 text-center text-gray-500">No human resources match your filters.</td></tr>
+                                    <tr><td colSpan={showLocality ? "6" : "5"} className="p-6 text-center text-gray-500">{t('program_teams.dashboard.no_hr_match', 'No human resources match your filters.')}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -1114,6 +1129,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
 
 // --- NEW COMPONENT: Bulk Import Modal ---
 function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setToast }) {
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [parsedRows, setParsedRows] = useState([]);
     
@@ -1244,7 +1260,7 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
             
         } catch (error) {
             console.error("Error generating Excel:", error);
-            setToast({ show: true, message: 'Failed to generate Excel template.', type: 'error' });
+            setToast({ show: true, message: t('program_teams.bulk.template_failed', 'Failed to generate Excel template.'), type: 'error' });
         }
     };
 
@@ -1261,7 +1277,7 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                 
                 const worksheet = workbook.getWorksheet(1);
                 if (!worksheet) {
-                    setToast({ show: true, message: 'Invalid Excel file.', type: 'error' });
+                    setToast({ show: true, message: t('program_teams.bulk.invalid_file', 'Invalid Excel file.'), type: 'error' });
                     return;
                 }
 
@@ -1346,7 +1362,7 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                 }
             } catch (err) {
                 console.error("File processing error:", err);
-                setToast({ show: true, message: 'Could not read Excel file. Please ensure it is a valid .xlsx file.', type: 'error' });
+                setToast({ show: true, message: t('program_teams.bulk.read_failed', 'Could not read Excel file. Please ensure it is a valid .xlsx file.'), type: 'error' });
             }
         };
         reader.readAsArrayBuffer(file);
@@ -1453,34 +1469,34 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
             await fetchers.state.list(true);
             await fetchers.locality.list(true);
             
-            setToast({ show: true, message: `Successfully processed ${promises.length} records.`, type: 'success' });
+            setToast({ show: true, message: t('program_teams.bulk.success', 'Successfully processed {{n}} records.', { n: promises.length }), type: 'success' });
             onClose();
         } catch (error) {
             console.error("Bulk Import Failed", error);
-            setToast({ show: true, message: `Bulk Import Failed: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('program_teams.bulk.failed', 'Bulk Import Failed: {{error}}', { error: error.message }), type: 'error' });
         } finally {
             setIsExecuting(false);
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Bulk Import/Update Program Team" size="3xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('program_teams.bulk.title', 'Bulk Import/Update Program Team')} size="3xl">
             <div className="p-4" dir="ltr">
                 {/* STEP 1: UPLOAD */}
                 {step === 1 && (
                     <div className="space-y-6">
                         <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                            <h4 className="font-bold text-blue-800 mb-2">Step 1: Prepare your data</h4>
+                            <h4 className="font-bold text-blue-800 mb-2">{t('program_teams.bulk.step1_title', 'Step 1: Prepare your data')}</h4>
                             <p className="text-sm text-blue-700 mb-4">
-                                Download the current data template. The <strong><code className="bg-blue-100 px-1 rounded">ID_(LOCKED)</code></strong> column is locked and protected by the system to prevent accidental changes to existing users. 
+                                {t('program_teams.bulk.step1_desc_before', 'Download the current data template. The')}{' '}<strong><code className="bg-blue-100 px-1 rounded">ID_(LOCKED)</code></strong>{' '}{t('program_teams.bulk.step1_desc_after', 'column is locked and protected by the system to prevent accidental changes to existing users.')}
                                 <br/><br/>
-                                <em>Note: Leave the ID column blank to add new members. The file downloads as a protected Excel Sheet (.xlsx) ensuring phone numbers and IDs are preserved properly.</em>
+                                <em>{t('program_teams.bulk.step1_note', 'Note: Leave the ID column blank to add new members. The file downloads as a protected Excel Sheet (.xlsx) ensuring phone numbers and IDs are preserved properly.')}</em>
                             </p>
-                            <Button onClick={handleDownloadTemplate} variant="primary">Download Current Data Template (Excel)</Button>
+                            <Button onClick={handleDownloadTemplate} variant="primary">{t('program_teams.bulk.download_template', 'Download Current Data Template (Excel)')}</Button>
                         </div>
 
                         <div className="bg-gray-50 p-4 rounded-md border">
-                            <h4 className="font-bold text-gray-800 mb-2">Step 2: Upload Excel File</h4>
+                            <h4 className="font-bold text-gray-800 mb-2">{t('program_teams.bulk.step2_title', 'Step 2: Upload Excel File')}</h4>
                             <input 
                                 type="file" 
                                 accept=".xlsx" 
@@ -1495,19 +1511,19 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                 {step === 2 && (
                     <div className="space-y-6">
                         <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
-                            <h4 className="font-bold text-yellow-800 mb-2">Map Unrecognized Values</h4>
-                            <p className="text-sm text-yellow-700">The uploaded file contains values that don't match the system's standard dropdowns. Please map them below. Unmapped items will be imported exactly as they appear in the file.</p>
+                            <h4 className="font-bold text-yellow-800 mb-2">{t('program_teams.bulk.map_title', 'Map Unrecognized Values')}</h4>
+                            <p className="text-sm text-yellow-700">{t('program_teams.bulk.map_desc', 'The uploaded file contains values that don\'t match the system\'s standard dropdowns. Please map them below. Unmapped items will be imported exactly as they appear in the file.')}</p>
                         </div>
                         
                         <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
                             {unmappedLists.levels.length > 0 && (
                                 <div className="border p-3 rounded bg-white">
-                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map Levels</h5>
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">{t('program_teams.bulk.map_levels', 'Map Levels')}</h5>
                                     {unmappedLists.levels.map(val => (
                                         <div key={val} className="flex items-center justify-between gap-4 mb-2">
                                             <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
                                             <Select value={mappingData.levels[val] || ''} onChange={(e) => handleMappingChange('levels', val, e.target.value)} className="w-1/2 text-sm">
-                                                <option value="">-- Keep Original --</option>
+                                                <option value="">{t('program_teams.bulk.keep_original', '-- Keep Original --')}</option>
                                                 {STD_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
                                             </Select>
                                         </div>
@@ -1517,12 +1533,12 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
 
                             {unmappedLists.states.length > 0 && (
                                 <div className="border p-3 rounded bg-white">
-                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map States</h5>
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">{t('program_teams.bulk.map_states', 'Map States')}</h5>
                                     {unmappedLists.states.map(val => (
                                         <div key={val} className="flex items-center justify-between gap-4 mb-2">
                                             <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
                                             <Select value={mappingData.states[val] || ''} onChange={(e) => handleMappingChange('states', val, e.target.value)} className="w-1/2 text-sm">
-                                                <option value="">-- Keep Original --</option>
+                                                <option value="">{t('program_teams.bulk.keep_original', '-- Keep Original --')}</option>
                                                 {STD_STATES.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)}
                                             </Select>
                                         </div>
@@ -1532,14 +1548,14 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
 
                             {unmappedLists.jobs.length > 0 && (
                                 <div className="border p-3 rounded bg-white">
-                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map Job Titles</h5>
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">{t('program_teams.bulk.map_jobs', 'Map Job Titles')}</h5>
                                     {unmappedLists.jobs.map(val => (
                                         <div key={val} className="flex items-center justify-between gap-4 mb-2">
                                             <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
                                             <Select value={mappingData.jobs[val] || ''} onChange={(e) => handleMappingChange('jobs', val, e.target.value)} className="w-1/2 text-sm">
-                                                <option value="">-- Keep Original --</option>
+                                                <option value="">{t('program_teams.bulk.keep_original', '-- Keep Original --')}</option>
                                                 {STD_JOBS.map(s => <option key={s} value={s}>{s}</option>)}
-                                                <option value="اخرى">اخرى (Other)</option>
+                                                <option value="اخرى">{t('program_teams.bulk.other_option', 'اخرى (Other)')}</option>
                                             </Select>
                                         </div>
                                     ))}
@@ -1548,12 +1564,12 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
 
                             {unmappedLists.roles.length > 0 && (
                                 <div className="border p-3 rounded bg-white">
-                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map Job Responsibilities (الصفة)</h5>
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">{t('program_teams.bulk.map_roles', 'Map Job Responsibilities (الصفة)')}</h5>
                                     {unmappedLists.roles.map(val => (
                                         <div key={val} className="flex items-center justify-between gap-4 mb-2">
                                             <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
                                             <Select value={mappingData.roles[val] || ''} onChange={(e) => handleMappingChange('roles', val, e.target.value)} className="w-1/2 text-sm" dir="rtl">
-                                                <option value="">-- Keep Original --</option>
+                                                <option value="">{t('program_teams.bulk.keep_original', '-- Keep Original --')}</option>
                                                 {STD_ROLES.map(s => <option key={s} value={s}>{s}</option>)}
                                             </Select>
                                         </div>
@@ -1563,12 +1579,12 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
 
                             {unmappedLists.units.length > 0 && (
                                 <div className="border p-3 rounded bg-white">
-                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map Units</h5>
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">{t('program_teams.bulk.map_units', 'Map Units')}</h5>
                                     {unmappedLists.units.map(val => (
                                         <div key={val} className="flex items-center justify-between gap-4 mb-2">
                                             <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
                                             <Select value={mappingData.units[val] || ''} onChange={(e) => handleMappingChange('units', val, e.target.value)} className="w-1/2 text-sm" dir="rtl">
-                                                <option value="">-- Keep Original --</option>
+                                                <option value="">{t('program_teams.bulk.keep_original', '-- Keep Original --')}</option>
                                                 {STD_UNITS.map(s => <option key={s} value={s}>{s}</option>)}
                                             </Select>
                                         </div>
@@ -1578,8 +1594,8 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                         </div>
 
                         <div className="flex justify-end gap-2 border-t pt-4">
-                            <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
-                            <Button variant="primary" onClick={() => setStep(3)}>Continue to Import</Button>
+                            <Button variant="secondary" onClick={() => setStep(1)}>{t('program_teams.bulk.back', 'Back')}</Button>
+                            <Button variant="primary" onClick={() => setStep(3)}>{t('program_teams.bulk.continue', 'Continue to Import')}</Button>
                         </div>
                     </div>
                 )}
@@ -1587,19 +1603,19 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                 {/* STEP 3: EXECUTE */}
                 {step === 3 && (
                     <div className="space-y-6 text-center py-6">
-                        <h3 className="text-2xl font-bold text-gray-800">Ready to Import</h3>
+                        <h3 className="text-2xl font-bold text-gray-800">{t('program_teams.bulk.ready', 'Ready to Import')}</h3>
                         <div className="bg-gray-100 inline-block p-6 rounded-lg text-left">
                             <ul className="space-y-2 text-lg">
-                                <li><span className="font-bold text-blue-600">{summary.updates}</span> records will be <strong>updated</strong>.</li>
-                                <li><span className="font-bold text-green-600">{summary.adds}</span> new records will be <strong>added</strong>.</li>
+                                <li><span className="font-bold text-blue-600">{summary.updates}</span> {t('program_teams.bulk.records_will_be', 'records will be')} <strong>{t('program_teams.bulk.updated', 'updated')}</strong>.</li>
+                                <li><span className="font-bold text-green-600">{summary.adds}</span> {t('program_teams.bulk.new_records_will_be', 'new records will be')} <strong>{t('program_teams.bulk.added', 'added')}</strong>.</li>
                             </ul>
                         </div>
-                        <p className="text-sm text-gray-500 mt-4">Depending on the size of the file, this may take a few moments. Please do not close this window.</p>
+                        <p className="text-sm text-gray-500 mt-4">{t('program_teams.bulk.wait_note', 'Depending on the size of the file, this may take a few moments. Please do not close this window.')}</p>
                         
                         <div className="flex justify-center gap-4 mt-8">
-                            <Button variant="secondary" onClick={() => setStep(1)} disabled={isExecuting}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => setStep(1)} disabled={isExecuting}>{t('program_teams.common.cancel', 'Cancel')}</Button>
                             <Button variant="primary" onClick={executeImport} disabled={isExecuting}>
-                                {isExecuting ? <><Spinner size="sm" className="mr-2" /> Processing...</> : "Execute Import"}
+                                {isExecuting ? <><Spinner size="sm" className="mr-2" /> {t('program_teams.common.processing', 'Processing...')}</> : t('program_teams.bulk.execute', 'Execute Import')}
                             </Button>
                         </div>
                     </div>
@@ -1658,6 +1674,7 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
 
 // --- NEW COMPONENT: Program Structure Chart ---
 function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators, localityCoordinators }) {
+    const { t } = useTranslation();
     const isFederal = filters.level === 'federal';
     const selectedState = filters.state;
 
@@ -1732,9 +1749,9 @@ function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators
             <div className={`w-40 p-3 rounded-xl border border-gray-200 shadow-sm ${bgClass} flex flex-col items-center text-center z-10 hover:shadow-md transition-shadow`}>
                 <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-100 shadow-sm mb-2 bg-gray-100 flex items-center justify-center shrink-0">
                     {member.imageUrl ? (
-                        <img src={member.imageUrl} alt="Profile" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                        <img src={member.imageUrl} alt={t('program_teams.common.profile_alt', 'Profile')} className="w-full h-full object-cover" crossOrigin="anonymous" />
                     ) : (
-                        <span className="text-gray-400 text-[9px]">No Photo</span>
+                        <span className="text-gray-400 text-[9px]">{t('program_teams.common.no_photo', 'No Photo')}</span>
                     )}
                 </div>
                 {/* Full name logic: break-words so it wraps naturally instead of truncating */}
@@ -1763,11 +1780,11 @@ function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators
                 {/* Header and Export Tools */}
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                     <h3 className="text-lg font-bold text-gray-800">
-                        {isFederal ? 'الهيكل التنظيمي الاتحادي (Federal Structure)' : `الهيكل التنظيمي - ${STATE_LOCALITIES[selectedState]?.ar || selectedState}`}
+                        {isFederal ? t('program_teams.structure.federal_title', 'الهيكل التنظيمي الاتحادي (Federal Structure)') : `الهيكل التنظيمي - ${STATE_LOCALITIES[selectedState]?.ar || selectedState}`}
                     </h3>
                     <div className="flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => exportChart('jpg')}>Export as JPG</Button>
-                        <Button size="sm" variant="secondary" onClick={() => exportChart('pdf')}><PdfIcon /> Export as PDF</Button>
+                        <Button size="sm" variant="secondary" onClick={() => exportChart('jpg')}>{t('program_teams.structure.export_jpg', 'Export as JPG')}</Button>
+                        <Button size="sm" variant="secondary" onClick={() => exportChart('pdf')}><PdfIcon /> {t('program_teams.structure.export_pdf', 'Export as PDF')}</Button>
                     </div>
                 </div>
 
@@ -1851,6 +1868,7 @@ function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators
 }
 
 export function ProgramTeamView({ permissions, userStates }) {
+    const { t } = useTranslation();
     const {
         federalCoordinators: rawFederalCoordinators,
         stateCoordinators: rawStateCoordinators,
@@ -2083,17 +2101,17 @@ export function ProgramTeamView({ permissions, userStates }) {
 
                 if (newRole && dataToSave.email) {
                     try { await updateUserRoleByEmail(dataToSave.email, newRole, dataToSave.state, dataToSave.locality); } 
-                    catch (roleError) { notify(`Team member saved, but role could not be assigned. \n\nError: ${roleError.message}`); }
+                    catch (roleError) { notify(t('program_teams.messages.saved_role_failed', 'Team member saved, but role could not be assigned. \n\nError: {{error}}', { error: roleError.message })); }
                 }
             }
 
             fetchersByLevel[level].list(true); 
             if (level !== filters.level) handleFilterChange('level', level);
             handleCloseModal(); 
-            setFeedbackModal({ isOpen: true, type: 'success', message: 'Team member saved successfully.' });
+            setFeedbackModal({ isOpen: true, type: 'success', message: t('program_teams.messages.saved', 'Team member saved successfully.') });
         } catch (error) { 
             console.error("Error saving member:", error);
-            setFeedbackModal({ isOpen: true, type: 'error', message: `Failed to save member: ${error.message}` });
+            setFeedbackModal({ isOpen: true, type: 'error', message: t('program_teams.messages.save_failed', 'Failed to save member: {{error}}', { error: error.message }) });
         } finally {
             setIsSaving(false); // STOP SAVING SPINNER
         }
@@ -2121,7 +2139,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                 };
                 await deleteFnMap[level](id);
                 await fetchersByLevel[level].list(true);
-                setFeedbackModal({ isOpen: true, type: 'success', message: 'Team member deleted successfully.' });
+                setFeedbackModal({ isOpen: true, type: 'success', message: t('program_teams.messages.deleted', 'Team member deleted successfully.') });
 
             } else if (type === 'bulk') {
                 const deleteFnMap = {
@@ -2136,11 +2154,11 @@ export function ProgramTeamView({ permissions, userStates }) {
                 
                 setSelectedMemberIds(new Set());
                 await fetchersByLevel[filters.level].list(true); 
-                setFeedbackModal({ isOpen: true, type: 'success', message: `Successfully deleted ${selectedMemberIds.size} team members.` });
+                setFeedbackModal({ isOpen: true, type: 'success', message: t('program_teams.messages.bulk_deleted', 'Successfully deleted {{n}} team members.', { n: selectedMemberIds.size }) });
             }
         } catch (err) {
             console.error("Delete failed:", err);
-            setFeedbackModal({ isOpen: true, type: 'error', message: `Delete operation failed: ${err.message}` });
+            setFeedbackModal({ isOpen: true, type: 'error', message: t('program_teams.messages.delete_failed', 'Delete operation failed: {{error}}', { error: err.message }) });
         }
     };
 
@@ -2170,7 +2188,7 @@ export function ProgramTeamView({ permissions, userStates }) {
         });
         
         if (Object.keys(groups).length === 0) {
-            setFeedbackModal({ isOpen: true, type: 'success', message: 'All team members are already mapped to standard job descriptions!' });
+            setFeedbackModal({ isOpen: true, type: 'success', message: t('program_teams.messages.all_mapped', 'All team members are already mapped to standard job descriptions!') });
             return;
         }
         
@@ -2212,11 +2230,11 @@ export function ProgramTeamView({ permissions, userStates }) {
             fetchFederalCoordinators(true);
             fetchStateCoordinators(true);
             fetchLocalityCoordinators(true);
-            setFeedbackModal({ isOpen: true, type: 'success', message: 'Normalization applied successfully.' });
+            setFeedbackModal({ isOpen: true, type: 'success', message: t('program_teams.messages.normalize_success', 'Normalization applied successfully.') });
             
         } catch (err) {
             console.error("Auto normalize failed", err);
-            setFeedbackModal({ isOpen: true, type: 'error', message: 'Failed to apply normalization.' });
+            setFeedbackModal({ isOpen: true, type: 'error', message: t('program_teams.messages.normalize_failed', 'Failed to apply normalization.') });
         } finally {
             setIsBulkLoading(false);
         }
@@ -2250,7 +2268,7 @@ export function ProgramTeamView({ permissions, userStates }) {
         const approveFnMap = { federal: approveFederalSubmission, state: approveCoordinatorSubmission, locality: approveLocalitySubmission };
         if (!filters.level) return;
         const currentUser = auth.currentUser;
-        if (!currentUser) return setFeedbackModal({ isOpen: true, type: 'error', message: 'Error: You must be logged in to approve submissions.' });
+        if (!currentUser) return setFeedbackModal({ isOpen: true, type: 'error', message: t('program_teams.messages.login_to_approve', 'Error: You must be logged in to approve submissions.') });
         
         setIsActionDisabled(true); 
         try {
@@ -2270,26 +2288,26 @@ export function ProgramTeamView({ permissions, userStates }) {
 
             if (newRole && submission.email) {
                  try { await updateUserRoleByEmail(submission.email, newRole, submission.state, submission.locality); } 
-                 catch (roleError) { notify(`Approved, but role assignment failed. \n\nError: ${roleError.message}`); }
+                 catch (roleError) { notify(t('program_teams.messages.approved_role_failed', 'Approved, but role assignment failed. \n\nError: {{error}}', { error: roleError.message })); }
             }
             
             // Allow the actual backend fetch to happen silently in background
             await fetchersByLevel[filters.level].listPending(true); 
             await fetchersByLevel[filters.level].list(true); 
             
-            setFeedbackModal({ isOpen: true, type: 'success', message: 'Submission approved successfully.' });
+            setFeedbackModal({ isOpen: true, type: 'success', message: t('program_teams.messages.approved', 'Submission approved successfully.') });
         } catch (error) { 
             console.error("Error approving:", error); 
-            setFeedbackModal({ isOpen: true, type: 'error', message: 'Failed to approve submission.' }); 
+            setFeedbackModal({ isOpen: true, type: 'error', message: t('program_teams.messages.approve_failed', 'Failed to approve submission.') }); 
         }
     };
 
     const handleRejectSubmission = async (submissionId) => {
         const rejectFnMap = { federal: rejectFederalSubmission, state: rejectCoordinatorSubmission, locality: rejectLocalitySubmission };
         if (!filters.level) return;
-        if (!auth.currentUser) return setFeedbackModal({ isOpen: true, type: 'error', message: 'Error: You must be logged in.' });
+        if (!auth.currentUser) return setFeedbackModal({ isOpen: true, type: 'error', message: t('program_teams.messages.login_required', 'Error: You must be logged in.') });
         
-        if (await confirmDialog("Are you sure you want to reject this submission?")) {
+        if (await confirmDialog(t('program_teams.messages.confirm_reject', 'Are you sure you want to reject this submission?'))) {
             setIsActionDisabled(true); 
             try {
                 const rejectFn = rejectFnMap[filters.level];
@@ -2303,10 +2321,10 @@ export function ProgramTeamView({ permissions, userStates }) {
                 // Allow the actual backend fetch to happen silently in background
                 await fetchersByLevel[filters.level].listPending(true); 
                 
-                setFeedbackModal({ isOpen: true, type: 'success', message: 'Submission rejected successfully.' });
+                setFeedbackModal({ isOpen: true, type: 'success', message: t('program_teams.messages.rejected', 'Submission rejected successfully.') });
             } catch (error) { 
                 console.error("Error rejecting:", error); 
-                setFeedbackModal({ isOpen: true, type: 'error', message: 'Failed to reject submission.' }); 
+                setFeedbackModal({ isOpen: true, type: 'error', message: t('program_teams.messages.reject_failed', 'Failed to reject submission.') }); 
             }
         }
     };
@@ -2317,14 +2335,14 @@ export function ProgramTeamView({ permissions, userStates }) {
             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
             checked={filteredMembers.length > 0 && selectedMemberIds.size === filteredMembers.length}
             onChange={toggleSelectAll}
-            title="Select All"
+            title={t('program_teams.members.select_all', 'Select All')}
         />
     );
 
     const tableHeaders = {
-        state: [selectAllNode, 'الإسم', 'الولاية', 'المسمى الوظيفي', 'الصفة', 'الوحدة', 'Actions'],
-        federal: [selectAllNode, 'الإسم', 'المسمى الوظيفي', 'الصفة', 'الوحدة', 'Actions'],
-        locality: [selectAllNode, 'الإسم', 'الولاية', 'المحلية', 'المسمى الوظيفي', 'Actions'],
+        state: [selectAllNode, 'الإسم', 'الولاية', 'المسمى الوظيفي', 'الصفة', 'الوحدة', t('program_teams.common.actions', 'Actions')],
+        federal: [selectAllNode, 'الإسم', 'المسمى الوظيفي', 'الصفة', 'الوحدة', t('program_teams.common.actions', 'Actions')],
+        locality: [selectAllNode, 'الإسم', 'الولاية', 'المحلية', 'المسمى الوظيفي', t('program_teams.common.actions', 'Actions')],
     };
     
     const currentLevelData = dataByLevel[filters.level] || { members: null, pending: null, loading: true, pendingLoading: true };
@@ -2347,27 +2365,27 @@ export function ProgramTeamView({ permissions, userStates }) {
     return (
         <div>
             {/* Custom Confirm Delete Modal */}
-            <Modal isOpen={deleteConfig.isOpen} onClose={() => setDeleteConfig({ isOpen: false, type: null, level: null, id: null })} title="Confirm Deletion">
+            <Modal isOpen={deleteConfig.isOpen} onClose={() => setDeleteConfig({ isOpen: false, type: null, level: null, id: null })} title={t('program_teams.delete.title', 'Confirm Deletion')}>
                 <div className="p-4 text-center text-lg font-medium text-gray-800">
                     {deleteConfig.type === 'bulk' 
-                        ? `Are you sure you want to delete ${selectedMemberIds.size} selected members?` 
-                        : "Are you sure you want to delete this team member?"}
-                    <p className="text-sm text-red-500 mt-2">This action cannot be undone.</p>
+                        ? t('program_teams.delete.confirm_bulk', 'Are you sure you want to delete {{n}} selected members?', { n: selectedMemberIds.size }) 
+                        : t('program_teams.delete.confirm_single', 'Are you sure you want to delete this team member?')}
+                    <p className="text-sm text-red-500 mt-2">{t('program_teams.delete.cannot_undo', 'This action cannot be undone.')}</p>
                 </div>
                 <div className="mt-6 flex justify-end gap-3">
-                    <Button variant="secondary" onClick={() => setDeleteConfig({ isOpen: false, type: null, level: null, id: null })}>Cancel</Button>
-                    <Button variant="danger" onClick={confirmDeleteExecute}>Yes, Delete</Button>
+                    <Button variant="secondary" onClick={() => setDeleteConfig({ isOpen: false, type: null, level: null, id: null })}>{t('program_teams.common.cancel', 'Cancel')}</Button>
+                    <Button variant="danger" onClick={confirmDeleteExecute}>{t('program_teams.delete.yes_delete', 'Yes, Delete')}</Button>
                 </div>
             </Modal>
 
             {/* Feedback Message Modal (Centralized Feedback handler locking actions) */}
-            <Modal isOpen={feedbackModal.isOpen} onClose={closeFeedbackModal} title={feedbackModal.type === 'success' ? 'نجاح (Success)' : 'تنبيه (Notice)'}>
+            <Modal isOpen={feedbackModal.isOpen} onClose={closeFeedbackModal} title={feedbackModal.type === 'success' ? t('program_teams.feedback.success', 'نجاح (Success)') : t('program_teams.feedback.notice', 'تنبيه (Notice)')}>
                 <div className={`p-4 text-center text-lg font-medium ${feedbackModal.type === 'success' ? 'text-green-600' : 'text-red-600'}`} dir="rtl">
                     {feedbackModal.message}
                 </div>
                 <div className="mt-6 flex justify-end">
                     <Button onClick={closeFeedbackModal} variant={feedbackModal.type === 'success' ? 'success' : 'secondary'}>
-                        حسناً (OK)
+                        {t('program_teams.feedback.ok', 'حسناً (OK)')}
                     </Button>
                 </div>
             </Modal>
@@ -2375,23 +2393,23 @@ export function ProgramTeamView({ permissions, userStates }) {
             {/* TABS RENDERED FIRST */}
             <div className="border-b border-gray-200 mb-6 pb-2">
                  <div className="flex items-center gap-6">
-                    <nav className="-mb-px flex items-center gap-6" aria-label="Tabs">
-                        <Button variant="tab" isActive={activeTab === 'members'} onClick={() => setActiveTab('members')}>Team Members</Button>
+                    <nav className="-mb-px flex items-center gap-6" aria-label={t('program_teams.tabs.aria', 'Tabs')}>
+                        <Button variant="tab" isActive={activeTab === 'members'} onClick={() => setActiveTab('members')}>{t('program_teams.tabs.members', 'Team Members')}</Button>
                         {permissions?.canApproveSubmissions && (
                             <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
-                                Pending Approvals 
+                                {t('program_teams.tabs.pending', 'Pending Approvals')}{' '}
                                 <span className="ml-2 bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
                                     {/* Exclude instantly hidden rows from the badge count too */}
                                     {currentLevelData.pending ? currentLevelData.pending.filter(s => !processedPendingIds.has(s.id)).length : 0}
                                 </span>
                             </Button>
                         )}
-                        <Button variant="tab" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>Dashboard</Button>
+                        <Button variant="tab" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>{t('program_teams.tabs.dashboard', 'Dashboard')}</Button>
                         
-                        <Button variant="tab" isActive={activeTab === 'structure'} onClick={() => setActiveTab('structure')}>Program Structure</Button>
+                        <Button variant="tab" isActive={activeTab === 'structure'} onClick={() => setActiveTab('structure')}>{t('program_teams.tabs.structure', 'Program Structure')}</Button>
 
                         {permissions?.canApproveSubmissions && (
-                            <Button variant="secondary" size="sm" onClick={handleOpenLinkModal}>Manage Submission Link</Button>
+                            <Button variant="secondary" size="sm" onClick={handleOpenLinkModal}>{t('program_teams.tabs.manage_link', 'Manage Submission Link')}</Button>
                         )}
                     </nav>
                 </div>
@@ -2402,43 +2420,43 @@ export function ProgramTeamView({ permissions, userStates }) {
                 {activeTab === 'members' && (
                     <FormGroup label={'\u00A0'}>
                         <div className="flex gap-2">
-                            {permissions.canManageHumanResource && <Button onClick={handleAdd}>Add New Team Member</Button>}
-                            {permissions.canManageHumanResource && <Button variant="secondary" onClick={handleOpenAutoNormalize}>Auto-Normalize Jobs</Button>}
+                            {permissions.canManageHumanResource && <Button onClick={handleAdd}>{t('program_teams.members.add', 'Add New Team Member')}</Button>}
+                            {permissions.canManageHumanResource && <Button variant="secondary" onClick={handleOpenAutoNormalize}>{t('program_teams.members.auto_normalize', 'Auto-Normalize Jobs')}</Button>}
                             {permissions.canUseFederalManagerAdvancedFeatures && (
-                                <Button variant="secondary" onClick={() => setIsBulkImportOpen(true)}>Bulk Import/Update</Button>
+                                <Button variant="secondary" onClick={() => setIsBulkImportOpen(true)}>{t('program_teams.members.bulk_import', 'Bulk Import/Update')}</Button>
                             )}
                         </div>
                     </FormGroup>
                 )}
                 <div className="flex flex-wrap items-end gap-4 flex-grow">
                     {activeTab !== 'dashboard' && activeTab !== 'structure' && (
-                        <FormGroup label="Filter by Level">
+                        <FormGroup label={t('program_teams.filters.level', 'Filter by Level')}>
                             <Select value={filters.level} onChange={(e) => handleFilterChange('level', e.target.value)}>
-                                {isFederal && <option value="federal">Federal</option>}
-                                <option value="state">State</option>
-                                <option value="locality">Locality</option>
+                                {isFederal && <option value="federal">{t('program_teams.levels.federal', 'Federal')}</option>}
+                                <option value="state">{t('program_teams.levels.state', 'State')}</option>
+                                <option value="locality">{t('program_teams.levels.locality', 'Locality')}</option>
                             </Select>
                         </FormGroup>
                     )}
                     {(activeTab === 'dashboard' || activeTab === 'structure' || filters.level === 'state' || filters.level === 'locality') && (
-                        <FormGroup label="State">
+                        <FormGroup label={t('program_teams.filters.state', 'State')}>
                             <Select value={filters.state} onChange={(e) => handleFilterChange('state', e.target.value)} disabled={!isFederal}>
-                                <option value="">كل الولايات (All States)</option>
+                                <option value="">{t('program_teams.filters.all_states', 'كل الولايات (All States)')}</option>
                                 {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)}
                             </Select>
                         </FormGroup>
                     )}
                     {(activeTab === 'dashboard' || filters.level === 'locality') && activeTab !== 'structure' && (
-                        <FormGroup label="Locality">
+                        <FormGroup label={t('program_teams.filters.locality', 'Locality')}>
                             <Select value={filters.locality} onChange={(e) => handleFilterChange('locality', e.target.value)} disabled={!filters.state}>
-                                <option value="">كل المحليات (All Localities)</option>
+                                <option value="">{t('program_teams.filters.all_localities', 'كل المحليات (All Localities)')}</option>
                                 {(STATE_LOCALITIES[filters.state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                             </Select>
                         </FormGroup>
                     )}
                     
                     {activeTab !== 'structure' && (
-                        <FormGroup label="Job Description">
+                        <FormGroup label={t('program_teams.filters.job_description', 'Job Description')}>
                             <Select value={filters.jobTitle} onChange={(e) => handleFilterChange('jobTitle', e.target.value)}>
                                 <option value="">كل المسميات الوظيفية</option>
                                 {allJobTitles.map(job => <option key={job} value={job}>{job}</option>)}
@@ -2448,9 +2466,9 @@ export function ProgramTeamView({ permissions, userStates }) {
 
                     {filters.level !== 'locality' && activeTab !== 'structure' && (
                         <>
-                            <FormGroup label="Job Responsibilities (الصفة)">
+                            <FormGroup label={t('program_teams.filters.role', 'Job Responsibilities (الصفة)')}>
                                 <Select value={filters.role} onChange={(e) => handleFilterChange('role', e.target.value)}>
-                                    <option value="">الكل (All)</option>
+                                    <option value="">{t('program_teams.filters.all', 'الكل (All)')}</option>
                                     <option value="مدير البرنامج">مدير البرنامج</option>
                                     <option value="رئيس وحدة">رئيس وحدة</option>
                                     <option value="عضو في وحدة">عضو في وحدة</option>
@@ -2458,9 +2476,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                                 </Select>
                             </FormGroup>
                             
-                            <FormGroup label="Unit (الوحدة)">
+                            <FormGroup label={t('program_teams.filters.unit', 'Unit (الوحدة)')}>
                                 <Select value={filters.unit} onChange={(e) => handleFilterChange('unit', e.target.value)}>
-                                    <option value="">الكل (All)</option>
+                                    <option value="">{t('program_teams.filters.all', 'الكل (All)')}</option>
                                     <option value="العلاج المتكامل للاطفال اقل من 5 سنوات">العلاج المتكامل للاطفال اقل من 5 سنوات</option>
                                     <option value="حديثي الولادة">حديثي الولادة</option>
                                     <option value="المراهقين وحماية الاطفال">المراهقين وحماية الاطفال</option>
@@ -2495,10 +2513,10 @@ export function ProgramTeamView({ permissions, userStates }) {
                         {/* BULK ACTIONS BAR */}
                         {selectedMemberIds.size > 0 && (
                             <div className="bg-blue-50 p-3 mb-4 rounded-md flex items-center justify-between border border-blue-100">
-                                <span className="text-blue-800 font-medium px-2">{selectedMemberIds.size} members selected</span>
+                                <span className="text-blue-800 font-medium px-2">{t('program_teams.members.n_selected', '{{n}} members selected', { n: selectedMemberIds.size })}</span>
                                 <div className="flex gap-2">
                                     <Button size="sm" variant="danger" onClick={handleBulkDeleteClick} disabled={isActionDisabled}>
-                                        {isActionDisabled ? 'Processing...' : 'Delete Selected'}
+                                        {isActionDisabled ? t('program_teams.common.processing', 'Processing...') : t('program_teams.members.delete_selected', 'Delete Selected')}
                                     </Button>
                                 </div>
                             </div>
@@ -2536,12 +2554,12 @@ export function ProgramTeamView({ permissions, userStates }) {
                                         )}
                                         <td className="p-4 text-sm">
                                             <div className="flex gap-2">
-                                                <Button variant="secondary" onClick={() => handleView(c)}>View</Button>
-                                                <Button variant="secondary" onClick={() => handleShare(filters.level, c)}>Share</Button>
-                                                {permissions.canManageHumanResource && <Button onClick={() => handleEdit(c)}>Edit</Button>}
+                                                <Button variant="secondary" onClick={() => handleView(c)}>{t('program_teams.common.view', 'View')}</Button>
+                                                <Button variant="secondary" onClick={() => handleShare(filters.level, c)}>{t('program_teams.common.share', 'Share')}</Button>
+                                                {permissions.canManageHumanResource && <Button onClick={() => handleEdit(c)}>{t('program_teams.common.edit', 'Edit')}</Button>}
                                                 {permissions.canManageHumanResource && (
                                                     <Button variant="danger" onClick={() => handleDeleteSingleClick(filters.level, c.id)} disabled={isActionDisabled}>
-                                                        Delete
+                                                        {t('program_teams.common.delete', 'Delete')}
                                                     </Button>
                                                 )}
                                             </div>
@@ -2550,7 +2568,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                                 )}) : (
                                     <tr>
                                         <td colSpan={tableHeaders[filters.level]?.length} className="p-8 text-center text-gray-500">
-                                            No team members found for the selected filters.
+                                            {t('program_teams.members.empty', 'No team members found for the selected filters.')}
                                         </td>
                                     </tr>
                                 )}
@@ -2571,7 +2589,7 @@ export function ProgramTeamView({ permissions, userStates }) {
             )}
 
             {/* AUTO NORMALIZE JOB DESCRIPTION MODAL */}
-            <Modal isOpen={isAutoNormalizeModalOpen} onClose={() => setIsAutoNormalizeModalOpen(false)} title="Auto-Detect & Normalize Job Descriptions" size="2xl">
+            <Modal isOpen={isAutoNormalizeModalOpen} onClose={() => setIsAutoNormalizeModalOpen(false)} title={t('program_teams.normalize.title', 'Auto-Detect & Normalize Job Descriptions')} size="2xl">
                 <form onSubmit={handleApplyAutoNormalize} className="space-y-4" dir="rtl">
                     <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-md border">
                         تم اكتشاف المسميات الوظيفية التالية غير المتطابقة مع القائمة القياسية. يرجى اختيار المسمى القياسي المناسب لكل منها. (يمكنك تجاهل ما لا تريد تغييره).
@@ -2580,9 +2598,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">المسمى غير القياسي (Unmapped)</th>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">عدد الأعضاء (Count)</th>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">تعيين إلى (Map To)</th>
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">{t('program_teams.normalize.unmapped', 'المسمى غير القياسي (Unmapped)')}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">{t('program_teams.normalize.count', 'عدد الأعضاء (Count)')}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">{t('program_teams.normalize.map_to', 'تعيين إلى (Map To)')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -2595,7 +2613,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                                                 value={jobMappings[weirdJob] || ''} 
                                                 onChange={(e) => setJobMappings({...jobMappings, [weirdJob]: e.target.value})}
                                             >
-                                                <option value="">-- تجاهل (Ignore) --</option>
+                                                <option value="">{t('program_teams.normalize.ignore', '-- تجاهل (Ignore) --')}</option>
                                                 {STANDARD_JOB_TITLES.map(standard => (
                                                     <option key={standard} value={standard}>{standard}</option>
                                                 ))}
@@ -2607,8 +2625,8 @@ export function ProgramTeamView({ permissions, userStates }) {
                         </table>
                     </div>
                     <div className="flex justify-end gap-3 mt-6 border-t pt-4">
-                        <Button type="button" variant="secondary" onClick={() => setIsAutoNormalizeModalOpen(false)}>إلغاء (Cancel)</Button>
-                        <Button type="submit" disabled={isBulkLoading || Object.keys(jobMappings).length === 0}>{isBulkLoading ? 'جاري التطبيق...' : 'تطبيق التحديثات (Apply)'}</Button>
+                        <Button type="button" variant="secondary" onClick={() => setIsAutoNormalizeModalOpen(false)}>{t('program_teams.normalize.cancel', 'إلغاء (Cancel)')}</Button>
+                        <Button type="submit" disabled={isBulkLoading || Object.keys(jobMappings).length === 0}>{isBulkLoading ? 'جاري التطبيق...' : t('program_teams.normalize.apply', 'تطبيق التحديثات (Apply)')}</Button>
                     </div>
                 </form>
             </Modal>
@@ -2624,7 +2642,7 @@ export function ProgramTeamView({ permissions, userStates }) {
             <ShareLinkModal
                 isOpen={shareModalInfo.isOpen}
                 onClose={() => setShareModalInfo({ isOpen: false, link: '' })}
-                title="Share Team Member Profile"
+                title={t('program_teams.share.title', 'Share Team Member Profile')}
                 link={shareModalInfo.link}
             />
 
@@ -2655,6 +2673,7 @@ export function ProgramTeamView({ permissions, userStates }) {
 }
 
 export function TeamMemberApplicationForm() {
+    const { t } = useTranslation();
     const [formData, setFormData] = useState({
         name: '', nameAr: '', phone: '', email: '', state: '', locality: '', 
         jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', 
@@ -2788,7 +2807,7 @@ export function TeamMemberApplicationForm() {
             setFormData(prev => ({ ...prev, imageUrl: downloadUrl }));
         } catch (error) {
             console.error("Upload failed:", error);
-            notify("Failed to upload image. Please try again.");
+            notify(t('program_teams.messages.upload_failed', 'Failed to upload image. Please try again.'));
         } finally {
             setIsUploadingImage(false);
         }
@@ -2913,24 +2932,24 @@ export function TeamMemberApplicationForm() {
             <Card>
                 <PageHeader title="معلومات فريق صحة الطفل" />
                 <CardBody>
-                    <EmptyState message="Submissions for new team members are currently closed." />
+                    <EmptyState message={t('program_teams.application.closed', 'Submissions for new team members are currently closed.')} />
                 </CardBody>
             </Card>
         );
     }
     
     if (submitted) {
-        const title = isUpdate ? "Profile Updated" : "Submission Received";
+        const title = isUpdate ? t('program_teams.application.profile_updated', 'Profile Updated') : t('program_teams.application.submission_received', 'Submission Received');
         const message = isUpdate 
-            ? "Your profile has been updated successfully."
-            : "Your information has been submitted successfully for review.";
+            ? t('program_teams.application.profile_updated_msg', 'Your profile has been updated successfully.')
+            : t('program_teams.application.submitted_msg', 'Your information has been submitted successfully for review.');
             
         return (
             <Card>
                 <PageHeader title={title} />
                 <CardBody>
                     <div className="p-8 text-center">
-                        <h3 className="text-2xl font-bold text-green-600 mb-4">Thank You!</h3>
+                        <h3 className="text-2xl font-bold text-green-600 mb-4">{t('program_teams.application.thank_you', 'Thank You!')}</h3>
                         <p className="text-gray-700">{message}</p>
                     </div>
                 </CardBody>
@@ -2940,13 +2959,13 @@ export function TeamMemberApplicationForm() {
 
     return (
         <Card>
-            <Modal isOpen={feedbackModal.isOpen} onClose={handleCloseFeedbackModal} title={feedbackModal.type === 'success' ? 'نجاح (Success)' : 'خطأ (Error)'}>
+            <Modal isOpen={feedbackModal.isOpen} onClose={handleCloseFeedbackModal} title={feedbackModal.type === 'success' ? t('program_teams.feedback.success', 'نجاح (Success)') : t('program_teams.feedback.error', 'خطأ (Error)')}>
                 <div className={`p-4 text-center text-lg font-medium ${feedbackModal.type === 'success' ? 'text-green-600' : 'text-red-600'}`} dir="rtl">
                     {feedbackModal.message}
                 </div>
                 <div className="mt-6 flex justify-end">
                     <Button onClick={handleCloseFeedbackModal} variant={feedbackModal.type === 'success' ? 'success' : 'secondary'}>
-                        {feedbackModal.type === 'success' ? 'حسناً (OK)' : 'إغلاق (Close)'}
+                        {feedbackModal.type === 'success' ? t('program_teams.feedback.ok', 'حسناً (OK)') : t('program_teams.feedback.close', 'إغلاق (Close)')}
                     </Button>
                 </div>
             </Modal>
@@ -2963,9 +2982,9 @@ export function TeamMemberApplicationForm() {
                              <FormGroup label="اختر المستوى الذي تتقدم إليه" dir="rtl">
                                 <Select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required>
                                     <option value="">-- اختر المستوى --</option>
-                                    <option value="federal">Federal (اتحادي)</option>
-                                    <option value="state">State (ولائي)</option>
-                                    <option value="locality">Locality (محلي)</option>
+                                    <option value="federal">{t('program_teams.application.level_federal', 'Federal (اتحادي)')}</option>
+                                    <option value="state">{t('program_teams.application.level_state', 'State (ولائي)')}</option>
+                                    <option value="locality">{t('program_teams.application.level_locality', 'Locality (محلي)')}</option>
                                 </Select>
                             </FormGroup>
                         </div>
@@ -2988,7 +3007,7 @@ export function TeamMemberApplicationForm() {
                 {selectedLevel && (
                     <CardFooter>
                          <Button type="submit" disabled={submitting}>
-                            {submitting ? 'Submitting...' : (isUpdate || formData.pendingCollName ? 'تحديث المعلومات' : 'تسليم الاستمارة')}
+                            {submitting ? t('program_teams.application.submitting', 'Submitting...') : (isUpdate || formData.pendingCollName ? 'تحديث المعلومات' : 'تسليم الاستمارة')}
                         </Button>
                     </CardFooter>
                 )}
@@ -2999,6 +3018,7 @@ export function TeamMemberApplicationForm() {
 
 // Public View Component with dedicated bordered sections and BLUE styled headers
 export function PublicTeamMemberProfileView({ member, level }) {
+    const { t } = useTranslation();
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const publicLink = window.location.href;
 
@@ -3028,16 +3048,16 @@ export function PublicTeamMemberProfileView({ member, level }) {
             <ShareLinkModal
                 isOpen={isShareModalOpen}
                 onClose={() => setIsShareModalOpen(false)}
-                title="Share Team Member Profile"
+                title={t('program_teams.share.title', 'Share Team Member Profile')}
                 link={publicLink}
             />
 
             <PageHeader 
-                title={`${levelName} Team Member Profile`} 
+                title={t('program_teams.profile.title', '{{level}} Team Member Profile', { level: t(`program_teams.levels.${level}`, levelName) })} 
                 subtitle={member.name}
                 actions={
                     <Button variant="secondary" onClick={() => setIsShareModalOpen(true)}>
-                        Share
+                        {t('program_teams.common.share', 'Share')}
                     </Button>
                 }
             />
@@ -3048,7 +3068,7 @@ export function PublicTeamMemberProfileView({ member, level }) {
                     {member.imageUrl && (
                         <div className="flex justify-center mb-6">
                             <div className="w-32 h-32 bg-gray-100 rounded-full border-4 border-gray-200 shadow-sm overflow-hidden">
-                                <img src={member.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                                <img src={member.imageUrl} alt={t('program_teams.common.profile_alt', 'Profile')} className="w-full h-full object-cover" />
                             </div>
                         </div>
                     )}
@@ -3079,7 +3099,7 @@ export function PublicTeamMemberProfileView({ member, level }) {
                             {Array.isArray(member.previousRoles) && member.previousRoles.some(e => e.role) ? (
                                 <ul className="list-disc pl-5 pr-5 space-y-1 text-sm text-gray-900">
                                     {member.previousRoles.map((exp, index) => (
-                                        exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || 'N/A'})</li>
+                                        exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || t('program_teams.common.na', 'N/A')})</li>
                                     ))}
                                 </ul>
                             ) : <span className="text-sm text-gray-500">لا توجد خبرات مسجلة</span>}

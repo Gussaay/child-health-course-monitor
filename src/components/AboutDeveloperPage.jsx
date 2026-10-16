@@ -4,6 +4,7 @@ import { User, Users, Activity, Camera } from 'lucide-react';
 import { Card, PageHeader, Spinner, Toast } from './CommonComponents';
 import { uploadFile, updateAboutTeamImage } from '../data.js';
 import { useDataCache } from '../DataContext';
+import { useTranslation } from 'react-i18next';
 
 const initialTeamData = [
     { id: 'main', name: 'Dr Qusay Mohamed Osman', title: 'Main Technical Developer', spec: 'Pediatric and Child Health Specialist', role: 'National Child Health Program Manager', type: 'main' },
@@ -14,6 +15,7 @@ const initialTeamData = [
 ];
 
 export default function AboutDeveloperPage({ permissions }) {
+    const { t } = useTranslation();
     const { aboutTeamImages, fetchAboutTeamImages } = useDataCache();
     const [uploadingId, setUploadingId] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -26,6 +28,9 @@ export default function AboutDeveloperPage({ permissions }) {
     // Merge the cloud images with our hardcoded team list
     const teamMembers = initialTeamData.map(member => ({
         ...member,
+        title: t(`admin_pages.about.team.${member.id}.title`, member.title),
+        spec: t(`admin_pages.about.team.${member.id}.spec`, member.spec),
+        role: t(`admin_pages.about.team.${member.id}.role`, member.role),
         imageUrl: aboutTeamImages?.[member.id] || null
     }));
 
@@ -44,10 +49,10 @@ export default function AboutDeveloperPage({ permissions }) {
             // 3. Force refresh the global cache to display the new image instantly
             if (fetchAboutTeamImages) await fetchAboutTeamImages(true); 
 
-            setToast({ show: true, message: 'Image uploaded successfully!', type: 'success' });
+            setToast({ show: true, message: t('admin_pages.about.upload_success', 'Image uploaded successfully!'), type: 'success' });
         } catch (error) {
             console.error("Upload failed:", error);
-            setToast({ show: true, message: 'Failed to upload image. Make sure you are online.', type: 'error' });
+            setToast({ show: true, message: t('admin_pages.about.upload_failed', 'Failed to upload image. Make sure you are online.'), type: 'error' });
         } finally {
             setUploadingId(null);
         }
@@ -69,7 +74,7 @@ export default function AboutDeveloperPage({ permissions }) {
 
             {/* Upload Image Overlay - Only visible if the user has Super User permissions */}
             {permissions?.canUseSuperUserAdvancedFeatures && (
-                <label className="absolute bottom-0 right-0 bg-sky-600 hover:bg-sky-700 text-white p-2.5 rounded-full cursor-pointer shadow-lg transition-colors border-2 border-white" title="Upload Image">
+                <label className="absolute bottom-0 right-0 bg-sky-600 hover:bg-sky-700 text-white p-2.5 rounded-full cursor-pointer shadow-lg transition-colors border-2 border-white" title={t('admin_pages.about.upload_image', 'Upload Image')}>
                     <Camera className="w-4 h-4" />
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, member.id)} disabled={uploadingId === member.id} />
                 </label>
@@ -84,7 +89,7 @@ export default function AboutDeveloperPage({ permissions }) {
         <div className="max-w-5xl mx-auto space-y-6">
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
             <Card>
-                <PageHeader title="About the Team" subtitle="National Child Health Program Monitoring System" />
+                <PageHeader title={t('admin_pages.about.page_title', 'About the Team')} subtitle={t('admin_pages.about.page_subtitle', 'National Child Health Program Monitoring System')} />
                 <div className="p-6 sm:p-10">
                     
                     {/* Main Developer (Horizontal Layout) */}
@@ -113,7 +118,7 @@ export default function AboutDeveloperPage({ permissions }) {
                     <div>
                         <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center justify-center sm:justify-start gap-3 border-b-2 border-sky-100 inline-flex pb-2">
                             <Users className="w-7 h-7 text-sky-500" />
-                            Main Reviewers
+                            {t('admin_pages.about.main_reviewers', 'Main Reviewers')}
                         </h3>
                         
                         {/* Grid for Reviewers (Horizontal cards inside the grid) */}

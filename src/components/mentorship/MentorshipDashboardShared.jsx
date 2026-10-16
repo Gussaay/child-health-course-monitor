@@ -1294,21 +1294,21 @@ export const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
     );
 };
 
-export const renderTrendArrows = (val, type) => {
+export const renderTrendArrows = (val, type, t = (key, def, opts) => def.replace('{{ideal}}', opts?.ideal)) => {
     const numVal = parseFloat(val);
     if (isNaN(numVal)) return null;
 
     if (type === 'visits') {
-        if (numVal < 2) return <span className="text-red-500 text-[10px] ml-1" title="Critically below ideal (4)">▼▼▼</span>;
-        if (numVal < 3) return <span className="text-red-500 text-[10px] ml-1" title="Below ideal (4)">▼▼</span>;
-        if (numVal < 4) return <span className="text-red-500 text-[10px] ml-1" title="Slightly below ideal (4)">▼</span>;
-        if (numVal > 4) return <span className="text-emerald-500 text-[10px] ml-1" title="Above ideal (4)">▲</span>;
+        if (numVal < 2) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.critically_below', 'Critically below ideal ({{ideal}})', { ideal: 4 })}>▼▼▼</span>;
+        if (numVal < 3) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.below', 'Below ideal ({{ideal}})', { ideal: 4 })}>▼▼</span>;
+        if (numVal < 4) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.slightly_below', 'Slightly below ideal ({{ideal}})', { ideal: 4 })}>▼</span>;
+        if (numVal > 4) return <span className="text-emerald-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.above', 'Above ideal ({{ideal}})', { ideal: 4 })}>▲</span>;
     } else if (type === 'cases') {
-        if (numVal < 2) return <span className="text-red-500 text-[10px] ml-1" title="Critically below ideal (3)">▼▼</span>;
-        if (numVal < 3) return <span className="text-red-500 text-[10px] ml-1" title="Below ideal (3)">▼</span>;
-        if (numVal > 5) return <span className="text-emerald-500 text-[10px] ml-1" title="Exceptionally above ideal (3)">▲▲▲</span>;
-        if (numVal > 4) return <span className="text-emerald-500 text-[10px] ml-1" title="Well above ideal (3)">▲▲</span>;
-        if (numVal > 3) return <span className="text-emerald-500 text-[10px] ml-1" title="Above ideal (3)">▲</span>;
+        if (numVal < 2) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.critically_below', 'Critically below ideal ({{ideal}})', { ideal: 3 })}>▼▼</span>;
+        if (numVal < 3) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.below', 'Below ideal ({{ideal}})', { ideal: 3 })}>▼</span>;
+        if (numVal > 5) return <span className="text-emerald-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.exceptionally_above', 'Exceptionally above ideal ({{ideal}})', { ideal: 3 })}>▲▲▲</span>;
+        if (numVal > 4) return <span className="text-emerald-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.well_above', 'Well above ideal ({{ideal}})', { ideal: 3 })}>▲▲</span>;
+        if (numVal > 3) return <span className="text-emerald-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.above', 'Above ideal ({{ideal}})', { ideal: 3 })}>▲</span>;
     }
     return null;
 };
@@ -1343,10 +1343,10 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
                                 <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
                                     <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{row.stateName}</td>
                                     <td className="px-5 py-3 border-l border-black text-center font-bold text-sky-800 bg-sky-50/50" dir="ltr">{row.totalVisits}</td>
-                                    <td className="px-5 py-3 border-l border-black text-center text-slate-600 bg-sky-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{visitsPerHw}</span>{renderTrendArrows(visitsPerHw, 'visits')}</div></td>
+                                    <td className="px-5 py-3 border-l border-black text-center text-slate-600 bg-sky-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{visitsPerHw}</span>{renderTrendArrows(visitsPerHw, 'visits', t)}</div></td>
                                     <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">{row.totalHealthWorkers}</td>
                                     <td className="px-5 py-3 border-l border-black text-center font-bold text-emerald-800 bg-emerald-50/50" dir="ltr">{row.totalCasesObserved}</td>
-                                    <td className="px-5 py-3 text-center text-slate-600 bg-emerald-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{casesPerVisit}</span>{renderTrendArrows(casesPerVisit, 'cases')}</div></td>
+                                    <td className="px-5 py-3 text-center text-slate-600 bg-emerald-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{casesPerVisit}</span>{renderTrendArrows(casesPerVisit, 'cases', t)}</div></td>
                                 </tr>
                             );
                         })}

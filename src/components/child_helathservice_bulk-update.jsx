@@ -10,6 +10,7 @@ import { doc, getDoc } from "firebase/firestore";
 
 // --- ICONS ---
 import { Plus, Trash2, Edit } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // --- DATA & CONFIG ---
 import { db } from "../firebase";
@@ -148,6 +149,7 @@ const calculateKPIs = (targetFacilities, updates, serviceCategory) => {
 
 // --- HELPER COMPONENT: STAFF MANAGEMENT MODAL ---
 const StaffManagementModal = ({ isOpen, onClose, facilityName, initialStaff, onSave }) => {
+    const { t } = useTranslation();
     const [staffList, setStaffList] = useState([]);
 
     useEffect(() => {
@@ -192,7 +194,7 @@ const StaffManagementModal = ({ isOpen, onClose, facilityName, initialStaff, onS
                                 <button 
                                     onClick={() => handleRemoveStaff(index)}
                                     className="absolute top-2 left-2 text-red-500 hover:text-red-700 font-bold"
-                                    title="Remove Worker"
+                                    title={t('clinical_ui.bulk_update.remove_worker', 'Remove Worker')}
                                 >
                                     <Trash2 size={18} />
                                 </button>
@@ -267,6 +269,7 @@ const StaffManagementModal = ({ isOpen, onClose, facilityName, initialStaff, onS
 
 // --- MAIN EXPORT: BULK UPDATE VIEW ---
 const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }) => {
+    const { t } = useTranslation();
     const { healthFacilities, fetchHealthFacilities, isLoading } = useDataCache();
     const isFetchingData = isLoading?.healthFacilities || false;
 
@@ -606,14 +609,14 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                 }
             });
             await Promise.all(submissionPromises);
-            setToast({ show: true, message: `Successfully ${canApprove ? 'saved' : 'submitted'} ${changeCount} updates.`, type: "success" });
+            setToast({ show: true, message: canApprove ? t('clinical_ui.bulk_update.toast.saved', 'Successfully saved {{count}} updates.', { count: changeCount }) : t('clinical_ui.bulk_update.toast.submitted', 'Successfully submitted {{count}} updates.', { count: changeCount }), type: "success" });
             setUpdates({}); 
             
             // Refresh global cache after save
             fetchHealthFacilities({}, true);
         } catch (err) {
             console.error(err);
-            setToast({ show: true, message: "Error submitting batch updates.", type: "error" });
+            setToast({ show: true, message: t('clinical_ui.bulk_update.toast.error', 'Error submitting batch updates.'), type: "error" });
         } finally {
             setIsSaving(false);
         }

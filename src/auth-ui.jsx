@@ -20,6 +20,8 @@ import {
 } from 'firebase/auth';
 
 import { auth } from './firebase.js';
+import { useTranslation } from 'react-i18next';
+import { authErrorCode, authErrorKey } from './utils/authMessages';
 
 // --- NATIVE PLUGIN INITIALIZATION ---
 let socialLoginInitialized = false;
@@ -34,8 +36,34 @@ async function ensureSocialLoginInit() {
   socialLoginInitialized = true;
 }
 
+// English fallbacks for auth.errors.* (both languages live in i18n.js).
+const AUTH_ERROR_DEFAULTS = {
+  google_closed: "Google sign-in was closed before it finished. Please try again.",
+  popup_blocked: "Your browser blocked the Google window. Allow pop-ups for this site and try again.",
+  network: "No internet connection. Check your connection and try again.",
+  wrong_password: "Wrong email or password. Try again or use 'Forgot Password?'.",
+  no_account: "No account uses this email. Please sign up.",
+  invalid_email: "This email address is not valid.",
+  too_many: "Too many attempts. Please wait a few minutes and try again.",
+  disabled: "This account has been disabled. Please contact the program administrator.",
+  email_in_use: "This email is already in use. Please sign in instead.",
+  weak_password: "Password must be at least 6 characters long.",
+  already_linked: "This account is already linked to a password.",
+  other_method: "This email is registered with another sign-in method. Please use that method.",
+  unauthorized_domain: "Sign-in is not allowed from this address. Please contact the program administrator.",
+  recent_login: "Please sign out and sign in again, then retry.",
+  generic: "Sign-in failed. Please try again.",
+};
+
 // --- Sign-In and Sign-Up Component ---
 export function SignInBox() {
+  const { t, i18n } = useTranslation();
+  const dir = i18n.language?.startsWith('ar') ? 'rtl' : 'ltr';
+  const friendlyError = (err) => {
+    const key = authErrorKey(err);
+    const text = t(`auth.errors.${key}`, AUTH_ERROR_DEFAULTS[key]);
+    return key === 'generic' && authErrorCode(err) ? `${text} (${authErrorCode(err)})` : text;
+  };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -67,7 +95,7 @@ export function SignInBox() {
           checkAndPromptForName(result.user);
         }
       } catch (err) {
-        setError(err.message);
+        setError(friendlyError(err));
         setIsLoading(false);
       }
     };
@@ -79,13 +107,13 @@ export function SignInBox() {
     const isNameMissing = !user || !user.displayName || user.displayName.trim().length === 0;
 
     if (isNameMissing) {
-      setMessage("Welcome! Please enter your full name to complete your profile.");
+      setMessage(t('auth.welcome_name', "Welcome! Please enter your full name to complete your profile."));
       setIsMissingName(true);
       return true; 
     }
     
     if (!skipSuccessMessage) {
-        setMessage("Sign in successful. Loading your dashboard..."); 
+        setMessage(t('auth.signin_success', "Sign in successful. Loading your dashboard...")); 
         setIsLoading(true); 
     }
     
@@ -99,21 +127,21 @@ export function SignInBox() {
     setError('');
 
     if (!fullName) {
-        setError("Please enter your full name before continuing.");
+        setError(t('auth.name_before', "Please enter your full name before continuing."));
         return;
     }
 
     setIsLoading(true);
-    setMessage("Updating profile..."); 
+    setMessage(t('auth.updating_profile', "Updating profile...")); 
 
     try {
         await updateProfile(user, { displayName: fullName });
-        setMessage("Profile updated! Redirecting...");
+        setMessage(t('auth.profile_updated', "Profile updated! Redirecting..."));
         setTimeout(() => {
             window.location.reload();
         }, 1500);
     } catch (err) {
-        setError(err.message);
+        setError(friendlyError(err));
         console.error("Profile Update Error:", err);
         setIsLoading(false); 
     } 
@@ -125,9 +153,9 @@ export function SignInBox() {
     setMessage('');
 
     if (!fullName || !email || password.length < 6) {
-      if (!fullName) setError("Please enter your full name.");
-      else if (!email) setError("Please enter an email address.");
-      else setError("Password must be at least 6 characters long.");
+      if (!fullName) setError(t('auth.enter_name', "Please enter your full name."));
+      else if (!email) setError(t('auth.enter_email', "Please enter an email address."));
+      else setError(t('auth.password_length', "Password must be at least 6 characters long."));
       return;
     }
     
@@ -145,10 +173,10 @@ export function SignInBox() {
 
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
-        setError("This email is already in use. Please Sign In instead.");
+        setError(t('auth.email_in_use_signin', "This email is already in use. Please Sign In instead."));
         setIsSignUpMode(false);
       } else {
-        setError(err.message);
+        setError(friendlyError(err));
       }
       setIsLoading(false); 
     } 
@@ -161,12 +189,12 @@ export function SignInBox() {
     setIsMissingName(false); 
     
     if (!email) {
-      setError("Please enter an email address.");
+      setError(t('auth.enter_email', "Please enter an email address."));
       return;
     }
     
     if (!password) {
-        setMessage("Checking account type and signing you in...");
+        setMessage(t('auth.checking_account', "Checking account type and signing you in..."));
         signInWithGoogle(); 
         return;
     }
@@ -177,13 +205,13 @@ export function SignInBox() {
     try {
         methods = await fetchSignInMethodsForEmail(auth, email);
     } catch (err) {
-        setError(err.message);
+        setError(friendlyError(err));
         setIsLoading(false); 
         return;
     }
     
     if (methods.length === 0) { 
-        setError("Account not found. Please Sign Up to create a new account.");
+        setError(t('auth.account_not_found', "Account not found. Please Sign Up to create a new account."));
         setPassword(''); 
         setIsSignUpMode(true);
         setIsLoading(false); 
@@ -200,7 +228,7 @@ export function SignInBox() {
             return; 
         } catch (err) {
             if (err.code === 'auth/wrong-password' && methods.includes('google.com')) {
-                setMessage("Sign-in failed with password. Retrying with Google to link your password...");
+                setMessage(t('auth.retry_google_link', "Sign-in failed with password. Retrying with Google to link your password..."));
                 const passwordToAttemptLink = password; 
                 setPassword(''); 
                 signInWithGoogle(passwordToAttemptLink); 
@@ -208,7 +236,7 @@ export function SignInBox() {
             } 
             
             if (err.code === 'auth/account-exists-with-different-credential' && methods.includes('google.com')) {
-                setMessage("This account is registered with Google. Retrying with Google to link this password...");
+                setMessage(t('auth.registered_google_link', "This account is registered with Google. Retrying with Google to link this password..."));
                 const passwordToAttemptLink = password; 
                 setPassword(''); 
                 signInWithGoogle(passwordToAttemptLink); 
@@ -216,9 +244,9 @@ export function SignInBox() {
             } 
             
             if (err.code === 'auth/wrong-password') {
-                setError("Invalid credentials. Please try again or use 'Forgot Password?'.");
+                setError(t('auth.invalid_credentials', "Invalid credentials. Please try again or use 'Forgot Password?'."));
             } else {
-                setError(err.message);
+                setError(friendlyError(err));
             }
             setIsLoading(false); 
             return;
@@ -227,20 +255,20 @@ export function SignInBox() {
     
     if (methods.includes('google.com')) {
         if (password) {
-            setMessage("This email is registered with Google. Please sign in with Google to link this new password to your account.");
+            setMessage(t('auth.google_link_new', "This email is registered with Google. Please sign in with Google to link this new password to your account."));
             const passwordToAttemptLink = password; 
             setPassword(''); 
             signInWithGoogle(passwordToAttemptLink); 
             return;
         } else {
             setPassword('');
-            setMessage("This email is registered with Google. Signing you in with Google...");
+            setMessage(t('auth.google_signing', "This email is registered with Google. Signing you in with Google..."));
             signInWithGoogle(); 
             return;
         }
     }
 
-    setError(`This email is registered with ${methods.join(', ')}. Please use that method to sign in.`);
+    setError(t('auth.other_method_list', 'This email is registered with {{methods}}. Please use that method to sign in.', { methods: methods.join(', ') }));
     setIsLoading(false); 
   };
 
@@ -250,16 +278,16 @@ export function SignInBox() {
     setMessage('');
     
     if (!email) {
-      setError("Please enter your email to reset password.");
+      setError(t('auth.reset_enter_email', "Please enter your email to reset password."));
       return;
     }
     
     setIsLoading(true); 
     try {
       await sendPasswordResetEmail(auth, email);
-      setMessage("Password reset email sent! Check your inbox.");
+      setMessage(t('auth.reset_sent', "Password reset email sent! Check your inbox."));
     } catch (err) {
-      setError(err.message);
+      setError(friendlyError(err));
     } finally {
         setIsLoading(false); 
     }
@@ -289,13 +317,21 @@ export function SignInBox() {
         user = userCredential.user;
       } else {
         const provider = new GoogleAuthProvider();
+        // Phone browsers open the Google window as a separate tab and often
+        // lose track of it, so sign in by redirect there; the result is
+        // picked up by getRedirectResult when the page comes back.
+        if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
+            setMessage(t('auth.redirecting_google', "Redirecting to secure Google sign-in..."));
+            await signInWithRedirect(auth, provider);
+            return;
+        }
         try {
             const result = await signInWithPopup(auth, provider); 
             user = result.user;
         } catch (popupError) {
             // Fallback to redirect if browser blocks the popup[cite: 2]
             if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/operation-not-supported-in-this-environment') {
-                setMessage("Redirecting to secure Google sign-in...");
+                setMessage(t('auth.redirecting_google', "Redirecting to secure Google sign-in..."));
                 await signInWithRedirect(auth, provider);
                 return; // Stop execution, the page will redirect
             } else {
@@ -308,14 +344,14 @@ export function SignInBox() {
         try {
           const credential = EmailAuthProvider.credential(user.email, passwordToAttemptLink);
           await linkWithCredential(user, credential);
-          setMessage("Password successfully linked! Redirecting..."); 
+          setMessage(t('auth.password_linked', "Password successfully linked! Redirecting...")); 
           setError(''); 
           user = auth.currentUser; 
         } catch (linkError) {
           if (linkError.code === 'auth/credential-already-in-use') {
-            setError("This account is already linked to a password.");
+            setError(t('auth.already_linked_password', "This account is already linked to a password."));
           } else {
-            setError(linkError.message);
+            setError(friendlyError(linkError));
           }
           setIsLoading(false); 
           setPassword('');
@@ -331,7 +367,7 @@ export function SignInBox() {
       }
 
     } catch (err) {
-      setError(err.message);
+      setError(friendlyError(err));
       setIsMissingName(false); 
       setIsLoading(false);
     } 
@@ -349,9 +385,9 @@ export function SignInBox() {
   if (isMissingName) {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-          <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
-            <h1 className="text-3xl font-bold text-gray-800">Complete Your Profile</h1>
-            <p className="mt-2 text-gray-600">Please enter your full name to continue.</p>
+          <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
+            <h1 className="text-3xl font-bold text-gray-800">{t('auth.complete_profile', "Complete Your Profile")}</h1>
+            <p className="mt-2 text-gray-600">{t('auth.name_to_continue', "Please enter your full name to continue.")}</p>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
             {message && <p className="text-sm text-green-600">{message}</p>}
@@ -361,7 +397,7 @@ export function SignInBox() {
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Full Name"
+                placeholder={t('auth.full_name', "Full Name")}
                 className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
                 disabled={isLoading}
@@ -371,7 +407,7 @@ export function SignInBox() {
                 className="w-full px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition duration-300 disabled:bg-gray-400"
                 disabled={isLoading}
               >
-                {isLoading ? (message ? message : 'Updating Profile...') : 'Save and Continue'}
+                {isLoading ? (message ? message : t('auth.updating_profile_btn', "Updating Profile...")) : t('auth.save_continue', "Save and Continue")}
               </button>
             </form>
           </div>
@@ -381,11 +417,11 @@ export function SignInBox() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
+      <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Monitoring System</h1>
+          <h1 className="text-3xl font-bold text-gray-800">{t('auth.system_title', "Monitoring System")}</h1>
           <p className="mt-2 text-gray-600">
-            {isSignUpMode ? "Create a new account" : "Sign in to your account"}
+            {isSignUpMode ? t('auth.create_account', "Create a new account") : t('auth.signin_to_account', "Sign in to your account")}
           </p>
         </div>
 
@@ -395,7 +431,7 @@ export function SignInBox() {
               type="text" 
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Full Name"
+              placeholder={t('auth.full_name', "Full Name")}
               className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
               disabled={isLoading}
@@ -406,7 +442,7 @@ export function SignInBox() {
             type="email" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email Address"
+            placeholder={t('auth.email', "Email Address")}
             className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
             disabled={isLoading}
@@ -416,21 +452,21 @@ export function SignInBox() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder={t('auth.password', "Password")}
               className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required={isSignUpMode}
               disabled={isLoading}
             />
             
             {!isSignUpMode && (
-              <div className="text-right mt-2">
+              <div className="text-end mt-2">
                 <button 
                   type="button" 
                   onClick={handlePasswordReset}
                   className="text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none disabled:opacity-50"
                   disabled={isLoading} 
                 >
-                  {isLoading ? 'Processing...' : 'Forgot Password?'}
+                  {isLoading ? t('auth.processing', t('auth.processing', "Processing...")) : t('auth.forgot', 'Forgot Password?')}
                 </button>
               </div>
             )}
@@ -446,7 +482,7 @@ export function SignInBox() {
                 className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
                 disabled={isLoading} 
               >
-                {isLoading ? (message ? message : 'Creating Account...') : 'Sign Up'}
+                {isLoading ? (message ? message : t('auth.creating', "Creating Account...")) : t('auth.sign_up', "Sign Up")}
               </button>
             ) : (
               <button 
@@ -454,7 +490,7 @@ export function SignInBox() {
                 className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
                 disabled={isLoading} 
               >
-                {isLoading ? (message ? message : 'Signing In...') : 'Sign In'}
+                {isLoading ? (message ? message : t('auth.signing_in', "Signing In...")) : t('auth.sign_in', "Sign In")}
               </button>
             )}
           </div>
@@ -468,14 +504,14 @@ export function SignInBox() {
             disabled={isLoading} 
           >
             {isSignUpMode 
-              ? <span className="font-medium text-indigo-600 hover:text-indigo-500">Already have an account? Sign In</span> 
-              : <span className="font-bold text-red-600">if this your first time, please sign up</span>}
+              ? <span className="font-medium text-indigo-600 hover:text-indigo-500">{t('auth.have_account', 'Already have an account? Sign In')}</span> 
+              : <span className="font-bold text-red-600">{t('auth.first_time', 'First time here? Please sign up')}</span>}
           </button>
         </div>
 
         <div className="flex items-center justify-center">
           <div className="flex-grow border-t border-gray-300"></div>
-          <span className="mx-4 text-xs font-bold text-gray-500">OR</span>
+          <span className="mx-4 text-xs font-bold text-gray-500">{t('auth.or', 'OR')}</span>
           <div className="flex-grow border-t border-gray-300"></div>
         </div> 
         
@@ -489,7 +525,7 @@ export function SignInBox() {
           disabled={isLoading} 
         >
           <svg className="w-6 h-6" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19-5.238C39.902,35.619,44,29.89,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
-          {isLoading ? (message ? message : 'Processing...') : 'Sign in with Google'}
+          {isLoading ? (message ? message : t('auth.processing', "Processing...")) : t('auth.google', "Sign in with Google")}
         </button>
       </div>
     </div>

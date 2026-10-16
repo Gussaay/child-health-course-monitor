@@ -1,6 +1,7 @@
 // FacilityForms.jsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle, ArrowRightLeft } from 'lucide-react';
 import { db } from '../firebase'; 
 import { collection, getDocs, doc, addDoc, serverTimestamp } from 'firebase/firestore'; 
@@ -1057,6 +1058,7 @@ export const GenericFacilityForm = React.forwardRef(({
     saveButtonVariant = "primary",
     isSubmitting = false 
 }, ref) => {
+    const { t } = useTranslation();
     const [isLocalSubmitting, setIsLocalSubmitting] = useState(false); 
     const [showNamePrompt, setShowNamePrompt] = useState(false);
 
@@ -1153,7 +1155,7 @@ export const GenericFacilityForm = React.forwardRef(({
         try {
             await onSave({ ...processedData, 'اخر تحديث': new Date().toISOString(), 'updated_by': updaterIdentifier });
         } catch (error) {
-            setToast({ show: true, message: `Failed to save facility: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('clinical_ui.facility_forms.toast.save_failed', 'Failed to save facility: {{msg}}', { msg: error.message }), type: 'error' });
             notify(`حدث خطأ أثناء الحفظ: ${error.message}`);
         } finally {
             setIsLocalSubmitting(false);
@@ -1301,7 +1303,7 @@ export const GenericFacilityForm = React.forwardRef(({
             <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-hidden">
                 <div className="bg-gradient-to-r from-sky-50 to-white px-6 py-5 border-b border-gray-100">
                     <h2 className="text-2xl font-extrabold text-sky-900">{isEditing ? `تعديل: ${title}` : `إضافة: ${title}`}</h2>
-                    <p className="text-sky-700 mt-1 font-medium">{subtitle || (isEditing ? (formData['اسم_المؤسسة'] || "Update details for this facility") : "أدخل تفاصيل المنشأة الجديدة.")}</p>
+                    <p className="text-sky-700 mt-1 font-medium">{subtitle || (isEditing ? (formData['اسم_المؤسسة'] || t('clinical_ui.facility_forms.update_details', 'Update details for this facility')) : "أدخل تفاصيل المنشأة الجديدة.")}</p>
                 </div>
                 
                 <div className="p-6">
@@ -1334,18 +1336,18 @@ export const GenericFacilityForm = React.forwardRef(({
                         {isPublicForm && (
                              <div className="mt-8 pt-6 border-t border-sky-200">
                                 <div className="p-4 bg-sky-50 rounded-lg border border-sky-200">
-                                    <h3 className="text-lg font-semibold mb-2 text-sky-800" dir="ltr">Your Information</h3>
+                                    <h3 className="text-lg font-semibold mb-2 text-sky-800" dir="ltr">{t('clinical_ui.facility_forms.your_info.title', 'Your Information')}</h3>
                                     <p className="text-sm text-gray-600 mb-4" dir="ltr">
                                         {isUserLoggedIn 
-                                            ? "Your information is automatically recorded with this submission."
-                                            : "Please provide your name (required) and email (optional). This will be recorded with your submission."
+                                            ? t('clinical_ui.facility_forms.your_info.auto', 'Your information is automatically recorded with this submission.')
+                                            : t('clinical_ui.facility_forms.your_info.prompt', 'Please provide your name (required) and email (optional). This will be recorded with your submission.')
                                         }
                                     </p>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <FormGroup label="Your Name (Required)">
+                                        <FormGroup label={t('clinical_ui.facility_forms.your_info.name', 'Your Name (Required)')}>
                                             <Input type="text" name="submitterName" value={submitterName} onChange={(e) => setSubmitterName(e.target.value)} disabled={isUserLoggedIn || isReadOnly} />
                                         </FormGroup>
-                                        <FormGroup label="Your Email (Optional)">
+                                        <FormGroup label={t('clinical_ui.facility_forms.your_info.email', 'Your Email (Optional)')}>
                                             <Input type="email" name="submitterEmail" value={submitterEmail} onChange={(e) => setSubmitterEmail(e.target.value)} disabled={isUserLoggedIn || isReadOnly} />
                                         </FormGroup>
                                     </div>

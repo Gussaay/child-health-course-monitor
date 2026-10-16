@@ -4,6 +4,7 @@ import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, Spinn
 import { listObservationsForParticipant, listCasesForParticipant, upsertCaseAndObservations, deleteCaseAndObservations } from '../../data.js';
 import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, MATERNAL_CHECKLIST_GROUPS, groupChecklists, participantsForModule, calcPct, fmtPct, pctBgClass } from '../constants.js';
 import { notify, confirmDialog } from '../dialogs';
+import { useTranslation } from 'react-i18next';
 
 const generateHash = (buffer) => Object.keys(buffer).sort().map(k => `${k}:${buffer[k]}`).join('|');
 
@@ -497,7 +498,8 @@ export const MATERNAL_CHECKLISTS = {
 };
 
 function ActionToggle({ currentValue, onClick }) {
-    const options = [['Done', 1, 'bg-green-600 border-green-600'], ['Not Done', 0, 'bg-red-600 border-red-600'], ['N/A', -1, 'bg-gray-500 border-gray-500']];
+    const { t } = useTranslation();
+    const options = [[t('clinical_ui.maternal.toggle.done', 'Done'), 1, 'bg-green-600 border-green-600'], [t('clinical_ui.maternal.toggle.not_done', 'Not Done'), 0, 'bg-red-600 border-red-600'], [t('clinical_ui.maternal.toggle.na', 'N/A'), -1, 'bg-gray-500 border-gray-500']];
     return (
         // Fills the row on a phone, inline on a laptop, with a 40px touch
         // target — the smallest that can be hit reliably at a bedside.
@@ -519,6 +521,7 @@ function ActionToggle({ currentValue, onClick }) {
 }
 
 export function MaternalEmergencyMonitoring({ course, participant, participants, onChangeParticipant, onCancel, switchModule, isPublicView = false }) {
+    const { t } = useTranslation();
     const [observations, setObservations] = useState([]);
     const [cases, setCases] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -595,7 +598,7 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
     const submitCase = async () => {
         if (isSaving) return; 
         const entries = Object.entries(buffer);
-        if (entries.length === 0) { notify('No skills/actions selected.'); return; }
+        if (entries.length === 0) { notify(t('clinical_ui.maternal.toast.none_selected', 'No skills/actions selected.')); return; }
         setIsSaving(true);
         const currentCaseSerial = editingCase ? editingCase.case_serial : caseSerial;
         const allCorrect = entries.every(([, v]) => v > 0);
@@ -628,14 +631,14 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
             setBuffer({});
             setEditingCase(null);
         } catch (err) {
-            notify(`Failed to save case: ${err.message}`);
+            notify(t('clinical_ui.maternal.toast.save_failed', 'Failed to save case: {{msg}}', { msg: err.message }));
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDeleteCase = async (caseToDelete) => {
-        if (!await confirmDialog('Delete this case and all its observations? This cannot be undone.')) return;
+        if (!await confirmDialog(t('clinical_ui.maternal.dlg.delete_case', 'Delete this case and all its observations? This cannot be undone.'))) return;
         const previousCases = [...cases];
         const previousObservations = [...observations];
         setCases(prev => prev.filter(c => c.id !== caseToDelete.id));
@@ -645,7 +648,7 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
         } catch (err) {
             setCases(previousCases);
             setObservations(previousObservations);
-            notify(`Failed to delete: ${err.message}`);
+            notify(t('clinical_ui.maternal.toast.delete_failed', 'Failed to delete: {{msg}}', { msg: err.message }));
         }
     };
 
@@ -658,19 +661,19 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
 
     return (
         <div className="grid gap-2">
-            {!isPublicView && <PageHeader title="Maternal Emergency Monitor" subtitle={`Observing: ${participant.name}`} />}
+            {!isPublicView && <PageHeader title={t('clinical_ui.maternal.title', 'Maternal Emergency Monitor')} subtitle={t('clinical_ui.maternal.observing', 'Observing: {{name}}', { name: participant.name })} />}
             {error && <Card><div className="p-4 bg-red-100 text-red-700 rounded-md">{error}</div></Card>}
 
-            <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} title="Submission Successful">
+            <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} title={t('clinical_ui.maternal.success.title', 'Submission Successful')}>
                 <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Case Saved Successfully!</h3>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{t('clinical_ui.maternal.success.msg', 'Case Saved Successfully!')}</h3>
                     <Button onClick={() => { setShowSuccessModal(false); setShowGrid(false); setShowSetupModal(true); }} className="w-full bg-green-600 hover:bg-green-700">
-                        Continue to Next Case
+                        {t('clinical_ui.maternal.success.next', 'Continue to Next Case')}
                     </Button>
                 </div>
             </Modal>
 
-            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Case Setup Configuration" size="lg">
+            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title={t('clinical_ui.maternal.setup.title', 'Case Setup Configuration')} size="lg">
                 <div className="p-4">
                     {/* Only where there is somewhere to switch TO — see the
                         matching note in NeonatalEmergencyMonitoring. */}
@@ -680,25 +683,25 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                                 type="button"
                                 className="flex-1 py-2 px-4 rounded-md font-bold text-sm shadow bg-white text-purple-700 border border-purple-200"
                             >
-                                Maternal Emergencies
+                                {t('clinical_ui.maternal.module.maternal', 'Maternal Emergencies')}
                             </button>
                             <button
                                 type="button"
                                 onClick={(e) => { e.preventDefault(); switchModule('neonatal'); }}
                                 className="flex-1 py-2 px-4 rounded-md font-medium text-sm text-gray-500 hover:text-gray-700 transition-colors"
                             >
-                                Neonatal Emergencies
+                                {t('clinical_ui.maternal.module.neonatal', 'Neonatal Emergencies')}
                             </button>
                         </div>
                     ) : (
                         <div className="mb-6 px-3 py-2 rounded-lg bg-purple-50 border border-purple-200 text-sm font-bold text-purple-800 text-center">
-                            Maternal Emergencies
+                            {t('clinical_ui.maternal.module.maternal', 'Maternal Emergencies')}
                         </div>
                     )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {isPublicView && participants && (
-                            <FormGroup label="Select participant" className="sm:col-span-2">
+                            <FormGroup label={t('clinical_ui.maternal.setup.participant', 'Select participant')} className="sm:col-span-2">
                                 <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)} disabled={!!editingCase}>
                                     {(() => {
                                         const { own, others } = participantsForModule(participants, course, 'maternal');
@@ -709,15 +712,15 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                                         if (!others.length) return own.map(row);
                                         return (
                                             <>
-                                                <optgroup label="Maternal stream">{own.map(row)}</optgroup>
-                                                <optgroup label="Other participants">{others.map(row)}</optgroup>
+                                                <optgroup label={t('clinical_ui.maternal.setup.stream', 'Maternal stream')}>{own.map(row)}</optgroup>
+                                                <optgroup label={t('clinical_ui.maternal.setup.other', 'Other participants')}>{others.map(row)}</optgroup>
                                             </>
                                         );
                                     })()}
                                 </Select>
                             </FormGroup>
                         )}
-                        <FormGroup label="Select Maternal Form / Checklist" className="sm:col-span-2">
+                        <FormGroup label={t('clinical_ui.maternal.setup.checklist', 'Select Maternal Form / Checklist')} className="sm:col-span-2">
                             <Select value={scenario} onChange={(e) => { setScenario(e.target.value); setBuffer({}); }} disabled={!!editingCase}>
                                 {groupChecklists(MATERNAL_CHECKLISTS, MATERNAL_CHECKLIST_GROUPS).map(({ label, items }) => (
                                     <optgroup key={label} label={label}>
@@ -728,24 +731,24 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                                 ))}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="Encounter Date"><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
-                        <FormGroup label="Course Day"><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
+                        <FormGroup label={t('clinical_ui.maternal.setup.date', 'Encounter Date')}><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
+                        <FormGroup label={t('clinical_ui.maternal.setup.day', 'Course Day')}><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
                     </div>
                 </div>
                 <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                    {!isPublicView && <Button variant="secondary" onClick={() => { setShowSetupModal(false); setShowGrid(false); }}>Close</Button>}
-                    <Button onClick={() => { setShowSetupModal(false); setShowGrid(true); }}>Confirm & Start</Button>
+                    {!isPublicView && <Button variant="secondary" onClick={() => { setShowSetupModal(false); setShowGrid(false); }}>{t('clinical_ui.maternal.btn.close', 'Close')}</Button>}
+                    <Button onClick={() => { setShowSetupModal(false); setShowGrid(true); }}>{t('clinical_ui.maternal.btn.confirm_start', 'Confirm & Start')}</Button>
                 </div>
             </Modal>
 
             {!showGrid && !loading && (
                 <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-800">Ready to monitor?</h3>
-                        <p className="text-sm text-slate-500">Start a new observation case for {participant.name}.</p>
+                        <h3 className="text-lg font-bold text-slate-800">{t('clinical_ui.maternal.ready.title', 'Ready to monitor?')}</h3>
+                        <p className="text-sm text-slate-500">{t('clinical_ui.maternal.ready.msg', 'Start a new observation case for {{name}}.', { name: participant.name })}</p>
                     </div>
                     <Button onClick={() => { setBuffer({}); setEditingCase(null); setShowSetupModal(true); }}>
-                        + Start New Case
+                        {t('clinical_ui.maternal.btn.start_new', '+ Start New Case')}
                     </Button>
                 </div>
             )}
@@ -754,17 +757,17 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                 <Card className="p-4 mb-4">
                     <div className="flex justify-between items-start mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
                         <div>
-                            <h3 className="text-lg font-semibold">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
+                            <h3 className="text-lg font-semibold">{editingCase ? t('clinical_ui.maternal.grid.editing', 'Editing Case #{{n}}', { n: editingCase.case_serial }) : t('clinical_ui.maternal.grid.new', 'New Case Observation')}</h3>
                             <p className="text-sm text-slate-600 mt-1">
-                                <span className="font-semibold">Day:</span> {dayOfCourse} &bull; <span className="font-semibold ml-2">Date:</span> {encounterDate} &bull; <span className="font-semibold ml-2">Checklist:</span> {currentChecklist.title}
+                                <span className="font-semibold">{t('clinical_ui.maternal.grid.day', 'Day:')}</span> {dayOfCourse} &bull; <span className="font-semibold ml-2">{t('clinical_ui.maternal.grid.date', 'Date:')}</span> {encounterDate} &bull; <span className="font-semibold ml-2">{t('clinical_ui.maternal.grid.checklist', 'Checklist:')}</span> {currentChecklist.title}
                             </p>
                         </div>
-                        <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>Edit Setup</Button>
+                        <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>{t('clinical_ui.maternal.btn.edit_setup', 'Edit Setup')}</Button>
                     </div>
 
                     <div className="flex gap-2 mb-4">
-                        <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(currentDomains))}>Expand All</Button>
-                        <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                        <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(currentDomains))}>{t('clinical_ui.maternal.btn.expand_all', 'Expand All')}</Button>
+                        <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>{t('clinical_ui.maternal.btn.collapse_all', 'Collapse All')}</Button>
                     </div>
 
                     <div className="space-y-3">
@@ -798,8 +801,8 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                     </div>
 
                     <div className="flex justify-end gap-3 mt-4 border-t pt-4">
-                        <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setShowGrid(false); }} disabled={isSaving}>Discard</Button>
-                        <Button onClick={submitCase} disabled={isSaving}>{isSaving ? 'Saving...' : (editingCase ? 'Update Case' : 'Submit Case')}</Button>
+                        <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setShowGrid(false); }} disabled={isSaving}>{t('clinical_ui.maternal.btn.discard', 'Discard')}</Button>
+                        <Button onClick={submitCase} disabled={isSaving}>{isSaving ? t('clinical_ui.maternal.btn.saving', 'Saving...') : (editingCase ? t('clinical_ui.maternal.btn.update_case', 'Update Case') : t('clinical_ui.maternal.btn.submit_case', 'Submit Case'))}</Button>
                     </div>
                 </Card>
             )}
@@ -812,11 +815,12 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
 }
 
 function SubmittedMaternalCases({ cases, observations, onEditCase, onDeleteCase }) {
-    if (cases.length === 0) return <Card className="p-8 text-center text-gray-500">No cases submitted yet.</Card>;
+    const { t } = useTranslation();
+    if (cases.length === 0) return <Card className="p-8 text-center text-gray-500">{t('clinical_ui.maternal.list.empty', 'No cases submitted yet.')}</Card>;
     return (
         <Card className="p-4">
-            <h3 className="text-lg font-bold mb-4">Submitted Maternal Cases</h3>
-            <Table headers={["Date", "Day", "Checklist", "Score", "Actions"]}>
+            <h3 className="text-lg font-bold mb-4">{t('clinical_ui.maternal.list.title', 'Submitted Maternal Cases')}</h3>
+            <Table headers={[t('clinical_ui.maternal.list.date', 'Date'), t('clinical_ui.maternal.list.day', 'Day'), t('clinical_ui.maternal.list.checklist', 'Checklist'), t('clinical_ui.maternal.list.score', 'Score'), t('clinical_ui.maternal.list.actions', 'Actions')]}>
                 {cases.sort((a,b) => b.day_of_course - a.day_of_course || b.case_serial - a.case_serial).map(c => {
                     const relatedObs = observations.filter(o => o.caseId === c.id);
                     const total = relatedObs.length;
@@ -830,8 +834,8 @@ function SubmittedMaternalCases({ cases, observations, onEditCase, onDeleteCase 
                             <td className="p-2">{checklistName}</td>
                             <td className={`p-2 text-center font-mono ${pctBgClass(pct)}`}>{fmtPct(pct)} ({correct}/{total})</td>
                             <td className="p-2 text-right">
-                                <Button size="sm" variant="secondary" onClick={() => onEditCase(c)} className="mr-2">Edit</Button>
-                                <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>Delete</Button>
+                                <Button size="sm" variant="secondary" onClick={() => onEditCase(c)} className="mr-2">{t('clinical_ui.maternal.btn.edit', 'Edit')}</Button>
+                                <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>{t('clinical_ui.maternal.btn.delete', 'Delete')}</Button>
                             </td>
                         </tr>
                     );

@@ -16,6 +16,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { fetchFacilitiesHistoryMultiDate, upsertCourse } from '../data.js';
 import { useDataCache } from '../DataContext';
 import { notify } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // --- Helper Components ---
 const Select = (props) => <select {...props} className={`border border-gray-300 rounded-md p-2 text-sm w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`}>{props.children}</select>;
@@ -42,6 +43,7 @@ const fmtCurrency = (value) => (isNaN(value) || value === null ? '$0' : `$${Numb
 // courseType: the course package picked on the Courses page. When given, the
 // dashboard is that package's only, and the Course Type filter is not offered.
 export default function CompiledReportView({ allCourses, allParticipants, allHealthFacilities = [], courseType = null }) {
+    const { t } = useTranslation();
     // --- State ---
     const [filterType, setFilterType] = useState(courseType || 'All'); 
     useEffect(() => { setFilterType(courseType || 'All'); setFilterSubType('All'); }, [courseType]);
@@ -183,7 +185,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
 
         } catch (error) {
             console.error("Error calculating historical coverage:", error);
-            notify("Failed to load historical coverage baseline.");
+            notify(t('compiled_reports.compiled.notify.load_baseline_failed', 'Failed to load historical coverage baseline.'));
             setIsCoverageModalOpen(false);
         } finally {
             setIsPreviewLoading(false);
@@ -204,9 +206,9 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
             if (fetchCourses) await fetchCourses(); 
             
             setIsCoverageModalOpen(false);
-            notify("Baseline coverage saved successfully.");
+            notify(t('compiled_reports.compiled.notify.baseline_saved', 'Baseline coverage saved successfully.'));
         } catch (error) {
-            notify("Failed to save coverage.");
+            notify(t('compiled_reports.compiled.notify.save_failed', 'Failed to save coverage.'));
         } finally {
             setIsSavingCoverage(false);
         }
@@ -562,13 +564,13 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-center border-b border-gray-200 pb-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-800">{courseType ? `${courseType} Courses Dashboard` : 'Courses Dashboard'}</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">{courseType ? t('compiled_reports.compiled.title_type', '{{type}} Courses Dashboard', { type: courseType }) : t('compiled_reports.compiled.title', 'Courses Dashboard')}</h2>
                     <p className="text-sm text-gray-500">
-                        Consolidated performance, coverage, and investment overview.
+                        {t('compiled_reports.compiled.subtitle', 'Consolidated performance, coverage, and investment overview.')}
                     </p>
                 </div>
                 <Button onClick={handlePdfExport} disabled={isGeneratingPdf || filteredCourses.length === 0} variant="secondary">
-                    {isGeneratingPdf ? <Spinner size="sm" /> : <><PdfIcon className="w-4 h-4 mr-2"/> Export Report</>}
+                    {isGeneratingPdf ? <Spinner size="sm" /> : <><PdfIcon className="w-4 h-4 mr-2"/> {t('compiled_reports.compiled.export_report', 'Export Report')}</>}
                 </Button>
             </div>
 
@@ -576,79 +578,79 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
             <Card className="bg-gray-50 border border-gray-200">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {!courseType && (
-                        <FormGroup label="Course Type">
+                        <FormGroup label={t('compiled_reports.compiled.filters.course_type', 'Course Type')}>
                             <Select value={filterType} onChange={e => { setFilterType(e.target.value); setFilterSubType('All'); }}>
-                                {courseTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                {courseTypes.map(ct => <option key={ct} value={ct}>{ct === 'All' ? t('compiled_reports.compiled.filters.all', 'All') : ct}</option>)}
                             </Select>
                         </FormGroup>
                     )}
-                    <FormGroup label="Sub-Type">
+                    <FormGroup label={t('compiled_reports.compiled.filters.sub_type', 'Sub-Type')}>
                         <Select value={filterSubType} onChange={e => setFilterSubType(e.target.value)} disabled={filterType === 'All'}>
-                            <option value="All">All Sub-Types</option>
-                            {subTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                            <option value="All">{t('compiled_reports.compiled.filters.all_sub_types', 'All Sub-Types')}</option>
+                            {subTypes.map(st => <option key={st} value={st}>{st === 'All' ? t('compiled_reports.compiled.filters.all', 'All') : st}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="State">
+                    <FormGroup label={t('compiled_reports.compiled.table.state', 'State')}>
                         <Select value={filterState} onChange={e => setFilterState(e.target.value)}>
-                            {states.map(s => <option key={s} value={s}>{s}</option>)}
+                            {states.map(s => <option key={s} value={s}>{s === 'All' ? t('compiled_reports.compiled.filters.all', 'All') : s}</option>)}
                         </Select>
                     </FormGroup>
-                     <FormGroup label="Year">
+                     <FormGroup label={t('compiled_reports.compiled.filters.year', 'Year')}>
                         <Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                            {years.map(y => <option key={y} value={y}>{y === 'All' ? t('compiled_reports.compiled.filters.all', 'All') : y}</option>)}
                         </Select>
                     </FormGroup>
                 </div>
             </Card>
 
             {filteredCourses.length === 0 ? (
-                <EmptyState message="No data matches the selected filters." />
+                <EmptyState message={t('compiled_reports.compiled.empty', 'No data matches the selected filters.')} />
             ) : (
                 <>
                     {/* Overall Summaries */}
                     <Card>
-                        <h3 className="text-xl font-bold mb-4 border-b pb-2">Overall Summaries</h3>
+                        <h3 className="text-xl font-bold mb-4 border-b pb-2">{t('compiled_reports.compiled.overall_summaries', 'Overall Summaries')}</h3>
                         
-                        <h4 className="font-semibold text-gray-700 mb-2">Performance KPIs</h4>
+                        <h4 className="font-semibold text-gray-700 mb-2">{t('compiled_reports.compiled.performance_kpis', 'Performance KPIs')}</h4>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 text-center mb-6">
                             <div className="p-4 bg-gray-100 rounded-lg border border-gray-200">
-                                <div className="text-sm font-semibold text-gray-600">Total Courses</div>
+                                <div className="text-sm font-semibold text-gray-600">{t('compiled_reports.compiled.kpi.total_courses', 'Total Courses')}</div>
                                 <div className="text-xl font-bold text-sky-700">{reportData.totalCourses}</div>
                             </div>
                             <div className="p-4 bg-gray-100 rounded-lg border border-gray-200">
-                                <div className="text-sm font-semibold text-gray-600">Total Pax</div>
+                                <div className="text-sm font-semibold text-gray-600">{t('compiled_reports.compiled.kpi.total_pax', 'Total Pax')}</div>
                                 <div className="text-xl font-bold text-sky-700">{reportData.totalParticipants}</div>
                             </div>
                             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <div className="text-sm font-semibold text-gray-600">Avg Pre-Test</div>
+                                <div className="text-sm font-semibold text-gray-600">{t('compiled_reports.compiled.kpi.avg_pre_test', 'Avg Pre-Test')}</div>
                                 <div className="text-xl font-bold">{`${reportData.avgPre.toFixed(1)}%`}</div>
                             </div>
                             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <div className="text-sm font-semibold text-gray-600">Avg Post-Test</div>
+                                <div className="text-sm font-semibold text-gray-600">{t('compiled_reports.compiled.kpi.avg_post_test', 'Avg Post-Test')}</div>
                                 <div className="text-xl font-bold">{`${reportData.avgPost.toFixed(1)}%`}</div>
                             </div>
                             <div className={`p-4 rounded-lg border ${getScoreColorClass(reportData.improvement, 'improvement')}`}>
-                                <div className="text-sm font-semibold">Avg Improvement</div>
+                                <div className="text-sm font-semibold">{t('compiled_reports.compiled.kpi.avg_improvement', 'Avg Improvement')}</div>
                                 <div className="text-xl font-bold">{`${reportData.improvement.toFixed(1)}%`}</div>
                             </div>
                         </div>
 
-                        <h4 className="font-semibold text-gray-700 mb-2">Coverage & Investment KPIs</h4>
+                        <h4 className="font-semibold text-gray-700 mb-2">{t('compiled_reports.compiled.coverage_kpis', 'Coverage & Investment KPIs')}</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
                             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                                <div className="text-sm font-semibold text-blue-700">Total Investment</div>
+                                <div className="text-sm font-semibold text-blue-700">{t('compiled_reports.compiled.kpi.total_investment', 'Total Investment')}</div>
                                 <div className="text-xl font-bold text-blue-800">{fmtCurrency(reportData.totalBudget)}</div>
                             </div>
                             <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                                <div className="text-sm font-semibold text-green-700">New Facilities Reached</div>
+                                <div className="text-sm font-semibold text-green-700">{t('compiled_reports.compiled.kpi.new_facilities', 'New Facilities Reached')}</div>
                                 <div className="text-xl font-bold text-green-800">{reportData.totalNewFacilities}</div>
                             </div>
                             <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-                                <div className="text-sm font-semibold text-yellow-700">Cost / Participant</div>
+                                <div className="text-sm font-semibold text-yellow-700">{t('compiled_reports.compiled.kpi.cost_per_participant', 'Cost / Participant')}</div>
                                 <div className="text-xl font-bold text-yellow-800">{fmtCurrency(reportData.costPerParticipant)}</div>
                             </div>
                             <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                                <div className="text-sm font-semibold text-purple-700">Cost / New Center</div>
+                                <div className="text-sm font-semibold text-purple-700">{t('compiled_reports.compiled.kpi.cost_per_new_center', 'Cost / New Center')}</div>
                                 <div className="text-xl font-bold text-purple-800">{fmtCurrency(reportData.costPerNewFacility)}</div>
                             </div>
                         </div>
@@ -656,9 +658,9 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
 
                     {/* Courses by State */}
                     <Card className="p-0 overflow-hidden">
-                        <h4 className="font-semibold text-xl pl-4 pt-4 mb-4 border-b pb-2">Number of Courses by State</h4>
+                        <h4 className="font-semibold text-xl pl-4 pt-4 mb-4 border-b pb-2">{t('compiled_reports.compiled.courses_by_state', 'Number of Courses by State')}</h4>
                         <div className="overflow-x-auto px-4 pb-4">
-                            <Table headers={reportData.coursesByStateHeaders}>
+                            <Table headers={reportData.coursesByStateHeaders.map((h, i) => (i === 0 ? t('compiled_reports.compiled.table.state', 'State') : i === reportData.coursesByStateHeaders.length - 1 ? t('compiled_reports.compiled.table.total', 'Total') : h))}>
                                 {reportData.coursesByStateBody.map((row, index) => (
                                     <tr key={index} className="hover:bg-gray-50 transition-colors">
                                         {row.map((cell, cellIndex) => (
@@ -668,7 +670,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                                 ))}
                                 <tr className="font-bold bg-gray-100">
                                     {reportData.coursesByStateTotals.map((cell, index) => (
-                                        <td key={index} className="p-2 border text-center">{cell}</td>
+                                        <td key={index} className="p-2 border text-center">{index === 0 ? t('compiled_reports.compiled.table.total', 'Total') : cell}</td>
                                     ))}
                                 </tr>
                             </Table>
@@ -682,43 +684,43 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                         return (
                             <Card key={type}>
                                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 border-b pb-2">
-                                    <h3 className="text-xl font-bold text-sky-800">{type} - Performance & Investment List</h3>
-                                    <span className="text-sm text-gray-500 font-medium">{data.courses.length} Course(s)</span>
+                                    <h3 className="text-xl font-bold text-sky-800">{t('compiled_reports.compiled.type_list_title', '{{type}} - Performance & Investment List', { type })}</h3>
+                                    <span className="text-sm text-gray-500 font-medium">{t('compiled_reports.compiled.course_count', '{{count}} Course(s)', { count: data.courses.length })}</span>
                                 </div>
                                 
                                 {/* Specific KPIs for this Course Type */}
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6 text-center">
                                     <div className="p-3 bg-blue-50 rounded border border-blue-100">
-                                        <div className="text-xs text-blue-700 font-semibold uppercase">Total Inv.</div>
+                                        <div className="text-xs text-blue-700 font-semibold uppercase">{t('compiled_reports.compiled.kpi.total_inv', 'Total Inv.')}</div>
                                         <div className="text-lg font-bold text-blue-800">{fmtCurrency(data.kpis.totalBudget)}</div>
                                     </div>
                                     <div className="p-3 bg-yellow-50 rounded border border-yellow-100">
-                                        <div className="text-xs text-yellow-700 font-semibold uppercase">Cost/Pax</div>
+                                        <div className="text-xs text-yellow-700 font-semibold uppercase">{t('compiled_reports.compiled.kpi.cost_pax', 'Cost/Pax')}</div>
                                         <div className="text-lg font-bold text-yellow-800">{fmtCurrency(data.kpis.costPerPax)}</div>
                                     </div>
                                     <div className="p-3 bg-purple-50 rounded border border-purple-100">
-                                        <div className="text-xs text-purple-700 font-semibold uppercase">Cost/Fac</div>
+                                        <div className="text-xs text-purple-700 font-semibold uppercase">{t('compiled_reports.compiled.kpi.cost_fac', 'Cost/Fac')}</div>
                                         <div className="text-lg font-bold text-purple-800">{fmtCurrency(data.kpis.costPerFac)}</div>
                                     </div>
                                     <div className="p-3 bg-gray-50 rounded border border-gray-200">
-                                        <div className="text-xs text-gray-600 font-semibold uppercase">Avg Pre</div>
+                                        <div className="text-xs text-gray-600 font-semibold uppercase">{t('compiled_reports.compiled.kpi.avg_pre', 'Avg Pre')}</div>
                                         <div className="text-lg font-bold">{data.kpis.avgPre.toFixed(1)}%</div>
                                     </div>
                                     <div className="p-3 bg-gray-50 rounded border border-gray-200">
-                                        <div className="text-xs text-gray-600 font-semibold uppercase">Avg Post</div>
+                                        <div className="text-xs text-gray-600 font-semibold uppercase">{t('compiled_reports.compiled.kpi.avg_post', 'Avg Post')}</div>
                                         <div className="text-lg font-bold">{data.kpis.avgPost.toFixed(1)}%</div>
                                     </div>
                                     <div className={`p-3 rounded border ${getScoreColorClass(data.kpis.avgImp, 'improvement')}`}>
-                                        <div className="text-xs font-semibold uppercase">Avg Imp</div>
+                                        <div className="text-xs font-semibold uppercase">{t('compiled_reports.compiled.kpi.avg_imp', 'Avg Imp')}</div>
                                         <div className="text-lg font-bold">{data.kpis.avgImp.toFixed(1)}%</div>
                                     </div>
                                 </div>
 
                                 <div className="overflow-x-auto touch-pan-x">
-                                    <Table headers={['Type', 'State', 'Locality', 'Partner', 'Budget', 'New Facs', '+ Loc Cov.', '+ State Cov.', '+ Nat Cov.', '# Pax', 'Baseline Action']}>
+                                    <Table headers={[t('compiled_reports.compiled.table.type', 'Type'), t('compiled_reports.compiled.table.state', 'State'), t('compiled_reports.compiled.table.locality', 'Locality'), t('compiled_reports.compiled.table.partner', 'Partner'), t('compiled_reports.compiled.table.budget', 'Budget'), t('compiled_reports.compiled.table.new_facs', 'New Facs'), t('compiled_reports.compiled.table.loc_cov', '+ Loc Cov.'), t('compiled_reports.compiled.table.state_cov', '+ State Cov.'), t('compiled_reports.compiled.table.nat_cov', '+ Nat Cov.'), t('compiled_reports.compiled.table.pax', '# Pax'), t('compiled_reports.compiled.table.baseline_action', 'Baseline Action')]}>
                                         {/* Total Row */}
                                         <tr className="bg-gray-100 font-bold border-b-2 border-gray-300">
-                                            <td className="p-3 border-r text-sm">TOTAL</td>
+                                            <td className="p-3 border-r text-sm">{t('compiled_reports.compiled.table.total_row', 'TOTAL')}</td>
                                             <td className="p-3 text-center">-</td>
                                             <td className="p-3 text-center">-</td>
                                             <td className="p-3 border-r text-center">-</td>
@@ -732,7 +734,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                                         </tr>
                                         {/* Average Row */}
                                         <tr className="bg-gray-50 font-bold border-b-2 border-gray-300">
-                                            <td className="p-3 border-r text-sm">AVERAGE</td>
+                                            <td className="p-3 border-r text-sm">{t('compiled_reports.compiled.table.average_row', 'AVERAGE')}</td>
                                             <td className="p-3 text-center">-</td>
                                             <td className="p-3 text-center">-</td>
                                             <td className="p-3 border-r text-center">-</td>
@@ -760,14 +762,14 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                                                 <td className="p-3 border-b text-sm text-center font-medium">{c.pax}</td>
                                                 <td className="p-3 border-b text-sm text-center">
                                                     {c.hasCoverageSnapshot ? (
-                                                        <span className="text-green-600 font-bold bg-green-50 px-2 py-1 rounded">Saved</span>
+                                                        <span className="text-green-600 font-bold bg-green-50 px-2 py-1 rounded">{t('compiled_reports.compiled.baseline.saved', 'Saved')}</span>
                                                     ) : isSuperUser ? (
                                                         <div className="flex flex-col gap-1 items-center justify-center">
-                                                            <Button size="sm" onClick={() => handleAutoFetchCoverage(c.id)}>Auto Fetch</Button>
-                                                            <Button size="sm" variant="secondary" onClick={() => notify("Please open the Full Course Report to Manually Edit this baseline.")}>Manual</Button>
+                                                            <Button size="sm" onClick={() => handleAutoFetchCoverage(c.id)}>{t('compiled_reports.compiled.baseline.auto_fetch', 'Auto Fetch')}</Button>
+                                                            <Button size="sm" variant="secondary" onClick={() => notify(t('compiled_reports.compiled.baseline.manual_hint', 'Please open the Full Course Report to Manually Edit this baseline.'))}>{t('compiled_reports.compiled.baseline.manual', 'Manual')}</Button>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-gray-400">N/A</span>
+                                                        <span className="text-gray-400">{t('compiled_reports.compiled.table.na', 'N/A')}</span>
                                                     )}
                                                 </td>
                                             </tr>
@@ -779,26 +781,26 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                     })}
 
                     {/* Modal for Historical Coverage Preview */}
-                    <Modal isOpen={isCoverageModalOpen} onClose={() => setIsCoverageModalOpen(false)} title={`Historical Coverage Baseline: ${activeCourseForCoverage?.course_type}`} size="lg">
+                    <Modal isOpen={isCoverageModalOpen} onClose={() => setIsCoverageModalOpen(false)} title={t('compiled_reports.compiled.modal.title', 'Historical Coverage Baseline: {{type}}', { type: activeCourseForCoverage?.course_type })} size="lg">
                         <div className="p-4 sm:p-6 space-y-4">
                             {isPreviewLoading ? (
                                 <div className="flex flex-col items-center justify-center p-8">
                                     <Spinner size="lg" />
-                                    <p className="mt-4 text-sky-700 font-semibold text-center">Calculating historical baseline coverage from facility snapshots...</p>
+                                    <p className="mt-4 text-sky-700 font-semibold text-center">{t('compiled_reports.compiled.modal.calculating', 'Calculating historical baseline coverage from facility snapshots...')}</p>
                                 </div>
                             ) : historicalCoveragePreview ? (
                                 <div>
                                     <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg mb-4 text-sm">
-                                        <strong>Retrieved At:</strong> {new Date(historicalCoveragePreview.retrievedAt).toLocaleString()}
+                                        <strong>{t('compiled_reports.compiled.modal.retrieved_at', 'Retrieved At:')}</strong> {new Date(historicalCoveragePreview.retrievedAt).toLocaleString()}
                                         <br /><br />
-                                        Please review the fully calculated baseline coverage below. Confirming will permanently save this snapshot to the course.
+                                        {t('compiled_reports.compiled.modal.review_hint', 'Please review the fully calculated baseline coverage below. Confirming will permanently save this snapshot to the course.')}
                                     </div>
                                     
                                     <div className="overflow-x-auto max-h-[50vh] border rounded-lg shadow-sm">
-                                        <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
+                                        <Table headers={[t('compiled_reports.compiled.modal.level_name', 'Level / Name'), t('compiled_reports.compiled.modal.total_phc', 'Total Functioning PHCs'), t('compiled_reports.compiled.modal.phc_before', 'PHCs w/ IMNCI (Before)'), t('compiled_reports.compiled.modal.cov_before', 'Coverage Before'), t('compiled_reports.compiled.modal.new_phc', 'New PHCs w/ IMNCI'), t('compiled_reports.compiled.modal.cov_after', 'Coverage After'), t('compiled_reports.compiled.modal.increase', 'Increase')]}>
                                             {historicalCoveragePreview.localityCoverage.map(l => (
                                                 <tr key={`prev-loc-${l.name}`} className="hover:bg-gray-50">
-                                                    <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">Locality: {l.name}</td>
+                                                    <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">{t('compiled_reports.compiled.modal.locality_row', 'Locality: {{name}}', { name: l.name })}</td>
                                                     <td className="p-2 border text-center">{l.totalPhc}</td>
                                                     <td className="p-2 border text-center">{l.phcWithImnciBefore}</td>
                                                     <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(l.covBefore)}</td>
@@ -809,7 +811,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                                             ))}
                                             {historicalCoveragePreview.stateCoverage.map(s => (
                                                 <tr key={`prev-state-${s.name}`} className="hover:bg-gray-50 bg-gray-50/50">
-                                                    <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">State: {s.name}</td>
+                                                    <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">{t('compiled_reports.compiled.modal.state_row', 'State: {{name}}', { name: s.name })}</td>
                                                     <td className="p-2 border text-center">{s.totalPhc}</td>
                                                     <td className="p-2 border text-center">{s.phcWithImnciBefore}</td>
                                                     <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(s.covBefore)}</td>
@@ -819,7 +821,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                                                 </tr>
                                             ))}
                                             <tr className="hover:bg-gray-50 bg-sky-50">
-                                                <td className="p-2 border font-bold text-gray-900 min-w-[150px]">National (Sudan Overall)</td>
+                                                <td className="p-2 border font-bold text-gray-900 min-w-[150px]">{t('compiled_reports.compiled.modal.national', 'National (Sudan Overall)')}</td>
                                                 <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.totalPhc}</td>
                                                 <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.phcWithImnciBefore}</td>
                                                 <td className="p-2 border text-center font-bold text-gray-700">{fmtPct(historicalCoveragePreview.nationalCov.covBefore)}</td>
@@ -831,14 +833,14 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                                     </div>
                                     
                                     <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6 pt-4 border-t w-full">
-                                        <Button variant="secondary" onClick={() => setIsCoverageModalOpen(false)} disabled={isSavingCoverage} className="w-full sm:w-auto">Cancel</Button>
+                                        <Button variant="secondary" onClick={() => setIsCoverageModalOpen(false)} disabled={isSavingCoverage} className="w-full sm:w-auto">{t('compiled_reports.compiled.modal.cancel', 'Cancel')}</Button>
                                         <Button onClick={handleConfirmCoverage} disabled={isSavingCoverage} className="w-full sm:w-auto">
-                                            {isSavingCoverage ? <Spinner size="sm" /> : "Confirm & Save"}
+                                            {isSavingCoverage ? <Spinner size="sm" /> : t('compiled_reports.compiled.modal.confirm_save', 'Confirm & Save')}
                                         </Button>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center p-4 text-red-500">Failed to load preview.</div>
+                                <div className="text-center p-4 text-red-500">{t('compiled_reports.compiled.modal.preview_failed', 'Failed to load preview.')}</div>
                             )}
                         </div>
                     </Modal>

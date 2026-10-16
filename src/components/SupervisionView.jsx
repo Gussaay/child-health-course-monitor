@@ -371,7 +371,11 @@ const toneFor = (v) => {
 // The assessment form
 // =============================================================================
 
+const GROUP_KEYS = { 'IPC programme': 'ipc_programme', 'IPC guideline': 'ipc_guideline', 'Training': 'training', 'Surveillance': 'surveillance' };
+const itemKey = (item) => item.id.replace(/^l[23]_/, '');
+
 function SectionEditor({ section, values, onChange, readOnly }) {
+    const { t } = useTranslation();
     const set = (itemId, field, value) => onChange(itemId, { ...(values[itemId] || {}), [field]: value });
 
     const grouped = useMemo(() => {
@@ -387,45 +391,45 @@ function SectionEditor({ section, values, onChange, readOnly }) {
 
     const headerFor = () => {
         switch (section.type) {
-            case 'staff': return ['Name', 'Contact'];
-            case 'yesno': return ['Available'];
-            case 'present_action': return ['Present', 'Action needed'];
-            case 'present_number': return ['Present', 'Number registered'];
-            case 'standard_available_need': return ['Standard', 'Available', 'Needed'];
-            default: return ['Available', 'Need'];
+            case 'staff': return [t('trackers.supervision.cols.name', 'Name'), t('trackers.supervision.cols.contact', 'Contact')];
+            case 'yesno': return [t('trackers.supervision.cols.available', 'Available')];
+            case 'present_action': return [t('trackers.supervision.cols.present', 'Present'), t('trackers.supervision.cols.action', 'Action needed')];
+            case 'present_number': return [t('trackers.supervision.cols.present', 'Present'), t('trackers.supervision.cols.number', 'Number registered')];
+            case 'standard_available_need': return [t('trackers.supervision.cols.standard', 'Standard'), t('trackers.supervision.cols.available', 'Available'), t('trackers.supervision.cols.needed', 'Needed')];
+            default: return [t('trackers.supervision.cols.available', 'Available'), t('trackers.supervision.cols.need', 'Need')];
         }
     };
 
     return (
         <div className="space-y-2">
             <div className="flex items-baseline justify-between gap-2">
-                <h4 className="font-semibold text-slate-800">{section.title}</h4>
+                <h4 className="font-semibold text-slate-800">{t(`trackers.supervision.sections.${section.id}`, section.title)}</h4>
                 {(() => {
                     const s = scoreSection(section, values);
                     if (!s) return null;
                     return (
                         <div className="flex gap-2 text-xs">
                             <span className={`px-2 py-0.5 rounded ${toneFor(s.presencePercent)}`}>
-                                present {pctText(s.presencePercent)}
+                                {t('trackers.supervision.score.present', 'present {{pct}}', { pct: pctText(s.presencePercent) })}
                             </span>
                             {s.adequacyPercent != null && (
                                 <span className={`px-2 py-0.5 rounded ${toneFor(s.adequacyPercent)}`}>
-                                    vs standard {pctText(s.adequacyPercent)}
+                                    {t('trackers.supervision.score.vs_standard', 'vs standard {{pct}}', { pct: pctText(s.adequacyPercent) })}
                                 </span>
                             )}
                             <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                                {s.answered}/{s.total} answered
+                                {t('trackers.supervision.score.answered', '{{answered}}/{{total}} answered', { answered: s.answered, total: s.total })}
                             </span>
                         </div>
                     );
                 })()}
             </div>
 
-            {section.note && <p className="text-xs text-gray-500">{section.note}</p>}
+            {section.note && <p className="text-xs text-gray-500">{t(`trackers.supervision.notes.${section.id}`, section.note)}</p>}
 
             <div className="border rounded overflow-hidden">
                 <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-100 text-xs font-semibold text-gray-700">
-                    <div className="col-span-5">Item</div>
+                    <div className="col-span-5">{t('trackers.supervision.cols.item', 'Item')}</div>
                     {headerFor().map((h, i) => (
                         <div key={h} className={i === 0 && headerFor().length === 3 ? 'col-span-2' : 'col-span-3'}>{h}</div>
                     ))}
@@ -435,14 +439,14 @@ function SectionEditor({ section, values, onChange, readOnly }) {
                     <React.Fragment key={bi}>
                         {block.group && (
                             <div className="px-3 py-1 bg-slate-50 text-xs font-semibold text-slate-600 border-t">
-                                {block.group}
+                                {GROUP_KEYS[block.group] ? t(`trackers.supervision.groups.${GROUP_KEYS[block.group]}`, block.group) : block.group}
                             </div>
                         )}
                         {block.items.map((item) => {
                             const v = values[item.id] || {};
                             return (
                                 <div key={item.id} className="grid grid-cols-12 gap-2 px-3 py-1.5 border-t items-center text-sm">
-                                    <div className="col-span-5 text-gray-800">{item.label}</div>
+                                    <div className="col-span-5 text-gray-800">{t(`trackers.supervision.items.${itemKey(item)}`, item.label)}</div>
 
                                     {section.type === 'staff' && (
                                         <>
@@ -467,8 +471,8 @@ function SectionEditor({ section, values, onChange, readOnly }) {
                                                     e.target.value === '' ? undefined : e.target.value === 'yes')}
                                                 className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50">
                                                 <option value="">—</option>
-                                                <option value="yes">Yes</option>
-                                                <option value="no">No</option>
+                                                <option value="yes">{t('trackers.supervision.yes', 'Yes')}</option>
+                                                <option value="no">{t('trackers.supervision.no', 'No')}</option>
                                             </select>
                                         </div>
                                     )}
@@ -482,8 +486,8 @@ function SectionEditor({ section, values, onChange, readOnly }) {
                                                         e.target.value === '' ? undefined : e.target.value === 'yes')}
                                                     className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50">
                                                     <option value="">—</option>
-                                                    <option value="yes">Yes</option>
-                                                    <option value="no">No</option>
+                                                    <option value="yes">{t('trackers.supervision.yes', 'Yes')}</option>
+                                                    <option value="no">{t('trackers.supervision.no', 'No')}</option>
                                                 </select>
                                             </div>
                                             <div className="col-span-4">
@@ -528,6 +532,7 @@ function SectionEditor({ section, values, onChange, readOnly }) {
 }
 
 function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
+    const { t } = useTranslation();
     const [form, setForm] = useState(() => initial || {
         checklistId: checklist.id,
         service: checklist.service,
@@ -553,8 +558,8 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
     }, []);
 
     const save = async (status) => {
-        if (!form.facilityName?.trim()) { notify('Enter the hospital name.', 'error'); return; }
-        if (!form.stateKey) { notify('Choose the state.', 'error'); return; }
+        if (!form.facilityName?.trim()) { notify(t('trackers.supervision.form.err_hospital', 'Enter the hospital name.'), 'error'); return; }
+        if (!form.stateKey) { notify(t('trackers.supervision.form.err_state', 'Choose the state.'), 'error'); return; }
         setSaving(true);
         try {
             const payload = {
@@ -567,15 +572,15 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
                 },
             };
             await upsertSupervisionAssessment(payload);
-            notify(status === 'submitted' ? 'Assessment submitted.' : 'Draft saved.', 'success');
+            notify(status === 'submitted' ? t('trackers.supervision.form.submitted', 'Assessment submitted.') : t('trackers.supervision.form.draft_saved', 'Draft saved.'), 'success');
             onSaved();
             if (status === 'submitted') onBack();
         } catch (error) {
             console.error('Failed to save assessment:', error);
             const raw = String(error?.message || error);
             notify(/insufficient permissions|permission-denied/i.test(raw)
-                ? 'Firestore refused the write. Your account may not have supervision rights.'
-                : `Could not save the assessment. ${raw}`, 'error');
+                ? t('trackers.supervision.form.permission_denied', 'Firestore refused the write. Your account may not have supervision rights.')
+                : t('trackers.supervision.form.save_failed', 'Could not save the assessment. {{error}}', { error: raw }), 'error');
         } finally {
             setSaving(false);
         }
@@ -587,15 +592,15 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
         <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <Button variant="secondary" onClick={onBack}>
-                    <ArrowLeft size={16} /> Back to assessments
+                    <ArrowLeft size={16} /> {t('trackers.supervision.form.back', 'Back to assessments')}
                 </Button>
                 {canEdit && (
                     <div className="flex gap-2">
                         <Button variant="secondary" onClick={() => save('draft')} disabled={saving}>
-                            <Save size={16} /> Save draft
+                            <Save size={16} /> {t('trackers.supervision.form.save_draft', 'Save draft')}
                         </Button>
                         <Button onClick={() => save('submitted')} disabled={saving}>
-                            Submit assessment
+                            {t('trackers.supervision.form.submit', 'Submit assessment')}
                         </Button>
                     </div>
                 )}
@@ -603,37 +608,37 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
 
             <Card>
                 <CardBody className="space-y-4">
-                    <h3 className="font-semibold text-slate-800">{checklist.title}</h3>
+                    <h3 className="font-semibold text-slate-800">{t(`trackers.supervision.checklists.${checklist.id}`, checklist.title)}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        <Select label="State" value={form.stateKey} disabled={readOnly}
+                        <Select label={t('trackers.supervision.state', 'State')} value={form.stateKey} disabled={readOnly}
                             onChange={(e) => setForm((p) => ({ ...p, stateKey: e.target.value, localityKey: '' }))}>
-                            <option value="">Select…</option>
+                            <option value="">{t('trackers.supervision.select', 'Select…')}</option>
                             {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal')
                                 .map((k) => <option key={k} value={k}>{STATE_LOCALITIES[k].en}</option>)}
                         </Select>
-                        <Select label="Locality" value={form.localityKey} disabled={readOnly || !form.stateKey}
+                        <Select label={t('trackers.supervision.locality', 'Locality')} value={form.localityKey} disabled={readOnly || !form.stateKey}
                             onChange={(e) => setField('localityKey', e.target.value)}>
-                            <option value="">Select…</option>
+                            <option value="">{t('trackers.supervision.select', 'Select…')}</option>
                             {(STATE_LOCALITIES[form.stateKey]?.localities || [])
                                 .map((l) => <option key={l.en} value={l.en}>{l.en}</option>)}
                         </Select>
-                        <Input label="Hospital name" value={form.facilityName} disabled={readOnly}
+                        <Input label={t('trackers.supervision.form.hospital_name', 'Hospital name')} value={form.facilityName} disabled={readOnly}
                             onChange={(e) => setField('facilityName', e.target.value)} />
-                        <Input label="Assessment date" type="date" value={form.assessmentDate} disabled={readOnly}
+                        <Input label={t('trackers.supervision.form.date', 'Assessment date')} type="date" value={form.assessmentDate} disabled={readOnly}
                             onChange={(e) => setField('assessmentDate', e.target.value)} />
                     </div>
-                    <Input label="Assessor name" value={form.assessorName || ''} disabled={readOnly}
+                    <Input label={t('trackers.supervision.form.assessor', 'Assessor name')} value={form.assessorName || ''} disabled={readOnly}
                         onChange={(e) => setField('assessorName', e.target.value)} />
 
                     <div className="flex flex-wrap gap-2 text-sm">
                         <span className={`px-2 py-1 rounded ${toneFor(score.completionPercent)}`}>
-                            completed {pctText(score.completionPercent)}
+                            {t('trackers.supervision.score.completed', 'completed {{pct}}', { pct: pctText(score.completionPercent) })}
                         </span>
                         <span className={`px-2 py-1 rounded ${toneFor(score.presencePercent)}`}>
-                            present {pctText(score.presencePercent)}
+                            {t('trackers.supervision.score.present', 'present {{pct}}', { pct: pctText(score.presencePercent) })}
                         </span>
                         <span className="px-2 py-1 rounded bg-slate-100 text-slate-600">
-                            {score.answered} of {score.total} items answered
+                            {t('trackers.supervision.score.items_answered', '{{answered}} of {{total}} items answered', { answered: score.answered, total: score.total })}
                         </span>
                     </div>
                 </CardBody>
@@ -643,7 +648,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit }) {
                 <CardBody className="space-y-4">
                     <div className="overflow-x-auto">
                         <Tabs
-                            tabs={checklist.sections.map((s) => ({ id: s.id, label: s.title }))}
+                            tabs={checklist.sections.map((s) => ({ id: s.id, label: t(`trackers.supervision.sections.${s.id}`, s.title) }))}
                             activeTab={activeSection}
                             onTabChange={setActiveSection}
                         />
@@ -670,7 +675,7 @@ const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 const DELETED_TAB = '__deleted';
 
 export default function SupervisionView({ permissions = {} }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const canEdit = !!(permissions.canManageSupervision ?? permissions.canUseFederalManagerAdvancedFeatures);
 
@@ -699,18 +704,18 @@ export default function SupervisionView({ permissions = {} }) {
 
     const handleDelete = async (row) => {
         const ok = await confirmDialog(
-            `Delete the assessment for ${row.facilityName}?`,
-            { title: 'Delete assessment', confirmLabel: 'Delete', danger: true }
+            t('trackers.supervision.delete_confirm', 'Delete the assessment for {{name}}?', { name: row.facilityName }),
+            { title: t('trackers.supervision.delete_title', 'Delete assessment'), confirmLabel: t('trackers.supervision.delete', 'Delete'), danger: true }
         );
         if (!ok) return;
         try {
             await deleteSupervisionAssessment(row.id);
-            notify('Assessment deleted.', 'success');
+            notify(t('trackers.supervision.deleted', 'Assessment deleted.'), 'success');
             // A soft delete stamps lastUpdatedAt, so the delta sync is enough.
             fetchSupervisionAssessments('sync');
         } catch (error) {
             console.error('Failed to delete assessment:', error);
-            notify('Could not delete the assessment.', 'error');
+            notify(t('trackers.supervision.delete_failed', 'Could not delete the assessment.'), 'error');
         }
     };
 
@@ -726,17 +731,17 @@ export default function SupervisionView({ permissions = {} }) {
         );
     }
 
-    const headers = ['Date', 'Hospital', 'State', 'Status', 'Completed', 'Present',
-        ...(canEdit ? ['Actions'] : [])];
+    const headers = [t('trackers.supervision.table.date', 'Date'), t('trackers.supervision.table.hospital', 'Hospital'), t('trackers.supervision.state', 'State'), t('trackers.supervision.table.status', 'Status'), t('trackers.supervision.table.completed', 'Completed'), t('trackers.supervision.table.present', 'Present'),
+        ...(canEdit ? [t('trackers.supervision.table.actions', 'Actions')] : [])];
 
     return (
         <div className="space-y-4">
             <PageHeader
-                title="Supervision"
-                subtitle="Facility assessment checklists by service"
+                title={t('trackers.supervision.title', 'Supervision')}
+                subtitle={t('trackers.supervision.subtitle', 'Facility assessment checklists by service')}
                 actions={canEdit ? (
                     <Button onClick={() => setEditing({ checklistId })}>
-                        <Plus size={16} /> New assessment
+                        <Plus size={16} /> {t('trackers.supervision.new', 'New assessment')}
                     </Button>
                 ) : null}
             />
@@ -749,7 +754,7 @@ export default function SupervisionView({ permissions = {} }) {
                                 id: c.id,
                                 label: `${c.service} · ${isArabic ? c.titleAr : c.title}`,
                             })),
-                            ...(canEmptyBin ? [{ id: DELETED_TAB, label: 'Deleted Items' }] : []),
+                            ...(canEmptyBin ? [{ id: DELETED_TAB, label: t('trackers.supervision.deleted_items', 'Deleted Items') }] : []),
                         ]}
                         activeTab={showDeleted ? DELETED_TAB : checklistId}
                         onTabChange={(id) => {
@@ -766,8 +771,8 @@ export default function SupervisionView({ permissions = {} }) {
                     ) : (<>
 
                     <div className="w-56">
-                        <Select label="State" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
-                            <option value="all">All states</option>
+                        <Select label={t('trackers.supervision.state', 'State')} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+                            <option value="all">{t('trackers.supervision.all_states', 'All states')}</option>
                             {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal')
                                 .map((k) => <option key={k} value={k}>{STATE_LOCALITIES[k].en}</option>)}
                         </Select>
@@ -777,7 +782,7 @@ export default function SupervisionView({ permissions = {} }) {
                         <Table headers={headers}>
                             {rows.length === 0 ? (
                                 <EmptyState colSpan={headers.length}
-                                    message="No assessments yet. Use New assessment to start one." />
+                                    message={t('trackers.supervision.empty', 'No assessments yet. Use New assessment to start one.')} />
                             ) : rows.map((row) => (
                                 <tr key={row.id}>
                                     <td className="text-gray-600">{row.assessmentDate || '—'}</td>
@@ -790,7 +795,7 @@ export default function SupervisionView({ permissions = {} }) {
                                             row.status === 'submitted'
                                                 ? 'bg-green-100 text-green-800'
                                                 : 'bg-amber-100 text-amber-800'}`}>
-                                            {row.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                            {row.status === 'submitted' ? t('trackers.supervision.status.submitted', 'Submitted') : t('trackers.supervision.status.draft', 'Draft')}
                                         </span>
                                     </td>
                                     <td className="text-gray-600">{pctText(row.summary?.completionPercent)}</td>

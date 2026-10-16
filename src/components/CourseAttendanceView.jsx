@@ -16,6 +16,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { amiriFontBase64 } from './AmiriFont.js';
 import { notify, confirmDialog, promptDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // --- Helper Functions ---
 
@@ -47,7 +48,7 @@ const getStatusDetails = (attended, totalSessions) => {
     }
 };
 
-const generateAttendanceReportPdf = async (course, participants, columns, onSuccess, onError) => {
+const generateAttendanceReportPdf = async (course, participants, columns, onSuccess, onError, t) => {
     try {
         const doc = new jsPDF('landscape'); 
         
@@ -229,22 +230,24 @@ const generateAttendanceReportPdf = async (course, participants, columns, onSucc
             const base64Data = doc.output('datauristring').split('base64,')[1];
             const writeResult = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Downloads });
             await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
-            if (onSuccess) onSuccess(`PDF saved to Downloads folder: ${fileName}`);
+            if (onSuccess) onSuccess(t('course_tests.attendance.pdf_saved', 'PDF saved to Downloads folder: {{fileName}}', { fileName }));
         } else {
             doc.save(fileName);
-            if (onSuccess) onSuccess("PDF download initiated.");
+            if (onSuccess) onSuccess(t('course_tests.attendance.pdf_download_started', 'PDF download initiated.'));
         }
 
     } catch (error) {
         console.error("Error generating attendance report:", error);
-        if (onError) onError("Failed to generate report: " + error.message);
-        else notify("Failed to generate report: " + error.message);
+        const msg = t('course_tests.attendance.pdf_failed', 'Failed to generate report: {{message}}', { message: error.message });
+        if (onError) onError(msg);
+        else notify(msg);
     }
 };
 
 // --- Component: AttendanceManagerView (Dashboard for Managers) ---
 
 export function AttendanceManagerView({ course, onClose }) {
+    const { t } = useTranslation();
     const [participants, setParticipants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -260,13 +263,13 @@ export function AttendanceManagerView({ course, onClose }) {
                 setParticipants(data || []);
             } catch (err) {
                 console.error(err);
-                notify("Failed to load participants.");
+                notify(t('course_tests.attendance.load_participants_failed', 'Failed to load participants.'));
             } finally {
                 setLoading(false);
             }
         };
         loadData();
-    }, [course.id]);
+    }, [course.id, t]);
 
     const sessionDates = useMemo(() => {
         const dates = new Set(manualDates);
@@ -312,7 +315,7 @@ export function AttendanceManagerView({ course, onClose }) {
             }
         } catch (err) {
             console.error("Failed to update attendance:", err);
-            notify("Failed to save attendance change.");
+            notify(t('course_tests.attendance.save_change_failed', 'Failed to save attendance change.'));
             setParticipants(prev => prev.map(p => 
                 p.id === participant.id ? participant : p 
             ));
@@ -320,7 +323,7 @@ export function AttendanceManagerView({ course, onClose }) {
     };
 
     const handleDeleteDate = async (dateToDelete) => {
-        if (!await confirmDialog(`Are you sure you want to remove ${dateToDelete}? This will remove attendance records for this date from ALL participants.`)) return;
+        if (!await confirmDialog(t('course_tests.attendance.confirm_remove_date', 'Are you sure you want to remove {{date}}? This will remove attendance records for this date from ALL participants.', { date: dateToDelete }))) return;
         
         setUpdating(true);
         try {
@@ -347,17 +350,17 @@ export function AttendanceManagerView({ course, onClose }) {
 
         } catch (err) {
             console.error(err);
-            notify("Failed to delete date.");
+            notify(t('course_tests.attendance.delete_date_failed', 'Failed to delete date.'));
         } finally {
             setUpdating(false);
         }
     };
 
     const handleEditDate = async (oldDate) => {
-        const newDate = await promptDialog("Enter new date", { title: "Change session date", defaultValue: oldDate, inputType: "date" });
+        const newDate = await promptDialog(t('course_tests.attendance.enter_new_date', 'Enter new date'), { title: t('course_tests.attendance.change_session_date', 'Change session date'), defaultValue: oldDate, inputType: "date" });
         if (!newDate || newDate === oldDate) return;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
-            notify("Invalid date format. Use YYYY-MM-DD");
+            notify(t('course_tests.attendance.invalid_date_format_hint', 'Invalid date format. Use YYYY-MM-DD'));
             return;
         }
 
@@ -384,7 +387,7 @@ export function AttendanceManagerView({ course, onClose }) {
 
         } catch (err) {
             console.error(err);
-            notify("Failed to edit date.");
+            notify(t('course_tests.attendance.edit_date_failed', 'Failed to edit date.'));
         } finally {
             setUpdating(false);
         }
@@ -392,14 +395,14 @@ export function AttendanceManagerView({ course, onClose }) {
 
     const handleAddColumn = async () => {
         const today = new Date().toISOString().split('T')[0];
-        const newDate = await promptDialog("Session date", { title: "Add a session date", defaultValue: today, inputType: "date" });
+        const newDate = await promptDialog(t('course_tests.attendance.session_date', 'Session date'), { title: t('course_tests.attendance.add_session_date', 'Add a session date'), defaultValue: today, inputType: "date" });
         if (newDate) {
             if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
-                notify("Invalid date format.");
+                notify(t('course_tests.attendance.invalid_date_format', 'Invalid date format.'));
                 return;
             }
             if (sessionDates.includes(newDate)) {
-                notify("Date already exists.");
+                notify(t('course_tests.attendance.date_exists', 'Date already exists.'));
                 return;
             }
             setManualDates(prev => [...prev, newDate]);
@@ -414,7 +417,8 @@ export function AttendanceManagerView({ course, onClose }) {
             participants, 
             sessionDates,
             (msg) => { notify(msg); setIsPdfGenerating(false); },
-            (msg) => { notify(msg); setIsPdfGenerating(false); }
+            (msg) => { notify(msg); setIsPdfGenerating(false); },
+            t
         );
     };
 
@@ -430,13 +434,20 @@ export function AttendanceManagerView({ course, onClose }) {
         return { date, count };
     });
 
+    const statusLabel = (text) => ({
+        Excellent: t('course_tests.attendance.status.excellent', 'Excellent'),
+        Adequate: t('course_tests.attendance.status.adequate', 'Adequate'),
+        Poor: t('course_tests.attendance.status.poor', 'Poor'),
+        'Not Accepted': t('course_tests.attendance.status.not_accepted', 'Not Accepted'),
+    })[text] || text;
+
     if (loading) return <div className="p-8 flex justify-center"><Spinner /></div>;
 
     return (
         <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm">
             <div className="p-2 md:p-4 border-b flex flex-wrap justify-between items-center bg-gray-50 gap-2 md:gap-4">
                 <div>
-                    <h3 className="text-base md:text-lg font-bold text-gray-800">Attendance Dashboard</h3>
+                    <h3 className="text-base md:text-lg font-bold text-gray-800">{t('course_tests.attendance.dashboard_title', 'Attendance Dashboard')}</h3>
                     <p className="text-xs md:text-sm text-gray-500">{course.course_type} - {course.state}</p>
                 </div>
                 <div className="flex items-center gap-1 md:gap-2">
@@ -445,18 +456,18 @@ export function AttendanceManagerView({ course, onClose }) {
                         <Input 
                             value={searchTerm} 
                             onChange={(e) => setSearchTerm(e.target.value)} 
-                            placeholder="Search..." 
+                            placeholder={t('course_tests.attendance.search', 'Search...')} 
                             className="pl-7 md:pl-9 w-28 md:w-60 text-xs md:text-sm py-1"
                         />
                     </div>
                     <Button variant="primary" onClick={handleAddColumn} size="sm" className="px-2 md:px-3 text-xs md:text-sm">
-                        <PlusCircle className="w-3 h-3 md:w-4 md:h-4 md:mr-1" /> <span className="hidden md:inline">Add Session</span>
+                        <PlusCircle className="w-3 h-3 md:w-4 md:h-4 md:mr-1" /> <span className="hidden md:inline">{t('course_tests.attendance.add_session', 'Add Session')}</span>
                     </Button>
                     <Button variant="secondary" onClick={handleGeneratePdf} disabled={isPdfGenerating} size="sm" className="px-2 md:px-3 text-xs md:text-sm">
                         {isPdfGenerating ? <Spinner size="sm" className="md:mr-1" /> : <Download className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />}
-                        <span className="hidden md:inline">{isPdfGenerating ? 'Generating...' : 'PDF'}</span>
+                        <span className="hidden md:inline">{isPdfGenerating ? t('course_tests.attendance.generating', 'Generating...') : 'PDF'}</span>
                     </Button>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 ml-1 md:ml-2">
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 ml-1 md:ml-2" title={t('course_tests.attendance.close', 'Close')} aria-label={t('course_tests.attendance.close', 'Close')}>
                         <X className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
                 </div>
@@ -465,44 +476,44 @@ export function AttendanceManagerView({ course, onClose }) {
             <div className="p-2 md:p-4 grid grid-cols-3 gap-2 md:gap-4 border-b">
                 <div className="bg-blue-50 p-2 md:p-4 rounded-lg border border-blue-100 text-center">
                     <div className="text-lg md:text-2xl font-bold text-blue-700">{totalParticipants}</div>
-                    <div className="text-[10px] md:text-xs text-blue-600 uppercase font-semibold leading-tight">Total Participants</div>
+                    <div className="text-[10px] md:text-xs text-blue-600 uppercase font-semibold leading-tight">{t('course_tests.attendance.total_participants', 'Total Participants')}</div>
                 </div>
                 <div className="bg-green-50 p-2 md:p-4 rounded-lg border border-green-100 text-center">
                     <div className="text-lg md:text-2xl font-bold text-green-700">{avgAttendance.toFixed(1)}%</div>
-                    <div className="text-[10px] md:text-xs text-green-600 uppercase font-semibold leading-tight">Avg. Rate</div>
+                    <div className="text-[10px] md:text-xs text-green-600 uppercase font-semibold leading-tight">{t('course_tests.attendance.avg_rate', 'Avg. Rate')}</div>
                 </div>
                 <div className="bg-purple-50 p-2 md:p-4 rounded-lg border border-purple-100 text-center">
                     <div className="text-lg md:text-2xl font-bold text-purple-700">{totalSessions}</div>
-                    <div className="text-[10px] md:text-xs text-purple-600 uppercase font-semibold leading-tight">Sessions</div>
+                    <div className="text-[10px] md:text-xs text-purple-600 uppercase font-semibold leading-tight">{t('course_tests.attendance.sessions', 'Sessions')}</div>
                 </div>
             </div>
 
             <div className="flex-grow p-1 md:p-4 overflow-x-hidden">
-                {updating && <div className="text-center text-xs md:text-sm text-blue-600 mb-2 font-semibold">Updating records...</div>}
+                {updating && <div className="text-center text-xs md:text-sm text-blue-600 mb-2 font-semibold">{t('course_tests.attendance.updating', 'Updating records...')}</div>}
                 
                 {sessionDates.length === 0 ? (
-                    <EmptyState message="No attendance sessions recorded yet. Click 'Add Session' to start." />
+                    <EmptyState message={t('course_tests.attendance.empty', "No attendance sessions recorded yet. Click 'Add Session' to start.")} />
                 ) : (
                     <table className="w-full text-left border-collapse table-auto border border-gray-200">
                         <thead className="bg-gray-100">
                             <tr>
                                 <th className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase w-6 md:w-8">#</th>
-                                <th className="p-1 border text-[10px] md:text-xs font-medium text-gray-500 uppercase w-1/4">Participant</th>
-                                <th className="p-1 border text-[10px] md:text-xs font-medium text-gray-500 uppercase w-1/4">Details</th>
+                                <th className="p-1 border text-[10px] md:text-xs font-medium text-gray-500 uppercase w-1/4">{t('course_tests.attendance.table.participant', 'Participant')}</th>
+                                <th className="p-1 border text-[10px] md:text-xs font-medium text-gray-500 uppercase w-1/4">{t('course_tests.attendance.table.details', 'Details')}</th>
                                 {sessionDates.map((date, idx) => (
                                     <th key={date} className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase relative group" title={date}>
                                         <div className="flex flex-col items-center">
                                             <span>S{idx + 1}</span>
                                             <span className="text-[8px] md:text-[9px] text-gray-400 font-normal leading-tight whitespace-nowrap">{date}</span>
                                             <div className="absolute top-0 right-0 flex opacity-0 group-hover:opacity-100 transition-opacity bg-white border rounded shadow-sm scale-75 md:scale-90 z-20">
-                                                <button onClick={() => handleEditDate(date)} className="p-1 text-blue-500 hover:bg-blue-50"><Edit2 className="w-3 h-3" /></button>
-                                                <button onClick={() => handleDeleteDate(date)} className="p-1 text-red-500 hover:bg-red-50"><Trash2 className="w-3 h-3" /></button>
+                                                <button onClick={() => handleEditDate(date)} className="p-1 text-blue-500 hover:bg-blue-50" title={t('course_tests.attendance.edit_date', 'Edit date')}><Edit2 className="w-3 h-3" /></button>
+                                                <button onClick={() => handleDeleteDate(date)} className="p-1 text-red-500 hover:bg-red-50" title={t('course_tests.attendance.delete_date', 'Delete date')}><Trash2 className="w-3 h-3" /></button>
                                             </div>
                                         </div>
                                     </th>
                                 ))}
-                                <th className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase w-10 md:w-16">Total</th>
-                                <th className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase w-12 md:w-20">Status</th>
+                                <th className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase w-10 md:w-16">{t('course_tests.attendance.table.total', 'Total')}</th>
+                                <th className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase w-12 md:w-20">{t('course_tests.attendance.table.status', 'Status')}</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white">
@@ -545,7 +556,7 @@ export function AttendanceManagerView({ course, onClose }) {
                                         </td>
                                         <td className="p-1 border text-center font-bold bg-gray-50 align-middle">
                                             <span className={`px-1 py-0.5 rounded border text-[8px] md:text-xs inline-block text-center leading-tight break-words max-w-full ${status.class}`}>
-                                                {status.text}
+                                                {statusLabel(status.text)}
                                             </span>
                                         </td>
                                     </tr>
@@ -554,7 +565,7 @@ export function AttendanceManagerView({ course, onClose }) {
                         </tbody>
                         <tfoot className="bg-gray-50 font-semibold shadow-inner">
                             <tr>
-                                <td colSpan="3" className="p-1 border text-right text-[10px] md:text-xs text-gray-600 uppercase">Daily Presence:</td>
+                                <td colSpan="3" className="p-1 border text-right text-[10px] md:text-xs text-gray-600 uppercase">{t('course_tests.attendance.daily_presence', 'Daily Presence:')}</td>
                                 {dailyCounts.map((d, i) => <td key={i} className="p-1 border text-center text-[10px] md:text-xs text-gray-800">{d.count}</td>)}
                                 <td colSpan="2" className="p-1 border bg-gray-50"></td>
                             </tr>
@@ -569,6 +580,7 @@ export function AttendanceManagerView({ course, onClose }) {
 // --- Component: PublicAttendanceView (For Participants) ---
 
 export function PublicAttendanceView({ courseId }) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [course, setCourse] = useState(null);
@@ -582,7 +594,7 @@ export function PublicAttendanceView({ courseId }) {
     useEffect(() => {
         const checkDateAndLoadData = async () => {
             try {
-                if (!targetDate) throw new Error("No date specified in the link.");
+                if (!targetDate) throw new Error(t('course_tests.attendance.no_date_in_link', 'No date specified in the link.'));
                 const today = new Date().toISOString().split('T')[0];
                 if (today !== targetDate) {
                     setIsWrongDate(true);
@@ -590,7 +602,7 @@ export function PublicAttendanceView({ courseId }) {
                     return;
                 }
                 const courseData = await getCourseById(courseId, 'server');
-                if (!courseData) throw new Error("Course not found.");
+                if (!courseData) throw new Error(t('course_tests.attendance.course_not_found', 'Course not found.'));
                 setCourse(courseData);
                 const participantsData = await listAllParticipantsForCourse(courseId, 'server');
                 setParticipants(participantsData || []);
@@ -602,7 +614,7 @@ export function PublicAttendanceView({ courseId }) {
             }
         };
         if (courseId) checkDateAndLoadData();
-    }, [courseId, targetDate]);
+    }, [courseId, targetDate, t]);
 
     const handleConfirmAttendance = async (participantId) => {
         try {
@@ -616,7 +628,7 @@ export function PublicAttendanceView({ courseId }) {
                 return p;
             }));
         } catch (err) {
-            notify("Failed to mark attendance. Please try again.");
+            notify(t('course_tests.attendance.mark_failed', 'Failed to mark attendance. Please try again.'));
             console.error(err);
         }
     };
@@ -635,15 +647,15 @@ export function PublicAttendanceView({ courseId }) {
             <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
                 <Card className="max-w-md text-center p-8">
                     <div className="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4"><Clock className="h-8 w-8 text-red-600" /></div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">Link Expired or Invalid</h2>
-                    <p className="text-gray-600">This attendance form is only valid for <strong>{targetDate}</strong>.</p>
-                    <p className="text-sm text-gray-500 mt-4">Today is: {new Date().toISOString().split('T')[0]}</p>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">{t('course_tests.attendance.link_expired', 'Link Expired or Invalid')}</h2>
+                    <p className="text-gray-600">{t('course_tests.attendance.only_valid_for', 'This attendance form is only valid for')} <strong>{targetDate}</strong>.</p>
+                    <p className="text-sm text-gray-500 mt-4">{t('course_tests.attendance.today_is', 'Today is:')} {new Date().toISOString().split('T')[0]}</p>
                 </Card>
             </div>
         );
     }
 
-    if (error) return <EmptyState message={`Error: ${error}`} />;
+    if (error) return <EmptyState message={t('course_tests.attendance.error', 'Error: {{error}}', { error })} />;
 
     return (
         <div className="min-h-screen bg-gray-50 p-2 md:p-8">
@@ -651,11 +663,11 @@ export function PublicAttendanceView({ courseId }) {
                 <Card className="p-3 md:p-6 border-t-4 border-blue-500">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4">
                         <div>
-                            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Training Attendance</h1>
+                            <h1 className="text-xl md:text-2xl font-bold text-gray-900">{t('course_tests.attendance.public_title', 'Training Attendance')}</h1>
                             <p className="text-sm md:text-base text-gray-600">{course.course_type} - {course.state}</p>
                         </div>
                         <div className="text-right bg-blue-50 px-3 py-1.5 md:px-4 md:py-2 rounded-lg border border-blue-100">
-                            <span className="block text-[10px] md:text-xs text-blue-600 font-bold uppercase">Date</span>
+                            <span className="block text-[10px] md:text-xs text-blue-600 font-bold uppercase">{t('course_tests.attendance.date', 'Date')}</span>
                             <span className="text-base md:text-lg font-bold text-blue-900">{targetDate}</span>
                         </div>
                     </div>
@@ -665,7 +677,7 @@ export function PublicAttendanceView({ courseId }) {
                             <Input 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search by name..."
+                                placeholder={t('course_tests.attendance.search_by_name', 'Search by name...')}
                                 className="pl-9 md:pl-10 w-full text-sm"
                             />
                         </div>
@@ -677,12 +689,12 @@ export function PublicAttendanceView({ courseId }) {
                         <table className="w-full divide-y divide-gray-200 table-fixed">
                             <thead className="bg-gray-100">
                                 <tr>
-                                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[35%] md:w-[25%]">Name</th>
-                                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[20%] md:w-[15%]">State</th>
+                                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[35%] md:w-[25%]">{t('course_tests.attendance.table.name', 'Name')}</th>
+                                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[20%] md:w-[15%]">{t('course_tests.attendance.table.state', 'State')}</th>
                                     {/* Hide Facility and Status on Mobile */}
-                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider md:w-[30%]">Facility</th>
-                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider md:w-[15%]">Status</th>
-                                    <th className="px-2 py-2 md:px-4 md:py-3 text-right text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[45%] md:w-[15%]">Action</th>
+                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider md:w-[30%]">{t('course_tests.attendance.table.facility', 'Facility')}</th>
+                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider md:w-[15%]">{t('course_tests.attendance.table.status', 'Status')}</th>
+                                    <th className="px-2 py-2 md:px-4 md:py-3 text-right text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[45%] md:w-[15%]">{t('course_tests.attendance.table.action', 'Action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -695,8 +707,8 @@ export function PublicAttendanceView({ courseId }) {
                                             <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-500 break-words">{p.center_name || p.health_facility || p.facilityName || '-'}</td>
                                             <td className="hidden md:table-cell px-4 py-3 text-sm">
                                                 {isPresent ? 
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Present</span> : 
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">Pending</span>
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">{t('course_tests.attendance.present', 'Present')}</span> : 
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">{t('course_tests.attendance.pending', 'Pending')}</span>
                                                 }
                                             </td>
                                             <td className="px-2 py-2 md:px-4 md:py-3 text-right">
@@ -708,8 +720,8 @@ export function PublicAttendanceView({ courseId }) {
                                                     className={`text-[10px] md:text-sm px-2 py-1 md:px-3 md:py-1.5 ${isPresent ? "opacity-70 cursor-not-allowed bg-white border-gray-300 w-full" : "w-full"}`}
                                                 >
                                                     {isPresent ? (
-                                                        <span className="flex items-center justify-center"><CheckCircle className="w-3 h-3 md:w-4 md:h-4 mr-1 text-green-600" /> Confirmed</span>
-                                                    ) : "Confirm"}
+                                                        <span className="flex items-center justify-center"><CheckCircle className="w-3 h-3 md:w-4 md:h-4 mr-1 text-green-600" /> {t('course_tests.attendance.confirmed', 'Confirmed')}</span>
+                                                    ) : t('course_tests.attendance.confirm', 'Confirm')}
                                                 </Button>
                                             </td>
                                         </tr>
@@ -718,7 +730,7 @@ export function PublicAttendanceView({ courseId }) {
                             </tbody>
                         </table>
                         {filteredParticipants.length === 0 && (
-                            <div className="p-4 md:p-8 text-center text-sm text-gray-500">No participants found matching "{searchTerm}"</div>
+                            <div className="p-4 md:p-8 text-center text-sm text-gray-500">{t('course_tests.attendance.no_match', 'No participants found matching "{{term}}"', { term: searchTerm })}</div>
                         )}
                     </div>
                 </Card>

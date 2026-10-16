@@ -1,5 +1,6 @@
 // EENCSkillsAssessmentForm.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
 import {
@@ -494,6 +495,7 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
 
 
 export const EENCFormRenderer = ({ formData, setFormData, scores, handleFormChange, handleSkillChange }) => {
+    const { t } = useTranslation();
     const isCesarean = formData.delivery_type === 'cesarean';
 
     const activePrepItems = isCesarean ? [] : PREPARATION_ITEMS;
@@ -532,9 +534,9 @@ export const EENCFormRenderer = ({ formData, setFormData, scores, handleFormChan
                 <div className="p-6 text-center space-y-6" dir="rtl">
                     <h3 className="text-lg font-bold text-sky-800 mb-4">الرجاء تحديد نوع الولادة أو المحاكاة لبدء التقييم</h3>
                     <div className="flex flex-col gap-4 max-w-sm mx-auto">
-                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'normal' }))} className="w-full justify-center text-lg py-3" variant="outline">NORMAL VAGINAL DELIVERY</Button>
-                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'cesarean' }))} className="w-full justify-center text-lg py-3" variant="outline">Caesarean section</Button>
-                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'manikin' }))} className="w-full justify-center text-lg py-3" variant="outline">manikin simulation</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'normal' }))} className="w-full justify-center text-lg py-3" variant="outline">{t('mentorship_extra.eenc_skills.delivery.normal', 'NORMAL VAGINAL DELIVERY')}</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'cesarean' }))} className="w-full justify-center text-lg py-3" variant="outline">{t('mentorship_extra.eenc_skills.delivery.cesarean', 'Caesarean section')}</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({ ...prev, delivery_type: 'manikin' }))} className="w-full justify-center text-lg py-3" variant="outline">{t('mentorship_extra.eenc_skills.delivery.manikin', 'manikin simulation')}</Button>
                     </div>
                 </div>
             </Modal>
@@ -554,9 +556,9 @@ export const EENCFormRenderer = ({ formData, setFormData, scores, handleFormChan
                                 onChange={(e) => setFormData(prev => ({ ...prev, delivery_type: e.target.value }))}
                             >
                                 <option value="" disabled>اختر النوع</option>
-                                <option value="normal">NORMAL VAGINAL DELIVERY</option>
-                                <option value="cesarean">Caesarean section</option>
-                                <option value="manikin">manikin simulation</option>
+                                <option value="normal">{t('mentorship_extra.eenc_skills.delivery.normal', 'NORMAL VAGINAL DELIVERY')}</option>
+                                <option value="cesarean">{t('mentorship_extra.eenc_skills.delivery.cesarean', 'Caesarean section')}</option>
+                                <option value="manikin">{t('mentorship_extra.eenc_skills.delivery.manikin', 'manikin simulation')}</option>
                             </select>
                         </div>
                     </div>
@@ -622,6 +624,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         lastSessionDate = null, onDraftCreated, setIsMothersFormModalOpen, setIsDashboardModalOpen,
         setIsVisitReportModalOpen, draftCount, workerHistory = []
     } = props;
+    const { t } = useTranslation();
 
     const [formData, setFormData] = useState(() => existingSessionData ? rehydrateDraftData(existingSessionData) : getInitialFormData());
     const [isSaving, setIsSaving] = useState(false);
@@ -791,7 +794,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const handleSubmit = async (e, status = 'complete') => {
         if (e) e.preventDefault();
         const currentFormComplete = checkFormCompletion(formData);
-        if (status === 'complete' && !currentFormComplete) { setToast({ show: true, message: "Please complete all fields before saving.", type: 'error', duration: 10000 }); return; }
+        if (status === 'complete' && !currentFormComplete) { setToast({ show: true, message: t('mentorship_extra.eenc_skills.toast.incomplete', 'Please complete all fields before saving.'), type: 'error', duration: 10000 }); return; }
         const savingDraft = status === 'draft';
         if (savingDraft) setIsSavingDraft(true); else setIsSaving(true);
         try {
@@ -811,9 +814,9 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             if (payload.visitNumber > currentStoredMax) localStorage.setItem(offlineKey, payload.visitNumber.toString());
             const savedSessionId = await (onSaveOverride || saveMentorshipSession)(payload, sessionId);
             if (!sessionId && savedSessionId) { editingIdRef.current = savedSessionId; if (onDraftCreated) onDraftCreated({ ...payload, id: savedSessionId }); }
-            setToast({ show: true, message: `Saved ${status} successfully!`, type: 'success' });
+            setToast({ show: true, message: status === 'draft' ? t('mentorship_extra.eenc_skills.toast.saved_draft', 'Saved draft successfully!') : t('mentorship_extra.eenc_skills.toast.saved_complete', 'Saved complete successfully!'), type: 'success' });
             if (onSaveComplete) onSaveComplete(status, payload);
-        } catch (error) { setToast({ show: true, message: `Error: ${error.message}`, type: 'error' }); } 
+        } catch (error) { setToast({ show: true, message: t('mentorship_extra.eenc_skills.toast.error', 'Error: {{message}}', { message: error.message }), type: 'error' }); } 
         finally { setIsSaving(false); setIsSavingDraft(false); }
     };
 
@@ -853,9 +856,9 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 <div className="p-6 text-center space-y-6" dir="rtl">
                     <h3 className="text-lg font-bold text-sky-800 mb-4">الرجاء تحديد نوع الولادة أو المحاكاة لبدء التقييم</h3>
                     <div className="flex flex-col gap-4 max-w-sm mx-auto">
-                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'normal'}))} className="w-full justify-center text-lg py-3" variant="outline">NORMAL VAGINAL DELIVERY</Button>
-                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'cesarean'}))} className="w-full justify-center text-lg py-3" variant="outline">Caesarean section</Button>
-                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'manikin'}))} className="w-full justify-center text-lg py-3" variant="outline">manikin simulation</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'normal'}))} className="w-full justify-center text-lg py-3" variant="outline">{t('mentorship_extra.eenc_skills.delivery.normal', 'NORMAL VAGINAL DELIVERY')}</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'cesarean'}))} className="w-full justify-center text-lg py-3" variant="outline">{t('mentorship_extra.eenc_skills.delivery.cesarean', 'Caesarean section')}</Button>
+                        <Button type="button" onClick={() => setFormData(prev => ({...prev, delivery_type: 'manikin'}))} className="w-full justify-center text-lg py-3" variant="outline">{t('mentorship_extra.eenc_skills.delivery.manikin', 'manikin simulation')}</Button>
                     </div>
                 </div>
             </Modal>
@@ -886,9 +889,9 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                                         onChange={(e) => setFormData(prev => ({ ...prev, delivery_type: e.target.value }))}
                                     >
                                         <option value="" disabled>اختر النوع</option>
-                                        <option value="normal">NORMAL VAGINAL DELIVERY</option>
-                                        <option value="cesarean">Caesarean section</option>
-                                        <option value="manikin">manikin simulation</option>
+                                        <option value="normal">{t('mentorship_extra.eenc_skills.delivery.normal', 'NORMAL VAGINAL DELIVERY')}</option>
+                                        <option value="cesarean">{t('mentorship_extra.eenc_skills.delivery.cesarean', 'Caesarean section')}</option>
+                                        <option value="manikin">{t('mentorship_extra.eenc_skills.delivery.manikin', 'manikin simulation')}</option>
                                     </select>
                                 </div>
                                 <div className="text-sm flex items-center">

@@ -33,6 +33,7 @@ import {
     getTestSections, computeSectionScores, findParticipantTest, alignSectionScores
 } from './CourseTestForm'; 
 import { notify } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // EmONC test parts: colours used in the report (Part 1 EENC / Part 2 Newborn or Maternal)
 const REPORT_SECTION_STYLES = {
@@ -60,7 +61,7 @@ const PrintIcon = () => (
 );
 
 
-const saveJsPdfDoc = async (doc, fileName, onSuccess, onError) => {
+const saveJsPdfDoc = async (doc, fileName, onSuccess, onError, t) => {
     try {
         if (Capacitor.isNativePlatform()) {
             const base64Data = doc.output('datauristring').split('base64,')[1];
@@ -73,14 +74,14 @@ const saveJsPdfDoc = async (doc, fileName, onSuccess, onError) => {
                 filePath: writeResult.uri,
                 contentType: 'application/pdf',
             });
-            onSuccess(`PDF saved to Downloads folder: ${fileName}`);
+            onSuccess(t('reports_views.reports.pdf_saved_to', 'PDF saved to Downloads folder: {{fileName}}', { fileName }));
         } else {
             doc.save(fileName);
-            onSuccess("PDF download initiated.");
+            onSuccess(t('reports_views.reports.pdf_download_started', 'PDF download initiated.'));
         }
     } catch (e) {
         console.error("Error saving PDF:", e);
-        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
+        onError(t('reports_views.reports.pdf_save_failed', 'Failed to save PDF: {{error}}', { error: e.message || t('reports_views.reports.unknown_error', 'Unknown error') }));
     }
 };
 
@@ -141,6 +142,7 @@ const addCanvasToPdfOnePage = (doc, headerCanvas, groupCanvas, profile, margin, 
 };
 
 export function ReportsView({ course, participants, allObs: propAllObs, allCases: propAllCases, allTests: propAllTests, hideHeader }) {
+    const { t } = useTranslation();
     const [allObs, setAllObs] = useState([]);
     const [allCases, setAllCases] = useState([]);
     const [allTests, setAllTests] = useState([]); 
@@ -219,7 +221,7 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
             `}
             </style>
 
-            {!hideHeader && <PageHeader title="Individual Participant Report" subtitle={`${course.course_type} - ${course.state} / ${course.locality}`} className="print-hide" />}
+            {!hideHeader && <PageHeader title={t('reports_views.reports.title', 'Individual Participant Report')} subtitle={`${course.course_type} - ${course.state} / ${course.locality}`} className="print-hide" />}
             
             {hasTestReports && (
                 <div className="flex gap-2 mb-6 print-hide">
@@ -227,13 +229,13 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
                         variant={reportType === 'standard' ? 'primary' : 'secondary'} 
                         onClick={() => setReportType('standard')}
                     >
-                        Standard Reports
+                        {t('reports_views.reports.tabs.standard', 'Standard Reports')}
                     </Button>
                     <Button 
                         variant={reportType === 'test' ? 'primary' : 'secondary'} 
                         onClick={() => setReportType('test')}
                     >
-                        Test Score Reports
+                        {t('reports_views.reports.tabs.test', 'Test Score Reports')}
                     </Button>
                 </div>
             )}
@@ -246,12 +248,13 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
                 <CourseTestReports course={course} participants={participants} allTests={allTests} />
             )}
             
-            {reportType === 'standard' && !StandardReportComponent && <p>No standard report available for this course type.</p>}
+            {reportType === 'standard' && !StandardReportComponent && <p>{t('reports_views.reports.no_standard', 'No standard report available for this course type.')}</p>}
         </Card>
     );
 }
 
 function CourseTestReports({ course, participants, allTests }) {
+    const { t } = useTranslation();
     const [tab, setTab] = useState('matrix'); 
     const [groupFilter, setGroupFilter] = useState('All');
     const [testTypeFilter, setTestTypeFilter] = useState('pre-test'); 
@@ -425,7 +428,7 @@ function CourseTestReports({ course, participants, allTests }) {
                 if (el) groupElements.push(el);
             });
 
-            if (groupElements.length === 0) { notify("No data to export.", "error"); return; }
+            if (groupElements.length === 0) { notify(t('reports_views.reports.no_data_export', 'No data to export.'), "error"); return; }
 
             for (let i = 0; i < groupElements.length; i++) {
                 const el = groupElements[i];
@@ -441,10 +444,10 @@ function CourseTestReports({ course, participants, allTests }) {
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin, (i === 0 ? kpiCanvas : null));
             }
 
-            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'));
+            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'), t);
         } catch (e) {
             console.error(e);
-            notify(`Failed to save PDF: ${e.message}`, 'error');
+            notify(t('reports_views.reports.pdf_save_failed', 'Failed to save PDF: {{error}}', { error: e.message }), 'error');
         } finally {
             if (headerEl) headerEl.style.display = 'none';
             const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
@@ -459,46 +462,46 @@ function CourseTestReports({ course, participants, allTests }) {
     return (
         <div className="mt-6 printable-area" id="test-report-container">
             <div className="report-header mb-4 p-4" id="test-report-header">
-                <h2 className="text-2xl font-bold">Individual Participant Report (Test Scores)</h2>
+                <h2 className="text-2xl font-bold">{t('reports_views.reports.test.title', 'Individual Participant Report (Test Scores)')}</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
-                <h4 className="text-md text-gray-600">Report Type: {tab === 'summary' ? 'Score Summary' : `Detailed Matrix (${testTypeFilter === 'pre-test' ? 'Pre-Test' : 'Post-Test'})`}</h4>
-                {isEmonc && <h4 className="text-md font-semibold text-gray-700">Module: {getEmoncModuleLabel(moduleFilter)}</h4>}
+                <h4 className="text-md text-gray-600">{t('reports_views.reports.test.report_type', 'Report Type: {{type}}', { type: tab === 'summary' ? t('reports_views.reports.tabs.score_summary', 'Score Summary') : t('reports_views.reports.test.detailed_matrix_type', 'Detailed Matrix ({{testType}})', { testType: testTypeFilter === 'pre-test' ? t('reports_views.reports.pre_test', 'Pre-Test') : t('reports_views.reports.post_test', 'Post-Test') }) })}</h4>
+                {isEmonc && <h4 className="text-md font-semibold text-gray-700">{t('reports_views.reports.test.module', 'Module: {{module}}', { module: getEmoncModuleLabel(moduleFilter) })}</h4>}
             </div>
 
             <div className="flex flex-wrap gap-3 mb-4 print-hide">
-                <Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>Score Summary</Button>
-                <Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Matrix</Button>
+                <Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>{t('reports_views.reports.tabs.score_summary', 'Score Summary')}</Button>
+                <Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>{t('reports_views.reports.tabs.detailed_matrix', 'Detailed Matrix')}</Button>
             </div>
 
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex gap-4 items-center">
                     {isEmonc && (
-                        <FormGroup label="EmONC Module">
+                        <FormGroup label={t('reports_views.reports.test.emonc_module', 'EmONC Module')}>
                             <Select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
-                                {EMONC_TEST_MODULES.map(m => <option key={m} value={m}>{getEmoncModuleLabel(m)} ({moduleCounts[m] || 0} with results)</option>)}
+                                {EMONC_TEST_MODULES.map(m => <option key={m} value={m}>{t('reports_views.reports.test.module_option', '{{module}} ({{count}} with results)', { module: getEmoncModuleLabel(m), count: moduleCounts[m] || 0 })}</option>)}
                             </Select>
                         </FormGroup>
                     )}
                     {tab === 'matrix' && (
-                        <FormGroup label="Test Type">
+                        <FormGroup label={t('reports_views.reports.test.test_type', 'Test Type')}>
                             <Select value={testTypeFilter} onChange={(e) => setTestTypeFilter(e.target.value)}>
-                                <option value="pre-test">Pre-Test</option>
-                                <option value="post-test">Post-Test</option>
+                                <option value="pre-test">{t('reports_views.reports.pre_test', 'Pre-Test')}</option>
+                                <option value="post-test">{t('reports_views.reports.post_test', 'Post-Test')}</option>
                             </Select>
                         </FormGroup>
                     )}
-                    <FormGroup label="Group">
+                    <FormGroup label={t('reports_views.reports.filters.group', 'Group')}>
                         <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
-                            <option value="All">All Groups</option>
-                            <option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option>
+                            <option value="All">{t('reports_views.reports.filters.all_groups', 'All Groups')}</option>
+                            <option value="Group A">{t('reports_views.reports.groups.a', 'Group A')}</option><option value="Group B">{t('reports_views.reports.groups.b', 'Group B')}</option><option value="Group C">{t('reports_views.reports.groups.c', 'Group C')}</option><option value="Group D">{t('reports_views.reports.groups.d', 'Group D')}</option>
                         </Select>
                     </FormGroup>
                 </div>
                 <div className="flex items-center gap-2">
                     {isPdfGenerating && <Spinner />}
-                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> Print</Button>
-                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Print</Button>
-                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Sharing</Button>
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> {t('reports_views.reports.buttons.print', 'Print')}</Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_print', 'Export for Print')}</Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_share', 'Export for Sharing')}</Button>
                 </div>
             </div>
 
@@ -513,16 +516,16 @@ function CourseTestReports({ course, participants, allTests }) {
                             <table className="min-w-full text-sm text-left">
                                 <thead className="bg-gray-50 border-b">
                                     <tr>
-                                        <th className="py-2 px-3 border">Participant</th>
-                                        <th className="py-2 px-3 border text-center">Pre-Test Score</th>
-                                        <th className="py-2 px-3 border text-center">Pre-Test %</th>
-                                        <th className="py-2 px-3 border text-center">Post-Test Score</th>
-                                        <th className="py-2 px-3 border text-center">Post-Test %</th>
-                                        <th className="py-2 px-3 border text-center">Improvement</th>
+                                        <th className="py-2 px-3 border">{t('reports_views.reports.table.participant', 'Participant')}</th>
+                                        <th className="py-2 px-3 border text-center">{t('reports_views.reports.test.pre_score', 'Pre-Test Score')}</th>
+                                        <th className="py-2 px-3 border text-center">{t('reports_views.reports.test.pre_pct', 'Pre-Test %')}</th>
+                                        <th className="py-2 px-3 border text-center">{t('reports_views.reports.test.post_score', 'Post-Test Score')}</th>
+                                        <th className="py-2 px-3 border text-center">{t('reports_views.reports.test.post_pct', 'Post-Test %')}</th>
+                                        <th className="py-2 px-3 border text-center">{t('reports_views.reports.test.improvement', 'Improvement')}</th>
                                         {sections && sections.map(section => (
                                             <th key={section.key} className={`py-2 px-3 border text-center ${getReportSectionStyle(section.key).chip}`}>
-                                                <div className="text-[10px] font-bold uppercase tracking-wider">Part {section.part}</div>
-                                                <div>{section.shortTitle} (Pre &rarr; Post)</div>
+                                                <div className="text-[10px] font-bold uppercase tracking-wider">{t('reports_views.reports.test.part', 'Part {{part}}', { part: section.part })}</div>
+                                                <div>{t('reports_views.reports.test.pre_post', '{{title}} (Pre → Post)', { title: section.shortTitle })}</div>
                                             </th>
                                         ))}
                                     </tr>
@@ -565,33 +568,33 @@ function CourseTestReports({ course, participants, allTests }) {
                     {kpiStats && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="test-report-kpi">
                             <div className="p-4 bg-white rounded-lg border shadow-sm">
-                                <div className="text-sm text-gray-500 mb-1">Overall Correctness</div>
+                                <div className="text-sm text-gray-500 mb-1">{t('reports_views.reports.test.overall_correctness', 'Overall Correctness')}</div>
                                 <div className={`text-2xl font-bold ${pctBgClass(kpiStats.overall).replace('bg-', 'text-').replace('-100', '-600')}`}>
                                     {fmtPct(kpiStats.overall)}
                                 </div>
-                                <div className="text-xs text-gray-400 mt-1">Across {kpiStats.testCount} participants</div>
+                                <div className="text-xs text-gray-400 mt-1">{t('reports_views.reports.test.across_n', 'Across {{count}} participants', { count: kpiStats.testCount })}</div>
                             </div>
                             <div className="p-4 bg-green-50 rounded-lg border border-green-100 shadow-sm">
-                                <div className="text-sm text-green-700 mb-1">Most Correct Question</div>
+                                <div className="text-sm text-green-700 mb-1">{t('reports_views.reports.test.most_correct', 'Most Correct Question')}</div>
                                 <div className="font-semibold text-gray-800 whitespace-normal leading-relaxed" title={kpiStats.best?.text}>
-                                    {kpiStats.best?.text.replace(/^\d+\.\s*/, '') || 'N/A'}
+                                    {kpiStats.best?.text.replace(/^\d+\.\s*/, '') || t('reports_views.reports.na', 'N/A')}
                                 </div>
                                 <div className="text-xs text-green-600 mt-1">
-                                    {kpiStats.best ? `${kpiStats.best.count} correct (${fmtPct(kpiStats.best.pct)})` : ''}
+                                    {kpiStats.best ? t('reports_views.reports.test.n_correct', '{{count}} correct ({{pct}})', { count: kpiStats.best.count, pct: fmtPct(kpiStats.best.pct) }) : ''}
                                 </div>
                             </div>
                             <div className="p-4 bg-red-50 rounded-lg border border-red-100 shadow-sm">
-                                <div className="text-sm text-red-700 mb-1">Least Correct Question</div>
+                                <div className="text-sm text-red-700 mb-1">{t('reports_views.reports.test.least_correct', 'Least Correct Question')}</div>
                                 <div className="font-semibold text-gray-800 whitespace-normal leading-relaxed" title={kpiStats.worst?.text}>
-                                    {kpiStats.worst?.text.replace(/^\d+\.\s*/, '') || 'N/A'}
+                                    {kpiStats.worst?.text.replace(/^\d+\.\s*/, '') || t('reports_views.reports.na', 'N/A')}
                                 </div>
                                 <div className="text-xs text-red-600 mt-1">
-                                    {kpiStats.worst ? `${kpiStats.worst.count} correct (${fmtPct(kpiStats.worst.pct)})` : ''}
+                                    {kpiStats.worst ? t('reports_views.reports.test.n_correct', '{{count}} correct ({{pct}})', { count: kpiStats.worst.count, pct: fmtPct(kpiStats.worst.pct) }) : ''}
                                 </div>
                             </div>
                             {kpiStats.partStats && kpiStats.partStats.map(part => (
                                 <div key={part.key} className={`p-4 rounded-lg border-2 shadow-sm md:col-span-1 ${getReportSectionStyle(part.key).chip}`}>
-                                    <div className="text-xs font-bold uppercase tracking-wider opacity-80">Part {part.part} Correctness</div>
+                                    <div className="text-xs font-bold uppercase tracking-wider opacity-80">{t('reports_views.reports.test.part_correctness', 'Part {{part}} Correctness', { part: part.part })}</div>
                                     <div className="font-semibold">{part.title}</div>
                                     <div className="text-2xl font-bold mt-1">{fmtPct(part.pct)}</div>
                                 </div>
@@ -605,18 +608,18 @@ function CourseTestReports({ course, participants, allTests }) {
 
                         return (
                             <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`test-group-matrix-${g.replace(/\s+/g, '-')}`}>
-                                <h3 className="text-xl font-semibold">{g} - {testTypeFilter === 'pre-test' ? 'Pre-Test' : 'Post-Test'} Detail{isEmonc ? ` (${getEmoncModuleLabel(moduleFilter)})` : ''}</h3>
+                                <h3 className="text-xl font-semibold">{g} - {t('reports_views.reports.test.detail', '{{testType}} Detail', { testType: testTypeFilter === 'pre-test' ? t('reports_views.reports.pre_test', 'Pre-Test') : t('reports_views.reports.post_test', 'Post-Test') })}{isEmonc ? ` (${getEmoncModuleLabel(moduleFilter)})` : ''}</h3>
                                 <div className="overflow-x-auto no-scroll-wrapper">
                                     <table className="w-full text-xs border-collapse border">
                                         <thead>
                                             <tr className="bg-gray-100 border-b">
-                                                <th className="py-2 px-2 border text-left w-1/3">Question</th>
+                                                <th className="py-2 px-2 border text-left w-1/3">{t('reports_views.reports.test.question', 'Question')}</th>
                                                 {parts.map(p => (
                                                     <th key={p.id} className="py-2 px-1 border text-center align-bottom" style={{ minWidth: '80px' }}>
                                                         <div className="whitespace-normal text-xs break-words">{p.name}</div>
                                                     </th>
                                                 ))}
-                                                <th className="py-2 px-2 border text-center w-16">Total Correct</th>
+                                                <th className="py-2 px-2 border text-center w-16">{t('reports_views.reports.test.total_correct', 'Total Correct')}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -658,12 +661,12 @@ function CourseTestReports({ course, participants, allTests }) {
                                                     <React.Fragment key={section.key}>
                                                         <tr className={style.row}>
                                                             <td colSpan={parts.length + 2} className="py-2 px-3 border font-bold text-sm">
-                                                                PART {section.part} &middot; {section.title} &middot; Questions {section.from}&ndash;{section.to}
+                                                                {t('reports_views.reports.test.part_header', 'PART {{part}} · {{title}} · Questions {{from}}–{{to}}', { part: section.part, title: section.title, from: section.from, to: section.to })}
                                                             </td>
                                                         </tr>
                                                         {section.questions.map(renderQuestionRow)}
                                                         <tr className={`${style.subtotal} border-b-2 border-gray-300`}>
-                                                            <td className="py-2 px-2 border font-semibold text-right">Part {section.part} Subtotal ({section.shortTitle})</td>
+                                                            <td className="py-2 px-2 border font-semibold text-right">{t('reports_views.reports.test.part_subtotal', 'Part {{part}} Subtotal ({{title}})', { part: section.part, title: section.shortTitle })}</td>
                                                             {parts.map(p => {
                                                                 const test = getTest(p.id, testTypeFilter);
                                                                 const sec = getTestPartScores(test, sections)?.[section.part - 1];
@@ -680,7 +683,7 @@ function CourseTestReports({ course, participants, allTests }) {
                                             })}
                                             
                                             <tr className="bg-gray-100 border-t-2 border-gray-300">
-                                                <td className="py-2 px-2 border font-bold text-right">Total Correct (Per Participant)</td>
+                                                <td className="py-2 px-2 border font-bold text-right">{t('reports_views.reports.test.total_per_participant', 'Total Correct (Per Participant)')}</td>
                                                 {parts.map(p => {
                                                     const test = getTest(p.id, testTypeFilter);
                                                     const score = test ? test.score : '-';
@@ -706,6 +709,7 @@ function CourseTestReports({ course, participants, allTests }) {
 }
 
 function ImnciReports({ course, participants, allObs, allCases }) {
+    const { t } = useTranslation();
     const [age, setAge] = useState('GE2M_LE5Y');
     const [settingFilter, setSettingFilter] = useState('All');
     const [dayFilter, setDayFilter] = useState('All');
@@ -760,7 +764,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                 if (el) groupElements.push(el);
             });
             
-            if (groupElements.length === 0) { notify("No data to export.", "error"); setIsPdfGenerating(false); return; }
+            if (groupElements.length === 0) { notify(t('reports_views.reports.no_data_export', 'No data to export.'), "error"); setIsPdfGenerating(false); return; }
 
             for (let i = 0; i < groupElements.length; i++) {
                 const el = groupElements[i];
@@ -776,11 +780,11 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
             }
 
-            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'));
+            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'), t);
 
         } catch (e) {
             console.error("Error generating PDF:", e);
-            notify(`Failed to save PDF: ${e.message || 'Unknown error'}`, 'error');
+            notify(t('reports_views.reports.pdf_save_failed', 'Failed to save PDF: {{error}}', { error: e.message || t('reports_views.reports.unknown_error', 'Unknown error') }), 'error');
         } finally {
             if (headerEl) headerEl.style.display = 'none';
             const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
@@ -795,24 +799,24 @@ function ImnciReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6 printable-area" id="imnci-report-container">
             <div className="report-header mb-4 px-1" id="imnci-report-header">
-                <h2 className="text-2xl font-bold">Individual Participant Report</h2>
+                <h2 className="text-2xl font-bold">{t('reports_views.reports.title', 'Individual Participant Report')}</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
-                <h4 className="text-md text-gray-600">Age Group: {age === 'LT2M' ? '0-2 months' : '2-59 months'}</h4>
+                <h4 className="text-md text-gray-600">{t('reports_views.reports.imnci.age_group_label', 'Age Group: {{age}}', { age: age === 'LT2M' ? t('reports_views.reports.imnci.age_0_2', '0-2 months') : t('reports_views.reports.imnci.age_2_59', '2-59 months') })}</h4>
             </div>
 
-            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
+            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>{t('reports_views.reports.tabs.case_summary', 'Case Summary')}</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>{t('reports_views.reports.tabs.class_summary', 'Classification Summary')}</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>{t('reports_views.reports.tabs.detailed_report', 'Detailed Report')}</Button></div>
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex flex-wrap gap-4 items-center">
-                    <FormGroup label="Age group"><Select value={age} onChange={(e) => setAge(e.target.value)}><option value="LT2M">0-2 months</option><option value="GE2M_LE5Y">2-59 months</option></Select></FormGroup>
-                    <FormGroup label="Setting"><Select value={settingFilter} onChange={(e) => setSettingFilter(e.target.value)}><option value="All">All</option><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>
-                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
-                    <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.age_group', 'Age group')}><Select value={age} onChange={(e) => setAge(e.target.value)}><option value="LT2M">{t('reports_views.reports.imnci.age_0_2', '0-2 months')}</option><option value="GE2M_LE5Y">{t('reports_views.reports.imnci.age_2_59', '2-59 months')}</option></Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.setting', 'Setting')}><Select value={settingFilter} onChange={(e) => setSettingFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all', 'All')}</option><option value="OPD">{t('reports_views.reports.filters.opd', 'Out-patient')}</option><option value="IPD">{t('reports_views.reports.filters.ipd', 'In-patient')}</option></Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.day_of_training', 'Day of Training')}><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all_days', 'All Days')}</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{t('reports_views.reports.filters.day', 'Day {{day}}', { day: d })}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.group', 'Group')}><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all_groups', 'All Groups')}</option><option value="Group A">{t('reports_views.reports.groups.a', 'Group A')}</option><option value="Group B">{t('reports_views.reports.groups.b', 'Group B')}</option><option value="Group C">{t('reports_views.reports.groups.c', 'Group C')}</option><option value="Group D">{t('reports_views.reports.groups.d', 'Group D')}</option></Select></FormGroup>
                 </div>
                 <div className="flex items-center gap-2">
                     {isPdfGenerating && <Spinner />}
-                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> Print</Button>
-                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Print</Button>
-                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Sharing</Button>
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> {t('reports_views.reports.buttons.print', 'Print')}</Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_print', 'Export for Print')}</Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_share', 'Export for Sharing')}</Button>
                 </div>
             </div>
 
@@ -821,8 +825,8 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                 const ids = Object.keys(data); if (ids.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead>{tab === 'case' ? (<tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">IPD Cases</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">OPD Cases</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>) : (<tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">IPD Class.</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">OPD Class.</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>)}</thead><tbody>{ids.map(id => { const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct; const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct; const pctIn = calcPct(inCor, inSeen), pctOut = calcPct(outCor, outSeen), pctAll = calcPct(inCor + outCor, inSeen + outSeen); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{inSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctIn)}`}>{fmtPct(pctIn)}</td><td className="py-2 pr-4">{outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctOut)}`}>{fmtPct(pctOut)}</td><td className="py-2 pr-4">{inSeen + outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctAll)}`}>{fmtPct(pctAll)}</td></tr>); })}</tbody></table></div>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead>{tab === 'case' ? (<tr className="text-left border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.ipd_cases', 'IPD Cases')}</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.opd_cases', 'OPD Cases')}</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.total', 'Total')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_overall', '% Overall')}</th></tr>) : (<tr className="text-left border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.ipd_class', 'IPD Class.')}</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.opd_class', 'OPD Class.')}</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.total', 'Total')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_overall', '% Overall')}</th></tr>)}</thead><tbody>{ids.map(id => { const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct; const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct; const pctIn = calcPct(inCor, inSeen), pctOut = calcPct(outCor, outSeen), pctAll = calcPct(inCor + outCor, inSeen + outSeen); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{inSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctIn)}`}>{fmtPct(pctIn)}</td><td className="py-2 pr-4">{outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctOut)}`}>{fmtPct(pctOut)}</td><td className="py-2 pr-4">{inSeen + outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctAll)}`}>{fmtPct(pctAll)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -832,12 +836,12 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                 if (parts.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
                         <div className="no-scroll-wrapper">
                             <table className="w-full text-xs">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
-                                        <th className="py-2 pr-4">Classification</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.classification', 'Classification')}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>
                                 </thead>
@@ -850,7 +854,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                                             {(getClassListImnci(age, domain) || []).map(item => {
                                                 const participantCells = parts.map(p => {
                                                     const allObsForSkill = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === item);
-                                                    if (allObsForSkill.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">N/A</td>;
+                                                    if (allObsForSkill.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">{t('reports_views.reports.na', 'N/A')}</td>;
                                                     const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
                                                     const totalCount = allObsForSkill.length;
                                                     const percentage = calcPct(correctCount, totalCount);
@@ -871,6 +875,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
 }
 
 function EtatReports({ course, participants, allObs, allCases }) {
+    const { t } = useTranslation();
     const [tab, setTab] = useState('matrix');
     const [dayFilter, setDayFilter] = useState('All');
     const [groupFilter, setGroupFilter] = useState('All');
@@ -934,7 +939,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 if (el) groupElements.push(el);
             });
             
-            if (groupElements.length === 0) { notify("No data to export.", "error"); setIsPdfGenerating(false); return; }
+            if (groupElements.length === 0) { notify(t('reports_views.reports.no_data_export', 'No data to export.'), "error"); setIsPdfGenerating(false); return; }
 
             for (let i = 0; i < groupElements.length; i++) {
                 const el = groupElements[i];
@@ -946,11 +951,11 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
             }
 
-            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'));
+            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'), t);
 
         } catch (e) {
             console.error("Error generating PDF:", e);
-            notify(`Failed to save PDF: ${e.message || 'Unknown error'}`, 'error');
+            notify(t('reports_views.reports.pdf_save_failed', 'Failed to save PDF: {{error}}', { error: e.message || t('reports_views.reports.unknown_error', 'Unknown error') }), 'error');
         } finally {
             if (headerEl) headerEl.style.display = 'none';
             const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
@@ -965,22 +970,22 @@ function EtatReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6 printable-area" id="etat-report-container">
             <div className="report-header mb-4 px-1" id="etat-report-header">
-                <h2 className="text-2xl font-bold">Individual Participant Report</h2>
+                <h2 className="text-2xl font-bold">{t('reports_views.reports.title', 'Individual Participant Report')}</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
             </div>
 
-            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
+            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>{t('reports_views.reports.tabs.case_summary', 'Case Summary')}</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>{t('reports_views.reports.tabs.class_summary', 'Classification Summary')}</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>{t('reports_views.reports.tabs.detailed_report', 'Detailed Report')}</Button></div>
 
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex gap-4 items-center">
-                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
-                    <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.day_of_training', 'Day of Training')}><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all_days', 'All Days')}</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{t('reports_views.reports.filters.day', 'Day {{day}}', { day: d })}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.group', 'Group')}><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all_groups', 'All Groups')}</option><option value="Group A">{t('reports_views.reports.groups.a', 'Group A')}</option><option value="Group B">{t('reports_views.reports.groups.b', 'Group B')}</option><option value="Group C">{t('reports_views.reports.groups.c', 'Group C')}</option><option value="Group D">{t('reports_views.reports.groups.d', 'Group D')}</option></Select></FormGroup>
                 </div>
                 <div className="flex items-center gap-2">
                     {isPdfGenerating && <Spinner />}
-                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> Print</Button>
-                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Print</Button>
-                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Sharing</Button>
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> {t('reports_views.reports.buttons.print', 'Print')}</Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_print', 'Export for Print')}</Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_share', 'Export for Sharing')}</Button>
                 </div>
             </div>
 
@@ -988,8 +993,8 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 const data = caseSummaryByGroup[g] || {}; const ids = Object.keys(data); if (ids.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">Total Cases</th><th className="py-2 pr-4">Correct Cases</th><th className="py-2 pr-4">% Correct Cases</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.total_cases', 'Total Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.correct_cases', 'Correct Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_correct_cases', '% Correct Cases')}</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -1000,15 +1005,15 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 if (ids.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
                         <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="text-left border-b">
-                                        <th className="py-2 pr-4">Participant</th>
-                                        <th className="py-2 pr-4">Total Class.</th>
-                                        <th className="py-2 pr-4">Correct Class.</th>
-                                        <th className="py-2 pr-4">% Correct Class.</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.total_class', 'Total Class.')}</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.correct_class', 'Correct Class.')}</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.pct_correct_class', '% Correct Class.')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1036,12 +1041,12 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 if (parts.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
                         <div className="no-scroll-wrapper">
                             <table className="w-full text-xs">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
-                                        <th className="py-2 pr-4">Skill</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.skill', 'Skill')}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>
                                 </thead>
@@ -1054,7 +1059,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                                             {SKILLS_ETAT[domain].map(skill => {
                                                 const participantCells = parts.map(p => {
                                                     const allObsForSkill = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === skill);
-                                                    if (allObsForSkill.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">N/A</td>;
+                                                    if (allObsForSkill.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">{t('reports_views.reports.na', 'N/A')}</td>;
                                                     const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
                                                     const totalCount = allObsForSkill.length;
                                                     const percentage = calcPct(correctCount, totalCount);
@@ -1074,6 +1079,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
 }
 
 function IccmReports({ course, participants, allObs, allCases }) {
+    const { t } = useTranslation();
     const [tab, setTab] = useState('matrix');
     const [dayFilter, setDayFilter] = useState('All');
     const [groupFilter, setGroupFilter] = useState('All');
@@ -1139,7 +1145,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
                 if (el) groupElements.push(el);
             });
             
-            if (groupElements.length === 0) { notify("No data to export.", "error"); setIsPdfGenerating(false); return; }
+            if (groupElements.length === 0) { notify(t('reports_views.reports.no_data_export', 'No data to export.'), "error"); setIsPdfGenerating(false); return; }
 
             for (let i = 0; i < groupElements.length; i++) {
                 const el = groupElements[i];
@@ -1151,11 +1157,11 @@ function IccmReports({ course, participants, allObs, allCases }) {
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
             }
 
-            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'));
+            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'), t);
 
         } catch (e) {
             console.error("Error generating PDF:", e);
-            notify(`Failed to save PDF: ${e.message || 'Unknown error'}`, 'error');
+            notify(t('reports_views.reports.pdf_save_failed', 'Failed to save PDF: {{error}}', { error: e.message || t('reports_views.reports.unknown_error', 'Unknown error') }), 'error');
         } finally {
             if (headerEl) headerEl.style.display = 'none';
             const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
@@ -1170,22 +1176,22 @@ function IccmReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6 printable-area" id="iccm-report-container">
             <div className="report-header mb-4 px-1" id="iccm-report-header">
-                <h2 className="text-2xl font-bold">Individual Participant Report</h2>
+                <h2 className="text-2xl font-bold">{t('reports_views.reports.title', 'Individual Participant Report')}</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
             </div>
 
-            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
+            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>{t('reports_views.reports.tabs.case_summary', 'Case Summary')}</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>{t('reports_views.reports.tabs.class_summary', 'Classification Summary')}</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>{t('reports_views.reports.tabs.detailed_report', 'Detailed Report')}</Button></div>
 
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex gap-4 items-center">
-                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
-                    <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.day_of_training', 'Day of Training')}><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all_days', 'All Days')}</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{t('reports_views.reports.filters.day', 'Day {{day}}', { day: d })}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.group', 'Group')}><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all_groups', 'All Groups')}</option><option value="Group A">{t('reports_views.reports.groups.a', 'Group A')}</option><option value="Group B">{t('reports_views.reports.groups.b', 'Group B')}</option><option value="Group C">{t('reports_views.reports.groups.c', 'Group C')}</option><option value="Group D">{t('reports_views.reports.groups.d', 'Group D')}</option></Select></FormGroup>
                 </div>
                 <div className="flex items-center gap-2">
                     {isPdfGenerating && <Spinner />}
-                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> Print</Button>
-                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Print</Button>
-                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Sharing</Button>
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> {t('reports_views.reports.buttons.print', 'Print')}</Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_print', 'Export for Print')}</Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_share', 'Export for Sharing')}</Button>
                 </div>
             </div>
 
@@ -1193,8 +1199,8 @@ function IccmReports({ course, participants, allObs, allCases }) {
                 const data = caseSummaryByGroup[g] || {}; const ids = Object.keys(data); if (ids.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">Total Cases</th><th className="py-2 pr-4">Correct Cases</th><th className="py-2 pr-4">% Correct Cases</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.total_cases', 'Total Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.correct_cases', 'Correct Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_correct_cases', '% Correct Cases')}</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -1205,15 +1211,15 @@ function IccmReports({ course, participants, allObs, allCases }) {
                 if (ids.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
                         <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="text-left border-b">
-                                        <th className="py-2 pr-4">Participant</th>
-                                        <th className="py-2 pr-4">Total Class.</th>
-                                        <th className="py-2 pr-4">Correct Class.</th>
-                                        <th className="py-2 pr-4">% Correct Class.</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.total_class', 'Total Class.')}</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.correct_class', 'Correct Class.')}</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.pct_correct_class', '% Correct Class.')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1241,12 +1247,12 @@ function IccmReports({ course, participants, allObs, allCases }) {
                 if (parts.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
                         <div className="no-scroll-wrapper">
                             <table className="w-full text-xs">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
-                                        <th className="py-2 pr-4">Skill</th>
+                                        <th className="py-2 pr-4">{t('reports_views.reports.table.skill', 'Skill')}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>
                                 </thead>
@@ -1259,7 +1265,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
                                             {(SKILLS_ICCM[domain] || []).map(skill => {
                                                 const participantCells = parts.map(p => {
                                                     const allObsForSkill = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === skill);
-                                                    if (allObsForSkill.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">N/A</td>;
+                                                    if (allObsForSkill.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">{t('reports_views.reports.na', 'N/A')}</td>;
                                                     const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
                                                     const totalCount = allObsForSkill.length;
                                                     const percentage = calcPct(correctCount, totalCount);
@@ -1279,6 +1285,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
 }
 
 function EencReports({ course, participants, allObs, allCases }) {
+    const { t } = useTranslation();
     const [tab, setTab] = useState('summary');
     const [scenarioFilter, setScenarioFilter] = useState('All');
     const [dayFilter, setDayFilter] = useState('All');
@@ -1361,7 +1368,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                 if (el) groupElements.push(el);
             });
             
-            if (groupElements.length === 0) { notify("No data to export.", "error"); setIsPdfGenerating(false); return; }
+            if (groupElements.length === 0) { notify(t('reports_views.reports.no_data_export', 'No data to export.'), "error"); setIsPdfGenerating(false); return; }
 
             for (let i = 0; i < groupElements.length; i++) {
                 const el = groupElements[i];
@@ -1373,11 +1380,11 @@ function EencReports({ course, participants, allObs, allCases }) {
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
             }
 
-            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'));
+            await saveJsPdfDoc(doc, reportName, (msg) => notify(msg, 'success'), (msg) => notify(msg, 'error'), t);
 
         } catch (e) {
             console.error("Error generating PDF:", e);
-            notify(`Failed to save PDF: ${e.message || 'Unknown error'}`, 'error');
+            notify(t('reports_views.reports.pdf_save_failed', 'Failed to save PDF: {{error}}', { error: e.message || t('reports_views.reports.unknown_error', 'Unknown error') }), 'error');
         } finally {
             if (headerEl) headerEl.style.display = 'none';
             const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
@@ -1394,13 +1401,13 @@ function EencReports({ course, participants, allObs, allCases }) {
         let skillsMap, labelsMap, title;
 
         if (scenario === 'breathing') {
-            skillsMap = SKILLS_EENC_BREATHING; labelsMap = EENC_DOMAIN_LABEL_BREATHING; title = "Breathing Baby";
+            skillsMap = SKILLS_EENC_BREATHING; labelsMap = EENC_DOMAIN_LABEL_BREATHING; title = t('reports_views.reports.eenc.breathing', 'Breathing Baby');
         } else if (scenario === 'not_breathing') {
-            skillsMap = SKILLS_EENC_NOT_BREATHING; labelsMap = EENC_DOMAIN_LABEL_NOT_BREATHING; title = "Not Breathing Baby";
+            skillsMap = SKILLS_EENC_NOT_BREATHING; labelsMap = EENC_DOMAIN_LABEL_NOT_BREATHING; title = t('reports_views.reports.eenc.not_breathing', 'Not Breathing Baby');
         } else if (scenario === 'neonatal_emergency') {
-            skillsMap = SKILLS_EMONC_NEONATAL; labelsMap = EMONC_DOMAIN_LABEL_NEONATAL; title = "Neonatal Emergency Care";
+            skillsMap = SKILLS_EMONC_NEONATAL; labelsMap = EMONC_DOMAIN_LABEL_NEONATAL; title = t('reports_views.reports.eenc.neonatal_care', 'Neonatal Emergency Care');
         } else if (scenario === 'maternal_emergency') {
-            skillsMap = SKILLS_EMONC_MATERNAL; labelsMap = EMONC_DOMAIN_LABEL_MATERNAL; title = "Maternal Emergency Care";
+            skillsMap = SKILLS_EMONC_MATERNAL; labelsMap = EMONC_DOMAIN_LABEL_MATERNAL; title = t('reports_views.reports.eenc.maternal_care', 'Maternal Emergency Care');
         }
 
         const domains = Object.keys(skillsMap || {});
@@ -1425,7 +1432,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                     <table className="min-w-full text-xs">
                         <thead>
                             <tr className="text-left border-b bg-gray-50 sticky top-0">
-                                <th className="py-2 pr-4">Skill</th>
+                                <th className="py-2 pr-4">{t('reports_views.reports.table.skill', 'Skill')}</th>
                                 {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                             </tr>
                         </thead>
@@ -1437,7 +1444,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                                         const participantCells = parts.map(p => {
                                             // FIXED: Now filters correctly using both format possibilities
                                             const skillObservations = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === skill.text && (o.age_group === scenario || o.age_group === `EENC_${scenario}`));
-                                            if (skillObservations.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">N/A</td>;
+                                            if (skillObservations.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">{t('reports_views.reports.na', 'N/A')}</td>;
 
 
 
@@ -1463,23 +1470,23 @@ function EencReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6 printable-area" id="eenc-report-container">
             <div className="report-header mb-4 px-1" id="eenc-report-header">
-                <h2 className="text-2xl font-bold">Individual Participant Report</h2>
+                <h2 className="text-2xl font-bold">{t('reports_views.reports.title', 'Individual Participant Report')}</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
             </div>
 
-            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>Score Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Skill Report</Button></div>
+            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>{t('reports_views.reports.tabs.score_summary', 'Score Summary')}</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>{t('reports_views.reports.tabs.detailed_skill', 'Detailed Skill Report')}</Button></div>
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex gap-4 items-center">
                     {tab === 'matrix' && (
-                        <FormGroup label="Scenario">
+                        <FormGroup label={t('reports_views.reports.eenc.scenario', 'Scenario')}>
                             <Select value={scenarioFilter} onChange={(e) => setScenarioFilter(e.target.value)}>
-                                <option value="All">All (Combined)</option>
-                                <option value="breathing">Breathing Baby</option>
-                                <option value="not_breathing">Not Breathing Baby</option>
+                                <option value="All">{t('reports_views.reports.eenc.all_combined', 'All (Combined)')}</option>
+                                <option value="breathing">{t('reports_views.reports.eenc.breathing', 'Breathing Baby')}</option>
+                                <option value="not_breathing">{t('reports_views.reports.eenc.not_breathing', 'Not Breathing Baby')}</option>
                                 {course.course_type === 'EmONC' && (
                                     <>
-                                        <option value="neonatal_emergency">Neonatal Emergency</option>
-                                        <option value="maternal_emergency">Maternal Emergency</option>
+                                        <option value="neonatal_emergency">{t('reports_views.reports.eenc.neonatal', 'Neonatal Emergency')}</option>
+                                        <option value="maternal_emergency">{t('reports_views.reports.eenc.maternal', 'Maternal Emergency')}</option>
                                     </>
                                 )}
                             </Select>
@@ -1488,14 +1495,14 @@ function EencReports({ course, participants, allObs, allCases }) {
 
 
 
-                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
-                    <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.day_of_training', 'Day of Training')}><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all_days', 'All Days')}</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{t('reports_views.reports.filters.day', 'Day {{day}}', { day: d })}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('reports_views.reports.filters.group', 'Group')}><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">{t('reports_views.reports.filters.all_groups', 'All Groups')}</option><option value="Group A">{t('reports_views.reports.groups.a', 'Group A')}</option><option value="Group B">{t('reports_views.reports.groups.b', 'Group B')}</option><option value="Group C">{t('reports_views.reports.groups.c', 'Group C')}</option><option value="Group D">{t('reports_views.reports.groups.d', 'Group D')}</option></Select></FormGroup>
                 </div>
                 <div className="flex items-center gap-2">
                     {isPdfGenerating && <Spinner />}
-                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> Print</Button>
-                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Print</Button>
-                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Sharing</Button>
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}><PrintIcon /> {t('reports_views.reports.buttons.print', 'Print')}</Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_print', 'Export for Print')}</Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> {t('reports_views.reports.buttons.export_share', 'Export for Sharing')}</Button>
                 </div>
             </div>
 
@@ -1511,15 +1518,15 @@ function EencReports({ course, participants, allObs, allCases }) {
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50">
-                                        <th rowSpan={2} className="py-2 px-2 border">Participant</th>
-                                        <th colSpan={3} className="py-2 px-2 border text-center">Total Performance</th>
-                                        <th colSpan={3} className="py-2 px-2 border text-center">Breathing Baby</th>
-                                        <th colSpan={3} className="py-2 px-2 border text-center">Not Breathing Baby</th>
+                                        <th rowSpan={2} className="py-2 px-2 border">{t('reports_views.reports.table.participant', 'Participant')}</th>
+                                        <th colSpan={3} className="py-2 px-2 border text-center">{t('reports_views.reports.eenc.total_performance', 'Total Performance')}</th>
+                                        <th colSpan={3} className="py-2 px-2 border text-center">{t('reports_views.reports.eenc.breathing', 'Breathing Baby')}</th>
+                                        <th colSpan={3} className="py-2 px-2 border text-center">{t('reports_views.reports.eenc.not_breathing', 'Not Breathing Baby')}</th>
                                     </tr>
                                     <tr className="text-left border-b bg-gray-50">
-                                        <th className="py-2 px-2 border">Cases</th><th className="py-2 px-2 border">Score</th><th className="py-2 px-2 border">%</th>
-                                        <th className="py-2 px-2 border">Cases</th><th className="py-2 px-2 border">Score</th><th className="py-2 px-2 border">%</th>
-                                        <th className="py-2 px-2 border">Cases</th><th className="py-2 px-2 border">Score</th><th className="py-2 px-2 border">%</th>
+                                        <th className="py-2 px-2 border">{t('reports_views.reports.table.cases', 'Cases')}</th><th className="py-2 px-2 border">{t('reports_views.reports.table.score', 'Score')}</th><th className="py-2 px-2 border">%</th>
+                                        <th className="py-2 px-2 border">{t('reports_views.reports.table.cases', 'Cases')}</th><th className="py-2 px-2 border">{t('reports_views.reports.table.score', 'Score')}</th><th className="py-2 px-2 border">%</th>
+                                        <th className="py-2 px-2 border">{t('reports_views.reports.table.cases', 'Cases')}</th><th className="py-2 px-2 border">{t('reports_views.reports.table.score', 'Score')}</th><th className="py-2 px-2 border">%</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1574,6 +1581,7 @@ function EencReports({ course, participants, allObs, allCases }) {
 
 
 function MentorshipReports({ course, participants, allObs, allCases }) {
+    const { t } = useTranslation();
     const [tab, setTab] = useState('matrix');
     const [groupFilter, setGroupFilter] = useState('All');
     const [dayFilter, setDayFilter] = useState('All');
@@ -1660,8 +1668,8 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
     if (allMentorshipObs.length === 0) {
         return (
             <EmptyState
-                title="No mentorship sessions recorded"
-                message="Sessions saved from the Mentorship Practice tab appear here."
+                title={t('reports_views.reports.mentor.no_sessions', 'No mentorship sessions recorded')}
+                message={t('reports_views.reports.mentor.no_sessions_msg', 'Sessions saved from the Mentorship Practice tab appear here.')}
             />
         );
     }
@@ -1675,40 +1683,40 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
     return (
         <div className="grid gap-4 printable-area">
             <div className="report-header">
-                <h3>{subCourse || `${service} Mentorship`}</h3>
+                <h3>{subCourse || t('reports_views.reports.mentor.title', '{{service}} Mentorship', { service })}</h3>
                 <h4>{course.state} / {course.locality}</h4>
             </div>
 
             <div className="flex flex-wrap gap-2 items-end print-hide">
                 <Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>
-                    Skills matrix
+                    {t('reports_views.reports.mentor.skills_matrix', 'Skills matrix')}
                 </Button>
                 <Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>
-                    Participant summary
+                    {t('reports_views.reports.mentor.participant_summary', 'Participant summary')}
                 </Button>
 
                 {hasMothersRecords && (
-                    <FormGroup label="Record type">
+                    <FormGroup label={t('reports_views.reports.mentor.record_type', 'Record type')}>
                         <Select value={recordType} onChange={(e) => setRecordType(e.target.value)}>
-                            <option value="SKILLS">Skills assessments</option>
-                            <option value="MOTHERS">Mothers interviews</option>
+                            <option value="SKILLS">{t('reports_views.reports.mentor.skills_assessments', 'Skills assessments')}</option>
+                            <option value="MOTHERS">{t('reports_views.reports.mentor.mothers_interviews', 'Mothers interviews')}</option>
                         </Select>
                     </FormGroup>
                 )}
 
-                <FormGroup label="Group">
+                <FormGroup label={t('reports_views.reports.filters.group', 'Group')}>
                     <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
-                        <option value="All">All groups</option>
+                        <option value="All">{t('reports_views.reports.mentor.all_groups', 'All groups')}</option>
                         {[...new Set(participants.map(p => p.group))].filter(Boolean).sort().map(g => (
                             <option key={g} value={g}>{g}</option>
                         ))}
                     </Select>
                 </FormGroup>
 
-                <FormGroup label="Course day">
+                <FormGroup label={t('reports_views.reports.mentor.course_day', 'Course day')}>
                     <Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}>
-                        <option value="All">All days</option>
-                        {availableDays.map(d => <option key={d} value={d}>Day {d}</option>)}
+                        <option value="All">{t('reports_views.reports.mentor.all_days', 'All days')}</option>
+                        {availableDays.map(d => <option key={d} value={d}>{t('reports_views.reports.filters.day', 'Day {{day}}', { day: d })}</option>)}
                     </Select>
                 </FormGroup>
             </div>
@@ -1718,12 +1726,12 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="text-left border-b bg-gray-50">
-                                <th className="py-2 pr-4">Participant</th>
-                                <th className="py-2 pr-4">Group</th>
-                                <th className="py-2 pr-4">Sessions</th>
-                                <th className="py-2 pr-4">Skills observed</th>
-                                <th className="py-2 pr-4">Points</th>
-                                <th className="py-2 pr-4">Score</th>
+                                <th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th>
+                                <th className="py-2 pr-4">{t('reports_views.reports.filters.group', 'Group')}</th>
+                                <th className="py-2 pr-4">{t('reports_views.reports.mentor.sessions', 'Sessions')}</th>
+                                <th className="py-2 pr-4">{t('reports_views.reports.mentor.skills_observed', 'Skills observed')}</th>
+                                <th className="py-2 pr-4">{t('reports_views.reports.mentor.points', 'Points')}</th>
+                                <th className="py-2 pr-4">{t('reports_views.reports.table.score', 'Score')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1752,8 +1760,8 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
 
             {mentorshipObs.length === 0 && (
                 <EmptyState
-                    title={`No ${recordType === 'MOTHERS' ? 'mothers interviews' : 'skills assessments'} recorded`}
-                    message="Switch record type to see what has been saved."
+                    title={recordType === 'MOTHERS' ? t('reports_views.reports.mentor.no_mothers', 'No mothers interviews recorded') : t('reports_views.reports.mentor.no_skills', 'No skills assessments recorded')}
+                    message={t('reports_views.reports.mentor.switch_type', 'Switch record type to see what has been saved.')}
                 />
             )}
 
@@ -1765,12 +1773,12 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
 
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper">
-                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
                         <div className="no-scroll-wrapper">
                             <table className="w-full text-xs">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
-                                        <th className="py-2 pr-4">{recordType === 'MOTHERS' ? 'Question' : 'Skill'}</th>
+                                        <th className="py-2 pr-4">{recordType === 'MOTHERS' ? t('reports_views.reports.test.question', 'Question') : t('reports_views.reports.table.skill', 'Skill')}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>
                                 </thead>
@@ -1801,7 +1809,7 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
                                                                 o => o.participant_id === p.id && o.item_recorded === skill
                                                             );
                                                             if (obs.length === 0) {
-                                                                return <td key={p.id} className="py-2 pr-4 text-center">N/A</td>;
+                                                                return <td key={p.id} className="py-2 pr-4 text-center">{t('reports_views.reports.na', 'N/A')}</td>;
                                                             }
                                                             const { earned, possible, pct } = scoreOf(obs);
                                                             return (

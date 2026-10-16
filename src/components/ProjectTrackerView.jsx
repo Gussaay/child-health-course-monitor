@@ -13,22 +13,25 @@ import {
     BarChart2, Target, Search, Share2, Link as LinkIcon, AlertTriangle, Calendar
 } from 'lucide-react';
 import { confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 const PROGRAM_UNITS_DATA = [
-    { id: "Neonatal Health Unit", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100", border: "border-blue-200" },
-    { id: "IMNCI unit", title: "IMNCI", icon: Stethoscope, color: "text-green-500", bg: "bg-green-100", border: "border-green-200" },
-    { id: "Adolescent unit", title: "Adolescent Health", icon: Users, color: "text-purple-500", bg: "bg-purple-100", border: "border-purple-200" },
-    { id: "Monitoring and evaluation", title: "Monitoring & Eval (M&E)", icon: Activity, color: "text-orange-500", bg: "bg-orange-100", border: "border-orange-200" },
-    { id: "Supply", title: "Supply & Logistics", icon: Package, color: "text-amber-500", bg: "bg-amber-100", border: "border-amber-200" },
-    { id: "Health promotion", title: "Health Promotion", icon: HeartPulse, color: "text-rose-500", bg: "bg-rose-100", border: "border-rose-200" }
+    { id: "Neonatal Health Unit", key: "neonatal", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100", border: "border-blue-200" },
+    { id: "IMNCI unit", key: "imnci", title: "IMNCI", icon: Stethoscope, color: "text-green-500", bg: "bg-green-100", border: "border-green-200" },
+    { id: "Adolescent unit", key: "adolescent", title: "Adolescent Health", icon: Users, color: "text-purple-500", bg: "bg-purple-100", border: "border-purple-200" },
+    { id: "Monitoring and evaluation", key: "me", title: "Monitoring & Eval (M&E)", icon: Activity, color: "text-orange-500", bg: "bg-orange-100", border: "border-orange-200" },
+    { id: "Supply", key: "supply", title: "Supply & Logistics", icon: Package, color: "text-amber-500", bg: "bg-amber-100", border: "border-amber-200" },
+    { id: "Health promotion", key: "promotion", title: "Health Promotion", icon: HeartPulse, color: "text-rose-500", bg: "bg-rose-100", border: "border-rose-200" }
 ];
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Completed'];
+const STATUS_KEYS = { 'Pending': 'pending', 'In Progress': 'in_progress', 'Completed': 'completed' };
 
 const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 
 // Reusable Share Modal Component
 function ShareLinkModal({ isOpen, onClose, title, link }) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
@@ -41,32 +44,35 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
             <div className="p-4 bg-gray-50 text-sm text-gray-600 mb-4 rounded-b border-b">
-                Share this link to direct someone exactly to this view.
+                {t('trackers.projects.share.help', 'Share this link to direct someone exactly to this view.')}
             </div>
             <div className="px-6 pb-6 space-y-6">
-                <FormGroup label="Shareable Link">
+                <FormGroup label={t('trackers.projects.share.link', 'Shareable Link')}>
                     <div className="flex gap-2">
                         <Input type="text" value={link} readOnly className="bg-gray-50 text-gray-500" />
                         <Button onClick={handleCopy} variant={copied ? "success" : "primary"} className="w-28 shrink-0">
-                            {copied ? 'Copied!' : 'Copy Link'}
+                            {copied ? t('trackers.projects.share.copied', 'Copied!') : t('trackers.projects.share.copy', 'Copy Link')}
                         </Button>
                     </div>
                 </FormGroup>
 
-                <FormGroup label="QR Code">
+                <FormGroup label={t('trackers.projects.share.qr', 'QR Code')}>
                     <div className="flex justify-center p-6 bg-white rounded-xl border border-gray-200 shadow-sm">
                         <QRCodeCanvas value={link} size={200} level={"Q"} />
                     </div>
                 </FormGroup>
             </div>
             <div className="p-4 border-t flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
+                <Button type="button" variant="secondary" onClick={onClose}>{t('trackers.projects.share.close', 'Close')}</Button>
             </div>
         </Modal>
     );
 }
 
 export default function ProjectTrackerView({ permissions }) {
+    const { t } = useTranslation();
+    const unitLabel = (key, fallback) => key ? t(`trackers.projects.units.${key}`, fallback) : fallback;
+    const statusLabel = (status) => STATUS_KEYS[status] ? t(`trackers.projects.status.${STATUS_KEYS[status]}`, status) : status;
     const { 
         projects: rawProjects, 
         fetchProjects, 
@@ -148,7 +154,7 @@ export default function ProjectTrackerView({ permissions }) {
 
         // Initialize Unit Performance Trackers
         PROGRAM_UNITS_DATA.forEach(u => {
-            unitPerformance[u.id] = { id: u.id, title: u.title, color: u.color, icon: u.icon, totalProjects: 0, totalTasks: 0, completed: 0, active: 0 };
+            unitPerformance[u.id] = { id: u.id, key: u.key, title: u.title, color: u.color, icon: u.icon, totalProjects: 0, totalTasks: 0, completed: 0, active: 0 };
         });
 
         const now = new Date();
@@ -169,7 +175,7 @@ export default function ProjectTrackerView({ permissions }) {
                 totalTasks += p.subtasks.length;
                 
                 p.subtasks.forEach(task => {
-                    const enrichedTask = { ...task, projectName: p.title, unitName: unitTitle, projectId: p.id };
+                    const enrichedTask = { ...task, projectName: p.title, unitName: unitTitle, unitKey: unitObj?.key, projectId: p.id };
                     const respId = task.responsibleId || 'unassigned';
                     
                     if (unitPerformance[p.unit]) {
@@ -376,7 +382,7 @@ export default function ProjectTrackerView({ permissions }) {
     };
 
     const handleDeleteSubtask = async (subtaskId, projectId) => {
-        if (await confirmDialog("Delete this task?")) {
+        if (await confirmDialog(t('trackers.projects.confirm_delete_task', 'Delete this task?'))) {
             const targetProjectId = projectId || activeProject?.id;
             const targetProject = allActiveProjects.find(p => p.id === targetProjectId);
             
@@ -397,7 +403,7 @@ export default function ProjectTrackerView({ permissions }) {
         params.set('tab', dashboardTab);
 
         const link = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-        setShareModalInfo({ isOpen: true, title: 'Share Filtered View', link });
+        setShareModalInfo({ isOpen: true, title: t('trackers.projects.share.filtered_title', 'Share Filtered View'), link });
     };
 
     const handleShareSpecificTask = (task) => {
@@ -408,11 +414,11 @@ export default function ProjectTrackerView({ permissions }) {
         params.set('tab', task.status === 'Completed' ? 'completed' : 'active');
 
         const link = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-        setShareModalInfo({ isOpen: true, title: 'Share Specific Task', link });
+        setShareModalInfo({ isOpen: true, title: t('trackers.projects.share.task_title', 'Share Specific Task'), link });
     };
 
     const formatDate = (isoString) => {
-        if (!isoString) return 'N/A';
+        if (!isoString) return t('trackers.projects.na', 'N/A');
         const date = new Date(isoString);
         return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     };
@@ -432,7 +438,7 @@ export default function ProjectTrackerView({ permissions }) {
                 <div className="flex-1 bg-gray-200 h-1.5 rounded-full overflow-hidden max-w-[100px]">
                     <div className="bg-sky-500 h-full" style={{ width: `${(completed / total) * 100}%` }}></div>
                 </div>
-                <span>{completed}/{total} sub-activities</span>
+                <span>{t('trackers.projects.sub_activities_progress', '{{completed}}/{{total}} sub-activities', { completed, total })}</span>
             </div>
         );
     };
@@ -441,26 +447,26 @@ export default function ProjectTrackerView({ permissions }) {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Federal Project Tracker" subtitle="Manage and track federal projects and tasks across program units." />
+            <PageHeader title={t('trackers.projects.title', 'Federal Project Tracker')} subtitle={t('trackers.projects.subtitle', 'Manage and track federal projects and tasks across program units.')} />
 
             <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-max mb-4 border border-gray-200">
                 <Button 
                     variant={viewMode === 'dashboard' ? 'primary' : 'ghost'} 
                     onClick={() => setViewMode('dashboard')}
                 >
-                    <BarChart2 className="w-4 h-4 mr-2" /> Dashboard Overview
+                    <BarChart2 className="w-4 h-4 mr-2" /> {t('trackers.projects.tabs.dashboard', 'Dashboard Overview')}
                 </Button>
                 <Button 
                     variant={viewMode === 'entry' ? 'primary' : 'ghost'} 
                     onClick={() => { setViewMode('entry'); setSelectedProjectId(''); }}
                 >
-                    <Edit className="w-4 h-4 mr-2" /> Data Entry
+                    <Edit className="w-4 h-4 mr-2" /> {t('trackers.projects.tabs.entry', 'Data Entry')}
                 </Button>
                 <Button 
                     variant={viewMode === 'deleted' ? 'primary' : 'ghost'} 
                     onClick={() => setViewMode('deleted')}
                 >
-                    Deleted Items
+                    {t('trackers.projects.tabs.deleted', 'Deleted Items')}
                 </Button>
             </div>
 
@@ -475,19 +481,19 @@ export default function ProjectTrackerView({ permissions }) {
                             onClick={() => { setDashboardTab('overview'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
                             className={`pb-2 px-2 font-semibold transition-colors ${dashboardTab === 'overview' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            Overview
+                            {t('trackers.projects.tabs.overview', 'Overview')}
                         </button>
                         <button 
                             onClick={() => { setDashboardTab('active'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
                             className={`pb-2 px-2 font-semibold transition-colors flex items-center gap-2 ${dashboardTab === 'active' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            Active Tasks <span className="bg-sky-100 text-sky-700 text-xs py-0.5 px-2 rounded-full">{allActiveTasks.length}</span>
+                            {t('trackers.projects.tabs.active', 'Active Tasks')} <span className="bg-sky-100 text-sky-700 text-xs py-0.5 px-2 rounded-full">{allActiveTasks.length}</span>
                         </button>
                         <button 
                             onClick={() => { setDashboardTab('completed'); setTaskFilter({ project: '', responsible: '', status: '', search: '' }); }}
                             className={`pb-2 px-2 font-semibold transition-colors flex items-center gap-2 ${dashboardTab === 'completed' ? 'border-b-2 border-sky-600 text-sky-700' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            Completed Tasks <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full">{allCompletedTasks.length}</span>
+                            {t('trackers.projects.tabs.completed', 'Completed Tasks')} <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full">{allCompletedTasks.length}</span>
                         </button>
                     </div>
 
@@ -497,33 +503,33 @@ export default function ProjectTrackerView({ permissions }) {
                             <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm animate-in fade-in">
                                 <div className="flex justify-between items-center mb-4 border-b pb-2">
                                     <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                        <Target className="text-sky-600" /> Overall Project Performance
+                                        <Target className="text-sky-600" /> {t('trackers.projects.overall_performance', 'Overall Project Performance')}
                                     </h3>
                                     <div className="flex gap-3 text-sm">
-                                        <span className="flex items-center gap-1 text-gray-500"><Clock className="w-4 h-4"/> Pending: <b>{kpiStats.pendingTasks}</b></span>
-                                        <span className="flex items-center gap-1 text-blue-500"><PlayCircle className="w-4 h-4"/> In Progress: <b>{kpiStats.inProgressTasks}</b></span>
+                                        <span className="flex items-center gap-1 text-gray-500"><Clock className="w-4 h-4"/> {t('trackers.projects.kpi.pending', 'Pending:')} <b>{kpiStats.pendingTasks}</b></span>
+                                        <span className="flex items-center gap-1 text-blue-500"><PlayCircle className="w-4 h-4"/> {t('trackers.projects.kpi.in_progress', 'In Progress:')} <b>{kpiStats.inProgressTasks}</b></span>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                     <div className="bg-gray-50 border-l-4 border-l-sky-500 p-4 rounded-r-lg shadow-sm">
-                                        <div className="text-gray-500 text-xs font-bold uppercase mb-1">Total Projects</div>
+                                        <div className="text-gray-500 text-xs font-bold uppercase mb-1">{t('trackers.projects.kpi.total_projects', 'Total Projects')}</div>
                                         <div className="text-2xl font-black text-gray-900">{kpiStats.totalProjects}</div>
                                     </div>
                                     <div className="bg-gray-50 border-l-4 border-l-indigo-500 p-4 rounded-r-lg shadow-sm">
-                                        <div className="text-gray-500 text-xs font-bold uppercase mb-1">Total Tasks</div>
+                                        <div className="text-gray-500 text-xs font-bold uppercase mb-1">{t('trackers.projects.kpi.total_tasks', 'Total Tasks')}</div>
                                         <div className="text-2xl font-black text-gray-900">{kpiStats.totalTasks}</div>
                                     </div>
                                     <div className="bg-green-50 border-l-4 border-l-green-500 p-4 rounded-r-lg shadow-sm relative overflow-hidden">
-                                        <div className="text-green-700 text-xs font-bold uppercase mb-1">Completion Rate</div>
+                                        <div className="text-green-700 text-xs font-bold uppercase mb-1">{t('trackers.projects.kpi.completion_rate', 'Completion Rate')}</div>
                                         <div className="text-2xl font-black text-green-800">{kpiStats.completionRate}%</div>
                                         <div className="absolute bottom-0 left-0 h-1 bg-green-500 transition-all" style={{ width: `${kpiStats.completionRate}%`}}></div>
                                     </div>
                                     <div className="bg-red-50 border-l-4 border-l-red-500 p-4 rounded-r-lg shadow-sm">
-                                        <div className="text-red-600 text-xs font-bold uppercase mb-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> Overdue</div>
+                                        <div className="text-red-600 text-xs font-bold uppercase mb-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> {t('trackers.projects.kpi.overdue', 'Overdue')}</div>
                                         <div className="text-2xl font-black text-red-700">{kpiStats.overdueTasks}</div>
                                     </div>
                                     <div className="bg-amber-50 border-l-4 border-l-amber-500 p-4 rounded-r-lg shadow-sm">
-                                        <div className="text-amber-700 text-xs font-bold uppercase mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> Due Soon (7 Days)</div>
+                                        <div className="text-amber-700 text-xs font-bold uppercase mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> {t('trackers.projects.kpi.due_soon', 'Due Soon (7 Days)')}</div>
                                         <div className="text-2xl font-black text-amber-800">{kpiStats.upcomingTasks}</div>
                                     </div>
                                 </div>
@@ -532,7 +538,7 @@ export default function ProjectTrackerView({ permissions }) {
                             {/* Program Unit Performance Cards */}
                             <div className="animate-in fade-in slide-in-from-bottom-4">
                                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <FolderKanban className="text-sky-600" /> Program Unit Breakdown
+                                    <FolderKanban className="text-sky-600" /> {t('trackers.projects.unit_breakdown', 'Program Unit Breakdown')}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {unitStatsList.map((unit) => {
@@ -545,21 +551,21 @@ export default function ProjectTrackerView({ permissions }) {
                                                             <div className={`p-2 rounded-lg ${unit.color.replace('text-', 'bg-').replace('500', '100')}`}>
                                                                 <UnitIcon className={`w-5 h-5 ${unit.color}`} />
                                                             </div>
-                                                            <h4 className="font-bold text-gray-800">{unit.title}</h4>
+                                                            <h4 className="font-bold text-gray-800">{unitLabel(unit.key, unit.title)}</h4>
                                                         </div>
-                                                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{unit.totalProjects} Projects</span>
+                                                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{t('trackers.projects.unit_projects', '{{count}} Projects', { count: unit.totalProjects })}</span>
                                                     </div>
                                                     
                                                     <div className="flex justify-between text-sm mb-1 mt-4">
-                                                        <span className="text-gray-500">Tasks Progress</span>
+                                                        <span className="text-gray-500">{t('trackers.projects.tasks_progress', 'Tasks Progress')}</span>
                                                         <span className="font-bold text-gray-700">{unit.completed} / {unit.totalTasks}</span>
                                                     </div>
                                                     <div className="w-full bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
                                                         <div className={`h-2 rounded-full ${unit.completionRate === 100 ? 'bg-green-500' : 'bg-sky-500'}`} style={{ width: `${unit.completionRate}%` }}></div>
                                                     </div>
                                                     <div className="flex justify-between text-xs text-gray-400">
-                                                        <span>{unit.active} Active</span>
-                                                        <span>{unit.completionRate}% Completed</span>
+                                                        <span>{t('trackers.projects.unit_active', '{{count}} Active', { count: unit.active })}</span>
+                                                        <span>{t('trackers.projects.unit_completed_pct', '{{pct}}% Completed', { pct: unit.completionRate })}</span>
                                                     </div>
                                                 </CardBody>
                                             </Card>
@@ -567,7 +573,7 @@ export default function ProjectTrackerView({ permissions }) {
                                     })}
                                     {unitStatsList.length === 0 && (
                                         <div className="col-span-full p-8 text-center text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
-                                            No active projects assigned to any units yet.
+                                            {t('trackers.projects.no_unit_projects', 'No active projects assigned to any units yet.')}
                                         </div>
                                     )}
                                 </div>
@@ -577,24 +583,24 @@ export default function ProjectTrackerView({ permissions }) {
                             <Card className="animate-in fade-in slide-in-from-bottom-8">
                                 <CardBody>
                                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                                        <Users className="text-indigo-600" /> Team Member Performance
+                                        <Users className="text-indigo-600" /> {t('trackers.projects.team_performance', 'Team Member Performance')}
                                     </h3>
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full divide-y divide-gray-200 border">
                                             <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team Member</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase border-l">Total Assigned</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Completed</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Pending/Prog</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-red-500 uppercase border-l">Overdue</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border-l">Completion Rate</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('trackers.projects.team.member', 'Team Member')}</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase border-l">{t('trackers.projects.team.total_assigned', 'Total Assigned')}</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('trackers.projects.team.completed', 'Completed')}</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('trackers.projects.team.pending_prog', 'Pending/Prog')}</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-red-500 uppercase border-l">{t('trackers.projects.kpi.overdue', 'Overdue')}</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border-l">{t('trackers.projects.kpi.completion_rate', 'Completion Rate')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
                                                 {userStatsList.map((user) => (
                                                     <tr key={user.id} className="hover:bg-gray-50">
-                                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{user.id === 'unassigned' ? t('trackers.projects.unassigned', 'Unassigned') : user.name}</td>
                                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-700 text-center border-l bg-gray-50/50">{user.total}</td>
                                                         <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-bold text-center">{user.completed}</td>
                                                         <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 font-bold text-center">{user.pending + user.inProgress}</td>
@@ -610,7 +616,7 @@ export default function ProjectTrackerView({ permissions }) {
                                                     </tr>
                                                 ))}
                                                 {userStatsList.length === 0 && (
-                                                    <tr><td colSpan="6" className="p-6 text-center text-gray-500">No tasks assigned to any team member yet.</td></tr>
+                                                    <tr><td colSpan="6" className="p-6 text-center text-gray-500">{t('trackers.projects.no_member_tasks', 'No tasks assigned to any team member yet.')}</td></tr>
                                                 )}
                                             </tbody>
                                         </table>
@@ -628,46 +634,46 @@ export default function ProjectTrackerView({ permissions }) {
                                         <div className="relative flex-1 min-w-[200px] max-w-[300px]">
                                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                             <Input
-                                                placeholder="Search tasks..."
+                                                placeholder={t('trackers.projects.filters.search', 'Search tasks...')}
                                                 value={taskFilter.search}
                                                 onChange={e => setTaskFilter({...taskFilter, search: e.target.value})}
                                                 className="pl-9 w-full"
                                             />
                                         </div>
                                         <Select value={taskFilter.project} onChange={e => setTaskFilter({...taskFilter, project: e.target.value})} className="w-48">
-                                            <option value="">All Projects</option>
+                                            <option value="">{t('trackers.projects.filters.all_projects', 'All Projects')}</option>
                                             {allActiveProjects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                                         </Select>
                                         <Select value={taskFilter.responsible} onChange={e => setTaskFilter({...taskFilter, responsible: e.target.value})} className="w-48">
-                                            <option value="">All Federal Members</option>
+                                            <option value="">{t('trackers.projects.filters.all_members', 'All Federal Members')}</option>
                                             {allTeamMembers.map(m => <option key={m.id} value={m.id}>{m.nameAr || m.name}</option>)}
                                         </Select>
                                         {dashboardTab === 'active' && (
                                             <Select value={taskFilter.status} onChange={e => setTaskFilter({...taskFilter, status: e.target.value})} className="w-40">
-                                                <option value="">All Statuses</option>
-                                                <option value="Pending">Pending</option>
-                                                <option value="In Progress">In Progress</option>
+                                                <option value="">{t('trackers.projects.filters.all_statuses', 'All Statuses')}</option>
+                                                <option value="Pending">{t('trackers.projects.status.pending', 'Pending')}</option>
+                                                <option value="In Progress">{t('trackers.projects.status.in_progress', 'In Progress')}</option>
                                             </Select>
                                         )}
                                     </div>
                                     <Button size="sm" variant="primary" onClick={handleShareFilteredView} className="shrink-0 shadow-sm border border-blue-600">
-                                        <Share2 className="w-4 h-4 mr-2" /> Share View
+                                        <Share2 className="w-4 h-4 mr-2" /> {t('trackers.projects.share.view', 'Share View')}
                                     </Button>
                                 </div>
 
                                 <div className="overflow-x-auto">
-                                    <Table headers={["Program Unit", "Project", "Task Description", "Responsible", "Due Date", "Status", "Actions"]}>
+                                    <Table headers={[t('trackers.projects.table.unit', 'Program Unit'), t('trackers.projects.table.project', 'Project'), t('trackers.projects.table.task', 'Task Description'), t('trackers.projects.table.responsible', 'Responsible'), t('trackers.projects.table.due', 'Due Date'), t('trackers.projects.table.status', 'Status'), t('trackers.projects.table.actions', 'Actions')]}>
                                         {(dashboardTab === 'active' ? filteredActiveTasks : filteredCompletedTasks).map(task => {
                                             const isOverdue = dashboardTab === 'active' && task.dueDate && new Date(task.dueDate) < new Date();
                                             return (
                                                 <tr key={`${task.projectId}-${task.id}`} className="hover:bg-gray-50 border-b">
-                                                    <td className="p-3 text-xs text-gray-500 font-medium">{task.unitName}</td>
+                                                    <td className="p-3 text-xs text-gray-500 font-medium">{unitLabel(task.unitKey, task.unitName)}</td>
                                                     <td className="p-3 text-sm font-semibold text-gray-700">{task.projectName}</td>
                                                     <td className="p-3 text-sm text-gray-900">
                                                         {task.description}
                                                         {renderSubActivitiesProgress(task)}
                                                     </td>
-                                                    <td className="p-3 text-sm text-gray-600">{task.responsible || 'Unassigned'}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{task.responsible || t('trackers.projects.unassigned', 'Unassigned')}</td>
                                                     <td className="p-3 text-sm">
                                                         <span className={isOverdue ? 'text-red-600 font-bold bg-red-50 p-1 rounded inline-block' : ''}>
                                                             {formatDate(task.dueDate)}
@@ -675,19 +681,19 @@ export default function ProjectTrackerView({ permissions }) {
                                                     </td>
                                                     <td className="p-3 text-sm">
                                                         <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full w-max border whitespace-nowrap">
-                                                            {getStatusIcon(task.status)} {task.status}
+                                                            {getStatusIcon(task.status)} {statusLabel(task.status)}
                                                         </span>
                                                     </td>
                                                     <td className="p-3 text-right">
                                                         <div className="flex justify-end gap-2">
-                                                            <Button size="sm" variant="ghost" onClick={() => handleShareSpecificTask(task)} title="Share this task link">
+                                                            <Button size="sm" variant="ghost" onClick={() => handleShareSpecificTask(task)} title={t('trackers.projects.share.task_link', 'Share this task link')}>
                                                                 <LinkIcon className="w-4 h-4 text-gray-500 hover:text-blue-600" />
                                                             </Button>
                                                             <Button size="sm" variant="secondary" onClick={() => { 
                                                                 setCurrentSubtask(task); 
                                                                 setIsSubtaskModalOpen(true); 
-                                                            }}>Edit</Button>
-                                                            <Button size="sm" variant="danger" onClick={() => handleDeleteSubtask(task.id, task.projectId)}>Delete</Button>
+                                                            }}>{t('trackers.projects.edit', 'Edit')}</Button>
+                                                            <Button size="sm" variant="danger" onClick={() => handleDeleteSubtask(task.id, task.projectId)}>{t('trackers.projects.delete', 'Delete')}</Button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -696,7 +702,7 @@ export default function ProjectTrackerView({ permissions }) {
                                         {(dashboardTab === 'active' ? filteredActiveTasks : filteredCompletedTasks).length === 0 && (
                                             <tr>
                                                 <td colSpan="7" className="p-8 text-center text-gray-500">
-                                                    No {dashboardTab} tasks found matching your filters.
+                                                    {dashboardTab === 'active' ? t('trackers.projects.no_active_found', 'No active tasks found matching your filters.') : t('trackers.projects.no_completed_found', 'No completed tasks found matching your filters.')}
                                                 </td>
                                             </tr>
                                         )}
@@ -710,19 +716,19 @@ export default function ProjectTrackerView({ permissions }) {
                 <Card>
                     <CardBody className="p-6 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded border border-gray-200">
-                            <FormGroup label="Select Program Unit">
+                            <FormGroup label={t('trackers.projects.select_unit', 'Select Program Unit')}>
                                 <Select value={selectedUnit} onChange={(e) => { setSelectedUnit(e.target.value); setSelectedProjectId(''); }}>
-                                    <option value="">-- Choose Unit --</option>
-                                    {PROGRAM_UNITS_DATA.map(u => <option key={u.id} value={u.id}>{u.title}</option>)}
+                                    <option value="">{t('trackers.projects.choose_unit', '-- Choose Unit --')}</option>
+                                    {PROGRAM_UNITS_DATA.map(u => <option key={u.id} value={u.id}>{unitLabel(u.key, u.title)}</option>)}
                                 </Select>
                             </FormGroup>
                             
                             {selectedUnit && (
-                                <FormGroup label="Select or Add Project">
+                                <FormGroup label={t('trackers.projects.select_project', 'Select or Add Project')}>
                                     <Select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-                                        <option value="">-- Choose Project --</option>
+                                        <option value="">{t('trackers.projects.choose_project', '-- Choose Project --')}</option>
                                         {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                                        <option value="NEW" className="font-bold text-sky-600">+ Add New Project</option>
+                                        <option value="NEW" className="font-bold text-sky-600">{t('trackers.projects.add_new_project', '+ Add New Project')}</option>
                                     </Select>
                                 </FormGroup>
                             )}
@@ -730,10 +736,10 @@ export default function ProjectTrackerView({ permissions }) {
 
                         {selectedProjectId === 'NEW' && (
                             <div className="bg-sky-50 p-4 rounded border border-sky-200 flex gap-4 items-end animate-in">
-                                <FormGroup label="New Project Name" className="flex-1">
-                                    <Input value={newProjectTitle} onChange={(e) => setNewProjectTitle(e.target.value)} placeholder="e.g., Annual Federal Strategy Plan" />
+                                <FormGroup label={t('trackers.projects.new_project_name', 'New Project Name')} className="flex-1">
+                                    <Input value={newProjectTitle} onChange={(e) => setNewProjectTitle(e.target.value)} placeholder={t('trackers.projects.new_project_ph', 'e.g., Annual Federal Strategy Plan')} />
                                 </FormGroup>
-                                <Button onClick={handleCreateProject} disabled={!newProjectTitle.trim()}>Create Project</Button>
+                                <Button onClick={handleCreateProject} disabled={!newProjectTitle.trim()}>{t('trackers.projects.create_project', 'Create Project')}</Button>
                             </div>
                         )}
 
@@ -741,7 +747,7 @@ export default function ProjectTrackerView({ permissions }) {
                             <div className="space-y-4 animate-in fade-in">
                                 <div className="flex items-center justify-between border-b pb-2">
                                     <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                        <FolderKanban className="text-sky-600 w-5 h-5"/> {activeProject.title} Tasks
+                                        <FolderKanban className="text-sky-600 w-5 h-5"/> {t('trackers.projects.project_tasks', '{{title}} Tasks', { title: activeProject.title })}
                                     </h3>
                                     <Button size="sm" onClick={() => {
                                         setCurrentSubtask({ 
@@ -755,42 +761,42 @@ export default function ProjectTrackerView({ permissions }) {
                                         });
                                         setIsSubtaskModalOpen(true);
                                     }}>
-                                        <Plus className="w-4 h-4 mr-1" /> Add Task
+                                        <Plus className="w-4 h-4 mr-1" /> {t('trackers.projects.add_task', 'Add Task')}
                                     </Button>
                                 </div>
                                 
                                 {activeProject.subtasks && activeProject.subtasks.length > 0 ? (
-                                    <Table headers={["Task Description", "Responsible", "Due Date", "Status", "Actions"]}>
+                                    <Table headers={[t('trackers.projects.table.task', 'Task Description'), t('trackers.projects.table.responsible', 'Responsible'), t('trackers.projects.table.due', 'Due Date'), t('trackers.projects.table.status', 'Status'), t('trackers.projects.table.actions', 'Actions')]}>
                                         {activeProject.subtasks.map(task => (
                                             <tr key={task.id} className="hover:bg-gray-50">
                                                 <td className="p-3 text-sm font-medium">
                                                     {task.description}
                                                     {renderSubActivitiesProgress(task)}
                                                 </td>
-                                                <td className="p-3 text-sm text-gray-600">{task.responsible || 'Unassigned'}</td>
+                                                <td className="p-3 text-sm text-gray-600">{task.responsible || t('trackers.projects.unassigned', 'Unassigned')}</td>
                                                 <td className="p-3 text-sm">{formatDate(task.dueDate)}</td>
                                                 <td className="p-3 text-sm">
                                                     <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full w-max border">
-                                                        {getStatusIcon(task.status)} {task.status}
+                                                        {getStatusIcon(task.status)} {statusLabel(task.status)}
                                                     </span>
                                                 </td>
                                                 <td className="p-3 text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        <Button size="sm" variant="ghost" onClick={() => handleShareSpecificTask(task)} title="Share this task link">
+                                                        <Button size="sm" variant="ghost" onClick={() => handleShareSpecificTask(task)} title={t('trackers.projects.share.task_link', 'Share this task link')}>
                                                             <LinkIcon className="w-4 h-4 text-gray-500 hover:text-blue-600" />
                                                         </Button>
                                                         <Button size="sm" variant="secondary" onClick={() => { 
                                                             setCurrentSubtask({...task, projectId: activeProject.id}); 
                                                             setIsSubtaskModalOpen(true); 
-                                                        }}>Edit</Button>
-                                                        <Button size="sm" variant="danger" onClick={() => handleDeleteSubtask(task.id, activeProject.id)}>Delete</Button>
+                                                        }}>{t('trackers.projects.edit', 'Edit')}</Button>
+                                                        <Button size="sm" variant="danger" onClick={() => handleDeleteSubtask(task.id, activeProject.id)}>{t('trackers.projects.delete', 'Delete')}</Button>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ))}
                                     </Table>
                                 ) : (
-                                    <EmptyState message="No tasks assigned to this project yet." />
+                                    <EmptyState message={t('trackers.projects.no_project_tasks', 'No tasks assigned to this project yet.')} />
                                 )}
                             </div>
                         )}
@@ -798,17 +804,17 @@ export default function ProjectTrackerView({ permissions }) {
                 </Card>
             )}
 
-            <Modal isOpen={isSubtaskModalOpen} onClose={() => setIsSubtaskModalOpen(false)} title={`${currentSubtask?.id ? 'Edit' : 'Add'} Task`}>
+            <Modal isOpen={isSubtaskModalOpen} onClose={() => setIsSubtaskModalOpen(false)} title={currentSubtask?.id ? t('trackers.projects.modal.edit_task', 'Edit Task') : t('trackers.projects.add_task', 'Add Task')}>
                 <form onSubmit={handleSaveSubtask}>
                     <CardBody className="space-y-4">
-                        <FormGroup label="Task Description">
-                            <Input value={currentSubtask?.description || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, description: e.target.value})} required placeholder="Describe main task..."/>
+                        <FormGroup label={t('trackers.projects.table.task', 'Task Description')}>
+                            <Input value={currentSubtask?.description || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, description: e.target.value})} required placeholder={t('trackers.projects.modal.describe', 'Describe main task...')}/>
                         </FormGroup>
-                        <FormGroup label="Responsible Member (Federal Team)">
+                        <FormGroup label={t('trackers.projects.modal.responsible', 'Responsible Member (Federal Team)')}>
                             <Select 
                                 value={currentSubtask?.responsibleId || ''} 
                                 onChange={(e) => {
-                                    const selectedMember = allTeamMembers.find(t => t.id === e.target.value);
+                                    const selectedMember = allTeamMembers.find(tm => tm.id === e.target.value);
                                     setCurrentSubtask({
                                         ...currentSubtask, 
                                         responsibleId: selectedMember?.id || '',
@@ -817,24 +823,24 @@ export default function ProjectTrackerView({ permissions }) {
                                 }} 
                                 required
                             >
-                                <option value="">-- Select Federal Team Member --</option>
-                                {allTeamMembers.map(t => <option key={t.id} value={t.id}>{t.nameAr || t.name}</option>)}
+                                <option value="">{t('trackers.projects.modal.select_member', '-- Select Federal Team Member --')}</option>
+                                {allTeamMembers.map(tm => <option key={tm.id} value={tm.id}>{tm.nameAr || tm.name}</option>)}
                             </Select>
                         </FormGroup>
                         <div className="grid grid-cols-2 gap-4">
-                            <FormGroup label="Due Date">
+                            <FormGroup label={t('trackers.projects.table.due', 'Due Date')}>
                                 <Input type="date" value={currentSubtask?.dueDate || ''} onChange={(e) => setCurrentSubtask({...currentSubtask, dueDate: e.target.value})} required />
                             </FormGroup>
-                            <FormGroup label="Status">
+                            <FormGroup label={t('trackers.projects.table.status', 'Status')}>
                                 <Select value={currentSubtask?.status || 'Pending'} onChange={(e) => setCurrentSubtask({...currentSubtask, status: e.target.value})}>
-                                    {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{statusLabel(opt)}</option>)}
                                 </Select>
                             </FormGroup>
                         </div>
                         
                         <hr className="my-4" />
                         
-                        <FormGroup label="Sub-Activities (Checklist)">
+                        <FormGroup label={t('trackers.projects.modal.sub_activities', 'Sub-Activities (Checklist)')}>
                             <div className="space-y-2 mb-2">
                                 {currentSubtask?.subActivities?.map((sa, idx) => (
                                     <div key={idx} className="flex gap-2 items-center">
@@ -855,7 +861,7 @@ export default function ProjectTrackerView({ permissions }) {
                                                 newSA[idx].title = e.target.value;
                                                 setCurrentSubtask({...currentSubtask, subActivities: newSA});
                                             }} 
-                                            placeholder="Enter sub-activity title..." 
+                                            placeholder={t('trackers.projects.modal.sub_activity_ph', 'Enter sub-activity title...')} 
                                             className={`flex-1 text-sm ${sa.completed ? 'line-through text-gray-400' : ''}`}
                                         />
                                         <Button type="button" variant="ghost" size="sm" onClick={() => {
@@ -871,15 +877,15 @@ export default function ProjectTrackerView({ permissions }) {
                                 const current = currentSubtask?.subActivities || [];
                                 setCurrentSubtask({...currentSubtask, subActivities: [...current, { title: '', completed: false }]});
                             }}>
-                                <Plus className="w-4 h-4 mr-1" /> Add Sub-Activity
+                                <Plus className="w-4 h-4 mr-1" /> {t('trackers.projects.modal.add_sub_activity', 'Add Sub-Activity')}
                             </Button>
                         </FormGroup>
 
                     </CardBody>
                     <div className="p-4 border-t flex justify-end gap-2 bg-gray-50 rounded-b-lg">
-                        <Button type="button" variant="secondary" onClick={() => setIsSubtaskModalOpen(false)} disabled={isSavingTask}>Cancel</Button>
+                        <Button type="button" variant="secondary" onClick={() => setIsSubtaskModalOpen(false)} disabled={isSavingTask}>{t('trackers.projects.cancel', 'Cancel')}</Button>
                         <Button type="submit" disabled={isSavingTask}>
-                            {isSavingTask ? <Spinner size="sm" /> : 'Save Task'}
+                            {isSavingTask ? <Spinner size="sm" /> : t('trackers.projects.save_task', 'Save Task')}
                         </Button>
                     </div>
                 </form>

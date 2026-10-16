@@ -4,8 +4,10 @@ import { db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { Bell, Trash2, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Modal, Button, Toast } from './CommonComponents';
+import { useTranslation } from 'react-i18next';
 
 export default function NotificationBell({ user, navigate }) {
+    const { t } = useTranslation();
     const [notifications, setNotifications] = useState([]);
     const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
     const [selectedNotif, setSelectedNotif] = useState(null); 
@@ -119,7 +121,7 @@ export default function NotificationBell({ user, navigate }) {
             <button
                 onClick={() => setIsNotificationsModalOpen(true)}
                 className="relative p-1.5 sm:px-3 sm:py-1 text-sm font-semibold text-slate-200 bg-slate-600 rounded-md hover:bg-slate-500 hover:text-white flex items-center justify-center transition-colors"
-                title="Notifications"
+                title={t('shared_ui.notifications.title', 'Notifications')}
             >
                 <Bell size={18} />
                 {unreadCount > 0 && (
@@ -133,7 +135,7 @@ export default function NotificationBell({ user, navigate }) {
 
             {/* ACTION ALERT POP-UP MODAL */}
             {actionAlert && (
-                <Modal isOpen={!!actionAlert} onClose={() => setActionAlert(null)} title="Action Required">
+                <Modal isOpen={!!actionAlert} onClose={() => setActionAlert(null)} title={t('shared_ui.notifications.action_required', 'Action Required')}>
                     <div className="p-6 text-center space-y-4">
                         <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-sky-100 mb-4 shadow-sm border-4 border-white">
                             <Bell className="h-8 w-8 text-sky-600 animate-pulse" />
@@ -146,7 +148,7 @@ export default function NotificationBell({ user, navigate }) {
                                 handleClearNotification(actionAlert.id, actionAlert.targetUser);
                                 setActionAlert(null);
                             }} className="w-full sm:w-auto">
-                                Dismiss
+                                {t('shared_ui.notifications.dismiss', 'Dismiss')}
                             </Button>
                             <Button onClick={() => {
                                 handleClearNotification(actionAlert.id, actionAlert.targetUser);
@@ -157,7 +159,7 @@ export default function NotificationBell({ user, navigate }) {
                                     navigate(actionAlert.actionView, params);
                                 }
                             }} className="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 shadow-md">
-                                View Details Now
+                                {t('shared_ui.notifications.view_details_now', 'View Details Now')}
                             </Button>
                         </div>
                     </div>
@@ -168,14 +170,14 @@ export default function NotificationBell({ user, navigate }) {
                 <Modal 
                     isOpen={isNotificationsModalOpen} 
                     onClose={() => { setIsNotificationsModalOpen(false); setSelectedNotif(null); }} 
-                    title={selectedNotif ? "Message Details" : "Notifications"}
+                    title={selectedNotif ? t('shared_ui.notifications.message_details', 'Message Details') : t('shared_ui.notifications.title', 'Notifications')}
                 >
                     <div className="p-4 max-h-[60vh] min-h-[300px] overflow-y-auto bg-gray-50">
                         
                         {!selectedNotif && notifications.length === 0 && (
                             <div className="text-center py-12 text-gray-500">
                                 <Bell className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-                                <p>No notifications right now.</p>
+                                <p>{t('shared_ui.notifications.empty', 'No notifications right now.')}</p>
                             </div>
                         )}
 
@@ -198,7 +200,7 @@ export default function NotificationBell({ user, navigate }) {
                                                     <p className="text-xs text-gray-500 truncate mt-0.5">{notif.message || notif.body}</p>
                                                 </div>
                                                 <div className="text-[10px] text-gray-400 shrink-0 flex items-center">
-                                                    {notif.createdAt ? new Date(notif.createdAt.seconds * 1000).toLocaleDateString() : 'New'}
+                                                    {notif.createdAt ? new Date(notif.createdAt.seconds * 1000).toLocaleDateString() : t('shared_ui.notifications.new', 'New')}
                                                     <ChevronRight size={16} className="ml-1 text-gray-300" />
                                                 </div>
                                             </div>
@@ -214,7 +216,7 @@ export default function NotificationBell({ user, navigate }) {
                                     <div className="flex-1 pr-4">
                                         <h4 className="text-lg font-bold text-gray-900 leading-tight mb-1">{selectedNotif.title}</h4>
                                         <div className="text-xs text-gray-400">
-                                            {selectedNotif.createdAt ? new Date(selectedNotif.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
+                                            {selectedNotif.createdAt ? new Date(selectedNotif.createdAt.seconds * 1000).toLocaleString() : t('shared_ui.notifications.just_now', 'Just now')}
                                         </div>
                                     </div>
                                     <button 
@@ -223,7 +225,7 @@ export default function NotificationBell({ user, navigate }) {
                                             setSelectedNotif(null);
                                         }} 
                                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0 bg-gray-50" 
-                                        title="Delete Notification"
+                                        title={t('shared_ui.notifications.delete_notification', 'Delete Notification')}
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -239,13 +241,13 @@ export default function NotificationBell({ user, navigate }) {
                     <div className="p-4 border-t border-gray-200 bg-white flex justify-between items-center rounded-b-xl">
                         {selectedNotif ? (
                             <Button onClick={() => setSelectedNotif(null)} variant="secondary" className="px-4">
-                                <ArrowLeft size={16} className="mr-2" /> Back to List
+                                <ArrowLeft size={16} className="mr-2" /> {t('shared_ui.notifications.back_to_list', 'Back to List')}
                             </Button>
                         ) : (
                             <div></div>
                         )}
                         <Button onClick={() => { setIsNotificationsModalOpen(false); setSelectedNotif(null); }} variant="secondary">
-                            Close
+                            {t('shared_ui.notifications.close', 'Close')}
                         </Button>
                     </div>
                 </Modal>

@@ -154,6 +154,7 @@ export function buildMigration(legacy, courseKey) {
 const TAB_ICONS = { read: BookOpenText, see: MonitorPlay, practise: Stethoscope };
 
 function BookImage({ block }) {
+    const { t } = useTranslation();
     const { url, missing } = useAssetUrl(block.path);
     // A whole page captured from the book, as opposed to a figure lifted out of
     // one. The classification charts are drawn as vectors, so their grid and
@@ -162,21 +163,21 @@ function BookImage({ block }) {
     const isPage = block.type === 'page';
     // A picture an author uploaded has no page behind it, so it is described as
     // a picture rather than as "Figure from page undefined".
-    const what = !block.page ? 'Picture'
-        : isPage ? `Page ${block.page} of the book`
-            : `Figure from page ${block.page}`;
+    const what = !block.page ? t('imnci_ui.courses.image.picture', 'Picture')
+        : isPage ? t('imnci_ui.courses.image.page_of_book', 'Page {{page}} of the book', { page: block.page })
+            : t('imnci_ui.courses.image.figure_from_page', 'Figure from page {{page}}', { page: block.page });
 
     if (!block.path) {
         return (
             <div className="p-3 border border-dashed rounded text-xs text-gray-500 text-center">
-                {what} — not uploaded.
+                {t('imnci_ui.courses.image.not_uploaded', '{{what}} — not uploaded.', { what })}
             </div>
         );
     }
     if (missing) {
         return (
             <div className="p-3 border border-dashed border-amber-300 bg-amber-50 rounded text-xs text-amber-800 text-center">
-                {what} is missing from storage.
+                {t('imnci_ui.courses.image.missing', '{{what}} is missing from storage.', { what })}
             </div>
         );
     }
@@ -190,7 +191,7 @@ function BookImage({ block }) {
                 {block.caption || (isPage ? what : '')}
                 {isPage && (
                     <a href={url} target="_blank" rel="noreferrer"
-                        className="ms-2 text-sky-700 font-semibold hover:underline">open full size</a>
+                        className="ms-2 text-sky-700 font-semibold hover:underline">{t('imnci_ui.courses.image.open_full', 'open full size')}</a>
                 )}
             </figcaption>
         </figure>
@@ -202,6 +203,7 @@ function BookImage({ block }) {
 // Nothing is scored or stored — this is self-assessment, and a health worker
 // checking themselves should not feel they are being marked.
 function QuestionBlock({ block }) {
+    const { t } = useTranslation();
     const [picked, setPicked] = useState(null);
     const options = block.options || [];
     return (
@@ -230,11 +232,11 @@ function QuestionBlock({ block }) {
             {picked !== null && (
                 <div className="mt-3 text-sm">
                     <div className={picked === (block.answer ?? 0) ? 'text-emerald-800 font-semibold' : 'text-rose-800 font-semibold'}>
-                        {picked === (block.answer ?? 0) ? 'Correct.' : 'Not quite.'}
+                        {picked === (block.answer ?? 0) ? t('imnci_ui.courses.question.correct', 'Correct.') : t('imnci_ui.courses.question.not_quite', 'Not quite.')}
                     </div>
                     {block.explanation && <p className="text-slate-600 mt-1">{block.explanation}</p>}
                     <button onClick={() => setPicked(null)}
-                        className="text-xs text-sky-700 font-semibold mt-2">try again</button>
+                        className="text-xs text-sky-700 font-semibold mt-2">{t('imnci_ui.courses.question.try_again', 'try again')}</button>
                 </div>
             )}
         </div>
@@ -245,11 +247,12 @@ function QuestionBlock({ block }) {
 // directly otherwise, so a file in Storage and a link to a WHO recording both
 // work without the author having to know which is which.
 function VideoBlock({ block }) {
+    const { t } = useTranslation();
     const src = videoSource(block.url);
     if (!src) {
         return (
             <div className="p-3 border border-dashed rounded text-xs text-gray-500 text-center not-prose">
-                A video with no address.
+                {t('imnci_ui.courses.video.no_address', 'A video with no address.')}
             </div>
         );
     }
@@ -258,7 +261,7 @@ function VideoBlock({ block }) {
             <div className="relative w-full rounded-lg overflow-hidden border border-slate-300 bg-black"
                 style={{ aspectRatio: '16 / 9' }}>
                 {src.kind === 'embed' ? (
-                    <iframe src={src.src} title={block.caption || 'Video'} allowFullScreen
+                    <iframe src={src.src} title={block.caption || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen
                         className="absolute inset-0 w-full h-full"
                         allow="accelerometer; encrypted-media; picture-in-picture" />
                 ) : (
@@ -274,7 +277,7 @@ function VideoBlock({ block }) {
 // are shown from the exercise's own definition; the grading itself stays in
 // Online Exercises, which is where attempts are recorded.
 function ExerciseLinkBlock({ block }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const { exercises } = useImnci();
     if (!exercises) return <div className="not-prose h-28 bg-slate-100 rounded-xl animate-pulse my-4" />;
@@ -282,8 +285,7 @@ function ExerciseLinkBlock({ block }) {
     if (!ex) {
         return (
             <div className="not-prose p-3 border border-dashed border-amber-300 bg-amber-50 rounded text-xs text-amber-900">
-                This section points at an exercise ({block.exerciseId || 'none chosen'}) that is no
-                longer in Online Exercises.
+                {t('imnci_ui.courses.exlink.gone', 'This section points at an exercise ({{id}}) that is no longer in Online Exercises.', { id: block.exerciseId || t('imnci_ui.courses.exlink.none_chosen', 'none chosen') })}
             </div>
         );
     }
@@ -293,7 +295,7 @@ function ExerciseLinkBlock({ block }) {
                 <GraduationCap size={16} className="shrink-0" />
                 <span className="font-bold text-sm flex-1">{ex.title}</span>
                 <span className="text-[11px] text-slate-300">
-                    {ex.estimatedMinutes ? `${ex.estimatedMinutes} min · ` : ''}pass {ex.passMark ?? 80}%
+                    {ex.estimatedMinutes ? t('imnci_ui.courses.exlink.minutes', '{{n}} min · ', { n: ex.estimatedMinutes }) : ''}{t('imnci_ui.courses.exlink.pass', 'pass {{n}}%', { n: ex.passMark ?? 80 })}
                 </span>
             </div>
             <div className="p-4 space-y-3">
@@ -306,8 +308,8 @@ function ExerciseLinkBlock({ block }) {
                     ))}
                 </ul>
                 <div className="text-xs text-slate-500 border-t pt-2">
-                    Work this case, with the assessment form and a score, in
-                    {' '}<strong>Online Exercises</strong>.
+                    {t('imnci_ui.courses.exlink.work_in', 'Work this case, with the assessment form and a score, in')}
+                    {' '}<strong>{t('imnci_ui.courses.exlink.online_exercises', 'Online Exercises')}</strong>.
                 </div>
             </div>
         </div>
@@ -414,6 +416,7 @@ function useAssetUrl(path) {
 // =============================================================================
 
 function ImportModal({ isOpen, onClose, onImported }) {
+    const { t } = useTranslation();
     const [busy, setBusy] = useState(false);
     const [legacy, setLegacy] = useState(null);
     const [error, setError] = useState('');
@@ -436,7 +439,7 @@ function ImportModal({ isOpen, onClose, onImported }) {
             setCourseKey(first?.course_key || '');
         } catch (e) {
             console.error('Legacy fetch failed:', e);
-            setError(`Could not read the original database. ${e.message}`);
+            setError(t('imnci_ui.courses.import.read_failed', 'Could not read the original database. {{msg}}', { msg: e.message }));
         } finally {
             setBusy(false);
         }
@@ -449,23 +452,26 @@ function ImportModal({ isOpen, onClose, onImported }) {
     const commit = async () => {
         if (!plan?.course) return;
         const ok = await confirmDialog(
-            `Import "${plan.course.title}" with ${plan.items.filter(i => i.kind === 'module').length} modules `
-            + `and ${plan.items.filter(i => i.kind === 'section').length} sections? This creates a new course.`,
-            { title: 'Import course', confirmLabel: 'Import' });
+            t('imnci_ui.courses.import.confirm', 'Import "{{title}}" with {{modules}} modules and {{sections}} sections? This creates a new course.', {
+                title: plan.course.title,
+                modules: plan.items.filter(i => i.kind === 'module').length,
+                sections: plan.items.filter(i => i.kind === 'section').length,
+            }),
+            { title: t('imnci_ui.courses.import.confirm_title', 'Import course'), confirmLabel: t('imnci_ui.courses.import.import', 'Import') });
         if (!ok) return;
         setBusy(true);
         try {
             const r = await bulkUpsertOnlineCourseContent(plan);
-            notify(`Imported ${r.modules} modules and ${r.sections} sections.`
-                + (r.orphaned ? ` ${r.orphaned} section(s) had no module.` : ''), 'success');
+            notify(t('imnci_ui.courses.import.done', 'Imported {{modules}} modules and {{sections}} sections.', { modules: r.modules, sections: r.sections })
+                + (r.orphaned ? ' ' + t('imnci_ui.courses.import.orphaned', '{{n}} section(s) had no module.', { n: r.orphaned }) : ''), 'success');
             onImported();
             onClose();
         } catch (e) {
             console.error('Import failed:', e);
             const raw = String(e?.message || e);
             setError(/insufficient permissions|permission-denied/i.test(raw)
-                ? 'Firestore refused the write. The onlineCourses rules may not be deployed yet. Nothing was saved.'
-                : `The import failed and nothing was saved. ${raw}`);
+                ? t('imnci_ui.courses.import.refused', 'Firestore refused the write. The onlineCourses rules may not be deployed yet. Nothing was saved.')
+                : t('imnci_ui.courses.import.failed', 'The import failed and nothing was saved. {{msg}}', { msg: raw }));
         } finally {
             setBusy(false);
         }
@@ -474,7 +480,7 @@ function ImportModal({ isOpen, onClose, onImported }) {
     const courses = Object.values(legacy?.course || {});
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Import from the Android app">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('imnci_ui.courses.import.title', 'Import from the Android app')}>
             <div className="space-y-4">
                 {error && (
                     <div className="flex gap-2 bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-sm">
@@ -483,13 +489,12 @@ function ImportModal({ isOpen, onClose, onImported }) {
                 )}
 
                 <p className="text-sm text-gray-600">
-                    Reads the course structure from the original Sudan Child Health database.
-                    Nothing in that database is changed.
+                    {t('imnci_ui.courses.import.intro', 'Reads the course structure from the original Sudan Child Health database. Nothing in that database is changed.')}
                 </p>
 
                 {!legacy && (
                     <Button onClick={fetchLegacy} disabled={busy}>
-                        <DownloadCloud size={16} /> {busy ? 'Reading…' : 'Read the original database'}
+                        <DownloadCloud size={16} /> {busy ? t('imnci_ui.courses.import.reading', 'Reading…') : t('imnci_ui.courses.import.read_db', 'Read the original database')}
                     </Button>
                 )}
 
@@ -497,7 +502,7 @@ function ImportModal({ isOpen, onClose, onImported }) {
 
                 {legacy && (
                     <>
-                        <Select label="Course to import" value={courseKey}
+                        <Select label={t('imnci_ui.courses.import.course_to_import', 'Course to import')} value={courseKey}
                             onChange={(e) => setCourseKey(e.target.value)}>
                             {courses.map((c) => (
                                 <option key={c.course_key} value={c.course_key}>{c.course_title}</option>
@@ -506,14 +511,13 @@ function ImportModal({ isOpen, onClose, onImported }) {
 
                         {plan?.course && (
                             <div className="p-3 bg-green-50 border border-green-200 rounded text-sm text-green-900">
-                                <strong>{plan.course.title}</strong> — {plan.items.filter(i => i.kind === 'module').length} modules,
-                                {' '}{plan.items.filter(i => i.kind === 'section').length} sections.
+                                <strong>{plan.course.title}</strong> — {t('imnci_ui.courses.import.summary', '{{modules}} modules, {{sections}} sections.', { modules: plan.items.filter(i => i.kind === 'module').length, sections: plan.items.filter(i => i.kind === 'section').length })}
                             </div>
                         )}
 
                         {plan?.warnings?.length > 0 && (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">
-                                <div className="font-semibold mb-1">{plan.warnings.length} thing(s) to know</div>
+                                <div className="font-semibold mb-1">{t('imnci_ui.courses.import.things_to_know', '{{n}} thing(s) to know', { n: plan.warnings.length })}</div>
                                 <ul className="list-disc ms-5 space-y-0.5 max-h-32 overflow-y-auto">
                                     {plan.warnings.map((w, i) => <li key={i}>{w}</li>)}
                                 </ul>
@@ -521,16 +525,14 @@ function ImportModal({ isOpen, onClose, onImported }) {
                         )}
 
                         <div className="p-3 bg-sky-50 border border-sky-200 rounded text-xs text-sky-900">
-                            The course text is only page references. After importing, use
-                            <strong> Upload course files</strong> to add the PDFs, or every section
-                            will show &ldquo;not uploaded yet&rdquo;.
+                            {t('imnci_ui.courses.import.after_note', 'The course text is only page references. After importing, use Upload course files to add the PDFs, or every section will show “not uploaded yet”.')}
                         </div>
                     </>
                 )}
 
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
-                    <Button onClick={commit} disabled={busy || !plan?.course}>Import</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={busy}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                    <Button onClick={commit} disabled={busy || !plan?.course}>{t('imnci_ui.courses.import.import', 'Import')}</Button>
                 </div>
             </div>
         </Modal>
@@ -546,6 +548,7 @@ function ImportModal({ isOpen, onClose, onImported }) {
 // =============================================================================
 
 function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onRefresh }) {
+    const { t } = useTranslation();
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const [result, setResult] = useState(null);
@@ -574,12 +577,12 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
             // Kept beside the parse so the blobs are still in hand at commit.
             parsed.images = pages.flatMap((pg) => pg.images || []);
             if (parsed.sections.length === 0) {
-                setError('No numbered headings were found. This converter expects the IMNCI module books, which number their headings like "2.0" and "5.2.1".');
+                setError(t('imnci_ui.courses.convert.no_headings', 'No numbered headings were found. This converter expects the IMNCI module books, which number their headings like "2.0" and "5.2.1".'));
             }
             setResult({ ...parsed, fileName: picked.name, pageCount: pages.length });
         } catch (e) {
             console.error('PDF conversion failed:', e);
-            setError(`Could not read that PDF. ${e?.message || ''}`.trim());
+            setError(t('imnci_ui.courses.convert.read_failed', 'Could not read that PDF. {{msg}}', { msg: e?.message || '' }).trim());
         } finally {
             setBusy(false);
             event.target.value = '';
@@ -590,9 +593,9 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
         if (!result?.sections?.length || !moduleId) return;
         const module = modules.find((m) => m.id === moduleId);
         const ok = await confirmDialog(
-            `Create ${result.sections.length} readable sections under "${module?.title}"?`
-            + (replace ? ' The sections already in that module will be hidden.' : ''),
-            { title: 'Convert book', confirmLabel: 'Create sections' });
+            t('imnci_ui.courses.convert.confirm', 'Create {{n}} readable sections under "{{module}}"?', { n: result.sections.length, module: module?.title })
+            + (replace ? ' ' + t('imnci_ui.courses.convert.confirm_hide', 'The sections already in that module will be hidden.') : ''),
+            { title: t('imnci_ui.courses.convert.confirm_title', 'Convert book'), confirmLabel: t('imnci_ui.courses.convert.create_sections', 'Create sections') });
         if (!ok) return;
 
         setBusy(true);
@@ -673,19 +676,19 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
                 });
                 n += 1;
             }
-            notify(`Created ${n} readable sections.`, 'success');
+            notify(t('imnci_ui.courses.convert.created', 'Created {{n}} readable sections.', { n }), 'success');
             onRefresh();
             onClose();
         } catch (e) {
             console.error('Could not create sections:', e);
-            setError(`Saving failed part way through. ${e?.message || ''}`.trim());
+            setError(t('imnci_ui.courses.convert.save_failed', 'Saving failed part way through. {{msg}}', { msg: e?.message || '' }).trim());
         } finally {
             setBusy(false);
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Convert a book into readable sections">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('imnci_ui.courses.convert.title', 'Convert a book into readable sections')}>
             <div className="space-y-4">
                 {error && (
                     <div className="flex gap-2 bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-sm">
@@ -694,18 +697,16 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
                 )}
 
                 <p className="text-sm text-gray-600">
-                    Reads an IMNCI module book and splits it at its numbered headings, so each
-                    section becomes text the learner reads in the app rather than a page number
-                    in a PDF. The file is read in your browser and is not uploaded.
+                    {t('imnci_ui.courses.convert.intro', 'Reads an IMNCI module book and splits it at its numbered headings, so each section becomes text the learner reads in the app rather than a page number in a PDF. The file is read in your browser and is not uploaded.')}
                 </p>
 
-                <Select label="Add the sections to" value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
-                    <option value="">— choose a module —</option>
+                <Select label={t('imnci_ui.courses.convert.add_to', 'Add the sections to')} value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
+                    <option value="">{t('imnci_ui.courses.convert.choose_module', '— choose a module —')}</option>
                     {modules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
                 </Select>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Module book (PDF)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('imnci_ui.courses.convert.module_book', 'Module book (PDF)')}</label>
                     <input type="file" accept=".pdf,application/pdf" onChange={handleFile} disabled={busy}
                         className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
                 </div>
@@ -720,9 +721,9 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
                                 </div>
                                 <div className="flex justify-between text-xs text-gray-500">
                                     <span>
-                                        {progress.phase === 'pages' ? 'Capturing'
-                                            : progress.phase === 'figures' ? 'Reading figures on' : 'Reading'} page
-                                        {' '}{progress.page} of {progress.total}
+                                        {progress.phase === 'pages' ? t('imnci_ui.courses.convert.capturing_page', 'Capturing page {{page}} of {{total}}', { page: progress.page, total: progress.total })
+                                            : progress.phase === 'figures' ? t('imnci_ui.courses.convert.figures_page', 'Reading figures on page {{page}} of {{total}}', { page: progress.page, total: progress.total })
+                                                : t('imnci_ui.courses.convert.reading_page', 'Reading page {{page}} of {{total}}', { page: progress.page, total: progress.total })}
                                     </span>
                                     <span>{Math.round((progress.page / progress.total) * 100)}%</span>
                                 </div>
@@ -734,15 +735,12 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
                 {result && result.sections.length > 0 && (
                     <>
                         <div className="p-3 bg-green-50 border border-green-200 rounded text-sm text-green-900">
-                            <strong>{result.sections.length} sections</strong> and
-                            {' '}<strong>{result.images?.length || 0} figures</strong> found in
-                            {' '}{result.pageCount} pages of {result.fileName}. The text becomes the
-                            Read tab and the figures the See tab.
+                            {t('imnci_ui.courses.convert.found', '{{sections}} sections and {{figures}} figures found in {{pages}} pages of {{file}}. The text becomes the Read tab and the figures the See tab.', { sections: result.sections.length, figures: result.images?.length || 0, pages: result.pageCount, file: result.fileName })}
                         </div>
 
                         {result.warnings.length > 0 && (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">
-                                <div className="font-semibold mb-1">Worth knowing</div>
+                                <div className="font-semibold mb-1">{t('imnci_ui.courses.convert.worth_knowing', 'Worth knowing')}</div>
                                 <ul className="list-disc ms-5 space-y-0.5 max-h-28 overflow-y-auto">
                                     {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
                                 </ul>
@@ -765,27 +763,25 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
                             <input type="checkbox" className="mt-1" checked={capturePages}
                                 onChange={(e) => setCapturePages(e.target.checked)} />
                             <span>
-                                Capture each page as a picture for the <strong>See</strong> tab
+                                {t('imnci_ui.courses.convert.capture_pages', 'Capture each page as a picture for the See tab')}
                                 <span className="block text-xs text-gray-500">
-                                    The classification charts are drawn, not typed, so their colours
-                                    survive only as a picture of the page. Adds about
-                                    {' '}{result.sections.length ? (result.sections[result.sections.length - 1].endPage
-                                        - result.sections[0].startPage + 1) : 0} uploads.
+                                    {t('imnci_ui.courses.convert.capture_help', 'The classification charts are drawn, not typed, so their colours survive only as a picture of the page. Adds about {{n}} uploads.', { n: result.sections.length ? (result.sections[result.sections.length - 1].endPage
+                                        - result.sections[0].startPage + 1) : 0 })}
                                 </span>
                             </span>
                         </label>
 
                         <label className="flex items-center gap-2 text-sm">
                             <input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} />
-                            Hide the sections already in that module
+                            {t('imnci_ui.courses.convert.hide_existing', 'Hide the sections already in that module')}
                         </label>
                     </>
                 )}
 
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={busy}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
                     <Button onClick={commit} disabled={busy || !result?.sections?.length || !moduleId}>
-                        Create {result?.sections?.length || 0} sections
+                        {t('imnci_ui.courses.convert.create_n', 'Create {{n}} sections', { n: result?.sections?.length || 0 })}
                     </Button>
                 </div>
             </div>
@@ -798,34 +794,35 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
 // =============================================================================
 
 function CourseModal({ isOpen, onClose, course, onSaved }) {
+    const { t } = useTranslation();
     const [form, setForm] = useState(course || { title: '', description: '', isPublished: false });
     const [saving, setSaving] = useState(false);
     useEffect(() => { if (isOpen) setForm(course || { title: '', description: '', isPublished: false }); }, [isOpen, course]);
 
     const save = async () => {
-        if (!form.title?.trim()) { notify('Enter a course title.', 'error'); return; }
+        if (!form.title?.trim()) { notify(t('imnci_ui.courses.course_modal.enter_title', 'Enter a course title.'), 'error'); return; }
         setSaving(true);
         try {
             await upsertOnlineCourse({ ...form, title: form.title.trim() });
-            notify('Course saved.', 'success');
+            notify(t('imnci_ui.courses.course_modal.saved', 'Course saved.'), 'success');
             onSaved(); onClose();
         } catch (e) {
-            console.error(e); notify('Could not save the course.', 'error');
+            console.error(e); notify(t('imnci_ui.courses.course_modal.save_failed', 'Could not save the course.'), 'error');
         } finally { setSaving(false); }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={course?.id ? 'Edit course' : 'Add course'}>
+        <Modal isOpen={isOpen} onClose={onClose} title={course?.id ? t('imnci_ui.courses.course_modal.edit', 'Edit course') : t('imnci_ui.courses.course_modal.add', 'Add course')}>
             <div className="space-y-4">
-                <Input label="Title" value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-                <Textarea label="Description" rows={3} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <Input label={t('imnci_ui.courses.common.title', 'Title')} value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+                <Textarea label={t('imnci_ui.courses.common.description', 'Description')} rows={3} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={!!form.isPublished} onChange={(e) => setForm({ ...form, isPublished: e.target.checked })} />
-                    Published (visible to learners)
+                    {t('imnci_ui.courses.course_modal.published', 'Published (visible to learners)')}
                 </label>
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-                    <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                    <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.common.save', 'Save')}</Button>
                 </div>
             </div>
         </Modal>
@@ -833,6 +830,7 @@ function CourseModal({ isOpen, onClose, course, onSaved }) {
 }
 
 function ItemModal({ isOpen, onClose, item, courseId, kind, modules, onSaved }) {
+    const { t } = useTranslation();
     const blank = { kind, courseId, title: '', order: 0, isPublished: true };
     const [form, setForm] = useState(item || blank);
     const [saving, setSaving] = useState(false);
@@ -841,31 +839,33 @@ function ItemModal({ isOpen, onClose, item, courseId, kind, modules, onSaved }) 
     const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
     const save = async () => {
-        if (!form.title?.trim()) { notify('Enter a title.', 'error'); return; }
+        if (!form.title?.trim()) { notify(t('imnci_ui.courses.item_modal.enter_title', 'Enter a title.'), 'error'); return; }
         setSaving(true);
         try {
             await upsertOnlineCourseItem({ ...form, courseId, kind, title: form.title.trim(), order: Number(form.order) || 0 });
-            notify('Saved.', 'success');
+            notify(t('imnci_ui.courses.common.saved', 'Saved.'), 'success');
             onSaved(); onClose();
         } catch (e) {
-            console.error(e); notify('Could not save.', 'error');
+            console.error(e); notify(t('imnci_ui.courses.common.save_failed', 'Could not save.'), 'error');
         } finally { setSaving(false); }
     };
 
     const isSection = kind === 'section';
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${item?.id ? 'Edit' : 'Add'} ${kind}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={item?.id
+            ? (kind === 'section' ? t('imnci_ui.courses.item_modal.edit_section', 'Edit section') : t('imnci_ui.courses.item_modal.edit_module', 'Edit module'))
+            : (kind === 'section' ? t('imnci_ui.courses.item_modal.add_section', 'Add section') : t('imnci_ui.courses.item_modal.add_module', 'Add module'))}>
             <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Input label="Title" value={form.title || ''} onChange={(e) => set('title', e.target.value)} />
-                    <Input label="Order" type="number" value={form.order ?? 0} onChange={(e) => set('order', e.target.value)} />
+                    <Input label={t('imnci_ui.courses.common.title', 'Title')} value={form.title || ''} onChange={(e) => set('title', e.target.value)} />
+                    <Input label={t('imnci_ui.courses.item_modal.order', 'Order')} type="number" value={form.order ?? 0} onChange={(e) => set('order', e.target.value)} />
                 </div>
 
                 {isSection && (
                     <>
-                        <Select label="Module" value={form.moduleId || ''} onChange={(e) => set('moduleId', e.target.value)}>
-                            <option value="">— none —</option>
+                        <Select label={t('imnci_ui.courses.item_modal.module', 'Module')} value={form.moduleId || ''} onChange={(e) => set('moduleId', e.target.value)}>
+                            <option value="">{t('imnci_ui.courses.item_modal.none', '— none —')}</option>
                             {modules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
                         </Select>
                     </>
@@ -873,12 +873,12 @@ function ItemModal({ isOpen, onClose, item, courseId, kind, modules, onSaved }) 
 
                 <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={form.isPublished !== false} onChange={(e) => set('isPublished', e.target.checked)} />
-                    Published
+                    {t('imnci_ui.courses.item_modal.published', 'Published')}
                 </label>
 
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-                    <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                    <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.common.save', 'Save')}</Button>
                 </div>
             </div>
         </Modal>
@@ -918,12 +918,14 @@ function ItemModal({ isOpen, onClose, item, courseId, kind, modules, onSaved }) 
 const STRUCTURED = ['video', 'question', 'exercise', 'page'];
 
 function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
+    const { t, i18n } = useTranslation();
     const [html, setHtml] = useState('');
     const [extras, setExtras] = useState([]);
     const [title, setTitle] = useState('');
     const [saving, setSaving] = useState(false);
     const [charting, setCharting] = useState(false);
-    const meta = SECTION_TABS.find((t) => t.id === tab) || SECTION_TABS[0];
+    const meta = SECTION_TABS.find((x) => x.id === tab) || SECTION_TABS[0];
+    const tabLabel = i18n.language === 'ar' && meta.labelAr ? meta.labelAr : meta.label;
     const { exercises } = useImnci();
     const insertRef = useRef(null);
 
@@ -963,7 +965,7 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
             return await getDownloadURL(dest);
         } catch (e) {
             console.error('Could not upload the image:', e);
-            notify(`Could not upload that image. ${e?.message || ''}`.trim(), 'error');
+            notify(t('imnci_ui.courses.editor.upload_failed', 'Could not upload that image. {{msg}}', { msg: e?.message || '' }).trim(), 'error');
             return null;
         }
     };
@@ -990,8 +992,8 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
             ));
             if (problem) {
                 notify(problem.type === 'exercise'
-                    ? 'Choose which case the card points at.'
-                    : 'Each question needs at least two answers to choose from.', 'error');
+                    ? t('imnci_ui.courses.editor.choose_case', 'Choose which case the card points at.')
+                    : t('imnci_ui.courses.editor.two_answers', 'Each question needs at least two answers to choose from.'), 'error');
                 setSaving(false);
                 return;
             }
@@ -1003,11 +1005,11 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
             const patch = { ...section, title: title.trim(), [tab]: [...body, ...kept] };
             if (tab === 'read' && section.blocks?.length) patch.blocks = [];
             await upsertOnlineCourseItem(patch);
-            notify(`${meta.label} saved.`, 'success');
+            notify(t('imnci_ui.courses.editor.tab_saved', '{{tab}} saved.', { tab: tabLabel }), 'success');
             onSaved();
         } catch (e) {
             console.error('Could not save the section:', e);
-            notify(`Could not save. ${e?.message || ''}`.trim(), 'error');
+            notify(t('imnci_ui.courses.editor.save_failed', 'Could not save. {{msg}}', { msg: e?.message || '' }).trim(), 'error');
         } finally {
             setSaving(false);
         }
@@ -1022,15 +1024,15 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                 paragraph in a box half the size of the page it appears on. */}
             <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-300 sticky top-2 z-20">
                 <span className="text-sm text-amber-900 font-semibold">
-                    Editing {meta.label}
+                    {t('imnci_ui.courses.editor.editing', 'Editing {{tab}}', { tab: tabLabel })}
                 </span>
                 <span className="flex gap-2">
-                    <Button variant="secondary" onClick={onCancel} disabled={saving}>Cancel</Button>
-                    <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                    <Button variant="secondary" onClick={onCancel} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                    <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.common.save', 'Save')}</Button>
                 </span>
             </div>
 
-            <Input label="Section title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input label={t('imnci_ui.courses.editor.section_title', 'Section title')} value={title} onChange={(e) => setTitle(e.target.value)} />
 
             <RichTextEditor
                 value={html}
@@ -1038,7 +1040,7 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                 onInsertImage={uploadInline}
                 onInsertChart={() => setCharting(true)}
                 registerInsert={(fn) => { insertRef.current = fn; }}
-                placeholder={`Write the ${meta.label.toLowerCase()} text here. Press Enter for a new paragraph.`}
+                placeholder={t('imnci_ui.courses.editor.placeholder', 'Write the {{tab}} text here. Press Enter for a new paragraph.', { tab: tabLabel.toLowerCase() })}
                 className="min-h-[24rem]"
             />
 
@@ -1064,17 +1066,17 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
 
                         {b.type === 'page' && (
                             <div className="text-xs text-slate-500">
-                                Page {b.page} of the book, captured when it was converted.
+                                {t('imnci_ui.courses.editor.page_captured', 'Page {{page}} of the book, captured when it was converted.', { page: b.page })}
                                 <BookImage block={b} />
                             </div>
                         )}
 
                         {b.type === 'video' && (
                             <div className="space-y-2">
-                                <Input label="Video address" value={b.url || ''}
-                                    placeholder="https://www.youtube.com/watch?v=… or a link to an MP4"
+                                <Input label={t('imnci_ui.courses.editor.video_address', 'Video address')} value={b.url || ''}
+                                    placeholder={t('imnci_ui.courses.editor.video_placeholder', 'https://www.youtube.com/watch?v=… or a link to an MP4')}
                                     onChange={(e) => updateExtra(i, { url: e.target.value })} />
-                                <Input label="Caption" value={b.caption || ''}
+                                <Input label={t('imnci_ui.courses.editor.caption', 'Caption')} value={b.caption || ''}
                                     onChange={(e) => updateExtra(i, { caption: e.target.value })} />
                                 {b.url && <VideoBlock block={b} />}
                             </div>
@@ -1082,32 +1084,32 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
 
                         {b.type === 'exercise' && (
                             <div className="space-y-2">
-                                <Select label="Which case" value={b.exerciseId || ''} disabled={!exercises}
+                                <Select label={t('imnci_ui.courses.editor.which_case', 'Which case')} value={b.exerciseId || ''} disabled={!exercises}
                                     onChange={(e) => updateExtra(i, { exerciseId: e.target.value })}>
-                                    <option value="">{exercises ? '— choose a case —' : 'Loading the cases…'}</option>
+                                    <option value="">{exercises ? t('imnci_ui.courses.editor.choose_a_case', '— choose a case —') : t('imnci_ui.courses.editor.loading_cases', 'Loading the cases…')}</option>
                                     {(exercises || []).map((ex) => (
                                         <option key={ex.id} value={ex.id}>
-                                            {ex.title}{ex.draft ? ' (draft)' : ''}
+                                            {ex.title}{ex.draft ? t('imnci_ui.courses.editor.draft_suffix', ' (draft)') : ''}
                                         </option>
                                     ))}
                                 </Select>
                                 <p className="text-xs text-slate-500">
-                                    Cases are written in the case builder, from Manage mode.
+                                    {t('imnci_ui.courses.editor.cases_written', 'Cases are written in the case builder, from Manage mode.')}
                                 </p>
-                                <Input label="Why it is here (optional)" value={b.note || ''}
+                                <Input label={t('imnci_ui.courses.editor.why_here', 'Why it is here (optional)')} value={b.note || ''}
                                     onChange={(e) => updateExtra(i, { note: e.target.value })} />
                             </div>
                         )}
 
                         {b.type === 'question' && (
                             <div className="space-y-2">
-                                <Textarea rows={2} value={b.text || ''} placeholder="The question"
+                                <Textarea rows={2} value={b.text || ''} placeholder={t('imnci_ui.courses.editor.the_question', 'The question')}
                                     onChange={(e) => updateExtra(i, { text: e.target.value })} />
                                 {(b.options || []).map((opt, oi) => (
                                     <div key={oi} className="flex gap-2 items-center">
                                         <input type="radio" name={`ans-${i}`} checked={(b.answer ?? 0) === oi}
-                                            onChange={() => updateExtra(i, { answer: oi })} title="The correct answer" />
-                                        <input value={opt} placeholder={`Answer ${String.fromCharCode(97 + oi)}`}
+                                            onChange={() => updateExtra(i, { answer: oi })} title={t('imnci_ui.courses.editor.correct_answer', 'The correct answer')} />
+                                        <input value={opt} placeholder={t('imnci_ui.courses.editor.answer_n', 'Answer {{letter}}', { letter: String.fromCharCode(97 + oi) })}
                                             onChange={(e) => updateExtra(i, {
                                                 options: b.options.map((x, k) => (k === oi ? e.target.value : x)),
                                             })} className="flex-1 border rounded px-2 py-1 text-sm" />
@@ -1120,8 +1122,8 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                                     </div>
                                 ))}
                                 <button onClick={() => updateExtra(i, { options: [...(b.options || []), ''] })}
-                                    className="text-xs text-sky-700 font-semibold">+ add answer</button>
-                                <Input label="Why (shown after answering)" value={b.explanation || ''}
+                                    className="text-xs text-sky-700 font-semibold">{t('imnci_ui.courses.editor.add_answer', '+ add answer')}</button>
+                                <Input label={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')} value={b.explanation || ''}
                                     onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
                             </div>
                         )}
@@ -1130,30 +1132,30 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2 border-t">
-                <span className="text-xs text-gray-500 self-center">Add below the text:</span>
+                <span className="text-xs text-gray-500 self-center">{t('imnci_ui.courses.editor.add_below', 'Add below the text:')}</span>
                 {tab === 'practise' && (
                     <>
                         <button onClick={() => addExtra('question')}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                            <Plus size={13} /> Question
+                            <Plus size={13} /> {t('imnci_ui.courses.editor.question', 'Question')}
                         </button>
                         <button onClick={() => addExtra('exercise')}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                            <Stethoscope size={13} /> Link a case
+                            <Stethoscope size={13} /> {t('imnci_ui.courses.editor.link_case', 'Link a case')}
                         </button>
                     </>
                 )}
                 {tab !== 'practise' && (
                     <button onClick={() => addExtra('video')}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                        <Film size={13} /> Video
+                        <Film size={13} /> {t('imnci_ui.courses.video.video', 'Video')}
                     </button>
                 )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button variant="secondary" onClick={onCancel} disabled={saving}>Cancel</Button>
-                <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : `Save ${meta.label}`}</Button>
+                <Button variant="secondary" onClick={onCancel} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.editor.save_tab', 'Save {{tab}}', { tab: tabLabel })}</Button>
             </div>
         </div>
     );
@@ -1164,6 +1166,7 @@ function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
 // underneath. The colours are IMNCI_SEVERITIES, written as inline style so the
 // chart keeps its meaning wherever the HTML ends up.
 function ChartBuilderModal({ isOpen, onClose, onInsert }) {
+    const { t, i18n } = useTranslation();
     const [rows, setRows] = useState([{ colour: 'note', cells: ['', '', ''] }]);
     const [headers, setHeaders] = useState(['Signs', 'Classify as', 'Treatment']);
 
@@ -1198,15 +1201,14 @@ function ChartBuilderModal({ isOpen, onClose, onInsert }) {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Build a classification chart">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('imnci_ui.courses.chart.title', 'Build a classification chart')}>
             <div className="space-y-3">
                 <p className="text-sm text-slate-600">
-                    The row colour is the classification colour — the same one the protocol and
-                    the exercises use — so a pink row here means at the bedside what it means here.
+                    {t('imnci_ui.courses.chart.intro', 'The row colour is the classification colour — the same one the protocol and the exercises use — so a pink row here means at the bedside what it means here.')}
                 </p>
 
                 <div className="flex gap-1">
-                    <span className="w-32 shrink-0 text-xs text-slate-500 self-center">Headings</span>
+                    <span className="w-32 shrink-0 text-xs text-slate-500 self-center">{t('imnci_ui.courses.chart.headings', 'Headings')}</span>
                     {headers.map((h, i) => (
                         <input key={i} value={h} onChange={(e) => setHeaders(
                             (p) => p.map((x, k) => (k === i ? e.target.value : x)))}
@@ -1220,7 +1222,7 @@ function ChartBuilderModal({ isOpen, onClose, onInsert }) {
                             onChange={(e) => setRows((p) => p.map((x, i) => (
                                 i === ri ? { ...x, colour: e.target.value } : x)))}
                             className="border rounded text-xs p-1 w-32 shrink-0">
-                            {IMNCI_SEVERITIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                            {IMNCI_SEVERITIES.map((c) => <option key={c.id} value={c.id}>{i18n.language === 'ar' && c.labelAr ? c.labelAr : c.label}</option>)}
                         </select>
                         {r.cells.map((c, ci) => (
                             <input key={ci} value={c} onChange={(e) => setCell(ri, ci, e.target.value)}
@@ -1233,13 +1235,13 @@ function ChartBuilderModal({ isOpen, onClose, onInsert }) {
                 ))}
 
                 <div className="flex gap-3">
-                    <button onClick={addRow} className="text-xs text-sky-700 font-semibold">+ row</button>
-                    <button onClick={addColumn} className="text-xs text-sky-700 font-semibold">+ column</button>
+                    <button onClick={addRow} className="text-xs text-sky-700 font-semibold">{t('imnci_ui.courses.chart.add_row', '+ row')}</button>
+                    <button onClick={addColumn} className="text-xs text-sky-700 font-semibold">{t('imnci_ui.courses.chart.add_column', '+ column')}</button>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button onClick={build}>Insert the chart</Button>
+                    <Button variant="secondary" onClick={onClose}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                    <Button onClick={build}>{t('imnci_ui.courses.chart.insert', 'Insert the chart')}</Button>
                 </div>
             </div>
         </Modal>
@@ -1264,6 +1266,10 @@ const CHART_TONES = {
 // converted module is a day's work and "delete" is one click away from "edit"
 // in a list.
 function DeletedItems({ courses, items, onChanged }) {
+    const { t } = useTranslation();
+    const kindLabel = (k) => (k === 'course' ? t('imnci_ui.courses.bin.kind_course', 'course')
+        : k === 'module' ? t('imnci_ui.courses.bin.kind_module', 'module')
+            : k === 'section' ? t('imnci_ui.courses.bin.kind_section', 'section') : k);
     const [busy, setBusy] = useState(null);
 
     const deletedCourses = courses.filter((c) => c.isDeleted === true);
@@ -1271,9 +1277,9 @@ function DeletedItems({ courses, items, onChanged }) {
 
     const when = (row) => {
         const at = row.deletedAt?.toDate?.() || (row.deletedAt ? new Date(row.deletedAt) : null);
-        const who = row.deletedBy ? ` by ${row.deletedBy}` : '';
+        const who = row.deletedBy ? ' ' + t('imnci_ui.courses.bin.by', 'by {{who}}', { who: row.deletedBy }) : '';
         return at ? `${at.toLocaleDateString()} ${at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${who}`
-            : (row.deletedBy ? `by ${row.deletedBy}` : 'before this was recorded');
+            : (row.deletedBy ? t('imnci_ui.courses.bin.by', 'by {{who}}', { who: row.deletedBy }) : t('imnci_ui.courses.bin.before_recorded', 'before this was recorded'));
     };
 
     const restore = async (row) => {
@@ -1281,11 +1287,11 @@ function DeletedItems({ courses, items, onChanged }) {
         try {
             if (row.kind) await restoreOnlineCourseItem(row.id);
             else await restoreOnlineCourse(row.id);
-            notify('Restored.', 'success');
+            notify(t('imnci_ui.courses.bin.restored', 'Restored.'), 'success');
             onChanged();
         } catch (e) {
             console.error('Could not restore:', e);
-            notify(`Could not restore. ${e?.message || ''}`.trim(), 'error');
+            notify(t('imnci_ui.courses.bin.restore_failed', 'Could not restore. {{msg}}', { msg: e?.message || '' }).trim(), 'error');
         } finally { setBusy(null); }
     };
 
@@ -1294,10 +1300,10 @@ function DeletedItems({ courses, items, onChanged }) {
             .filter((b) => (b.type === 'image' || b.type === 'page') && b.path).length;
 
         const ok = await confirmDialog(
-            `Permanently delete "${row.title}"?`
-            + (pictures ? ` Its ${pictures} picture${pictures === 1 ? '' : 's'} will be removed from storage too.` : '')
-            + ' This cannot be undone.',
-            { title: 'Delete for good', confirmLabel: 'Delete permanently', danger: true });
+            t('imnci_ui.courses.bin.purge_item', 'Permanently delete "{{title}}"?', { title: row.title })
+            + (pictures ? ' ' + t('imnci_ui.courses.bin.purge_pictures', 'Its {{n}} picture(s) will be removed from storage too.', { n: pictures }) : '')
+            + ' ' + t('imnci_ui.courses.bin.cannot_undo', 'This cannot be undone.'),
+            { title: t('imnci_ui.courses.bin.delete_for_good', 'Delete for good'), confirmLabel: t('imnci_ui.courses.bin.delete_permanently', 'Delete permanently'), danger: true });
         if (!ok) return;
 
         setBusy(row.id);
@@ -1311,32 +1317,34 @@ function DeletedItems({ courses, items, onChanged }) {
                 .map((b) => `${ASSET_ROOT}/${String(b.path).replace(/^\/+/, '')}`);
 
             await hardDeleteOnlineCourseItem(row, keep);
-            notify('Deleted permanently.', 'success');
+            notify(t('imnci_ui.courses.bin.deleted_permanently', 'Deleted permanently.'), 'success');
             onChanged({ onlineCourseItems: [row.id] });
         } catch (e) {
             console.error('Could not delete:', e);
-            notify(`Could not delete. ${e?.message || ''}`.trim(), 'error');
+            notify(t('imnci_ui.courses.bin.delete_failed', 'Could not delete. {{msg}}', { msg: e?.message || '' }).trim(), 'error');
         } finally { setBusy(null); }
     };
 
     const purgeCourse = async (course) => {
         const mine = items.filter((i) => i.courseId === course.id);
         const ok = await confirmDialog(
-            `Permanently delete "${course.title}" and everything in it?`
-            + ` That is ${mine.filter((i) => i.kind === 'module').length} modules and`
-            + ` ${mine.filter((i) => i.kind === 'section').length} sections, with their pictures.`
-            + ' This cannot be undone.',
-            { title: 'Delete the whole course', confirmLabel: 'Delete permanently', danger: true });
+            t('imnci_ui.courses.bin.purge_course', 'Permanently delete "{{title}}" and everything in it? That is {{modules}} modules and {{sections}} sections, with their pictures.', {
+                title: course.title,
+                modules: mine.filter((i) => i.kind === 'module').length,
+                sections: mine.filter((i) => i.kind === 'section').length,
+            })
+            + ' ' + t('imnci_ui.courses.bin.cannot_undo', 'This cannot be undone.'),
+            { title: t('imnci_ui.courses.bin.delete_whole_course', 'Delete the whole course'), confirmLabel: t('imnci_ui.courses.bin.delete_permanently', 'Delete permanently'), danger: true });
         if (!ok) return;
 
         setBusy(course.id);
         try {
             await hardDeleteOnlineCourse(course, mine);
-            notify('The course and everything in it was deleted.', 'success');
+            notify(t('imnci_ui.courses.bin.course_deleted', 'The course and everything in it was deleted.'), 'success');
             onChanged({ onlineCourses: [course.id], onlineCourseItems: mine.map((i) => i.id) });
         } catch (e) {
             console.error('Could not delete the course:', e);
-            notify(`Could not delete. ${e?.message || ''}`.trim(), 'error');
+            notify(t('imnci_ui.courses.bin.delete_failed', 'Could not delete. {{msg}}', { msg: e?.message || '' }).trim(), 'error');
         } finally { setBusy(null); }
     };
 
@@ -1344,7 +1352,7 @@ function DeletedItems({ courses, items, onChanged }) {
         return (
             <Card><CardBody className="text-center text-slate-500 py-10 text-sm">
                 <Trash2 size={24} className="mx-auto mb-2 text-slate-300" />
-                Nothing has been deleted.
+                {t('imnci_ui.courses.bin.nothing', 'Nothing has been deleted.')}
             </CardBody></Card>
         );
     }
@@ -1352,14 +1360,14 @@ function DeletedItems({ courses, items, onChanged }) {
     const row = (thing, label, onPurge) => (
         <li key={thing.id} className="flex flex-wrap items-center gap-2 px-4 py-3">
             <div className="min-w-0 flex-1">
-                <div className="font-medium text-slate-700 truncate">{thing.title || '(no title)'}</div>
-                <div className="text-xs text-slate-500">{label} · deleted {when(thing)}</div>
+                <div className="font-medium text-slate-700 truncate">{thing.title || t('imnci_ui.courses.bin.no_title', '(no title)')}</div>
+                <div className="text-xs text-slate-500">{t('imnci_ui.courses.bin.deleted_when', '{{kind}} · deleted {{when}}', { kind: kindLabel(label), when: when(thing) })}</div>
             </div>
             <Button variant="secondary" disabled={busy === thing.id} onClick={() => restore(thing)}>
-                <RotateCcw size={14} /> Restore
+                <RotateCcw size={14} /> {t('imnci_ui.courses.bin.restore', 'Restore')}
             </Button>
             <Button variant="danger" disabled={busy === thing.id} onClick={() => onPurge(thing)}>
-                <Trash2 size={14} /> Delete for good
+                <Trash2 size={14} /> {t('imnci_ui.courses.bin.delete_for_good', 'Delete for good')}
             </Button>
         </li>
     );
@@ -1367,14 +1375,13 @@ function DeletedItems({ courses, items, onChanged }) {
     return (
         <div className="space-y-3">
             <div className="px-3 py-2 bg-slate-100 border border-slate-300 rounded text-sm text-slate-700">
-                Deleted content is kept here so it can be put back. Emptying it removes the
-                documents and their pictures from storage, and cannot be undone.
+                {t('imnci_ui.courses.bin.intro', 'Deleted content is kept here so it can be put back. Emptying it removes the documents and their pictures from storage, and cannot be undone.')}
             </div>
 
             {deletedCourses.length > 0 && (
                 <Card>
                     <div className="px-4 py-2 bg-rose-50 border-b border-rose-200 text-sm font-bold text-rose-900">
-                        Courses ({deletedCourses.length})
+                        {t('imnci_ui.courses.bin.courses_n', 'Courses ({{n}})', { n: deletedCourses.length })}
                     </div>
                     <ul className="divide-y">
                         {deletedCourses.map((c) => row(c, 'course', purgeCourse))}
@@ -1385,7 +1392,7 @@ function DeletedItems({ courses, items, onChanged }) {
             {deletedItems.length > 0 && (
                 <Card>
                     <div className="px-4 py-2 bg-slate-50 border-b text-sm font-bold text-slate-700">
-                        Modules and sections ({deletedItems.length})
+                        {t('imnci_ui.courses.bin.items_n', 'Modules and sections ({{n}})', { n: deletedItems.length })}
                     </div>
                     <ul className="divide-y max-h-[28rem] overflow-y-auto">
                         {deletedItems.map((i) => row(i, i.kind, purgeItem))}
@@ -1401,8 +1408,9 @@ function DeletedItems({ courses, items, onChanged }) {
 // =============================================================================
 
 export default function OnlineCoursesView({ permissions = {} }) {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
+    const tabName = (x) => (isArabic && x.labelAr ? x.labelAr : x.label);
     // Two distinct experiences, not one screen with extra buttons for some
     // people. A learner should never see an edit pencil or a delete button
     // beside the material they are trying to read, so authoring lives behind a
@@ -1595,22 +1603,22 @@ export default function OnlineCoursesView({ permissions = {} }) {
             await setOnlineSectionComplete(user.uid, section.id, done);
         } catch (e) {
             console.error('Could not save progress:', e);
-            notify('Could not save your progress.', 'error');
+            notify(t('imnci_ui.courses.main.progress_failed', 'Could not save your progress.'), 'error');
         }
     };
 
     const removeCourse = async (course) => {
-        if (!await confirmDialog(`Delete "${course.title}" and hide all its content?`,
-            { title: 'Delete course', confirmLabel: 'Delete', danger: true })) return;
-        try { await deleteOnlineCourse(course.id); notify('Course deleted.', 'success'); resync(); }
-        catch (e) { console.error(e); notify('Could not delete the course.', 'error'); }
+        if (!await confirmDialog(t('imnci_ui.courses.main.delete_course_confirm', 'Delete "{{title}}" and hide all its content?', { title: course.title }),
+            { title: t('imnci_ui.courses.main.delete_course', 'Delete course'), confirmLabel: t('imnci_ui.courses.common.delete', 'Delete'), danger: true })) return;
+        try { await deleteOnlineCourse(course.id); notify(t('imnci_ui.courses.main.course_deleted', 'Course deleted.'), 'success'); resync(); }
+        catch (e) { console.error(e); notify(t('imnci_ui.courses.main.course_delete_failed', 'Could not delete the course.'), 'error'); }
     };
 
     const removeItem = async (item) => {
-        if (!await confirmDialog(`Delete "${item.title}"?`,
-            { title: `Delete ${item.kind}`, confirmLabel: 'Delete', danger: true })) return;
-        try { await deleteOnlineCourseItem(item.id); notify('Deleted.', 'success'); resync(); }
-        catch (e) { console.error(e); notify('Could not delete.', 'error'); }
+        if (!await confirmDialog(t('imnci_ui.courses.main.delete_item_confirm', 'Delete "{{title}}"?', { title: item.title }),
+            { title: item.kind === 'module' ? t('imnci_ui.courses.main.delete_module', 'Delete module') : t('imnci_ui.courses.main.delete_section', 'Delete section'), confirmLabel: t('imnci_ui.courses.common.delete', 'Delete'), danger: true })) return;
+        try { await deleteOnlineCourseItem(item.id); notify(t('imnci_ui.courses.main.deleted', 'Deleted.'), 'success'); resync(); }
+        catch (e) { console.error(e); notify(t('imnci_ui.courses.main.delete_failed', 'Could not delete.'), 'error'); }
     };
 
     if ((isLoading?.onlineCourses && !onlineCourses) || (isLoading?.onlineCourseItems && !onlineCourseItems)) {
@@ -1626,7 +1634,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
     if (openSection) {
         const isDone = !!progress.completed?.[openSection.id];
         const content = tabContent(openSection, sectionTab);
-        const meta = SECTION_TABS.find((t) => t.id === sectionTab) || SECTION_TABS[0];
+        const meta = SECTION_TABS.find((x) => x.id === sectionTab) || SECTION_TABS[0];
         // Revising the converted text means holding it against the page it came
         // from. The captured pages make that possible without leaving the app.
         const pages = tabContent(openSection, 'see').filter((b) => b.type === 'page');
@@ -1645,7 +1653,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
             <div className="space-y-4 max-w-5xl mx-auto">
                 <button onClick={() => setOpenSectionId(null)}
                     className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                    <ArrowLeft size={15} /> {openModule?.title || 'Back'}
+                    <ArrowLeft size={15} /> {openModule?.title || t('imnci_ui.courses.main.back', 'Back')}
                 </button>
 
                 <div className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm">
@@ -1657,17 +1665,17 @@ export default function OnlineCoursesView({ permissions = {} }) {
                     </div>
 
                     <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
-                        {SECTION_TABS.map((t) => {
-                            const Icon = TAB_ICONS[t.id];
-                            const n = tabContent(openSection, t.id).length;
-                            const active = sectionTab === t.id;
+                        {SECTION_TABS.map((tb) => {
+                            const Icon = TAB_ICONS[tb.id];
+                            const n = tabContent(openSection, tb.id).length;
+                            const active = sectionTab === tb.id;
                             return (
-                                <button key={t.id} disabled={!!editingTab && editingTab !== t.id}
-                                    onClick={() => { setSectionTab(t.id); setCompare(false); }}
+                                <button key={tb.id} disabled={!!editingTab && editingTab !== tb.id}
+                                    onClick={() => { setSectionTab(tb.id); setCompare(false); }}
                                     className={`relative flex items-center gap-2 px-5 py-3 text-sm font-semibold whitespace-nowrap transition-colors ${
                                         active ? 'text-sky-800 bg-white' : 'text-slate-500 hover:text-slate-700'}`}>
                                     <Icon size={15} />
-                                    {isArabic ? t.labelAr : t.label}
+                                    {isArabic ? tb.labelAr : tb.label}
                                     {n > 0 && (
                                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                                             active ? 'bg-sky-100 text-sky-700' : 'bg-slate-200 text-slate-600'}`}>{n}</span>
@@ -1680,26 +1688,26 @@ export default function OnlineCoursesView({ permissions = {} }) {
 
                     <div className="p-5 space-y-4">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-xs text-slate-500">{meta.hint}</p>
+                            <p className="text-xs text-slate-500">{t(`imnci_ui.courses.tab_hints.${meta.id}`, meta.hint)}</p>
                             <div className="flex items-center gap-1">
                                 {isAdmin && !editingTab && (
                                     <Button variant="secondary" className="px-2 py-1 h-auto"
                                         onClick={() => setEditingTab(sectionTab)}>
-                                        <Pencil size={14} /> Edit {meta.label}
+                                        <Pencil size={14} /> {t('imnci_ui.courses.main.edit_tab', 'Edit {{tab}}', { tab: tabName(meta) })}
                                     </Button>
                                 )}
                                 {canCompare && !editingTab && (
                                     <Button variant={compare ? 'primary' : 'secondary'} className="px-2 py-1 h-auto"
                                         onClick={() => setCompare(!compare)}
-                                        title="Show the book page beside the converted text">
-                                        <Columns2 size={14} /> Compare
+                                        title={t('imnci_ui.courses.main.compare_title', 'Show the book page beside the converted text')}>
+                                        <Columns2 size={14} /> {t('imnci_ui.courses.main.compare', 'Compare')}
                                     </Button>
                                 )}
                                 {sectionTab === 'read' && !editingTab && (
                                     <>
                                         <Button variant="secondary" onClick={() => setScale(fontScale - 0.1)}
                                             disabled={fontScale <= 0.8} className="px-2 py-1 h-auto"><ZoomOut size={16} /></Button>
-                                        <button onClick={() => setScale(1)} title="Reset the reading size"
+                                        <button onClick={() => setScale(1)} title={t('imnci_ui.courses.main.reset_size', 'Reset the reading size')}
                                             className="text-xs text-slate-500 w-12 hover:text-sky-700">
                                             {Math.round(fontScale * 100)}%
                                         </button>
@@ -1722,11 +1730,11 @@ export default function OnlineCoursesView({ permissions = {} }) {
                             // screen two narrow columns would defeat that.
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="lg:max-h-[38rem] lg:overflow-y-auto pe-1">
-                                    <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Converted text</div>
+                                    <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">{t('imnci_ui.courses.main.converted_text', 'Converted text')}</div>
                                     <ContentBlocks blocks={content} scale={fontScale} />
                                 </div>
                                 <div className="lg:max-h-[38rem] lg:overflow-y-auto ps-1 border-s">
-                                    <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">The book</div>
+                                    <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">{t('imnci_ui.courses.main.the_book', 'The book')}</div>
                                     <ContentBlocks blocks={pages} />
                                 </div>
                             </div>
@@ -1734,27 +1742,27 @@ export default function OnlineCoursesView({ permissions = {} }) {
                             <ContentBlocks blocks={content} scale={sectionTab === 'read' ? fontScale : 1} />
                         ) : (
                             <div className="text-sm text-slate-500 py-12 text-center border border-dashed rounded-lg">
-                                Nothing in {meta.label} for this section yet.
+                                {t('imnci_ui.courses.main.nothing_in_tab', 'Nothing in {{tab}} for this section yet.', { tab: tabName(meta) })}
                                 {isAdmin && (
-                                    <div className="mt-1 text-xs">Use Edit {meta.label}, above, to write it.</div>
+                                    <div className="mt-1 text-xs">{t('imnci_ui.courses.main.use_edit_tab', 'Use Edit {{tab}}, above, to write it.', { tab: tabName(meta) })}</div>
                                 )}
                             </div>
                         )}
 
                         {sectionTab === 'read' && openSection.bookFromPage && (
                             <div className="text-xs text-slate-400 pt-2 border-t">
-                                From the module book, pages {openSection.bookFromPage}–{openSection.bookToPage}.
+                                {t('imnci_ui.courses.main.from_book_pages', 'From the module book, pages {{from}}–{{to}}.', { from: openSection.bookFromPage, to: openSection.bookToPage })}
                             </div>
                         )}
                     </div>
 
                     <div className="px-5 py-3 bg-slate-50 border-t flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs text-slate-500">
-                            {isDone ? 'You have completed this section.' : 'Mark this section when you are done.'}
+                            {isDone ? t('imnci_ui.courses.main.completed_section', 'You have completed this section.') : t('imnci_ui.courses.main.mark_when_done', 'Mark this section when you are done.')}
                         </span>
                         <Button onClick={() => toggleComplete(openSection)}
                             variant={isDone ? 'secondary' : 'primary'} disabled={!user?.uid}>
-                            {isDone ? <><CheckCircle2 size={16} /> Completed</> : <><Circle size={16} /> Mark complete</>}
+                            {isDone ? <><CheckCircle2 size={16} /> {t('imnci_ui.courses.main.completed', 'Completed')}</> : <><Circle size={16} /> {t('imnci_ui.courses.main.mark_complete', 'Mark complete')}</>}
                         </Button>
                     </div>
                 </div>
@@ -1764,23 +1772,23 @@ export default function OnlineCoursesView({ permissions = {} }) {
                         <button disabled={here <= 0} onClick={() => goTo(siblings[here - 1])}
                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:border-sky-400 hover:text-sky-700 disabled:opacity-40 disabled:hover:border-slate-300 disabled:hover:text-slate-700">
                             <ArrowLeft size={18} />
-                            <span className="hidden sm:inline">Previous</span>
+                            <span className="hidden sm:inline">{t('imnci_ui.courses.main.previous', 'Previous')}</span>
                         </button>
 
                         <span className="text-xs text-slate-400 text-center">
-                            {here + 1} of {siblings.length}
+                            {t('imnci_ui.courses.main.n_of_total', '{{n}} of {{total}}', { n: here + 1, total: siblings.length })}
                             {!nextAllowed && here < siblings.length - 1 && (
                                 <span className="block text-amber-700">
-                                    Mark this section complete to go on
+                                    {t('imnci_ui.courses.main.mark_to_go_on', 'Mark this section complete to go on')}
                                 </span>
                             )}
                         </span>
 
                         <button disabled={here < 0 || here >= siblings.length - 1 || !nextAllowed}
                             onClick={() => goTo(siblings[here + 1])}
-                            title={nextAllowed ? 'The next section' : 'Finish this section first'}
+                            title={nextAllowed ? t('imnci_ui.courses.main.next_section', 'The next section') : t('imnci_ui.courses.main.finish_first', 'Finish this section first')}
                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 disabled:bg-slate-200 disabled:text-slate-400">
-                            <span className="hidden sm:inline">Next</span>
+                            <span className="hidden sm:inline">{t('imnci_ui.courses.main.next', 'Next')}</span>
                             {nextAllowed ? <ArrowRight size={18} /> : <Lock size={16} />}
                         </button>
                     </div>
@@ -1805,13 +1813,13 @@ export default function OnlineCoursesView({ permissions = {} }) {
                     {isAdmin && (
                         <div className="flex gap-2">
                             <Button variant="secondary" onClick={() => setConvertOpen(true)}>
-                                <Wand2 size={16} /> Convert a book
+                                <Wand2 size={16} /> {t('imnci_ui.courses.main.convert_book', 'Convert a book')}
                             </Button>
                             <Button variant="secondary" onClick={() => setItemModal({ kind: 'module', item: openModule })}>
-                                <Pencil size={16} /> Module
+                                <Pencil size={16} /> {t('imnci_ui.courses.item_modal.module', 'Module')}
                             </Button>
                             <Button onClick={() => setItemModal({ kind: 'section' })}>
-                                <Plus size={16} /> Add section
+                                <Plus size={16} /> {t('imnci_ui.courses.item_modal.add_section', 'Add section')}
                             </Button>
                         </div>
                     )}
@@ -1821,7 +1829,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                     <div className="px-5 py-4 bg-gradient-to-br from-slate-800 to-slate-900 text-white">
                         <h2 className="text-lg font-bold">{openModule.title}</h2>
                         <div className="text-xs text-slate-300 mt-1">
-                            {secs.length} sections · {doneHere} complete
+                            {t('imnci_ui.courses.main.sections_complete', '{{n}} sections · {{done}} complete', { n: secs.length, done: doneHere })}
                         </div>
                         <div className="h-1.5 bg-white/20 rounded mt-3 overflow-hidden max-w-md">
                             <div className="h-full bg-emerald-400 transition-all"
@@ -1831,13 +1839,13 @@ export default function OnlineCoursesView({ permissions = {} }) {
 
                     {secs.length === 0 ? (
                         <div className="p-12 text-center text-slate-500 text-sm space-y-2">
-                            <div>{syncing ? 'Checking for sections…' : 'No sections yet.'}</div>
+                            <div>{syncing ? t('imnci_ui.courses.main.checking_sections', 'Checking for sections…') : t('imnci_ui.courses.main.no_sections', 'No sections yet.')}</div>
                             {isAdmin && !syncing && (
-                                <div className="text-xs">Convert the module book to create them.</div>
+                                <div className="text-xs">{t('imnci_ui.courses.main.convert_to_create', 'Convert the module book to create them.')}</div>
                             )}
                             {!syncing && (
                                 <Button variant="secondary" onClick={resync}>
-                                    <RefreshCw size={15} /> Check again
+                                    <RefreshCw size={15} /> {t('imnci_ui.courses.main.check_again', 'Check again')}
                                 </Button>
                             )}
                         </div>
@@ -1847,7 +1855,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                 const done = !!progress.completed?.[s.id];
                                 const locked = sectionLocked(secs, i);
                                 const filled = SECTION_TABS
-                                    .map((t) => ({ t, n: tabContent(s, t.id).length }))
+                                    .map((tb) => ({ tb, n: tabContent(s, tb.id).length }))
                                     .filter((x) => x.n > 0);
                                 return (
                                     <li key={s.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${
@@ -1859,31 +1867,31 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                         </span>
                                         <button className="flex-1 text-start min-w-0 disabled:cursor-not-allowed"
                                             disabled={locked}
-                                            title={locked ? 'Finish the section before this one first' : undefined}
+                                            title={locked ? t('imnci_ui.courses.main.finish_before', 'Finish the section before this one first') : undefined}
                                             onClick={() => {
                                                 setOpenSectionId(s.id); setSectionTab('read');
                                                 setCompare(false); setEditingTab(null);
                                             }}>
                                             <div className={`font-medium truncate ${locked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</div>
                                             <div className="text-xs text-slate-500 flex gap-2 flex-wrap mt-0.5">
-                                                {locked ? <span>Finish the previous section first</span> : (<>
-                                                    {filled.map(({ t, n }) => (
-                                                        <span key={t.id}>{isArabic ? t.labelAr : t.label} {n}</span>
+                                                {locked ? <span>{t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span> : (<>
+                                                    {filled.map(({ tb, n }) => (
+                                                        <span key={tb.id}>{isArabic ? tb.labelAr : tb.label} {n}</span>
                                                     ))}
-                                                    {filled.length === 0 && <span>empty</span>}
+                                                    {filled.length === 0 && <span>{t('imnci_ui.courses.main.empty', 'empty')}</span>}
                                                 </>)}
                                             </div>
                                         </button>
                                         {isAdmin && (
                                             <span className="flex gap-1 shrink-0">
-                                                {SECTION_TABS.map((t) => {
-                                                    const Icon = TAB_ICONS[t.id];
+                                                {SECTION_TABS.map((tb) => {
+                                                    const Icon = TAB_ICONS[tb.id];
                                                     return (
-                                                        <button key={t.id} title={`Edit ${t.label}`}
+                                                        <button key={tb.id} title={t('imnci_ui.courses.main.edit_tab', 'Edit {{tab}}', { tab: tabName(tb) })}
                                                             onClick={() => {
                                                                 setOpenSectionId(s.id);
-                                                                setSectionTab(t.id);
-                                                                setEditingTab(t.id);
+                                                                setSectionTab(tb.id);
+                                                                setEditingTab(tb.id);
                                                             }}
                                                             className="p-1.5 border rounded text-slate-500 hover:bg-slate-50 hover:text-sky-700">
                                                             <Icon size={14} />
@@ -1927,10 +1935,10 @@ export default function OnlineCoursesView({ permissions = {} }) {
         const pct = courseSections.length ? Math.round((doneCount / courseSections.length) * 100) : 0;
 
         const chips = [
-            { Icon: Sparkles, label: 'Self-paced' },
-            { Icon: Globe, label: '100% online' },
-            { Icon: Layers, label: `${modules.length} modules` },
-            { Icon: BookOpen, label: `${courseSections.length} sections` },
+            { Icon: Sparkles, label: t('imnci_ui.courses.main.self_paced', 'Self-paced') },
+            { Icon: Globe, label: t('imnci_ui.courses.main.online', '100% online') },
+            { Icon: Layers, label: t('imnci_ui.courses.main.n_modules', '{{n}} modules', { n: modules.length }) },
+            { Icon: BookOpen, label: t('imnci_ui.courses.main.n_sections', '{{n}} sections', { n: courseSections.length }) },
         ];
 
         return (
@@ -1938,11 +1946,11 @@ export default function OnlineCoursesView({ permissions = {} }) {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <button onClick={() => setOpenCourseId(null)}
                         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                        <ArrowLeft size={15} /> All courses
+                        <ArrowLeft size={15} /> {t('imnci_ui.courses.main.all_courses', 'All courses')}
                     </button>
                     {isAdmin && (
                         <Button variant="secondary" onClick={() => setItemModal({ kind: 'module' })}>
-                            <Plus size={16} /> Add module
+                            <Plus size={16} /> {t('imnci_ui.courses.item_modal.add_module', 'Add module')}
                         </Button>
                     )}
                 </div>
@@ -1958,7 +1966,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                             <div className="absolute bottom-4 start-52 w-10 h-10 rounded-full bg-white/50" />
                         </div>
                         <div className="relative">
-                            <div className="text-[11px] uppercase tracking-widest text-sky-200">Course</div>
+                            <div className="text-[11px] uppercase tracking-widest text-sky-200">{t('imnci_ui.courses.main.course', 'Course')}</div>
                             <h1 className="text-2xl font-bold mt-1">{openCourse.title}</h1>
                             {openCourse.description && (
                                 <p className="text-sky-100 text-sm mt-2 max-w-2xl">{openCourse.description}</p>
@@ -1979,7 +1987,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                                 style={{ width: `${pct}%` }} />
                                         </div>
                                         <div className="text-[11px] text-sky-100 mt-1">
-                                            {doneCount} of {courseSections.length} sections · {pct}%
+                                            {t('imnci_ui.courses.main.progress_line', '{{done}} of {{total}} sections · {{pct}}%', { done: doneCount, total: courseSections.length, pct })}
                                         </div>
                                     </div>
                                     {nextUp ? (
@@ -1989,11 +1997,11 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                             setSectionTab('read');
                                         }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-sky-800 text-sm font-bold hover:bg-sky-50">
                                             <GraduationCap size={16} />
-                                            {doneCount ? 'Continue' : 'Start the course'}
+                                            {doneCount ? t('imnci_ui.courses.main.continue', 'Continue') : t('imnci_ui.courses.main.start_course', 'Start the course')}
                                         </button>
                                     ) : (
                                         <span className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-200">
-                                            <CheckCircle2 size={18} /> Every section finished
+                                            <CheckCircle2 size={18} /> {t('imnci_ui.courses.main.all_finished', 'Every section finished')}
                                         </span>
                                     )}
                                 </div>
@@ -2005,7 +2013,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                     <div className="p-4 space-y-3">
                         {modules.length === 0 ? (
                             <div className="text-center text-slate-500 py-10 text-sm">
-                                This course has no modules yet.
+                                {t('imnci_ui.courses.main.no_modules', 'This course has no modules yet.')}
                             </div>
                         ) : modules.map((m, i) => {
                             const secs = sectionsByModule[m.id] || [];
@@ -2029,8 +2037,8 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                             </div>
                                             <div className="text-xs text-slate-500 mt-0.5">
                                                 {locked
-                                                    ? 'Finish the module before this one to open it'
-                                                    : `${done} / ${secs.length} sections${secs.length ? ` · ${mpct}%` : ''}`}
+                                                    ? t('imnci_ui.courses.main.finish_module_before', 'Finish the module before this one to open it')
+                                                    : t('imnci_ui.courses.main.module_progress', '{{done}} / {{total}} sections', { done, total: secs.length }) + (secs.length ? ` · ${mpct}%` : '')}
                                             </div>
                                             {!locked && secs.length > 0 && (
                                                 <div className="h-1 bg-slate-100 rounded mt-2 overflow-hidden">
@@ -2052,7 +2060,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                 {orphans.length > 0 && isAdmin && (
                     <Card>
                         <div className="p-3 bg-amber-50 border-b border-amber-200 font-bold text-amber-900 text-sm">
-                            Sections not attached to a module
+                            {t('imnci_ui.courses.main.orphans', 'Sections not attached to a module')}
                         </div>
                         <div className="divide-y">
                             {orphans.map((s) => (
@@ -2084,29 +2092,29 @@ export default function OnlineCoursesView({ permissions = {} }) {
                 actions={
                     <div className="flex gap-2 items-center">
                         <Button variant="secondary" onClick={resync} disabled={syncing}
-                            title="Look for anything added on another device">
+                            title={t('imnci_ui.courses.main.refresh_title', 'Look for anything added on another device')}>
                             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-                            <span className="hidden sm:inline">{syncing ? 'Checking…' : 'Refresh'}</span>
+                            <span className="hidden sm:inline">{syncing ? t('imnci_ui.courses.main.checking', 'Checking…') : t('imnci_ui.courses.main.refresh', 'Refresh')}</span>
                         </Button>
                         {canManage && (
                             <div className="flex rounded-md overflow-hidden border border-slate-300">
                                 <button
                                     onClick={() => setMode('learn')}
                                     className={`px-3 py-1.5 text-sm font-semibold ${mode === 'learn' ? 'bg-sky-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                                >Learn</button>
+                                >{t('imnci_ui.courses.main.learn', 'Learn')}</button>
                                 <button
                                     onClick={() => setMode('manage')}
                                     className={`px-3 py-1.5 text-sm font-semibold ${mode === 'manage' ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                                >Manage</button>
+                                >{t('imnci_ui.courses.main.manage', 'Manage')}</button>
                             </div>
                         )}
                         {isAdmin && (
                             <>
                                 <Button variant="secondary" onClick={() => setImportOpen(true)}>
-                                    <DownloadCloud size={16} /> Import
+                                    <DownloadCloud size={16} /> {t('imnci_ui.courses.import.import', 'Import')}
                                 </Button>
                                 <Button onClick={() => setCourseModal({})}>
-                                    <Plus size={16} /> Add course
+                                    <Plus size={16} /> {t('imnci_ui.courses.course_modal.add', 'Add course')}
                                 </Button>
                             </>
                         )}
@@ -2117,22 +2125,21 @@ export default function OnlineCoursesView({ permissions = {} }) {
             {isAdmin && (
                 <div className="space-y-2">
                     <div className="px-3 py-2 bg-amber-50 border border-amber-300 rounded text-sm text-amber-900">
-                        Manage mode. Learners do not see the editing controls below, and drafts are
-                        visible only here.
+                        {t('imnci_ui.courses.main.manage_note', 'Manage mode. Learners do not see the editing controls below, and drafts are visible only here.')}
                     </div>
                     {/* The course, the cases and the protocol are one body of
                         work, so the two other builders open from here rather
                         than being somewhere else in the app. */}
                     <div className="flex flex-wrap gap-2">
                         <Button variant={showBin ? 'primary' : 'secondary'} onClick={() => setShowBin(!showBin)}>
-                            <Trash2 size={16} /> Deleted{deletedCount ? ` (${deletedCount})` : ''}
+                            <Trash2 size={16} /> {t('imnci_ui.courses.main.deleted_bin', 'Deleted')}{deletedCount ? ` (${deletedCount})` : ''}
                         </Button>
                         <Button variant="secondary" onClick={() => setBuilder('exercises')}>
-                            <Stethoscope size={16} /> Case builder
+                            <Stethoscope size={16} /> {t('imnci_ui.courses.main.case_builder', 'Case builder')}
                         </Button>
                         {permissions.canManageProtocols && (
                             <Button variant="secondary" onClick={() => setBuilder('protocol')}>
-                                <Syringe size={16} /> Protocol builder
+                                <Syringe size={16} /> {t('imnci_ui.courses.main.protocol_builder', 'Protocol builder')}
                             </Button>
                         )}
                     </div>
@@ -2148,10 +2155,10 @@ export default function OnlineCoursesView({ permissions = {} }) {
                     <div className="mx-auto w-full max-w-6xl bg-white rounded-xl flex flex-col min-h-0 flex-1 overflow-hidden">
                         <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
                             <h2 className="font-bold text-slate-800">
-                                {builder === 'protocol' ? 'Protocol builder' : 'Case builder'}
+                                {builder === 'protocol' ? t('imnci_ui.courses.main.protocol_builder', 'Protocol builder') : t('imnci_ui.courses.main.case_builder', 'Case builder')}
                             </h2>
                             <button onClick={() => { setBuilder(null); refreshExercises(); }}
-                                className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title="Close">
+                                className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title={t('imnci_ui.courses.main.close', 'Close')}>
                                 <X size={18} />
                             </button>
                         </div>
@@ -2171,8 +2178,8 @@ export default function OnlineCoursesView({ permissions = {} }) {
             {isAdmin && showBin ? null : courses.length === 0 ? (
                 <Card><CardBody className="text-center py-12 text-gray-500">
                     <BookOpen size={32} className="mx-auto mb-3 text-gray-400" />
-                    <div className="font-medium text-gray-700">No courses yet</div>
-                    {isAdmin && <div className="text-sm mt-1">Use Import to bring in the IMNCI course from the Android app.</div>}
+                    <div className="font-medium text-gray-700">{t('imnci_ui.courses.main.no_courses', 'No courses yet')}</div>
+                    {isAdmin && <div className="text-sm mt-1">{t('imnci_ui.courses.main.use_import', 'Use Import to bring in the IMNCI course from the Android app.')}</div>}
                 </CardBody></Card>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -2194,7 +2201,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                     <BookOpen size={30} className="absolute bottom-3 start-4 text-white/90" />
                                     {!c.isPublished && (
                                         <span className="absolute top-3 end-3 px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold uppercase tracking-wide">
-                                            draft
+                                            {t('imnci_ui.courses.main.draft', 'draft')}
                                         </span>
                                     )}
                                 </div>
@@ -2206,9 +2213,9 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                     </div>
 
                                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                                        <span className="inline-flex items-center gap-1"><Sparkles size={13} /> Self-paced</span>
-                                        <span className="inline-flex items-center gap-1"><Globe size={13} /> 100% online</span>
-                                        <span className="inline-flex items-center gap-1"><Layers size={13} /> {mods.length} modules</span>
+                                        <span className="inline-flex items-center gap-1"><Sparkles size={13} /> {t('imnci_ui.courses.main.self_paced', 'Self-paced')}</span>
+                                        <span className="inline-flex items-center gap-1"><Globe size={13} /> {t('imnci_ui.courses.main.online', '100% online')}</span>
+                                        <span className="inline-flex items-center gap-1"><Layers size={13} /> {t('imnci_ui.courses.main.n_modules', '{{n}} modules', { n: mods.length })}</span>
                                     </div>
 
                                     {secs.length > 0 && (
@@ -2217,7 +2224,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                                 <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
                                             </div>
                                             <div className="text-[11px] text-slate-500 mt-1">
-                                                {done} of {secs.length} sections complete
+                                                {t('imnci_ui.courses.main.card_progress', '{{done}} of {{total}} sections complete', { done, total: secs.length })}
                                             </div>
                                         </div>
                                     )}
@@ -2225,7 +2232,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                     <div className="flex gap-2 mt-auto pt-1">
                                         <Button className="flex-1 justify-center"
                                             onClick={() => { setOpenCourseId(c.id); setOpenModuleId(null); setOpenSectionId(null); }}>
-                                            {done ? 'Continue' : 'Start'}
+                                            {done ? t('imnci_ui.courses.main.continue', 'Continue') : t('imnci_ui.courses.main.start', 'Start')}
                                         </Button>
                                         {isAdmin && (
                                             <>

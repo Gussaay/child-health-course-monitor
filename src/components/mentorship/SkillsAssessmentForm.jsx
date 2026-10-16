@@ -1,5 +1,6 @@
 // SkillsAssessmentForm.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
 import {
@@ -92,6 +93,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         draftCount,
         workerHistory = [] 
     } = props;
+    const { t } = useTranslation();
 
     // --- State Management ---
     const [formData, setFormData] = useState(() => 
@@ -882,7 +884,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                             variant="info"
                             onClick={() => setIsFacilityModalOpen(true)} 
                             disabled={isSaving || isSavingDraft || !facility}
-                            title={facility ? "Open IMNCI Facility Data Form" : "No facility selected"}
+                            title={facility ? t('mentorship_extra.skills_assessment.open_facility_form', 'Open IMNCI Facility Data Form') : t('mentorship_extra.skills_assessment.no_facility', 'No facility selected')}
                         >
                             بيانات المنشأة (IMNCI)
                         </Button>
@@ -891,7 +893,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                             variant="info"
                             onClick={() => setIsMothersFormModalOpen(true)} 
                             disabled={isSaving || isSavingDraft || !facility}
-                            title={facility ? "Open Mother's Survey" : "No facility selected"}
+                            title={facility ? t('mentorship_extra.skills_assessment.open_mothers_survey', "Open Mother's Survey") : t('mentorship_extra.skills_assessment.no_facility', 'No facility selected')}
                         >
                             استبيان الأم
                         </Button>
@@ -900,7 +902,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                             variant="info"
                             onClick={() => setIsVisitReportModalOpen(true)} 
                             disabled={isSaving || isSavingDraft || !facility}
-                            title={facility ? "Open IMNCI Visit Report" : "No facility selected"}
+                            title={facility ? t('mentorship_extra.skills_assessment.open_visit_report', 'Open IMNCI Visit Report') : t('mentorship_extra.skills_assessment.no_facility', 'No facility selected')}
                         >
                             تقرير الزيارة
                         </Button>
@@ -909,7 +911,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                             variant="info"
                             onClick={() => setIsDashboardModalOpen(true)} 
                             disabled={isSaving || isSavingDraft}
-                            title="Open Dashboard"
+                            title={t('mentorship_extra.skills_assessment.open_dashboard', 'Open Dashboard')}
                         >
                             لوحة المتابعة
                         </Button>
@@ -963,8 +965,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                             title="بيانات خدمة IMNCI"
                             subtitle={`تحديث البيانات للمنشأة: ${facility['اسم_المؤسسة'] || '...'}`}
                             isPublicForm={false}
-                            saveButtonText="Submit for Approval"
-                            cancelButtonText="Close"
+                            saveButtonText={t('mentorship_extra.skills_assessment.submit_for_approval', 'Submit for Approval')}
+                            cancelButtonText={t('mentorship_extra.skills_assessment.close', 'Close')}
                         >
                             {(props) => <IMNCIFormFields {...props} />}
                         </GenericFacilityForm>

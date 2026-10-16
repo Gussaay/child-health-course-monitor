@@ -1,5 +1,6 @@
 // src/components/Participants.jsx
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx'; 
 import jsPDF from "jspdf"; 
 
@@ -46,6 +47,7 @@ import { confirmDialog, alertDialog } from './dialogs';
 // ====================================================================
 
 const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const ref = useRef(null);
 
@@ -69,7 +71,7 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
         ? placeholder 
         : selected.length === 1 
             ? selected[0] 
-            : `${selected.length} selected`;
+            : t('participants_page.multiselect.n_selected', '{{count}} selected', { count: selected.length });
 
     return (
         <div className="relative flex flex-col gap-1" ref={ref}>
@@ -88,7 +90,7 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
                             className="p-2 border-b border-gray-200 cursor-pointer bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-red-600 text-center"
                             onClick={() => { onChange([]); setIsOpen(false); }}
                         >
-                            Clear Selection
+                            {t('participants_page.multiselect.clear', 'Clear Selection')}
                         </div>
                     )}
                     {options.length > 0 ? options.map((opt, i) => (
@@ -102,7 +104,7 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
                             <span className="text-gray-700 select-none truncate" title={opt}>{opt}</span>
                         </label>
                     )) : (
-                        <div className="p-3 text-sm text-gray-500 text-center">No options available</div>
+                        <div className="p-3 text-sm text-gray-500 text-center">{t('participants_page.multiselect.no_options', 'No options available')}</div>
                     )}
                 </div>
             )}
@@ -115,6 +117,7 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
 // ====================================================================
 
 const CertificateLanguageModal = ({ isOpen, onClose, onConfirm, title }) => {
+    const { t } = useTranslation();
     const [language, setLanguage] = useState('en');
     
     useEffect(() => {
@@ -122,17 +125,17 @@ const CertificateLanguageModal = ({ isOpen, onClose, onConfirm, title }) => {
     }, [isOpen]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={title || "Select Certificate Language"}>
+        <Modal isOpen={isOpen} onClose={onClose} title={title || t('participants_page.cert.select_language_title', 'Select Certificate Language')}>
             <div className="p-4 space-y-4">
-                <FormGroup label="Select Language">
+                <FormGroup label={t('participants_page.cert.select_language', 'Select Language')}>
                     <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
-                        <option value="en">English</option>
-                        <option value="ar">Arabic (عربي)</option>
+                        <option value="en">{t('participants_page.common.english', 'English')}</option>
+                        <option value="ar">{t('participants_page.common.arabic', 'Arabic (عربي)')}</option>
                     </Select>
                 </FormGroup>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button variant="primary" onClick={() => onConfirm(language)}>Continue</Button>
+                    <Button variant="secondary" onClick={onClose}>{t('participants_page.common.cancel', 'Cancel')}</Button>
+                    <Button variant="primary" onClick={() => onConfirm(language)}>{t('participants_page.common.continue', 'Continue')}</Button>
                 </div>
             </div>
         </Modal>
@@ -140,6 +143,7 @@ const CertificateLanguageModal = ({ isOpen, onClose, onConfirm, title }) => {
 };
 
 const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = false, setToast }) => {
+    const { t } = useTranslation();
     const [language, setLanguage] = useState('en');
     const [isSending, setIsSending] = useState(false);
     const [progress, setProgress] = useState({ current: 0, total: 0, errors: 0 });
@@ -179,58 +183,58 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
         setProgress(prev => ({ ...prev, errors: errorCount }));
         
         if (errorCount === 0) {
-            setToast({ show: true, message: `Successfully queued emails for ${total} participants.`, type: 'success' });
+            setToast({ show: true, message: t('participants_page.email.success', 'Successfully queued emails for {{count}} participants.', { count: total }), type: 'success' });
             onClose();
         } else if (errorCount < total) {
-            setToast({ show: true, message: `Queued emails. ${errorCount} failed (missing email or error).`, type: 'warning' });
+            setToast({ show: true, message: t('participants_page.email.partial', 'Queued emails. {{count}} failed (missing email or error).', { count: errorCount }), type: 'warning' });
         } else {
-            setToast({ show: true, message: "Failed to send emails. Check if participants have email addresses.", type: 'error' });
+            setToast({ show: true, message: t('participants_page.email.failed', 'Failed to send emails. Check if participants have email addresses.'), type: 'error' });
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={isBulk ? "Email All Certificates" : "Email Certificate"}>
+        <Modal isOpen={isOpen} onClose={onClose} title={isBulk ? t('participants_page.email.title_bulk', 'Email All Certificates') : t('participants_page.email.title_single', 'Email Certificate')}>
             <div className="p-4 space-y-4">
                 {!isSending && progress.current === 0 ? (
                     <>
                         <p className="text-sm text-gray-600">
                             {isBulk 
-                                ? `You are about to send certificate download links to ${participants.length} participants via email.` 
-                                : `Send certificate download link to ${participants[0]?.name} via email.`
+                                ? t('participants_page.email.intro_bulk', 'You are about to send certificate download links to {{count}} participants via email.', { count: participants.length }) 
+                                : t('participants_page.email.intro_single', 'Send certificate download link to {{name}} via email.', { name: participants[0]?.name })
                             }
                         </p>
                         {isBulk && (
                             <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-xs text-yellow-800">
-                                <strong>Note:</strong> Only participants with a saved email address will receive the link.
+                                <strong>{t('participants_page.email.note', 'Note:')}</strong> {t('participants_page.email.note_text', 'Only participants with a saved email address will receive the link.')}
                             </div>
                         )}
 
-                        <FormGroup label="Select Certificate Language">
+                        <FormGroup label={t('participants_page.cert.select_language_title', 'Select Certificate Language')}>
                             <Select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={isSending}>
-                                <option value="en">English</option>
-                                <option value="ar">Arabic (عربي)</option>
+                                <option value="en">{t('participants_page.common.english', 'English')}</option>
+                                <option value="ar">{t('participants_page.common.arabic', 'Arabic (عربي)')}</option>
                             </Select>
                         </FormGroup>
                     </>
                 ) : (
                     <div className="text-center py-6">
-                        {isSending ? <Spinner size="lg" /> : (progress.errors > 0 ? <div className="text-orange-600 text-xl font-bold">Completed with Issues</div> : <div className="text-green-600 text-xl font-bold">Done!</div>)}
+                        {isSending ? <Spinner size="lg" /> : (progress.errors > 0 ? <div className="text-orange-600 text-xl font-bold">{t('participants_page.email.completed_issues', 'Completed with Issues')}</div> : <div className="text-green-600 text-xl font-bold">{t('participants_page.email.done', 'Done!')}</div>)}
                         <p className="mt-4 text-gray-700">
-                            Processing: {progress.current} / {progress.total}
+                            {t('participants_page.email.processing', 'Processing: {{current}} / {{total}}', { current: progress.current, total: progress.total })}
                         </p>
                         {progress.errors > 0 && (
                             <p className="text-red-600 text-sm mt-2">
-                                {progress.errors} skipped (missing email or error)
+                                {t('participants_page.email.skipped', '{{count}} skipped (missing email or error)', { count: progress.errors })}
                             </p>
                         )}
                     </div>
                 )}
 
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-                    <Button variant="secondary" onClick={onClose} disabled={isSending}>Close</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={isSending}>{t('participants_page.common.close', 'Close')}</Button>
                     {!isSending && progress.current === 0 && (
                         <Button onClick={handleSend} variant="primary" disabled={isSending}>
-                            {isBulk ? "Send All Emails" : "Send Email"}
+                            {isBulk ? t('participants_page.email.send_all', 'Send All Emails') : t('participants_page.email.send', 'Send Email')}
                         </Button>
                     )}
                 </div>
@@ -240,6 +244,7 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
 };
 
 const ShareCoursePageModal = ({ isOpen, onClose, courseId, courseName }) => {
+    const { t } = useTranslation();
     const [link, setLink] = useState('');
     const [copied, setCopied] = useState(false);
 
@@ -257,24 +262,24 @@ const ShareCoursePageModal = ({ isOpen, onClose, courseId, courseName }) => {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Share Public Certificates Page">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('participants_page.share_course.title', 'Share Public Certificates Page')}>
             <div className="p-4 space-y-4">
                 <p className="text-sm text-gray-600">
-                    Share this link with participants or stakeholders. They will be able to view the list of all participants in the <strong>{courseName}</strong> course and download certificates individually.
+                    {t('participants_page.share_course.text_before', 'Share this link with participants or stakeholders. They will be able to view the list of all participants in the')} <strong>{courseName}</strong> {t('participants_page.share_course.text_after', 'course and download certificates individually.')}
                 </p>
                 
                 <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Public Page Link</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('participants_page.share_course.link_label', 'Public Page Link')}</label>
                     <div className="flex gap-2">
                         <Input readOnly value={link} className="bg-gray-50 text-sm text-gray-600" />
                         <Button onClick={handleCopy} variant={copied ? "success" : "primary"}>
-                            {copied ? "Copied!" : "Copy Link"}
+                            {copied ? t('participants_page.common.copied', 'Copied!') : t('participants_page.common.copy_link', 'Copy Link')}
                         </Button>
                     </div>
                 </div>
 
                 <div className="flex justify-end mt-4 pt-4 border-t">
-                    <Button variant="secondary" onClick={onClose}>Close</Button>
+                    <Button variant="secondary" onClick={onClose}>{t('participants_page.common.close', 'Close')}</Button>
                 </div>
             </div>
         </Modal>
@@ -282,6 +287,7 @@ const ShareCoursePageModal = ({ isOpen, onClose, courseId, courseName }) => {
 };
 
 const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId }) => {
+    const { t } = useTranslation();
     const [language, setLanguage] = useState('en');
     const [generatedLink, setGeneratedLink] = useState('');
     const [copied, setCopied] = useState(false);
@@ -309,31 +315,31 @@ const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Share Certificate Link">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('participants_page.share_cert.title', 'Share Certificate Link')}>
             <div className="p-4 space-y-4">
                 <p className="text-sm text-gray-600">
-                    Generate a direct download link for <strong>{participantName}</strong>. 
+                    {t('participants_page.share_cert.intro', 'Generate a direct download link for')} <strong>{participantName}</strong>. 
                 </p>
 
-                <FormGroup label="Select Certificate Language">
+                <FormGroup label={t('participants_page.cert.select_language_title', 'Select Certificate Language')}>
                     <Select value={language} onChange={handleLanguageChange}>
-                        <option value="en">English</option>
-                        <option value="ar">Arabic (عربي)</option>
+                        <option value="en">{t('participants_page.common.english', 'English')}</option>
+                        <option value="ar">{t('participants_page.common.arabic', 'Arabic (عربي)')}</option>
                     </Select>
                 </FormGroup>
 
                 <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Direct Download Link</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('participants_page.share_cert.link_label', 'Direct Download Link')}</label>
                     <div className="flex gap-2">
                         <Input readOnly value={generatedLink} className="bg-gray-50 text-sm" />
                         <Button onClick={handleCopy} variant={copied ? "success" : "primary"}>
-                            {copied ? "Copied!" : "Copy Link"}
+                            {copied ? t('participants_page.common.copied', 'Copied!') : t('participants_page.common.copy_link', 'Copy Link')}
                         </Button>
                     </div>
                 </div>
 
                 <div className="flex justify-end mt-4 pt-4 border-t">
-                    <Button variant="secondary" onClick={onClose}>Close</Button>
+                    <Button variant="secondary" onClick={onClose}>{t('participants_page.common.close', 'Close')}</Button>
                 </div>
             </div>
         </Modal>
@@ -341,19 +347,20 @@ const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId
 };
 
 const ParticipantCertificateActionModal = ({ isOpen, onClose, participant, onDownload, onEmail, onShare }) => {
+    const { t } = useTranslation();
     if (!isOpen || !participant) return null;
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Certificate: ${participant.name}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={t('participants_page.cert_action.title', 'Certificate: {{name}}', { name: participant.name })}>
             <div className="p-4 flex flex-col gap-3">
-                <p className="text-sm text-gray-600 mb-4">Choose an action for this participant's certificate.</p>
+                <p className="text-sm text-gray-600 mb-4">{t('participants_page.cert_action.intro', "Choose an action for this participant's certificate.")}</p>
                 <Button variant="primary" className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 border-transparent focus:ring-emerald-500" onClick={() => { onClose(); onDownload(); }}>
-                    <Printer className="w-4 h-4 mr-3" /> Download as PDF
+                    <Printer className="w-4 h-4 mr-3" /> {t('participants_page.cert_action.download_pdf', 'Download as PDF')}
                 </Button>
                 <Button variant="secondary" className="w-full justify-start text-gray-700" onClick={() => { onClose(); onEmail(); }} disabled={!participant.email}>
-                    <Mail className="w-4 h-4 mr-3" /> Share by Email {!participant.email && <span className="text-xs text-red-500 ml-1">(No email saved)</span>}
+                    <Mail className="w-4 h-4 mr-3" /> {t('participants_page.cert_action.share_email', 'Share by Email')} {!participant.email && <span className="text-xs text-red-500 ml-1">{t('participants_page.cert_action.no_email', '(No email saved)')}</span>}
                 </Button>
                 <Button variant="secondary" className="w-full justify-start text-gray-700" onClick={() => { onClose(); onShare(); }}>
-                    <RefreshCw className="w-4 h-4 mr-3" /> Share Direct Link
+                    <RefreshCw className="w-4 h-4 mr-3" /> {t('participants_page.cert_action.share_link', 'Share Direct Link')}
                 </Button>
             </div>
         </Modal>
@@ -361,6 +368,7 @@ const ParticipantCertificateActionModal = ({ isOpen, onClose, participant, onDow
 };
 
 const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
     const ref = useRef(null);
@@ -427,7 +435,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
                             </div>
                         ))
                     ) : (
-                        <div className="p-2 text-gray-500">No results found.</div>
+                        <div className="p-2 text-gray-500">{t('participants_page.common.no_results', 'No results found.')}</div>
                     )}
                 </div>
             )}
@@ -436,6 +444,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
 };
 
 const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave, isSaving }) => {
+    const { t } = useTranslation();
     const [name, setName] = useState(initialName || '');
     const [phone, setPhone] = useState('');
     const [job, setJob] = useState('');
@@ -445,7 +454,7 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave, is
     const handleSave = () => {
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
         if (!name || !finalJobTitle || !phone) {
-            setError("Please fill in all fields.");
+            setError(t('participants_page.new_participant.fill_all', 'Please fill in all fields.'));
             return;
         }
         setError('');
@@ -457,35 +466,35 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave, is
     };
 
     return (
-        <Modal isOpen={true} onClose={isSaving ? null : onCancel} title="Add New Participant Details">
+        <Modal isOpen={true} onClose={isSaving ? null : onCancel} title={t('participants_page.new_participant.title', 'Add New Participant Details')}>
             <Card>
                 <div className="p-6">
-                    <p className="text-sm text-gray-600 mb-4">This person was not found in the facility's staff list. Please provide their details.</p>
+                    <p className="text-sm text-gray-600 mb-4">{t('participants_page.new_participant.intro', "This person was not found in the facility's staff list. Please provide their details.")}</p>
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
                     <div className="space-y-4 pt-6">
-                        <FormGroup label="Participant Name">
-                            <Input disabled={isSaving} value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" />
+                        <FormGroup label={t('participants_page.fields.participant_name', 'Participant Name')}>
+                            <Input disabled={isSaving} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('participants_page.fields.full_name', 'Full Name')} />
                         </FormGroup>
-                        <FormGroup label="Job Title">
+                        <FormGroup label={t('participants_page.fields.job_title', 'Job Title')}>
                             <Select disabled={isSaving} value={job} onChange={(e) => setJob(e.target.value)}>
-                                <option value="">— Select Job —</option>
+                                <option value="">{t('participants_page.fields.select_job', '— Select Job —')}</option>
                                 {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                <option value="Other">Other</option>
+                                <option value="Other">{t('participants_page.fields.other', 'Other')}</option>
                             </Select>
                         </FormGroup>
                         {job === 'Other' && (
-                            <FormGroup label="Specify Job Title">
-                                <Input disabled={isSaving} value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" />
+                            <FormGroup label={t('participants_page.fields.specify_job', 'Specify Job Title')}>
+                                <Input disabled={isSaving} value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder={t('participants_page.fields.please_specify', 'Please specify')} />
                             </FormGroup>
                         )}
-                        <FormGroup label="Phone Number">
-                            <Input disabled={isSaving} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone Number" />
+                        <FormGroup label={t('participants_page.fields.phone_number', 'Phone Number')}>
+                            <Input disabled={isSaving} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('participants_page.fields.phone_number', 'Phone Number')} />
                         </FormGroup>
                     </div>
                     <div className="flex gap-2 justify-end mt-6 border-t pt-6">
-                        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>{t('participants_page.common.cancel', 'Cancel')}</Button>
                         <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? <Spinner size="sm" /> : 'Continue'}
+                            {isSaving ? <Spinner size="sm" /> : t('participants_page.common.continue', 'Continue')}
                         </Button>
                     </div>
                 </div>
@@ -495,6 +504,7 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave, is
 };
 
 const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilitiesList, onSave, courseType, setToast }) => {
+    const { t } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [selectedFieldKey, setSelectedFieldKey] = useState('');
@@ -512,12 +522,12 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
     const CLEANABLE_FIELDS_CONFIG = useMemo(() => {
         const config = {
             'state': {
-                label: 'State',
+                label: t('participants_page.fields.state', 'State'),
                 standardValues: Object.keys(STATE_LOCALITIES).sort(),
                 getOptionLabel: (opt) => STATE_LOCALITIES[opt]?.ar || opt
             },
             'locality': {
-                label: 'Locality',
+                label: t('participants_page.fields.locality', 'Locality'),
                 standardValues: Object.values(STATE_LOCALITIES).flatMap(s => s.localities.map(l => l.en)).sort(),
                 getOptionLabel: (opt) => {
                     for (const stateKey in STATE_LOCALITIES) {
@@ -528,12 +538,12 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
                 }
             },
             'job_title': {
-                label: 'Job Title',
+                label: t('participants_page.fields.job_title', 'Job Title'),
                 standardValues: jobTitleOptions,
                 getOptionLabel: (opt) => opt
             },
             'group': {
-                label: 'Group',
+                label: t('participants_page.fields.group', 'Group'),
                 standardValues: ['Group A', 'Group B', 'Group C', 'Group D'],
                 getOptionLabel: (opt) => opt
             },
@@ -541,13 +551,13 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
 
         if (courseType === 'IMNCI' || courseType === 'ICCM' || courseType === 'Comprehensive Package For Community Midwives') {
             config['imci_sub_type'] = {
-                label: 'Course Sub-type',
+                label: t('participants_page.fields.course_sub_type', 'Course Sub-type'),
                 standardValues: courseType === 'IMNCI' ? IMNCI_SUBCOURSE_TYPES : courseType === 'ICCM' ? ['ICCM Community Module'] : ['CPCM Community Module'],
                 getOptionLabel: (opt) => opt
             };
             if (courseType === 'IMNCI') {
                 config['facility_type'] = {
-                    label: 'Facility Type',
+                    label: t('participants_page.fields.facility_type', 'Facility Type'),
                     standardValues: ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"],
                     getOptionLabel: (opt) => opt
                 };
@@ -556,7 +566,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
 
         if (courseType === 'ETAT') {
             config['hospital_type'] = {
-                label: 'Hospital Type (ETAT)',
+                label: t('participants_page.fields.hospital_type_etat', 'Hospital Type (ETAT)'),
                 standardValues: ['Pediatric Hospital', 'Pediatric Department in General Hospital', 'Rural Hospital', 'other'],
                 getOptionLabel: (opt) => opt
             };
@@ -564,14 +574,14 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
 
         if (courseType === 'EENC' || courseType === 'EmONC' || courseType === 'SSNC' || courseType === 'Small & Sick Newborn') {
             config['hospital_type'] = {
-                label: `Hospital Type (${courseType})`,
+                label: t('participants_page.fields.hospital_type_course', 'Hospital Type ({{course}})', { course: courseType }),
                 standardValues: ['Comprehensive EmONC', 'Basic EmONC', 'other'],
                 getOptionLabel: (opt) => opt
             };
         }
 
         return config;
-    }, [jobTitleOptions, courseType]);
+    }, [jobTitleOptions, courseType, t]);
 
     useEffect(() => {
         if (!isOpen) setSelectedFieldKey('');
@@ -676,11 +686,11 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
 
         try {
             await onSave(participantsToUpdate, facilitiesToUpsert);
-            setToast({ show: true, message: 'Data cleaned successfully!', type: 'success' });
+            setToast({ show: true, message: t('participants_page.cleanup.success', 'Data cleaned successfully!'), type: 'success' });
             onClose();
         } catch (error) {
             console.error("Failed to update participants:", error);
-            setToast({ show: true, message: `Failed to clean data: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('participants_page.cleanup.failed', 'Failed to clean data: {{error}}', { error: error.message }), type: 'error' });
         } finally {
             setIsUpdating(false);
         }
@@ -689,11 +699,11 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
     const renderSelectionScreen = () => (
         <div>
             <p className="text-sm text-gray-600 mb-4">
-                This tool helps standardize data for all participants in the current course. Select a field to find and correct non-standard entries.
+                {t('participants_page.cleanup.intro', 'This tool helps standardize data for all participants in the current course. Select a field to find and correct non-standard entries.')}
             </p>
-            <FormGroup label="Select a data field to clean">
+            <FormGroup label={t('participants_page.cleanup.select_field', 'Select a data field to clean')}>
                 <Select value={selectedFieldKey} onChange={(e) => setSelectedFieldKey(e.target.value)} disabled={isUpdating}>
-                    <option value="">-- Choose field --</option>
+                    <option value="">{t('participants_page.common.choose_field', '-- Choose field --')}</option>
                     {Object.entries(CLEANABLE_FIELDS_CONFIG).map(([key, config]) => (
                         <option key={key} value={key}>{config.label}</option>
                     ))}
@@ -709,22 +719,22 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
                 {isLoading && <div className="text-center"><Spinner /></div>}
                 {!isLoading && nonStandardValues.length === 0 && (
                     <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-md">
-                        {`All values for "${config.label}" are already standardized for this course.`}
+                        {t('participants_page.cleanup.all_standard', 'All values for "{{field}}" are already standardized for this course.', { field: config.label })}
                     </div>
                 )}
                 {!isLoading && nonStandardValues.length > 0 && (
                     <div>
                         <p className="mb-4 text-sm text-gray-700">
-                            Found <strong>{nonStandardValues.length}</strong> non-standard value(s) for <strong>{config.label}</strong>. Map them to a standard value to clean up your data.
+                            {t('participants_page.cleanup.found', 'Found')} <strong>{nonStandardValues.length}</strong> {t('participants_page.cleanup.non_standard_for', 'non-standard value(s) for')} <strong>{config.label}</strong>. {t('participants_page.cleanup.map_hint', 'Map them to a standard value to clean up your data.')}
                         </p>
                         <div className="space-y-3 max-h-80 overflow-y-auto p-2 border rounded bg-gray-50">
                             {nonStandardValues.map(value => (
                                 <div key={String(value)} className="grid grid-cols-1 md:grid-cols-2 items-center gap-2 p-2 bg-white rounded border">
                                     <span className="bg-yellow-50 text-yellow-800 p-2 rounded text-sm truncate" title={String(value)}>
-                                        Current: "{String(value)}"
+                                        {t('participants_page.cleanup.current', 'Current: "{{value}}"', { value: String(value) })}
                                     </span>
                                     <Select disabled={isUpdating} value={mappings[String(value)] || ''} onChange={(e) => handleMappingChange(String(value), e.target.value)}>
-                                        <option value="">-- Map to standard value --</option>
+                                        <option value="">{t('participants_page.cleanup.map_to', '-- Map to standard value --')}</option>
                                         {config.standardValues.map(opt => <option key={opt} value={opt}>{config.getOptionLabel ? config.getOptionLabel(opt) : opt}</option>)}
                                     </Select>
                                 </div>
@@ -733,9 +743,9 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
                     </div>
                 )}
                 <div className="flex justify-between items-center mt-6">
-                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')} disabled={isUpdating}>Back to Selection</Button>
+                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')} disabled={isUpdating}>{t('participants_page.cleanup.back', 'Back to Selection')}</Button>
                     <Button onClick={handleApplyFixes} disabled={isUpdating || nonStandardValues.length === 0}>
-                        {isUpdating ? <Spinner size="sm"/> : `Apply Fixes for ${Object.keys(mappings).length} Value(s)`}
+                        {isUpdating ? <Spinner size="sm"/> : t('participants_page.cleanup.apply', 'Apply Fixes for {{count}} Value(s)', { count: Object.keys(mappings).length })}
                     </Button>
                 </div>
             </div>
@@ -743,7 +753,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={isUpdating ? null : onClose} title="Clean Participant Data">
+        <Modal isOpen={isOpen} onClose={isUpdating ? null : onClose} title={t('participants_page.cleanup.title', 'Clean Participant Data')}>
             <div className="p-4">
                 {!selectedFieldKey ? renderSelectionScreen() : renderMappingScreen()}
             </div>
@@ -752,6 +762,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, facilities
 };
 
 const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave, courseType, setToast }) => {
+    const { t } = useTranslation();
     const [isUpdating, setIsUpdating] = useState(false);
     const [selectedFieldKey, setSelectedFieldKey] = useState('');
     const [fromValue, setFromValue] = useState('');
@@ -767,14 +778,14 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
 
     const CHANGEABLE_FIELDS_CONFIG = useMemo(() => ({
         'job_title': {
-            label: 'Job Title',
+            label: t('participants_page.fields.job_title', 'Job Title'),
             options: jobTitleOptions,
         },
         'group': {
-            label: 'Group',
+            label: t('participants_page.fields.group', 'Group'),
             options: ['Group A', 'Group B', 'Group C', 'Group D'],
         },
-    }), [jobTitleOptions]);
+    }), [jobTitleOptions, t]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -848,12 +859,12 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
         try {
             if (participantsToUpdate.length > 0) {
                 await onSave(participantsToUpdate, facilitiesToUpsert);
-                setToast({ show: true, message: `Successfully updated ${participantsToUpdate.length} participants!`, type: 'success' });
+                setToast({ show: true, message: t('participants_page.bulk_change.success', 'Successfully updated {{count}} participants!', { count: participantsToUpdate.length }), type: 'success' });
             }
             onClose();
         } catch (error) {
             console.error("Failed to bulk update participants:", error);
-            setToast({ show: true, message: `Update failed: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('participants_page.bulk_change.failed', 'Update failed: {{error}}', { error: error.message }), type: 'error' });
         } finally {
             setIsUpdating(false);
         }
@@ -866,18 +877,18 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
     }, [participants, selectedFieldKey, fromValue]);
 
     return (
-        <Modal isOpen={isOpen} onClose={isUpdating ? null : onClose} title="Bulk Change Participant Data">
+        <Modal isOpen={isOpen} onClose={isUpdating ? null : onClose} title={t('participants_page.bulk_change.title', 'Bulk Change Participant Data')}>
             <div className="p-4 space-y-4">
                 <p className="text-sm text-gray-600">
-                    This tool allows you to change a value for a specific field across all participants in this course.
+                    {t('participants_page.bulk_change.intro', 'This tool allows you to change a value for a specific field across all participants in this course.')}
                 </p>
-                <FormGroup label="Select a field to change">
+                <FormGroup label={t('participants_page.bulk_change.select_field', 'Select a field to change')}>
                     <Select disabled={isUpdating} value={selectedFieldKey} onChange={(e) => {
                         setSelectedFieldKey(e.target.value);
                         setFromValue('');
                         setToValue('');
                     }}>
-                        <option value="">-- Choose field --</option>
+                        <option value="">{t('participants_page.common.choose_field', '-- Choose field --')}</option>
                         {Object.entries(CHANGEABLE_FIELDS_CONFIG).map(([key, config]) => (
                             <option key={key} value={key}>{config.label}</option>
                         ))}
@@ -886,15 +897,15 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
 
                 {currentConfig && (
                     <>
-                        <FormGroup label={`Change from value:`}>
+                        <FormGroup label={t('participants_page.bulk_change.from', 'Change from value:')}>
                             <Select disabled={isUpdating} value={fromValue} onChange={(e) => setFromValue(e.target.value)}>
-                                <option value="">-- Select original value --</option>
+                                <option value="">{t('participants_page.bulk_change.select_original', '-- Select original value --')}</option>
                                 {currentConfig.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label={`Change to value:`}>
+                        <FormGroup label={t('participants_page.bulk_change.to', 'Change to value:')}>
                             <Select disabled={isUpdating} value={toValue} onChange={(e) => setToValue(e.target.value)}>
-                                <option value="">-- Select new value --</option>
+                                <option value="">{t('participants_page.bulk_change.select_new', '-- Select new value --')}</option>
                                 {currentConfig.options.filter(opt => opt !== fromValue).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </Select>
                         </FormGroup>
@@ -903,17 +914,17 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
 
                 {affectedParticipantsCount > 0 && toValue && (
                      <div className="p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-md">
-                        This will change the <strong>{currentConfig.label}</strong> from "<strong>{fromValue}</strong>" to "<strong>{toValue}</strong>" for <strong>{affectedParticipantsCount}</strong> participant(s).
+                        {t('participants_page.bulk_change.summary_1', 'This will change the')} <strong>{currentConfig.label}</strong> {t('participants_page.bulk_change.summary_from', 'from')} "<strong>{fromValue}</strong>" {t('participants_page.bulk_change.summary_to', 'to')} "<strong>{toValue}</strong>" {t('participants_page.bulk_change.summary_for', 'for')} <strong>{affectedParticipantsCount}</strong> {t('participants_page.bulk_change.summary_participants', 'participant(s).')}
                     </div>
                 )}
 
                 <div className="flex justify-end items-center mt-6 pt-4 border-t">
-                    <Button variant="secondary" onClick={onClose} className="mr-2" disabled={isUpdating}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose} className="mr-2" disabled={isUpdating}>{t('participants_page.common.cancel', 'Cancel')}</Button>
                     <Button
                         onClick={handleApplyChange}
                         disabled={isUpdating || !selectedFieldKey || !fromValue || !toValue || fromValue === toValue || affectedParticipantsCount === 0}
                     >
-                        {isUpdating ? <Spinner size="sm"/> : `Apply Change`}
+                        {isUpdating ? <Spinner size="sm"/> : t('participants_page.bulk_change.apply', 'Apply Change')}
                     </Button>
                 </div>
             </div>
@@ -922,6 +933,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
 };
 
 const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, facilitiesList, setToast }) => {
+    const { t } = useTranslation();
     const [excelData, setExcelData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [fieldMappings, setFieldMappings] = useState({});
@@ -1033,12 +1045,12 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
                 const workbook = XLSX.read(data, { type: 'array' });
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-                if (jsonData.length < 1) { setError('Excel file appears to be empty.'); return; }
+                if (jsonData.length < 1) { setError(t('participants_page.import.empty_file', 'Excel file appears to be empty.')); return; }
                 setHeaders(jsonData[0].map(h => String(h).trim()));
                 setExcelData(jsonData.slice(1));
                 setCurrentPage(1);
                 setError('');
-            } catch (err) { setError('Error reading Excel file: ' + err.message); }
+            } catch (err) { setError(t('participants_page.import.read_error', 'Error reading Excel file: ') + err.message); }
         };
         reader.readAsArrayBuffer(file);
     };
@@ -1051,7 +1063,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
         const requiredFields = allFields.filter(f => f.required).map(f => f.key);
         for (const field of requiredFields) {
             if (!fieldMappings[field]) {
-                setError(`The required field "${field.label}" must be mapped.`);
+                setError(t('participants_page.import.required_unmapped', 'The required field "{{field}}" must be mapped.', { field: field.label }));
                 return;
             }
         }
@@ -1215,11 +1227,11 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
 
         try {
             await onImport({ participantsToImport, facilitiesToUpsert });
-            setToast({ show: true, message: `Successfully imported ${participantsToImport.length} records.`, type: 'success' });
+            setToast({ show: true, message: t('participants_page.import.success', 'Successfully imported {{count}} records.', { count: participantsToImport.length }), type: 'success' });
             onClose();
         } catch (error) {
-            setError(error.message || 'An error occurred during import.');
-            alertDialog(`Import failed. Fix the problem below and import again.\n\n${error.message}`, { title: 'Could not import participants' });
+            setError(error.message || t('participants_page.import.error_generic', 'An error occurred during import.'));
+            alertDialog(t('participants_page.import.failed_msg', 'Import failed. Fix the problem below and import again.\n\n{{error}}', { error: error.message }), { title: t('participants_page.import.failed_title', 'Could not import participants') });
         } finally {
             setIsImporting(false);
         }
@@ -1229,23 +1241,23 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
         const allCorrectionsMade = validationIssues.every(issue => issue.invalidValues.every(val => userCorrections[val]));
         return (
             <div>
-                <h3 className="text-lg font-semibold mb-2">Review & Confirm Import</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('participants_page.import.review_title', 'Review & Confirm Import')}</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                    Found <strong>{excelData.length}</strong> participants to import.
-                    {course.course_type === 'IMNCI' && " This will create or update facility records accordingly."}
+                    {t('participants_page.import.found', 'Found')} <strong>{excelData.length}</strong> {t('participants_page.import.to_import', 'participants to import.')}
+                    {course.course_type === 'IMNCI' && t('participants_page.import.facility_note', ' This will create or update facility records accordingly.')}
                 </p>
                 {validationIssues.length > 0 && (
                     <div className="mb-4">
-                        <h4 className="font-semibold text-gray-800 mb-2">Data Mismatches Found</h4>
+                        <h4 className="font-semibold text-gray-800 mb-2">{t('participants_page.import.mismatches', 'Data Mismatches Found')}</h4>
                         <div className="space-y-3 max-h-60 overflow-y-auto p-2 border rounded bg-gray-50">
                             {validationIssues.map(issue => (
                                 <div key={issue.key}>
-                                    <h5 className="font-semibold text-sm text-gray-700">Mismatches for Column: <span className="font-bold">"{issue.columnName}"</span></h5>
+                                    <h5 className="font-semibold text-sm text-gray-700">{t('participants_page.import.mismatches_for', 'Mismatches for Column:')} <span className="font-bold">"{issue.columnName}"</span></h5>
                                     {issue.invalidValues.map(val => (
                                         <div key={val} className="grid grid-cols-1 md:grid-cols-2 items-center gap-2 mt-1 p-2 bg-white rounded border">
-                                            <span className="bg-red-50 text-red-800 p-1 rounded text-xs truncate" title={val}>Your value: "{val}"</span>
+                                            <span className="bg-red-50 text-red-800 p-1 rounded text-xs truncate" title={val}>{t('participants_page.import.your_value', 'Your value: "{{value}}"', { value: val })}</span>
                                             <Select disabled={isImporting} value={userCorrections[val] || ''} onChange={(e) => handleCorrectionChange(val, e.target.value)}>
-                                                <option value="">-- Choose correct option --</option>
+                                                <option value="">{t('participants_page.import.choose_correct', '-- Choose correct option --')}</option>
                                                 {issue.options.map(opt => <option key={opt} value={opt}>{STATE_LOCALITIES[opt]?.ar || opt}</option>)}
                                             </Select>
                                         </div>
@@ -1253,14 +1265,14 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
                                 </div>
                             ))}
                         </div>
-                         {!allCorrectionsMade && <p className="text-right text-sm text-red-600 mt-1">Please resolve all mismatches to proceed.</p>}
+                         {!allCorrectionsMade && <p className="text-right text-sm text-red-600 mt-1">{t('participants_page.import.resolve_all', 'Please resolve all mismatches to proceed.')}</p>}
                     </div>
                 )}
 
                 <div className="flex justify-end mt-6 space-x-2">
-                    <Button variant="secondary" onClick={() => setCurrentPage(1)} disabled={isImporting}>Back to Mapping</Button>
+                    <Button variant="secondary" onClick={() => setCurrentPage(1)} disabled={isImporting}>{t('participants_page.import.back_mapping', 'Back to Mapping')}</Button>
                     <Button onClick={startImportProcess} disabled={!allCorrectionsMade || isImporting}>
-                        {isImporting ? <Spinner size="sm" /> : 'Apply Corrections & Import'}
+                        {isImporting ? <Spinner size="sm" /> : t('participants_page.import.apply_import', 'Apply Corrections & Import')}
                     </Button>
                 </div>
             </div>
@@ -1268,21 +1280,21 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={isImporting ? null : onClose} title="Import Participants from Excel">
+        <Modal isOpen={isOpen} onClose={isImporting ? null : onClose} title={t('participants_page.import.title', 'Import Participants from Excel')}>
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
                 {currentPage === 0 && (
                     <div>
                         <p className="mb-4">
-                            Download an Excel template to get started, or upload your own file. The template will include existing participant data for easy editing.
+                            {t('participants_page.import.intro', 'Download an Excel template to get started, or upload your own file. The template will include existing participant data for easy editing.')}
                         </p>
                         <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">
-                            Download Template
+                            {t('participants_page.import.download_template', 'Download Template')}
                         </Button>
                         <hr className="my-4"/>
                         <p className="mb-2">
-                            Upload your Excel file (first row must be headers).
+                            {t('participants_page.import.upload_hint', 'Upload your Excel file (first row must be headers).')}
                         </p>
                         <input
                             type="file"
@@ -1296,22 +1308,22 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
 
                 {currentPage === 1 && (
                     <div>
-                        <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
+                        <h4 className="font-medium mb-4">{t('participants_page.import.map_title', 'Map Excel columns to application fields')}</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 max-h-80 overflow-y-auto p-2 border rounded">
                             {allFields.map(field => (
                                 <div key={field.key} className="flex items-center">
                                     <label className="w-1/2 font-medium text-sm capitalize">{field.label}{field.required && '*'}</label>
                                     <Select value={fieldMappings[field.key] || ''} onChange={(e) => handleMappingChange(field.key, e.target.value)} className="flex-1">
-                                        <option value="">-- Select Excel Column --</option>
+                                        <option value="">{t('participants_page.import.select_column', '-- Select Excel Column --')}</option>
                                         {headers.map(h => <option key={h} value={h}>{h}</option>)}
                                     </Select>
                                 </div>
                             ))}
                         </div>
                         <div className="flex justify-end mt-6 space-x-2">
-                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button>
+                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>{t('participants_page.common.back', 'Back')}</Button>
                             <Button onClick={handleValidate} disabled={isValidating}>
-                                {isValidating ? <Spinner/> : 'Validate & Review'}
+                                {isValidating ? <Spinner/> : t('participants_page.import.validate', 'Validate & Review')}
                             </Button>
                         </div>
                     </div>
@@ -1323,6 +1335,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
 };
 
 const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value || '');
     const ref = useRef(null);
@@ -1362,7 +1375,7 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
                 }}
                 onFocus={() => setIsOpen(true)}
                 disabled={disabled}
-                placeholder={disabled ? "Select a facility first" : "Type to search or add new"}
+                placeholder={disabled ? t('participants_page.name_input.select_facility_first', 'Select a facility first') : t('participants_page.name_input.type_search_add', 'Type to search or add new')}
             />
             {isOpen && !disabled && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -1370,7 +1383,7 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
                         className="p-2 cursor-pointer hover:bg-gray-100 font-semibold text-blue-600"
                         onClick={() => handleSelect(null)} 
                     >
-                        -- Add as New Participant --
+                        {t('participants_page.name_input.add_new', '-- Add as New Participant --')}
                     </div>
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map((opt, index) => (
@@ -1379,11 +1392,11 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
                                 className="p-2 cursor-pointer hover:bg-gray-100"
                                 onClick={() => handleSelect(opt)}
                             >
-                                {opt.name} ({opt.job_title || 'No Job Title'})
+                                {opt.name} ({opt.job_title || t('participants_page.name_input.no_job_title', 'No Job Title')})
                             </div>
                         ))
                     ) : (
-                        inputValue && <div className="p-2 text-gray-500">No existing staff found matching "{inputValue}".</div>
+                        inputValue && <div className="p-2 text-gray-500">{t('participants_page.name_input.no_staff', 'No existing staff found matching "{{term}}".', { term: inputValue })}</div>
                     )}
                 </div>
             )}
@@ -1392,6 +1405,7 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
 };
 
 const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
+    const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
     const inputRef = useRef(null);
 
@@ -1412,7 +1426,7 @@ const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
     }, [facilities, searchTerm]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Select Health Facility">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('participants_page.facility_search.title', 'Select Health Facility')}>
             <div className="p-4 h-[60vh] flex flex-col">
                 <div className="mb-4">
                     <div className="relative">
@@ -1422,7 +1436,7 @@ const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
                         <Input
                             ref={inputRef}
                             type="text"
-                            placeholder="Type to search facilities..."
+                            placeholder={t('participants_page.facility_search.placeholder', 'Type to search facilities...')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10"
@@ -1446,13 +1460,13 @@ const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
                         ))
                     ) : (
                         <div className="p-4 text-center text-gray-500">
-                            No facilities match "{searchTerm}".
+                            {t('participants_page.facility_search.no_match', 'No facilities match "{{term}}".', { term: searchTerm })}
                         </div>
                     )}
                 </div>
                 
                 <div className="mt-4 flex justify-end">
-                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose}>{t('participants_page.common.cancel', 'Cancel')}</Button>
                 </div>
             </div>
         </Modal>
@@ -1464,6 +1478,7 @@ const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
 // ====================================================================
 
 export function ParticipantMigrationMappingView({ course, participants, onCancel, onSave, setToast }) {
+    const { t } = useTranslation();
     const { healthFacilities } = useDataCache();
     const [facilitiesInLocation, setFacilitiesInLocation] = useState([]);
     const [mappings, setMappings] = useState({});
@@ -1509,13 +1524,13 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
         });
 
         setMappings(newMappings);
-        setToast({ show: true, message: `Auto-mapped ${matchCount} participants based on name match.`, type: 'info' });
+        setToast({ show: true, message: t('participants_page.migrate.auto_mapped', 'Auto-mapped {{count}} participants based on name match.', { count: matchCount }), type: 'info' });
     };
 
     const handleSubmit = async () => {
         const mappedEntries = Object.entries(mappings).filter(([_, facId]) => facId !== '');
         if (mappedEntries.length === 0) {
-            setToast({ show: true, message: 'No mappings selected.', type: 'warning' });
+            setToast({ show: true, message: t('participants_page.migrate.no_mappings', 'No mappings selected.'), type: 'warning' });
             return;
         }
 
@@ -1535,39 +1550,39 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
     return (
         <Card>
             <div className="p-6">
-                <PageHeader title="Bulk Migrate Participants to Facilities" subtitle="Link legacy participants to official Health Facility records." />
+                <PageHeader title={t('participants_page.migrate.title', 'Bulk Migrate Participants to Facilities')} subtitle={t('participants_page.migrate.subtitle', 'Link legacy participants to official Health Facility records.')} />
                 
                 <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
                     <p className="text-sm text-blue-800">
-                        This tool connects existing participants to the central Health Facilities database. 
-                        <strong> {unmappedParticipants.length}</strong> participants in this course are currently unlinked.
+                        {t('participants_page.migrate.intro', 'This tool connects existing participants to the central Health Facilities database.')} 
+                        <strong> {unmappedParticipants.length}</strong> {t('participants_page.migrate.unlinked', 'participants in this course are currently unlinked.')}
                     </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded border">
-                    <FormGroup label="Target State">
+                    <FormGroup label={t('participants_page.migrate.target_state', 'Target State')}>
                         <Select value={filterState} onChange={(e) => { setFilterState(e.target.value); setFilterLocality(''); }}>
-                            <option value="">-- Select State --</option>
+                            <option value="">{t('participants_page.common.select_state', '-- Select State --')}</option>
                             {Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Target Locality">
+                    <FormGroup label={t('participants_page.migrate.target_locality', 'Target Locality')}>
                         <Select value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)} disabled={!filterState}>
-                            <option value="">-- Select Locality --</option>
+                            <option value="">{t('participants_page.common.select_locality', '-- Select Locality --')}</option>
                             {filterState && STATE_LOCALITIES[filterState]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                         </Select>
                     </FormGroup>
                 </div>
 
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-800">Unmapped Participants</h3>
+                    <h3 className="font-bold text-gray-800">{t('participants_page.migrate.unmapped', 'Unmapped Participants')}</h3>
                     <Button variant="secondary" onClick={handleAutoMap} disabled={facilitiesInLocation.length === 0}>
-                        Auto-Map by Name
+                        {t('participants_page.migrate.auto_map', 'Auto-Map by Name')}
                     </Button>
                 </div>
 
                 <div className="max-h-[500px] overflow-y-auto border rounded">
-                    <Table headers={['Participant Name', 'Current Text Name', 'Map to Official Facility']}>
+                    <Table headers={[t('participants_page.fields.participant_name', 'Participant Name'), t('participants_page.migrate.col_current_name', 'Current Text Name'), t('participants_page.migrate.col_map_to', 'Map to Official Facility')]}>
                         {unmappedParticipants.map(p => (
                             <tr key={p.id} className="hover:bg-gray-50">
                                 <td className="p-3 font-medium">{p.name}</td>
@@ -1579,7 +1594,7 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
                                         disabled={facilitiesInLocation.length === 0}
                                         className={mappings[p.id] ? 'border-green-400 bg-green-50' : ''}
                                     >
-                                        <option value="">-- Do not map --</option>
+                                        <option value="">{t('participants_page.migrate.do_not_map', '-- Do not map --')}</option>
                                         {facilitiesInLocation.map(f => (
                                             <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>
                                         ))}
@@ -1588,15 +1603,15 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
                             </tr>
                         ))}
                         {unmappedParticipants.length === 0 && (
-                            <tr><td colSpan="3" className="p-8 text-center text-gray-500">All participants are currently mapped to a facility!</td></tr>
+                            <tr><td colSpan="3" className="p-8 text-center text-gray-500">{t('participants_page.migrate.all_mapped', 'All participants are currently mapped to a facility!')}</td></tr>
                         )}
                     </Table>
                 </div>
 
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>{t('participants_page.common.cancel', 'Cancel')}</Button>
                     <Button onClick={handleSubmit} disabled={isSaving || Object.keys(mappings).length === 0}>
-                        {isSaving ? <Spinner size="sm" /> : `Migrate ${Object.values(mappings).filter(Boolean).length} Participants`}
+                        {isSaving ? <Spinner size="sm" /> : t('participants_page.migrate.submit', 'Migrate {{count}} Participants', { count: Object.values(mappings).filter(Boolean).length })}
                     </Button>
                 </div>
             </div>
@@ -1605,17 +1620,18 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
 }
 
 export function BulkEditParticipantsView({ participants, course, onCancel, onSave }) {
+    const { t } = useTranslation();
     const [editedData, setEditedData] = useState({});
     const [isSaving, setIsSaving] = useState(false);
 
     const editableFields = [
-        { key: 'name', label: 'Name', type: 'text' },
-        { key: 'phone', label: 'Phone', type: 'text' },
-        { key: 'email', label: 'Email', type: 'email' },
-        { key: 'job_title', label: 'Job Title', type: 'text' },
-        { key: 'group', label: 'Group', type: 'select', options: ['Group A', 'Group B', 'Group C', 'Group D'] },
-        { key: 'pre_test_score', label: 'Pre-Test', type: 'number' },
-        { key: 'post_test_score', label: 'Post-Test', type: 'number' }
+        { key: 'name', label: t('participants_page.fields.name', 'Name'), type: 'text' },
+        { key: 'phone', label: t('participants_page.fields.phone', 'Phone'), type: 'text' },
+        { key: 'email', label: t('participants_page.fields.email', 'Email'), type: 'email' },
+        { key: 'job_title', label: t('participants_page.fields.job_title', 'Job Title'), type: 'text' },
+        { key: 'group', label: t('participants_page.fields.group', 'Group'), type: 'select', options: ['Group A', 'Group B', 'Group C', 'Group D'] },
+        { key: 'pre_test_score', label: t('participants_page.fields.pre_test', 'Pre-Test'), type: 'number' },
+        { key: 'post_test_score', label: t('participants_page.fields.post_test', 'Post-Test'), type: 'number' }
     ];
 
     const handleCellChange = (participantId, fieldKey, value) => {
@@ -1659,10 +1675,10 @@ export function BulkEditParticipantsView({ participants, course, onCancel, onSav
     return (
         <Card>
             <div className="p-4 sm:p-6">
-                <PageHeader title="Bulk Edit Participants" subtitle={`Edit multiple records at once for ${course.course_type}`} />
+                <PageHeader title={t('participants_page.bulk_edit.title', 'Bulk Edit Participants')} subtitle={t('participants_page.bulk_edit.subtitle', 'Edit multiple records at once for {{course}}', { course: course.course_type })} />
                 
                 <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-sm text-yellow-800 mb-4">
-                    <strong>Note:</strong> Facility mappings and complex IMNCI statistics cannot be edited here. Use the standard edit form for those fields.
+                    <strong>{t('participants_page.email.note', 'Note:')}</strong> {t('participants_page.bulk_edit.note', 'Facility mappings and complex IMNCI statistics cannot be edited here. Use the standard edit form for those fields.')}
                 </div>
 
                 <div className="overflow-x-auto border border-gray-200 rounded max-h-[60vh]">
@@ -1713,9 +1729,9 @@ export function BulkEditParticipantsView({ participants, course, onCancel, onSav
                 </div>
 
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>{t('participants_page.common.cancel', 'Cancel')}</Button>
                     <Button onClick={handleSave} disabled={isSaving || Object.keys(editedData).length === 0}>
-                        {isSaving ? <Spinner size="sm" /> : `Save ${Object.keys(editedData).length} Edited Rows`}
+                        {isSaving ? <Spinner size="sm" /> : t('participants_page.bulk_edit.save', 'Save {{count}} Edited Rows', { count: Object.keys(editedData).length })}
                     </Button>
                 </div>
             </div>
@@ -1730,6 +1746,7 @@ export function ParticipantsView({
     canImportParticipants, canCleanParticipantData, canBulkChangeParticipants, canBulkMigrateParticipants,
     canManageCertificates, canUseSuperUserAdvancedFeatures, canUseFederalManagerAdvancedFeatures
 }) {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
     
@@ -1969,7 +1986,7 @@ export function ParticipantsView({
 
     const handlePrepareSyncPreview = () => {
         if (!participants || participants.length === 0) {
-            setToast({ show: true, message: 'No participants to sync.', type: 'info' });
+            setToast({ show: true, message: t('participants_page.sync.no_participants', 'No participants to sync.'), type: 'info' });
             return;
         }
 
@@ -2035,7 +2052,7 @@ export function ParticipantsView({
 
         const facilitiesToUpsert = Array.from(facilityUpdatesMap.values());
         if (facilitiesToUpsert.length === 0) {
-            setToast({ show: true, message: 'No valid facilities found to sync.', type: 'info' });
+            setToast({ show: true, message: t('participants_page.sync.no_facilities', 'No valid facilities found to sync.'), type: 'info' });
             return;
         }
 
@@ -2058,10 +2075,10 @@ export function ParticipantsView({
             if (typeof fetchHealthFacilities === 'function') await fetchHealthFacilities(true);
             if (onBatchUpdate) onBatchUpdate();
 
-            setToast({ show: true, message: `Successfully synchronized and updated ${syncPreviewModal.facilitiesToUpsert.length} registry records!`, type: 'success' });
+            setToast({ show: true, message: t('participants_page.sync.success', 'Successfully synchronized and updated {{count}} registry records!', { count: syncPreviewModal.facilitiesToUpsert.length }), type: 'success' });
             setSyncPreviewModal({ isOpen: false, facilitiesToUpsert: [], serviceType: '', staffField: '' });
         } catch (error) {
-            setToast({ show: true, message: `Sync failed: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('participants_page.sync.failed', 'Sync failed: {{error}}', { error: error.message }), type: 'error' });
         } finally {
             setIsProcessing(false);
         }
@@ -2098,7 +2115,7 @@ export function ParticipantsView({
 
     const handleDeleteParticipant = async (participantId) => {
         if (!canEditDeleteParticipantActiveCourse && !canEditDeleteParticipantInactiveCourse) return;
-        if (await confirmDialog('Are you sure you want to delete this participant and all their data?')) {
+        if (await confirmDialog(t('participants_page.delete.confirm', 'Are you sure you want to delete this participant and all their data?'))) {
             setProcessingRowId(participantId);
             setIsProcessing(true);
             try {
@@ -2109,9 +2126,9 @@ export function ParticipantsView({
 
                 await fetchParticipants(navigator.onLine);
                 if (onBatchUpdate) onBatchUpdate();
-                setToast({ show: true, message: 'Participant deleted successfully.', type: 'success' });
+                setToast({ show: true, message: t('participants_page.delete.success', 'Participant deleted successfully.'), type: 'success' });
             } catch (error) {
-                await alertDialog(`The participant was not deleted: ${error.message}`, { title: 'Could not delete participant' });
+                await alertDialog(t('participants_page.delete.failed_msg', 'The participant was not deleted: {{error}}', { error: error.message }), { title: t('participants_page.delete.failed_title', 'Could not delete participant') });
             } finally {
                 setProcessingRowId(null);
                 setIsProcessing(false);
@@ -2149,9 +2166,9 @@ export function ParticipantsView({
             const { removed, participant } = await approveParticipantReadd({ id: requestId }, currentUserIdentifier);
             if (facilityUpdateData) await submitFacilityDataForApproval(facilityUpdateData, currentUserIdentifier);
             await applyParticipantCacheChange({ removed, added: participant });
-            setToast({ show: true, message: `${participant.name || 'Participant'} was added again.`, type: 'success' });
+            setToast({ show: true, message: t('participants_page.readd.added_again', '{{name}} was added again.', { name: participant.name || t('participants_page.readd.participant_fallback', 'Participant') }), type: 'success' });
         } else {
-            setToast({ show: true, message: 'Request sent. The participant will be added once a federal manager approves it.', type: 'success' });
+            setToast({ show: true, message: t('participants_page.readd.request_sent', 'Request sent. The participant will be added once a federal manager approves it.'), type: 'success' });
         }
         setReaddModal({ isOpen: false, existing: null, participantData: null, facilityUpdateData: null });
         setActiveScreen('list');
@@ -2175,7 +2192,7 @@ export function ParticipantsView({
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
             setActiveScreen('list');
-            setToast({ show: true, message: facilityUpdateData ? 'Participant saved and facility update submitted.' : 'Participant saved successfully.', type: 'success' });
+            setToast({ show: true, message: facilityUpdateData ? t('participants_page.save.with_facility', 'Participant saved and facility update submitted.') : t('participants_page.save.success', 'Participant saved successfully.'), type: 'success' });
         } catch (error) {
             if (error?.code === 'DUPLICATE_PHONE' && error.canRequestReadd) {
                 setReaddModal({
@@ -2185,7 +2202,7 @@ export function ParticipantsView({
                     facilityUpdateData,
                 });
             } else {
-                await alertDialog(error?.message || 'The participant could not be saved.', { title: 'Could not save participant' });
+                await alertDialog(error?.message || t('participants_page.save.failed_msg', 'The participant could not be saved.'), { title: t('participants_page.save.failed_title', 'Could not save participant') });
             }
         } finally {
             setIsProcessing(false);
@@ -2215,10 +2232,10 @@ export function ParticipantsView({
 
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
-            setToast({ show: true, message: 'Data updated successfully.', type: 'success' });
+            setToast({ show: true, message: t('participants_page.advanced.success', 'Data updated successfully.'), type: 'success' });
         } catch (err) {
             console.error("Advanced save failed", err);
-            alertDialog(`The changes were not saved.\n\n${err.message}`, { title: 'Could not save participants' });
+            alertDialog(t('participants_page.advanced.failed_msg', 'The changes were not saved.\n\n{{error}}', { error: err.message }), { title: t('participants_page.advanced.failed_title', 'Could not save participants') });
         } finally {
             setIsProcessing(false);
         }
@@ -2244,7 +2261,7 @@ export function ParticipantsView({
 
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
-            if (setLocalToast) setToast({ show: true, message: `Successfully imported ${participantsToImport.length} participants.`, type: 'success' });
+            if (setLocalToast) setToast({ show: true, message: t('participants_page.import.success_participants', 'Successfully imported {{count}} participants.', { count: participantsToImport.length }), type: 'success' });
         } finally {
             // Errors reach the import modal, which shows them in a popup.
             setIsProcessing(false);
@@ -2253,7 +2270,7 @@ export function ParticipantsView({
 
     const handleExecuteBulkMigration = async (mappings) => {
         if (!mappings || mappings.length === 0) {
-            setToast({ show: true, message: 'No mappings were provided.', type: 'info' });
+            setToast({ show: true, message: t('participants_page.migrate.none_provided', 'No mappings were provided.'), type: 'info' });
             return;
         }
         setIsProcessing(true);
@@ -2263,12 +2280,12 @@ export function ParticipantsView({
             if (onBatchUpdate) onBatchUpdate();
             setActiveScreen('list');
             
-            let summaryMessage = `${result.submitted} participants submitted for migration.`;
-            if (result.errors > 0) summaryMessage += ` ${result.errors} failed.`;
-            if (result.skipped > 0) summaryMessage += ` ${result.skipped} skipped.`;
+            let summaryMessage = t('participants_page.migrate.summary_submitted', '{{count}} participants submitted for migration.', { count: result.submitted });
+            if (result.errors > 0) summaryMessage += t('participants_page.migrate.summary_failed', ' {{count}} failed.', { count: result.errors });
+            if (result.skipped > 0) summaryMessage += t('participants_page.migrate.summary_skipped', ' {{count}} skipped.', { count: result.skipped });
             setToast({ show: true, message: summaryMessage, type: result.errors > 0 ? 'warning' : 'success' });
         } catch (error) {
-            setToast({ show: true, message: `Migration failed: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('participants_page.migrate.failed', 'Migration failed: {{error}}', { error: error.message }), type: 'error' });
         } finally {
             setIsProcessing(false);
         }
@@ -2284,10 +2301,10 @@ export function ParticipantsView({
                 const data = snapshot.data();
                 setLocalApprovalStatus(data.isCertificateApproved === true);
                 setLocalCourseData({ id: snapshot.id, ...data }); 
-                setToast({ show: true, message: data.isCertificateApproved ? 'Status updated! Certificates are approved.' : 'Status refreshed. Still pending.', type: data.isCertificateApproved ? 'success' : 'info' });
+                setToast({ show: true, message: data.isCertificateApproved ? t('participants_page.approval.approved', 'Status updated! Certificates are approved.') : t('participants_page.approval.pending', 'Status refreshed. Still pending.'), type: data.isCertificateApproved ? 'success' : 'info' });
             }
         } catch (error) {
-            setToast({ show: true, message: 'Failed to refresh status.', type: 'error' });
+            setToast({ show: true, message: t('participants_page.approval.refresh_failed', 'Failed to refresh status.'), type: 'error' });
         } finally {
             setIsRefreshingApproval(false);
         }
@@ -2308,8 +2325,7 @@ export function ParticipantsView({
         if (certificateApprovalState(p, localCourseData).state === 'stale') {
             setToast({
                 show: true, type: 'error',
-                message: `${p.name}'s details changed after this course was approved. `
-                    + `The Federal Program Manager must approve this certificate again.`
+                message: t('participants_page.cert.stale_single', "{{name}}'s details changed after this course was approved. The Federal Program Manager must approve this certificate again.", { name: p.name })
             });
             return;
         }
@@ -2324,12 +2340,12 @@ export function ParticipantsView({
             facilitators,
             coordinators: federalCoordinators,
         });
-        setToast({ show: true, message: 'Preparing the certificate — you can carry on working.', type: 'info' });
+        setToast({ show: true, message: t('participants_page.cert.preparing_single', 'Preparing the certificate — you can carry on working.'), type: 'info' });
     };
 
     const handleBulkCertificateDownload = async (language) => {
         if (filtered.length === 0) {
-            setToast({ show: true, message: "No participants available for bulk certificate download.", type: 'warning' });
+            setToast({ show: true, message: t('participants_page.cert.no_bulk', 'No participants available for bulk certificate download.'), type: 'warning' });
             return;
         }
 
@@ -2343,19 +2359,16 @@ export function ParticipantsView({
         if (printable.length === 0) {
             setToast({
                 show: true, type: 'error',
-                message: 'Every certificate in this selection is waiting to be approved again.'
+                message: t('participants_page.cert.all_held', 'Every certificate in this selection is waiting to be approved again.')
             });
             return;
         }
 
         const heldList = held.slice(0, 10).map((h) => `\u2022 ${h.name}`).join('\n');
-        const heldMore = held.length > 10 ? `\n\u2026 and ${held.length - 10} more` : '';
+        const heldMore = held.length > 10 ? t('participants_page.cert.and_more', '\n\u2026 and {{count}} more', { count: held.length - 10 }) : '';
 
         if (held.length > 0 && !await confirmDialog(
-            `${held.length} certificate(s) will be left out because those participants' `
-            + `details changed after the course was approved:\n\n`
-            + heldList + heldMore
-            + `\n\nDownload the remaining ${printable.length}?`
+            t('participants_page.cert.held_confirm', "{{count}} certificate(s) will be left out because those participants' details changed after the course was approved:\n\n{{list}}\n\nDownload the remaining {{remaining}}?", { count: held.length, list: heldList + heldMore, remaining: printable.length })
         )) return;
 
         // Same hand-off as the single download: the queue owns it from here, so
@@ -2371,7 +2384,7 @@ export function ParticipantsView({
         });
         setToast({
             show: true, type: 'info',
-            message: `Preparing ${printable.length} certificates — you can carry on working.`
+            message: t('participants_page.cert.preparing_bulk', 'Preparing {{count}} certificates — you can carry on working.', { count: printable.length })
         });
     };
 
@@ -2384,10 +2397,10 @@ export function ParticipantsView({
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
                 doc.save(`Certificate_Template_${course.course_type}.pdf`);
-                setToast({ show: true, message: 'Template downloaded successfully!', type: 'success' });
+                setToast({ show: true, message: t('participants_page.cert.template_success', 'Template downloaded successfully!'), type: 'success' });
             }
         } catch (error) {
-            setToast({ show: true, message: "Failed to generate template.", type: 'error' });
+            setToast({ show: true, message: t('participants_page.cert.template_failed', 'Failed to generate template.'), type: 'error' });
         } finally {
             setIsGeneratingTemplate(false);
             setIsProcessing(false);
@@ -2459,7 +2472,7 @@ export function ParticipantsView({
                     const updatedParticipantsList = participants.map(orig => pData.find(u => u.id === orig.id) || orig);
                     await syncCourseCoverageSnapshot(updatedParticipantsList);
 
-                    setToast({ show: true, message: 'Bulk edit saved successfully!', type: 'success' });
+                    setToast({ show: true, message: t('participants_page.bulk_edit.success', 'Bulk edit saved successfully!'), type: 'success' });
                     setIsBulkEditing(false);
                 }}
             />
@@ -2472,7 +2485,7 @@ export function ParticipantsView({
         <Card>
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
-            <PageHeader title="Course Participants" subtitle={`${course.state} / ${course.locality}`} />
+            <PageHeader title={t('participants_page.list.title', 'Course Participants')} subtitle={`${course.state} / ${course.locality}`} />
 
             <CertificateLanguageModal 
                 isOpen={certLangModal.isOpen}
@@ -2485,9 +2498,9 @@ export function ParticipantsView({
                     else if (actionType === 'template') handleDesignCertificate(lang);
                 }}
                 title={
-                    certLangModal.actionType === 'single' ? "Download Certificate" :
-                    certLangModal.actionType === 'bulk' ? "Download Bulk Certificates" :
-                    "Design Certificate Template"
+                    certLangModal.actionType === 'single' ? t('participants_page.cert.download_title', 'Download Certificate') :
+                    certLangModal.actionType === 'bulk' ? t('participants_page.cert.download_bulk_title', 'Download Bulk Certificates') :
+                    t('participants_page.cert.design_template', 'Design Certificate Template')
                 }
             />
             
@@ -2545,30 +2558,30 @@ export function ParticipantsView({
             <Modal 
                 isOpen={syncPreviewModal.isOpen} 
                 onClose={() => !isProcessing && setSyncPreviewModal(prev => ({ ...prev, isOpen: false }))} 
-                title="Confirm Synchronization to Central Registry"
+                title={t('participants_page.sync.title', 'Confirm Synchronization to Central Registry')}
                 size="lg"
             >
                 <div className="p-4 space-y-4">
                     <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start gap-3 text-sm text-blue-900 shadow-sm">
                         <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600" />
                         <div>
-                            <strong className="block mb-1 text-base">You are updating {syncPreviewModal.facilitiesToUpsert.length} facility records.</strong>
-                            This action enlists registered participants directly into their designated rosters and turns on the service activation keys for each facility.
+                            <strong className="block mb-1 text-base">{t('participants_page.sync.updating', 'You are updating {{count}} facility records.', { count: syncPreviewModal.facilitiesToUpsert.length })}</strong>
+                            {t('participants_page.sync.explain', 'This action enlists registered participants directly into their designated rosters and turns on the service activation keys for each facility.')}
                         </div>
                     </div>
                     
                     <div className="border border-gray-200 rounded-xl bg-gray-50 p-4 text-sm text-gray-700 shadow-inner flex flex-col sm:flex-row gap-4 justify-between items-center">
                         <div className="flex items-center gap-2">
-                            <span className="font-semibold">Service Type:</span> 
+                            <span className="font-semibold">{t('participants_page.sync.service_type', 'Service Type:')}</span> 
                             <span className="bg-sky-100 text-sky-800 px-3 py-1 rounded-full font-bold shadow-sm">{syncPreviewModal.serviceType}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="font-semibold">Database Array:</span> 
+                            <span className="font-semibold">{t('participants_page.sync.db_array', 'Database Array:')}</span> 
                             <code className="bg-white border border-gray-200 text-gray-800 px-2 py-1 rounded-md shadow-sm">{syncPreviewModal.staffField}</code>
                         </div>
                     </div>
 
-                    <h4 className="font-bold text-gray-800 border-b border-gray-200 pb-2 mt-2">Targeted Deliveries Breakdown</h4>
+                    <h4 className="font-bold text-gray-800 border-b border-gray-200 pb-2 mt-2">{t('participants_page.sync.breakdown', 'Targeted Deliveries Breakdown')}</h4>
                     <div className="max-h-60 overflow-y-auto space-y-3 p-2">
                         {syncPreviewModal.facilitiesToUpsert.map((fac, idx) => (
                             <div key={idx} className="border border-gray-100 bg-white rounded-xl p-3 shadow-sm hover:shadow transition-shadow">
@@ -2581,15 +2594,15 @@ export function ParticipantsView({
                                 </div>
                                 <div className="text-gray-700 text-xs pl-6">
                                     <div className="flex items-center gap-1.5 mb-1.5 text-green-700 font-medium">
-                                        <CheckCircle className="w-3.5 h-3.5" /> Service status flagged to 'Active'
+                                        <CheckCircle className="w-3.5 h-3.5" /> {t('participants_page.sync.status_active', "Service status flagged to 'Active'")}
                                     </div>
                                     <div className="font-semibold flex items-center gap-1.5 mb-1.5 text-indigo-700">
-                                        <Users className="w-3.5 h-3.5" /> Personnel enlisting ({fac[syncPreviewModal.staffField]?.length || 0}):
+                                        <Users className="w-3.5 h-3.5" /> {t('participants_page.sync.personnel', 'Personnel enlisting ({{count}}):', { count: fac[syncPreviewModal.staffField]?.length || 0 })}
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
                                         {fac[syncPreviewModal.staffField]?.map((staff, sIdx) => (
                                             <span key={sIdx} className="bg-gray-50 text-gray-800 px-2 py-1 rounded-md border border-gray-200">
-                                                {staff.name} <span className="text-gray-500">({staff.job_title || 'No Title'})</span>
+                                                {staff.name} <span className="text-gray-500">({staff.job_title || t('participants_page.sync.no_title', 'No Title')})</span>
                                             </span>
                                         ))}
                                     </div>
@@ -2600,10 +2613,10 @@ export function ParticipantsView({
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                         <Button variant="secondary" onClick={() => setSyncPreviewModal(prev => ({ ...prev, isOpen: false }))} disabled={isProcessing}>
-                            Cancel
+                            {t('participants_page.common.cancel', 'Cancel')}
                         </Button>
                         <Button variant="primary" onClick={handleConfirmSyncToFirebase} disabled={isProcessing} className="bg-indigo-600 hover:bg-indigo-700">
-                            {isProcessing ? <Spinner size="sm" /> : 'Confirm & Push to Firebase'}
+                            {isProcessing ? <Spinner size="sm" /> : t('participants_page.sync.confirm', 'Confirm & Push to Firebase')}
                         </Button>
                     </div>
                 </div>
@@ -2619,39 +2632,39 @@ export function ParticipantsView({
                 />
             )}
 
-            <Modal isOpen={isAdvancedActionsModalOpen} onClose={() => setIsAdvancedActionsModalOpen(false)} title="Advanced User Actions">
+            <Modal isOpen={isAdvancedActionsModalOpen} onClose={() => setIsAdvancedActionsModalOpen(false)} title={t('participants_page.advanced.title', 'Advanced User Actions')}>
                 <div className="p-4 flex flex-col gap-3">
-                    <p className="text-sm text-gray-600 mb-2">Select an advanced action to perform on this course's data.</p>
+                    <p className="text-sm text-gray-600 mb-2">{t('participants_page.advanced.intro', "Select an advanced action to perform on this course's data.")}</p>
                     {finalAdvancedPerm && (
                         <>
                             <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setImportModalOpen(true); }} disabled={isProcessing}>
-                                Import from Excel
+                                {t('participants_page.advanced.import_excel', 'Import from Excel')}
                             </Button>
                             <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setIsCleanupModalOpen(true); }} disabled={isProcessing}>
-                                Clean Data
+                                {t('participants_page.advanced.clean', 'Clean Data')}
                             </Button>
                             <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setIsBulkChangeModalOpen(true); }} disabled={isProcessing}>
-                                Bulk Change
+                                {t('participants_page.advanced.bulk_change', 'Bulk Change')}
                             </Button>
                             <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setIsBulkEditing(true); }} disabled={isProcessing}>
-                                Bulk Edit Table
+                                {t('participants_page.advanced.bulk_edit', 'Bulk Edit Table')}
                             </Button>
                             <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setActiveScreen('migration'); }} disabled={!participants || participants.length === 0 || isProcessing}>
-                                Bulk Migrate to Facilities
+                                {t('participants_page.advanced.bulk_migrate', 'Bulk Migrate to Facilities')}
                             </Button>
                             <Button variant="primary" className="w-full justify-start bg-indigo-600 hover:bg-indigo-700" onClick={handlePrepareSyncPreview} disabled={!participants || participants.length === 0 || isProcessing}>
                                 <RefreshCw className="w-4 h-4 mr-2" /> 
-                                Sync All Participants to Facilities
+                                {t('participants_page.advanced.sync_all', 'Sync All Participants to Facilities')}
                             </Button>
                         </>
                     )}
                 </div>
             </Modal>
 
-            <Modal isOpen={isCertManagementModalOpen} onClose={() => setIsCertManagementModalOpen(false)} title="Certificate Management">
+            <Modal isOpen={isCertManagementModalOpen} onClose={() => setIsCertManagementModalOpen(false)} title={t('participants_page.cert_mgmt.title', 'Certificate Management')}>
                 <div className="p-4 flex flex-col gap-3">
                     <Button onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'template' }); }} disabled={isProcessing || isGeneratingTemplate || isCacheLoading} className="w-full justify-start bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500">
-                        {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate Template'}
+                        {isGeneratingTemplate ? <Spinner size="sm" /> : t('participants_page.cert.design_template', 'Design Certificate Template')}
                     </Button>
 
                     {/* Said here rather than discovered at the download: the
@@ -2661,16 +2674,14 @@ export function ParticipantsView({
                         <div className="p-3 bg-amber-50 border border-amber-300 rounded text-sm space-y-2">
                             <div className="flex items-center gap-2 text-amber-900 font-semibold">
                                 <Lock className="w-4 h-4 shrink-0" />
-                                {heldCertificates.length} certificate{heldCertificates.length === 1 ? '' : 's'} need re-approval
+                                {t('participants_page.cert_mgmt.held_count', '{{count}} certificate(s) need re-approval', { count: heldCertificates.length })}
                             </div>
                             <p className="text-amber-800 text-xs">
-                                These participants&rsquo; names or sub-courses changed after the course was
-                                approved, so their certificates are held until the Federal Program Manager
-                                approves them again.
+                                {t('participants_page.cert_mgmt.held_explain', "These participants' names or sub-courses changed after the course was approved, so their certificates are held until the Federal Program Manager approves them again.")}
                             </p>
                             <ul className="text-xs text-amber-900 list-disc ps-5 space-y-0.5">
                                 {heldCertificates.slice(0, 8).map((h) => <li key={h.id}>{h.name}</li>)}
-                                {heldCertificates.length > 8 && <li>and {heldCertificates.length - 8} more</li>}
+                                {heldCertificates.length > 8 && <li>{t('participants_page.cert_mgmt.and_more', 'and {{count}} more', { count: heldCertificates.length - 8 })}</li>}
                             </ul>
                         </div>
                     )}
@@ -2678,23 +2689,23 @@ export function ParticipantsView({
                     {localApprovalStatus ? (
                         <>
                             <Button variant="primary" className="w-full justify-start" onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'bulk' }); }} disabled={isProcessing || filtered.length === 0 || isCacheLoading}>
-                                Download Filtered Certificates
+                                {t('participants_page.cert_mgmt.download_filtered', 'Download Filtered Certificates')}
                             </Button>
                             <Button variant="secondary" className="w-full justify-start border-sky-600 text-sky-700 hover:bg-sky-50" onClick={() => { setIsCertManagementModalOpen(false); handleShareCoursePublicPage(); }} disabled={isProcessing}>
-                                Share Public Page
+                                {t('participants_page.cert_mgmt.share_public', 'Share Public Page')}
                             </Button>
                             <Button variant="secondary" className="w-full justify-start border-green-600 text-green-700 hover:bg-green-50" onClick={() => { setIsCertManagementModalOpen(false); handleOpenBulkEmail(); }} disabled={!filtered || filtered.length === 0 || isProcessing}>
-                                <Mail className="w-4 h-4 mr-2" /> Email All Certs
+                                <Mail className="w-4 h-4 mr-2" /> {t('participants_page.cert_mgmt.email_all', 'Email All Certs')}
                             </Button>
                         </>
                     ) : (
                         <div className="p-3 bg-orange-50 border border-orange-200 rounded text-sm flex flex-col gap-3">
                             <div className="flex items-center gap-2 text-orange-800 font-semibold">
-                                <Lock className="w-4 h-4" /> Certificates Pending Approval
+                                <Lock className="w-4 h-4" /> {t('participants_page.cert_mgmt.pending', 'Certificates Pending Approval')}
                             </div>
-                            <p className="text-orange-700 text-xs">Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.</p>
+                            <p className="text-orange-700 text-xs">{t('participants_page.cert_mgmt.pending_explain', 'Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.')}</p>
                             <Button variant="secondary" onClick={handleRefreshApproval} disabled={isRefreshingApproval || isProcessing} className="w-full justify-center bg-white">
-                                {isRefreshingApproval ? <Spinner size="sm" /> : 'Check Status Update'}
+                                {isRefreshingApproval ? <Spinner size="sm" /> : t('participants_page.cert_mgmt.check_status', 'Check Status Update')}
                             </Button>
                         </div>
                     )}
@@ -2706,15 +2717,15 @@ export function ParticipantsView({
                     <div className="flex flex-wrap gap-2 items-center">
                         {canAddParticipant && (
                             <Button onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>
-                                Add Participant
+                                {t('participants_page.list.add_participant', 'Add Participant')}
                             </Button>
                         )}
 
                         {finalFederalPerm && (
                             <Button variant="secondary" onClick={() => setIsDeletedModalOpen(true)} disabled={isProcessing}>
-                                Deleted Participants
+                                {t('participants_page.list.deleted_participants', 'Deleted Participants')}
                                 {pendingReaddCount > 0 && (
-                                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5" title="Re-add requests waiting for approval">
+                                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5" title={t('participants_page.list.readd_waiting', 'Re-add requests waiting for approval')}>
                                         {pendingReaddCount}
                                     </span>
                                 )}
@@ -2723,13 +2734,13 @@ export function ParticipantsView({
 
                         {finalAdvancedPerm && (
                             <Button variant="secondary" onClick={() => setIsAdvancedActionsModalOpen(true)} disabled={isProcessing}>
-                                Advanced User Actions
+                                {t('participants_page.advanced.title', 'Advanced User Actions')}
                             </Button>
                         )}
 
                         {finalCertPerm && (
                             <Button variant="secondary" onClick={() => setIsCertManagementModalOpen(true)} disabled={isProcessing} className="bg-slate-800 text-white hover:bg-slate-700 border-transparent">
-                                Certificate Management
+                                {t('participants_page.cert_mgmt.title', 'Certificate Management')}
                             </Button>
                         )}
                     </div>
@@ -2737,15 +2748,15 @@ export function ParticipantsView({
 
                 <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3">
                     <div className="flex flex-wrap items-end gap-3">
-                        <MultiSelectDropdown label="Group" placeholder="All Groups" options={uniqueGroups.length > 0 ? uniqueGroups : ['Group A', 'Group B', 'Group C', 'Group D']} selected={groupFilter} onChange={setGroupFilter} />
-                        <MultiSelectDropdown label="Job Title" placeholder="All Job Titles" options={uniqueJobTitles} selected={jobTitleFilter} onChange={setJobTitleFilter} />
-                        <MultiSelectDropdown label="Locality" placeholder="All Localities" options={uniqueLocalities} selected={localityFilter} onChange={setLocalityFilter} />
-                        <MultiSelectDropdown label="Facility" placeholder="All Facilities" options={uniqueFacilities} selected={facilityFilter} onChange={setFacilityFilter} />
-                        {uniqueSubTypes.length > 0 && <MultiSelectDropdown label="Course Sub Type" placeholder="All Sub Types" options={uniqueSubTypes} selected={subTypeFilter} onChange={setSubTypeFilter} />}
+                        <MultiSelectDropdown label={t('participants_page.fields.group', 'Group')} placeholder={t('participants_page.filters.all_groups', 'All Groups')} options={uniqueGroups.length > 0 ? uniqueGroups : ['Group A', 'Group B', 'Group C', 'Group D']} selected={groupFilter} onChange={setGroupFilter} />
+                        <MultiSelectDropdown label={t('participants_page.fields.job_title', 'Job Title')} placeholder={t('participants_page.filters.all_job_titles', 'All Job Titles')} options={uniqueJobTitles} selected={jobTitleFilter} onChange={setJobTitleFilter} />
+                        <MultiSelectDropdown label={t('participants_page.fields.locality', 'Locality')} placeholder={t('participants_page.filters.all_localities', 'All Localities')} options={uniqueLocalities} selected={localityFilter} onChange={setLocalityFilter} />
+                        <MultiSelectDropdown label={t('participants_page.filters.facility', 'Facility')} placeholder={t('participants_page.filters.all_facilities', 'All Facilities')} options={uniqueFacilities} selected={facilityFilter} onChange={setFacilityFilter} />
+                        {uniqueSubTypes.length > 0 && <MultiSelectDropdown label={t('participants_page.filters.sub_type', 'Course Sub Type')} placeholder={t('participants_page.filters.all_sub_types', 'All Sub Types')} options={uniqueSubTypes} selected={subTypeFilter} onChange={setSubTypeFilter} />}
                         {(groupFilter.length > 0 || jobTitleFilter.length > 0 || localityFilter.length > 0 || facilityFilter.length > 0 || subTypeFilter.length > 0) && (
                             <div className="flex flex-col justify-end pb-0.5">
                                 <Button variant="secondary" onClick={() => { setGroupFilter([]); setJobTitleFilter([]); setLocalityFilter([]); setFacilityFilter([]); setSubTypeFilter([]); }} className="text-xs py-1.5 px-3 hover:bg-red-50 hover:text-red-600 hover:border-red-200" disabled={isProcessing}>
-                                    Clear Filters
+                                    {t('participants_page.filters.clear', 'Clear Filters')}
                                 </Button>
                             </div>
                         )}
@@ -2757,10 +2768,10 @@ export function ParticipantsView({
                 <table className="w-full text-left border-collapse border border-slate-300 text-sm">
                     <thead>
                         <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                            <th className="p-3 font-semibold border border-slate-300 w-1/3">Participant & Role</th>
-                            <th className="p-3 font-semibold border border-slate-300 w-1/3">Facility & Location</th>
-                            <th className="p-3 font-semibold border border-slate-300 hidden lg:table-cell w-24">Activity</th>
-                            <th className="p-3 font-semibold border border-slate-300 text-right">Actions</th>
+                            <th className="p-3 font-semibold border border-slate-300 w-1/3">{t('participants_page.table.participant_role', 'Participant & Role')}</th>
+                            <th className="p-3 font-semibold border border-slate-300 w-1/3">{t('participants_page.table.facility_location', 'Facility & Location')}</th>
+                            <th className="p-3 font-semibold border border-slate-300 hidden lg:table-cell w-24">{t('participants_page.table.activity', 'Activity')}</th>
+                            <th className="p-3 font-semibold border border-slate-300 text-right">{t('participants_page.table.actions', 'Actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2773,7 +2784,7 @@ export function ParticipantsView({
                             const certAwaiting = certificateApprovalState(p, localCourseData).state === 'stale';
 
                             let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
-                            const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+                            const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : t('participants_page.common.na', 'N/A');
 
                             return (
                                 <tr key={p.id} className="hover:bg-blue-50/50 transition-colors group">
@@ -2783,8 +2794,8 @@ export function ParticipantsView({
                                                 <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">{p.name}</span>
                                                 {certAwaiting && (
                                                     <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wider"
-                                                        title="Name or sub-course changed after this course was approved">
-                                                        Re-approve
+                                                        title={t('participants_page.list.stale_tooltip', 'Name or sub-course changed after this course was approved')}>
+                                                        {t('participants_page.list.reapprove', 'Re-approve')}
                                                     </span>
                                                 )}
                                             </div>
@@ -2794,36 +2805,36 @@ export function ParticipantsView({
 
                                     <td className="p-3 align-middle border border-slate-200">
                                         <div className="text-[12px] font-semibold text-gray-700 whitespace-nowrap truncate max-w-[220px]">
-                                            {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}
+                                            {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : p.center_name}
                                         </div>
-                                        {p.locality && <div className="text-[11px] text-gray-500 whitespace-nowrap">Locality: {p.locality}</div>}
+                                        {p.locality && <div className="text-[11px] text-gray-500 whitespace-nowrap">{t('participants_page.list.locality_value', 'Locality: {{locality}}', { locality: p.locality })}</div>}
                                     </td>
                                     
                                     <td className="p-3 align-middle border border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
                                         <div>{createdDate}</div>
-                                        <div className="truncate max-w-[90px]" title={p.createdBy || 'Legacy'}>By: {p.createdBy || 'Legacy'}</div>
+                                        <div className="truncate max-w-[90px]" title={p.createdBy || t('participants_page.list.legacy', 'Legacy')}>{t('participants_page.list.by', 'By: {{name}}', { name: p.createdBy || t('participants_page.list.legacy', 'Legacy') })}</div>
                                     </td>
 
                                     <td className="p-3 align-middle border border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
                                             
                                             <Button variant="primary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>
-                                                Monitor
+                                                {t('participants_page.actions.monitor', 'Monitor')}
                                             </Button>
 
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>
-                                                Report
+                                                {t('participants_page.actions.report', 'Report')}
                                             </Button>
 
                                             {participantSubCourse === 'online IMCI course' && (
                                                 <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>
-                                                    Exercises
+                                                    {t('participants_page.actions.exercises', 'Exercises')}
                                                 </Button>
                                             )}
 
                                             {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') && (
                                                 <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>
-                                                    Test
+                                                    {t('participants_page.actions.test', 'Test')}
                                                 </Button>
                                             )}
 
@@ -2833,18 +2844,18 @@ export function ParticipantsView({
                                                     className="px-2.5 py-1 text-[11px] border-emerald-200 text-emerald-700 hover:bg-emerald-50" 
                                                     onClick={() => setCertActionModal({ isOpen: true, data: { p, participantSubCourse } })}
                                                     disabled={isCacheLoading || isProcessing || processingRowId === p.id}
-                                                    title="Manage Certificate"
+                                                    title={t('participants_page.actions.manage_certificate', 'Manage Certificate')}
                                                 >
-                                                    {processingRowId === p.id ? <Spinner size="sm" /> : 'Certificate'}
+                                                    {processingRowId === p.id ? <Spinner size="sm" /> : t('participants_page.actions.certificate', 'Certificate')}
                                                 </Button>
                                             )}
 
                                             <Button variant="secondary" className="px-2.5 py-1 text-[11px] text-gray-600" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>
-                                                Edit
+                                                {t('participants_page.actions.edit', 'Edit')}
                                             </Button>
                                             
                                             <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent" onClick={() => handleDeleteParticipant(p.id)} disabled={!canDelete || isProcessing}>
-                                                {processingRowId === p.id ? <Spinner size="sm" /> : 'Delete'}
+                                                {processingRowId === p.id ? <Spinner size="sm" /> : t('participants_page.actions.delete', 'Delete')}
                                             </Button>
                                             
                                         </div>
@@ -2854,7 +2865,7 @@ export function ParticipantsView({
                         }) : (
                             <tr>
                                 <td colSpan="4" className="p-6 text-center text-[13px] text-gray-500 border border-slate-200">
-                                    No participants found matching the current filters.
+                                    {t('participants_page.list.no_match', 'No participants found matching the current filters.')}
                                 </td>
                             </tr>
                         )}
@@ -2871,8 +2882,8 @@ export function ParticipantsView({
                     const isExpanded = expandedParticipantId === p.id;
                     let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
 
-                    const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleString() : 'N/A';
-                    const lastEditDate = p.lastUpdatedAt?.toDate ? p.lastUpdatedAt.toDate().toLocaleString() : p.lastUpdatedAt?.seconds ? new Date(p.lastUpdatedAt.seconds * 1000).toLocaleString() : 'N/A';
+                    const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleString() : t('participants_page.common.na', 'N/A');
+                    const lastEditDate = p.lastUpdatedAt?.toDate ? p.lastUpdatedAt.toDate().toLocaleString() : p.lastUpdatedAt?.seconds ? new Date(p.lastUpdatedAt.seconds * 1000).toLocaleString() : t('participants_page.common.na', 'N/A');
 
                     return (
                         <div key={p.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -2882,12 +2893,12 @@ export function ParticipantsView({
                             >
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
-                                    <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}</p>
+                                    <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : p.center_name}</p>
                                     <div className="flex flex-wrap items-center gap-2 mt-2">
-                                        <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">Group: {p.group}</span>
+                                        <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">{t('participants_page.list.group_value', 'Group: {{group}}', { group: p.group })}</span>
                                         {certAwaiting && (
                                             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-amber-100 rounded text-amber-800">
-                                                Certificate needs re-approval
+                                                {t('participants_page.list.cert_needs_reapproval', 'Certificate needs re-approval')}
                                             </span>
                                         )}
                                     </div>
@@ -2900,31 +2911,31 @@ export function ParticipantsView({
                             {isExpanded && (
                                 <div className="p-4 bg-gray-50 border-t border-gray-100">
                                     <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-50 border-b border-gray-200 pb-3">
-                                        <div><span className="block font-semibold text-gray-700">Created:</span>{createdDate}<br/>By: {p.createdBy || 'Legacy'}</div>
-                                        <div><span className="block font-semibold text-gray-700">Last Edit:</span>{lastEditDate}<br/>By: {p.updatedBy || 'Legacy'}</div>
+                                        <div><span className="block font-semibold text-gray-700">{t('participants_page.list.created', 'Created:')}</span>{createdDate}<br/>{t('participants_page.list.by', 'By: {{name}}', { name: p.createdBy || t('participants_page.list.legacy', 'Legacy') })}</div>
+                                        <div><span className="block font-semibold text-gray-700">{t('participants_page.list.last_edit', 'Last Edit:')}</span>{lastEditDate}<br/>{t('participants_page.list.by', 'By: {{name}}', { name: p.updatedBy || t('participants_page.list.legacy', 'Legacy') })}</div>
                                     </div>
 
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                        <Button variant="primary" className="w-full justify-center" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>Monitor</Button>
-                                        <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
+                                        <Button variant="primary" className="w-full justify-center" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>{t('participants_page.actions.monitor', 'Monitor')}</Button>
+                                        <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>{t('participants_page.actions.report', 'Report')}</Button>
 
                                         {participantSubCourse === 'online IMCI course' && (
-                                            <Button variant="secondary" className="w-full justify-center" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>Exercises</Button>
+                                            <Button variant="secondary" className="w-full justify-center" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>{t('participants_page.actions.exercises', 'Exercises')}</Button>
                                         )}
                                         
                                         {isCertApproved && finalCertPerm && (
                                             <Button variant="secondary" className="w-full justify-center border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => setCertActionModal({ isOpen: true, data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
-                                                {processingRowId === p.id ? <Spinner size="sm" /> : 'Certificate'}
+                                                {processingRowId === p.id ? <Spinner size="sm" /> : t('participants_page.actions.certificate', 'Certificate')}
                                             </Button>
                                         )}
 
                                         {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') && (
-                                            <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>Test Score</Button>
+                                            <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>{t('participants_page.actions.test_score', 'Test Score')}</Button>
                                         )}
                                         
-                                        <Button variant="secondary" className="w-full justify-center" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>Edit</Button>
+                                        <Button variant="secondary" className="w-full justify-center" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>{t('participants_page.actions.edit', 'Edit')}</Button>
                                         <Button variant="danger" className="w-full justify-center" onClick={() => handleDeleteParticipant(p.id)} disabled={!canDelete || isProcessing}>
-                                            {processingRowId === p.id ? <Spinner size="sm" /> : 'Delete'}
+                                            {processingRowId === p.id ? <Spinner size="sm" /> : t('participants_page.actions.delete', 'Delete')}
                                         </Button>
                                     </div>
                                 </div>
@@ -2933,7 +2944,7 @@ export function ParticipantsView({
                     );
                 }) : (
                     <div className="p-4 text-center text-gray-500 bg-white rounded-lg shadow-md border border-gray-200">
-                        No participants found matching the current filters.
+                        {t('participants_page.list.no_match', 'No participants found matching the current filters.')}
                     </div>
                 )}
             </div>
@@ -2947,6 +2958,7 @@ const parseBool = (val) => val === 'yes' ? true : (val === 'no' ? false : null);
 const parseStr = (val) => val === 'yes' ? 'Yes' : (val === 'no' ? 'No' : '');
 
 export function ParticipantForm({ course, initialData, onCancel, onSave }) {
+    const { t } = useTranslation();
     const { healthFacilities } = useDataCache();
     const isImnci = course.course_type === 'IMNCI';
     const isIccm = course.course_type === 'ICCM';
@@ -3483,7 +3495,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
             await onSave(p, facilityUpdatePayload, oldFacilityUpdatePayload);
         } catch (error) {
-            showError(error.message || 'An error occurred while saving.');
+            showError(error.message || t('participants_page.form.save_error', 'An error occurred while saving.'));
         } finally {
             setIsSaving(false);
         }

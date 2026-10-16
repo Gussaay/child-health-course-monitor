@@ -6,8 +6,10 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Card, CardBody, Button, Input, FormGroup, Select, Toast, Table, Modal } from './CommonComponents';
 import { Trash2, CheckCircle, Clock, Eye } from 'lucide-react';
 import { confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
+    const { t } = useTranslation();
     const [users, setUsers] = useState([]);
     const [usersMap, setUsersMap] = useState({});
     
@@ -76,7 +78,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
     const handleSend = async (e) => {
         e.preventDefault();
         if (!title.trim() || !message.trim()) {
-            setToast({ message: 'Title and message are required', type: 'error' });
+            setToast({ message: t('admin_pages.notification_sender.required', 'Title and message are required'), type: 'error' });
             return;
         }
 
@@ -111,27 +113,27 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                 console.error("FCM Send Error:", fcmError);
             }
 
-            setToast({ message: 'Notification sent and pushed successfully!', type: 'success' });
+            setToast({ message: t('admin_pages.notification_sender.sent_ok', 'Notification sent and pushed successfully!'), type: 'success' });
             setTitle('');
             setMessage('');
         } catch (error) {
             console.error("Error sending notification:", error);
-            setToast({ message: 'Error sending notification', type: 'error' });
+            setToast({ message: t('admin_pages.notification_sender.send_error', 'Error sending notification'), type: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!await confirmDialog("Are you sure you want to permanently delete this notification? It will be removed for all users.")) return;
+        if (!await confirmDialog(t('admin_pages.notification_sender.confirm_delete', 'Are you sure you want to permanently delete this notification? It will be removed for all users.'))) return;
         
         try {
             await deleteDoc(doc(db, 'notifications', id));
-            setToast({ message: 'Notification deleted.', type: 'success' });
+            setToast({ message: t('admin_pages.notification_sender.deleted', 'Notification deleted.'), type: 'success' });
             if (statsNotifId === id) setStatsNotifId(null);
         } catch (error) {
             console.error("Error deleting notification:", error);
-            setToast({ message: 'Error deleting notification.', type: 'error' });
+            setToast({ message: t('admin_pages.notification_sender.delete_error', 'Error deleting notification.'), type: 'error' });
         }
     };
 
@@ -140,14 +142,14 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
             {/* 1. SEND NOTIFICATION FORM */}
             <Card>
                 <div className="px-6 py-4 border-b border-gray-200 bg-sky-50 rounded-t-lg">
-                    <h3 className="text-lg font-bold text-sky-900">Send Real-Time Notification</h3>
-                    <p className="text-sm text-sky-700">Broadcast a message to all users or target a specific individual.</p>
+                    <h3 className="text-lg font-bold text-sky-900">{t('admin_pages.notification_sender.send_title', 'Send Real-Time Notification')}</h3>
+                    <p className="text-sm text-sky-700">{t('admin_pages.notification_sender.send_subtitle', 'Broadcast a message to all users or target a specific individual.')}</p>
                 </div>
                 <CardBody>
                     <form onSubmit={handleSend} className="space-y-4 max-w-2xl">
-                        <FormGroup label="Target Audience">
+                        <FormGroup label={t('admin_pages.notification_sender.target_audience', 'Target Audience')}>
                             <Select value={targetUser} onChange={(e) => setTargetUser(e.target.value)} className="bg-white">
-                                <option value="all">Broadcast to All Users</option>
+                                <option value="all">{t('admin_pages.notification_sender.broadcast_all', 'Broadcast to All Users')}</option>
                                 {users.map(u => (
                                     <option key={u.id} value={u.id}>
                                         {u.displayName || u.email || u.id}
@@ -156,28 +158,28 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                             </Select>
                         </FormGroup>
 
-                        <FormGroup label="Notification Title">
+                        <FormGroup label={t('admin_pages.notification_sender.notif_title', 'Notification Title')}>
                             <Input 
                                 value={title} 
                                 onChange={(e) => setTitle(e.target.value)} 
-                                placeholder="e.g. System Update or Course Reminder" 
+                                placeholder={t('admin_pages.notification_sender.title_placeholder', 'e.g. System Update or Course Reminder')} 
                                 required 
                             />
                         </FormGroup>
 
-                        <FormGroup label="Message Body">
+                        <FormGroup label={t('admin_pages.notification_sender.message_body', 'Message Body')}>
                             <textarea
                                 className="w-full border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 p-3 border text-sm"
                                 rows="3"
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
-                                placeholder="Type your message here..."
+                                placeholder={t('admin_pages.notification_sender.message_placeholder', 'Type your message here...')}
                                 required
                             />
                         </FormGroup>
 
                         <Button type="submit" disabled={loading} className="w-full justify-center shadow-md">
-                            {loading ? 'Sending...' : 'Send Notification Now'}
+                            {loading ? t('admin_pages.notification_sender.sending', 'Sending...') : t('admin_pages.notification_sender.send_now', 'Send Notification Now')}
                         </Button>
                     </form>
                 </CardBody>
@@ -187,28 +189,28 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
             <Card className="overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                     <div>
-                        <h3 className="text-lg font-bold text-gray-800">Notification History & Manager</h3>
-                        <p className="text-sm text-gray-500">Track sent messages and view detailed delivery & read receipts.</p>
+                        <h3 className="text-lg font-bold text-gray-800">{t('admin_pages.notification_sender.history_title', 'Notification History & Manager')}</h3>
+                        <p className="text-sm text-gray-500">{t('admin_pages.notification_sender.history_subtitle', 'Track sent messages and view detailed delivery & read receipts.')}</p>
                     </div>
                 </div>
                 
                 {managerLoading ? (
-                    <div className="p-8 text-center text-gray-500">Loading history...</div>
+                    <div className="p-8 text-center text-gray-500">{t('admin_pages.notification_sender.loading_history', 'Loading history...')}</div>
                 ) : notifications.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">No notifications sent yet.</div>
+                    <div className="p-8 text-center text-gray-500">{t('admin_pages.notification_sender.none_sent', 'No notifications sent yet.')}</div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <Table headers={['Date', 'Target', 'Message Details', 'Engagement Stats', 'Actions']}>
+                        <Table headers={[t('admin_pages.notification_sender.col.date', 'Date'), t('admin_pages.notification_sender.col.target', 'Target'), t('admin_pages.notification_sender.col.details', 'Message Details'), t('admin_pages.notification_sender.col.stats', 'Engagement Stats'), t('admin_pages.notification_sender.col.actions', 'Actions')]}>
                             {notifications.map(notif => {
                                 const deliveredCount = (notif.deliveredTo || []).length;
                                 const readCount = (notif.readBy || []).length;
                                 const dateStr = notif.createdAt 
                                     ? new Date(notif.createdAt.seconds * 1000).toLocaleString() 
-                                    : 'Sending...';
+                                    : t('admin_pages.notification_sender.sending', 'Sending...');
 
                                 const targetDisplay = notif.targetUser === 'all' 
-                                    ? <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-bold uppercase tracking-wider">All Users</span>
-                                    : <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-[10px] font-bold uppercase tracking-wider">{usersMap[notif.targetUser] || 'Unknown User'}</span>;
+                                    ? <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-bold uppercase tracking-wider">{t('admin_pages.notification_sender.all_users', 'All Users')}</span>
+                                    : <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-[10px] font-bold uppercase tracking-wider">{usersMap[notif.targetUser] || t('admin_pages.notification_sender.unknown_user', 'Unknown User')}</span>;
 
                                 return (
                                     <tr key={notif.id} className="hover:bg-gray-50 group">
@@ -225,14 +227,14 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                         <td 
                                             className="cursor-pointer bg-gray-50/50 hover:bg-sky-50 transition-colors rounded-lg m-1 p-2 border border-transparent hover:border-sky-200"
                                             onClick={() => setStatsNotifId(notif.id)}
-                                            title="Click to view detailed engagement lists"
+                                            title={t('admin_pages.notification_sender.click_details', 'Click to view detailed engagement lists')}
                                         >
                                             <div className="flex flex-col gap-1.5 text-xs">
                                                 <div className={`flex items-center font-bold ${deliveredCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
-                                                    <CheckCircle className="w-3.5 h-3.5 mr-1" /> {deliveredCount} Delivered
+                                                    <CheckCircle className="w-3.5 h-3.5 mr-1" /> {t('admin_pages.notification_sender.n_delivered', '{{count}} Delivered', { count: deliveredCount })}
                                                 </div>
                                                 <div className={`flex items-center font-bold ${readCount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                                                    <Eye className="w-3.5 h-3.5 mr-1" /> {readCount} Read
+                                                    <Eye className="w-3.5 h-3.5 mr-1" /> {t('admin_pages.notification_sender.n_read', '{{count}} Read', { count: readCount })}
                                                 </div>
                                             </div>
                                         </td>
@@ -256,7 +258,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
 
             {/* 3. ENGAGEMENT STATS MODAL */}
             {statsNotif && (
-                <Modal isOpen={!!statsNotif} onClose={() => setStatsNotifId(null)} title="Notification Engagement Details">
+                <Modal isOpen={!!statsNotif} onClose={() => setStatsNotifId(null)} title={t('admin_pages.notification_sender.details_title', 'Notification Engagement Details')}>
                     {/* Removed max-h and overflow configurations to rely completely on default Modal container scrolling behavior */}
                     <div className="p-5 bg-gray-50 space-y-5">
                         
@@ -266,9 +268,9 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                             <p className="text-sm text-gray-600 mb-3">{statsNotif.message}</p>
                             <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                                 <Clock className="w-3 h-3 mr-1" />
-                                {statsNotif.createdAt ? new Date(statsNotif.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
+                                {statsNotif.createdAt ? new Date(statsNotif.createdAt.seconds * 1000).toLocaleString() : t('admin_pages.notification_sender.just_now', 'Just now')}
                                 <span className="mx-2">•</span>
-                                Target: {statsNotif.targetUser === 'all' ? 'All Users' : usersMap[statsNotif.targetUser] || 'Unknown'}
+                                {t('admin_pages.notification_sender.target_label', 'Target:')} {statsNotif.targetUser === 'all' ? t('admin_pages.notification_sender.all_users', 'All Users') : usersMap[statsNotif.targetUser] || t('admin_pages.notification_sender.unknown', 'Unknown')}
                             </div>
                         </div>
                         
@@ -277,7 +279,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                             {/* Column 1: DELIVERED */}
                             <div className="bg-white rounded-xl border border-blue-100 shadow-sm flex flex-col">
                                 <div className="bg-blue-50 px-4 py-3 border-b border-blue-100 font-bold text-blue-900 flex items-center justify-between rounded-t-xl">
-                                    <span className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-blue-600"/> Delivered To Device</span>
+                                    <span className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-blue-600"/> {t('admin_pages.notification_sender.delivered_to_device', 'Delivered To Device')}</span>
                                     <span className="bg-blue-200 text-blue-900 px-2.5 py-0.5 rounded-full text-xs shadow-sm">
                                         {(statsNotif.deliveredTo || []).length}
                                     </span>
@@ -285,7 +287,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                 <div>
                                     <ul className="divide-y divide-gray-50">
                                         {(!statsNotif.deliveredTo || statsNotif.deliveredTo.length === 0) ? (
-                                            <li className="p-6 text-center text-sm text-gray-400 italic">No delivery receipts yet.</li>
+                                            <li className="p-6 text-center text-sm text-gray-400 italic">{t('admin_pages.notification_sender.no_delivery', 'No delivery receipts yet.')}</li>
                                         ) : (
                                             statsNotif.deliveredTo.map(uid => (
                                                 <li key={uid} className="px-4 py-2.5 text-sm text-gray-700 flex items-center gap-2">
@@ -303,7 +305,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                             {/* Column 2: READ */}
                             <div className="bg-white rounded-xl border border-green-100 shadow-sm flex flex-col">
                                 <div className="bg-green-50 px-4 py-3 border-b border-green-100 font-bold text-green-900 flex items-center justify-between rounded-t-xl">
-                                    <span className="flex items-center"><Eye className="w-4 h-4 mr-2 text-green-600"/> Clicked & Read</span>
+                                    <span className="flex items-center"><Eye className="w-4 h-4 mr-2 text-green-600"/> {t('admin_pages.notification_sender.clicked_read', 'Clicked & Read')}</span>
                                     <span className="bg-green-200 text-green-900 px-2.5 py-0.5 rounded-full text-xs shadow-sm">
                                         {(statsNotif.readBy || []).length}
                                     </span>
@@ -311,7 +313,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                 <div>
                                     <ul className="divide-y divide-gray-50">
                                         {(!statsNotif.readBy || statsNotif.readBy.length === 0) ? (
-                                            <li className="p-6 text-center text-sm text-gray-400 italic">Nobody has read this yet.</li>
+                                            <li className="p-6 text-center text-sm text-gray-400 italic">{t('admin_pages.notification_sender.nobody_read', 'Nobody has read this yet.')}</li>
                                         ) : (
                                             statsNotif.readBy.map(uid => (
                                                 <li key={uid} className="px-4 py-2.5 text-sm text-gray-700 flex items-center justify-between gap-2">
@@ -332,7 +334,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
 
                     </div>
                     <div className="p-4 border-t border-gray-200 bg-white flex justify-end rounded-b-xl">
-                        <Button onClick={() => setStatsNotifId(null)} variant="secondary" className="px-6">Close Details</Button>
+                        <Button onClick={() => setStatsNotifId(null)} variant="secondary" className="px-6">{t('admin_pages.notification_sender.close_details', 'Close Details')}</Button>
                     </div>
                 </Modal>
             )}

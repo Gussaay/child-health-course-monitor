@@ -316,6 +316,7 @@ export function gradeQuiz(questions = [], answers = {}) {
 // ============================================================================
 
 function ScenarioHeader({ exercise, participant, lang, onToggleLang }) {
+    const { t } = useTranslation();
     const bullets = (lang === 'ar' && exercise.narrativeAr) ? exercise.narrativeAr : exercise.narrative;
     const title = (lang === 'ar' && exercise.titleAr) ? exercise.titleAr : exercise.title;
     const rtl = lang === 'ar';
@@ -344,9 +345,9 @@ function ScenarioHeader({ exercise, participant, lang, onToggleLang }) {
                             ))}
                         </ul>
                         <p className="text-xs text-slate-500 mt-4">
-                            Record this child on the form below, tick the classification you would give
-                            {exercise.expected?.includeTreatment ? ' and the treatment you would identify' : ''},
-                            then press <strong>Check my form</strong>. Nothing is saved to patient records.
+                            {exercise.expected?.includeTreatment
+                                ? t('imnci_ui.exercises.case.instructions_treat', 'Record this child on the form below, tick the classification you would give and the treatment you would identify, then press Check my form. Nothing is saved to patient records.')
+                                : t('imnci_ui.exercises.case.instructions', 'Record this child on the form below, tick the classification you would give, then press Check my form. Nothing is saved to patient records.')}
                         </p>
                     </div>
                 </div>
@@ -358,6 +359,7 @@ function ScenarioHeader({ exercise, participant, lang, onToggleLang }) {
 /** Score strip, pinned to the top of the form with the scenario. */
 /** Headline result only. Stays at the top, beside the scenario. */
 function ScoreStrip({ result, passMark, attemptNo, saveState, saveError }) {
+    const { t } = useTranslation();
     if (!result) return null;
     const passed = result.percent >= passMark;
     return (
@@ -365,9 +367,9 @@ function ScoreStrip({ result, passMark, attemptNo, saveState, saveError }) {
             <div className={`rounded-xl px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-white ${passed ? 'bg-emerald-600' : 'bg-amber-600'}`}>
                 <span className="font-bold flex items-center gap-2">
                     {passed ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                    {passed ? 'Passed' : 'Below the pass mark'}
+                    {passed ? t('imnci_ui.exercises.score.passed', 'Passed') : t('imnci_ui.exercises.score.below_pass', 'Below the pass mark')}
                     <span className="font-normal opacity-90 text-sm">
-                        · attempt {attemptNo} · pass mark {passMark}%
+                        {t('imnci_ui.exercises.score.attempt_pass_mark', '· attempt {{n}} · pass mark {{mark}}%', { n: attemptNo, mark: passMark })}
                     </span>
                 </span>
                 <span className="font-bold text-lg">
@@ -376,10 +378,10 @@ function ScoreStrip({ result, passMark, attemptNo, saveState, saveError }) {
             </div>
 
             <p className="text-xs text-slate-500">
-                {saveState === 'saving' && 'Recording this attempt…'}
-                {saveState === 'saved' && `Attempt ${attemptNo} recorded. Each field is marked where you filled it in; the full breakdown is at the foot of the form.`}
-                {saveState === 'error' && <span className="text-rose-600">Not recorded: {saveError}</span>}
-                {saveState === 'idle' && 'Each field is marked where you filled it in; the full breakdown is at the foot of the form.'}
+                {saveState === 'saving' && t('imnci_ui.exercises.score.recording', 'Recording this attempt…')}
+                {saveState === 'saved' && t('imnci_ui.exercises.score.recorded', 'Attempt {{n}} recorded. Each field is marked where you filled it in; the full breakdown is at the foot of the form.', { n: attemptNo })}
+                {saveState === 'error' && <span className="text-rose-600">{t('imnci_ui.exercises.score.not_recorded', 'Not recorded: {{error}}', { error: saveError })}</span>}
+                {saveState === 'idle' && t('imnci_ui.exercises.score.idle', 'Each field is marked where you filled it in; the full breakdown is at the foot of the form.')}
             </p>
         </div>
     );
@@ -393,13 +395,14 @@ function ScoreStrip({ result, passMark, attemptNo, saveState, saveError }) {
  * points at the end.
  */
 function ResultDetail({ result, exercise }) {
+    const { t } = useTranslation();
     if (!result) return null;
 
     const rows = [
-        ['Child details', result.breakdown?.patientData],
-        ['Signs recorded', result.breakdown?.assessments],
-        ['Classification', result.breakdown?.classifications],
-        ['Treatment', result.breakdown?.treatments],
+        [t('imnci_ui.exercises.result.child_details', 'Child details'), result.breakdown?.patientData],
+        [t('imnci_ui.exercises.result.signs_recorded', 'Signs recorded'), result.breakdown?.assessments],
+        [t('imnci_ui.exercises.result.classification', 'Classification'), result.breakdown?.classifications],
+        [t('imnci_ui.exercises.result.treatment', 'Treatment'), result.breakdown?.treatments],
     ].filter(([, b]) => b && b.possible > 0);
 
     // Authored learning points if the exercise has them; otherwise the case
@@ -413,16 +416,16 @@ function ResultDetail({ result, exercise }) {
             {rows.length > 0 && (
                 <div className="border border-slate-200 rounded-xl bg-white overflow-hidden">
                     <div className="px-4 py-2.5 bg-slate-800 text-white text-sm font-bold uppercase tracking-wide">
-                        How this attempt was scored
+                        {t('imnci_ui.exercises.result.how_scored', 'How this attempt was scored')}
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm min-w-[540px]">
                             <thead>
                                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
-                                    <th className="text-left p-2.5 font-semibold">Part of the form</th>
-                                    <th className="p-2.5 font-semibold w-20">Score</th>
-                                    <th className="text-left p-2.5 font-semibold">Correct</th>
-                                    <th className="text-left p-2.5 font-semibold">Wrong</th>
+                                    <th className="text-left p-2.5 font-semibold">{t('imnci_ui.exercises.result.part_of_form', 'Part of the form')}</th>
+                                    <th className="p-2.5 font-semibold w-20">{t('imnci_ui.exercises.result.score', 'Score')}</th>
+                                    <th className="text-left p-2.5 font-semibold">{t('imnci_ui.exercises.result.correct', 'Correct')}</th>
+                                    <th className="text-left p-2.5 font-semibold">{t('imnci_ui.exercises.result.wrong', 'Wrong')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -439,11 +442,10 @@ function ResultDetail({ result, exercise }) {
                             </tbody>
                             <tfoot>
                                 <tr className="bg-slate-50 font-bold text-slate-800 border-t-2 border-slate-300">
-                                    <td className="p-2.5">Total</td>
+                                    <td className="p-2.5">{t('imnci_ui.exercises.result.total', 'Total')}</td>
                                     <td className="p-2.5 text-center">{result.earned}/{result.possible}</td>
                                     <td className="p-2.5 text-xs font-normal text-slate-500" colSpan={2}>
-                                        One mark per item. A classification or treatment row scores only when every
-                                        correct box is ticked and no extra one is.
+                                        {t('imnci_ui.exercises.result.one_mark', 'One mark per item. A classification or treatment row scores only when every correct box is ticked and no extra one is.')}
                                     </td>
                                 </tr>
                             </tfoot>
@@ -455,7 +457,7 @@ function ResultDetail({ result, exercise }) {
             {learning.length > 0 && (
                 <div className="border-2 border-sky-200 rounded-xl bg-sky-50 overflow-hidden">
                     <div className="px-4 py-2.5 bg-sky-600 text-white text-sm font-bold uppercase tracking-wide flex items-center gap-2">
-                        <BookOpen className="w-4 h-4" /> Learning points
+                        <BookOpen className="w-4 h-4" /> {t('imnci_ui.exercises.result.learning_points', 'Learning points')}
                     </div>
                     <ul className="p-4 space-y-2">
                         {learning.map((p, i) => (
@@ -540,7 +542,7 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
             setSaveState('saved');
         } catch (e) {
             setSaveState('error');
-            setSaveError(e?.message || 'Could not record this attempt.');
+            setSaveError(e?.message || t('imnci_ui.exercises.case.record_failed', 'Could not record this attempt.'));
         }
     };
 
@@ -569,7 +571,7 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
                 expected: d.expected,
                 // A field that is only required, with no expected value, is
                 // marked on whether it was answered at all.
-                expectedText: d.required ? 'filled in' : pretty(d.expected),
+                expectedText: d.required ? t('imnci_ui.exercises.case.filled_in', 'filled in') : pretty(d.expected),
                 expectedValue: isChoice && !d.required ? d.expected : null,
                 gotValue: isChoice && d.got ? d.got : null,
                 // Nothing was chosen: the whole group is the error, not one option.
@@ -595,7 +597,7 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
         }
 
         return { fields, classify, treatment };
-    }, [detail, exercise, fieldMap, infant]);
+    }, [detail, exercise, fieldMap, infant, t]);
 
     const header = (
         <div ref={topRef} className="space-y-4">
@@ -620,8 +622,8 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
             <ResultDetail result={result} exercise={exercise} />
             <div className="flex flex-wrap items-center justify-between gap-3 border border-slate-200 rounded-xl bg-white p-4">
             <p className="text-sm text-slate-500">
-                {previousBest != null ? `Previous best ${previousBest}%. ` : ''}
-                {!review && 'Every check is recorded as its own attempt.'}
+                {previousBest != null ? t('imnci_ui.exercises.case.previous_best', 'Previous best {{n}}%. ', { n: previousBest }) : ''}
+                {!review && t('imnci_ui.exercises.case.each_check', 'Every check is recorded as its own attempt.')}
             </p>
             <div className="flex gap-2">
                 {!review && (
@@ -634,10 +636,10 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
                         startedAt.current = Date.now();
                         topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}>
-                        Try again with a blank form
+                        {t('imnci_ui.exercises.case.try_again_blank', 'Try again with a blank form')}
                     </Button>
                 )}
-                {onExit && <Button variant="secondary" onClick={onExit}>Back to exercises</Button>}
+                {onExit && <Button variant="secondary" onClick={onExit}>{t('imnci_ui.exercises.common.back_to_exercises', 'Back to exercises')}</Button>}
             </div>
             </div>
         </div>
@@ -650,7 +652,7 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
         <Suspense fallback={<div className="flex justify-center p-10"><Spinner /></div>}>
             {showResult && result && (
                 <Modal isOpen={showResult} onClose={() => setShowResult(false)}
-                    title={`Submitted — attempt ${attemptNo}`} size="md">
+                    title={t('imnci_ui.exercises.case.submitted_attempt', 'Submitted — attempt {{n}}', { n: attemptNo })} size="md">
                     {/* A summary only. The itemised marking and the learning
                         points are at the foot of the form; repeating them here
                         makes the popup something the learner has to scroll,
@@ -659,21 +661,21 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
                         <div className={`rounded-xl px-4 py-4 text-white text-center ${result.percent >= passMark ? 'bg-emerald-600' : 'bg-amber-600'}`}>
                             <div className="flex items-center justify-center gap-2 font-bold">
                                 {result.percent >= passMark ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                                {result.percent >= passMark ? 'Passed' : 'Below the pass mark'}
+                                {result.percent >= passMark ? t('imnci_ui.exercises.score.passed', 'Passed') : t('imnci_ui.exercises.score.below_pass', 'Below the pass mark')}
                             </div>
                             <p className="text-4xl font-bold mt-1 leading-none">{result.percent}%</p>
                             <p className="text-sm opacity-90 mt-1">
-                                {result.earned} of {result.possible} marks · pass mark {passMark}%
+                                {t('imnci_ui.exercises.case.marks_summary', '{{earned}} of {{possible}} marks · pass mark {{mark}}%', { earned: result.earned, possible: result.possible, mark: passMark })}
                             </p>
                         </div>
 
                         {result.breakdown && (
                             <div className="grid grid-cols-2 gap-2">
                                 {[
-                                    ['Child details', result.breakdown.patientData],
-                                    ['Signs', result.breakdown.assessments],
-                                    ['Classification', result.breakdown.classifications],
-                                    ['Treatment', result.breakdown.treatments],
+                                    [t('imnci_ui.exercises.result.child_details', 'Child details'), result.breakdown.patientData],
+                                    [t('imnci_ui.exercises.result.signs', 'Signs'), result.breakdown.assessments],
+                                    [t('imnci_ui.exercises.result.classification', 'Classification'), result.breakdown.classifications],
+                                    [t('imnci_ui.exercises.result.treatment', 'Treatment'), result.breakdown.treatments],
                                 ].filter(([, b]) => b && b.possible > 0).map(([label, b]) => (
                                     <div key={label} className="border border-slate-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                                         <span className="text-xs text-slate-600 truncate">{label}</span>
@@ -686,14 +688,13 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
                         )}
 
                         <p className="text-xs text-slate-500 text-center leading-relaxed">
-                            {saveState === 'saving' && 'Recording this attempt…'}
-                            {saveState === 'saved' && 'Attempt recorded. '}
-                            {saveState === 'error' && <span className="text-rose-600 font-semibold">Not recorded: {saveError}. </span>}
-                            Close to see every answer marked on the form, with the full breakdown and
-                            learning points at the foot of the page.
+                            {saveState === 'saving' && t('imnci_ui.exercises.score.recording', 'Recording this attempt…')}
+                            {saveState === 'saved' && t('imnci_ui.exercises.case.attempt_recorded', 'Attempt recorded. ')}
+                            {saveState === 'error' && <span className="text-rose-600 font-semibold">{t('imnci_ui.exercises.score.not_recorded', 'Not recorded: {{error}}', { error: saveError })}. </span>}
+                            {t('imnci_ui.exercises.case.close_to_see', 'Close to see every answer marked on the form, with the full breakdown and learning points at the foot of the page.')}
                         </p>
 
-                        <Button onClick={() => setShowResult(false)} className="w-full justify-center">OK</Button>
+                        <Button onClick={() => setShowResult(false)} className="w-full justify-center">{t('imnci_ui.exercises.common.ok', 'OK')}</Button>
                     </CardBody>
                 </Modal>
             )}
@@ -721,6 +722,7 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
 // ============================================================================
 
 function QuizQuestion({ q, index, value, onChange, detail, locked }) {
+    const { t } = useTranslation();
     const wrong = detail && !detail.ok;
     const right = detail && detail.ok;
 
@@ -739,12 +741,12 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
                     className="w-full sm:w-80 rounded-md border border-slate-300 px-3 py-2 text-sm"
                     value={value ?? ''}
                     onChange={e => onChange(e.target.value)}
-                    placeholder={q.placeholder || 'Type your answer'}
+                    placeholder={q.placeholder || t('imnci_ui.exercises.quiz.type_answer', 'Type your answer')}
                 />
             ) : q.type === 'tf' ? (
                 <div className="flex gap-2">
-                    {[{ v: true, l: 'True' }, { v: false, l: 'False' }].map(o => (
-                        <button key={o.l} type="button" disabled={locked} onClick={() => onChange(o.v)}
+                    {[{ v: true, l: t('imnci_ui.exercises.quiz.true', 'True') }, { v: false, l: t('imnci_ui.exercises.quiz.false', 'False') }].map(o => (
+                        <button key={String(o.v)} type="button" disabled={locked} onClick={() => onChange(o.v)}
                             className={`px-4 py-1.5 rounded-md text-sm border transition-colors ${
                                 value === o.v ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
                             {o.l}
@@ -753,7 +755,7 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
                 </div>
             ) : (
                 <div className="space-y-1.5">
-                    {(q.correct || []).length > 1 && <p className="text-xs text-slate-500">Select all that apply.</p>}
+                    {(q.correct || []).length > 1 && <p className="text-xs text-slate-500">{t('imnci_ui.exercises.quiz.select_all', 'Select all that apply.')}</p>}
                     {q.options.map((opt, i) => {
                         const multi = (q.correct || []).length > 1;
                         const chosen = Array.isArray(value) ? value.includes(i) : value === i;
@@ -776,9 +778,9 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
 
             {detail && !detail.ok && (
                 <p className="text-xs text-emerald-700 mt-2">
-                    Correct answer:{' '}
+                    {t('imnci_ui.exercises.quiz.correct_answer', 'Correct answer:')}{' '}
                     <strong>
-                        {q.type === 'tf' ? (q.correct ? 'True' : 'False')
+                        {q.type === 'tf' ? (q.correct ? t('imnci_ui.exercises.quiz.true', 'True') : t('imnci_ui.exercises.quiz.false', 'False'))
                             : q.type === 'text' ? q.correct
                             : (q.correct || []).map(i => q.options[i]).join('; ')}
                     </strong>
@@ -792,6 +794,7 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
 }
 
 export function QuizPlayer({ exercise, participant, onSubmit, onExit, previousBest = null, readOnlyAttempt = null }) {
+    const { t } = useTranslation();
     const [lang, setLang] = useState('en');
     const [answers, setAnswers] = useState(readOnlyAttempt?.submitted?.answers || {});
     const [result, setResult] = useState(readOnlyAttempt?.result || null);
@@ -821,7 +824,7 @@ export function QuizPlayer({ exercise, participant, onSubmit, onExit, previousBe
                 durationSeconds: Math.round((Date.now() - startedAt.current) / 1000),
             });
             setSaved(true);
-        } catch (e) { setSaveError(e?.message || 'Could not save your result.'); }
+        } catch (e) { setSaveError(e?.message || t('imnci_ui.exercises.quiz.save_failed', 'Could not save your result.')); }
         finally { setSaving(false); }
     };
 
@@ -851,23 +854,23 @@ export function QuizPlayer({ exercise, participant, onSubmit, onExit, previousBe
                             <span className={`font-bold ${result.percent >= passMark ? 'text-emerald-600' : 'text-amber-600'}`}>
                                 {result.percent}% — {result.earned}/{result.possible}
                             </span>
-                            <span className="text-slate-500"> · pass mark {passMark}%{previousBest != null ? ` · previous best ${previousBest}%` : ''}</span>
+                            <span className="text-slate-500"> · {t('imnci_ui.exercises.quiz.pass_mark', 'pass mark {{n}}%', { n: passMark })}{previousBest != null ? ' · ' + t('imnci_ui.exercises.quiz.previous_best', 'previous best {{n}}%', { n: previousBest }) : ''}</span>
                             {saveError && <p className="text-rose-600 mt-1">{saveError}</p>}
-                            {saved && !review && <p className="text-emerald-600 mt-1">Result saved.</p>}
+                            {saved && !review && <p className="text-emerald-600 mt-1">{t('imnci_ui.exercises.quiz.result_saved', 'Result saved.')}</p>}
                         </>
                     ) : (
-                        <span className="text-slate-500">{Object.keys(answers).length} of {questions.length} answered</span>
+                        <span className="text-slate-500">{t('imnci_ui.exercises.quiz.answered', '{{n}} of {{total}} answered', { n: Object.keys(answers).length, total: questions.length })}</span>
                     )}
                 </div>
                 <div className="flex gap-2">
-                    {!result && !review && <Button onClick={check} disabled={!answeredAll}>Check my answers</Button>}
+                    {!result && !review && <Button onClick={check} disabled={!answeredAll}>{t('imnci_ui.exercises.quiz.check_answers', 'Check my answers')}</Button>}
                     {result && !review && onSubmit && (
                         <Button onClick={save} disabled={saving || saved}>
-                            {saving ? <Spinner size="sm" /> : saved ? 'Saved' : 'Save my result'}
+                            {saving ? <Spinner size="sm" /> : saved ? t('imnci_ui.exercises.quiz.saved', 'Saved') : t('imnci_ui.exercises.quiz.save_result', 'Save my result')}
                         </Button>
                     )}
-                    {result && !review && <Button variant="secondary" onClick={() => { setAnswers({}); setResult(null); setSaved(false); startedAt.current = Date.now(); }}>Try again</Button>}
-                    {onExit && <Button variant="secondary" onClick={onExit}>Back to exercises</Button>}
+                    {result && !review && <Button variant="secondary" onClick={() => { setAnswers({}); setResult(null); setSaved(false); startedAt.current = Date.now(); }}>{t('imnci_ui.exercises.quiz.try_again', 'Try again')}</Button>}
+                    {onExit && <Button variant="secondary" onClick={onExit}>{t('imnci_ui.exercises.common.back_to_exercises', 'Back to exercises')}</Button>}
                 </div>
             </div>
 
@@ -888,6 +891,7 @@ export function ExerciseListView({
     course, participant, subCourse = ONLINE_SUB_COURSE,
     source = 'public', includeDrafts = false, onChangeParticipant = null,
 }) {
+    const { t } = useTranslation();
     const [exercises, setExercises] = useState(() => getExercisesForSubCourse(subCourse, { includeDrafts }));
     // Kept only so the empty state can say WHY the list is empty.
     const [allForSubCourse, setAllForSubCourse] = useState(() => getExercisesForSubCourse(subCourse, { includeDrafts: true }));
@@ -903,11 +907,11 @@ export function ExerciseListView({
         try {
             setAttempts(await listExerciseAttemptsForParticipant(course.id, participant.id));
         } catch (e) {
-            setToast({ show: true, message: `Could not load previous attempts: ${e.message}`, type: 'error' });
+            setToast({ show: true, message: t('imnci_ui.exercises.list.load_attempts_failed', 'Could not load previous attempts: {{msg}}', { msg: e.message }), type: 'error' });
         } finally {
             setLoading(false);
         }
-    }, [course?.id, participant?.id]);
+    }, [course?.id, participant?.id, t]);
 
     useEffect(() => { loadAttempts(); }, [loadAttempts]);
 
@@ -954,7 +958,7 @@ export function ExerciseListView({
             results: { result },
             source,
         });
-        setToast({ show: true, message: 'Your result has been saved.', type: 'success' });
+        setToast({ show: true, message: t('imnci_ui.exercises.list.result_saved', 'Your result has been saved.'), type: 'success' });
         await loadAttempts();
     };
 
@@ -994,12 +998,12 @@ export function ExerciseListView({
 
             <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900">Interactive Exercises</h2>
+                    <h2 className="text-xl font-bold text-slate-900">{t('imnci_ui.exercises.list.title', 'Interactive Exercises')}</h2>
                     <p className="text-sm text-slate-500">{subCourse}{participant?.name ? ` · ${participant.name}` : ''}</p>
                 </div>
                 {onChangeParticipant && (
                     <Button variant="secondary" onClick={onChangeParticipant}>
-                        <Users className="w-4 h-4" /> Change participant
+                        <Users className="w-4 h-4" /> {t('imnci_ui.exercises.list.change_participant', 'Change participant')}
                     </Button>
                 )}
             </div>
@@ -1008,8 +1012,8 @@ export function ExerciseListView({
                 : exercises.length === 0 ? (
                     <EmptyState message={
                         allForSubCourse.length > 0
-                            ? `${allForSubCourse.length} exercise${allForSubCourse.length === 1 ? ' is' : 's are'} written for “${subCourse}”, but ${allForSubCourse.length === 1 ? 'it is' : 'they are all'} still marked DRAFT. Open Manage Exercises and turn Draft off to publish.`
-                            : `No exercises match the sub-course “${subCourse}”. Check that the course's sub-course name matches ONLINE_SUB_COURSE in exercises.js.`
+                            ? t('imnci_ui.exercises.list.all_drafts', '{{n}} exercise(s) written for “{{sub}}”, but still marked DRAFT. Open Manage Exercises and turn Draft off to publish.', { n: allForSubCourse.length, sub: subCourse })
+                            : t('imnci_ui.exercises.list.none_match', 'No exercises match the sub-course “{{sub}}”. Check that the course\'s sub-course name matches ONLINE_SUB_COURSE in exercises.js.', { sub: subCourse })
                     } />
                 )
                 : (
@@ -1027,28 +1031,28 @@ export function ExerciseListView({
                                         <div className="min-w-0 flex-1">
                                             <p className="font-semibold text-slate-800 text-sm leading-snug">{ex.title}</p>
                                             <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-500">
-                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{ex.estimatedMinutes || 15} min</span>
-                                                <span>Pass {ex.passMark ?? 80}%</span>
-                                                {ex.kind === 'quiz' && <span className="text-purple-600 font-semibold">QUIZ</span>}
-                                                {ex.formType === 'infant' && <span className="text-sky-600 font-semibold">YOUNG INFANT</span>}
-                                                {ex.expected?.includeTreatment && <span className="text-sky-600">+ treatment</span>}
-                                                {ex.draft && <span className="text-amber-600 font-semibold">DRAFT</span>}
+                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{t('imnci_ui.exercises.list.minutes', '{{n}} min', { n: ex.estimatedMinutes || 15 })}</span>
+                                                <span>{t('imnci_ui.exercises.list.pass', 'Pass {{n}}%', { n: ex.passMark ?? 80 })}</span>
+                                                {ex.kind === 'quiz' && <span className="text-purple-600 font-semibold">{t('imnci_ui.exercises.badges.quiz', 'QUIZ')}</span>}
+                                                {ex.formType === 'infant' && <span className="text-sky-600 font-semibold">{t('imnci_ui.exercises.badges.young_infant', 'YOUNG INFANT')}</span>}
+                                                {ex.expected?.includeTreatment && <span className="text-sky-600">{t('imnci_ui.exercises.badges.treatment', '+ treatment')}</span>}
+                                                {ex.draft && <span className="text-amber-600 font-semibold">{t('imnci_ui.exercises.badges.draft', 'DRAFT')}</span>}
                                             </div>
                                             {b && (
                                                 <p className={`text-xs mt-2 font-medium flex items-center gap-1 ${passed ? 'text-emerald-600' : 'text-amber-600'}`}>
                                                     <CheckCircle className="w-3.5 h-3.5" />
-                                                    Best {b.percent}% · {count} attempt{count > 1 ? 's' : ''}
+                                                    {t('imnci_ui.exercises.list.best_attempts', 'Best {{pct}}% · {{count}} attempt(s)', { pct: b.percent, count })}
                                                 </p>
                                             )}
                                         </div>
                                     </div>
                                     <div className="flex gap-2 mt-4">
                                         <Button className="flex-1 justify-center" onClick={() => { setReviewAttempt(null); setActiveId(ex.id); }}>
-                                            {b ? 'Try again' : 'Start'}
+                                            {b ? t('imnci_ui.exercises.quiz.try_again', 'Try again') : t('imnci_ui.exercises.list.start', 'Start')}
                                         </Button>
                                         {b && (
                                             <Button variant="secondary" onClick={() => { setReviewAttempt(b); setActiveId(ex.id); }}>
-                                                Review
+                                                {t('imnci_ui.exercises.list.review', 'Review')}
                                             </Button>
                                         )}
                                     </div>
@@ -1062,20 +1066,21 @@ export function ExerciseListView({
 }
 
 export function CourseExercisesView({ course, participants = [], selectedParticipantId = null, canManageExercises = true }) {
+    const { t } = useTranslation();
     const [participantId, setParticipantId] = useState(selectedParticipantId || '');
     const [tab, setTab] = useState('results');
 
     const participant = participants.find(p => p.id === participantId) || null;
-    if (!course) return <EmptyState message="Select a course first." />;
+    if (!course) return <EmptyState message={t('imnci_ui.exercises.course.select_course', 'Select a course first.')} />;
 
     return (
         <div className="space-y-4">
             <div className="flex gap-2 border-b border-slate-200 pb-3 flex-wrap">
-                <Button variant="tab" isActive={tab === 'live'} onClick={() => setTab('live')}>Live Dashboard</Button>
-                <Button variant="tab" isActive={tab === 'results'} onClick={() => setTab('results')}>Exercise Results</Button>
-                <Button variant="tab" isActive={tab === 'run'} onClick={() => setTab('run')}>Open an Exercise</Button>
+                <Button variant="tab" isActive={tab === 'live'} onClick={() => setTab('live')}>{t('imnci_ui.exercises.course.tab_live', 'Live Dashboard')}</Button>
+                <Button variant="tab" isActive={tab === 'results'} onClick={() => setTab('results')}>{t('imnci_ui.exercises.course.tab_results', 'Exercise Results')}</Button>
+                <Button variant="tab" isActive={tab === 'run'} onClick={() => setTab('run')}>{t('imnci_ui.exercises.course.tab_run', 'Open an Exercise')}</Button>
                 {canManageExercises && (
-                    <Button variant="tab" isActive={tab === 'manage'} onClick={() => setTab('manage')}>Manage Exercises</Button>
+                    <Button variant="tab" isActive={tab === 'manage'} onClick={() => setTab('manage')}>{t('imnci_ui.exercises.course.tab_manage', 'Manage Exercises')}</Button>
                 )}
             </div>
 
@@ -1087,16 +1092,16 @@ export function CourseExercisesView({ course, participants = [], selectedPartici
             {tab === 'run' && (
                 <div className="space-y-4">
                     <div className="max-w-sm">
-                        <FormGroup label="Participant">
+                        <FormGroup label={t('imnci_ui.exercises.common.participant', 'Participant')}>
                             <Select value={participantId} onChange={(e) => setParticipantId(e.target.value)}>
-                                <option value="">— Select participant —</option>
+                                <option value="">{t('imnci_ui.exercises.course.select_participant', '— Select participant —')}</option>
                                 {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </Select>
                         </FormGroup>
                     </div>
                     {participant
                         ? <ExerciseListView course={course} participant={participant} source="facilitator" includeDrafts />
-                        : <EmptyState message="Choose a participant to open the exercises on their behalf." />}
+                        : <EmptyState message={t('imnci_ui.exercises.course.choose_participant', 'Choose a participant to open the exercises on their behalf.')} />}
                 </div>
             )}
         </div>
@@ -1104,6 +1109,7 @@ export function CourseExercisesView({ course, participants = [], selectedPartici
 }
 
 export function ExerciseResultsTable({ course, participants = [] }) {
+    const { t } = useTranslation();
     const [attempts, setAttempts] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -1141,25 +1147,25 @@ export function ExerciseResultsTable({ course, participants = [] }) {
     };
 
     if (loading) return <div className="flex justify-center p-8"><Spinner /></div>;
-    if (rows.length === 0) return <EmptyState message="No participants or attempts yet." />;
+    if (rows.length === 0) return <EmptyState message={t('imnci_ui.exercises.results.empty', 'No participants or attempts yet.')} />;
 
     return (
         <div className="space-y-3">
             <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={load}><RefreshCw className="w-4 h-4" /> Refresh</Button>
-                <Button variant="secondary" onClick={exportCsv}>Export CSV</Button>
+                <Button variant="secondary" onClick={load}><RefreshCw className="w-4 h-4" /> {t('imnci_ui.exercises.common.refresh', 'Refresh')}</Button>
+                <Button variant="secondary" onClick={exportCsv}>{t('imnci_ui.exercises.results.export_csv', 'Export CSV')}</Button>
             </div>
             <div className="overflow-x-auto border border-slate-200 rounded-lg">
                 <table className="w-full text-sm">
                     <thead className="bg-slate-50">
                         <tr>
-                            <th className="p-3 text-left font-semibold border-b border-slate-200">Participant</th>
+                            <th className="p-3 text-left font-semibold border-b border-slate-200">{t('imnci_ui.exercises.common.participant', 'Participant')}</th>
                             {exercises.map(e => (
                                 <th key={e.id} className="p-3 text-center font-semibold border-b border-slate-200 whitespace-nowrap">
                                     {e.title.split('—')[0].trim()}
                                 </th>
                             ))}
-                            <th className="p-3 text-center font-semibold border-b border-slate-200">Attempts</th>
+                            <th className="p-3 text-center font-semibold border-b border-slate-200">{t('imnci_ui.exercises.common.attempts', 'Attempts')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1213,6 +1219,13 @@ function ReportTile({ label, value, sub, tone = 'slate' }) {
 }
 
 export function ExerciseCourseReport({ course, participants = [], subCourse = ONLINE_SUB_COURSE, onData = null }) {
+    const { t } = useTranslation();
+    const groupLabel = (g) => ({
+        'Child details': t('imnci_ui.exercises.result.child_details', 'Child details'),
+        Sign: t('imnci_ui.exercises.report.sign', 'Sign'),
+        Classification: t('imnci_ui.exercises.result.classification', 'Classification'),
+        Treatment: t('imnci_ui.exercises.result.treatment', 'Treatment'),
+    }[g] || g);
     const [attempts, setAttempts] = useState([]);
     const [exercises, setExercises] = useState(() => getExercisesForSubCourse(subCourse, { includeDrafts: true }));
     const [loading, setLoading] = useState(true);
@@ -1234,11 +1247,11 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
             setAttempts(rows || []);
             setExercises(list || []);
         } catch (e) {
-            setError(e?.message || 'Could not load exercise results.');
+            setError(e?.message || t('imnci_ui.exercises.report.load_failed', 'Could not load exercise results.'));
         } finally {
             setLoading(false);
         }
-    }, [course.id, subCourse]);
+    }, [course.id, subCourse, t]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -1395,13 +1408,14 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
         });
 
         const exTitle = followExercise === 'any'
-            ? 'any exercise'
+            ? t('imnci_ui.exercises.report.any_exercise_lower', 'any exercise')
             : (exercises.find(e => e.id === followExercise)?.title || followExercise);
-        const verb = followStatus === 'not-started' ? 'have not started'
-            : followStatus === 'below-pass' ? 'scored below the pass mark on'
-            : 'have not passed';
-
-        const heading = `${course.course_type || 'Course'} — ${rows.length} participant${rows.length === 1 ? '' : 's'} ${verb} ${exTitle}`;
+        const vars = { course: course.course_type || t('imnci_ui.exercises.report.course', 'Course'), n: rows.length, exercise: exTitle };
+        const heading = followStatus === 'not-started'
+            ? t('imnci_ui.exercises.report.heading_not_started', '{{course}} — {{n}} participant(s) have not started {{exercise}}', vars)
+            : followStatus === 'below-pass'
+                ? t('imnci_ui.exercises.report.heading_below_pass', '{{course}} — {{n}} participant(s) scored below the pass mark on {{exercise}}', vars)
+                : t('imnci_ui.exercises.report.heading_not_passed', '{{course}} — {{n}} participant(s) have not passed {{exercise}}', vars);
         const text = [
             heading,
             ...rows.map((p, i) => {
@@ -1414,7 +1428,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
         ].join('\n');
 
         return { rows, text, heading };
-    }, [model.perParticipant, exercises, followExercise, followStatus, course.course_type]);
+    }, [model.perParticipant, exercises, followExercise, followStatus, course.course_type, t]);
 
     const copyText = async (text, tag) => {
         try {
@@ -1468,7 +1482,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
     if (loading) return <div className="flex justify-center p-10"><Spinner /></div>;
     if (error) return <EmptyState message={error} />;
     if (attempts.length === 0) {
-        return <EmptyState message={`No exercise attempts have been recorded for this course yet.`} />;
+        return <EmptyState message={t('imnci_ui.exercises.report.no_attempts', 'No exercise attempts have been recorded for this course yet.')} />;
     }
 
     const { kpis } = model;
@@ -1477,75 +1491,75 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
         <div className="space-y-6" dir="ltr">
             <div className="flex flex-wrap justify-between items-center gap-2">
                 <p className="text-sm text-slate-500">
-                    {kpis.totalAttempts} attempt{kpis.totalAttempts === 1 ? '' : 's'} from {kpis.started} of {model.roster.length} participants
+                    {t('imnci_ui.exercises.report.attempts_from', '{{n}} attempt(s) from {{started}} of {{total}} participants', { n: kpis.totalAttempts, started: kpis.started, total: model.roster.length })}
                 </p>
                 <div className="flex gap-2 print-hide">
-                    <Button variant="secondary" onClick={load}><RefreshCw className="w-4 h-4" /> Refresh</Button>
-                    <Button variant="secondary" onClick={exportParticipants}>Export participants CSV</Button>
-                    {model.missed.length > 0 && <Button variant="secondary" onClick={exportMissed}>Export missed items CSV</Button>}
+                    <Button variant="secondary" onClick={load}><RefreshCw className="w-4 h-4" /> {t('imnci_ui.exercises.common.refresh', 'Refresh')}</Button>
+                    <Button variant="secondary" onClick={exportParticipants}>{t('imnci_ui.exercises.report.export_participants', 'Export participants CSV')}</Button>
+                    {model.missed.length > 0 && <Button variant="secondary" onClick={exportMissed}>{t('imnci_ui.exercises.report.export_missed', 'Export missed items CSV')}</Button>}
                 </div>
             </div>
 
             <div id="exercise-report-kpis" className="grid grid-cols-2 md:grid-cols-5 gap-3 bg-white p-2">
-                <ReportTile label="Started" value={kpis.started} sub={`of ${model.roster.length} participants`} tone="sky" />
-                <ReportTile label="Not started" value={kpis.notStarted} tone={kpis.notStarted > 0 ? 'amber' : 'emerald'} />
-                <ReportTile label="Total attempts" value={kpis.totalAttempts} />
-                <ReportTile label="Average score" value={kpis.avgScore != null ? `${kpis.avgScore}%` : '—'} sub="best attempt per exercise" tone="emerald" />
-                <ReportTile label="Passed everything" value={kpis.fullyPassed} sub="of those who started" tone="emerald" />
+                <ReportTile label={t('imnci_ui.exercises.report.started', 'Started')} value={kpis.started} sub={t('imnci_ui.exercises.report.of_participants', 'of {{n}} participants', { n: model.roster.length })} tone="sky" />
+                <ReportTile label={t('imnci_ui.exercises.report.not_started', 'Not started')} value={kpis.notStarted} tone={kpis.notStarted > 0 ? 'amber' : 'emerald'} />
+                <ReportTile label={t('imnci_ui.exercises.report.total_attempts', 'Total attempts')} value={kpis.totalAttempts} />
+                <ReportTile label={t('imnci_ui.exercises.report.average_score', 'Average score')} value={kpis.avgScore != null ? `${kpis.avgScore}%` : '—'} sub={t('imnci_ui.exercises.report.best_per_exercise', 'best attempt per exercise')} tone="emerald" />
+                <ReportTile label={t('imnci_ui.exercises.report.passed_everything', 'Passed everything')} value={kpis.fullyPassed} sub={t('imnci_ui.exercises.report.of_started', 'of those who started')} tone="emerald" />
             </div>
 
             {/* ---- follow-up list ---- */}
             <div className="border border-slate-200 rounded-xl overflow-hidden bg-white print-hide">
                 <div className="px-4 py-2.5 bg-sky-700 text-white text-sm font-bold uppercase tracking-wide">
-                    Follow-up list
+                    {t('imnci_ui.exercises.report.follow_up', 'Follow-up list')}
                 </div>
 
                 <div className="p-4 space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className="text-xs font-semibold text-slate-600 block mb-1">Exercise</label>
+                            <label className="text-xs font-semibold text-slate-600 block mb-1">{t('imnci_ui.exercises.report.exercise', 'Exercise')}</label>
                             <Select value={followExercise} onChange={e => setFollowExercise(e.target.value)} className="w-full">
-                                <option value="any">Any exercise</option>
+                                <option value="any">{t('imnci_ui.exercises.report.any_exercise', 'Any exercise')}</option>
                                 {exercises.map(e => (
                                     <option key={e.id} value={e.id}>{e.title}</option>
                                 ))}
                             </Select>
                         </div>
                         <div>
-                            <label className="text-xs font-semibold text-slate-600 block mb-1">Show participants who</label>
+                            <label className="text-xs font-semibold text-slate-600 block mb-1">{t('imnci_ui.exercises.report.show_who', 'Show participants who')}</label>
                             <Select value={followStatus} onChange={e => setFollowStatus(e.target.value)} className="w-full">
-                                <option value="not-started">Have not started it</option>
-                                <option value="below-pass">Did it but scored below the pass mark</option>
-                                <option value="not-passed">Have not passed it (either reason)</option>
+                                <option value="not-started">{t('imnci_ui.exercises.report.opt_not_started', 'Have not started it')}</option>
+                                <option value="below-pass">{t('imnci_ui.exercises.report.opt_below_pass', 'Did it but scored below the pass mark')}</option>
+                                <option value="not-passed">{t('imnci_ui.exercises.report.opt_not_passed', 'Have not passed it (either reason)')}</option>
                             </Select>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-slate-700">
-                            {followUp.rows.length} participant{followUp.rows.length === 1 ? '' : 's'}
+                            {t('imnci_ui.exercises.report.n_participants', '{{n}} participant(s)', { n: followUp.rows.length })}
                         </p>
                         <div className="flex gap-2">
                             <Button variant="secondary" disabled={followUp.rows.length === 0}
                                 onClick={() => copyText(followUp.rows.map(p => p.name).join('\n'), 'names')}>
-                                {copied === 'names' ? 'Copied' : 'Copy names only'}
+                                {copied === 'names' ? t('imnci_ui.exercises.report.copied', 'Copied') : t('imnci_ui.exercises.report.copy_names', 'Copy names only')}
                             </Button>
                             <Button disabled={followUp.rows.length === 0}
                                 onClick={() => copyText(followUp.text, 'full')}>
-                                {copied === 'full' ? 'Copied' : 'Copy list'}
+                                {copied === 'full' ? t('imnci_ui.exercises.report.copied', 'Copied') : t('imnci_ui.exercises.report.copy_list', 'Copy list')}
                             </Button>
                         </div>
                     </div>
 
                     {copied === 'failed' && (
                         <p className="text-xs text-rose-600">
-                            Could not reach the clipboard. Select the text below and copy it manually.
+                            {t('imnci_ui.exercises.report.clipboard_failed', 'Could not reach the clipboard. Select the text below and copy it manually.')}
                         </p>
                     )}
 
                     {followUp.rows.length === 0 ? (
                         <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                            Nobody matches — everyone on this filter is done.
+                            {t('imnci_ui.exercises.report.nobody', 'Nobody matches — everyone on this filter is done.')}
                         </p>
                     ) : (
                         // A plain, selectable block so it can always be copied by
@@ -1564,19 +1578,19 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
             {/* ---- per exercise ---- */}
             <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
                 <div className="px-4 py-2.5 bg-slate-800 text-white text-sm font-bold uppercase tracking-wide">
-                    Results by exercise
+                    {t('imnci_ui.exercises.report.by_exercise', 'Results by exercise')}
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm min-w-[820px]">
                         <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
                             <tr>
-                                <th className="p-3 text-left font-semibold">Exercise</th>
-                                <th className="p-3 font-semibold">Attempted by</th>
-                                <th className="p-3 font-semibold">Avg 1st attempt</th>
-                                <th className="p-3 font-semibold">Avg best</th>
-                                <th className="p-3 font-semibold">Pass rate</th>
-                                <th className="p-3 font-semibold">Avg attempts</th>
-                                <th className="p-3 font-semibold">Avg minutes</th>
+                                <th className="p-3 text-left font-semibold">{t('imnci_ui.exercises.report.exercise', 'Exercise')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.attempted_by', 'Attempted by')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.avg_first', 'Avg 1st attempt')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.avg_best', 'Avg best')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.pass_rate', 'Pass rate')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.avg_attempts', 'Avg attempts')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.avg_minutes', 'Avg minutes')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1584,7 +1598,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                                 <tr key={e.id} className={e.attemptedBy === 0 ? 'opacity-50' : ''}>
                                     <td className="p-3 font-medium text-slate-800">
                                         {e.title}
-                                        {e.draft && <span className="ml-2 text-[10px] font-bold text-amber-600">DRAFT</span>}
+                                        {e.draft && <span className="ml-2 text-[10px] font-bold text-amber-600">{t('imnci_ui.exercises.badges.draft', 'DRAFT')}</span>}
                                     </td>
                                     <td className="p-3 text-center">{e.attemptedBy}<span className="text-slate-400"> / {model.roster.length}</span></td>
                                     <td className="p-3 text-center">{e.initialAvg != null ? `${e.initialAvg}%` : '—'}</td>
@@ -1605,18 +1619,17 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
             {model.missed.length > 0 && (
                 <div id="exercise-report-missed" className="border border-slate-200 rounded-xl overflow-hidden bg-white">
                     <div className="px-4 py-2.5 bg-rose-700 text-white text-sm font-bold uppercase tracking-wide">
-                        Most commonly missed items
+                        {t('imnci_ui.exercises.report.most_missed', 'Most commonly missed items')}
                     </div>
                     <p className="px-4 pt-3 text-xs text-slate-500">
-                        Counted on each learner&apos;s first attempt only ({model.scoredFirsts} first attempts),
-                        because later attempts are made with the marking already visible.
+                        {t('imnci_ui.exercises.report.missed_note', "Counted on each learner's first attempt only ({{n}} first attempts), because later attempts are made with the marking already visible.", { n: model.scoredFirsts })}
                     </p>
                     <div className="p-4 space-y-2.5">
                         {model.missed.slice(0, 12).map(m => (
                             <div key={`${m.group}-${m.label}`}>
                                 <div className="flex items-center justify-between gap-3 mb-1">
                                     <span className="text-sm text-slate-700">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400 mr-2">{m.group}</span>
+                                        <span className="text-[10px] font-bold uppercase text-slate-400 mr-2">{groupLabel(m.group)}</span>
                                         {m.label}
                                     </span>
                                     <span className="text-xs text-slate-500 flex-shrink-0 whitespace-nowrap">{m.count} · {m.percent}%</span>
@@ -1633,22 +1646,22 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
             {/* ---- per participant ---- */}
             <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
                 <div className="px-4 py-2.5 bg-slate-800 text-white text-sm font-bold uppercase tracking-wide">
-                    Results by participant
+                    {t('imnci_ui.exercises.report.by_participant', 'Results by participant')}
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm min-w-[720px]">
                         <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
                             <tr>
-                                <th className="p-3 text-left font-semibold">Participant</th>
+                                <th className="p-3 text-left font-semibold">{t('imnci_ui.exercises.common.participant', 'Participant')}</th>
                                 {exercises.map(e => (
                                     <th key={e.id} className="p-3 font-semibold whitespace-nowrap" title={e.title}>
                                         {e.title.split('—')[0].trim()}
                                     </th>
                                 ))}
-                                <th className="p-3 font-semibold">Done</th>
-                                <th className="p-3 font-semibold">Passed</th>
-                                <th className="p-3 font-semibold">Attempts</th>
-                                <th className="p-3 font-semibold">Average</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.done', 'Done')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.passed', 'Passed')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.common.attempts', 'Attempts')}</th>
+                                <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.average', 'Average')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1667,7 +1680,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                                                             {best}%
                                                         </span>
                                                         {first !== best && (
-                                                            <span className="text-[10px] text-slate-400 mt-0.5">1st {first}%</span>
+                                                            <span className="text-[10px] text-slate-400 mt-0.5">{t('imnci_ui.exercises.report.first_pct', '1st {{n}}%', { n: first })}</span>
                                                         )}
                                                     </div>
                                                 )}
@@ -1684,7 +1697,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                     </table>
                 </div>
                 <p className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
-                    A cell shows the best score; where a learner improved, the first attempt is shown beneath it.
+                    {t('imnci_ui.exercises.report.cell_note', 'A cell shows the best score; where a learner improved, the first attempt is shown beneath it.')}
                 </p>
             </div>
         </div>
@@ -1692,6 +1705,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
 }
 
 export function PublicExerciseView({ courseId }) {
+    const { t } = useTranslation();
     const [course, setCourse] = useState(null);
     const [participants, setParticipants] = useState([]);
     const [participant, setParticipant] = useState(null);
@@ -1731,23 +1745,23 @@ export function PublicExerciseView({ courseId }) {
                         <div className="mx-auto h-16 w-16 bg-sky-100 rounded-full flex items-center justify-center mb-4">
                             <BookOpen className="h-8 w-8 text-sky-600" />
                         </div>
-                        <h1 className="text-xl font-bold text-slate-900">IMNCI Online Exercises</h1>
+                        <h1 className="text-xl font-bold text-slate-900">{t('imnci_ui.exercises.public.title', 'IMNCI Online Exercises')}</h1>
                         <p className="text-sm text-slate-500 mt-1">{course.course_type}</p>
                         <p className="text-xs text-slate-400">{course.state} — {course.locality} ({course.start_date})</p>
                     </div>
-                    <FormGroup label="Find your name to begin">
+                    <FormGroup label={t('imnci_ui.exercises.public.find_name', 'Find your name to begin')}>
                         <Select value={pickId} onChange={(e) => setPickId(e.target.value)}>
-                            <option value="">— Select your name —</option>
+                            <option value="">{t('imnci_ui.exercises.public.select_name', '— Select your name —')}</option>
                             {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </Select>
                     </FormGroup>
                     <Button className="w-full justify-center mt-4" disabled={!pickId}
                         onClick={() => setParticipant(participants.find(p => p.id === pickId))}>
-                        Continue
+                        {t('imnci_ui.exercises.public.continue', 'Continue')}
                     </Button>
                     {participants.length === 0 && (
                         <p className="text-xs text-amber-600 mt-4 text-center">
-                            No participants are registered on this course yet. Register first using the course registration link.
+                            {t('imnci_ui.exercises.public.no_participants', 'No participants are registered on this course yet. Register first using the course registration link.')}
                         </p>
                     )}
                 </Card>
@@ -1760,7 +1774,7 @@ export function PublicExerciseView({ courseId }) {
         <div className="w-full px-3 sm:px-6 py-6">
             <button onClick={() => { setParticipant(null); setPickId(''); }}
                 className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">
-                <ArrowLeft className="w-4 h-4" /> Not you?
+                <ArrowLeft className="w-4 h-4" /> {t('imnci_ui.exercises.public.not_you', 'Not you?')}
             </button>
             <ExerciseListView course={course} participant={participant} source="public" />
         </div>
@@ -1772,9 +1786,10 @@ export function PublicExerciseView({ courseId }) {
 // ============================================================================
 
 export function ParticipantExercisesModal({ isOpen, onClose, course, participant, subCourse = ONLINE_SUB_COURSE }) {
+    const { t } = useTranslation();
     if (!isOpen || !participant) return null;
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Online Exercises — ${participant.name}`} size="xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('imnci_ui.exercises.participant.modal_title', 'Online Exercises — {{name}}', { name: participant.name })} size="xl">
             <CardBody className="p-3 sm:p-4 max-h-[85vh] overflow-y-auto">
                 <ExerciseListView
                     course={course}
@@ -1789,6 +1804,7 @@ export function ParticipantExercisesModal({ isOpen, onClose, course, participant
 }
 
 export function ParticipantExerciseSummary({ course, participant, subCourse = ONLINE_SUB_COURSE }) {
+    const { t } = useTranslation();
     const [attempts, setAttempts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [reviewing, setReviewing] = useState(null);
@@ -1809,14 +1825,14 @@ export function ParticipantExerciseSummary({ course, participant, subCourse = ON
         const ex = getExerciseById(reviewing.exerciseId);
         return (
             <div className="space-y-3">
-                <Button variant="secondary" onClick={() => setReviewing(null)}>Back to summary</Button>
+                <Button variant="secondary" onClick={() => setReviewing(null)}>{t('imnci_ui.exercises.participant.back_to_summary', 'Back to summary')}</Button>
                 {ex
                     ? <CasePlayer
                         exercise={ex}
                         participant={participant}
                         readOnlyAttempt={{ result: reviewing.results?.result, submitted: reviewing.responses?.submitted }}
                         onExit={() => setReviewing(null)} />
-                    : <EmptyState message="This exercise is no longer in the content library." />}
+                    : <EmptyState message={t('imnci_ui.exercises.participant.not_in_library', 'This exercise is no longer in the content library.')} />}
             </div>
         );
     }
@@ -1827,15 +1843,15 @@ export function ParticipantExerciseSummary({ course, participant, subCourse = ON
         <div className="border border-slate-200 rounded-lg overflow-hidden">
             <div className="bg-slate-50 px-4 py-2.5 flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Award className="w-4 h-4 text-slate-400" /> Online Exercises
+                    <Award className="w-4 h-4 text-slate-400" /> {t('imnci_ui.exercises.participant.online_exercises', 'Online Exercises')}
                 </h4>
-                <button onClick={load} className="text-slate-400 hover:text-slate-700" title="Refresh">
+                <button onClick={load} className="text-slate-400 hover:text-slate-700" title={t('imnci_ui.exercises.common.refresh', 'Refresh')}>
                     <RefreshCw className="w-3.5 h-3.5" />
                 </button>
             </div>
 
             {attempts.length === 0 ? (
-                <p className="p-4 text-sm text-slate-500">No exercise attempts recorded yet.</p>
+                <p className="p-4 text-sm text-slate-500">{t('imnci_ui.exercises.participant.no_attempts', 'No exercise attempts recorded yet.')}</p>
             ) : (
                 <div className="divide-y divide-slate-100">
                     {exercises.map(ex => {
@@ -1848,8 +1864,8 @@ export function ParticipantExerciseSummary({ course, participant, subCourse = ON
                                 <div className="min-w-0">
                                     <p className="text-sm text-slate-800 truncate">{ex.title}</p>
                                     <p className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{count} attempt{count > 1 ? 's' : ''}</span>
-                                        <span>{Math.round((b.durationSeconds || 0) / 60)} min</span>
+                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{t('imnci_ui.exercises.participant.n_attempts', '{{n}} attempt(s)', { n: count })}</span>
+                                        <span>{t('imnci_ui.exercises.list.minutes', '{{n}} min', { n: Math.round((b.durationSeconds || 0) / 60) })}</span>
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-3 flex-shrink-0">
@@ -1857,7 +1873,7 @@ export function ParticipantExerciseSummary({ course, participant, subCourse = ON
                                         {b.percent}%
                                     </span>
                                     {passed ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-amber-500" />}
-                                    <button onClick={() => setReviewing(b)} className="text-xs text-sky-600 hover:underline">Review</button>
+                                    <button onClick={() => setReviewing(b)} className="text-xs text-sky-600 hover:underline">{t('imnci_ui.exercises.list.review', 'Review')}</button>
                                 </div>
                             </div>
                         );
@@ -2018,10 +2034,11 @@ const blankQuestion = () => ({
 });
 
 function TriState({ value, onChange }) {
+    const { t } = useTranslation();
     const opts = [
-        { v: undefined, label: 'Not graded' },
-        { v: true, label: 'Present' },
-        { v: false, label: 'Not present' },
+        { v: undefined, label: t('imnci_ui.exercises.editor.not_graded', 'Not graded') },
+        { v: true, label: t('imnci_ui.exercises.editor.present', 'Present') },
+        { v: false, label: t('imnci_ui.exercises.editor.not_present', 'Not present') },
     ];
     return (
         <div className="flex gap-1">
@@ -2040,10 +2057,11 @@ function TriState({ value, onChange }) {
 }
 
 function YesNoState({ value, onChange }) {
+    const { t } = useTranslation();
     const opts = [
-        { v: undefined, label: 'Not graded' },
-        { v: 'yes', label: 'Yes' },
-        { v: 'no', label: 'No' },
+        { v: undefined, label: t('imnci_ui.exercises.editor.not_graded', 'Not graded') },
+        { v: 'yes', label: t('imnci_ui.exercises.editor.yes', 'Yes') },
+        { v: 'no', label: t('imnci_ui.exercises.editor.no', 'No') },
     ];
     return (
         <div className="flex gap-1">
@@ -2063,6 +2081,7 @@ function YesNoState({ value, onChange }) {
 // --------------------------------------------------------------------------- quiz question editor
 
 function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
+    const { t } = useTranslation();
     const setQ = (patch) => onChange({ ...q, ...patch });
 
     const setType = (type) => {
@@ -2083,9 +2102,9 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                 <div className="flex-1 space-y-2">
                     <textarea rows={2} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={q.question} onChange={e => setQ({ question: e.target.value })}
-                        placeholder="Question text" />
+                        placeholder={t('imnci_ui.exercises.qeditor.question_text', 'Question text')} />
                     <div className="flex flex-wrap gap-2">
-                        {[['mcq', 'Multiple choice'], ['tf', 'True / False'], ['text', 'Short answer']].map(([v, l]) => (
+                        {[['mcq', t('imnci_ui.exercises.qeditor.mcq', 'Multiple choice')], ['tf', t('imnci_ui.exercises.qeditor.tf', 'True / False')], ['text', t('imnci_ui.exercises.qeditor.short', 'Short answer')]].map(([v, l]) => (
                             <button key={v} type="button" onClick={() => setType(v)}
                                 className={`px-3 py-1 rounded-md text-xs border transition-colors ${
                                     q.type === v ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
@@ -2106,7 +2125,7 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
 
             {q.type === 'mcq' && (
                 <div className="space-y-1.5 pl-8">
-                    <p className="text-xs text-slate-500">Tick every correct option. Ticking more than one makes it multi-select for the learner.</p>
+                    <p className="text-xs text-slate-500">{t('imnci_ui.exercises.qeditor.tick_correct', 'Tick every correct option. Ticking more than one makes it multi-select for the learner.')}</p>
                     {(q.options || []).map((opt, i) => (
                         <div key={i} className="flex items-center gap-2">
                             <input type="checkbox" className="rounded w-4 h-4 flex-shrink-0"
@@ -2116,7 +2135,7 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                                 onChange={e => {
                                     const opts = [...q.options]; opts[i] = e.target.value; setQ({ options: opts });
                                 }}
-                                placeholder={`Option ${String.fromCharCode(97 + i)}`} />
+                                placeholder={t('imnci_ui.exercises.qeditor.option_n', 'Option {{letter}}', { letter: String.fromCharCode(97 + i) })} />
                             <button type="button"
                                 onClick={() => setQ({
                                     options: q.options.filter((_, j) => j !== i),
@@ -2125,15 +2144,15 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                                 className="text-xs px-2 py-1 border border-slate-200 rounded text-slate-500">✕</button>
                         </div>
                     ))}
-                    <Button variant="secondary" onClick={() => setQ({ options: [...(q.options || []), ''] })}>Add option</Button>
+                    <Button variant="secondary" onClick={() => setQ({ options: [...(q.options || []), ''] })}>{t('imnci_ui.exercises.qeditor.add_option', 'Add option')}</Button>
                 </div>
             )}
 
             {q.type === 'tf' && (
                 <div className="pl-8 flex gap-2 items-center">
-                    <span className="text-xs text-slate-500">Correct answer:</span>
-                    {[{ v: true, l: 'True' }, { v: false, l: 'False' }].map(o => (
-                        <button key={o.l} type="button" onClick={() => setQ({ correct: o.v })}
+                    <span className="text-xs text-slate-500">{t('imnci_ui.exercises.quiz.correct_answer', 'Correct answer:')}</span>
+                    {[{ v: true, l: t('imnci_ui.exercises.quiz.true', 'True') }, { v: false, l: t('imnci_ui.exercises.quiz.false', 'False') }].map(o => (
+                        <button key={String(o.v)} type="button" onClick={() => setQ({ correct: o.v })}
                             className={`px-3 py-1 rounded-md text-xs border ${q.correct === o.v ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-300'}`}>
                             {o.l}
                         </button>
@@ -2143,15 +2162,15 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
 
             {q.type === 'text' && (
                 <div className="pl-8 grid sm:grid-cols-2 gap-2">
-                    <FormGroup label="Correct answer">
+                    <FormGroup label={t('imnci_ui.exercises.qeditor.correct_answer', 'Correct answer')}>
                         <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                             value={q.correct || ''} onChange={e => setQ({ correct: e.target.value })} />
                     </FormGroup>
-                    <FormGroup label="Also accept (comma separated)">
+                    <FormGroup label={t('imnci_ui.exercises.qeditor.also_accept', 'Also accept (comma separated)')}>
                         <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                             value={(q.accept || []).join(', ')}
                             onChange={e => setQ({ accept: e.target.value.split(',').map(x => x.trim()).filter(Boolean) })}
-                            placeholder="7 days, seven" />
+                            placeholder={t('imnci_ui.exercises.qeditor.accept_placeholder', '7 days, seven')} />
                     </FormGroup>
                 </div>
             )}
@@ -2159,7 +2178,7 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
             <div className="pl-8">
                 <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     value={q.explain || ''} onChange={e => setQ({ explain: e.target.value })}
-                    placeholder="Explanation shown after checking (optional)" />
+                    placeholder={t('imnci_ui.exercises.qeditor.explanation', 'Explanation shown after checking (optional)')} />
             </div>
         </div>
     );
@@ -2226,23 +2245,23 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
 
     const save = async () => {
         setError('');
-        if (!ex.id.trim()) return setError('An id is required. Use something stable like imnci-ex8-fatima.');
-        if (!/^[a-zA-Z0-9_-]+$/.test(ex.id)) return setError('The id may only contain letters, numbers, hyphens and underscores.');
-        if (!ex.title.trim()) return setError('A title is required.');
+        if (!ex.id.trim()) return setError(t('imnci_ui.exercises.editor.id_required', 'An id is required. Use something stable like imnci-ex8-fatima.'));
+        if (!/^[a-zA-Z0-9_-]+$/.test(ex.id)) return setError(t('imnci_ui.exercises.editor.id_chars', 'The id may only contain letters, numbers, hyphens and underscores.'));
+        if (!ex.title.trim()) return setError(t('imnci_ui.exercises.editor.title_required', 'A title is required.'));
 
         if (isQuiz) {
-            if (!ex.questions.length) return setError('Add at least one question.');
+            if (!ex.questions.length) return setError(t('imnci_ui.exercises.editor.add_one_question', 'Add at least one question.'));
             for (let i = 0; i < ex.questions.length; i++) {
                 const q = ex.questions[i];
-                if (!q.question.trim()) return setError(`Question ${i + 1} has no text.`);
+                if (!q.question.trim()) return setError(t('imnci_ui.exercises.editor.q_no_text', 'Question {{n}} has no text.', { n: i + 1 }));
                 if (q.type === 'mcq') {
-                    if ((q.options || []).some(o => !o.trim())) return setError(`Question ${i + 1} has an empty option.`);
-                    if (!(q.correct || []).length) return setError(`Question ${i + 1} has no correct option ticked.`);
+                    if ((q.options || []).some(o => !o.trim())) return setError(t('imnci_ui.exercises.editor.q_empty_option', 'Question {{n}} has an empty option.', { n: i + 1 }));
+                    if (!(q.correct || []).length) return setError(t('imnci_ui.exercises.editor.q_no_correct_ticked', 'Question {{n}} has no correct option ticked.', { n: i + 1 }));
                 }
-                if (q.type === 'text' && !String(q.correct || '').trim()) return setError(`Question ${i + 1} has no correct answer.`);
+                if (q.type === 'text' && !String(q.correct || '').trim()) return setError(t('imnci_ui.exercises.editor.q_no_correct', 'Question {{n}} has no correct answer.', { n: i + 1 }));
             }
         } else if (sections.length === 0) {
-            return setError('Select at least one section.');
+            return setError(t('imnci_ui.exercises.editor.select_section', 'Select at least one section.'));
         }
 
         setSaving(true);
@@ -2257,7 +2276,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
             });
             onSaved?.();
         } catch (e) {
-            setError(e.message || 'Could not save.');
+            setError(e.message || t('imnci_ui.exercises.editor.save_failed', 'Could not save.'));
         } finally {
             setSaving(false);
         }
@@ -2265,8 +2284,8 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
 
     const Actions = () => (
         <div className="flex gap-2">
-            <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? <Spinner size="sm" /> : 'Save exercise'}</Button>
+            <Button variant="secondary" onClick={onCancel}>{t('imnci_ui.exercises.common.cancel', 'Cancel')}</Button>
+            <Button onClick={save} disabled={saving}>{saving ? <Spinner size="sm" /> : t('imnci_ui.exercises.editor.save_exercise', 'Save exercise')}</Button>
         </div>
     );
 
@@ -2274,8 +2293,8 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
         <div className="space-y-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h3 className="font-bold text-slate-900">
-                    {initial ? 'Edit exercise' : 'New exercise'}
-                    {isBuiltIn && <span className="ml-2 text-xs font-normal text-amber-600">editing a built-in — saving creates an override</span>}
+                    {initial ? t('imnci_ui.exercises.editor.edit_exercise', 'Edit exercise') : t('imnci_ui.exercises.editor.new_exercise', 'New exercise')}
+                    {isBuiltIn && <span className="ml-2 text-xs font-normal text-amber-600">{t('imnci_ui.exercises.editor.builtin_note', 'editing a built-in — saving creates an override')}</span>}
                 </h3>
                 <Actions />
             </div>
@@ -2284,12 +2303,12 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
 
             {/* kind */}
             <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Exercise type</p>
+                <p className="text-sm font-semibold text-slate-700 mb-2">{t('imnci_ui.exercises.editor.exercise_type', 'Exercise type')}</p>
                 <div className="flex flex-wrap gap-2">
                     {[
-                        { kind: 'case', formType: 'child',  label: 'Case — sick child form (2 months–5 years)' },
-                        { kind: 'case', formType: 'infant', label: 'Case — young infant form (up to 2 months)' },
-                        { kind: 'quiz', formType: 'child',  label: 'Quiz — questions only' },
+                        { kind: 'case', formType: 'child',  label: t('imnci_ui.exercises.editor.type_child', 'Case — sick child form (2 months–5 years)') },
+                        { kind: 'case', formType: 'infant', label: t('imnci_ui.exercises.editor.type_infant', 'Case — young infant form (up to 2 months)') },
+                        { kind: 'quiz', formType: 'child',  label: t('imnci_ui.exercises.editor.type_quiz', 'Quiz — questions only') },
                     ].map(o => {
                         const on = ex.kind === o.kind && (o.kind === 'quiz' || ex.formType === o.formType);
                         return (
@@ -2301,33 +2320,33 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                         );
                     })}
                 </div>
-                {initial && <p className="text-xs text-amber-600 mt-2">Changing the type clears the answers below — the two formats share nothing.</p>}
+                {initial && <p className="text-xs text-amber-600 mt-2">{t('imnci_ui.exercises.editor.type_change_note', 'Changing the type clears the answers below — the two formats share nothing.')}</p>}
             </div>
 
             {/* basics */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <FormGroup label="Id (never change once attempted)">
+                <FormGroup label={t('imnci_ui.exercises.editor.id_label', 'Id (never change once attempted)')}>
                     <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.id} disabled={!!initial}
                         onChange={e => setField('id', e.target.value.trim())} placeholder="imnci-ex8-fatima" />
                 </FormGroup>
-                <FormGroup label="Order">
+                <FormGroup label={t('imnci_ui.exercises.editor.order', 'Order')}>
                     <input type="number" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.order} onChange={e => setField('order', Number(e.target.value))} />
                 </FormGroup>
-                <FormGroup label="Estimated minutes">
+                <FormGroup label={t('imnci_ui.exercises.editor.est_minutes', 'Estimated minutes')}>
                     <input type="number" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.estimatedMinutes} onChange={e => setField('estimatedMinutes', Number(e.target.value))} />
                 </FormGroup>
-                <FormGroup label="Title">
+                <FormGroup label={t('imnci_ui.exercises.editor.title', 'Title')}>
                     <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.title} onChange={e => setField('title', e.target.value)} />
                 </FormGroup>
-                <FormGroup label="Title (Arabic)">
+                <FormGroup label={t('imnci_ui.exercises.editor.title_ar', 'Title (Arabic)')}>
                     <input dir="rtl" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.titleAr} onChange={e => setField('titleAr', e.target.value)} />
                 </FormGroup>
-                <FormGroup label="Pass mark (%)">
+                <FormGroup label={t('imnci_ui.exercises.editor.pass_mark', 'Pass mark (%)')}>
                     <input type="number" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                         value={ex.passMark} onChange={e => setField('passMark', Number(e.target.value))} />
                 </FormGroup>
@@ -2337,13 +2356,13 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                 <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" className="rounded w-4 h-4" checked={!!ex.draft}
                         onChange={e => setField('draft', e.target.checked)} />
-                    Draft — facilitators see it, participants do not
+                    {t('imnci_ui.exercises.editor.draft_label', 'Draft — facilitators see it, participants do not')}
                 </label>
                 {!isQuiz && (
                     <label className="flex items-center gap-2 text-sm">
                         <input type="checkbox" className="rounded w-4 h-4" checked={!!ex.expected.includeTreatment}
                             onChange={e => setExpected('includeTreatment', e.target.checked)} />
-                        Include the treatment column
+                        {t('imnci_ui.exercises.editor.include_treatment', 'Include the treatment column')}
                     </label>
                 )}
             </div>
@@ -2351,7 +2370,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
             {/* narrative */}
             <div>
                 <p className="text-sm font-semibold text-slate-700 mb-2">
-                    {isQuiz ? 'Instructions — one bullet per line' : 'Case scenario — one bullet per line'}
+                    {isQuiz ? t('imnci_ui.exercises.editor.instructions', 'Instructions — one bullet per line') : t('imnci_ui.exercises.editor.scenario', 'Case scenario — one bullet per line')}
                 </p>
                 <textarea rows={6} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     value={(ex.narrative || []).join('\n')}
@@ -2362,14 +2381,14 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
             {isQuiz && (
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-slate-700">Questions ({ex.questions.length})</p>
+                        <p className="text-sm font-semibold text-slate-700">{t('imnci_ui.exercises.editor.questions_n', 'Questions ({{n}})', { n: ex.questions.length })}</p>
                         <Button variant="secondary" onClick={() => setEx(p => ({ ...p, questions: [...p.questions, blankQuestion()] }))}>
-                            Add question
+                            {t('imnci_ui.exercises.editor.add_question', 'Add question')}
                         </Button>
                     </div>
                     {ex.questions.length === 0 && (
                         <p className="text-sm text-slate-500 border border-dashed border-slate-300 rounded-lg p-6 text-center">
-                            No questions yet.
+                            {t('imnci_ui.exercises.editor.no_questions', 'No questions yet.')}
                         </p>
                     )}
                     {ex.questions.map((q, i) => (
@@ -2383,10 +2402,10 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
             {!isQuiz && (
                 <>
                     <div>
-                        <p className="text-sm font-semibold text-slate-700 mb-1">Sections shown on the form</p>
+                        <p className="text-sm font-semibold text-slate-700 mb-1">{t('imnci_ui.exercises.editor.sections_shown', 'Sections shown on the form')}</p>
                         <p className="text-xs text-slate-500 mb-2">
-                            The form ends after the last one selected.
-                            {ex.formType === 'child' && ' Include "Mother card — assess feeding" only when the case needs it.'}
+                            {t('imnci_ui.exercises.editor.form_ends', 'The form ends after the last one selected.')}
+                            {ex.formType === 'child' && ' ' + t('imnci_ui.exercises.editor.mother_card_note', 'Include "Mother card — assess feeding" only when the case needs it.')}
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {reg.sections.map(sec => (
@@ -2401,7 +2420,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
 
                     <div>
                         <p className="text-sm font-semibold text-slate-700 mb-2">
-                            {ex.formType === 'infant' ? 'Infant details' : 'Child details'} (leave blank to skip grading a field)
+                            {ex.formType === 'infant' ? t('imnci_ui.exercises.editor.infant_details', 'Infant details') : t('imnci_ui.exercises.result.child_details', 'Child details')} {t('imnci_ui.exercises.editor.leave_blank', '(leave blank to skip grading a field)')}
                         </p>
                         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             {reg.patient.map(([key, kind]) => (
@@ -2420,8 +2439,8 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                         </div>
                         <p className="text-xs text-slate-500 mt-1">
                             {ex.formType === 'infant'
-                                ? <>Age is free text, e.g. <code>5 weeks</code>. Visit type: <code>initial</code> / <code>followup</code>.</>
-                                : <>Sex: <code>male</code> / <code>female</code>. Visit type: <code>initial</code> / <code>followup</code>.</>}
+                                ? <>{t('imnci_ui.exercises.editor.age_hint', 'Age is free text, e.g.')} <code>5 weeks</code>. {t('imnci_ui.exercises.editor.visit_type', 'Visit type:')} <code>initial</code> / <code>followup</code>.</>
+                                : <>{t('imnci_ui.exercises.editor.sex', 'Sex:')} <code>male</code> / <code>female</code>. {t('imnci_ui.exercises.editor.visit_type', 'Visit type:')} <code>initial</code> / <code>followup</code>.</>}
                         </p>
                     </div>
 
@@ -2433,7 +2452,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                             <div className="p-4 space-y-4">
                                 {(reg.fields[sec] || []).length > 0 && (
                                     <div>
-                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Signs</p>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t('imnci_ui.exercises.result.signs', 'Signs')}</p>
                                         <div className="space-y-1.5">
                                             {(reg.fields[sec] || []).map(([key, kind]) => (
                                                 <div key={key} className="flex flex-wrap items-center justify-between gap-2 border border-slate-100 rounded px-3 py-2">
@@ -2470,7 +2489,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                                 )}
 
                                 <div>
-                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Correct classification</p>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t('imnci_ui.exercises.editor.correct_classification', 'Correct classification')}</p>
                                     <div className="flex flex-wrap gap-2">
                                         {(reg.classify[sec] || []).map(o => {
                                             const on = (ex.expected.classifications?.[sec] || []).includes(o.id);
@@ -2482,14 +2501,14 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                                             );
                                         })}
                                         {(reg.classify[sec] || []).length === 0 && (
-                                            <span className="text-xs text-slate-400 italic">No classification bank for this section.</span>
+                                            <span className="text-xs text-slate-400 italic">{t('imnci_ui.exercises.editor.no_class_bank', 'No classification bank for this section.')}</span>
                                         )}
                                     </div>
                                 </div>
 
                                 {ex.expected.includeTreatment && (
                                     <div>
-                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Correct treatment</p>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t('imnci_ui.exercises.editor.correct_treatment', 'Correct treatment')}</p>
                                         <div className="flex flex-wrap gap-2">
                                             {(reg.treatment[sec] || []).map(o => {
                                                 const on = (ex.expected.treatments?.[sec] || []).includes(o.id);
@@ -2501,10 +2520,10 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                                                 );
                                             })}
                                             {(reg.treatment[sec] || []).length === 0 && (
-                                                <span className="text-xs text-slate-400 italic">No treatment bank for this section.</span>
+                                                <span className="text-xs text-slate-400 italic">{t('imnci_ui.exercises.editor.no_treat_bank', 'No treatment bank for this section.')}</span>
                                             )}
                                         </div>
-                                        <p className="text-xs text-slate-500 mt-1">Select nothing to require that the learner ticks nothing here.</p>
+                                        <p className="text-xs text-slate-500 mt-1">{t('imnci_ui.exercises.editor.select_nothing', 'Select nothing to require that the learner ticks nothing here.')}</p>
                                     </div>
                                 )}
                             </div>
@@ -2514,16 +2533,15 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
             )}
 
             <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Explanation shown after checking</p>
+                <p className="text-sm font-semibold text-slate-700 mb-2">{t('imnci_ui.exercises.editor.explanation', 'Explanation shown after checking')}</p>
                 <textarea rows={4} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     value={ex.explain || ''} onChange={e => setField('explain', e.target.value)} />
             </div>
 
             <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Learning points</p>
+                <p className="text-sm font-semibold text-slate-700 mb-2">{t('imnci_ui.exercises.result.learning_points', 'Learning points')}</p>
                 <p className="text-xs text-slate-500 mb-2">
-                    One per line. These appear as a numbered list at the foot of the form after the
-                    learner submits. Leave empty to fall back to the explanation above.
+                    {t('imnci_ui.exercises.editor.lp_help', 'One per line. These appear as a numbered list at the foot of the form after the learner submits. Leave empty to fall back to the explanation above.')}
                 </p>
                 <textarea rows={4} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     placeholder={'Blood in the stool is DYSENTERY, whatever the hydration state.\nDiarrhoea under 14 days is not persistent diarrhoea.'}
@@ -2537,6 +2555,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
 }
 
 export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
+    const { t } = useTranslation();
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(null);   // exercise object
@@ -2568,7 +2587,7 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
         setBusy(true);
         try {
             await persist(ex, { draft });
-            setToast({ show: true, message: draft ? `“${ex.title}” is now a draft.` : `“${ex.title}” is published.`, type: 'success' });
+            setToast({ show: true, message: draft ? t('imnci_ui.exercises.manager.now_draft', '“{{title}}” is now a draft.', { title: ex.title }) : t('imnci_ui.exercises.manager.now_published', '“{{title}}” is published.', { title: ex.title }), type: 'success' });
             await load();
         } catch (e) {
             setToast({ show: true, message: e.message, type: 'error' });
@@ -2585,7 +2604,7 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
         setBusy(true);
         try {
             for (const ex of drafts) await persist(ex, { draft: false });
-            setToast({ show: true, message: `Published ${drafts.length} exercise${drafts.length === 1 ? '' : 's'}.`, type: 'success' });
+            setToast({ show: true, message: t('imnci_ui.exercises.manager.published_n', 'Published {{n}} exercise(s).', { n: drafts.length }), type: 'success' });
             await load();
         } catch (e) {
             setToast({ show: true, message: e.message, type: 'error' });
@@ -2598,7 +2617,7 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
         setBusy(true);
         try {
             await deleteExerciseDefinition(ex.id);
-            setToast({ show: true, message: 'Stored copy removed.', type: 'success' });
+            setToast({ show: true, message: t('imnci_ui.exercises.manager.stored_removed', 'Stored copy removed.'), type: 'success' });
             await load();
         } catch (e) {
             setToast({ show: true, message: e.message, type: 'error' });
@@ -2615,7 +2634,7 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
                 onCancel={() => { setEditing(null); setCreating(false); }}
                 onSaved={async () => {
                     setEditing(null); setCreating(false);
-                    setToast({ show: true, message: 'Exercise saved.', type: 'success' });
+                    setToast({ show: true, message: t('imnci_ui.exercises.manager.saved', 'Exercise saved.'), type: 'success' });
                     await load();
                 }}
             />
@@ -2628,29 +2647,29 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
 
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                    <h3 className="font-bold text-slate-900">Manage Exercises</h3>
+                    <h3 className="font-bold text-slate-900">{t('imnci_ui.exercises.course.tab_manage', 'Manage Exercises')}</h3>
                     <p className="text-xs text-slate-500">
-                        Built-in exercises ship with the app. Editing one stores an override under the same id.
+                        {t('imnci_ui.exercises.manager.intro', 'Built-in exercises ship with the app. Editing one stores an override under the same id.')}
                     </p>
                     {draftCount > 0 && (
                         <p className="text-xs text-amber-600 font-medium mt-1">
-                            {draftCount} of {list.length} {draftCount === 1 ? 'is a draft' : 'are drafts'} — participants cannot see {draftCount === 1 ? 'it' : 'them'}.
+                            {t('imnci_ui.exercises.manager.drafts_note', '{{n}} of {{total}} are drafts — participants cannot see them.', { n: draftCount, total: list.length })}
                         </p>
                     )}
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="secondary" onClick={load} disabled={busy}><RefreshCw className="w-4 h-4" /> Refresh</Button>
+                    <Button variant="secondary" onClick={load} disabled={busy}><RefreshCw className="w-4 h-4" /> {t('imnci_ui.exercises.common.refresh', 'Refresh')}</Button>
                     {draftCount > 0 && (
                         <Button variant="secondary" onClick={publishAll} disabled={busy}>
-                            Publish all ({draftCount})
+                            {t('imnci_ui.exercises.manager.publish_all', 'Publish all ({{n}})', { n: draftCount })}
                         </Button>
                     )}
-                    <Button onClick={() => setCreating(true)} disabled={busy}>New exercise</Button>
+                    <Button onClick={() => setCreating(true)} disabled={busy}>{t('imnci_ui.exercises.editor.new_exercise', 'New exercise')}</Button>
                 </div>
             </div>
 
             {loading ? <div className="flex justify-center p-8"><Spinner /></div>
-                : list.length === 0 ? <EmptyState message="No exercises yet." />
+                : list.length === 0 ? <EmptyState message={t('imnci_ui.exercises.manager.no_exercises', 'No exercises yet.')} />
                 : (
                     <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
                         {list.map(ex => (
@@ -2659,28 +2678,28 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
                                     <p className="font-medium text-sm text-slate-800">{ex.title}</p>
                                     <p className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
                                         <code>{ex.id}</code>
-                                        <span>order {ex.order}</span>
+                                        <span>{t('imnci_ui.exercises.manager.order_n', 'order {{n}}', { n: ex.order })}</span>
                                         {ex.kind === 'quiz'
-                                            ? <span className="text-purple-600 font-semibold">QUIZ · {(ex.questions || []).length} questions</span>
-                                            : <span>{(ex.expected?.sections || []).length} sections{ex.formType === 'infant' ? ' · young infant form' : ''}</span>}
-                                        {ex.expected?.includeTreatment && <span className="text-sky-600">+ treatment</span>}
+                                            ? <span className="text-purple-600 font-semibold">{t('imnci_ui.exercises.manager.quiz_questions', 'QUIZ · {{n}} questions', { n: (ex.questions || []).length })}</span>
+                                            : <span>{t('imnci_ui.exercises.manager.n_sections', '{{n}} sections', { n: (ex.expected?.sections || []).length })}{ex.formType === 'infant' ? t('imnci_ui.exercises.manager.infant_form_suffix', ' · young infant form') : ''}</span>}
+                                        {ex.expected?.includeTreatment && <span className="text-sky-600">{t('imnci_ui.exercises.badges.treatment', '+ treatment')}</span>}
                                         {ex.draft
-                                            ? <span className="text-amber-600 font-semibold">DRAFT</span>
-                                            : <span className="text-emerald-600 font-semibold">PUBLISHED</span>}
+                                            ? <span className="text-amber-600 font-semibold">{t('imnci_ui.exercises.badges.draft', 'DRAFT')}</span>
+                                            : <span className="text-emerald-600 font-semibold">{t('imnci_ui.exercises.badges.published', 'PUBLISHED')}</span>}
                                         {ex.isCustom
-                                            ? <span className="text-indigo-600 font-semibold">STORED</span>
-                                            : <span className="text-slate-400">built-in</span>}
+                                            ? <span className="text-indigo-600 font-semibold">{t('imnci_ui.exercises.badges.stored', 'STORED')}</span>
+                                            : <span className="text-slate-400">{t('imnci_ui.exercises.badges.built_in', 'built-in')}</span>}
                                     </p>
                                 </div>
                                 <div className="flex gap-2 flex-shrink-0">
                                     <Button variant={ex.draft ? undefined : 'secondary'} disabled={busy}
                                         onClick={() => setDraft(ex, !ex.draft)}>
-                                        {ex.draft ? 'Publish' : 'Unpublish'}
+                                        {ex.draft ? t('imnci_ui.exercises.manager.publish', 'Publish') : t('imnci_ui.exercises.manager.unpublish', 'Unpublish')}
                                     </Button>
-                                    <Button variant="secondary" disabled={busy} onClick={() => setEditing(ex)}>Edit</Button>
+                                    <Button variant="secondary" disabled={busy} onClick={() => setEditing(ex)}>{t('imnci_ui.exercises.manager.edit', 'Edit')}</Button>
                                     {ex.isCustom && (
                                         <Button variant="secondary" disabled={busy} onClick={() => resetToBuiltIn(ex)}>
-                                            {EXERCISES.some(b => b.id === ex.id) ? 'Reset to built-in' : 'Delete'}
+                                            {EXERCISES.some(b => b.id === ex.id) ? t('imnci_ui.exercises.manager.reset_builtin', 'Reset to built-in') : t('imnci_ui.exercises.manager.delete', 'Delete')}
                                         </Button>
                                     )}
                                 </div>
@@ -2765,11 +2784,11 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                 setLive(!meta.fromCache);
                 setLastUpdate(new Date());
             },
-            (e) => setError(e.message || 'Live updates unavailable.')
+            (e) => setError(e.message || t('imnci_ui.exercises.live.unavailable', 'Live updates unavailable.'))
         );
         // Always detach: an open listener keeps reading in the background.
         return () => unsub();
-    }, [course?.id]);
+    }, [course?.id, t]);
 
     const focus = exercises.find(e => e.id === focusId) || null;
 
@@ -2833,8 +2852,8 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                 const options = q.type === 'mcq'
                     ? q.options.map((label, i) => ({ key: String(i), label, correct: (q.correct || []).includes(i) }))
                     : q.type === 'tf'
-                        ? [{ key: 'true', label: 'True', correct: q.correct === true }, { key: 'false', label: 'False', correct: q.correct === false }]
-                        : Object.keys(counts).map(k => ({ key: k, label: k || '(blank)', correct: String(q.correct).toLowerCase() === k.toLowerCase() }));
+                        ? [{ key: 'true', label: t('imnci_ui.exercises.quiz.true', 'True'), correct: q.correct === true }, { key: 'false', label: t('imnci_ui.exercises.quiz.false', 'False'), correct: q.correct === false }]
+                        : Object.keys(counts).map(k => ({ key: k, label: k || t('imnci_ui.exercises.live.blank', '(blank)'), correct: String(q.correct).toLowerCase() === k.toLowerCase() }));
                 return {
                     id: q.id, title: q.question, explain: q.explain,
                     answered, correctCount, options, counts,
@@ -2886,22 +2905,22 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
         return { rows, items, missed };
     }, [focus, attempts, t]);
 
-    if (!course) return <EmptyState message="Select a course first." />;
+    if (!course) return <EmptyState message={t('imnci_ui.exercises.course.select_course', 'Select a course first.')} />;
 
     return (
         <div className="space-y-5">
             <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
                     <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                        Live Results
+                        {t('imnci_ui.exercises.live.title', 'Live Results')}
                         <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${live ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${live ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                            {live ? 'Live' : 'Cached'}
+                            {live ? t('imnci_ui.exercises.live.live', 'Live') : t('imnci_ui.exercises.live.cached', 'Cached')}
                         </span>
                     </h3>
                     <p className="text-xs text-slate-500">
-                        Updates as participants submit — project this during the discussion.
-                        {lastUpdate && ` Last change ${lastUpdate.toLocaleTimeString()}.`}
+                        {t('imnci_ui.exercises.live.intro', 'Updates as participants submit — project this during the discussion.')}
+                        {lastUpdate && ' ' + t('imnci_ui.exercises.live.last_change', 'Last change {{time}}.', { time: lastUpdate.toLocaleTimeString() })}
                     </p>
                 </div>
             </div>
@@ -2909,18 +2928,18 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
             {error && <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">{error}</p>}
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatTile label="Participants started" value={overall.started}
-                    sub={participants.length ? `of ${participants.length} on the roster` : null} tone="sky" />
-                <StatTile label="Not started" value={overall.notStarted} tone="amber" />
-                <StatTile label="Submissions" value={overall.submissions} tone="slate" />
-                <StatTile label="Average score" value={`${overall.avg}%`} tone={overall.avg >= 80 ? 'emerald' : 'amber'} />
+                <StatTile label={t('imnci_ui.exercises.live.started', 'Participants started')} value={overall.started}
+                    sub={participants.length ? t('imnci_ui.exercises.live.of_roster', 'of {{n}} on the roster', { n: participants.length }) : null} tone="sky" />
+                <StatTile label={t('imnci_ui.exercises.report.not_started', 'Not started')} value={overall.notStarted} tone="amber" />
+                <StatTile label={t('imnci_ui.exercises.live.submissions', 'Submissions')} value={overall.submissions} tone="slate" />
+                <StatTile label={t('imnci_ui.exercises.report.average_score', 'Average score')} value={`${overall.avg}%`} tone={overall.avg >= 80 ? 'emerald' : 'amber'} />
             </div>
 
             {/* per exercise */}
             <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">By exercise — tap one to discuss it</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('imnci_ui.exercises.live.by_exercise', 'By exercise — tap one to discuss it')}</p>
                 {perExercise.length === 0 ? (
-                    <EmptyState message="No submissions yet. This updates the moment someone presses Save." />
+                    <EmptyState message={t('imnci_ui.exercises.live.no_submissions', 'No submissions yet. This updates the moment someone presses Save.')} />
                 ) : perExercise.map(({ ex, attempts: n, participants: np, avg, passed }) => (
                     <button key={ex.id} onClick={() => setFocusId(focusId === ex.id ? '' : ex.id)}
                         className={`w-full text-left border rounded-lg p-3 transition-colors ${focusId === ex.id ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-400'}`}>
@@ -2928,7 +2947,7 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                             <div className="min-w-0">
                                 <p className="text-sm font-medium text-slate-800 truncate">{ex.title}</p>
                                 <p className="text-[11px] text-slate-500 mt-0.5">
-                                    {np} participant{np === 1 ? '' : 's'} · {n} submission{n === 1 ? '' : 's'} · {passed} passed
+                                    {t('imnci_ui.exercises.live.row_summary', '{{np}} participant(s) · {{n}} submission(s) · {{passed}} passed', { np, n, passed })}
                                 </p>
                             </div>
                             <span className={`text-lg font-bold flex-shrink-0 ${avg >= (ex.passMark ?? 80) ? 'text-emerald-600' : 'text-amber-600'}`}>{avg}%</span>
@@ -2943,13 +2962,13 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                     <div className="bg-sky-700 text-white px-5 py-3">
                         <p className="font-bold">{focus.title}</p>
                         <p className="text-xs opacity-90">
-                            {breakdown.rows.length} submission{breakdown.rows.length === 1 ? '' : 's'} · the green bar is the correct answer
+                            {t('imnci_ui.exercises.live.focus_summary', '{{n}} submission(s) · the green bar is the correct answer', { n: breakdown.rows.length })}
                         </p>
                     </div>
 
                     <div className="p-5 space-y-6 bg-white">
                         {breakdown.items.length === 0 && (
-                            <p className="text-sm text-slate-500">Nothing to break down for this exercise yet.</p>
+                            <p className="text-sm text-slate-500">{t('imnci_ui.exercises.live.nothing', 'Nothing to break down for this exercise yet.')}</p>
                         )}
 
                         {breakdown.items.map(item => (
@@ -2958,7 +2977,7 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                                     <p className="text-sm font-semibold text-slate-800 whitespace-pre-line">{item.title}</p>
                                     <span className={`text-xs font-semibold flex-shrink-0 ${
                                         pct(item.correctCount, breakdown.rows.length) >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                        {item.correctCount}/{breakdown.rows.length} correct
+                                        {t('imnci_ui.exercises.live.n_correct', '{{n}}/{{total}} correct', { n: item.correctCount, total: breakdown.rows.length })}
                                     </span>
                                 </div>
                                 <div className="space-y-2">
@@ -2979,7 +2998,7 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                         {breakdown.missed?.length > 0 && (
                             <div className="border-t pt-4">
                                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                                    Signs most often recorded wrongly
+                                    {t('imnci_ui.exercises.live.signs_wrong', 'Signs most often recorded wrongly')}
                                 </p>
                                 <div className="flex flex-wrap gap-2">
                                     {breakdown.missed.map(m => (
@@ -2989,20 +3008,20 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                                     ))}
                                 </div>
                                 <p className="text-xs text-slate-500 mt-2">
-                                    These are the assessment entries to walk through with the group.
+                                    {t('imnci_ui.exercises.live.walk_through', 'These are the assessment entries to walk through with the group.')}
                                 </p>
                             </div>
                         )}
 
                         {/* who has submitted */}
                         <div className="border-t pt-4">
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Submissions</p>
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t('imnci_ui.exercises.live.submissions', 'Submissions')}</p>
                             <div className="flex flex-wrap gap-1.5">
                                 {breakdown.rows.map(a => (
                                     <span key={a.id}
                                         className={`text-xs px-2.5 py-1 rounded-full border ${
                                             a.passed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                                        {a.participantName || 'Participant'} · {a.percent}%
+                                        {a.participantName || t('imnci_ui.exercises.common.participant', 'Participant')} · {a.percent}%
                                     </span>
                                 ))}
                             </div>

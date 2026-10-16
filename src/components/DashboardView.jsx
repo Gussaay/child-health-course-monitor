@@ -9,6 +9,7 @@ import {
     CriticalCareCoverageDashboard 
 } from "./ServiceCoverageDashboard.jsx";
 import { useDataCache } from '../DataContext';
+import { PageSkeleton } from './CommonComponents';
 
 // The denominators behind every coverage percentage on the other tabs.
 const PopulationDashboard = lazy(() => import('./PopulationView').then((m) => ({ default: m.PopulationDashboard })));
@@ -92,9 +93,9 @@ function DashboardView({ userStates, userLocalities }) {
             </div>
 
             {isDashboardLoading ? (
-                <div className="text-center py-20 flex flex-col items-center justify-center">
-                    <Spinner />
-                    <p className="mt-4 text-sm font-semibold text-gray-500 tracking-wide uppercase">
+                <div className="py-4">
+                    <PageSkeleton />
+                    <p className="mt-4 text-center text-sm font-semibold text-gray-500 tracking-wide uppercase">
                         {t('dashboard.syncing', 'Syncing Dashboard Data...')}
                     </p>
                 </div>
@@ -107,7 +108,7 @@ function DashboardView({ userStates, userLocalities }) {
                     {viewType === 'imnciCoverage' && <IMNCICoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
                     {viewType === 'criticalCoverage' && <CriticalCareCoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
                     {viewType === 'population' && (
-                        <Suspense fallback={<Spinner />}><PopulationDashboard /></Suspense>
+                        <Suspense fallback={<PageSkeleton />}><PopulationDashboard /></Suspense>
                     )}
                 </div>
             )}

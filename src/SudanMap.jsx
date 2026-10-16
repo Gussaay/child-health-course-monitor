@@ -8,6 +8,7 @@ import {
   ZoomableGroup 
 } from "react-simple-maps";
 import { geoCentroid } from "d3-geo";
+import { useTranslation } from "react-i18next";
 
 // The two GeoJSON files are 3 MB together. Importing them compiled them into
 // the JavaScript bundle, so they were parsed as JS on every load of any screen
@@ -62,6 +63,7 @@ const SudanMap = ({
     isMovable, 
     pannable   
 }) => {
+  const { t } = useTranslation();
   const [localities, setLocalities] = useState(null);
   const [localityFeatures, setLocalityFeatures] = useState([]);
   const [sudanGeoJson, setSudanGeoJson] = useState(null);
@@ -288,7 +290,7 @@ const SudanMap = ({
   if (geoError) {
     return (
       <div className="flex h-full w-full items-center justify-center p-4 text-center text-sm text-gray-500">
-        The map could not be loaded. Check your connection and try again.
+        {t('trackers.sudan_map.load_error', 'The map could not be loaded. Check your connection and try again.')}
       </div>
     );
   }
@@ -296,7 +298,7 @@ const SudanMap = ({
   if (!sudanGeoJson) {
     return (
       <div className="flex h-full w-full items-center justify-center p-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-sky-600" aria-label="Loading map" />
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-sky-600" aria-label={t('trackers.sudan_map.loading', 'Loading map')} />
       </div>
     );
   }

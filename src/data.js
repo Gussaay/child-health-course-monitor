@@ -13,6 +13,7 @@ import {
     updateDoc as fbUpdateDoc,
     getDoc as fbGetDoc,
     getDocFromCache,
+    getDocsFromCache,
     increment, 
     serverTimestamp,
     orderBy,
@@ -249,17 +250,29 @@ const addToPendingQueue = (actionName) => {
 };
 
 // --- FIRESTORE WRAPPERS ---
+// Reads are counted only when the answer really came from the server.
+// Without `source: 'cache'` Firestore still answers from the device cache
+// whenever it is offline (or the server is unreachable), and those answers
+// cost nothing, so `metadata.fromCache` decides, not the options passed in.
+// A server query is billed one read per document, or one read if it
+// returned nothing.
+const servedByServer = (snapshot) => snapshot?.metadata?.fromCache === false;
+
+// The modular getDocs() ignores a second argument, so `{ source: 'cache' }`
+// is honoured here by reading the device cache directly.
 export const getDocs = async (query, options) => {
-  const snapshot = await fbGetDocs(query, options);
-  if (options?.source !== 'cache') {
-    dispatchOpEvent('read', 1 + (snapshot.docs.length || 0));
+  const snapshot = options?.source === 'cache'
+    ? await getDocsFromCache(query)
+    : await fbGetDocs(query);
+  if (servedByServer(snapshot)) {
+    dispatchOpEvent('read', Math.max(1, snapshot.docs.length || 0));
   }
   return snapshot;
 };
 
 export const getDoc = async (docRef, options) => {
   const snapshot = await fbGetDoc(docRef, options);
-  if (options?.source !== 'cache' && snapshot.exists()) {
+  if (servedByServer(snapshot)) {
     dispatchOpEvent('read', 1);
   }
   return snapshot;
@@ -3415,7 +3428,10 @@ export async function fetchFacilitiesHistoryMultiDate(states, targetDatesStrArra
         }
 
         const currentFacilitiesQ = query(collection(db, "healthFacilities"), where("الولاية", "in", states));
-        const currentFacilitiesSnap = await getDocs(currentFacilitiesQ, { source: 'cache' });
+        let currentFacilitiesSnap = await getDocs(currentFacilitiesQ, { source: 'cache' }).catch(() => null);
+        if (!currentFacilitiesSnap || currentFacilitiesSnap.empty) {
+            currentFacilitiesSnap = await getDocs(currentFacilitiesQ);
+        }
         const currentFacilitiesMap = new Map();
         currentFacilitiesSnap.docs.forEach(doc => {
             currentFacilitiesMap.set(doc.id, doc.data());
@@ -3802,10 +3818,17 @@ export async function getCachedExerciseDefinitions({ force = false } = {}) {
 export function subscribeExerciseAttempts(courseId, onChange, onError) {
     if (!courseId) return () => {};
     const q = query(collection(db, "exerciseAttempts"), where("courseId", "==", courseId));
+    let serverSnapshots = 0;
     return onSnapshot(
         q,
         (snapshot) => {
-            dispatchOpEvent('read', snapshot.docChanges().length || 1);
+            // Cached snapshots (offline, or the first one before the server
+            // answers) are free. The first server snapshot costs at least one read.
+            if (servedByServer(snapshot)) {
+                const changed = snapshot.docChanges().length;
+                dispatchOpEvent('read', serverSnapshots === 0 ? Math.max(1, changed) : changed);
+                serverSnapshots += 1;
+            }
             const rows = snapshot.docs
                 .map(d => {
                     const raw = d.data();

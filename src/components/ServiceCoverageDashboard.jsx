@@ -157,7 +157,7 @@ const FacilityTooltip = ({ data }) => {
     return (
     <div className="absolute z-50 p-3 bg-white border border-gray-300 shadow-xl rounded-lg w-64 pointer-events-none transform -translate-x-1/2">
         <h4 className="text-md font-bold text-gray-800 border-b pb-1 mb-2">{data.name}</h4>
-        <p className="text-xs font-semibold text-sky-700 mb-1">Equipment Summary:</p>
+        <p className="text-xs font-semibold text-sky-700 mb-1">{t('dashboard.equipment_summary', 'Equipment Summary:')}</p>
         <ul className="list-disc list-inside text-xs space-y-0.5 max-h-48 overflow-y-auto">
             {Object.entries(data.summary).map(([key, count]) => ( <li key={key} className={count === 0 ? 'text-red-500' : 'text-gray-700'}> {t(`dashboard.equip.${key}`, key)}: <span className="font-bold">{count}</span> </li> ))}
         </ul>
@@ -2100,7 +2100,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                         <div className="p-4 md:p-5 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center bg-slate-50/50 rounded-t-xl gap-4 sm:gap-0">
                             <div className="flex items-center gap-3">
                                 <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.geographic_coverage', 'Geographic Coverage & Service Performance')}</h3>
-                                <button onClick={handleCopyCombined} title="Copy Dashboard Image" className="text-gray-400 hover:text-sky-600 transition-colors p-1" disabled={!!combinedCopyStatus && combinedCopyStatus !== 'Failed'}>
+                                <button onClick={handleCopyCombined} title={t('dashboard.copy_image', 'Copy Dashboard Image')} className="text-gray-400 hover:text-sky-600 transition-colors p-1" disabled={!!combinedCopyStatus && combinedCopyStatus !== 'Failed'}>
                                     {combinedCopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{combinedCopyStatus}</span> : <CopyIcon />}
                                 </button>
                             </div>

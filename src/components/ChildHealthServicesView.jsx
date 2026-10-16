@@ -8,6 +8,7 @@ import { db } from "../firebase";
 import { useDataCache } from '../DataContext';
 import { amiriFontBase64 } from './AmiriFont.js';
 import { Capacitor } from '@capacitor/core';
+import { useTranslation } from 'react-i18next';
 
 // --- ICONS ---
 import { PdfIcon } from './CommonComponents';
@@ -25,7 +26,7 @@ import { point } from '@turf/helpers';
 
 import {
     Card, PageHeader, Button, FormGroup, Select, Table,
-    Modal, Spinner, EmptyState, Checkbox, Input
+    Modal, Spinner, EmptyState, Checkbox, Input, SkeletonTable
 } from './CommonComponents';
 import {
     saveFacilitySnapshot,
@@ -89,48 +90,49 @@ const removeUndefinedProperties = (obj) => {
 
 const deepEqual = (obj1, obj2) => JSON.stringify(obj1) === JSON.stringify(obj2);
 
-const getDisplayableValue = (value) => {
-    if (value === null || value === undefined) return 'N/A';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+const getDisplayableValue = (value, t) => {
+    if (value === null || value === undefined) return t('facilities_page.common.na', 'N/A');
+    if (typeof value === 'boolean') return value ? t('facilities_page.common.yes', 'Yes') : t('facilities_page.common.no', 'No');
     if (value instanceof Date) return value.toLocaleDateString();
     if (typeof value === 'object' && value !== null) {
-         if (Array.isArray(value)) { return value.length > 0 ? value.map(v => v.name || JSON.stringify(v)).join(', ') : 'N/A'; }
+         if (Array.isArray(value)) { return value.length > 0 ? value.map(v => v.name || JSON.stringify(v)).join(', ') : t('facilities_page.common.na', 'N/A'); }
          if ('primary' in value || 'secondary' in value || 'tertiary' in value) {
              const levels = [];
-             if (value.primary) levels.push('Primary');
-             if (value.secondary) levels.push('Special Care');
+             if (value.primary) levels.push(t('facilities_page.history.level_primary', 'Primary'));
+             if (value.secondary) levels.push(t('facilities_page.history.level_special_care', 'Special Care'));
              if (value.tertiary) levels.push('NICU');
-             return levels.length > 0 ? levels.join(', ') : 'N/A';
+             return levels.length > 0 ? levels.join(', ') : t('facilities_page.common.na', 'N/A');
          }
          return JSON.stringify(value);
     }
     return String(value);
 };
 
-const FIELD_LABELS_FOR_COMPARISON = {
-    'اسم_المؤسسة': 'Facility Name', 
-    'الولاية': 'State', 
-    'المحلية': 'Locality', 
-    'facility_ownership': 'Facility Ownership', 
-    'نوع_المؤسسةالصحية': 'Facility Type', 
-    'هل_المؤسسة_تعمل': 'Functioning', 
-    '_الإحداثيات_latitude': 'Latitude', 
-    '_الإحداثيات_longitude': 'Longitude', 
-    'وجود_العلاج_المتكامل_لامراض_الطفولة': 'IMNCI Service', 
-    'eenc_provides_essential_care': 'EENC Service', 
-    'eenc_trained_workers': 'EENC Trained Workers', 
-    'neonatal_level_of_care': 'Neonatal Level of Care', 
-    'neonatal_total_beds': 'Neonatal Total Beds', 
-    'neonatal_incubators': 'Neonatal Incubators', 
-    'etat_has_service': 'ETAT Service', 
-    'hdu_has_service': 'HDU Service', 
-    'picu_has_service': 'PICU Service', 
-    'imnci_staff': 'IMNCI Staff List'
-};
+const getFieldLabelsForComparison = (t) => ({
+    'اسم_المؤسسة': t('facilities_page.history.fields.facility_name', 'Facility Name'), 
+    'الولاية': t('facilities_page.history.fields.state', 'State'), 
+    'المحلية': t('facilities_page.history.fields.locality', 'Locality'), 
+    'facility_ownership': t('facilities_page.history.fields.facility_ownership', 'Facility Ownership'), 
+    'نوع_المؤسسةالصحية': t('facilities_page.history.fields.facility_type', 'Facility Type'), 
+    'هل_المؤسسة_تعمل': t('facilities_page.history.fields.functioning', 'Functioning'), 
+    '_الإحداثيات_latitude': t('facilities_page.history.fields.latitude', 'Latitude'), 
+    '_الإحداثيات_longitude': t('facilities_page.history.fields.longitude', 'Longitude'), 
+    'وجود_العلاج_المتكامل_لامراض_الطفولة': t('facilities_page.history.fields.imnci_service', 'IMNCI Service'), 
+    'eenc_provides_essential_care': t('facilities_page.history.fields.eenc_service', 'EENC Service'), 
+    'eenc_trained_workers': t('facilities_page.history.fields.eenc_trained_workers', 'EENC Trained Workers'), 
+    'neonatal_level_of_care': t('facilities_page.history.fields.neonatal_level_of_care', 'Neonatal Level of Care'), 
+    'neonatal_total_beds': t('facilities_page.history.fields.neonatal_total_beds', 'Neonatal Total Beds'), 
+    'neonatal_incubators': t('facilities_page.history.fields.neonatal_incubators', 'Neonatal Incubators'), 
+    'etat_has_service': t('facilities_page.history.fields.etat_service', 'ETAT Service'), 
+    'hdu_has_service': t('facilities_page.history.fields.hdu_service', 'HDU Service'), 
+    'picu_has_service': t('facilities_page.history.fields.picu_service', 'PICU Service'), 
+    'imnci_staff': t('facilities_page.history.fields.imnci_staff_list', 'IMNCI Staff List')
+});
 
 const STAFF_ARRAY_KEYS = ['imnci_staff', 'eenc_staff', 'neonatal_staff', 'critical_staff'];
 
-const compareFacilities = (oldData, newData) => {
+const compareFacilities = (oldData, newData, t) => {
+    const FIELD_LABELS_FOR_COMPARISON = getFieldLabelsForComparison(t);
     const changes = [];
     const ignoreFields = [
         'id', 'submissionId', 'submittedAt', 'updated_by', 'اخر تحديث', 'date_of_visit',
@@ -159,12 +161,12 @@ const compareFacilities = (oldData, newData) => {
 
                 staffFields.forEach(field => {
                     if (!deepEqual(os[field], ns[field])) {
-                        const niceLabel = `${serviceName} Staff ${i + 1}: ${field.replace(/_/g, ' ')}`;
+                        const niceLabel = t('facilities_page.services.staff_change_label', '{{service}} Staff {{n}}: {{field}}', { service: serviceName, n: i + 1, field: field.replace(/_/g, ' ') });
                         changes.push({
                             key: `${key}_${i}_${field}`,
                             label: niceLabel,
-                            from: getDisplayableValue(os[field]),
-                            to: getDisplayableValue(ns[field])
+                            from: getDisplayableValue(os[field], t),
+                            to: getDisplayableValue(ns[field], t)
                         });
                     }
                 });
@@ -176,8 +178,8 @@ const compareFacilities = (oldData, newData) => {
             changes.push({ 
                 key: key, 
                 label: FIELD_LABELS_FOR_COMPARISON[key] || key.replace(/_/g, ' '), 
-                from: getDisplayableValue(oldValue), 
-                to: getDisplayableValue(newValue) 
+                from: getDisplayableValue(oldValue, t), 
+                to: getDisplayableValue(newValue, t) 
             }); 
         }
     });
@@ -334,18 +336,19 @@ const ActionMenu = ({ onAction, isSuperUserOrFed }) => {
 };
 
 const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpenMap, onOpenHistory, emptyMessage, canApproveSubmissions, canManageFacilities }) => {
+    const { t } = useTranslation();
     const getServiceBadges = (f) => {
         const services = [];
         if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') services.push({ name: 'IMNCI', color: 'bg-sky-100 text-sky-800' });
         if (f.eenc_provides_essential_care === 'Yes') services.push({ name: 'EENC', color: 'bg-teal-100 text-teal-800' });
-        if (f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes' || (f.neonatal_level_of_care && (f.neonatal_level_of_care.primary || f.neonatal_level_of_care.secondary || f.neonatal_level_of_care.tertiary))) services.push({ name: 'Neonatal', color: 'bg-indigo-100 text-indigo-800' });
-        if (f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes') services.push({ name: 'Critical', color: 'bg-red-100 text-red-800' });
-        if (services.length === 0) return <span className="text-xs text-gray-500">None</span>;
-        return <div className="flex flex-wrap gap-1">{services.map(s => <span key={s.name} className={`px-2 py-1 text-xs font-medium rounded-full ${s.color}`}>{s.name}</span>)}</div>;
+        if (f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes' || (f.neonatal_level_of_care && (f.neonatal_level_of_care.primary || f.neonatal_level_of_care.secondary || f.neonatal_level_of_care.tertiary))) services.push({ name: 'Neonatal', label: t('facilities_page.services.badge_neonatal', 'Neonatal'), color: 'bg-indigo-100 text-indigo-800' });
+        if (f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes') services.push({ name: 'Critical', label: t('facilities_page.services.badge_critical', 'Critical'), color: 'bg-red-100 text-red-800' });
+        if (services.length === 0) return <span className="text-xs text-gray-500">{t('facilities_page.services.none', 'None')}</span>;
+        return <div className="flex flex-wrap gap-1">{services.map(s => <span key={s.name} className={`px-2 py-1 text-xs font-medium rounded-full ${s.color}`}>{s.label || s.name}</span>)}</div>;
     };
 
     return (
-        <Table headers={['State', 'Locality', 'Facility Name', 'Ownership', 'Functioning', 'Services Available', 'Last Update', 'Actions']}>
+        <Table cardsOnPhone headers={[t('facilities_page.services.col.state', 'State'), t('facilities_page.services.col.locality', 'Locality'), t('facilities_page.services.col.facility_name', 'Facility Name'), t('facilities_page.services.col.ownership', 'Ownership'), t('facilities_page.services.col.functioning', 'Functioning'), t('facilities_page.services.col.services_available', 'Services Available'), t('facilities_page.services.col.last_update', 'Last Update'), t('facilities_page.common.actions', 'Actions')]}>
             {facilities.length > 0 ? (
                 facilities.map((f, index) => (
                     <tr key={f.id}>
@@ -361,20 +364,20 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
                                 <span className="text-gray-400 text-xs">-</span>
                             )}
                         </td>
-                        <td>{ (f['هل_المؤسسة_تعمل'] === 'Yes' || f['هل_المؤسسة_تعمل'] === 'No') ? <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${f['هل_المؤسسة_تعمل'] === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{f['هل_المؤسسة_تعمل']}</span> : <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Not Set</span> }</td>
+                        <td>{ (f['هل_المؤسسة_تعمل'] === 'Yes' || f['هل_المؤسسة_تعمل'] === 'No') ? <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${f['هل_المؤسسة_تعمل'] === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{f['هل_المؤسسة_تعمل'] === 'Yes' ? t('facilities_page.common.yes', 'Yes') : t('facilities_page.common.no', 'No')}</span> : <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{t('facilities_page.services.not_set', 'Not Set')}</span> }</td>
                         <td>{getServiceBadges(f)}</td>
-                        <td>{f.lastSnapshotAt?.toDate ? f.lastSnapshotAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                        <td>{f.lastSnapshotAt?.toDate ? f.lastSnapshotAt.toDate().toLocaleDateString() : t('facilities_page.common.na', 'N/A')}</td>
                         <td className="min-w-[280px]">
                             <div className="flex flex-nowrap gap-2">
                                 {canManageFacilities && (
                                     <>
-                                        <Button variant="info" size="sm" onClick={() => onEdit(f.id)}>Edit</Button>
-                                        <Button variant="danger" size="sm" onClick={() => onDelete(f.id)}>Delete</Button>
+                                        <Button variant="info" size="sm" onClick={() => onEdit(f.id)}>{t('facilities_page.common.edit', 'Edit')}</Button>
+                                        <Button variant="danger" size="sm" onClick={() => onDelete(f.id)}>{t('facilities_page.common.delete', 'Delete')}</Button>
                                     </>
                                 )}
-                                <Button size="sm" onClick={() => onGenerateLink(f.id)}>Share Link</Button>
-                                <Button variant="secondary" size="sm" onClick={() => onOpenMap(f)}>Map</Button>
-                                <Button variant="secondary" size="sm" onClick={() => onOpenHistory(f)}>History</Button>
+                                <Button size="sm" onClick={() => onGenerateLink(f.id)}>{t('facilities_page.services.share_link', 'Share Link')}</Button>
+                                <Button variant="secondary" size="sm" onClick={() => onOpenMap(f)}>{t('facilities_page.services.map', 'Map')}</Button>
+                                <Button variant="secondary" size="sm" onClick={() => onOpenHistory(f)}>{t('facilities_page.services.history', 'History')}</Button>
                             </div>
                         </td>
                     </tr>
@@ -387,24 +390,25 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
 };
 
 const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
+    const { t } = useTranslation();
     return (
-        <Table headers={['Submission Date', 'Facility Name', 'State', 'Locality', 'Submitted By', 'Actions']}>
+        <Table cardsOnPhone headers={[t('facilities_page.services.col.submission_date', 'Submission Date'), t('facilities_page.services.col.facility_name', 'Facility Name'), t('facilities_page.services.col.state', 'State'), t('facilities_page.services.col.locality', 'Locality'), t('facilities_page.services.col.submitted_by', 'Submitted By'), t('facilities_page.common.actions', 'Actions')]}>
             {(!submissions || submissions.length === 0) ? (
-                <EmptyState message="No pending submissions found." colSpan={6} />
+                <EmptyState message={t('facilities_page.services.no_pending', 'No pending submissions found.')} colSpan={6} />
             ) : (
                 submissions.map(s => (
                     <tr key={s.submissionId}>
-                        <td>{s.submittedAt?.toDate ? s.submittedAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                        <td>{s.submittedAt?.toDate ? s.submittedAt.toDate().toLocaleDateString() : t('facilities_page.common.na', 'N/A')}</td>
                         <td>
                             {s['اسم_المؤسسة']}
-                            {s._action === 'DELETE' && <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Deletion Request</span>}
+                            {s._action === 'DELETE' && <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">{t('facilities_page.services.deletion_request', 'Deletion Request')}</span>}
                         </td>
                         <td>{s['الولاية']}</td>
                         <td>{s['المحلية']}</td>
-                        <td>{s.updated_by || 'Public Submission'}</td>
+                        <td>{s.updated_by || t('facilities_page.services.public_submission', 'Public Submission')}</td>
                         <td className="flex flex-wrap gap-2">
-                            <Button variant="success" size="sm" onClick={() => onApprove(s)}>View / Approve</Button>
-                            <Button variant="danger" size="sm" onClick={() => onReject(s._mergedSubmissionIds || [s.submissionId], s._action === 'DELETE')}>Reject</Button>
+                            <Button variant="success" size="sm" onClick={() => onApprove(s)}>{t('facilities_page.services.view_approve', 'View / Approve')}</Button>
+                            <Button variant="danger" size="sm" onClick={() => onReject(s._mergedSubmissionIds || [s.submissionId], s._action === 'DELETE')}>{t('facilities_page.services.reject', 'Reject')}</Button>
                         </td>
                     </tr>
                 ))
@@ -414,6 +418,7 @@ const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
 };
 
 const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm, setToast }) => {
+    const { t } = useTranslation();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const formRef = useRef(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -421,9 +426,9 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
     const comparison = useMemo(() => {
         if (!submission) return null;
         const existingFacility = (allFacilities || []).find(f => String(f?.['اسم_المؤسسة'] || '').trim().toLowerCase() === String(submission['اسم_المؤسسة'] || '').trim().toLowerCase() && f?.['الولاية'] === submission['الولاية'] && f?.['المحلية'] === submission['المحلية'] );
-        if (existingFacility) { const changes = compareFacilities(existingFacility, submission); return { isUpdate: true, changes, hasChanges: changes.length > 0 }; }
-        return { isUpdate: false, changes: compareFacilities({}, submission), hasChanges: true };
-    }, [submission, allFacilities]);
+        if (existingFacility) { const changes = compareFacilities(existingFacility, submission, t); return { isUpdate: true, changes, hasChanges: changes.length > 0 }; }
+        return { isUpdate: false, changes: compareFacilities({}, submission, t), hasChanges: true };
+    }, [submission, allFacilities, t]);
     const handleSaveFromForm = async (formData) => {
         setIsSubmitting(true);
         try {
@@ -440,7 +445,7 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
     const handleCancelEdit = () => { setIsEditing(false); };
     if (!submission) return null;
     const isDeletionRequest = submission?._action === 'DELETE';
-    const modalTitle = isDeletionRequest ? `Review Deletion Request: ${submission['اسم_المؤسسة']}` : `Review Submission: ${submission['اسم_المؤسسة']}`;
+    const modalTitle = isDeletionRequest ? t('facilities_page.services.review_deletion_title', 'Review Deletion Request: {{name}}', { name: submission['اسم_المؤسسة'] }) : t('facilities_page.services.review_submission_title', 'Review Submission: {{name}}', { name: submission['اسم_المؤسسة'] });
     
     return (
         <Modal isOpen={!!submission} onClose={onClose} title={modalTitle} size="full">
@@ -448,28 +453,28 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
                  <div className="absolute top-4 right-4 z-10 flex gap-2">
                      {(!isEditing || isDeletionRequest) && (
                          <Button variant={isDeletionRequest ? "danger" : "success"} onClick={handleDirectApprove} disabled={isSubmitting}>
-                             {isSubmitting ? (isDeletionRequest ? 'Deleting...' : 'Approving...') : (isDeletionRequest ? 'Confirm Deletion' : 'Approve') }
+                             {isSubmitting ? (isDeletionRequest ? t('facilities_page.services.deleting', 'Deleting...') : t('facilities_page.services.approving', 'Approving...')) : (isDeletionRequest ? t('facilities_page.services.confirm_deletion', 'Confirm Deletion') : t('facilities_page.services.approve', 'Approve')) }
                          </Button>
                      )}
-                     {!isSubmitting && ( <Button variant="secondary" onClick={onClose} > Close </Button> )}
+                     {!isSubmitting && ( <Button variant="secondary" onClick={onClose} > {t('facilities_page.common.close', 'Close')} </Button> )}
                  </div>
                  
                 {isDeletionRequest && (
                     <div className="p-4 bg-red-100 border border-red-300 rounded-md mb-4 mt-12 flex-shrink-0">
-                        <h4 className="font-semibold text-lg text-red-800">DELETION REQUEST</h4>
-                        <p className="text-red-700">A user has requested to **permanently delete** this facility. Review the details below. Approving will remove the facility.</p>
+                        <h4 className="font-semibold text-lg text-red-800">{t('facilities_page.services.deletion_request_heading', 'DELETION REQUEST')}</h4>
+                        <p className="text-red-700">{t('facilities_page.services.deletion_request_text', 'A user has requested to **permanently delete** this facility. Review the details below. Approving will remove the facility.')}</p>
                     </div>
                 )}
                 
                 {!isDeletionRequest && comparison && (
                      <div className={`p-4 border rounded-md mb-4 mt-12 flex-shrink-0 ${comparison.isUpdate ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
                         <h4 className={`font-semibold text-lg ${comparison.isUpdate ? 'text-yellow-800' : 'text-blue-800'}`}>
-                             {comparison.isUpdate ? "Summary of Changes" : "New Facility Submission"}
+                             {comparison.isUpdate ? t('facilities_page.services.summary_of_changes', 'Summary of Changes') : t('facilities_page.services.new_facility_submission', 'New Facility Submission')}
                         </h4>
                             {comparison.hasChanges ? (
                             <div className="mt-2">
-                                <Table headers={comparison.isUpdate ? ['Field', 'Previous Value', 'New Value'] : ['Field', 'Submitted Value']}>
-                                     {comparison.changes .filter(c => c.to !== 'N/A') .map(({ label, from, to }) => (
+                                <Table headers={comparison.isUpdate ? [t('facilities_page.services.field', 'Field'), t('facilities_page.services.previous_value', 'Previous Value'), t('facilities_page.services.new_value', 'New Value')] : [t('facilities_page.services.field', 'Field'), t('facilities_page.services.submitted_value', 'Submitted Value')]}>
+                                     {comparison.changes .filter(c => c.to !== t('facilities_page.common.na', 'N/A')) .map(({ label, from, to }) => (
                                         <tr key={label}>
                                             <td className="font-medium capitalize align-top py-2">{label}</td>
                                             {comparison.isUpdate && <td className="align-top py-2"><div className="text-sm bg-red-100 text-red-800 p-2 rounded">{from}</div></td>}
@@ -479,7 +484,7 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
                                 </Table>
                             </div>
                             ) : <p className={`mt-1 ${comparison.isUpdate ? 'text-yellow-700' : 'text-blue-700'}`}>
-                                 {comparison.isUpdate ? "No changes were detected compared to the existing record." : "No data submitted?"}
+                                 {comparison.isUpdate ? t('facilities_page.services.no_changes_detected', 'No changes were detected compared to the existing record.') : t('facilities_page.services.no_data_submitted', 'No data submitted?')}
                                 </p>}
                     </div>
                 )}
@@ -492,12 +497,12 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
                             onSave={handleSaveFromForm}
                             onCancel={handleCancelEdit}
                             setToast={setToast}
-                            title={isDeletionRequest ? "Facility Details (Read-Only)" : "Edit & Approve Submission"}
-                            subtitle={isDeletionRequest ? "Review the data below before approving deletion." : "Make necessary corrections and click 'Approve'." }
+                            title={isDeletionRequest ? t('facilities_page.services.facility_details_readonly', 'Facility Details (Read-Only)') : t('facilities_page.services.edit_approve_submission', 'Edit & Approve Submission')}
+                            subtitle={isDeletionRequest ? t('facilities_page.services.review_before_deletion', 'Review the data below before approving deletion.') : t('facilities_page.services.make_corrections', "Make necessary corrections and click 'Approve'.") }
                             isReadOnly={isDeletionRequest}
-                            saveButtonText="Approve Changes"
+                            saveButtonText={t('facilities_page.services.approve_changes', 'Approve Changes')}
                             saveButtonVariant="success"
-                            cancelButtonText="Cancel Edit"
+                            cancelButtonText={t('facilities_page.services.cancel_edit', 'Cancel Edit')}
                             isSubmitting={isSubmitting}
                              userAssignedState={null}
                              userAssignedLocality={null}
@@ -516,7 +521,7 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
                  {!isEditing && !isDeletionRequest && (
                      <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
                           <Button variant="info" onClick={() => setIsEditing(true)} disabled={isSubmitting}>
-                              Edit Before Approving
+                              {t('facilities_page.services.edit_before_approving', 'Edit Before Approving')}
                           </Button>
                      </div>
                  )}
@@ -526,9 +531,10 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
     );
 };
 
-const MappingRow = React.memo(({ field, headers, selectedValue, onMappingChange }) => ( <div className="flex items-center"><label className="w-1/2 font-medium text-sm capitalize">{field.label}{field.key === 'اسم_المؤسسة' && '*'}</label><Select value={selectedValue || ''} onChange={(e) => onMappingChange(field.key, e.target.value)} className="flex-1"><option value="">-- Select Excel Column --</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}</Select></div> ));
+const MappingRow = React.memo(({ field, headers, selectedValue, onMappingChange }) => { const { t } = useTranslation(); return ( <div className="flex items-center"><label className="w-1/2 font-medium text-sm capitalize">{field.label}{field.key === 'اسم_المؤسسة' && '*'}</label><Select value={selectedValue || ''} onChange={(e) => onMappingChange(field.key, e.target.value)} className="flex-1"><option value="">{t('facilities_page.services.select_excel_column', '-- Select Excel Column --')}</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}</Select></div> ); });
 
 const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, filteredData, cleanupConfig, projectNames = [], canonicalProject = (v) => v }) => {
+    const { t } = useTranslation();
     const [currentPage, setCurrentPage] = useState(0);
     const [error, setError] = useState('');
     const [excelData, setExcelData] = useState([]);
@@ -568,8 +574,8 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
     const allFacilityFields = useMemo(() => { 
         if (!activeTab) return []; 
         const config = getServiceConfig(activeTab); 
-        return [{ key: 'id', label: 'ID (for updates)' }, ...config.dataKeys.filter(key => key !== 'id').map(key => ({ key, label: FIELD_LABELS[key] || key.replace(/_/g, ' ') }))]; 
-    }, [activeTab, FIELD_LABELS]);
+        return [{ key: 'id', label: t('facilities_page.services.id_for_updates', 'ID (for updates)') }, ...config.dataKeys.filter(key => key !== 'id').map(key => ({ key, label: FIELD_LABELS[key] || key.replace(/_/g, ' ') }))]; 
+    }, [activeTab, FIELD_LABELS, t]);
 
     const handleFileUpload = (e) => { 
         const file = e.target.files[0]; if (!file) return; 
@@ -580,11 +586,11 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
                 const workbook = XLSX.read(data, { type: 'array' }); 
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]]; 
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", cellDates: true }); 
-                if (jsonData.length < 1) { setError('Excel file appears to be empty.'); return; } 
+                if (jsonData.length < 1) { setError(t('facilities_page.services.excel_empty', 'Excel file appears to be empty.')); return; } 
                 setHeaders(jsonData[0].map(h => String(h).trim())); 
                 setExcelData(jsonData.slice(1)); 
                 setCurrentPage(1); setError(''); 
-            } catch (err) { setError('Error reading Excel file: ' + err.message); } 
+            } catch (err) { setError(t('facilities_page.services.excel_read_error', 'Error reading Excel file: {{message}}', { message: err.message })); } 
         }; 
         reader.readAsArrayBuffer(file); 
     };
@@ -631,7 +637,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
     const handleMappingChange = useCallback((appField, excelHeader) => { setFieldMappings(prev => { const newMappings = { ...prev }; if (excelHeader) newMappings[appField] = excelHeader; else delete newMappings[appField]; return newMappings; }); }, []);
 
     const handleValidation = () => {
-        if (!fieldMappings['اسم_المؤسسة']) { setError('The "Facility Name" (اسم_المؤسسة) field must be mapped to an Excel column.'); return; }
+        if (!fieldMappings['اسم_المؤسسة']) { setError(t('facilities_page.services.name_must_be_mapped', 'The "Facility Name" (اسم_المؤسسة) field must be mapped to an Excel column.')); return; }
         setError('');
         const issues = []; const checkedFields = {}; const mappedFields = Object.keys(fieldMappings);
         for (const appField of mappedFields) {
@@ -706,7 +712,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
             const key1 = 'neonatal_level_of_care_primary', key2 = 'neonatal_level_of_care_secondary', key3 = 'neonatal_level_of_care_tertiary'; if (newFacility[key1] || newFacility[key2] || newFacility[key3]) { newFacility.neonatal_level_of_care = { primary: newFacility[key1] === 'Yes', secondary: newFacility[key2] === 'Yes', tertiary: newFacility[key3] === 'Yes', }; } delete newFacility[key1]; delete newFacility[key2]; delete newFacility[key3];
             return newFacility;
         });
-        if (processedFacilities.length === 0) { setError('No valid facilities with a name were found after mapping and filtering.'); setCurrentPage(1); return; }
+        if (processedFacilities.length === 0) { setError(t('facilities_page.services.no_valid_facilities', 'No valid facilities with a name were found after mapping and filtering.')); setCurrentPage(1); return; }
         onImport(processedFacilities, originalRawData);
     };
 
@@ -719,79 +725,79 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
     };
     const handleCorrectionDataChange = (errorIndex, cellIndex, value) => { const updatedFailedRows = [...failedRows]; const newRowData = [...updatedFailedRows[errorIndex].rowData]; newRowData[cellIndex] = value; updatedFailedRows[errorIndex].rowData = newRowData; setFailedRows(updatedFailedRows); };
     
-    const renderPreview = () => (excelData.length === 0) ? null : (<div className="mt-4 overflow-auto max-h-60"><h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4><table className="min-w-full border border-gray-200"><thead><tr className="bg-gray-100">{headers.map((header, idx) => <th key={idx} className="border border-gray-300 p-2 text-left text-xs">{header}</th>)}</tr></thead><tbody>{excelData.slice(0, 5).map((row, rowIdx) => <tr key={rowIdx}>{row.map((cell, cellIdx) => <td key={cellIdx} className="border border-gray-300 p-2 text-xs">{cell instanceof Date ? cell.toLocaleDateString() : cell}</td>)}</tr>)}</tbody></table></div>);
-    const renderValidationScreen = () => { const allCorrectionsMade = validationIssues.every(issue => issue.invalidValues.every(val => userCorrections[val])); return (<div><h4 className="font-medium text-lg mb-2">Review Data Mismatches</h4><p className="text-sm text-gray-600 mb-4">Some values in your file don't match the expected options. Please map your values to the correct ones.</p><div className="space-y-4 max-h-96 overflow-y-auto p-2 border rounded bg-gray-50">{validationIssues.map(issue => (<div key={issue.columnName}><h5 className="font-semibold text-gray-800">Mismatches for Column: <span className="font-bold">"{issue.columnName}"</span></h5>{issue.invalidValues.map(val => (<div key={val} className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 mt-2 p-2 bg-white rounded border"><span className="bg-red-50 text-red-800 p-2 rounded text-sm truncate" title={val}>Your value: "{val}"</span><span className="text-center font-bold text-gray-500 hidden md:block">&rarr;</span><Select value={userCorrections[val] || ''} onChange={(e) => handleCorrectionChange(val, e.target.value)}><option value="">-- Choose correct option --</option>{issue.options.map(opt => <option key={opt} value={opt}>{STATE_LOCALITIES[opt]?.ar || opt}</option>)}</Select></div>))}</div>))}</div><div className="flex justify-end mt-6 space-x-2"><Button variant="secondary" onClick={() => setCurrentPage(1)}>Back to Mapping</Button><Button onClick={startImportProcess} disabled={!allCorrectionsMade}>Apply and Import</Button></div>{!allCorrectionsMade && <p className="text-right text-sm text-red-600 mt-2">Please resolve all mismatches.</p>}</div>); };
-    const renderProgressView = () => (<div><h4 className="font-medium text-lg mb-2">Import in Progress...</h4><p className="text-sm text-gray-600 mb-4">Please wait while the facilities are being uploaded.</p><div className="w-full bg-gray-200 rounded-full h-4"><div className="bg-blue-600 h-4 rounded-full transition-all duration-500" style={{ width: `${uploadStatus.total > 0 ? (uploadStatus.processed / uploadStatus.total) * 100 : 0}%` }}></div></div><p className="text-center mt-2 font-medium">{uploadStatus.processed} / {uploadStatus.total}</p></div>);
-    const renderResultView = () => (<div><h4 className="font-medium text-lg mb-2">Import Complete</h4><div className="bg-gray-50 p-4 rounded-md"><p className="font-semibold whitespace-pre-wrap">{uploadStatus.message}</p>{uploadStatus.errors && uploadStatus.errors.length > 0 && !uploadStatus.errors.some(e => e.rowData) && (<div className="mt-4 max-h-40 overflow-y-auto"><h5 className="font-semibold text-red-700">Errors encountered (unrecoverable):</h5><ul className="list-disc list-inside text-sm text-red-600">{uploadStatus.errors.map((err, index) => <li key={index}>{err.message || err.toString()}</li>)}</ul></div>)}</div><div className="flex justify-end mt-6"><Button onClick={onClose}>Close</Button></div></div>);
-    const renderCorrectionScreen = () => ( <div><h4 className="font-medium text-lg text-red-700 mb-2">Import Errors</h4><p className="text-sm text-gray-600 mb-4">Some rows failed to import. You can correct the data below and retry uploading only the failed rows.</p><div className="overflow-x-auto max-h-[60vh] border rounded-md"><table className="min-w-full text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-2 border-r text-left">Row #</th><th className="p-2 border-r text-left">Error</th>{headers.map(header => <th key={header} className="p-2 border-r text-left whitespace-nowrap">{header}</th>)}</tr></thead><tbody>{failedRows.map((error, errorIndex) => ( <tr key={error.rowIndex} className="bg-white hover:bg-red-50"><td className="p-1 border-r font-medium">{error.rowIndex + 2}</td><td className="p-1 border-r text-red-600 max-w-xs">{error.message}</td>{error.rowData.map((cell, cellIndex) => ( <td key={cellIndex} className="p-0 border-r"><Input type="text" value={cell || ''} onChange={(e) => handleCorrectionDataChange(errorIndex, cellIndex, e.target.value)} className="w-full border-0 rounded-none focus:ring-2 focus:ring-blue-500" /></td> ))}</tr> ))}</tbody></table></div><div className="flex justify-end mt-6 space-x-2"><Button variant="secondary" onClick={() => setCurrentPage(0)}>Back to Selection</Button><Button onClick={handleRetryUpload}>Retry Upload for {failedRows.length} Corrected Row(s)</Button></div></div> );
+    const renderPreview = () => (excelData.length === 0) ? null : (<div className="mt-4 overflow-auto max-h-60"><h4 className="font-medium mb-2">{t('facilities_page.services.data_preview', 'Data Preview (first 5 rows)')}</h4><table className="min-w-full border border-gray-200"><thead><tr className="bg-gray-100">{headers.map((header, idx) => <th key={idx} className="border border-gray-300 p-2 text-left text-xs">{header}</th>)}</tr></thead><tbody>{excelData.slice(0, 5).map((row, rowIdx) => <tr key={rowIdx}>{row.map((cell, cellIdx) => <td key={cellIdx} className="border border-gray-300 p-2 text-xs">{cell instanceof Date ? cell.toLocaleDateString() : cell}</td>)}</tr>)}</tbody></table></div>);
+    const renderValidationScreen = () => { const allCorrectionsMade = validationIssues.every(issue => issue.invalidValues.every(val => userCorrections[val])); return (<div><h4 className="font-medium text-lg mb-2">{t('facilities_page.services.review_mismatches', 'Review Data Mismatches')}</h4><p className="text-sm text-gray-600 mb-4">{t('facilities_page.services.mismatch_hint', "Some values in your file don't match the expected options. Please map your values to the correct ones.")}</p><div className="space-y-4 max-h-96 overflow-y-auto p-2 border rounded bg-gray-50">{validationIssues.map(issue => (<div key={issue.columnName}><h5 className="font-semibold text-gray-800">{t('facilities_page.services.mismatches_for_column', 'Mismatches for Column:')} <span className="font-bold">"{issue.columnName}"</span></h5>{issue.invalidValues.map(val => (<div key={val} className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 mt-2 p-2 bg-white rounded border"><span className="bg-red-50 text-red-800 p-2 rounded text-sm truncate" title={val}>{t('facilities_page.services.your_value', 'Your value: "{{value}}"', { value: val })}</span><span className="text-center font-bold text-gray-500 hidden md:block">&rarr;</span><Select value={userCorrections[val] || ''} onChange={(e) => handleCorrectionChange(val, e.target.value)}><option value="">{t('facilities_page.services.choose_correct_option', '-- Choose correct option --')}</option>{issue.options.map(opt => <option key={opt} value={opt}>{STATE_LOCALITIES[opt]?.ar || opt}</option>)}</Select></div>))}</div>))}</div><div className="flex justify-end mt-6 space-x-2"><Button variant="secondary" onClick={() => setCurrentPage(1)}>{t('facilities_page.services.back_to_mapping', 'Back to Mapping')}</Button><Button onClick={startImportProcess} disabled={!allCorrectionsMade}>{t('facilities_page.services.apply_and_import', 'Apply and Import')}</Button></div>{!allCorrectionsMade && <p className="text-right text-sm text-red-600 mt-2">{t('facilities_page.services.resolve_all_mismatches', 'Please resolve all mismatches.')}</p>}</div>); };
+    const renderProgressView = () => (<div><h4 className="font-medium text-lg mb-2">{t('facilities_page.services.import_in_progress', 'Import in Progress...')}</h4><p className="text-sm text-gray-600 mb-4">{t('facilities_page.services.please_wait_uploading', 'Please wait while the facilities are being uploaded.')}</p><div className="w-full bg-gray-200 rounded-full h-4"><div className="bg-blue-600 h-4 rounded-full transition-all duration-500" style={{ width: `${uploadStatus.total > 0 ? (uploadStatus.processed / uploadStatus.total) * 100 : 0}%` }}></div></div><p className="text-center mt-2 font-medium">{uploadStatus.processed} / {uploadStatus.total}</p></div>);
+    const renderResultView = () => (<div><h4 className="font-medium text-lg mb-2">{t('facilities_page.services.import_complete', 'Import Complete')}</h4><div className="bg-gray-50 p-4 rounded-md"><p className="font-semibold whitespace-pre-wrap">{uploadStatus.message}</p>{uploadStatus.errors && uploadStatus.errors.length > 0 && !uploadStatus.errors.some(e => e.rowData) && (<div className="mt-4 max-h-40 overflow-y-auto"><h5 className="font-semibold text-red-700">{t('facilities_page.services.errors_unrecoverable', 'Errors encountered (unrecoverable):')}</h5><ul className="list-disc list-inside text-sm text-red-600">{uploadStatus.errors.map((err, index) => <li key={index}>{err.message || err.toString()}</li>)}</ul></div>)}</div><div className="flex justify-end mt-6"><Button onClick={onClose}>{t('facilities_page.common.close', 'Close')}</Button></div></div>);
+    const renderCorrectionScreen = () => ( <div><h4 className="font-medium text-lg text-red-700 mb-2">{t('facilities_page.services.import_errors', 'Import Errors')}</h4><p className="text-sm text-gray-600 mb-4">{t('facilities_page.services.import_errors_hint', 'Some rows failed to import. You can correct the data below and retry uploading only the failed rows.')}</p><div className="overflow-x-auto max-h-[60vh] border rounded-md"><table className="min-w-full text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-2 border-r text-left">{t('facilities_page.services.row_number', 'Row #')}</th><th className="p-2 border-r text-left">{t('facilities_page.services.error', 'Error')}</th>{headers.map(header => <th key={header} className="p-2 border-r text-left whitespace-nowrap">{header}</th>)}</tr></thead><tbody>{failedRows.map((error, errorIndex) => ( <tr key={error.rowIndex} className="bg-white hover:bg-red-50"><td className="p-1 border-r font-medium">{error.rowIndex + 2}</td><td className="p-1 border-r text-red-600 max-w-xs">{error.message}</td>{error.rowData.map((cell, cellIndex) => ( <td key={cellIndex} className="p-0 border-r"><Input type="text" value={cell || ''} onChange={(e) => handleCorrectionDataChange(errorIndex, cellIndex, e.target.value)} className="w-full border-0 rounded-none focus:ring-2 focus:ring-blue-500" /></td> ))}</tr> ))}</tbody></table></div><div className="flex justify-end mt-6 space-x-2"><Button variant="secondary" onClick={() => setCurrentPage(0)}>{t('facilities_page.services.back_to_selection', 'Back to Selection')}</Button><Button onClick={handleRetryUpload}>{t('facilities_page.services.retry_upload', 'Retry Upload for {{count}} Corrected Row(s)', { count: failedRows.length })}</Button></div></div> );
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Bulk Upload" size="full">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('facilities_page.services.bulk_upload', 'Bulk Upload')} size="full">
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
                 
                 {currentPage === 0 && (
                     <div>
-                        <p className="mb-4">Download the template to get started. You can select a State, Locality, or Project to restrict the template.</p>
+                        <p className="mb-4">{t('facilities_page.services.download_template_hint', 'Download the template to get started. You can select a State, Locality, or Project to restrict the template.')}</p>
                         
                         <div className="flex flex-col md:flex-row gap-4 mb-4 p-4 border rounded bg-gray-50">
-                            <FormGroup label="Filter Template by State (Optional)" className="flex-1">
+                            <FormGroup label={t('facilities_page.services.template_by_state', 'Filter Template by State (Optional)')} className="flex-1">
                                 <Select 
                                     value={uploadState} 
                                     onChange={e => { setUploadState(e.target.value); setUploadLocality(''); }}
                                 >
-                                    <option value="">-- All States --</option>
+                                    <option value="">{t('facilities_page.services.all_states_option', '-- All States --')}</option>
                                     {Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => (
                                         <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>
                                     ))}
                                 </Select>
                             </FormGroup>
-                            <FormGroup label="Filter Template by Locality (Optional)" className="flex-1">
+                            <FormGroup label={t('facilities_page.services.template_by_locality', 'Filter Template by Locality (Optional)')} className="flex-1">
                                 <Select 
                                     value={uploadLocality} 
                                     onChange={e => setUploadLocality(e.target.value)} 
                                     disabled={!uploadState}
                                 >
-                                    <option value="">-- All Localities --</option>
+                                    <option value="">{t('facilities_page.services.all_localities_option', '-- All Localities --')}</option>
                                     {uploadState && STATE_LOCALITIES[uploadState]?.localities.map(l => (
                                         <option key={l.en} value={l.en}>{l.ar}</option>
                                     ))}
                                 </Select>
                             </FormGroup>
-                            <FormGroup label="Filter Template by Project (Optional)" className="flex-1">
+                            <FormGroup label={t('facilities_page.services.template_by_project', 'Filter Template by Project (Optional)')} className="flex-1">
                                 <Select 
                                     value={uploadProject} 
                                     onChange={e => setUploadProject(e.target.value)}
                                 >
-                                    <option value="">-- All Projects --</option>
+                                    <option value="">{t('facilities_page.services.all_projects_option', '-- All Projects --')}</option>
                                     {projectNames.map(p => (
                                         <option key={p} value={p}>{p}</option>
                                     ))}
                                 </Select>
                             </FormGroup>
                         </div>
-                        <p className="text-xs text-gray-500 italic mb-4">Note: Selecting a State/Locality/Project above will also auto-assign uploaded facilities to them if they are missing from your Excel file.</p>
+                        <p className="text-xs text-gray-500 italic mb-4">{t('facilities_page.services.template_note', 'Note: Selecting a State/Locality/Project above will also auto-assign uploaded facilities to them if they are missing from your Excel file.')}</p>
 
                         <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">
-                            Download Template
+                            {t('facilities_page.services.download_template', 'Download Template')}
                         </Button>
                         <hr className="my-4"/>
-                        <p className="mb-2">Or, upload your own Excel file (first row must be headers).</p>
+                        <p className="mb-2">{t('facilities_page.services.upload_own_file', 'Or, upload your own Excel file (first row must be headers).')}</p>
                         <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
                     </div>
                 )}
                 
                 {currentPage === 1 && (
                     <div>
-                        <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
-                        <p className="text-sm text-gray-600 mb-4">Match the columns from your Excel file to the application fields. To update existing records, ensure the 'ID' field is correctly mapped.</p>
+                        <h4 className="font-medium mb-4">{t('facilities_page.services.map_columns', 'Map Excel columns to application fields')}</h4>
+                        <p className="text-sm text-gray-600 mb-4">{t('facilities_page.services.map_columns_hint', "Match the columns from your Excel file to the application fields. To update existing records, ensure the 'ID' field is correctly mapped.")}</p>
                         <div className="grid grid-cols-2 gap-3 mb-4 max-h-80 overflow-y-auto p-2 border rounded">
                             {allFacilityFields.map(field => <MappingRow key={field.key} field={field} headers={headers} selectedValue={fieldMappings[field.key]} onMappingChange={handleMappingChange}/>)}
                         </div>
                         {renderPreview()}
                         <div className="flex justify-end mt-6 space-x-2">
-                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button>
-                            <Button onClick={handleValidation}>Validate and Continue</Button>
+                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>{t('facilities_page.common.back', 'Back')}</Button>
+                            <Button onClick={handleValidation}>{t('facilities_page.services.validate_continue', 'Validate and Continue')}</Button>
                         </div>
                     </div>
                 )}
@@ -806,6 +812,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
 };
 
 const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted }) => {
+    const { t } = useTranslation();
      const [isLoading, setIsLoading] = useState(false); const [duplicateGroups, setDuplicateGroups] = useState([]); const [selectedGroups, setSelectedGroups] = useState({});
     const findDuplicates = useCallback(() => { 
         setIsLoading(true); 
@@ -836,17 +843,18 @@ const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted
     const handleSelectionChange = (key) => { setSelectedGroups(prev => ({ ...prev, [key]: !prev[key] })); };
     const handleDeleteSelected = async () => {
         const idsToDelete = []; duplicateGroups.forEach(group => { if (selectedGroups[group.key]) group.duplicates.forEach(d => idsToDelete.push(d.id)); });
-        if (idsToDelete.length === 0) { notify("No duplicates selected for deletion."); return; }
-        if (await confirmDialog(`Are you sure you want to permanently delete ${idsToDelete.length} duplicate records?`)) { try { await deleteFacilitiesBatch(idsToDelete); notify(`${idsToDelete.length} duplicates deleted successfully.`); onDuplicatesDeleted(idsToDelete); onClose(); } catch (error) { notify(`Failed to delete duplicates: ${error.message}`); } }
+        if (idsToDelete.length === 0) { notify(t('facilities_page.services.no_duplicates_selected', 'No duplicates selected for deletion.')); return; }
+        if (await confirmDialog(t('facilities_page.services.confirm_delete_duplicates', 'Are you sure you want to permanently delete {{count}} duplicate records?', { count: idsToDelete.length }))) { try { await deleteFacilitiesBatch(idsToDelete); notify(t('facilities_page.services.duplicates_deleted', '{{count}} duplicates deleted successfully.', { count: idsToDelete.length })); onDuplicatesDeleted(idsToDelete); onClose(); } catch (error) { notify(t('facilities_page.services.delete_duplicates_failed', 'Failed to delete duplicates: {{message}}', { message: error.message })); } }
     };
     const totalDuplicates = duplicateGroups.reduce((acc, group) => acc + group.duplicates.length, 0);
-    return (<Modal isOpen={isOpen} onClose={onClose} title="Find & Fix Duplicates"><div className="p-4">{isLoading && <div className="text-center"><Spinner /></div>}{!isLoading && duplicateGroups.length === 0 && <div className="text-center p-4"><EmptyState message="No duplicate facilities found." /></div>}{!isLoading && duplicateGroups.length > 0 && (<div><p className="mb-4 text-sm text-gray-700">Found <strong>{totalDuplicates}</strong> duplicate records across <strong>{duplicateGroups.length}</strong> groups. Uncheck any group you do not want to clean up.</p><div className="space-y-4 max-h-96 overflow-y-auto p-2 border rounded">{duplicateGroups.map(group => (<div key={group.key} className="p-3 border rounded-md bg-gray-50"><div className="flex items-center justify-between mb-2"><h4 className="font-bold text-gray-800">{group.original['اسم_المؤسسة']}<span className="text-sm font-normal text-gray-500 ml-2">({group.original['الولاية']} / {group.original['المحلية']})</span></h4><label className="flex items-center gap-2 cursor-pointer">
+    return (<Modal isOpen={isOpen} onClose={onClose} title={t('facilities_page.services.find_fix_duplicates', 'Find & Fix Duplicates')}><div className="p-4">{isLoading && <div className="text-center"><Spinner /></div>}{!isLoading && duplicateGroups.length === 0 && <div className="text-center p-4"><EmptyState message={t('facilities_page.services.no_duplicates', 'No duplicate facilities found.')} /></div>}{!isLoading && duplicateGroups.length > 0 && (<div><p className="mb-4 text-sm text-gray-700">{t('facilities_page.services.found', 'Found')} <strong>{totalDuplicates}</strong> {t('facilities_page.services.duplicate_records_across', 'duplicate records across')} <strong>{duplicateGroups.length}</strong> {t('facilities_page.services.groups_uncheck_hint', 'groups. Uncheck any group you do not want to clean up.')}</p><div className="space-y-4 max-h-96 overflow-y-auto p-2 border rounded">{duplicateGroups.map(group => (<div key={group.key} className="p-3 border rounded-md bg-gray-50"><div className="flex items-center justify-between mb-2"><h4 className="font-bold text-gray-800">{group.original['اسم_المؤسسة']}<span className="text-sm font-normal text-gray-500 ml-2">({group.original['الولاية']} / {group.original['المحلية']})</span></h4><label className="flex items-center gap-2 cursor-pointer">
         <Checkbox label="" checked={!!selectedGroups[group.key]} onChange={() => handleSelectionChange(group.key)}/>
-        <span>Clean up</span>
-    </label></div><div className="text-xs space-y-1"><p className="p-1 rounded bg-green-100 text-green-800"><strong>Keep (Original):</strong> ID {group.original.id} <span className="text-gray-600 italic ml-2"> (Last updated: {group.original.lastSnapshotAt?.toDate ? group.original.lastSnapshotAt.toDate().toLocaleString() : (group.original.lastSnapshotAt ? new Date(group.original.lastSnapshotAt).toLocaleString() : 'N/A')})</span></p>{group.duplicates.map(dup => <p key={dup.id} className="p-1 rounded bg-red-100 text-red-800"><strong>Delete (Duplicate):</strong> ID {dup.id}<span className="text-gray-600 italic ml-2"> (Last updated: {dup.lastSnapshotAt?.toDate ? dup.lastSnapshotAt.toDate().toLocaleString() : (dup.lastSnapshotAt ? new Date(dup.lastSnapshotAt).toLocaleString() : 'N/A')})</span></p>)}</div></div>))}</div><div className="flex justify-end mt-6"><Button variant="danger" onClick={handleDeleteSelected}>Delete Selected ({Object.values(selectedGroups).filter(Boolean).length})</Button></div></div>)}</div></Modal>);
+        <span>{t('facilities_page.services.clean_up', 'Clean up')}</span>
+    </label></div><div className="text-xs space-y-1"><p className="p-1 rounded bg-green-100 text-green-800"><strong>{t('facilities_page.services.keep_original', 'Keep (Original):')}</strong> ID {group.original.id} <span className="text-gray-600 italic ml-2"> {t('facilities_page.services.last_updated_paren', '(Last updated: {{date}})', { date: group.original.lastSnapshotAt?.toDate ? group.original.lastSnapshotAt.toDate().toLocaleString() : (group.original.lastSnapshotAt ? new Date(group.original.lastSnapshotAt).toLocaleString() : t('facilities_page.common.na', 'N/A')) })}</span></p>{group.duplicates.map(dup => <p key={dup.id} className="p-1 rounded bg-red-100 text-red-800"><strong>{t('facilities_page.services.delete_duplicate', 'Delete (Duplicate):')}</strong> ID {dup.id}<span className="text-gray-600 italic ml-2"> {t('facilities_page.services.last_updated_paren', '(Last updated: {{date}})', { date: dup.lastSnapshotAt?.toDate ? dup.lastSnapshotAt.toDate().toLocaleString() : (dup.lastSnapshotAt ? new Date(dup.lastSnapshotAt).toLocaleString() : t('facilities_page.common.na', 'N/A')) })}</span></p>)}</div></div>))}</div><div className="flex justify-end mt-6"><Button variant="danger" onClick={handleDeleteSelected}>{t('facilities_page.services.delete_selected', 'Delete Selected ({{count}})', { count: Object.values(selectedGroups).filter(Boolean).length })}</Button></div></div>)}</div></Modal>);
 };
 
 const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setToast, cleanupConfig }) => {
+    const { t } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [selectedFieldKey, setSelectedFieldKey] = useState('');
@@ -896,12 +904,12 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
 
     const handleApplyFixes = async () => {
         const user = auth.currentUser;
-        if (!user) { setToast({ show: true, message: 'You must be logged in to perform this action.', type: 'error' }); return; }
+        if (!user) { setToast({ show: true, message: t('facilities_page.services.must_be_logged_in_action', 'You must be logged in to perform this action.'), type: 'error' }); return; }
         const config = cleanupConfig[selectedFieldKey];
         const facilitiesToUpdate = facilities.filter(f => {
             if (config.isStaffField) { return f.imnci_staff?.some(staff => Object.keys(mappings).includes(staff[selectedFieldKey])); } else { return Object.keys(mappings).includes(f[selectedFieldKey]); }
         });
-        if (facilitiesToUpdate.length === 0) { setToast({ show: true, message: 'No changes to apply.', type: 'info' }); onClose(); return; }
+        if (facilitiesToUpdate.length === 0) { setToast({ show: true, message: t('facilities_page.services.no_changes_to_apply', 'No changes to apply.'), type: 'info' }); onClose(); return; }
         setIsUpdating(true);
         const batch = writeBatch(db);
         const today = new Date().toISOString().split('T')[0];
@@ -920,33 +928,33 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
         try {
             await Promise.all(updatePromises);
             await batch.commit();
-            setToast({ show: true, message: `${facilitiesToUpdate.length} facilities updated successfully for field "${config.label}".`, type: 'success' });
+            setToast({ show: true, message: t('facilities_page.services.cleanup_success', '{{count}} facilities updated successfully for field "{{field}}".', { count: facilitiesToUpdate.length, field: config.label }), type: 'success' });
             onCleanupComplete();
         } catch (error) {
-            setToast({ show: true, message: `An error occurred: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('facilities_page.services.error_occurred', 'An error occurred: {{message}}', { message: error.message }), type: 'error' });
         } finally {
             setIsUpdating(false);
             onClose();
         }
     };
     
-    const renderSelectionScreen = () => ( <div><FormGroup label="Select a data field to clean"><Select value={selectedFieldKey} onChange={(e) => setSelectedFieldKey(e.target.value)}><option value="">-- Choose field --</option>{Object.entries(cleanupConfig).map(([key, config]) => ( <option key={key} value={key}>{config.label}</option> ))}</Select></FormGroup></div> );
+    const renderSelectionScreen = () => ( <div><FormGroup label={t('facilities_page.services.select_field_to_clean', 'Select a data field to clean')}><Select value={selectedFieldKey} onChange={(e) => setSelectedFieldKey(e.target.value)}><option value="">{t('facilities_page.services.choose_field', '-- Choose field --')}</option>{Object.entries(cleanupConfig).map(([key, config]) => ( <option key={key} value={key}>{config.label}</option> ))}</Select></FormGroup></div> );
     
     const renderMappingScreen = () => {
         const config = cleanupConfig[selectedFieldKey];
         return (
             <div>
                 {isLoading && <div className="text-center"><Spinner /></div>}
-                {!isLoading && nonStandardValues.length === 0 && ( <div className="text-center p-4"><EmptyState message={`All values for "${config.label}" are already standardized.`} /></div> )}
+                {!isLoading && nonStandardValues.length === 0 && ( <div className="text-center p-4"><EmptyState message={t('facilities_page.services.all_standardized', 'All values for "{{field}}" are already standardized.', { field: config.label })} /></div> )}
                 {!isLoading && nonStandardValues.length > 0 && ( 
                     <div>
                         <p className="mb-4 text-sm text-gray-700"> 
-                            Found <strong>{nonStandardValues.length}</strong> {config.isDynamicText ? 'unique' : 'non-standard'} value(s) for <strong>{config.label}</strong>. Map them to a standard value to clean up your data. 
+                            {t('facilities_page.services.found', 'Found')} <strong>{nonStandardValues.length}</strong> {config.isDynamicText ? t('facilities_page.services.unique_values_for', 'unique value(s) for') : t('facilities_page.services.nonstandard_values_for', 'non-standard value(s) for')} <strong>{config.label}</strong>. {t('facilities_page.services.map_to_standard_hint', 'Map them to a standard value to clean up your data.')} 
                         </p>
                         <div className="space-y-3 max-h-80 overflow-y-auto p-2 border rounded bg-gray-50">
                             {nonStandardValues.map(value => ( 
                                 <div key={value} className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 p-2 bg-white rounded border">
-                                    <span className="bg-yellow-50 text-yellow-800 p-2 rounded text-sm truncate" title={value}> Current: "{value}" </span>
+                                    <span className="bg-yellow-50 text-yellow-800 p-2 rounded text-sm truncate" title={value}> {t('facilities_page.services.current_value', 'Current: "{{value}}"', { value })} </span>
                                     <span className="text-center font-bold text-gray-500 hidden md:block">&rarr;</span>
                                     
                                     {config.isDynamicText ? (
@@ -954,7 +962,7 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
                                             <Input 
                                                 type="text" 
                                                 list={`${selectedFieldKey}-options`}
-                                                placeholder="Type unified name..." 
+                                                placeholder={t('facilities_page.services.type_unified_name', 'Type unified name...')} 
                                                 value={mappings[value] || ''} 
                                                 onChange={(e) => handleMappingChange(value, e.target.value)} 
                                             />
@@ -964,7 +972,7 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
                                         </div>
                                     ) : (
                                         <Select value={mappings[value] || ''} onChange={(e) => handleMappingChange(value, e.target.value)}>
-                                            <option value="">-- Map to standard value --</option>
+                                            <option value="">{t('facilities_page.services.map_to_standard', '-- Map to standard value --')}</option>
                                             {config.standardValues.map(opt => { 
                                                 let displayValue = opt; 
                                                 if (selectedFieldKey === 'الولاية') { displayValue = STATE_LOCALITIES[opt]?.ar || opt; } 
@@ -979,29 +987,30 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
                     </div> 
                 )}
                 <div className="flex justify-between items-center mt-6">
-                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')}>Back to Selection</Button>
+                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')}>{t('facilities_page.services.back_to_selection', 'Back to Selection')}</Button>
                     <Button onClick={handleApplyFixes} disabled={isUpdating || Object.keys(mappings).length === 0 || nonStandardValues.length === 0}>
-                        {isUpdating ? 'Applying Fixes...' : `Apply Fixes for ${Object.keys(mappings).length} Value(s)`}
+                        {isUpdating ? t('facilities_page.services.applying_fixes', 'Applying Fixes...') : t('facilities_page.services.apply_fixes', 'Apply Fixes for {{count}} Value(s)', { count: Object.keys(mappings).length })}
                     </Button>
                 </div>
             </div>
         );
     };
     
-    return ( <Modal isOpen={isOpen} onClose={onClose} title="Clean Facility Data"><div className="p-4">{!selectedFieldKey ? renderSelectionScreen() : renderMappingScreen()}</div></Modal> );
+    return ( <Modal isOpen={isOpen} onClose={onClose} title={t('facilities_page.services.clean_facility_data', 'Clean Facility Data')}><div className="p-4">{!selectedFieldKey ? renderSelectionScreen() : renderMappingScreen()}</div></Modal> );
 };
 
 const LocationMismatchModal = ({ isOpen, onClose, mismatches, onFix }) => {
+    const { t } = useTranslation();
     if (!isOpen) return null;
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Location Mismatches Found (${mismatches.length})`} size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('facilities_page.services.mismatches_found', 'Location Mismatches Found ({{count}})', { count: mismatches.length })} size="lg">
             <div className="p-4">
                 <p className="text-sm text-gray-600 mb-4">
-                    The following facilities have coordinates that do not fall within the geographical boundaries of their assigned State and Locality.
+                    {t('facilities_page.services.mismatch_description', 'The following facilities have coordinates that do not fall within the geographical boundaries of their assigned State and Locality.')}
                 </p>
                 {mismatches.length > 0 ? (
                     <div className="max-h-96 overflow-y-auto">
-                        <Table headers={['Facility Name', 'Assigned State', 'Assigned Locality', 'Actions']}>
+                        <Table headers={[t('facilities_page.services.col.facility_name', 'Facility Name'), t('facilities_page.services.col.assigned_state', 'Assigned State'), t('facilities_page.services.col.assigned_locality', 'Assigned Locality'), t('facilities_page.common.actions', 'Actions')]}>
                             {mismatches.map(facility => (
                                 <tr key={facility.id}>
                                     <td>{facility['اسم_المؤسسة']}</td>
@@ -1009,7 +1018,7 @@ const LocationMismatchModal = ({ isOpen, onClose, mismatches, onFix }) => {
                                     <td>{LOCALITY_EN_TO_AR_MAP[facility['المحلية']] || facility['المحلية']}</td>
                                     <td>
                                         <Button size="sm" onClick={() => onFix(facility)}>
-                                            Fix Location
+                                            {t('facilities_page.services.fix_location', 'Fix Location')}
                                         </Button>
                                     </td>
                                 </tr>
@@ -1018,12 +1027,12 @@ const LocationMismatchModal = ({ isOpen, onClose, mismatches, onFix }) => {
                     </div>
                 ) : (
                      <div className="text-center p-4">
-                       <EmptyState message="No location mismatches were found." />
+                       <EmptyState message={t('facilities_page.services.no_mismatches', 'No location mismatches were found.')} />
                      </div>
                 )}
             </div>
             <div className="flex justify-end p-4 border-t">
-                <Button variant="secondary" onClick={onClose}>Close</Button>
+                <Button variant="secondary" onClick={onClose}>{t('facilities_page.common.close', 'Close')}</Button>
             </div>
         </Modal>
     );
@@ -1039,7 +1048,7 @@ const ChildHealthServicesView = ({
     canCleanFacilityData,
     canFindFacilityDuplicates
 }) => {
-    
+    const { t } = useTranslation();
     const [view, setView] = useState('action_menu');
     
     const [updateSelectionService, setUpdateSelectionService] = useState(null);
@@ -1211,7 +1220,7 @@ const ChildHealthServicesView = ({
 
    const handlePdfListGeneration = async (quality) => {
         if (!filteredFacilities || filteredFacilities.length === 0) {
-            notify("No facilities to export.", 'info');
+            notify(t('facilities_page.services.no_facilities_to_export', 'No facilities to export.'), 'info');
             return;
         }
         setIsPdfGenerating(true);
@@ -1227,7 +1236,7 @@ const ChildHealthServicesView = ({
             );
         } catch (error) {
             console.error("Failed to generate PDF:", error);
-            notify("Sorry, there was an error generating the PDF.", 'error');
+            notify(t('facilities_page.services.pdf_error', 'Sorry, there was an error generating the PDF.'), 'error');
         } finally {
             setIsPdfGenerating(false);
         }
@@ -1236,10 +1245,10 @@ const ChildHealthServicesView = ({
     const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar) );
         if (!userStates || userStates.length === 0) {
-            return [ { key: "", label: "-- Select State --" }, { key: "ALL_STATES", label: "All States" }, { key: "NOT_ASSIGNED", label: "Not Assigned" }, ...allStates.map(sKey => ({ key: sKey, label: STATE_LOCALITIES[sKey].ar })) ];
+            return [ { key: "", label: t('facilities_page.services.select_state', '-- Select State --') }, { key: "ALL_STATES", label: t('facilities_page.services.all_states', 'All States') }, { key: "NOT_ASSIGNED", label: t('facilities_page.services.not_assigned', 'Not Assigned') }, ...allStates.map(sKey => ({ key: sKey, label: STATE_LOCALITIES[sKey].ar })) ];
         }
-        return [ { key: "", label: "-- Select State --" }, ...allStates .filter(sKey => userStates.includes(sKey)) .map(sKey => ({ key: sKey, label: STATE_LOCALITIES[sKey].ar })) ];
-    }, [userStates]);
+        return [ { key: "", label: t('facilities_page.services.select_state', '-- Select State --') }, ...allStates .filter(sKey => userStates.includes(sKey)) .map(sKey => ({ key: sKey, label: STATE_LOCALITIES[sKey].ar })) ];
+    }, [userStates, t]);
 
     const getCurrentFilters = useCallback(() => {
         return {};
@@ -1276,38 +1285,38 @@ const ChildHealthServicesView = ({
     const projectNames = useMemo(() => canonicalOptions(canonicalProject, observedProjects), [canonicalProject, observedProjects]);
 
     const CLEANABLE_FIELDS_CONFIG = useMemo(() => ({
-        'الولاية': { label: 'State', standardValues: Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)), isStaffField: false },
-        'المحلية': { label: 'Locality', standardValues: Object.values(STATE_LOCALITIES).flatMap(s => s.localities.map(l => l.en)).sort((a, b) => (LOCALITY_EN_TO_AR_MAP[a] || a).localeCompare(LOCALITY_EN_TO_AR_MAP[b] || b)), isStaffField: false },
-        'facility_ownership': { label: 'Facility Ownership (ملكية المؤسسة)', standardValues: ['حكومي', 'خاص', 'منظمات', 'اهلي'], isStaffField: false },
-        'job_title': { label: 'Staff Job Title', standardValues: ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"], isStaffField: true },
-        'نوع_المؤسسةالصحية': { label: 'Facility Type', standardValues: ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"], isStaffField: false },
-        'eenc_service_type': { label: 'Service Type', standardValues: ["CEmONC", "BEmONC", "general", "pediatric"], isStaffField: false },
-        'هل_المؤسسة_تعمل': { label: 'Is Facility Functioning', standardValues: ['Yes', 'No'], isStaffField: false },
-        'staff_incentives': { label: 'Staff Incentives', standardValues: ['Yes', 'No'], isStaffField: false },
-        'project_participation': { label: 'Project Participation', standardValues: ['Yes', 'No'], isStaffField: false },
-        'project_name': { label: 'Project Name (اسم المشروع)', standardValues: projectNames, isDynamicText: true, isStaffField: false },
-        'وجود_العلاج_المتكامل_لامراض_الطفولة': { label: 'IMNCI Service Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-        'وجود_سجل_علاج_متكامل': { label: 'IMNCI Register Availability (السجلات)', standardValues: ['Yes', 'No'], isStaffField: false },
-        'وجود_كتيب_لوحات': { label: 'Chart Booklet Availability (كتيب اللوحات)', standardValues: ['Yes', 'No'], isStaffField: false },
-        'ميزان_وزن': { label: 'Weight Scale Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-        'ميزان_طول': { label: 'Height Scale Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-        'ميزان_حرارة': { label: 'Thermometer Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-        'ساعة_مؤقت': { label: 'Timer Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-        'غرفة_إرواء': { label: 'ORS Corner Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-        'immunization_office_exists': { label: 'Immunization Office Exists', standardValues: ['Yes', 'No'], isStaffField: false }, 
-        'nutrition_center_exists': { label: 'Nutrition Center Exists', standardValues: ['Yes', 'No'], isStaffField: false }, 
-        'growth_monitoring_service_exists': { label: 'Growth Monitoring Service Exists', standardValues: ['Yes', 'No'], isStaffField: false }, 
-        'eenc_provides_essential_care': { label: 'EENC Service Provided', standardValues: ['Yes', 'No'], isStaffField: false },
-        'eenc_steam_sterilizer': { label: 'EENC Steam Sterilizer', standardValues: ['Yes', 'No'], isStaffField: false },
-        'eenc_wall_clock': { label: 'EENC Wall Clock', standardValues: ['Yes', 'No'], isStaffField: false },
-        'neonatal_sepsis_surveillance': { label: 'Sepsis Surveillance and Prevention', standardValues: ['Yes', 'No'], isStaffField: false },
-        'neonatal_kmc_unit': { label: 'KMC Unit (وحدة رعاية الكنغر)', standardValues: ['Yes', 'No'], isStaffField: false },
-        'neonatal_breastfeeding_unit': { label: 'Breastfeeding Unit', standardValues: ['Yes', 'No'], isStaffField: false },
-        'neonatal_sterilization_unit': { label: 'Sterilization Unit', standardValues: ['Yes', 'No'], isStaffField: false },
-        'etat_has_service': { label: 'ETAT Service Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-        'hdu_has_service': { label: 'HDU Service Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-        'picu_has_service': { label: 'PICU Service Availability', standardValues: ['Yes', 'No'], isStaffField: false },
-    }), [projectNames]);
+        'الولاية': { label: t('facilities_page.services.cleanup_fields.state', 'State'), standardValues: Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)), isStaffField: false },
+        'المحلية': { label: t('facilities_page.services.cleanup_fields.locality', 'Locality'), standardValues: Object.values(STATE_LOCALITIES).flatMap(s => s.localities.map(l => l.en)).sort((a, b) => (LOCALITY_EN_TO_AR_MAP[a] || a).localeCompare(LOCALITY_EN_TO_AR_MAP[b] || b)), isStaffField: false },
+        'facility_ownership': { label: t('facilities_page.services.cleanup_fields.facility_ownership', 'Facility Ownership (ملكية المؤسسة)'), standardValues: ['حكومي', 'خاص', 'منظمات', 'اهلي'], isStaffField: false },
+        'job_title': { label: t('facilities_page.services.cleanup_fields.staff_job_title', 'Staff Job Title'), standardValues: ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"], isStaffField: true },
+        'نوع_المؤسسةالصحية': { label: t('facilities_page.services.cleanup_fields.facility_type', 'Facility Type'), standardValues: ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"], isStaffField: false },
+        'eenc_service_type': { label: t('facilities_page.services.cleanup_fields.service_type', 'Service Type'), standardValues: ["CEmONC", "BEmONC", "general", "pediatric"], isStaffField: false },
+        'هل_المؤسسة_تعمل': { label: t('facilities_page.services.cleanup_fields.is_functioning', 'Is Facility Functioning'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'staff_incentives': { label: t('facilities_page.services.cleanup_fields.staff_incentives', 'Staff Incentives'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'project_participation': { label: t('facilities_page.services.cleanup_fields.project_participation', 'Project Participation'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'project_name': { label: t('facilities_page.services.cleanup_fields.project_name', 'Project Name (اسم المشروع)'), standardValues: projectNames, isDynamicText: true, isStaffField: false },
+        'وجود_العلاج_المتكامل_لامراض_الطفولة': { label: t('facilities_page.services.cleanup_fields.imnci_service', 'IMNCI Service Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'وجود_سجل_علاج_متكامل': { label: t('facilities_page.services.cleanup_fields.imnci_register', 'IMNCI Register Availability (السجلات)'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'وجود_كتيب_لوحات': { label: t('facilities_page.services.cleanup_fields.chart_booklet', 'Chart Booklet Availability (كتيب اللوحات)'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'ميزان_وزن': { label: t('facilities_page.services.cleanup_fields.weight_scale', 'Weight Scale Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'ميزان_طول': { label: t('facilities_page.services.cleanup_fields.height_scale', 'Height Scale Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'ميزان_حرارة': { label: t('facilities_page.services.cleanup_fields.thermometer', 'Thermometer Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'ساعة_مؤقت': { label: t('facilities_page.services.cleanup_fields.timer', 'Timer Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'غرفة_إرواء': { label: t('facilities_page.services.cleanup_fields.ors_corner', 'ORS Corner Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'immunization_office_exists': { label: t('facilities_page.services.cleanup_fields.immunization_office', 'Immunization Office Exists'), standardValues: ['Yes', 'No'], isStaffField: false }, 
+        'nutrition_center_exists': { label: t('facilities_page.services.cleanup_fields.nutrition_center', 'Nutrition Center Exists'), standardValues: ['Yes', 'No'], isStaffField: false }, 
+        'growth_monitoring_service_exists': { label: t('facilities_page.services.cleanup_fields.growth_monitoring', 'Growth Monitoring Service Exists'), standardValues: ['Yes', 'No'], isStaffField: false }, 
+        'eenc_provides_essential_care': { label: t('facilities_page.services.cleanup_fields.eenc_service', 'EENC Service Provided'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'eenc_steam_sterilizer': { label: t('facilities_page.services.cleanup_fields.eenc_steam_sterilizer', 'EENC Steam Sterilizer'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'eenc_wall_clock': { label: t('facilities_page.services.cleanup_fields.eenc_wall_clock', 'EENC Wall Clock'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'neonatal_sepsis_surveillance': { label: t('facilities_page.services.cleanup_fields.sepsis_surveillance', 'Sepsis Surveillance and Prevention'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'neonatal_kmc_unit': { label: t('facilities_page.services.cleanup_fields.kmc_unit', 'KMC Unit (وحدة رعاية الكنغر)'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'neonatal_breastfeeding_unit': { label: t('facilities_page.services.cleanup_fields.breastfeeding_unit', 'Breastfeeding Unit'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'neonatal_sterilization_unit': { label: t('facilities_page.services.cleanup_fields.sterilization_unit', 'Sterilization Unit'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'etat_has_service': { label: t('facilities_page.services.cleanup_fields.etat_service', 'ETAT Service Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'hdu_has_service': { label: t('facilities_page.services.cleanup_fields.hdu_service', 'HDU Service Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+        'picu_has_service': { label: t('facilities_page.services.cleanup_fields.picu_service', 'PICU Service Availability'), standardValues: ['Yes', 'No'], isStaffField: false },
+    }), [projectNames, t]);
 
     const refreshSubmissions = useCallback(async (force = false) => {
         if (!permissions?.canManageFacilities) return;
@@ -1327,11 +1336,11 @@ const ChildHealthServicesView = ({
                 })()
             ]);
         } catch (error) {
-            setToast({ show: true, message: "Failed to load pending submissions.", type: "error" });
+            setToast({ show: true, message: t('facilities_page.services.load_pending_failed', 'Failed to load pending submissions.'), type: "error" });
         } finally {
             setIsSubmissionsLoading(false);
         }
-    }, [ permissions, setToast, fetchPendingFacilitatorSubmissions, fetchPendingFederalSubmissions, fetchPendingStateSubmissions, fetchPendingLocalitySubmissions ]);
+    }, [ permissions, setToast, t, fetchPendingFacilitatorSubmissions, fetchPendingFederalSubmissions, fetchPendingStateSubmissions, fetchPendingLocalitySubmissions ]);
 
     useEffect(() => {
         if (permissions?.canManageFacilities) {
@@ -1538,9 +1547,9 @@ const ChildHealthServicesView = ({
         setIsRefreshing(true);
         try {
             if (activeTab === TABS.PENDING) { await refreshSubmissions(true); } else { const currentFilters = getCurrentFilters(); if (currentFilters) { await fetchHealthFacilities(currentFilters, true); } }
-            setToast({ show: true, message: "Data refreshed successfully.", type: "success" });
+            setToast({ show: true, message: t('facilities_page.services.refreshed', 'Data refreshed successfully.'), type: "success" });
         } catch (error) {
-            setToast({ show: true, message: `Failed to refresh: ${error.message}`, type: "error" });
+            setToast({ show: true, message: t('facilities_page.services.refresh_failed', 'Failed to refresh: {{message}}', { message: error.message }), type: "error" });
         } finally {
             setIsRefreshing(false);
         }
@@ -1548,7 +1557,7 @@ const ChildHealthServicesView = ({
 
     const handleSaveFacility = async (payload) => {
         const user = auth.currentUser;
-        if (!user) { setToast({ show: true, message: 'You must be logged in.', type: 'error' }); return; }
+        if (!user) { setToast({ show: true, message: t('facilities_page.services.must_be_logged_in', 'You must be logged in.'), type: 'error' }); return; }
         
         const isUpdate = !!editingFacility?.id; 
         const finalPayload = { ...payload };
@@ -1618,13 +1627,13 @@ const ChildHealthServicesView = ({
             setEditingFacility(facility); 
             setView('form'); 
         } else { 
-            setToast({ show: true, message: 'Facility not found or you do not have permission to edit it.', type: 'error' }); 
+            setToast({ show: true, message: t('facilities_page.services.not_found_edit', 'Facility not found or you do not have permission to edit it.'), type: 'error' }); 
         }
     };
 
     const handleDeleteFacility = async (facilityId) => {
         const user = auth.currentUser;
-        if (!user) { setToast({ show: true, message: 'You must be logged in.', type: 'error' }); return; }
+        if (!user) { setToast({ show: true, message: t('facilities_page.services.must_be_logged_in', 'You must be logged in.'), type: 'error' }); return; }
         let facility = (filteredFacilities || []).find(f => f.id === facilityId);
         if (!facility) {
              facility = await getHealthFacilityById(facilityId);
@@ -1633,40 +1642,40 @@ const ChildHealthServicesView = ({
                    if (userScope === 'locality' && (!userLocalities || !userLocalities.includes(facility['المحلية']))) { facility = null; } else if (userScope === 'state' && (!userStates || !userStates.includes(facility['الولاية']))) { facility = null; }
              }
         }
-        if (!facility) { setToast({ show: true, message: 'Facility not found or you do not have permission to delete it.', type: 'error' }); return; }
-        const confirmMessage = permissions.canApproveSubmissions ? `Are you sure you want to permanently delete "${facility['اسم_المؤسسة']}"? This action cannot be undone.` : `Are you sure you want to request deletion for "${facility['اسم_المؤسسة']}"? This will be sent for approval.`;
+        if (!facility) { setToast({ show: true, message: t('facilities_page.services.not_found_delete', 'Facility not found or you do not have permission to delete it.'), type: 'error' }); return; }
+        const confirmMessage = permissions.canApproveSubmissions ? t('facilities_page.services.confirm_delete_facility', 'Are you sure you want to permanently delete "{{name}}"? This action cannot be undone.', { name: facility['اسم_المؤسسة'] }) : t('facilities_page.services.confirm_request_deletion', 'Are you sure you want to request deletion for "{{name}}"? This will be sent for approval.', { name: facility['اسم_المؤسسة'] });
         if (await confirmDialog(confirmMessage)) {
             try {
                 if (permissions.canApproveSubmissions) {
                     await deleteHealthFacility(facilityId);
-                    setToast({ show: true, message: 'Facility deleted.', type: 'success' });
+                    setToast({ show: true, message: t('facilities_page.services.facility_deleted', 'Facility deleted.'), type: 'success' });
                     // Only this facility leaves the cache; no full re-download.
                     await removeFromCache('healthFacilities', [facilityId]);
                 } else {
                     const updaterIdentifier = user.displayName ? `${user.displayName} (${user.email})` : user.email;
                     const payload = { ...facility, _action: 'DELETE', updated_by: updaterIdentifier, 'اخر تحديث': new Date().toISOString(), };
                     await submitFacilityDataForApproval(payload, user.email || 'Unknown User');
-                    setToast({ show: true, message: 'Deletion request submitted for approval.', type: 'info' });
+                    setToast({ show: true, message: t('facilities_page.services.deletion_requested', 'Deletion request submitted for approval.'), type: 'info' });
                 }
             } catch (error) {
-                setToast({ show: true, message: `Failed to process request: ${error.message}`, type: 'error' });
+                setToast({ show: true, message: t('facilities_page.services.process_failed', 'Failed to process request: {{message}}', { message: error.message }), type: 'error' });
             }
         }
     };
 
     const handleImport = async (data, originalRows) => {
-        if (!permissions.canApproveSubmissions) { setToast({ show: true, message: 'You do not have permission to import facilities.', type: 'error' }); return; }
+        if (!permissions.canApproveSubmissions) { setToast({ show: true, message: t('facilities_page.services.no_import_permission', 'You do not have permission to import facilities.'), type: 'error' }); return; }
         setUploadStatus({ inProgress: true, processed: 0, total: data.length, errors: [], message: '' });
         try {
             const { successes, errors, failedRowsData } = await importHealthFacilities(data, originalRows, (progress) => { setUploadStatus(prev => ({ ...prev, processed: progress.processed })); });
             const successCount = successes.length;
             const errorCount = errors.length;
-            let message = `${successCount} facilities imported/updated successfully.`;
-            if (errorCount > 0) { message += `\n${errorCount} rows failed to import.`; }
+            let message = t('facilities_page.services.import_success', '{{count}} facilities imported/updated successfully.', { count: successCount });
+            if (errorCount > 0) { message += '\n' + t('facilities_page.services.import_rows_failed', '{{count}} rows failed to import.', { count: errorCount }); }
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
              await fetchHealthFacilities({}, true);
         } catch (error) {
-             setUploadStatus({ inProgress: false, processed: 0, total: 0, errors: [{ message: error.message }], message: `Import failed: ${error.message}` });
+             setUploadStatus({ inProgress: false, processed: 0, total: 0, errors: [{ message: error.message }], message: t('facilities_page.services.import_failed', 'Import failed: {{message}}', { message: error.message }) });
         }
     };
 
@@ -1688,37 +1697,37 @@ const ChildHealthServicesView = ({
                  const idsToClean = (cleanSubmissionData._mergedSubmissionIds || [cleanSubmissionData.submissionId]).filter(Boolean);
                  await Promise.all(idsToClean.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Approver')));
                  
-                 setToast({ show: true, message: "Facility deletion approved and completed.", type: "success" });
+                 setToast({ show: true, message: t('facilities_page.services.deletion_approved', 'Facility deletion approved and completed.'), type: "success" });
             } else {
                 await approveFacilitySubmission(cleanSubmissionData, auth.currentUser?.email || 'Unknown Approver');
                 if (cleanSubmissionData._mergedSubmissionIds && cleanSubmissionData._mergedSubmissionIds.length > 1) {
                     const redundantIds = cleanSubmissionData._mergedSubmissionIds.filter(id => id !== cleanSubmissionData.submissionId).filter(Boolean);
                     await Promise.all(redundantIds.map(id => rejectFacilitySubmission(id, 'Merged into a combined submission')));
                 }
-                setToast({ show: true, message: "Submission approved and facility data updated.", type: "success" });
+                setToast({ show: true, message: t('facilities_page.services.submission_approved', 'Submission approved and facility data updated.'), type: "success" });
             }
             setSubmissionForReview(null);
             setComparisonFacilities([]);
             refreshSubmissions(true);
             if (cleanSubmissionData._action !== 'DELETE') await fetchHealthFacilities({}, true);
         } catch (error) {
-             setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
+             setToast({ show: true, message: t('facilities_page.services.approval_failed', 'Approval failed: {{message}}', { message: error.message }), type: 'error' });
         }
     };
 
     const handleReject = async (submissionIds, isDeletionRequest = false) => {
         if (!permissions.canApproveSubmissions) return;
-        const action = isDeletionRequest ? "deletion request" : "submission";
-        if (await confirmDialog(`Are you sure you want to reject this ${action}?`)) {
+        const confirmRejectMessage = isDeletionRequest ? t('facilities_page.services.confirm_reject_deletion', 'Are you sure you want to reject this deletion request?') : t('facilities_page.services.confirm_reject_submission', 'Are you sure you want to reject this submission?');
+        if (await confirmDialog(confirmRejectMessage)) {
             try {
                 // --- FIX 5: Safely ensure we don't pass undefined values to rejectDoc ---
                 const idsArray = (Array.isArray(submissionIds) ? submissionIds : [submissionIds]).filter(Boolean);
                 
                 await Promise.all(idsArray.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Rejector')));
-                setToast({ show: true, message: "Submission rejected.", type: "success" });
+                setToast({ show: true, message: t('facilities_page.services.submission_rejected', 'Submission rejected.'), type: "success" });
                 refreshSubmissions(true);
             } catch (error) {
-                setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' });
+                setToast({ show: true, message: t('facilities_page.services.rejection_failed', 'Rejection failed: {{message}}', { message: error.message }), type: 'error' });
             }
         }
     };
@@ -1732,11 +1741,11 @@ const ChildHealthServicesView = ({
              if(userScope === 'state' && userStates && userStates.length > 0) { const allowedStates = new Set(userStates); relevantFacilities = relevantFacilities.filter(f => allowedStates.has(f['الولاية'])); }
             setComparisonFacilities(relevantFacilities);
         } catch (error) {
-            setToast({ show: true, message: 'Failed to load comparison data.', type: 'error' });
+            setToast({ show: true, message: t('facilities_page.services.comparison_load_failed', 'Failed to load comparison data.'), type: 'error' });
         } finally {
             setIsReviewLoading(false);
         }
-    }, [activeHealthFacilities, setToast, permissions.manageScope, userStates]);
+    }, [activeHealthFacilities, setToast, t, permissions.manageScope, userStates]);
 
     const handleGenerateLink = (facilityId) => {
         const facility = (filteredFacilities || []).find(f => f.id === facilityId);
@@ -1823,7 +1832,7 @@ const ChildHealthServicesView = ({
     }, [editingFacility, userStates, userLocalities]);
 
     const renderFormPage = () => {
-        const saveButtonText = permissions.canApproveSubmissions ? "Save Directly" : "Submit for Approval";
+        const saveButtonText = permissions.canApproveSubmissions ? t('facilities_page.services.save_directly', 'Save Directly') : t('facilities_page.services.submit_for_approval', 'Submit for Approval');
         
         let formTypeKey = 'imnci';
         if (updateSelectionService === 'IMNCI') formTypeKey = 'imnci';
@@ -1906,6 +1915,21 @@ const ChildHealthServicesView = ({
             'Critical Care'
         ];
         const EENC_SERVICE_TYPES = ["CEmONC", "BEmONC", "general", "pediatric"];
+        const SERVICE_TYPE_LABELS = {
+            'Neonatal (Any Level)': t('facilities_page.services.service_types.neonatal_any', 'Neonatal (Any Level)'),
+            'Neonatal (Primary)': t('facilities_page.services.service_types.neonatal_primary', 'Neonatal (Primary)'),
+            'Neonatal (Secondary)': t('facilities_page.services.service_types.neonatal_secondary', 'Neonatal (Secondary)'),
+            'Neonatal (Tertiary)': t('facilities_page.services.service_types.neonatal_tertiary', 'Neonatal (Tertiary)'),
+            'Critical Care': t('facilities_page.services.service_types.critical_care', 'Critical Care'),
+        };
+        const EENC_SERVICE_TYPE_LABELS = {
+            'general': t('facilities_page.services.eenc_types.general', 'general'),
+            'pediatric': t('facilities_page.services.eenc_types.pediatric', 'pediatric'),
+        };
+        const TAB_LABELS = {
+            [TABS.PENDING]: t('facilities_page.services.tabs.pending', 'Pending Submissions'),
+            [TABS.ALL]: t('facilities_page.services.tabs.all', 'All Facilities'),
+        };
         
         const isLocalityManager = permissions.manageScope === 'locality';
         const isStateManager = permissions.manageScope === 'state';
@@ -1913,12 +1937,12 @@ const ChildHealthServicesView = ({
         const isUnassignedLocalityManager = isLocalityManager && (!userLocalities || userLocalities.length === 0);
         const isUnassignedStateManager = isStateManager && (!userStates || userStates.length === 0);
 
-        let emptyStateMessage = "No health facilities found for the selected criteria.";
-        if (isUnassignedLocalityManager) { emptyStateMessage = "You are a Locality Manager but do not have a locality assigned. Please contact an administrator."; } 
-        else if (isUnassignedStateManager) { emptyStateMessage = "You are a State Manager but do not have a state assigned. Please contact an administrator."; } 
-        else if (!stateFilter && isRestrictedUser) { emptyStateMessage = "Please select your assigned State to view facilities."; } 
-        else if (!stateFilter && !isRestrictedUser) { emptyStateMessage = "Please select a State or apply other filters to begin viewing facilities."; } 
-        else if (!hasManuallySelected) { emptyStateMessage = "Please select a State or apply other filters to begin viewing facilities."; }
+        let emptyStateMessage = t('facilities_page.services.empty.none_found', 'No health facilities found for the selected criteria.');
+        if (isUnassignedLocalityManager) { emptyStateMessage = t('facilities_page.services.empty.no_locality_assigned', 'You are a Locality Manager but do not have a locality assigned. Please contact an administrator.'); } 
+        else if (isUnassignedStateManager) { emptyStateMessage = t('facilities_page.services.empty.no_state_assigned', 'You are a State Manager but do not have a state assigned. Please contact an administrator.'); } 
+        else if (!stateFilter && isRestrictedUser) { emptyStateMessage = t('facilities_page.services.empty.select_assigned_state', 'Please select your assigned State to view facilities.'); } 
+        else if (!stateFilter && !isRestrictedUser) { emptyStateMessage = t('facilities_page.services.empty.select_state_or_filters', 'Please select a State or apply other filters to begin viewing facilities.'); } 
+        else if (!hasManuallySelected) { emptyStateMessage = t('facilities_page.services.empty.select_state_or_filters', 'Please select a State or apply other filters to begin viewing facilities.'); }
 
         const tabsContent = {
             [TABS.PENDING]: <PendingSubmissionsTab submissions={uniquePendingSubmissions || []} onApprove={handleReviewSubmission} onReject={handleReject} />,
@@ -1938,11 +1962,11 @@ const ChildHealthServicesView = ({
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={() => setView('action_menu')} className="mr-4">
-                            <ArrowLeft className="w-4 h-4 mr-1 inline" /> Back
+                            <ArrowLeft className="w-4 h-4 mr-1 inline" /> {t('facilities_page.common.back', 'Back')}
                         </Button>
                         <PageHeader 
-                            title="Child Health Services Management" 
-                            subtitle="Manage health facilities and their pediatric services."
+                            title={t('facilities_page.services.page_title', 'Child Health Services Management')} 
+                            subtitle={t('facilities_page.services.page_subtitle', 'Manage health facilities and their pediatric services.')}
                         />
                     </div>
                     <Button 
@@ -1952,26 +1976,26 @@ const ChildHealthServicesView = ({
                         className="flex items-center gap-2"
                     >
                         {isRefreshing ? (
-                            <> <Spinner size="sm" /> Refreshing... </>
+                            <> <Spinner size="sm" /> {t('facilities_page.services.refreshing', 'Refreshing...')} </>
                         ) : (
                             <>
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                                   <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.759l.274.549a.75.75 0 101.3-.65l-.274-.549a5.479 5.479 0 016.128-4.032.75.75 0 00.573-1.376 6.979 6.979 0 00-7.75-2.088l-.94-.313a.75.75 0 00-.913.655v1.944a.75.75 0 001.5 0V7.32l.94.313a5.479 5.479 0 016.128 4.032zM4.688 8.576a5.5 5.5 0 019.201-2.759l-.274-.549a.75.75 0 10-1.3.65l.274.549a5.479 5.479 0 01-6.128 4.032.75.75 0 00-.573 1.376 6.979 6.979 0 007.75 2.088l.94.313a.75.75 0 00.913-.655V12.06a.75.75 0 00-1.5 0v1.631l-.94-.313a5.479 5.479 0 01-6.128-4.032z" clipRule="evenodd" />
                                 </svg>
-                                Refresh
+                                {t('facilities_page.services.refresh', 'Refresh')}
                             </>
                         )}
                     </Button>
                 </div>
                 
-                <div className="border-b border-gray-200 mt-6"><nav className="-mb-px flex space-x-4 overflow-x-auto">{availableTabs.map(tabName => (<button key={tabName} onClick={() => setActiveTab(tabName)} className={`${activeTab === tabName ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm`}>{tabName}{tabName === TABS.PENDING && uniquePendingSubmissions && uniquePendingSubmissions.length > 0 && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">{uniquePendingSubmissions.length}</span>}</button>))}</nav></div>
+                <div className="border-b border-gray-200 mt-6"><nav className="-mb-px flex space-x-4 overflow-x-auto">{availableTabs.map(tabName => (<button key={tabName} onClick={() => setActiveTab(tabName)} className={`${activeTab === tabName ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm`}>{TAB_LABELS[tabName] || tabName}{tabName === TABS.PENDING && uniquePendingSubmissions && uniquePendingSubmissions.length > 0 && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">{uniquePendingSubmissions.length}</span>}</button>))}</nav></div>
 
                 {activeTab === TABS.PENDING && (
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4 items-end">
-                        <FormGroup label="Filter by Submission Start Date">
+                        <FormGroup label={t('facilities_page.services.filter_submission_start', 'Filter by Submission Start Date')}>
                             <Input type="date" value={pendingStartDate} onChange={(e) => setPendingStartDate(e.target.value)} />
                         </FormGroup>
-                        <FormGroup label="Filter by Submission End Date">
+                        <FormGroup label={t('facilities_page.services.filter_submission_end', 'Filter by Submission End Date')}>
                             <Input type="date" value={pendingEndDate} onChange={(e) => setPendingEndDate(e.target.value)} />
                         </FormGroup>
                     </div>
@@ -1979,67 +2003,67 @@ const ChildHealthServicesView = ({
 
                 {showFiltersAndActions && (<>
                     <div className="flex flex-wrap gap-4 my-4 items-end">
-                       <div className="flex-1 min-w-[160px]"><FormGroup label="Filter by State"><Select value={stateFilter} onChange={handleStateChange} disabled={isStateFilterDisabled}>{availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</Select></FormGroup></div>
+                       <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_state', 'Filter by State')}><Select value={stateFilter} onChange={handleStateChange} disabled={isStateFilterDisabled}>{availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</Select></FormGroup></div>
                        <div className="flex-1 min-w-[160px]">
-                            <FormGroup label="Filter by Locality">
+                            <FormGroup label={t('facilities_page.services.filter_locality', 'Filter by Locality')}>
                                 <Select value={localityFilter} onChange={(e) => { setLocalityFilter(e.target.value); setHasManuallySelected(true); }} disabled={isLocalityFilterDisabled}>
                                     {isLocalityManager ? (
-                                        userLocalities && userLocalities.length > 0 ? ( userLocalities.map(locEn => { const locAr = stateFilter && STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === locEn)?.ar || locEn; return <option key={locEn} value={locEn}>{locAr}</option>; }) ) : ( <option value="">-- No Locality Assigned --</option> )
+                                        userLocalities && userLocalities.length > 0 ? ( userLocalities.map(locEn => { const locAr = stateFilter && STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === locEn)?.ar || locEn; return <option key={locEn} value={locEn}>{locAr}</option>; }) ) : ( <option value="">{t('facilities_page.services.no_locality_assigned_option', '-- No Locality Assigned --')}</option> )
                                     ) : (
-                                         <> <option value="">All Localities</option> {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option> )} </>
+                                         <> <option value="">{t('facilities_page.services.all_localities', 'All Localities')}</option> {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option> )} </>
                                     )}
                                 </Select>
                             </FormGroup>
                         </div>
-                        <div className="flex-1 min-w-[160px]"><FormGroup label="Filter by Facility Type"><Select value={facilityTypeFilter} onChange={(e) => { setFacilityTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All Types</option>{FACILITY_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
-                        <div className="flex-1 min-w-[160px]"><FormGroup label="Filter by Service"><Select value={serviceTypeFilter} onChange={(e) => { setServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All Services</option>{SERVICE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
+                        <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_facility_type', 'Filter by Facility Type')}><Select value={facilityTypeFilter} onChange={(e) => { setFacilityTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_types', 'All Types')}</option>{FACILITY_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
+                        <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_service', 'Filter by Service')}><Select value={serviceTypeFilter} onChange={(e) => { setServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_services', 'All Services')}</option>{SERVICE_TYPES.map(type => <option key={type} value={type}>{SERVICE_TYPE_LABELS[type] || type}</option>)}</Select></FormGroup></div>
                         
-                        <div className="flex-1 min-w-[160px]"><FormGroup label="نوع الخدمات المقدمة"><Select value={eencServiceTypeFilter} onChange={(e) => { setEencServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All Types</option>{EENC_SERVICE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</Select></FormGroup></div>
+                        <div className="flex-1 min-w-[160px]"><FormGroup label="نوع الخدمات المقدمة"><Select value={eencServiceTypeFilter} onChange={(e) => { setEencServiceTypeFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_types', 'All Types')}</option>{EENC_SERVICE_TYPES.map(type => <option key={type} value={type}>{EENC_SERVICE_TYPE_LABELS[type] || type}</option>)}</Select></FormGroup></div>
 
-                        <div className="flex-1 min-w-[160px]"><FormGroup label="Functioning Status"><Select value={functioningFilter} onChange={(e) => { setFunctioningFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All</option><option value="Yes">Yes</option><option value="No">No</option><option value="NOT_SET">Not Set</option></Select></FormGroup></div>
-                        <div className="flex-1 min-w-[160px]"><FormGroup label="Filter by Project Name"><Select value={projectFilter} onChange={(e) => { setProjectFilter(e.target.value); setHasManuallySelected(true); }}><option value="">All Projects</option>{(projectNames || []).map(name => <option key={name} value={name}>{name}</option>)}</Select></FormGroup></div>
+                        <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.functioning_status', 'Functioning Status')}><Select value={functioningFilter} onChange={(e) => { setFunctioningFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all', 'All')}</option><option value="Yes">{t('facilities_page.common.yes', 'Yes')}</option><option value="No">{t('facilities_page.common.no', 'No')}</option><option value="NOT_SET">{t('facilities_page.services.not_set', 'Not Set')}</option></Select></FormGroup></div>
+                        <div className="flex-1 min-w-[160px]"><FormGroup label={t('facilities_page.services.filter_project', 'Filter by Project Name')}><Select value={projectFilter} onChange={(e) => { setProjectFilter(e.target.value); setHasManuallySelected(true); }}><option value="">{t('facilities_page.services.all_projects', 'All Projects')}</option>{(projectNames || []).map(name => <option key={name} value={name}>{name}</option>)}</Select></FormGroup></div>
                     </div>
 
                     <div className="flex justify-between items-center my-4">
                         <div className="flex flex-wrap gap-2">
-                            {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>Add New</Button> )}
-                            {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button> )}
+                            {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>{t('facilities_page.services.add_new', 'Add New')}</Button> )}
+                            {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>{t('facilities_page.services.bulk_upload', 'Bulk Upload')}</Button> )}
                             
-                            <Button variant="info" onClick={handleShareBulkUpdateLink}>Share Bulk Update Link</Button>
+                            <Button variant="info" onClick={handleShareBulkUpdateLink}>{t('facilities_page.services.share_bulk_link', 'Share Bulk Update Link')}</Button>
                             
-                            <Button variant="secondary" onClick={handleExportExcel} disabled={!filteredFacilities || filteredFacilities.length === 0}>Export Excel</Button>
+                            <Button variant="secondary" onClick={handleExportExcel} disabled={!filteredFacilities || filteredFacilities.length === 0}>{t('facilities_page.services.export_excel', 'Export Excel')}</Button>
                             
                             {isPdfGenerating ? (
-                                <Button disabled variant="secondary"><Spinner size="sm" /> Generating PDF...</Button>
+                                <Button disabled variant="secondary"><Spinner size="sm" /> {t('facilities_page.services.generating_pdf', 'Generating PDF...')}</Button>
                             ) : (
                                 <>
                                     <Button onClick={() => handlePdfListGeneration('print')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
-                                        <PdfIcon /> Export PDF (Print)
+                                        <PdfIcon /> {t('facilities_page.services.export_pdf_print', 'Export PDF (Print)')}
                                     </Button>
                                     <Button onClick={() => handlePdfListGeneration('screen')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
-                                        <PdfIcon /> Export PDF (Share)
+                                        <PdfIcon /> {t('facilities_page.services.export_pdf_share', 'Export PDF (Share)')}
                                     </Button>
                                 </>
                             )}
                         </div>
                          
                         <div className="flex flex-wrap gap-2">
-                             {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>Find Duplicates</Button> )}
-                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>Clean Data</Button> )}
-                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>Standardize Projects &amp; Organizations</Button> )}
+                             {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>{t('facilities_page.services.find_duplicates', 'Find Duplicates')}</Button> )}
+                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>{t('facilities_page.services.clean_data', 'Clean Data')}</Button> )}
+                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>{t('facilities_page.services.standardize_names', 'Standardize Projects & Organizations')}</Button> )}
                         </div>
                     </div>
 
                     <p className="text-sm text-gray-600 mb-2">
-                        {hasManuallySelected ? `Showing ${totalFacilities} facilities.` : 'Select filters to view data.'}
+                        {hasManuallySelected ? t('facilities_page.services.showing_n', 'Showing {{count}} facilities.', { count: totalFacilities }) : t('facilities_page.services.select_filters', 'Select filters to view data.')}
                     </p>
                      <div className="my-4">
-                        <Input type="search" placeholder="Search by Facility Name..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setHasManuallySelected(true); }} />
+                        <Input type="search" placeholder={t('facilities_page.services.search_placeholder', 'Search by Facility Name...')} value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setHasManuallySelected(true); }} />
                     </div>
                 </>)}
 
                 {isFacilitiesLoading || isReviewLoading || (activeTab === TABS.PENDING && isSubmissionsLoading) ? (
-                    <div className="flex justify-center items-center h-48"><Spinner /></div>
+                    <div className="mt-4"><SkeletonTable rows={8} columns={5} /></div>
                 ) : (
                     <div className="mt-4" id="facility-list-content">
                         {tabsContent[activeTab]}
@@ -2050,10 +2074,10 @@ const ChildHealthServicesView = ({
                     <div className="flex justify-between items-center mt-4 p-4 border-t">
                         <div className="flex items-center gap-4">
                             <span className="text-sm text-gray-700">
-                                Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> (Total: {totalFacilities} facilities)
+                                {t('facilities_page.services.page', 'Page')} <strong>{currentPage}</strong> {t('facilities_page.services.of', 'of')} <strong>{totalPages}</strong> {t('facilities_page.services.total_facilities', '(Total: {{count}} facilities)', { count: totalFacilities })}
                             </span>
                             <div className="flex items-center gap-2">
-                                <label htmlFor="itemsPerPageSelect" className="text-sm font-medium text-gray-700">Per Page:</label>
+                                <label htmlFor="itemsPerPageSelect" className="text-sm font-medium text-gray-700">{t('facilities_page.services.per_page', 'Per Page:')}</label>
                                 <Select
                                     id="itemsPerPageSelect"
                                     value={itemsPerPage}
@@ -2071,8 +2095,8 @@ const ChildHealthServicesView = ({
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="secondary" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} > &larr; Previous </Button>
-                            <Button variant="secondary" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || totalPages === 0} > Next &rarr; </Button>
+                            <Button variant="secondary" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} > &larr; {t('facilities_page.services.previous', 'Previous')} </Button>
+                            <Button variant="secondary" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || totalPages === 0} > {t('facilities_page.services.next', 'Next')} &rarr; </Button>
                         </div>
                     </div>
                 )}

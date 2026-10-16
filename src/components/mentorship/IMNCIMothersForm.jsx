@@ -1,5 +1,6 @@
 // IMNCIMothersForm.jsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
 import {
@@ -51,6 +52,7 @@ const ScoreCircle = ({ score, maxScore }) => {
 
 // --- Sticky Overall Score Component ---
 const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
+    const { t } = useTranslation();
     if (totalScore === null || totalMaxScore === null || totalMaxScore === 0 || totalScore === undefined || totalMaxScore === undefined) return null;
     
     let percentage = Math.round((totalScore / totalMaxScore) * 100);
@@ -69,7 +71,7 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
             dir="ltr"
         >
             <div className="font-bold text-sm sm:text-lg leading-none">{totalMaxScore === 0 ? 'N/A' : `${percentage}%`}</div>
-            <div className="text-[10px] sm:text-xs mt-1 text-center leading-tight">Overall Score</div>
+            <div className="text-[10px] sm:text-xs mt-1 text-center leading-tight">{t('mentorship_extra.imnci_mothers.overall_score', 'Overall Score')}</div>
             <div className="text-[10px] sm:text-xs mt-0 leading-tight">({totalScore}/{totalMaxScore})</div>
         </div>
     );

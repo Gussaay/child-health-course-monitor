@@ -165,15 +165,15 @@ const MentorshipDashboard = ({
         if (canEditStatus) {
             return (
                 <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-[11px] font-bold border border-black rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${isResolvedOrDone ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Resolved/Done">Resolved / Done</option>
+                    <option value="Pending">{t('mentorship_extra.dashboard.status.pending', 'Pending')}</option>
+                    <option value="In Progress">{t('mentorship_extra.dashboard.status.in_progress', 'In Progress')}</option>
+                    <option value="Resolved/Done">{t('mentorship_extra.dashboard.status.resolved_done', 'Resolved / Done')}</option>
                 </select>
             );
         } else {
             return (
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide shadow-sm border border-black ${isResolvedOrDone ? 'bg-emerald-50 text-emerald-700' : displayStatus === 'In Progress' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
-                    {displayStatus === 'Resolved/Done' ? 'Resolved / Done' : displayStatus}
+                    {displayStatus === 'Resolved/Done' ? t('mentorship_extra.dashboard.status.resolved_done', 'Resolved / Done') : displayStatus === 'Pending' ? t('mentorship_extra.dashboard.status.pending', 'Pending') : displayStatus === 'In Progress' ? t('mentorship_extra.dashboard.status.in_progress', 'In Progress') : displayStatus}
                 </span>
             );
         }

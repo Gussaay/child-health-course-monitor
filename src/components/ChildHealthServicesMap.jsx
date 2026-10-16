@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import { Modal, Button } from './CommonComponents';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import 'leaflet-geosearch/dist/geosearch.css';
+import { useTranslation } from 'react-i18next';
 
 // --- Icon Fix (unchanged) ---
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
@@ -66,6 +67,7 @@ const MapClickHandler = ({ isEditing, setPosition }) => {
 
 // --- MAP MODAL COMPONENT ---
 const LocationMapModal = ({ isOpen, onClose, facility, onSaveLocation }) => {
+    const { t } = useTranslation();
     const [position, setPosition] = useState(null);
     const [originalPosition, setOriginalPosition] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -186,8 +188,8 @@ const LocationMapModal = ({ isOpen, onClose, facility, onSaveLocation }) => {
     }
 
     const modalTitle = isEditing
-        ? `Editing Location: ${facility?.['اسم_المؤسسة']}`
-        : `Location of ${facility?.['اسم_المؤسسة']}`;
+        ? t('facilities_page.map.editing_location', 'Editing Location: {{name}}', { name: facility?.['اسم_المؤسسة'] })
+        : t('facilities_page.map.location_of', 'Location of {{name}}', { name: facility?.['اسم_المؤسسة'] });
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={modalTitle} size="lg">
@@ -199,15 +201,15 @@ const LocationMapModal = ({ isOpen, onClose, facility, onSaveLocation }) => {
                  <div className="absolute top-6 right-6 z-[1000] bg-white p-1 rounded-md shadow-lg flex flex-col gap-1">
                     <label className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-100 rounded">
                         <input type="radio" name="tile-provider" value="street" checked={tileProvider === 'street'} onChange={(e) => setTileProvider(e.target.value)} className="form-radio"/>
-                        Street (Detailed)
+                        {t('facilities_page.map.tile_street', 'Street (Detailed)')}
                     </label>
                     <label className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-100 rounded">
                         <input type="radio" name="tile-provider" value="light" checked={tileProvider === 'light'} onChange={(e) => setTileProvider(e.target.value)} className="form-radio"/>
-                        Light
+                        {t('facilities_page.map.tile_light', 'Light')}
                     </label>
                     <label className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-100 rounded">
                         <input type="radio" name="tile-provider" value="satellite" checked={tileProvider === 'satellite'} onChange={(e) => setTileProvider(e.target.value)} className="form-radio"/>
-                        Satellite
+                        {t('facilities_page.map.tile_satellite', 'Satellite')}
                     </label>
                 </div>
                 
@@ -218,9 +220,9 @@ const LocationMapModal = ({ isOpen, onClose, facility, onSaveLocation }) => {
                             variant="secondary"
                             size="sm"
                             onClick={handleResetPosition}
-                            title="Reset marker to its original saved location"
+                            title={t('facilities_page.map.reset_position_title', 'Reset marker to its original saved location')}
                         >
-                            Reset Position
+                            {t('facilities_page.map.reset_position', 'Reset Position')}
                         </Button>
                     </div>
                 )}
@@ -245,30 +247,30 @@ const LocationMapModal = ({ isOpen, onClose, facility, onSaveLocation }) => {
 
                 {!hasValidCoordinates && !isEditing && (
                     <div className="text-center bg-yellow-100 text-yellow-800 p-3 mt-4 rounded-md">
-                        <p>No valid coordinates found for this facility.</p>
-                        <p className="font-semibold">Click 'Edit' to set the location on the map.</p>
+                        <p>{t('facilities_page.map.no_coordinates', 'No valid coordinates found for this facility.')}</p>
+                        <p className="font-semibold">{t('facilities_page.map.click_edit_hint', "Click 'Edit' to set the location on the map.")}</p>
                     </div>
                 )}
 
                 {isEditing && (
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] w-fit text-center font-mono bg-white bg-opacity-80 p-2 rounded shadow-lg pointer-events-none">
-                        <p className="text-xs">Drag, click, or use search to set the location.</p>
-                        <p className="text-sm"><b>Lat:</b> {position[0].toFixed(6)} | <b>Lon:</b> {position[1].toFixed(6)}</p>
+                        <p className="text-xs">{t('facilities_page.map.drag_hint', 'Drag, click, or use search to set the location.')}</p>
+                        <p className="text-sm"><b>{t('facilities_page.map.lat', 'Lat:')}</b> {position[0].toFixed(6)} | <b>{t('facilities_page.map.lon', 'Lon:')}</b> {position[1].toFixed(6)}</p>
                     </div>
                 )}
             </div>
             <div className="flex justify-end p-4 border-t gap-2">
                 {isEditing ? (
                     <>
-                        <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                        <Button variant="secondary" onClick={handleCancelEdit}>{t('facilities_page.common.cancel', 'Cancel')}</Button>
                         <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? 'Saving...' : 'Save Location'}
+                            {isSaving ? t('facilities_page.common.saving', 'Saving...') : t('facilities_page.map.save_location', 'Save Location')}
                         </Button>
                     </>
                 ) : (
                     <>
-                        <Button variant="secondary" onClick={onClose}>Close</Button>
-                        <Button onClick={handleEnterEditMode}>Edit</Button>
+                        <Button variant="secondary" onClick={onClose}>{t('facilities_page.common.close', 'Close')}</Button>
+                        <Button onClick={handleEnterEditMode}>{t('facilities_page.common.edit', 'Edit')}</Button>
                     </>
                 )}
             </div>

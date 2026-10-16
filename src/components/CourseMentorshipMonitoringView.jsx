@@ -37,6 +37,7 @@ import {
     deleteCaseAndObservations,
 } from '../data.js';
 import { notify, confirmDialog } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 // The field forms, imported exactly as SkillsMentorshipView imports them. They
 // are lazy-loaded because the course tab is itself lazy-loaded and most courses
@@ -141,6 +142,16 @@ export const PRACTICE_SERVICES = {
         ],
     },
 };
+
+// Translated labels for the catalogue above. The catalogue itself stays English
+// because it is exported and its titles are also written into records.
+const formTitle = (t, key) => (PRACTICE_FORMS[key]
+    ? t(`compiled_reports.course_mentorship.forms.${key}`, PRACTICE_FORMS[key].title)
+    : undefined);
+const serviceSubtitle = (t, svcKey) => (PRACTICE_SERVICES[svcKey]
+    ? t(`compiled_reports.course_mentorship.services.${svcKey}.subtitle`, PRACTICE_SERVICES[svcKey].subtitle)
+    : undefined);
+const formDesc = (t, svcKey, opt) => t(`compiled_reports.course_mentorship.services.${svcKey}.forms.${opt.key}`, opt.desc);
 
 // A course teaches one thing, but a participant may practise any of them, which
 // is the point of the tab. This only picks the tab's opening selection.
@@ -413,14 +424,14 @@ const runScenarioCheck = (payload, scenario, service) => {
 // ---------------------------------------------------------------------------
 
 function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
+    const { t } = useTranslation();
     if (!cases.length) {
         return (
             <Card>
                 <div className="p-8 text-center">
-                    <h3 className="text-base font-semibold text-slate-700">Nothing recorded yet</h3>
+                    <h3 className="text-base font-semibold text-slate-700">{t('compiled_reports.course_mentorship.saved.empty_title', 'Nothing recorded yet')}</h3>
                     <p className="text-sm text-slate-500 mt-1">
-                        Start a session above. What you record here goes into this participant's
-                        course report.
+                        {t('compiled_reports.course_mentorship.saved.empty_hint', "Start a session above. What you record here goes into this participant's course report.")}
                     </p>
                 </div>
             </Card>
@@ -448,7 +459,7 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
         return {
             c,
             pct,
-            label: PRACTICE_FORMS[c.form_key]?.title || c.record_type || 'Session',
+            label: formTitle(t, c.form_key) || c.record_type || t('compiled_reports.course_mentorship.saved.session', 'Session'),
             scoreText: possible ? `${earned}/${possible} (${pct}%)` : '—',
             tone: pct === null ? 'text-slate-500'
                 : pct >= 80 ? 'text-green-700'
@@ -458,7 +469,7 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
 
     return (
         <Card className="p-3 sm:p-4">
-            <h3 className="text-lg font-semibold mb-3">Recorded practice sessions</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('compiled_reports.course_mentorship.saved.title', 'Recorded practice sessions')}</h3>
 
             {/* Phone view: a seven-column table is unreadable at 360px. */}
             <div className="md:hidden space-y-3">
@@ -470,21 +481,21 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
                                     #{c.case_serial} · {label}
                                 </div>
                                 <div className="text-sm text-slate-500">
-                                    {c.mentorship_service} · {c.encounter_date} · Day {c.day_of_course}
+                                    {c.mentorship_service} · {c.encounter_date} · {t('compiled_reports.course_mentorship.saved.day_n', 'Day {{day}}', { day: c.day_of_course })}
                                 </div>
                             </div>
                             <span className={`font-semibold text-sm flex-shrink-0 ${tone}`}>{scoreText}</span>
                         </div>
                         {c.status === 'draft' && (
                             <span className="inline-block mt-2 px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">
-                                Draft
+                                {t('compiled_reports.course_mentorship.labels.draft', 'Draft')}
                             </span>
                         )}
                         <div className="flex gap-2 justify-end pt-2 mt-2 border-t border-slate-200">
                             {PRACTICE_FORMS[c.form_key]?.canReopen !== false && (
-                                <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>Open</Button>
+                                <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>{t('compiled_reports.course_mentorship.buttons.open', 'Open')}</Button>
                             )}
-                            <Button variant="danger" size="sm" onClick={() => onDelete(c)}>Delete</Button>
+                            <Button variant="danger" size="sm" onClick={() => onDelete(c)}>{t('compiled_reports.course_mentorship.buttons.delete', 'Delete')}</Button>
                         </div>
                     </div>
                 ))}
@@ -495,12 +506,12 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
                     <thead>
                         <tr className="bg-slate-100 text-left">
                             <th className="p-2">#</th>
-                            <th className="p-2">Training</th>
-                            <th className="p-2">Form</th>
-                            <th className="p-2">Date</th>
-                            <th className="p-2">Day</th>
-                            <th className="p-2">Score</th>
-                            <th className="p-2 text-right">Actions</th>
+                            <th className="p-2">{t('compiled_reports.course_mentorship.labels.training', 'Training')}</th>
+                            <th className="p-2">{t('compiled_reports.course_mentorship.labels.form', 'Form')}</th>
+                            <th className="p-2">{t('compiled_reports.course_mentorship.saved.date', 'Date')}</th>
+                            <th className="p-2">{t('compiled_reports.course_mentorship.saved.day', 'Day')}</th>
+                            <th className="p-2">{t('compiled_reports.course_mentorship.saved.score', 'Score')}</th>
+                            <th className="p-2 text-right">{t('compiled_reports.course_mentorship.saved.actions', 'Actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -512,7 +523,7 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
                                     {label}
                                     {c.status === 'draft' && (
                                         <span className="ml-2 px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">
-                                            Draft
+                                            {t('compiled_reports.course_mentorship.labels.draft', 'Draft')}
                                         </span>
                                     )}
                                 </td>
@@ -521,10 +532,10 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
                                 <td className={`p-2 font-semibold ${tone}`}>{scoreText}</td>
                                 <td className="p-2 text-right whitespace-nowrap">
                                     {PRACTICE_FORMS[c.form_key]?.canReopen !== false && (
-                                        <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>Open</Button>
+                                        <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>{t('compiled_reports.course_mentorship.buttons.open', 'Open')}</Button>
                                     )}
                                     <Button variant="danger" size="sm" className="ml-2" onClick={() => onDelete(c)}>
-                                        Delete
+                                        {t('compiled_reports.course_mentorship.buttons.delete', 'Delete')}
                                     </Button>
                                 </td>
                             </tr>
@@ -541,6 +552,7 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
 // ---------------------------------------------------------------------------
 
 function ScenarioCheckPanel({ check }) {
+    const { t } = useTranslation();
     const { kind, result, scenario } = check;
     const isEtat = kind === 'ETAT';
     const ok = isEtat
@@ -554,53 +566,52 @@ function ScenarioCheckPanel({ check }) {
             }`}>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <h4 className="font-bold text-slate-800 min-w-0 break-words">
-                        Case {scenario.id} — {scenario.title || scenario.childName}
+                        {t('compiled_reports.course_mentorship.check.case_title', 'Case {{id}} — {{title}}', { id: scenario.id, title: scenario.title || scenario.childName })}
                     </h4>
                     <span className={`self-start shrink-0 px-3 py-1 rounded-md text-white font-semibold text-sm ${
                         ok ? 'bg-green-600' : 'bg-amber-600'
                     }`}>
                         {isEtat
-                            ? (result.mentorPct === null ? 'Recorded' : `${result.mentorPct}%`)
-                            : `${result.agreementPct}% agreement`}
+                            ? (result.mentorPct === null ? t('compiled_reports.course_mentorship.check.recorded', 'Recorded') : `${result.mentorPct}%`)
+                            : t('compiled_reports.course_mentorship.check.agreement', '{{pct}}% agreement', { pct: result.agreementPct })}
                     </span>
                 </div>
 
                 {isEtat ? (
                     <div className="mt-3 text-sm">
-                        <div className="font-semibold text-slate-700">Checklists</div>
+                        <div className="font-semibold text-slate-700">{t('compiled_reports.course_mentorship.check.checklists', 'Checklists')}</div>
                         {result.checklistsCorrect ? (
                             <p className="text-green-800">
-                                Correct — this case calls for {result.expected.join(' and ')}, and that is what you opened.
+                                {t('compiled_reports.course_mentorship.check.correct', 'Correct — this case calls for {{list}}, and that is what you opened.', { list: result.expected.join(t('compiled_reports.course_mentorship.check.and', ' and ')) })}
                             </p>
                         ) : (
                             <ul className="list-disc ml-5 text-amber-900">
                                 {result.missing.length > 0 && (
-                                    <li>Missed: {result.missing.join(', ')} — the case needed this and it was not opened.</li>
+                                    <li>{t('compiled_reports.course_mentorship.check.missed', 'Missed: {{list}} — the case needed this and it was not opened.', { list: result.missing.join(', ') })}</li>
                                 )}
                                 {result.extra.length > 0 && (
-                                    <li>Not needed: {result.extra.join(', ')} — this case does not call for it.</li>
+                                    <li>{t('compiled_reports.course_mentorship.check.not_needed', 'Not needed: {{list}} — this case does not call for it.', { list: result.extra.join(', ') })}</li>
                                 )}
                             </ul>
                         )}
                         {result.mentorPct !== null && (
                             <p className="text-slate-600 mt-2">
-                                You marked {result.score} of {result.max} applicable items done
-                                ({result.mentorPct}%). The standard for this case is {result.standardPct}%.
+                                {t('compiled_reports.course_mentorship.check.marked', 'You marked {{score}} of {{max}} applicable items done ({{pct}}%). The standard for this case is {{std}}%.', { score: result.score, max: result.max, pct: result.mentorPct, std: result.standardPct })}
                             </p>
                         )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-3 gap-3 text-sm mt-3">
                         <div>
-                            <div className="text-slate-500 text-xs">You scored</div>
+                            <div className="text-slate-500 text-xs">{t('compiled_reports.course_mentorship.check.you_scored', 'You scored')}</div>
                             <div className="font-semibold">{result.mentorScore}/{result.mentorMax}</div>
                         </div>
                         <div>
-                            <div className="text-slate-500 text-xs">Standard</div>
+                            <div className="text-slate-500 text-xs">{t('compiled_reports.course_mentorship.check.standard', 'Standard')}</div>
                             <div className="font-semibold">{result.standardScore}/{result.standardMax}</div>
                         </div>
                         <div>
-                            <div className="text-slate-500 text-xs">Difference</div>
+                            <div className="text-slate-500 text-xs">{t('compiled_reports.course_mentorship.check.difference', 'Difference')}</div>
                             <div className={`font-semibold ${result.withinTolerance ? 'text-green-700' : 'text-amber-700'}`}>
                                 {result.difference > 0 ? '+' : ''}{result.difference}
                             </div>
@@ -614,20 +625,20 @@ function ScenarioCheckPanel({ check }) {
                 <div className="mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm">
                     {scenario.expectedRecognition && (
                         <p className="mb-2">
-                            <span className="font-semibold text-slate-700">Expected recognition: </span>
+                            <span className="font-semibold text-slate-700">{t('compiled_reports.course_mentorship.check.expected_recognition', 'Expected recognition: ')}</span>
                             <span className="text-slate-700">{scenario.expectedRecognition}</span>
                         </p>
                     )}
                     {Array.isArray(scenario.expectedManagement) ? (
                         <>
-                            <div className="font-semibold text-slate-700">Expected management</div>
+                            <div className="font-semibold text-slate-700">{t('compiled_reports.course_mentorship.check.expected_management', 'Expected management')}</div>
                             <ul className="list-disc ml-5 text-slate-700 mt-1 space-y-1">
                                 {scenario.expectedManagement.map((line, i) => <li key={i}>{line}</li>)}
                             </ul>
                         </>
                     ) : scenario.expectedManagement ? (
                         <p>
-                            <span className="font-semibold text-slate-700">Expected management: </span>
+                            <span className="font-semibold text-slate-700">{t('compiled_reports.course_mentorship.check.expected_management_colon', 'Expected management: ')}</span>
                             <span className="text-slate-700">{scenario.expectedManagement}</span>
                         </p>
                     ) : null}
@@ -644,6 +655,7 @@ function ScenarioCheckPanel({ check }) {
 export function MentorshipMonitoringView({
     course, participant, participants = [], onChangeParticipant, isPublicView = false,
 }) {
+    const { t } = useTranslation();
     const subCourse = useMemo(() => {
         try {
             return getMentorshipSubType(course, participant);
@@ -711,7 +723,6 @@ export function MentorshipMonitoringView({
     const activeCaseIdsRef = React.useRef({});
 
     const availableForms = PRACTICE_SERVICES[service]?.forms || [];
-    const form = PRACTICE_FORMS[formKey];
     const trainingFacility = useMemo(
         () => buildTrainingFacility(course, participant),
         [course, participant]
@@ -751,7 +762,7 @@ export function MentorshipMonitoringView({
             } catch (err) {
                 if (cancelled) return;
                 console.error('Failed to load course practice records:', err);
-                setError("Could not load this participant's practice records. Check the connection and reload.");
+                setError(true);
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -907,8 +918,7 @@ export function MentorshipMonitoringView({
         if (PRACTICE_FORMS[key]?.canReopen === false) {
             setToast({
                 show: true,
-                message: `A saved ${PRACTICE_FORMS[key].title} cannot be reopened for editing. `
-                    + 'Record a new session to correct it, then delete this one.',
+                message: t('compiled_reports.course_mentorship.toast.cannot_reopen', 'A saved {{form}} cannot be reopened for editing. Record a new session to correct it, then delete this one.', { form: formTitle(t, key) }),
                 type: 'info',
             });
             return;
@@ -927,7 +937,7 @@ export function MentorshipMonitoringView({
     };
 
     const handleDeleteSession = async (caseToDelete) => {
-        if (!await confirmDialog('Delete this practice session and everything recorded in it? This cannot be undone.')) return;
+        if (!await confirmDialog(t('compiled_reports.course_mentorship.confirm_delete', 'Delete this practice session and everything recorded in it? This cannot be undone.'))) return;
 
         const prevCases = [...cases];
         const prevObs = [...observations];
@@ -940,7 +950,7 @@ export function MentorshipMonitoringView({
             console.error('Failed to delete practice session:', err);
             setCases(prevCases);
             setObservations(prevObs);
-            notify(`Could not delete this session: ${err.message}. It has been restored in your view.`);
+            notify(t('compiled_reports.course_mentorship.delete_failed', 'Could not delete this session: {{error}}. It has been restored in your view.', { error: err.message }));
         }
     };
 
@@ -984,7 +994,7 @@ export function MentorshipMonitoringView({
         setIsVisitReportModalOpen: () => setCompanionForm('visit_report'),
         setIsDashboardModalOpen: () => setToast({
             show: true,
-            message: 'The mentorship dashboard covers facility visits, so it is not part of course practice.',
+            message: t('compiled_reports.course_mentorship.toast.dashboard_na', 'The mentorship dashboard covers facility visits, so it is not part of course practice.'),
             type: 'info',
         }),
         draftCount: 0,
@@ -1060,8 +1070,8 @@ export function MentorshipMonitoringView({
 
         return (
             <EmptyState
-                title="Form unavailable"
-                message="This training has no practice form yet."
+                title={t('compiled_reports.course_mentorship.form_unavailable.title', 'Form unavailable')}
+                message={t('compiled_reports.course_mentorship.form_unavailable.message', 'This training has no practice form yet.')}
             />
         );
     };
@@ -1075,7 +1085,7 @@ export function MentorshipMonitoringView({
                 header here would just push the form down the page. */}
             {!isPublicView && (
                 <PageHeader
-                    title="Mentorship Practice"
+                    title={t('compiled_reports.course_mentorship.page_title', 'Mentorship Practice')}
                     subtitle={`${PRACTICE_SERVICES[service]?.label || service} — ${participant?.name || ''}`}
                 />
             )}
@@ -1099,21 +1109,20 @@ export function MentorshipMonitoringView({
             )}
 
             {error && (
-                <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div></Card>
+                <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{t('compiled_reports.course_mentorship.errors.load', "Could not load this participant's practice records. Check the connection and reload.")}</div></Card>
             )}
 
             <Modal
                 isOpen={showSuccess}
                 onClose={() => { setShowSuccess(false); setSavedCheck(null); }}
-                title="Session recorded"
+                title={t('compiled_reports.course_mentorship.success.title', 'Session recorded')}
                 size={savedCheck ? 'lg' : undefined}
             >
                 <div className="p-6">
                     <div className="text-center">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">Saved to the course report</h3>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">{t('compiled_reports.course_mentorship.success.heading', 'Saved to the course report')}</h3>
                         <p className="text-gray-600">
-                            This is now part of {participant?.name}'s course record. It stays inside the
-                            course and is not added to the facility mentorship records.
+                            {t('compiled_reports.course_mentorship.success.body', "This is now part of {{name}}'s course record. It stays inside the course and is not added to the facility mentorship records.", { name: participant?.name })}
                         </p>
                     </div>
 
@@ -1123,25 +1132,25 @@ export function MentorshipMonitoringView({
                         onClick={() => { setShowSuccess(false); setSavedCheck(null); }}
                         className="w-full mt-6 bg-green-600 hover:bg-green-700 border-green-600"
                     >
-                        Done
+                        {t('compiled_reports.course_mentorship.buttons.done', 'Done')}
                     </Button>
                 </div>
             </Modal>
 
-            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Session setup" size="lg">
+            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title={t('compiled_reports.course_mentorship.setup.title', 'Session setup')} size="lg">
                 <div className="p-4">
                     {applicableServices.length === 1 ? (
                         <div className="mb-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-                            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Training</div>
+                            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('compiled_reports.course_mentorship.labels.training', 'Training')}</div>
                             <div className="font-semibold text-slate-800 mt-0.5">
                                 {PRACTICE_SERVICES[applicableServices[0]]?.label}
                             </div>
                             <div className="text-xs text-slate-500">
-                                {PRACTICE_SERVICES[applicableServices[0]]?.subtitle}
+                                {serviceSubtitle(t, applicableServices[0])}
                             </div>
                         </div>
                     ) : (
-                        <FormGroup label="Which training?" className="mb-4">
+                        <FormGroup label={t('compiled_reports.course_mentorship.setup.which_training', 'Which training?')} className="mb-4">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 {applicableServices.map(key => {
                                     const svc = PRACTICE_SERVICES[key];
@@ -1158,7 +1167,7 @@ export function MentorshipMonitoringView({
                                         >
                                             <div className="font-semibold text-sm">{svc.label}</div>
                                             <div className={`text-xs mt-1 ${service === key ? 'text-sky-100' : 'text-slate-500'}`}>
-                                                {svc.subtitle}
+                                                {serviceSubtitle(t, key)}
                                             </div>
                                         </button>
                                     );
@@ -1169,14 +1178,14 @@ export function MentorshipMonitoringView({
 
                     {availableForms.length === 1 ? (
                         <div className="mb-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-                            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Form</div>
+                            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('compiled_reports.course_mentorship.labels.form', 'Form')}</div>
                             <div className="font-semibold text-slate-800 mt-0.5">
-                                {PRACTICE_FORMS[availableForms[0].key]?.title}
+                                {formTitle(t, availableForms[0].key)}
                             </div>
-                            <div className="text-xs text-slate-500">{availableForms[0].desc}</div>
+                            <div className="text-xs text-slate-500">{formDesc(t, service, availableForms[0])}</div>
                         </div>
                     ) : (
-                        <FormGroup label="Which form?" className="mb-4">
+                        <FormGroup label={t('compiled_reports.course_mentorship.setup.which_form', 'Which form?')} className="mb-4">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                 {availableForms.map(opt => (
                                     <button
@@ -1189,9 +1198,9 @@ export function MentorshipMonitoringView({
                                                 : 'bg-white border-slate-300 hover:bg-slate-50'
                                         }`}
                                     >
-                                        <div className="font-semibold text-sm">{PRACTICE_FORMS[opt.key]?.title}</div>
+                                        <div className="font-semibold text-sm">{formTitle(t, opt.key)}</div>
                                         <div className={`text-xs mt-1 ${formKey === opt.key ? 'text-sky-100' : 'text-slate-500'}`}>
-                                            {opt.desc}
+                                            {formDesc(t, service, opt)}
                                         </div>
                                     </button>
                                 ))}
@@ -1201,7 +1210,7 @@ export function MentorshipMonitoringView({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {participants.length > 0 && (
-                            <FormGroup label="Select participant" className="sm:col-span-2">
+                            <FormGroup label={t('compiled_reports.course_mentorship.setup.select_participant', 'Select participant')} className="sm:col-span-2">
                                 <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
                                     {participants.map(p => (
                                         <option key={p.id} value={p.id}>{p.name} — {p.group}</option>
@@ -1210,9 +1219,9 @@ export function MentorshipMonitoringView({
                             </FormGroup>
                         )}
                         {scenarios.length > 0 && formKey === 'skills_assessment' && (
-                            <FormGroup label="Standard case" className="sm:col-span-2">
+                            <FormGroup label={t('compiled_reports.course_mentorship.setup.standard_case', 'Standard case')} className="sm:col-span-2">
                                 <Select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
-                                    <option value="">No standard case — free practice</option>
+                                    <option value="">{t('compiled_reports.course_mentorship.setup.no_standard_case', 'No standard case — free practice')}</option>
                                     {scenarios.map(sc => (
                                         <option key={sc.id} value={sc.id}>
                                             {sc.id} · {sc.title || sc.childName}
@@ -1221,38 +1230,36 @@ export function MentorshipMonitoringView({
                                 </Select>
                             </FormGroup>
                         )}
-                        <FormGroup label="Course day">
+                        <FormGroup label={t('compiled_reports.course_mentorship.setup.course_day', 'Course day')}>
                             <Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>
                                 {[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}
                             </Select>
                         </FormGroup>
                         {formKey === 'skills_assessment' && service === 'IMNCI' && (
-                            <FormGroup label="Child age (months)">
+                            <FormGroup label={t('compiled_reports.course_mentorship.setup.child_age', 'Child age (months)')}>
                                 <Input
                                     type="number"
                                     value={caseAgeMonths}
                                     onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))}
-                                    placeholder="Optional"
+                                    placeholder={t('compiled_reports.course_mentorship.setup.optional', 'Optional')}
                                 />
                             </FormGroup>
                         )}
                     </div>
 
                     <p className="text-xs text-slate-500 mt-4">
-                        This opens the same form used during facility mentorship. The result is
-                        saved to the course report for {participant?.name || 'this participant'} and
-                        is not added to the facility mentorship records.
+                        {t('compiled_reports.course_mentorship.setup.note', 'This opens the same form used during facility mentorship. The result is saved to the course report for {{name}} and is not added to the facility mentorship records.', { name: participant?.name || t('compiled_reports.course_mentorship.this_participant', 'this participant') })}
                     </p>
                 </div>
                 <div className="p-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-gray-50 rounded-b-lg">
                     <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setShowSetupModal(false)}>
-                        Close
+                        {t('compiled_reports.course_mentorship.buttons.close', 'Close')}
                     </Button>
                     <Button
                         className="w-full sm:w-auto"
                         onClick={() => { setShowSetupModal(false); setShowForm(true); }}
                     >
-                        Start session
+                        {t('compiled_reports.course_mentorship.buttons.start_session', 'Start session')}
                     </Button>
                 </div>
             </Modal>
@@ -1264,20 +1271,19 @@ export function MentorshipMonitoringView({
             {!showForm && !loading && (isPublicView ? (
                 <div className="mb-4">
                     <Button className="w-full sm:w-auto" onClick={startNewSession}>
-                        + New session
+                        {t('compiled_reports.course_mentorship.buttons.new_session', '+ New session')}
                     </Button>
                 </div>
             ) : (
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
                     <div className="min-w-0">
-                        <h3 className="text-lg font-bold text-slate-800">Start a practice session</h3>
+                        <h3 className="text-lg font-bold text-slate-800">{t('compiled_reports.course_mentorship.start.title', 'Start a practice session')}</h3>
                         <p className="text-sm text-slate-500">
-                            The same forms used in the field. Everything is saved to
-                            {' '}{participant?.name || 'this participant'}'s course report.
+                            {t('compiled_reports.course_mentorship.start.body', "The same forms used in the field. Everything is saved to {{name}}'s course report.", { name: participant?.name || t('compiled_reports.course_mentorship.this_participant', 'this participant') })}
                         </p>
                     </div>
                     <Button className="w-full sm:w-auto flex-shrink-0" onClick={startNewSession}>
-                        + New session
+                        {t('compiled_reports.course_mentorship.buttons.new_session', '+ New session')}
                     </Button>
                 </div>
             ))}
@@ -1288,13 +1294,13 @@ export function MentorshipMonitoringView({
                         <div className="min-w-0">
                             <h3 className="text-base sm:text-lg font-semibold break-words">
                                 {editingCase
-                                    ? `Editing #${editingCase.case_serial} — ${form?.title}`
-                                    : `New #${nextSerial} — ${form?.title}`}
+                                    ? t('compiled_reports.course_mentorship.form_header.editing', 'Editing #{{serial}} — {{title}}', { serial: editingCase.case_serial, title: formTitle(t, formKey) })
+                                    : t('compiled_reports.course_mentorship.form_header.new', 'New #{{serial}} — {{title}}', { serial: nextSerial, title: formTitle(t, formKey) })}
                             </h3>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600 mt-1">
-                                <span><span className="font-semibold">Training:</span> {PRACTICE_SERVICES[service]?.label}</span>
-                                <span><span className="font-semibold">Day:</span> {dayOfCourse}</span>
-                                <span><span className="font-semibold">Sub-course:</span> {subCourse || '—'}</span>
+                                <span><span className="font-semibold">{t('compiled_reports.course_mentorship.form_header.training', 'Training:')}</span> {PRACTICE_SERVICES[service]?.label}</span>
+                                <span><span className="font-semibold">{t('compiled_reports.course_mentorship.form_header.day', 'Day:')}</span> {dayOfCourse}</span>
+                                <span><span className="font-semibold">{t('compiled_reports.course_mentorship.form_header.sub_course', 'Sub-course:')}</span> {subCourse || '—'}</span>
                             </div>
                         </div>
                         <Button
@@ -1303,7 +1309,7 @@ export function MentorshipMonitoringView({
                             className="w-full sm:w-auto flex-shrink-0"
                             onClick={() => setShowSetupModal(true)}
                         >
-                            Edit setup
+                            {t('compiled_reports.course_mentorship.buttons.edit_setup', 'Edit setup')}
                         </Button>
                     </div>
 
@@ -1316,7 +1322,7 @@ export function MentorshipMonitoringView({
                         <div className="mb-4 p-3 rounded-lg border border-sky-200 bg-sky-50">
                             <div className="flex flex-wrap items-baseline gap-2">
                                 <span className="px-2 py-0.5 rounded bg-sky-600 text-white text-xs font-semibold">
-                                    Case {scenario.id}
+                                    {t('compiled_reports.course_mentorship.case_n', 'Case {{id}}', { id: scenario.id })}
                                 </span>
                                 <span className="font-semibold text-slate-800">
                                     {scenario.title || scenario.childName}
@@ -1326,8 +1332,7 @@ export function MentorshipMonitoringView({
                                 {scenario.presentation || scenario.vignette}
                             </p>
                             <p className="text-xs text-slate-500 mt-2">
-                                Work the case as you would in the field. Your session is checked against the
-                                standard answer once you save, and the answer is shown to you then.
+                                {t('compiled_reports.course_mentorship.case_hint', 'Work the case as you would in the field. Your session is checked against the standard answer once you save, and the answer is shown to you then.')}
                             </p>
                         </div>
                     )}
@@ -1343,7 +1348,7 @@ export function MentorshipMonitoringView({
                 <Modal
                     isOpen={!!companionForm}
                     onClose={() => { releaseSlot(companionForm, service); setCompanionForm(null); }}
-                    title={PRACTICE_FORMS[companionForm]?.title || 'Form'}
+                    title={formTitle(t, companionForm) || t('compiled_reports.course_mentorship.labels.form', 'Form')}
                     size="full"
                 >
                     <div className="p-0 sm:p-4 bg-gray-100">

@@ -1,5 +1,6 @@
 // VisitReports.jsx
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getAuth } from "firebase/auth";
 import { Timestamp, collection, getDocs, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -17,8 +18,9 @@ import { PlusCircle, Trash2, Camera, Save, Clock, CheckCircle } from 'lucide-rea
 
 // --- Helper Component: Success Modal ---
 const SuccessModal = ({ isOpen, onClose, message }) => {
+    const { t } = useTranslation();
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Success" size="sm">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('mentorship_extra.visit_reports.success', 'Success')} size="sm">
             <div className="p-6 flex flex-col items-center justify-center text-center">
                 <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
                 <h3 className="text-xl font-bold text-gray-900 mb-2">تم الحفظ بنجاح!</h3>
@@ -96,6 +98,8 @@ const FacilitySnapshotSummary = ({ facility, serviceType }) => {
 
 // --- Helper Component for Previous Problems ---
 const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, onUpdateStatus, serviceType }) => {
+    const { t } = useTranslation();
+    const statusLabels = { 'Pending': t('mentorship_extra.visit_reports.status.pending', 'Pending'), 'In Progress': t('mentorship_extra.visit_reports.status.in_progress', 'In Progress'), 'Resolved': t('mentorship_extra.visit_reports.status.resolved', 'Resolved') };
     const previousProblems = useMemo(() => {
         if (!reports) return [];
         const problems = [];
@@ -151,7 +155,7 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
                                         prob.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                                         'bg-yellow-100 text-yellow-800'
                                     }`}>
-                                        {prob.status || 'Pending'}
+                                        {statusLabels[prob.status || 'Pending'] || prob.status}
                                     </span>
                                 </td>
                                 <td className="px-2 py-2 border align-top">
@@ -160,9 +164,9 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
                                         defaultValue={prob.status || 'Pending'} 
                                         onChange={(e) => onUpdateStatus(prob.reportId, prob.challengeId, e.target.value, serviceType)}
                                     >
-                                        <option value="Pending">Pending</option>
-                                        <option value="In Progress">In Progress</option>
-                                        <option value="Resolved">Resolved</option>
+                                        <option value="Pending">{t('mentorship_extra.visit_reports.status.pending', 'Pending')}</option>
+                                        <option value="In Progress">{t('mentorship_extra.visit_reports.status.in_progress', 'In Progress')}</option>
+                                        <option value="Resolved">{t('mentorship_extra.visit_reports.status.resolved', 'Resolved')}</option>
                                     </select>
                                 </td>
                             </tr>
@@ -256,6 +260,7 @@ export const IMNCIVisitReport = ({
     // that visit and this component stops deriving its own.
     lockedVisitNumber = false
 }) => {
+    const { t } = useTranslation();
     const auth = getAuth();
     const user = auth.currentUser;
 
@@ -1017,9 +1022,9 @@ export const IMNCIVisitReport = ({
                                                     <td className="border p-1"><Textarea value={row.solution} onChange={(e) => handleChallengeChange(row.id, 'solution', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
                                                     <td className="border align-top p-1">
                                                         <Select value={row.status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'status', e.target.value)} className="text-[11px] font-bold p-1 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
-                                                            <option value="Pending">Pending</option>
-                                                            <option value="In Progress">In Progress</option>
-                                                            <option value="Resolved">Resolved</option>
+                                                            <option value="Pending">{t('mentorship_extra.visit_reports.status.pending', 'Pending')}</option>
+                                                            <option value="In Progress">{t('mentorship_extra.visit_reports.status.in_progress', 'In Progress')}</option>
+                                                            <option value="Resolved">{t('mentorship_extra.visit_reports.status.resolved', 'Resolved')}</option>
                                                         </Select>
                                                     </td>
                                                     <td className="border align-top p-1">
@@ -1105,6 +1110,7 @@ export const EENCVisitReport = ({
     // that visit and this component stops deriving its own.
     lockedVisitNumber = false
 }) => {
+    const { t } = useTranslation();
     const auth = getAuth();
     const user = auth.currentUser;
 
@@ -1793,9 +1799,9 @@ export const EENCVisitReport = ({
                                                     <td className="border p-1"><Textarea value={row.solution} onChange={(e) => handleChallengeChange(row.id, 'solution', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
                                                     <td className="border align-top p-1">
                                                         <Select value={row.status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'status', e.target.value)} className="text-[11px] font-bold p-1 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
-                                                            <option value="Pending">Pending</option>
-                                                            <option value="In Progress">In Progress</option>
-                                                            <option value="Resolved">Resolved</option>
+                                                            <option value="Pending">{t('mentorship_extra.visit_reports.status.pending', 'Pending')}</option>
+                                                            <option value="In Progress">{t('mentorship_extra.visit_reports.status.in_progress', 'In Progress')}</option>
+                                                            <option value="Resolved">{t('mentorship_extra.visit_reports.status.resolved', 'Resolved')}</option>
                                                         </Select>
                                                     </td>
                                                     <td className="border align-top p-1">

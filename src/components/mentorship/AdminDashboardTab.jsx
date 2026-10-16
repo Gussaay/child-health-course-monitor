@@ -793,7 +793,7 @@ const AdminDashboardTab = ({
                 {t('Program Performance by')} {t(geographicLevelName)} {scopeTitle}
             </h3>
             <GeographicVolumeTable 
-                title={`Volume & Coverage by ${geographicLevelName}`} 
+                title={t('mentorship_extra.admin_dashboard.volume_by', 'Volume & Coverage by {{level}}', { level: t(geographicLevelName) })} 
                 data={geographicKpis} 
                 locationLabel={geographicLevelName} 
             />

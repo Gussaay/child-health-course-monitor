@@ -30,8 +30,18 @@ import { ReportsView } from './ReportsView';
 import { ExerciseCourseReport } from './imnci'; 
 import { FinalReportManager, ReportDocumentManager } from './FinalReportManager';
 import { notify } from './dialogs';
+import { useTranslation } from 'react-i18next';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
+
+// English labels stay the values the code compares; these only pick the translation key.
+const CATEGORY_KEYS = { 'All': 'all', 'Perfect': 'perfect', 'Excellent': 'excellent', 'Good': 'good', 'Fair': 'fair', 'Fail': 'fail', 'Data Incomplete': 'data_incomplete' };
+const HEADER_KEYS = {
+    'Participant Name': 'participant_name', 'Total Cases': 'total_cases', 'EENC Score': 'eenc_score', 'Maternal Score': 'maternal_score',
+    'Neonatal Score': 'neonatal_score', 'Overall Score': 'overall_score', 'Practical Category': 'practical_category',
+    'Pre-Test Result': 'pre_test_result', 'Post-Test Result': 'post_test_result', '% Increase': 'pct_increase',
+    'Average Improvement': 'average_improvement', 'Group': 'group', 'Pre-Test': 'pre_test', 'Post-Test': 'post_test'
+};
 
 // --- Icon Components ---
 const CopyIcon = () => (
@@ -58,31 +68,38 @@ const LegendBadge = ({ colorClass, label, range }) => (
     </div>
 );
 
-const RawScoreLegend = () => (
+const RawScoreLegend = () => {
+    const { t } = useTranslation();
+    return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 border-y border-gray-100 mb-3 text-xs print-hide">
         
-        <LegendBadge colorClass="bg-green-200 text-green-800" label="Perfect" range="100%" />
-        <LegendBadge colorClass="bg-yellow-200 text-yellow-800" label="Excellent" range="95% - 99.9%" />
-        <LegendBadge colorClass="bg-orange-200 text-orange-800" label="Good" range="90% - 94.9%" />
-        <LegendBadge colorClass="bg-red-200 text-red-800" label="Fail" range="< 90%" />
-        <LegendBadge colorClass="bg-gray-700 text-white" label="Data Incomplete" range="N/A" />
+        <LegendBadge colorClass="bg-green-200 text-green-800" label={t('course_report.category.perfect', 'Perfect')} range="100%" />
+        <LegendBadge colorClass="bg-yellow-200 text-yellow-800" label={t('course_report.category.excellent', 'Excellent')} range="95% - 99.9%" />
+        <LegendBadge colorClass="bg-orange-200 text-orange-800" label={t('course_report.category.good', 'Good')} range="90% - 94.9%" />
+        <LegendBadge colorClass="bg-red-200 text-red-800" label={t('course_report.category.fail', 'Fail')} range="< 90%" />
+        <LegendBadge colorClass="bg-gray-700 text-white" label={t('course_report.category.data_incomplete', 'Data Incomplete')} range={t('course_report.na', 'N/A')} />
     </div>
-);
+    );
+};
 
-const ImprovementScoreLegend = () => (
+const ImprovementScoreLegend = () => {
+    const { t } = useTranslation();
+    return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 border-y border-gray-100 mb-3 text-xs print-hide">
         
-        <LegendBadge colorClass="bg-green-200 text-green-800" label="Perfect" range="> 50%" />
-        <LegendBadge colorClass="bg-yellow-200 text-yellow-800" label="Excellent" range="30% - 50%" />
-        <LegendBadge colorClass="bg-gray-200 text-gray-800" label="Good" range="15% - 29.9%" />
-        <LegendBadge colorClass="bg-orange-200 text-orange-800" label="Fair" range="0% - 14.9%" />
-        <LegendBadge colorClass="bg-red-200 text-red-800" label="Fail" range="< 0%" />
-        <LegendBadge colorClass="bg-gray-700 text-white" label="Data Incomplete" range="N/A" />
+        <LegendBadge colorClass="bg-green-200 text-green-800" label={t('course_report.category.perfect', 'Perfect')} range="> 50%" />
+        <LegendBadge colorClass="bg-yellow-200 text-yellow-800" label={t('course_report.category.excellent', 'Excellent')} range="30% - 50%" />
+        <LegendBadge colorClass="bg-gray-200 text-gray-800" label={t('course_report.category.good', 'Good')} range="15% - 29.9%" />
+        <LegendBadge colorClass="bg-orange-200 text-orange-800" label={t('course_report.category.fair', 'Fair')} range="0% - 14.9%" />
+        <LegendBadge colorClass="bg-red-200 text-red-800" label={t('course_report.category.fail', 'Fail')} range="< 0%" />
+        <LegendBadge colorClass="bg-gray-700 text-white" label={t('course_report.category.data_incomplete', 'Data Incomplete')} range={t('course_report.na', 'N/A')} />
     </div>
-);
+    );
+};
 
 // --- INTERNAL COMPONENT: ShareModal ---
 function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSave }) {
+    const { t } = useTranslation();
     const [accessLevel, setAccessLevel] = useState('private');
     const [sharedWith, setSharedWith] = useState([]);
     const [emailInput, setEmailInput] = useState('');
@@ -139,10 +156,10 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
         const shareUrl = `${window.location.origin}/${routePrefix}/${shareableItem.id}`;
         
         navigator.clipboard.writeText(shareUrl).then(() => {
-            setCopySuccess('Link copied!');
+            setCopySuccess(t('course_report.share.link_copied', 'Link copied!'));
             setTimeout(() => setCopySuccess(''), 2000);
         }).catch(err => {
-            setCopySuccess('Failed to copy.');
+            setCopySuccess(t('course_report.share.copy_failed', 'Failed to copy.'));
         });
     };
 
@@ -150,7 +167,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
 
     const isCourse = shareType === 'course';
     const reportName = isCourse ? `${shareableItem.course_type} - ${shareableItem.state}` : shareableItem.name;
-    const modalTitle = `Share ${isCourse ? 'Course' : 'Participant'} Report`;
+    const modalTitle = isCourse ? t('course_report.share.title_course', 'Share Course Report') : t('course_report.share.title_participant', 'Share Participant Report');
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
@@ -161,12 +178,12 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                     </div>
                     <div>
                         <h3 className="text-lg font-semibold text-gray-800">{reportName}</h3>
-                        <p className="text-sm text-gray-500">Manage access permissions for this report.</p>
+                        <p className="text-sm text-gray-500">{t('course_report.share.manage_access', 'Manage access permissions for this report.')}</p>
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="font-semibold text-gray-700">General Access</label>
+                    <label className="font-semibold text-gray-700">{t('course_report.share.general_access', 'General Access')}</label>
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:space-x-4">
                         <label className="flex items-center space-x-2">
                             <input
@@ -177,7 +194,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                                 onChange={() => setAccessLevel('private')}
                                 className="form-radio text-sky-600"
                             />
-                            <span>Restricted</span>
+                            <span>{t('course_report.share.restricted', 'Restricted')}</span>
                         </label>
                         <label className="flex items-center space-x-2">
                             <input
@@ -188,23 +205,23 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                                 onChange={() => setAccessLevel('public')}
                                 className="form-radio text-sky-600"
                             />
-                            <span>Anyone with the link</span>
+                            <span>{t('course_report.share.anyone_with_link', 'Anyone with the link')}</span>
                         </label>
                     </div>
                 </div>
 
                 {accessLevel === 'private' && (
                     <div className="space-y-4">
-                        <label className="font-semibold text-gray-700">Share with specific people</label>
+                        <label className="font-semibold text-gray-700">{t('course_report.share.specific_people', 'Share with specific people')}</label>
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 sm:space-x-2 w-full">
                             <Input
                                 type="email"
-                                placeholder="Enter email address"
+                                placeholder={t('course_report.share.enter_email', 'Enter email address')}
                                 value={emailInput}
                                 onChange={(e) => setEmailInput(e.target.value)}
                                 className="flex-grow w-full"
                             />
-                            <Button onClick={handleAddEmail} className="w-full sm:w-auto">Add</Button>
+                            <Button onClick={handleAddEmail} className="w-full sm:w-auto">{t('course_report.buttons.add', 'Add')}</Button>
                         </div>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
                             {sharedWith.map(email => (
@@ -213,7 +230,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                                     <button onClick={() => handleRemoveEmail(email)} className="text-red-500 hover:text-red-700 font-bold">&times;</button>
                                 </div>
                             ))}
-                            {sharedWith.length === 0 && <p className="text-sm text-gray-500 text-center py-2">Not shared with anyone yet.</p>}
+                            {sharedWith.length === 0 && <p className="text-sm text-gray-500 text-center py-2">{t('course_report.share.not_shared', 'Not shared with anyone yet.')}</p>}
                         </div>
                     </div>
                 )}
@@ -221,12 +238,12 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                 <div className="pt-4 border-t">
                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full">
                         <Button onClick={handleCopyLink} variant="secondary" className="w-full sm:w-auto">
-                            <LinkIcon /> {copySuccess ? copySuccess : "Copy Link"}
+                            <LinkIcon /> {copySuccess ? copySuccess : t('course_report.share.copy_link', 'Copy Link')}
                         </Button>
                         <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
-                            <Button variant="secondary" onClose={onClose} className="w-full sm:w-auto">Cancel</Button>
+                            <Button variant="secondary" onClose={onClose} className="w-full sm:w-auto">{t('course_report.buttons.cancel', 'Cancel')}</Button>
                             <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
-                                {isSaving ? <Spinner /> : 'Save Changes'}
+                                {isSaving ? <Spinner /> : t('course_report.buttons.save_changes', 'Save Changes')}
                             </Button>
                         </div>
                     </div>
@@ -513,7 +530,7 @@ export const buildEmoncModuleTestSummary = (course, participantsList, tests) => 
 };
 
 // --- PDF EXPORT HELPER ---
-const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, tableData) => {
+const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, tableData, t) => {
     const { filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView, emoncTestSummary, isEencCourse, showEmoncCaseParts } = tableData;
     const qualityProfiles = {
         print: { scale: 2, fileSuffix: '', imageType: 'image/jpeg', imageQuality: 0.95, imageFormat: 'JPEG', compression: 'MEDIUM' },
@@ -778,19 +795,19 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
                     openWithDefault: true 
                 });
                 
-                onSuccess(`PDF saved to App Downloads and opened successfully.`);
+                onSuccess(t('course_report.pdf.saved_native', 'PDF saved to App Downloads and opened successfully.'));
             } catch (err) {
                 console.error("Native export error:", err);
-                onError(`Failed to process PDF natively: ${err.message}`);
+                onError(t('course_report.pdf.native_failed', 'Failed to process PDF natively: {{message}}', { message: err.message }));
             }
         } else {
             // Web fallback
             doc.save(fileName);
-            onSuccess("PDF download initiated.");
+            onSuccess(t('course_report.pdf.download_started', 'PDF download initiated.'));
         }
     } catch (e) {
         console.error("Error generating or saving PDF:", e);
-        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
+        onError(t('course_report.pdf.save_failed', 'Failed to save PDF: {{message}}', { message: e.message || t('course_report.pdf.unknown_error', 'Unknown error') }));
     }
 };
 
@@ -799,9 +816,9 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
 // Same shape as the full course report above: identical quality profiles, the
 // Amiri font (so Arabic participant names render), html2canvas for the visual
 // blocks, autoTable for the data tables, and the same native/web save path.
-const generateExerciseReportPdf = async (course, quality, onSuccess, onError, reportData) => {
+const generateExerciseReportPdf = async (course, quality, onSuccess, onError, reportData, t) => {
     if (!reportData || !reportData.hasAttempts) {
-        onError('There are no exercise attempts to export yet.');
+        onError(t('course_report.pdf.no_attempts', 'There are no exercise attempts to export yet.'));
         return;
     }
 
@@ -1000,18 +1017,18 @@ const generateExerciseReportPdf = async (course, quality, onSuccess, onError, re
                     path: filePath, data: base64Data, directory: Directory.Data, recursive: true
                 });
                 await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf', openWithDefault: true });
-                onSuccess('PDF saved to App Downloads and opened successfully.');
+                onSuccess(t('course_report.pdf.saved_native', 'PDF saved to App Downloads and opened successfully.'));
             } catch (err) {
                 console.error('Native export error:', err);
-                onError(`Failed to process PDF natively: ${err.message}`);
+                onError(t('course_report.pdf.native_failed', 'Failed to process PDF natively: {{message}}', { message: err.message }));
             }
         } else {
             doc.save(fileName);
-            onSuccess('PDF download initiated.');
+            onSuccess(t('course_report.pdf.download_started', 'PDF download initiated.'));
         }
     } catch (e) {
         console.error('Error generating exercise report PDF:', e);
-        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
+        onError(t('course_report.pdf.save_failed', 'Failed to save PDF: {{message}}', { message: e.message || t('course_report.pdf.unknown_error', 'Unknown error') }));
     }
 };
 
@@ -1029,16 +1046,16 @@ const generateExerciseReportPdf = async (course, quality, onSuccess, onError, re
  * report document is created if the course has not got one yet.
  */
 const FinalReportDocuments = ({ course, finalReport, onChanged, setToast }) => {
+    const { t } = useTranslation();
     const say = (message, type = 'success') =>
         (setToast ? setToast({ show: true, message, type }) : notify(message, type));
 
     return (
         <Card>
             <div className="p-4">
-                <h3 className="text-lg font-bold">Report document</h3>
+                <h3 className="text-lg font-bold">{t('course_report.final.report_document', 'Report document')}</h3>
                 <p className="text-sm text-slate-500 mb-3">
-                    Attach the final report PDF, then sign and stamp it here. Once signed, the signed
-                    copy is the one shown and shared.
+                    {t('course_report.final.report_document_help', 'Attach the final report PDF, then sign and stamp it here. Once signed, the signed copy is the one shown and shared.')}
                 </p>
                 <ReportDocumentManager course={course} finalReport={finalReport} onChanged={onChanged} say={say} />
             </div>
@@ -1063,29 +1080,30 @@ const FinalReportDocuments = ({ course, finalReport, onChanged, setToast }) => {
  * "this course has no data" rather than "not loaded yet".
  */
 export function CourseReportView({ isLoadingData = false, loadFailed = false, onRetry, ...props }) {
+    const { t } = useTranslation();
     if (!isLoadingData && !loadFailed) return <CourseReportBody {...props} />;
 
     const { course, onBack, isSharedView = false } = props;
     return (
         <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
             <PageHeader
-                title="Course Report"
+                title={t('course_report.title', 'Course Report')}
                 subtitle={`${course?.course_type || ''} - ${course?.state || ''}`}
-                actions={!isSharedView && onBack ? <Button onClick={onBack} className="w-full sm:w-auto mt-4 sm:mt-0">Back to List</Button> : null}
+                actions={!isSharedView && onBack ? <Button onClick={onBack} className="w-full sm:w-auto mt-4 sm:mt-0">{t('course_report.buttons.back_to_list', 'Back to List')}</Button> : null}
             />
             <Card>
                 <div className="p-10 flex flex-col items-center gap-4 text-center">
                     {loadFailed ? (
                         <>
-                            <p className="font-semibold text-slate-700">The report data could not be loaded.</p>
-                            <p className="text-sm text-slate-500">Check the connection and try again.</p>
-                            {onRetry && <Button onClick={onRetry}>Try again</Button>}
+                            <p className="font-semibold text-slate-700">{t('course_report.load.failed', 'The report data could not be loaded.')}</p>
+                            <p className="text-sm text-slate-500">{t('course_report.load.check_connection', 'Check the connection and try again.')}</p>
+                            {onRetry && <Button onClick={onRetry}>{t('course_report.load.try_again', 'Try again')}</Button>}
                         </>
                     ) : (
                         <>
                             <Spinner />
                             <p className="text-sm text-slate-500">
-                                Loading participants, observations and cases for this course&hellip;
+                                {t('course_report.load.loading', 'Loading participants, observations and cases for this course…')}
                             </p>
                         </>
                     )}
@@ -1100,6 +1118,20 @@ function CourseReportBody({
     onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast, allHealthFacilities: rawFacilities,
     onSaveFinalReport, onFinalReportChanged
 }) {
+    const { t } = useTranslation();
+    const catLabel = (name) => (CATEGORY_KEYS[name] ? t(`course_report.category.${CATEGORY_KEYS[name]}`, name) : name);
+    const headerLabel = (h) => (HEADER_KEYS[h] ? t(`course_report.headers.${HEADER_KEYS[h]}`, h) : h);
+    const dayLabel = (day) => t('course_report.daily.day_n', 'Day {{n}}', { n: String(day).replace('Day ', '') });
+    const coverageHeaders = [
+        t('course_report.coverage.level_name', 'Level / Name'), t('course_report.coverage.total_functioning_phcs', 'Total Functioning PHCs'),
+        t('course_report.coverage.phcs_imnci_before', 'PHCs w/ IMNCI (Before)'), t('course_report.coverage.coverage_before', 'Coverage Before'),
+        t('course_report.coverage.new_phcs_imnci', 'New PHCs w/ IMNCI'), t('course_report.coverage.coverage_after', 'Coverage After'),
+        t('course_report.coverage.increase', 'Increase')
+    ];
+    const facilityHeaders = [
+        t('course_report.facilities.facility_name', 'Facility Name'), t('course_report.facilities.locality', 'Locality'),
+        t('course_report.facilities.state', 'State'), t('course_report.facilities.type', 'Type')
+    ];
     const [activeTab, setActiveTab] = useState('full-course-report');
     // Computed inside ExerciseCourseReport and handed up, so the PDF uses
     // exactly the figures on screen rather than recalculating them.
@@ -1253,9 +1285,9 @@ function CourseReportBody({
             
             setCoverageData(editableCoverageData);
             setIsEditCoverageModalOpen(false);
-            notify("Baseline coverage updated successfully.", "success");
+            notify(t('course_report.toast.coverage_updated', 'Baseline coverage updated successfully.'), "success");
         } catch (error) {
-            notify("Failed to update coverage.", "error");
+            notify(t('course_report.toast.coverage_update_failed', 'Failed to update coverage.'), "error");
         } finally {
             setIsSavingCoverage(false);
         }
@@ -1518,7 +1550,7 @@ function CourseReportBody({
 
         } catch (error) {
             console.error("Error calculating historical coverage:", error);
-            notify("Failed to load historical coverage baseline.", "error");
+            notify(t('course_report.toast.coverage_load_failed', 'Failed to load historical coverage baseline.'), "error");
         } finally {
             setIsPreviewLoading(false);
         }
@@ -1538,9 +1570,9 @@ function CourseReportBody({
             
             setCoverageData(historicalCoveragePreview); 
             setIsCoverageModalOpen(false);
-            notify("Baseline coverage saved successfully.", "success");
+            notify(t('course_report.toast.coverage_saved', 'Baseline coverage saved successfully.'), "success");
         } catch (error) {
-            notify("Failed to save coverage.", "error");
+            notify(t('course_report.toast.coverage_save_failed', 'Failed to save coverage.'), "error");
         } finally {
             setIsSavingCoverage(false);
         }
@@ -1658,7 +1690,7 @@ function CourseReportBody({
                 course, quality,
                 (message) => notify(message, 'success'),
                 (message) => notify(message, 'error'),
-                exerciseReportData
+                exerciseReportData, t
             );
         } finally {
             setIsPdfGenerating(false);
@@ -1674,9 +1706,9 @@ function CourseReportBody({
             groupsWithData, groupCaseTotals, grandTotalCasesCorrect, grandTotalCasesTotal, groupSkillTotals, grandTotalSkillsCorrect, grandTotalSkillsTotal
         };
         try {
-            await generateFullCourseReportPdf(course, quality, (message) => notify(message, 'success'), (message) => notify(message, 'error'), pdfTableData);
+            await generateFullCourseReportPdf(course, quality, (message) => notify(message, 'success'), (message) => notify(message, 'error'), pdfTableData, t);
         } catch (error) {
-            console.error("Failed to generate PDF:", error); notify("Sorry, there was an error generating the PDF.", 'error');
+            console.error("Failed to generate PDF:", error); notify(t('course_report.toast.pdf_error', 'Sorry, there was an error generating the PDF.'), 'error');
         } finally {
             setIsPdfGenerating(false);
         }
@@ -1684,7 +1716,7 @@ function CourseReportBody({
 
     const handleCopyAsImage = async (elementId) => {
         const element = document.getElementById(elementId);
-        if (!element) { notify('Could not find element to copy.'); return; }
+        if (!element) { notify(t('course_report.toast.copy_not_found', 'Could not find element to copy.')); return; }
         try {
             const canvas = await html2canvas(element, {
                 scale: 2, useCORS: true, backgroundColor: '#ffffff',
@@ -1695,10 +1727,10 @@ function CourseReportBody({
             });
             canvas.toBlob(async (blob) => {
                 if (navigator.clipboard && navigator.clipboard.write) {
-                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); notify('Card copied to clipboard as an image!');
-                } else { notify('Clipboard API not available in this browser.'); }
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); notify(t('course_report.toast.copied_image', 'Card copied to clipboard as an image!'));
+                } else { notify(t('course_report.toast.clipboard_unavailable', 'Clipboard API not available in this browser.')); }
             }, 'image/png');
-        } catch (error) { console.error('Failed to copy image:', error); notify('Failed to copy image to clipboard.'); }
+        } catch (error) { console.error('Failed to copy image:', error); notify(t('course_report.toast.copy_image_failed', 'Failed to copy image to clipboard.')); }
     };
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
@@ -1709,27 +1741,27 @@ function CourseReportBody({
     const combinedChartData = {
         labels: groupsWithData,
         datasets: [
-            { type: 'bar', label: 'Total Cases', data: groupsWithData.map(g => groupPerformance[g].totalCases), backgroundColor: '#3b82f6', yAxisID: 'y' },
-            { type: 'bar', label: 'Total Correct Cases', data: groupsWithData.map(g => groupPerformance[g].correctCases), backgroundColor: '#10b981', yAxisID: 'y' }
+            { type: 'bar', label: t('course_report.kpi.total_cases', 'Total Cases'), data: groupsWithData.map(g => groupPerformance[g].totalCases), backgroundColor: '#3b82f6', yAxisID: 'y' },
+            { type: 'bar', label: t('course_report.kpi.total_correct_cases', 'Total Correct Cases'), data: groupsWithData.map(g => groupPerformance[g].correctCases), backgroundColor: '#10b981', yAxisID: 'y' }
         ]
     };
     const combinedChartOptions = {
         responsive: true,
-        plugins: { legend: { position: 'top' }, title: { display: true, text: 'Overall Performance by Group: Cases & Correct Cases' }, datalabels: { anchor: 'end', align: 'top', formatter: (value) => value > 0 ? value : '', font: { weight: 'bold', size: 10 }, color: '#000' } },
-        scales: { y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Total Count' }, beginAtZero: true } }
+        plugins: { legend: { position: 'top' }, title: { display: true, text: t('course_report.charts.group_title', 'Overall Performance by Group: Cases & Correct Cases') }, datalabels: { anchor: 'end', align: 'top', formatter: (value) => value > 0 ? value : '', font: { weight: 'bold', size: 10 }, color: '#000' } },
+        scales: { y: { type: 'linear', display: true, position: 'left', title: { display: true, text: t('course_report.charts.total_count', 'Total Count') }, beginAtZero: true } }
     };
 
     const dailyChartData = {
-        labels: dailyChartLabels,
+        labels: dailyChartLabels.map(dayLabel),
         datasets: [
-            { type: 'bar', label: 'Total Cases', data: dailyChartLabels.map(day => { let t = 0; groupsWithData.forEach(g => { if(dailyPerformance[day][g]) t+= dailyPerformance[day][g].cases }); return t; }), backgroundColor: '#3b82f6', yAxisID: 'y' },
-            { type: 'bar', label: 'Total Correct Cases', data: dailyChartLabels.map(day => { let t = 0; groupsWithData.forEach(g => { if(dailyPerformance[day][g]) t+= dailyPerformance[day][g].correctCases }); return t; }), backgroundColor: '#10b981', yAxisID: 'y' }
+            { type: 'bar', label: t('course_report.kpi.total_cases', 'Total Cases'), data: dailyChartLabels.map(day => { let sum = 0; groupsWithData.forEach(g => { if(dailyPerformance[day][g]) sum+= dailyPerformance[day][g].cases }); return sum; }), backgroundColor: '#3b82f6', yAxisID: 'y' },
+            { type: 'bar', label: t('course_report.kpi.total_correct_cases', 'Total Correct Cases'), data: dailyChartLabels.map(day => { let sum = 0; groupsWithData.forEach(g => { if(dailyPerformance[day][g]) sum+= dailyPerformance[day][g].correctCases }); return sum; }), backgroundColor: '#10b981', yAxisID: 'y' }
         ]
     };
     const dailyChartOptions = {
         responsive: true,
-        plugins: { title: { display: true, text: 'Overall Performance by Day' }, legend: { position: 'top' }, datalabels: { anchor: 'end', align: 'top', formatter: (value) => value > 0 ? value : '', font: { weight: 'bold', size: 10 }, color: '#000' } },
-        scales: { x: { title: { display: true, text: 'Day' } }, y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Total Count' }, beginAtZero: true } }
+        plugins: { title: { display: true, text: t('course_report.charts.by_day', 'Overall Performance by Day') }, legend: { position: 'top' }, datalabels: { anchor: 'end', align: 'top', formatter: (value) => value > 0 ? value : '', font: { weight: 'bold', size: 10 }, color: '#000' } },
+        scales: { x: { title: { display: true, text: t('course_report.daily.day', 'Day') } }, y: { type: 'linear', display: true, position: 'left', title: { display: true, text: t('course_report.charts.total_count', 'Total Count') }, beginAtZero: true } }
     };
 
     const chartParticipants = reportParticipants.filter(p => Number(p.pre_test_score) > 0 && Number(p.post_test_score) > 0);
@@ -1745,18 +1777,18 @@ function CourseReportBody({
     const testScoreChartData = {
         labels: participantLabels,
         datasets: [
-            { label: 'Pre-Test Score', data: preScores, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.2)', tension: 0.4, fill: false, pointRadius: showCompactLabels ? 3 : 5, pointBackgroundColor: '#6366f1' },
-            { label: 'Post-Test Score', data: postScores, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', tension: 0.4, fill: false, pointRadius: showCompactLabels ? 3 : 5, pointBackgroundColor: '#10b981' }
+            { label: t('course_report.charts.pre_test_score', 'Pre-Test Score'), data: preScores, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.2)', tension: 0.4, fill: false, pointRadius: showCompactLabels ? 3 : 5, pointBackgroundColor: '#6366f1' },
+            { label: t('course_report.charts.post_test_score', 'Post-Test Score'), data: postScores, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', tension: 0.4, fill: false, pointRadius: showCompactLabels ? 3 : 5, pointBackgroundColor: '#10b981' }
         ]
     };
     const testScoreChartOptions = {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-            legend: { position: 'top' }, title: { display: true, text: 'Participant Pre-Test vs. Post-Test Scores' },
+            legend: { position: 'top' }, title: { display: true, text: t('course_report.charts.pre_vs_post', 'Participant Pre-Test vs. Post-Test Scores') },
             tooltip: { mode: 'index', intersect: false, callbacks: { title: function(context) { const idx = context[0].dataIndex; return `${chartParticipants[idx].name} (${idx + 1})`; }, label: function(context) { let label = context.dataset.label || ''; if (label) label += ': '; if (context.raw !== null) label += fmtPct(context.raw); return label; } } },
             datalabels: { display: false }
         },
-        scales: { x: { title: { display: true, text: 'Participant' }, grid: { display: false }, ticks: { maxTicksLimit: 25 } }, y: { title: { display: true, text: 'Test Result (%)' }, beginAtZero: false, ticks: { stepSize: 5 }, min: yMin, max: 100 } }
+        scales: { x: { title: { display: true, text: t('course_report.charts.participant', 'Participant') }, grid: { display: false }, ticks: { maxTicksLimit: 25 } }, y: { title: { display: true, text: t('course_report.charts.test_result_pct', 'Test Result (%)') }, beginAtZero: false, ticks: { stepSize: 5 }, min: yMin, max: 100 } }
     };
     
     const scoreFilterOptions = [ { name: 'All' }, { name: 'Perfect' }, { name: 'Excellent' }, { name: 'Good' }, { name: 'Fair' }, { name: 'Fail' }, { name: 'Data Incomplete' } ];
@@ -1783,71 +1815,71 @@ function CourseReportBody({
     return (
         <div className="flex flex-col gap-6 pb-28 lg:pb-8 w-full max-w-full min-w-0">
             <PageHeader 
-                title={activeTab === 'full-course-report' ? "Full Course Report"
-                    : activeTab === 'final-report' ? "Final Course Report"
-                    : activeTab === 'exercise-report' ? "Interactive Exercise Report"
-                    : "Individual Participant Report"} 
+                title={activeTab === 'full-course-report' ? t('course_report.tabs.full_course_report', 'Full Course Report')
+                    : activeTab === 'final-report' ? t('course_report.tabs.final_course_report', 'Final Course Report')
+                    : activeTab === 'exercise-report' ? t('course_report.tabs.interactive_exercise_report', 'Interactive Exercise Report')
+                    : t('course_report.tabs.individual_participant_report', 'Individual Participant Report')} 
                 subtitle={`${course.course_type} - ${course.state}`} 
                 actions={
                     activeTab === 'full-course-report' ? (
                         isSharedView ? (
                             <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
-                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center"><PdfIcon /> PDF (Print)</Button>
-                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center"><PdfIcon /> PDF (Share)</Button>
-                                {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>Generating...</span></div>}
+                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center"><PdfIcon /> {t('course_report.buttons.pdf_print', 'PDF (Print)')}</Button>
+                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center"><PdfIcon /> {t('course_report.buttons.pdf_share', 'PDF (Share)')}</Button>
+                                {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>{t('course_report.buttons.generating', 'Generating...')}</span></div>}
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
                                 <Button onClick={() => setIsShareModalOpen(true)} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center">
-                                    <ShareIcon /> Share
+                                    <ShareIcon /> {t('course_report.buttons.share', 'Share')}
                                 </Button>
                                 <Button onClick={onBack} disabled={isPdfGenerating} className="w-full text-sm justify-center">
-                                    Back to List
+                                    {t('course_report.buttons.back_to_list', 'Back to List')}
                                 </Button>
                                 <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center">
-                                    <PdfIcon /> PDF (Print)
+                                    <PdfIcon /> {t('course_report.buttons.pdf_print', 'PDF (Print)')}
                                 </Button>
                                 <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center">
-                                    <PdfIcon /> PDF (Share)
+                                    <PdfIcon /> {t('course_report.buttons.pdf_share', 'PDF (Share)')}
                                 </Button>
-                                {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>Generating...</span></div>}
+                                {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>{t('course_report.buttons.generating', 'Generating...')}</span></div>}
                             </div>
                         )
                     ) : activeTab === 'exercise-report' ? (
                         <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
                             {!isSharedView && (
                                 <Button onClick={onBack} disabled={isPdfGenerating} className="w-full text-sm justify-center">
-                                    Back to List
+                                    {t('course_report.buttons.back_to_list', 'Back to List')}
                                 </Button>
                             )}
                             <Button onClick={() => handleExercisePdfGeneration('print')} variant="secondary"
                                 disabled={isPdfGenerating || !exerciseReportData?.hasAttempts} className="w-full text-sm justify-center">
-                                <PdfIcon /> PDF (Print)
+                                <PdfIcon /> {t('course_report.buttons.pdf_print', 'PDF (Print)')}
                             </Button>
                             <Button onClick={() => handleExercisePdfGeneration('screen')} variant="secondary"
                                 disabled={isPdfGenerating || !exerciseReportData?.hasAttempts} className="w-full text-sm justify-center">
-                                <PdfIcon /> PDF (Share)
+                                <PdfIcon /> {t('course_report.buttons.pdf_share', 'PDF (Share)')}
                             </Button>
-                            {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>Generating...</span></div>}
+                            {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>{t('course_report.buttons.generating', 'Generating...')}</span></div>}
                         </div>
                     ) : (
-                        !isSharedView ? <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-4 sm:mt-0">Back to List</Button> : null
+                        !isSharedView ? <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-4 sm:mt-0">{t('course_report.buttons.back_to_list', 'Back to List')}</Button> : null
                     )
                 }
             />
             
             <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4 print-hide">
-                <Button variant="tab" isActive={activeTab === 'full-course-report'} onClick={() => setActiveTab('full-course-report')}>Full Course Report</Button>
-                <Button variant="tab" isActive={activeTab === 'individual-participant-report'} onClick={() => setActiveTab('individual-participant-report')}>Individual Participant Report</Button>
+                <Button variant="tab" isActive={activeTab === 'full-course-report'} onClick={() => setActiveTab('full-course-report')}>{t('course_report.tabs.full_course_report', 'Full Course Report')}</Button>
+                <Button variant="tab" isActive={activeTab === 'individual-participant-report'} onClick={() => setActiveTab('individual-participant-report')}>{t('course_report.tabs.individual_participant_report', 'Individual Participant Report')}</Button>
 
                 {/* Online exercises only exist on IMNCI courses. */}
                 {course.course_type === 'IMNCI' && (
-                    <Button variant="tab" isActive={activeTab === 'exercise-report'} onClick={() => setActiveTab('exercise-report')}>Exercise Report</Button>
+                    <Button variant="tab" isActive={activeTab === 'exercise-report'} onClick={() => setActiveTab('exercise-report')}>{t('course_report.tabs.exercise_report', 'Exercise Report')}</Button>
                 )}
                 
                 {/* FINAL REPORT TAB - Access strictly bound to Federal Manager permissions */}
                 {isFederalManager && !isSharedView && (
-                    <Button variant="tab" isActive={activeTab === 'final-report'} onClick={() => setActiveTab('final-report')}>Final Report</Button>
+                    <Button variant="tab" isActive={activeTab === 'final-report'} onClick={() => setActiveTab('final-report')}>{t('course_report.tabs.final_report', 'Final Report')}</Button>
                 )}
             </div>
 
@@ -1856,9 +1888,9 @@ function CourseReportBody({
                 <div id="exercise-report" className="w-full max-w-full min-w-0">
                     <Card>
                         <div className="p-4 w-full max-w-full min-w-0">
-                            <h3 className="text-xl font-bold mb-1">Interactive Exercise Report</h3>
+                            <h3 className="text-xl font-bold mb-1">{t('course_report.tabs.interactive_exercise_report', 'Interactive Exercise Report')}</h3>
                             <p className="text-sm text-gray-500 mb-4">
-                                Every recorded attempt on this course, by exercise and by participant.
+                                {t('course_report.exercise.description', 'Every recorded attempt on this course, by exercise and by participant.')}
                             </p>
                             <ExerciseCourseReport course={course} participants={reportParticipants} onData={setExerciseReportData} />
                         </div>
@@ -1893,12 +1925,12 @@ function CourseReportBody({
                                     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
                                     const saved = await saveFinalReportWithFiles(data, currentUserIdentifier);
                                     noteFinalReport(saved);
-                                    notify("Final report saved successfully.", "success");
+                                    notify(t('course_report.toast.final_saved', 'Final report saved successfully.'), "success");
                                     setActiveTab('full-course-report'); // Return to main tab
                                 }
                             } catch (error) {
                                 console.error("Error saving final report:", error);
-                                notify(`Failed to save final report: ${error.message}`, "error");
+                                notify(t('course_report.toast.final_save_failed', 'Failed to save final report: {{message}}', { message: error.message }), "error");
                             }
                         }} 
                         initialData={activeFinalReport} 
@@ -1911,17 +1943,17 @@ function CourseReportBody({
                 <div id="full-course-report" className="flex flex-col gap-6 w-full max-w-full min-w-0">
                 <Card>
                     <div id="course-info-card" className="relative p-2 w-full max-w-full min-w-0">
-                        {!isSharedView && <button onClick={() => handleCopyAsImage('course-info-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                        <h3 className="text-xl font-bold mb-4">Course Information</h3>
+                        {!isSharedView && <button onClick={() => handleCopyAsImage('course-info-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                        <h3 className="text-xl font-bold mb-4">{t('course_report.info.title', 'Course Information')}</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                            <div><strong>State:</strong> {course.state}</div> <div><strong>Locality:</strong> {course.locality}</div>
-                            {course.course_type === 'IMNCI' && course.imci_sub_type && <div><strong>IMNCI Course Type:</strong> {course.imci_sub_type}</div>}
-                            <div><strong>Hall:</strong> {course.hall}</div> <div><strong>Start Date:</strong> {course.start_date}</div> <div><strong># Participants:</strong> {reportParticipants.length}</div>
-                            <div><strong>Coordinator:</strong> {course.coordinator}</div> <div><strong>Director:</strong> {course.director}</div>
-                            {course.clinical_instructor && <div><strong>Clinical Instructor:</strong> {course.clinical_instructor}</div>}
-                            <div><strong>Funded by:</strong> {course.funded_by}</div>
-                            {course.course_budget && <div><strong>Course Budget (USD):</strong> ${course.course_budget}</div>}
-                            <div className="col-span-1 sm:col-span-2 md:col-span-4 break-words"><strong>Facilitators:</strong> {(course.facilitators || []).join(', ')}</div>
+                            <div><strong>{t('course_report.info.state', 'State:')}</strong> {course.state}</div> <div><strong>{t('course_report.info.locality', 'Locality:')}</strong> {course.locality}</div>
+                            {course.course_type === 'IMNCI' && course.imci_sub_type && <div><strong>{t('course_report.info.imnci_course_type', 'IMNCI Course Type:')}</strong> {course.imci_sub_type}</div>}
+                            <div><strong>{t('course_report.info.hall', 'Hall:')}</strong> {course.hall}</div> <div><strong>{t('course_report.info.start_date', 'Start Date:')}</strong> {course.start_date}</div> <div><strong>{t('course_report.info.participants_count', '# Participants:')}</strong> {reportParticipants.length}</div>
+                            <div><strong>{t('course_report.info.coordinator', 'Coordinator:')}</strong> {course.coordinator}</div> <div><strong>{t('course_report.info.director', 'Director:')}</strong> {course.director}</div>
+                            {course.clinical_instructor && <div><strong>{t('course_report.info.clinical_instructor', 'Clinical Instructor:')}</strong> {course.clinical_instructor}</div>}
+                            <div><strong>{t('course_report.info.funded_by', 'Funded by:')}</strong> {course.funded_by}</div>
+                            {course.course_budget && <div><strong>{t('course_report.info.course_budget', 'Course Budget (USD):')}</strong> ${course.course_budget}</div>}
+                            <div className="col-span-1 sm:col-span-2 md:col-span-4 break-words"><strong>{t('course_report.info.facilitators', 'Facilitators:')}</strong> {(course.facilitators || []).join(', ')}</div>
                         </div>
                     </div>
                 </Card>
@@ -1929,9 +1961,9 @@ function CourseReportBody({
                 {availableSubTypes.length > 1 && (
                     <Card>
                         <div className="p-4 bg-gray-50 border-b border-gray-100 w-full max-w-full min-w-0">
-                            <FormGroup label="Filter Report by Course Sub-Type">
+                            <FormGroup label={t('course_report.info.filter_sub_type', 'Filter Report by Course Sub-Type')}>
                                 <Select value={subTypeFilter} onChange={e => setSubTypeFilter(e.target.value)} className="w-full md:w-1/3">
-                                    {availableSubTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {availableSubTypes.map(st => <option key={st} value={st}>{st === 'All' ? t('course_report.category.all', 'All') : st}</option>)}
                                 </Select>
                             </FormGroup>
                         </div>
@@ -1941,25 +1973,25 @@ function CourseReportBody({
                 {hasAnyKpis && (
                     <Card>
                         <div id="kpi-card" className="relative p-2 w-full max-w-full min-w-0">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('kpi-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">Key Performance Indicators (KPIs)</h3>
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('kpi-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-4">{t('course_report.kpi.title', 'Key Performance Indicators (KPIs)')}</h3>
                             <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
                                 <div>
-                                    <h4 className="text-lg font-semibold mb-2 text-gray-700">Case KPIs</h4>
+                                    <h4 className="text-lg font-semibold mb-2 text-gray-700">{t('course_report.kpi.case_kpis', 'Case KPIs')}</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Total Cases</div><div className="text-3xl font-bold text-sky-700">{overall.totalCases}</div></div>
-                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Total Correct Cases</div><div className="text-3xl font-bold text-sky-700">{overall.correctCases}</div></div>
-                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Avg. Cases / Participant</div><div className="text-3xl font-bold text-sky-700">{overall.avgCasesPerParticipant.toFixed(1)}</div></div>
-                                        <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(overall.caseCorrectnessPercentage)}`}><div className="text-sm font-semibold">Overall Correctness</div><div className="text-3xl font-bold">{fmtPct(overall.caseCorrectnessPercentage)}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">{t('course_report.kpi.total_cases', 'Total Cases')}</div><div className="text-3xl font-bold text-sky-700">{overall.totalCases}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">{t('course_report.kpi.total_correct_cases', 'Total Correct Cases')}</div><div className="text-3xl font-bold text-sky-700">{overall.correctCases}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">{t('course_report.kpi.avg_cases', 'Avg. Cases / Participant')}</div><div className="text-3xl font-bold text-sky-700">{overall.avgCasesPerParticipant.toFixed(1)}</div></div>
+                                        <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(overall.caseCorrectnessPercentage)}`}><div className="text-sm font-semibold">{t('course_report.kpi.overall_correctness', 'Overall Correctness')}</div><div className="text-3xl font-bold">{fmtPct(overall.caseCorrectnessPercentage)}</div></div>
                                     </div>
                                 </div>
                                 <div>
-                                    <h4 className="text-lg font-semibold mb-2 text-gray-700">Skill/Classification KPIs</h4>
+                                    <h4 className="text-lg font-semibold mb-2 text-gray-700">{t('course_report.kpi.skill_kpis', 'Skill/Classification KPIs')}</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Total Skills</div><div className="text-3xl font-bold text-sky-700">{overall.totalSkills}</div></div>
-                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Total Correct Skills</div><div className="text-3xl font-bold text-sky-700">{overall.correctSkills}</div></div>
-                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Avg. Skills / Participant</div><div className="text-3xl font-bold text-sky-700">{overall.avgSkillsPerParticipant.toFixed(1)}</div></div>
-                                        <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(overall.skillCorrectnessPercentage)}`}><div className="text-sm font-semibold">Overall Correctness</div><div className="text-3xl font-bold">{fmtPct(overall.skillCorrectnessPercentage)}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">{t('course_report.kpi.total_skills', 'Total Skills')}</div><div className="text-3xl font-bold text-sky-700">{overall.totalSkills}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">{t('course_report.kpi.total_correct_skills', 'Total Correct Skills')}</div><div className="text-3xl font-bold text-sky-700">{overall.correctSkills}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">{t('course_report.kpi.avg_skills', 'Avg. Skills / Participant')}</div><div className="text-3xl font-bold text-sky-700">{overall.avgSkillsPerParticipant.toFixed(1)}</div></div>
+                                        <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(overall.skillCorrectnessPercentage)}`}><div className="text-sm font-semibold">{t('course_report.kpi.overall_correctness', 'Overall Correctness')}</div><div className="text-3xl font-bold">{fmtPct(overall.skillCorrectnessPercentage)}</div></div>
                                     </div>
                                 </div>
                             </div>
@@ -1970,9 +2002,9 @@ function CourseReportBody({
                 {showTestScoresOnScreen && useEmoncModuleTests && (
                     <Card>
                         <div id="emonc-module-test-card" className="relative p-2 w-full max-w-full min-w-0">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('emonc-module-test-kpis')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors z-10" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-1">Participant Test Scores by EmONC Module</h3>
-                            <p className="text-sm text-gray-500 mb-4">Each module is a separate test: Part 1 (the module subject) + Part 2 (EENC, shared by both modules).</p>
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('emonc-module-test-kpis')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors z-10" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-1">{t('course_report.emonc.title', 'Participant Test Scores by EmONC Module')}</h3>
+                            <p className="text-sm text-gray-500 mb-4">{t('course_report.emonc.description', 'Each module is a separate test: Part 1 (the module subject) + Part 2 (EENC, shared by both modules).')}</p>
 
                             <div id="emonc-module-test-kpis" className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 bg-white">
                                 {emoncTestSummary.modules.map(mod => {
@@ -1981,23 +2013,23 @@ function CourseReportBody({
                                         <div key={mod.module} className={`rounded-xl border-2 ${style.border} overflow-hidden`}>
                                             <div className={`${style.header} px-4 py-3`}>
                                                 <div className="text-lg font-extrabold">{mod.label}</div>
-                                                <div className="text-xs opacity-90">{mod.stats.participantCount} participants with results &middot; Pre-test: {mod.stats.preCount} &middot; Post-test: {mod.stats.postCount}</div>
+                                                <div className="text-xs opacity-90">{t('course_report.emonc.module_stats', '{{count}} participants with results · Pre-test: {{pre}} · Post-test: {{post}}', { count: mod.stats.participantCount, pre: mod.stats.preCount, post: mod.stats.postCount })}</div>
                                             </div>
                                             <div className={`${style.light} p-4`}>
                                                 <div className="grid grid-cols-3 gap-3 text-center mb-4">
-                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">Avg. Pre-Test</div><div className="text-xl font-bold">{fmtPct(mod.stats.preAvg)}</div></div>
-                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">Avg. Post-Test</div><div className="text-xl font-bold">{fmtPct(mod.stats.postAvg)}</div></div>
-                                                    <div className={`p-3 rounded-lg ${getScoreColorClass(mod.stats.improvement, 'improvement')}`}><div className="text-xs font-semibold">Avg. Improvement</div><div className="text-xl font-bold">{fmtPct(mod.stats.improvement)}</div></div>
+                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">{t('course_report.tests.avg_pre', 'Avg. Pre-Test')}</div><div className="text-xl font-bold">{fmtPct(mod.stats.preAvg)}</div></div>
+                                                    <div className="p-3 bg-white rounded-lg border"><div className="text-xs font-semibold text-gray-600">{t('course_report.tests.avg_post', 'Avg. Post-Test')}</div><div className="text-xl font-bold">{fmtPct(mod.stats.postAvg)}</div></div>
+                                                    <div className={`p-3 rounded-lg ${getScoreColorClass(mod.stats.improvement, 'improvement')}`}><div className="text-xs font-semibold">{t('course_report.tests.avg_improvement', 'Avg. Improvement')}</div><div className="text-xl font-bold">{fmtPct(mod.stats.improvement)}</div></div>
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     {mod.parts.map(part => (
                                                         <div key={part.key} className={`border-2 rounded-lg px-3 py-2 ${EMONC_PART_CHIP_STYLES[part.key] || 'bg-gray-50 border-gray-300 text-gray-800'}`}>
-                                                            <div className="text-[11px] font-bold uppercase tracking-wider opacity-80">Part {part.part}</div>
+                                                            <div className="text-[11px] font-bold uppercase tracking-wider opacity-80">{t('course_report.emonc.part_n', 'Part {{n}}', { n: part.part })}</div>
                                                             <div className="font-semibold text-sm">{part.title}</div>
                                                             <div className="text-sm mt-1">
-                                                                Pre <span className="font-bold">{fmtPct(part.preAvg)}</span>
+                                                                {t('course_report.emonc.pre', 'Pre')} <span className="font-bold">{fmtPct(part.preAvg)}</span>
                                                                 <span className="mx-1">&rarr;</span>
-                                                                Post <span className="font-bold">{fmtPct(part.postAvg)}</span>
+                                                                {t('course_report.emonc.post', 'Post')} <span className="font-bold">{fmtPct(part.postAvg)}</span>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -2012,17 +2044,17 @@ function CourseReportBody({
                                 const style = EMONC_MODULE_REPORT_STYLES[mod.module] || EMONC_MODULE_REPORT_STYLES['Emergency Newborn Care'];
                                 return (
                                     <div key={`table-${mod.module}`} className="mb-8">
-                                        <h4 className={`text-base font-bold px-3 py-2 rounded-t-lg ${style.header}`}>{mod.label} &mdash; Participant Results</h4>
+                                        <h4 className={`text-base font-bold px-3 py-2 rounded-t-lg ${style.header}`}>{mod.label} &mdash; {t('course_report.results.title', 'Participant Results')}</h4>
                                         <div className={`w-full max-w-full overflow-x-auto touch-pan-x border-2 border-t-0 ${style.border} rounded-b-lg`}>
                                             <table className="w-full text-left border-collapse bg-white text-sm">
                                                 <thead className="bg-gray-50 border-b border-gray-200">
                                                     <tr>
                                                         {['#', 'Participant Name', 'Group', 'Pre-Test', 'Post-Test', '% Increase', 'Average Improvement'].map(h => (
-                                                            <th key={h} className="p-3 font-semibold text-gray-700 text-center whitespace-nowrap">{h}</th>
+                                                            <th key={h} className="p-3 font-semibold text-gray-700 text-center whitespace-nowrap">{headerLabel(h)}</th>
                                                         ))}
                                                         {mod.sections.map(sec => (
                                                             <th key={sec.key} className={`p-3 font-semibold text-center whitespace-nowrap border-l ${EMONC_PART_CHIP_STYLES[sec.key] || ''}`}>
-                                                                Part {sec.part}: {sec.shortTitle}<div className="text-[11px] font-normal">Pre &rarr; Post</div>
+                                                                {t('course_report.emonc.part_n_title', 'Part {{n}}: {{title}}', { n: sec.part, title: sec.shortTitle })}<div className="text-[11px] font-normal">{t('course_report.emonc.pre_to_post', 'Pre → Post')}</div>
                                                             </th>
                                                         ))}
                                                     </tr>
@@ -2035,8 +2067,8 @@ function CourseReportBody({
                                                             <td className="p-3 text-center text-gray-600">{r.group || '-'}</td>
                                                             <td className="p-3 text-center text-gray-700">{fmtPct(r.prePct)}</td>
                                                             <td className="p-3 text-center text-gray-700">{fmtPct(r.postPct)}</td>
-                                                            <td className="p-3 text-center font-medium text-gray-800">{r.increase === null ? 'N/A' : `${r.increase.toFixed(1)}%`}</td>
-                                                            <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${r.category.className}`}>{r.category.name}</span></td>
+                                                            <td className="p-3 text-center font-medium text-gray-800">{r.increase === null ? t('course_report.na', 'N/A') : `${r.increase.toFixed(1)}%`}</td>
+                                                            <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${r.category.className}`}>{catLabel(r.category.name)}</span></td>
                                                             {mod.sections.map((sec, idx) => (
                                                                 <td key={sec.key} className="p-3 text-center whitespace-nowrap border-l">
                                                                     {fmtPartScore(r.preParts?.[idx])} <span className="text-gray-400">&rarr;</span> {fmtPartScore(r.postParts?.[idx])}
@@ -2057,12 +2089,12 @@ function CourseReportBody({
                 {showTestScoresOnScreen && hasTestScoreDataForKpis && !useEmoncModuleTests && (
                     <Card>
                         <div id="test-scores-card" className="relative p-2 w-full max-w-full min-w-0">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('test-scores-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">Participant Test Scores</h3>
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('test-scores-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-4">{t('course_report.tests.title', 'Participant Test Scores')}</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-center mb-6">
-                                <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm font-semibold text-gray-600">Avg. Pre-Test</div><div className="text-2xl font-bold">{fmtPct(preTestStats.avg)}</div></div>
-                                <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm font-semibold text-gray-600">Avg. Post-Test</div><div className="text-2xl font-bold">{fmtPct(postTestStats.avg)}</div></div>
-                                <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(totalImprovement, 'improvement')}`}><div className="text-sm font-semibold">Avg. Improvement</div><div className="text-2xl font-bold">{fmtPct(totalImprovement)}</div></div>
+                                <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm font-semibold text-gray-600">{t('course_report.tests.avg_pre', 'Avg. Pre-Test')}</div><div className="text-2xl font-bold">{fmtPct(preTestStats.avg)}</div></div>
+                                <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm font-semibold text-gray-600">{t('course_report.tests.avg_post', 'Avg. Post-Test')}</div><div className="text-2xl font-bold">{fmtPct(postTestStats.avg)}</div></div>
+                                <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(totalImprovement, 'improvement')}`}><div className="text-sm font-semibold">{t('course_report.tests.avg_improvement', 'Avg. Improvement')}</div><div className="text-2xl font-bold">{fmtPct(totalImprovement)}</div></div>
                             </div>
                             {hasChartParticipants ? (
                                 <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
@@ -2072,7 +2104,7 @@ function CourseReportBody({
                                 </div>
                             ) : (
                                 <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-gray-200 w-full">
-                                    No valid pre- and post-test data available for charting.
+                                    {t('course_report.tests.no_chart_data', 'No valid pre- and post-test data available for charting.')}
                                 </div>
                             )}
                         </div>
@@ -2083,10 +2115,10 @@ function CourseReportBody({
                 {!coverageData && course?.course_type === 'IMNCI' && !isSharedView && (
                     <Card>
                         <div className="p-6 flex flex-col justify-center items-center text-center w-full max-w-full min-w-0">
-                            <h3 className="text-lg font-bold text-gray-700 mb-2">No Baseline Coverage Data</h3>
-                            <p className="text-sm text-gray-500 mb-4">Historical baseline coverage has not been calculated for this course yet.</p>
+                            <h3 className="text-lg font-bold text-gray-700 mb-2">{t('course_report.coverage.no_data', 'No Baseline Coverage Data')}</h3>
+                            <p className="text-sm text-gray-500 mb-4">{t('course_report.coverage.not_calculated', 'Historical baseline coverage has not been calculated for this course yet.')}</p>
                             <Button onClick={handleRetrieveCoverageHistory} variant="primary" className="w-full sm:w-auto">
-                                Retrieve Coverage History
+                                {t('course_report.coverage.retrieve', 'Retrieve Coverage History')}
                             </Button>
                         </div>
                     </Card>
@@ -2096,20 +2128,20 @@ function CourseReportBody({
                     <>
                     <Card>
                         <div id="investment-card" className="relative p-2 w-full max-w-full min-w-0">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('investment-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">Investment KPIs</h3>
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('investment-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-4">{t('course_report.investment.title', 'Investment KPIs')}</h3>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-center">
                                 <div className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg border border-blue-100 text-center w-full">
-                                    <div className="text-sm font-semibold text-blue-700">Total Investment</div>
+                                    <div className="text-sm font-semibold text-blue-700">{t('course_report.investment.total', 'Total Investment')}</div>
                                     <div className="text-2xl font-bold text-blue-800">${coverageData.totalBudget?.toLocaleString() || '0'}</div>
                                 </div>
                                 <div className="flex flex-col items-center justify-center p-4 bg-yellow-50 rounded-lg border border-yellow-100 text-center w-full">
-                                    <div className="text-sm font-semibold text-yellow-700">Cost / Participant</div>
+                                    <div className="text-sm font-semibold text-yellow-700">{t('course_report.investment.cost_per_participant', 'Cost / Participant')}</div>
                                     <div className="text-2xl font-bold text-yellow-800">${Math.round(coverageData.costPerParticipant || 0).toLocaleString()}</div>
                                 </div>
                                 <div className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-lg border border-purple-100 text-center w-full">
-                                    <div className="text-sm font-semibold text-purple-700">Cost/New Facility introduce IMNCI</div>
+                                    <div className="text-sm font-semibold text-purple-700">{t('course_report.investment.cost_per_facility', 'Cost/New Facility introduce IMNCI')}</div>
                                     <div className="text-2xl font-bold text-purple-800">
                                         ${Math.round((coverageData.stateCoverage?.reduce((sum, s) => sum + s.newPhc, 0) || 0) > 0 ? (coverageData.totalBudget / coverageData.stateCoverage.reduce((sum, s) => sum + s.newPhc, 0)) : 0).toLocaleString()}
                                     </div>
@@ -2120,44 +2152,44 @@ function CourseReportBody({
 
                     <Card>
                         <div id="coverage-card" className="relative p-2 w-full max-w-full min-w-0">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('coverage-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('coverage-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
                             
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                                <h3 className="text-xl font-bold">Coverage KPIs (PHC Facilities Only)</h3>
+                                <h3 className="text-xl font-bold">{t('course_report.coverage.title', 'Coverage KPIs (PHC Facilities Only)')}</h3>
                                 {isSuperUser && !isSharedView && (
                                     <div className="flex flex-wrap gap-2 copy-button w-full sm:w-auto">
-                                        <Button size="sm" variant="secondary" onClick={handleRetrieveCoverageHistory} className="w-full sm:w-auto">Refetch Baseline</Button>
-                                        <Button size="sm" variant="secondary" onClick={openEditCoverageModal} className="w-full sm:w-auto">Edit Baseline</Button>
+                                        <Button size="sm" variant="secondary" onClick={handleRetrieveCoverageHistory} className="w-full sm:w-auto">{t('course_report.coverage.refetch', 'Refetch Baseline')}</Button>
+                                        <Button size="sm" variant="secondary" onClick={openEditCoverageModal} className="w-full sm:w-auto">{t('course_report.coverage.edit', 'Edit Baseline')}</Button>
                                     </div>
                                 )}
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center mb-6">
                                 <div className="flex flex-col items-center justify-center p-4 bg-green-50 rounded-lg border border-green-100 text-center w-full">
-                                    <div className="text-sm font-semibold text-green-700">Total new PHC facility Introduce IMNCI</div>
+                                    <div className="text-sm font-semibold text-green-700">{t('course_report.coverage.total_new_phc', 'Total new PHC facility Introduce IMNCI')}</div>
                                     <div className="text-2xl font-bold text-green-800">
                                         {coverageData.stateCoverage?.reduce((sum, s) => sum + s.newPhc, 0) || 0}
                                     </div>
                                 </div>
                                 {coverageData.localityCoverage?.map(l => (
                                     <div key={`card-loc-${l.name}`} className="p-4 bg-sky-50 rounded-lg border border-sky-100">
-                                        <div className="text-sm font-semibold text-sky-700">Locality Increase ({l.name})</div>
+                                        <div className="text-sm font-semibold text-sky-700">{t('course_report.coverage.locality_increase', 'Locality Increase ({{name}})', { name: l.name })}</div>
                                         <div className="text-2xl font-bold text-sky-800">{l.newPhc} <span className="text-sm text-green-600 block xl:inline">(+{l.increase.toFixed(2)}%)</span></div>
                                     </div>
                                 ))}
                                 {coverageData.stateCoverage?.map(s => (
                                     <div key={`card-state-${s.name}`} className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                                        <div className="text-sm font-semibold text-indigo-700">State Increase ({s.name})</div>
+                                        <div className="text-sm font-semibold text-indigo-700">{t('course_report.coverage.state_increase', 'State Increase ({{name}})', { name: s.name })}</div>
                                         <div className="text-2xl font-bold text-indigo-800">{s.newPhc} <span className="text-sm text-green-600 block xl:inline">(+{s.increase.toFixed(2)}%)</span></div>
                                     </div>
                                 ))}
                             </div>
 
                             <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
+                                <Table headers={coverageHeaders}>
                                     {coverageData.localityCoverage?.map(l => (
                                         <tr key={`loc-${l.name}`} className="hover:bg-gray-50">
-                                            <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">Locality: {l.name}</td>
+                                            <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">{t('course_report.coverage.locality_name', 'Locality: {{name}}', { name: l.name })}</td>
                                             <td className="p-2 border text-center">{l.totalPhc}</td>
                                             <td className="p-2 border text-center">{l.phcWithImnciBefore}</td>
                                             <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(l.covBefore)}</td>
@@ -2168,7 +2200,7 @@ function CourseReportBody({
                                     ))}
                                     {coverageData.stateCoverage?.map(s => (
                                         <tr key={`state-${s.name}`} className="hover:bg-gray-50 bg-gray-50/50">
-                                            <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">State: {s.name}</td>
+                                            <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">{t('course_report.coverage.state_name', 'State: {{name}}', { name: s.name })}</td>
                                             <td className="p-2 border text-center">{s.totalPhc}</td>
                                             <td className="p-2 border text-center">{s.phcWithImnciBefore}</td>
                                             <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(s.covBefore)}</td>
@@ -2187,42 +2219,42 @@ function CourseReportBody({
                 {course.course_type === 'IMNCI' && newImciFacilities && newImciFacilities.length > 0 && (
                     <Card>
                         <div id="new-imci-facilities-card" className="relative p-2 w-full max-w-full min-w-0">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('new-imci-facilities-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">Facilities with New IMNCI Service Introduction</h3>
-                            <p className="text-sm text-gray-600 mb-2">The following facilities did not provide IMCI services before this course. Adding participants from these facilities has triggered an update to mark them as IMNCI-providing sites.</p>
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('new-imci-facilities-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-4">{t('course_report.facilities.title', 'Facilities with New IMNCI Service Introduction')}</h3>
+                            <p className="text-sm text-gray-600 mb-2">{t('course_report.facilities.description', 'The following facilities did not provide IMCI services before this course. Adding participants from these facilities has triggered an update to mark them as IMNCI-providing sites.')}</p>
                             
-                            <h4 className="text-lg font-semibold text-sky-800 mt-4 mb-2">PHC Facilities (Included in Coverage)</h4>
+                            <h4 className="text-lg font-semibold text-sky-800 mt-4 mb-2">{t('course_report.facilities.phc_title', 'PHC Facilities (Included in Coverage)')}</h4>
                             {newImciFacilities.filter(f => !f.isHospital).length > 0 ? (
                                 <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                    <Table headers={['Facility Name', 'Locality', 'State', 'Type']}>
+                                    <Table headers={facilityHeaders}>
                                         {newImciFacilities.filter(f => !f.isHospital).map((facility, index) => (
                                             <tr key={`phc-${index}`} className="hover:bg-gray-50">
                                                 <td className="p-2 border font-semibold min-w-[150px]">{facility.name}</td>
                                                 <td className="p-2 border min-w-[120px]">{facility.locality}</td>
                                                 <td className="p-2 border min-w-[120px]">{facility.state}</td>
-                                                <td className="p-2 border text-gray-600 text-sm">PHC</td>
+                                                <td className="p-2 border text-gray-600 text-sm">{t('course_report.facilities.phc', 'PHC')}</td>
                                             </tr>
                                         ))}
                                     </Table>
                                 </div>
                             ) : (
-                                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-center text-sm mb-4 w-full">No new PHC facilities introduced.</div>
+                                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-center text-sm mb-4 w-full">{t('course_report.facilities.no_new_phc', 'No new PHC facilities introduced.')}</div>
                             )}
 
                             {newImciFacilities.filter(f => f.isHospital).length > 0 && (
                                 <div className="mt-6">
-                                    <h4 className="text-lg font-semibold text-amber-800 mb-2">Hospitals</h4>
+                                    <h4 className="text-lg font-semibold text-amber-800 mb-2">{t('course_report.facilities.hospitals', 'Hospitals')}</h4>
                                     <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200 mb-3 font-medium">
-                                        * Note: Hospitals are listed below for reference but are NOT calculated in the PHC coverage increase metrics.
+                                        {t('course_report.facilities.hospitals_note', '* Note: Hospitals are listed below for reference but are NOT calculated in the PHC coverage increase metrics.')}
                                     </p>
                                     <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                        <Table headers={['Facility Name', 'Locality', 'State', 'Type']}>
+                                        <Table headers={facilityHeaders}>
                                             {newImciFacilities.filter(f => f.isHospital).map((facility, index) => (
                                                 <tr key={`hosp-${index}`} className="hover:bg-gray-50">
                                                     <td className="p-2 border font-semibold min-w-[150px]">{facility.name}</td>
                                                     <td className="p-2 border min-w-[120px]">{facility.locality}</td>
                                                     <td className="p-2 border min-w-[120px]">{facility.state}</td>
-                                                    <td className="p-2 border text-gray-600 text-sm">Hospital</td>
+                                                    <td className="p-2 border text-gray-600 text-sm">{t('course_report.facilities.hospital', 'Hospital')}</td>
                                                 </tr>
                                             ))}
                                         </Table>
@@ -2239,8 +2271,8 @@ function CourseReportBody({
                             <div className="w-full min-w-0 flex-1">
                                 <Card>
                                     <div id="group-perf-chart-card" className="relative p-2 w-full max-w-full min-w-0">
-                                        {!isSharedView && <button onClick={() => handleCopyAsImage('group-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                                        <h3 className="text-xl font-bold mb-4">Overall Performance by Group</h3>
+                                        {!isSharedView && <button onClick={() => handleCopyAsImage('group-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                                        <h3 className="text-xl font-bold mb-4">{t('course_report.charts.by_group', 'Overall Performance by Group')}</h3>
                                         <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                             <div style={{ minWidth: '500px' }} className="min-w-[500px]">
                                                 <Bar ref={overallChartRef} options={combinedChartOptions} data={combinedChartData} />
@@ -2254,8 +2286,8 @@ function CourseReportBody({
                             <div className="w-full min-w-0 flex-1">
                                 <Card>
                                     <div id="day-perf-chart-card" className="relative p-2 w-full max-w-full min-w-0">
-                                        {!isSharedView && <button onClick={() => handleCopyAsImage('day-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                                        <h3 className="text-xl font-bold mb-4">Overall Performance by Day</h3>
+                                        {!isSharedView && <button onClick={() => handleCopyAsImage('day-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                                        <h3 className="text-xl font-bold mb-4">{t('course_report.charts.by_day', 'Overall Performance by Day')}</h3>
                                         <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                             <div style={{ minWidth: '500px' }} className="min-w-[500px]">
                                                 <Bar ref={dailyChartRef} options={dailyChartOptions} data={dailyChartData} />
@@ -2270,25 +2302,25 @@ function CourseReportBody({
 
                 <div id="daily-tables-section" className="w-full max-w-full min-w-0 mb-4">
                     {(hasDailyCaseData || hasDailySkillData) && (
-                        <h3 className="text-xl font-bold mb-4 px-2">Daily Performance Tables</h3>
+                        <h3 className="text-xl font-bold mb-4 px-2">{t('course_report.daily.title', 'Daily Performance Tables')}</h3>
                     )}
                     <div id="daily-tables-grid" className="flex flex-col lg:flex-row gap-6 w-full max-w-full min-w-0">
                         {hasDailyCaseData && (
                             <div className="w-full min-w-0 flex-1">
                                 <Card>
                                     <div id="daily-case-table-card" className="relative p-2 w-full max-w-full min-w-0">
-                                        {!isSharedView && <button onClick={() => handleCopyAsImage('daily-case-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                                        <h3 className="text-xl font-bold mb-4 pr-10">Daily Case Performance</h3>
+                                        {!isSharedView && <button onClick={() => handleCopyAsImage('daily-case-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                                        <h3 className="text-xl font-bold mb-4 pr-10">{t('course_report.daily.case_title', 'Daily Case Performance')}</h3>
                                         <div className="mb-4">
                                             <RawScoreLegend />
                                         </div>
                                         <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                            <Table headers={['Day', ...groupsWithData, 'Total']}>
+                                            <Table headers={[t('course_report.daily.day', 'Day'), ...groupsWithData, t('course_report.daily.total', 'Total')]}>
                                                 {dailyCaseTableData.length > 0 ? (
                                                     <>
                                                         {dailyCaseTableData.map((row) => (
                                                             <tr key={row.day} className="hover:bg-gray-50">
-                                                                <td className="p-2 border font-bold min-w-[80px]">{row.day}</td>
+                                                                <td className="p-2 border font-bold min-w-[80px]">{dayLabel(row.day)}</td>
                                                                 {groupsWithData.map(group => (
                                                                     <td key={group} className={`p-2 border text-center min-w-[80px] ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>
                                                                 ))}
@@ -2296,7 +2328,7 @@ function CourseReportBody({
                                                             </tr>
                                                         ))}
                                                         <tr className="hover:bg-gray-50 font-bold">
-                                                            <td className="p-2 border">Total</td>
+                                                            <td className="p-2 border">{t('course_report.daily.total', 'Total')}</td>
                                                             {groupsWithData.map(group => { 
                                                                 const tCorrect = groupCaseTotals[group].totalCases.correct; 
                                                                 const tTotal = groupCaseTotals[group].totalCases.total; 
@@ -2315,7 +2347,7 @@ function CourseReportBody({
                                                 ) : (
                                                     <tr>
                                                         <td colSpan={groupsWithData.length + 2} className="p-8 text-center text-gray-500 bg-gray-50">
-                                                            No daily case data available.
+                                                            {t('course_report.daily.no_case_data', 'No daily case data available.')}
                                                         </td>
                                                     </tr>
                                                 )}
@@ -2329,18 +2361,18 @@ function CourseReportBody({
                             <div className="w-full min-w-0 flex-1">
                                 <Card>
                                     <div id="daily-skill-table-card" className="relative p-2 w-full max-w-full min-w-0">
-                                        {!isSharedView && <button onClick={() => handleCopyAsImage('daily-skill-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                                        <h3 className="text-xl font-bold mb-4 pr-10">Daily Skill Performance</h3>
+                                        {!isSharedView && <button onClick={() => handleCopyAsImage('daily-skill-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
+                                        <h3 className="text-xl font-bold mb-4 pr-10">{t('course_report.daily.skill_title', 'Daily Skill Performance')}</h3>
                                         <div className="mb-4">
                                             <RawScoreLegend />
                                         </div>
                                         <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                            <Table headers={['Day', ...groupsWithData, 'Total']}>
+                                            <Table headers={[t('course_report.daily.day', 'Day'), ...groupsWithData, t('course_report.daily.total', 'Total')]}>
                                                 {dailySkillTableData.length > 0 ? (
                                                     <>
                                                         {dailySkillTableData.map((row) => (
                                                             <tr key={row.day} className="hover:bg-gray-50">
-                                                                <td className="p-2 border font-bold min-w-[80px]">{row.day}</td>
+                                                                <td className="p-2 border font-bold min-w-[80px]">{dayLabel(row.day)}</td>
                                                                 {groupsWithData.map(group => (
                                                                     <td key={group} className={`p-2 border text-center min-w-[80px] ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>
                                                                 ))}
@@ -2348,7 +2380,7 @@ function CourseReportBody({
                                                             </tr>
                                                         ))}
                                                         <tr className="hover:bg-gray-50 font-bold">
-                                                            <td className="p-2 border">Total</td>
+                                                            <td className="p-2 border">{t('course_report.daily.total', 'Total')}</td>
                                                             {groupsWithData.map(group => { 
                                                                 const tCorrect = groupSkillTotals[group].totalSkills.correct; 
                                                                 const tTotal = groupSkillTotals[group].totalSkills.total; 
@@ -2367,7 +2399,7 @@ function CourseReportBody({
                                                 ) : (
                                                     <tr>
                                                         <td colSpan={groupsWithData.length + 2} className="p-8 text-center text-gray-500 bg-gray-50">
-                                                            No daily skill performance data available.
+                                                            {t('course_report.daily.no_skill_data', 'No daily skill performance data available.')}
                                                         </td>
                                                     </tr>
                                                 )}
@@ -2384,24 +2416,24 @@ function CourseReportBody({
                     <Card>
                          <div id="participant-results-card" className="relative p-2 w-full max-w-full min-w-0">
                             
-                            <h3 className="text-xl font-bold mb-4">Participant Results</h3>
+                            <h3 className="text-xl font-bold mb-4">{t('course_report.results.title', 'Participant Results')}</h3>
 
                             {showCaseColumns && (
                                 <div id="practical-full-section" className="relative mb-10 w-full bg-white rounded-lg p-2">
-                                    {!isSharedView && <button onClick={() => handleCopyAsImage('practical-full-section')} className="copy-button absolute top-0 right-0 z-10 m-1 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy Section as Image"><CopyIcon /></button>}
+                                    {!isSharedView && <button onClick={() => handleCopyAsImage('practical-full-section')} className="copy-button absolute top-0 right-0 z-10 m-1 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_section_as_image', 'Copy Section as Image')}><CopyIcon /></button>}
                                     <div id="practical-summary-table" className="relative mb-4 w-full max-w-full min-w-0">
                                         
-                                        <h4 className="text-[1.05rem] font-bold mb-2 text-sky-800 pr-8">Practical Case Performance Summary</h4>
+                                        <h4 className="text-[1.05rem] font-bold mb-2 text-sky-800 pr-8">{t('course_report.results.practical_summary', 'Practical Case Performance Summary')}</h4>
                                         <div className="w-full max-w-full overflow-hidden rounded-lg border border-gray-200 shadow-sm mb-2">
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-center text-sm whitespace-nowrap">
                                                     <thead>
                                                         <tr>
-                                                            <th className="px-4 py-3 bg-white text-left text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">Practical Score Category</th>
+                                                            <th className="px-4 py-3 bg-white text-left text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">{t('course_report.results.practical_category', 'Practical Score Category')}</th>
                                                             {practicalScoreCategories.map((cat, i) => (
                                                                 <th key={cat.key} className={`px-3 py-2 font-bold border-b border-gray-200 ${cat.colorClass} ${i !== practicalScoreCategories.length - 1 ? 'border-r border-black/5' : ''} min-w-[120px]`}>
                                                                     <div className="flex flex-col items-center justify-center">
-                                                                        <span className="text-sm">{cat.name}</span>
+                                                                        <span className="text-sm">{catLabel(cat.name)}</span>
                                                                         {cat.range && cat.range !== 'N/A' && <span className="text-[11px] font-medium opacity-75 mt-0.5">{cat.range}</span>}
                                                                     </div>
                                                                 </th>
@@ -2410,7 +2442,7 @@ function CourseReportBody({
                                                     </thead>
                                                     <tbody className="bg-white">
                                                         <tr>
-                                                            <td className="px-4 py-3 text-left text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">Participant Count</td>
+                                                            <td className="px-4 py-3 text-left text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">{t('course_report.results.participant_count', 'Participant Count')}</td>
                                                             {practicalScoreCategories.map((cat, i) => (
                                                                 <td key={cat.key} className={`px-3 py-3 text-2xl font-black text-sky-900 ${i !== practicalScoreCategories.length - 1 ? 'border-r border-gray-200' : ''}`}>
                                                                     {caseCorrectnessDistribution[cat.key] || 0}
@@ -2425,9 +2457,9 @@ function CourseReportBody({
                                     
                                     {!isSharedView && (
                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4 w-full sm:w-auto">
-                                            <label htmlFor="case-filter" className="text-sm font-semibold text-gray-700">Filter by Case Correctness:</label>
+                                            <label htmlFor="case-filter" className="text-sm font-semibold text-gray-700">{t('course_report.results.filter_case', 'Filter by Case Correctness:')}</label>
                                             <select id="case-filter" value={caseCorrectnessFilter} onChange={(e) => setCaseCorrectnessFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white w-full sm:w-auto">
-                                                {caseFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}
+                                                {caseFilterOptions.map(option => (<option key={option.name} value={option.name}>{catLabel(option.name)}</option>))}
                                             </select>
                                         </div>
                                     )}
@@ -2437,14 +2469,14 @@ function CourseReportBody({
                                             <table className="w-full text-left border-collapse bg-white">
                                                 <thead className="bg-gray-50 border-b border-gray-200">
                                                     <tr>
-                                                        {practicalTableHeaders.map(h => <th key={h} className="p-3 text-sm font-semibold text-gray-700 text-center">{h}</th>)}
+                                                        {practicalTableHeaders.map(h => <th key={h} className="p-3 text-sm font-semibold text-gray-700 text-center">{headerLabel(h)}</th>)}
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
                                                     {filteredPracticalParticipants.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={practicalTableHeaders.length} className="p-8 text-center text-gray-500 bg-gray-50">
-                                                        No participants match the selected filter.
+                                                        {t('course_report.results.no_match', 'No participants match the selected filter.')}
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -2480,7 +2512,7 @@ function CourseReportBody({
                                                             </>
                                                         ) : (
                                                             <>
-                                                                {!isSharedView && <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</span></td>}
+                                                                {!isSharedView && <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{catLabel(getCaseCorrectnessName(p.correctness_percentage))}</span></td>}
                                                                 <td className="p-3 text-center">
                                                                     <span className={`font-mono text-sm px-2 py-1 rounded ${getScoreColorClass(p.correctness_percentage)}`}>
                                                                         {fmtPct(p.correctness_percentage)}
@@ -2500,20 +2532,20 @@ function CourseReportBody({
 
                             {showTestScoreColumns && (
                                 <div id="written-full-section" className="relative mb-10 w-full bg-white rounded-lg p-2">
-                                    {!isSharedView && <button onClick={() => handleCopyAsImage('written-full-section')} className="copy-button absolute top-0 right-0 z-10 m-1 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy Section as Image"><CopyIcon /></button>}
+                                    {!isSharedView && <button onClick={() => handleCopyAsImage('written-full-section')} className="copy-button absolute top-0 right-0 z-10 m-1 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_section_as_image', 'Copy Section as Image')}><CopyIcon /></button>}
                                     <div id="written-summary-table" className="relative mb-4 w-full max-w-full min-w-0">
                                         
-                                        <h4 className="text-[1.05rem] font-bold mb-2 text-indigo-800 pr-8">Written Test Improvement Summary</h4>
+                                        <h4 className="text-[1.05rem] font-bold mb-2 text-indigo-800 pr-8">{t('course_report.results.written_summary', 'Written Test Improvement Summary')}</h4>
                                         <div className="w-full max-w-full overflow-hidden rounded-lg border border-gray-200 shadow-sm mb-2">
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-center text-sm whitespace-nowrap">
                                                     <thead>
                                                         <tr>
-                                                            <th className="px-4 py-3 bg-white text-left text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">Improvement Level</th>
+                                                            <th className="px-4 py-3 bg-white text-left text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">{t('course_report.results.improvement_level', 'Improvement Level')}</th>
                                                             {correctnessCategories.map((cat, i) => (
                                                                 <th key={cat.key} className={`px-3 py-2 font-bold border-b border-gray-200 ${cat.colorClass} ${i !== correctnessCategories.length - 1 ? 'border-r border-black/5' : ''} min-w-[120px]`}>
                                                                     <div className="flex flex-col items-center justify-center">
-                                                                        <span className="text-sm">{cat.name}</span>
+                                                                        <span className="text-sm">{catLabel(cat.name)}</span>
                                                                         {cat.range && cat.range !== 'N/A' && <span className="text-[11px] font-medium opacity-75 mt-0.5">{cat.range}</span>}
                                                                     </div>
                                                                 </th>
@@ -2522,7 +2554,7 @@ function CourseReportBody({
                                                     </thead>
                                                     <tbody className="bg-white">
                                                         <tr>
-                                                            <td className="px-4 py-3 text-left text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">Participant Count</td>
+                                                            <td className="px-4 py-3 text-left text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">{t('course_report.results.participant_count', 'Participant Count')}</td>
                                                             {correctnessCategories.map((cat, i) => (
                                                                 <td key={cat.key} className={`px-3 py-3 text-2xl font-black text-indigo-900 ${i !== correctnessCategories.length - 1 ? 'border-r border-gray-200' : ''}`}>
                                                                     {avgImprovementDistribution[cat.key] || 0}
@@ -2537,9 +2569,9 @@ function CourseReportBody({
 
                                     {!isSharedView && (
                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4 w-full sm:w-auto">
-                                            <label htmlFor="score-filter" className="text-sm font-semibold text-gray-700">Filter by Avg. Improvement:</label>
+                                            <label htmlFor="score-filter" className="text-sm font-semibold text-gray-700">{t('course_report.results.filter_improvement', 'Filter by Avg. Improvement:')}</label>
                                             <select id="score-filter" value={scoreFilter} onChange={(e) => setScoreFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white w-full sm:w-auto">
-                                                {scoreFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}
+                                                {scoreFilterOptions.map(option => (<option key={option.name} value={option.name}>{catLabel(option.name)}</option>))}
                                             </select>
                                         </div>
                                     )}
@@ -2549,14 +2581,14 @@ function CourseReportBody({
                                             <table className="w-full text-left border-collapse bg-white">
                                                 <thead className="bg-gray-50 border-b border-gray-200">
                                                     <tr>
-                                                        {writtenTableHeaders.map(h => <th key={h} className="p-3 text-sm font-semibold text-gray-700 text-center">{h}</th>)}
+                                                        {writtenTableHeaders.map(h => <th key={h} className="p-3 text-sm font-semibold text-gray-700 text-center">{headerLabel(h)}</th>)}
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
                                                     {filteredWrittenParticipants.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={writtenTableHeaders.length} className="p-8 text-center text-gray-500 bg-gray-50">
-                                                        No participants match the selected filter.
+                                                        {t('course_report.results.no_match', 'No participants match the selected filter.')}
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -2565,7 +2597,7 @@ function CourseReportBody({
                                                     const postScore = Number(p.post_test_score);
                                                     const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
                                                     const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
-                                                    const increaseDisplay = isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`;
+                                                    const increaseDisplay = isNaN(increase) || increase === null ? t('course_report.na', 'N/A') : `${increase.toFixed(1)}%`;
                                                     
                                                     return (
                                                         <tr key={`writ-${p.id}`} className={`transition-colors duration-150 border-b border-gray-100 ${!isSharedView ? 'cursor-pointer hover:bg-indigo-50' : ''}`} onClick={!isSharedView ? () => onViewParticipantReport(p.id) : undefined}>
@@ -2574,7 +2606,7 @@ function CourseReportBody({
                                                             <td className="p-3 text-center text-gray-700">{fmtDecimal(preScore)}</td>
                                                             <td className="p-3 text-center text-gray-700">{fmtDecimal(postScore)}</td>
                                                             <td className="p-3 text-center font-medium text-gray-800">{increaseDisplay}</td>
-                                                            <td className="p-3 text-center min-w-[120px]"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${category.className}`}>{category.name}</span></td>
+                                                            <td className="p-3 text-center min-w-[120px]"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${category.className}`}>{catLabel(category.name)}</span></td>
                                                         </tr>
                                                     );
                                                 })
@@ -2598,26 +2630,26 @@ function CourseReportBody({
             )}
 
             {/* Modal for Historical Coverage Preview */}
-            <Modal isOpen={isCoverageModalOpen} onClose={() => setIsCoverageModalOpen(false)} title="Historical Coverage Baseline" size="lg">
+            <Modal isOpen={isCoverageModalOpen} onClose={() => setIsCoverageModalOpen(false)} title={t('course_report.coverage.history_title', 'Historical Coverage Baseline')} size="lg">
                 <div className="p-4 sm:p-6 space-y-4">
                     {isPreviewLoading ? (
                         <div className="flex flex-col items-center justify-center p-8">
                             <Spinner size="lg" />
-                            <p className="mt-4 text-sky-700 font-semibold text-center">Calculating historical baseline coverage from facility snapshots...</p>
+                            <p className="mt-4 text-sky-700 font-semibold text-center">{t('course_report.coverage.calculating', 'Calculating historical baseline coverage from facility snapshots...')}</p>
                         </div>
                     ) : historicalCoveragePreview ? (
                         <div>
                             <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg mb-4 text-sm">
-                                <strong>Retrieved At:</strong> {new Date(historicalCoveragePreview.retrievedAt).toLocaleString()}
+                                <strong>{t('course_report.coverage.retrieved_at', 'Retrieved At:')}</strong> {new Date(historicalCoveragePreview.retrievedAt).toLocaleString()}
                                 <br /><br />
-                                Please review the fully calculated baseline coverage below. Confirming will permanently save this snapshot to the course.
+                                {t('course_report.coverage.review_note', 'Please review the fully calculated baseline coverage below. Confirming will permanently save this snapshot to the course.')}
                             </div>
                             
                             <div className="overflow-x-auto max-h-[50vh] border rounded-lg shadow-sm">
-                                <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
+                                <Table headers={coverageHeaders}>
                                     {historicalCoveragePreview.localityCoverage.map(l => (
                                         <tr key={`prev-loc-${l.name}`} className="hover:bg-gray-50">
-                                            <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">Locality: {l.name}</td>
+                                            <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">{t('course_report.coverage.locality_name', 'Locality: {{name}}', { name: l.name })}</td>
                                             <td className="p-2 border text-center">{l.totalPhc}</td>
                                             <td className="p-2 border text-center">{l.phcWithImnciBefore}</td>
                                             <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(l.covBefore)}</td>
@@ -2628,7 +2660,7 @@ function CourseReportBody({
                                     ))}
                                     {historicalCoveragePreview.stateCoverage.map(s => (
                                         <tr key={`prev-state-${s.name}`} className="hover:bg-gray-50 bg-gray-50/50">
-                                            <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">State: {s.name}</td>
+                                            <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">{t('course_report.coverage.state_name', 'State: {{name}}', { name: s.name })}</td>
                                             <td className="p-2 border text-center">{s.totalPhc}</td>
                                             <td className="p-2 border text-center">{s.phcWithImnciBefore}</td>
                                             <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(s.covBefore)}</td>
@@ -2641,42 +2673,42 @@ function CourseReportBody({
                             </div>
                             
                             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6 pt-4 border-t w-full">
-                                <Button variant="secondary" onClick={() => setIsCoverageModalOpen(false)} disabled={isSavingCoverage} className="w-full sm:w-auto">Cancel</Button>
+                                <Button variant="secondary" onClick={() => setIsCoverageModalOpen(false)} disabled={isSavingCoverage} className="w-full sm:w-auto">{t('course_report.buttons.cancel', 'Cancel')}</Button>
                                 <Button onClick={handleConfirmCoverage} disabled={isSavingCoverage} className="w-full sm:w-auto">
-                                    {isSavingCoverage ? <Spinner size="sm" /> : "Confirm & Save"}
+                                    {isSavingCoverage ? <Spinner size="sm" /> : t('course_report.coverage.confirm_save', 'Confirm & Save')}
                                 </Button>
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center p-4 text-red-500">Failed to load preview.</div>
+                        <div className="text-center p-4 text-red-500">{t('course_report.coverage.preview_failed', 'Failed to load preview.')}</div>
                     )}
                 </div>
             </Modal>
 
             
             {/* Modal for Editing Coverage */}
-            <Modal isOpen={isEditCoverageModalOpen} onClose={() => setIsEditCoverageModalOpen(false)} title="Edit Baseline Coverage" size="lg">
+            <Modal isOpen={isEditCoverageModalOpen} onClose={() => setIsEditCoverageModalOpen(false)} title={t('course_report.coverage.edit_title', 'Edit Baseline Coverage')} size="lg">
                 <div className="p-3 sm:p-4 max-h-[70vh] overflow-y-auto space-y-4 sm:space-y-6">
                     {editableCoverageData && (
                         <>
                             {editableCoverageData.stateCoverage.map((s, idx) => (
                                 <div key={s.name} className="bg-white p-4 rounded shadow-sm border">
-                                    <h4 className="font-bold text-lg border-b pb-2 mb-4 text-indigo-800">State: {s.name}</h4>
+                                    <h4 className="font-bold text-lg border-b pb-2 mb-4 text-indigo-800">{t('course_report.coverage.state_name', 'State: {{name}}', { name: s.name })}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <FormGroup label="Total Functioning PHCs"><Input type="number" value={s.totalPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'totalPhc', e.target.value)} /></FormGroup>
-                                        <FormGroup label="PHCs w/ IMNCI (Before)"><Input type="number" value={s.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('state', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
-                                        <FormGroup label="New PHCs w/ IMNCI"><Input type="number" value={s.newPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'newPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.total_functioning_phcs', 'Total Functioning PHCs')}><Input type="number" value={s.totalPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'totalPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.phcs_imnci_before', 'PHCs w/ IMNCI (Before)')}><Input type="number" value={s.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('state', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.new_phcs_imnci', 'New PHCs w/ IMNCI')}><Input type="number" value={s.newPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'newPhc', e.target.value)} /></FormGroup>
                                     </div>
                                 </div>
                             ))}
 
                             {editableCoverageData.localityCoverage.map((l, idx) => (
                                 <div key={l.name} className="bg-white p-4 rounded shadow-sm border">
-                                    <h4 className="font-bold text-lg border-b pb-2 mb-4 text-sky-800">Locality: {l.name}</h4>
+                                    <h4 className="font-bold text-lg border-b pb-2 mb-4 text-sky-800">{t('course_report.coverage.locality_name', 'Locality: {{name}}', { name: l.name })}</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <FormGroup label="Total Functioning PHCs"><Input type="number" value={l.totalPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'totalPhc', e.target.value)} /></FormGroup>
-                                        <FormGroup label="PHCs w/ IMNCI (Before)"><Input type="number" value={l.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('locality', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
-                                        <FormGroup label="New PHCs w/ IMNCI"><Input type="number" value={l.newPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'newPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.total_functioning_phcs', 'Total Functioning PHCs')}><Input type="number" value={l.totalPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'totalPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.phcs_imnci_before', 'PHCs w/ IMNCI (Before)')}><Input type="number" value={l.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('locality', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
+                                        <FormGroup label={t('course_report.coverage.new_phcs_imnci', 'New PHCs w/ IMNCI')}><Input type="number" value={l.newPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'newPhc', e.target.value)} /></FormGroup>
                                     </div>
                                 </div>
                             ))}
@@ -2684,8 +2716,8 @@ function CourseReportBody({
                     )}
                 </div>
                 <div className="p-3 sm:p-4 border-t flex flex-col-reverse sm:flex-row justify-end gap-2 bg-gray-50 w-full">
-                    <Button variant="secondary" onClick={() => setIsEditCoverageModalOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-                    <Button onClick={handleSaveEditedCoverage} disabled={isSavingCoverage} className="w-full sm:w-auto">{isSavingCoverage ? <Spinner size="sm" /> : 'Save Changes'}</Button>
+                    <Button variant="secondary" onClick={() => setIsEditCoverageModalOpen(false)} className="w-full sm:w-auto">{t('course_report.buttons.cancel', 'Cancel')}</Button>
+                    <Button onClick={handleSaveEditedCoverage} disabled={isSavingCoverage} className="w-full sm:w-auto">{isSavingCoverage ? <Spinner size="sm" /> : t('course_report.buttons.save_changes', 'Save Changes')}</Button>
                 </div>
             </Modal>
 

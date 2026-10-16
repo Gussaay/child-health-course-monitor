@@ -22,7 +22,7 @@ import {
 } from '../../data';
 
 import {
-    Card, PageHeader, Button, FormGroup, Select, Spinner,
+    Card, PageHeader, Button, FormGroup, Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards,
     EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal
 } from '../CommonComponents';
 
@@ -638,7 +638,9 @@ const VisitChooserModal = ({ isOpen, session, onContinue, onStartNew, onCancel }
 };
 
 // --- Blocking screen shown once the 4-hour window closes ---
-const VisitWindowExpiredScreen = ({ session, onStartNewVisit, onExit }) => (
+const VisitWindowExpiredScreen = ({ session, onStartNewVisit, onExit }) => {
+    const { t } = useTranslation();
+    return (
     <div className="max-w-lg mx-auto mt-10 p-4" dir="rtl">
         <div className="border border-red-200 rounded-lg overflow-hidden shadow-sm bg-white">
             <div className="bg-red-600 text-white px-5 py-3 flex items-center gap-2">
@@ -655,7 +657,7 @@ const VisitWindowExpiredScreen = ({ session, onStartNewVisit, onExit }) => (
                         <span className="font-semibold text-gray-800 truncate">{session?.facilityName || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between gap-3" dir="ltr">
-                        <span className="text-gray-500 text-xs">Visit window</span>
+                        <span className="text-gray-500 text-xs">{t('mentorship_page.visit.visit_window', 'Visit window')}</span>
                         <span className="font-semibold text-gray-800">
                             {formatVisitClock(session?.startedAt)} – {formatVisitClock(session?.expiresAt)}
                         </span>
@@ -671,10 +673,12 @@ const VisitWindowExpiredScreen = ({ session, onStartNewVisit, onExit }) => (
             </div>
         </div>
     </div>
-);
+    );
+};
 
 // --- Floating countdown shown while a form is open ---
 const VisitCountdownBadge = ({ session, onEndVisit }) => {
+    const { t } = useTranslation();
     // Self-ticking: keeps the per-second re-render scoped to this badge instead of
     // re-rendering the whole view (and any open form) once a second.
     const [now, setNow] = useState(() => Date.now());
@@ -702,13 +706,14 @@ const VisitCountdownBadge = ({ session, onEndVisit }) => {
                 onClick={onEndVisit}
                 className="text-[10px] underline opacity-80 hover:opacity-100 flex-shrink-0"
             >
-                End visit
+                {t('mentorship_page.visit.end_visit', 'End visit')}
             </button>
         </div>
     );
 };
 
 const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage, menuSection, onSelectSection, activeVisitSession }) => {
+    const { t } = useTranslation();
 
     const canViewSubmissions = 
         permissions?.canViewSkillsMentorship ||
@@ -719,7 +724,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
     const addItems = [
         { 
             id: 'new_skill', 
-            label: activeService === 'IPC' ? 'تقييم نظافة الأيدي (Hand Hygiene)' : 'Add New Skill Form', 
+            label: activeService === 'IPC' ? 'تقييم نظافة الأيدي (Hand Hygiene)' : t('mentorship_page.menu.add_skill_form', 'Add New Skill Form'), 
             icon: activeService === 'IPC' ? ShieldCheck : PlusCircle, 
             color: activeService === 'IPC' ? 'text-cyan-600' : 'text-emerald-600', 
             bg: activeService === 'IPC' ? 'bg-cyan-100' : 'bg-emerald-100', 
@@ -728,7 +733,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         },
         { 
             id: 'update_facility', 
-            label: activeService === 'IPC' ? 'تقييم برنامج مكافحة العدوى للمنشأة' : 'Update Facility Info', 
+            label: activeService === 'IPC' ? 'تقييم برنامج مكافحة العدوى للمنشأة' : t('mentorship_page.menu.update_facility', 'Update Facility Info'), 
             icon: Building, 
             color: 'text-cyan-600', 
             bg: 'bg-cyan-100', 
@@ -744,20 +749,20 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
             border: 'hover:border-indigo-400', 
             shadow: 'hover:shadow-indigo-100' 
         }] : []),
-        { id: 'new_mother', label: 'Add New Mother Form', icon: Users, color: 'text-pink-600', bg: 'bg-pink-100', border: 'hover:border-pink-400', shadow: 'hover:shadow-pink-100' },
-        { id: 'new_visit_report', label: 'Add New Visit Report', icon: ClipboardCheck, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
+        { id: 'new_mother', label: t('mentorship_page.menu.add_mother_form', 'Add New Mother Form'), icon: Users, color: 'text-pink-600', bg: 'bg-pink-100', border: 'hover:border-pink-400', shadow: 'hover:shadow-pink-100' },
+        { id: 'new_visit_report', label: t('mentorship_page.menu.add_visit_report', 'Add New Visit Report'), icon: ClipboardCheck, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
     ];
 
     const viewItems = [
-        { id: 'view_dashboard', label: 'Show Dashboard', icon: LayoutDashboard, color: 'text-purple-600', bg: 'bg-purple-100', border: 'hover:border-purple-400', shadow: 'hover:shadow-purple-100' },
-        { id: 'view_drafts', label: `My Drafts & Reports (${draftCount + (reportCount || 0)})`, icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
-        { id: 'training_priorities', label: 'Training Priorities', icon: Target, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
+        { id: 'view_dashboard', label: t('mentorship_page.menu.show_dashboard', 'Show Dashboard'), icon: LayoutDashboard, color: 'text-purple-600', bg: 'bg-purple-100', border: 'hover:border-purple-400', shadow: 'hover:shadow-purple-100' },
+        { id: 'view_drafts', label: t('mentorship_page.menu.my_drafts_reports', 'My Drafts & Reports ({{count}})', { count: draftCount + (reportCount || 0) }), icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
+        { id: 'training_priorities', label: t('mentorship_page.menu.training_priorities', 'Training Priorities'), icon: Target, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
     ];
 
     if (canViewSubmissions) {
         viewItems.unshift({ 
             id: 'view_submissions', 
-            label: 'Show Submitted Forms', 
+            label: t('mentorship_page.menu.show_submitted', 'Show Submitted Forms'), 
             icon: List, 
             color: 'text-blue-600', 
             bg: 'bg-blue-100', 
@@ -796,9 +801,9 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
     const landingItems = [
         ...(canManage ? [{
             id: 'add',
-            label: 'Add New Form',
+            label: t('mentorship_page.menu.add_new_form', 'Add New Form'),
             arabic: 'إضافة نموذج جديد',
-            hint: `${addItems.length} forms available`,
+            hint: t('mentorship_page.menu.forms_available', '{{count}} forms available', { count: addItems.length }),
             icon: PlusCircle,
             color: 'text-emerald-600',
             bg: 'bg-emerald-100',
@@ -807,9 +812,9 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         }] : []),
         {
             id: 'view',
-            label: 'Show Previous Forms',
+            label: t('mentorship_page.menu.show_previous', 'Show Previous Forms'),
             arabic: 'عرض النماذج السابقة',
-            hint: `${draftCount + (reportCount || 0)} drafts & reports`,
+            hint: t('mentorship_page.menu.drafts_reports_hint', '{{count}} drafts & reports', { count: draftCount + (reportCount || 0) }),
             icon: Archive,
             color: 'text-blue-600',
             bg: 'bg-blue-100',
@@ -840,7 +845,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         </div>
     );
 
-    const sectionTitles = { add: 'Add New Data', view: 'View Records & Dashboards' };
+    const sectionTitles = { add: t('mentorship_page.menu.add_new_data', 'Add New Data'), view: t('mentorship_page.menu.view_records', 'View Records & Dashboards') };
 
     return (
         <div className="max-w-4xl mx-auto mt-4 p-4 space-y-5" dir="ltr">
@@ -851,11 +856,11 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
                     size="sm"
                     className="py-1.5 px-3 text-sm"
                 >
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                    <ArrowLeft className="w-4 h-4 mr-2" /> {t('mentorship_page.buttons.back', 'Back')}
                 </Button>
                 {activeService && (
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full">
-                        {activeService} Mentorship
+                        {t('mentorship_page.menu.service_mentorship', '{{service}} Mentorship', { service: activeService })}
                     </span>
                 )}
             </div>
@@ -863,7 +868,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
             {activeVisitSession && (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2">
                     <span className="text-xs font-bold text-emerald-800">
-                        Open visit — {activeVisitSession.facilityName || 'N/A'} (visit #{activeVisitSession.visitNumber})
+                        {t('mentorship_page.visit.open_visit', 'Open visit — {{facility}} (visit #{{number}})', { facility: activeVisitSession.facilityName || 'N/A', number: activeVisitSession.visitNumber })}
                     </span>
                     <span className="text-[11px] text-emerald-700" dir="ltr">
                         {formatVisitClock(activeVisitSession.startedAt)} – {formatVisitClock(activeVisitSession.expiresAt)}
@@ -1366,9 +1371,10 @@ const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData
 
 // --- Mentor Info Modal ---
 const MentorInfoModal = ({ mentor, onClose }) => {
+    const { t } = useTranslation();
     if (!mentor) return null;
     return (
-        <Modal isOpen={true} onClose={onClose} title="Mentor Information" size="md">
+        <Modal isOpen={true} onClose={onClose} title={t('mentorship_page.mentor_info.title', 'Mentor Information')} size="md">
             <div className="p-6 text-right" dir="rtl">
                 <div className="space-y-4 text-gray-800">
                     <p className="flex justify-between border-b pb-2">
@@ -1425,7 +1431,7 @@ const VisitReportsTable = ({
     return (
         <div dir="ltr" className="p-4 overflow-x-auto border rounded-lg bg-white">
             {isReportsLoading ? (
-                <div className="flex justify-center p-8"><Spinner /></div>
+                <SkeletonTable rows={8} columns={6} />
             ) : (
                 <table className="w-full border-collapse border border-gray-300">
                     <thead className="bg-gray-50">
@@ -1452,7 +1458,7 @@ const VisitReportsTable = ({
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {reports.length === 0 ? (
-                            <tr><td colSpan={canManage ? "8" : "7"} className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
+                            <tr><td colSpan={canManage ? "8" : "7"} className="border border-gray-300"><EmptyState title={t('mentorship_page.empty.no_records', 'No Records Found')} message={t('mentorship_page.empty.no_visit_reports', 'No visit reports found for this service.')} /></td></tr>
                         ) : (
                             reports.map(rep => {
                                 const isAuthor = rep.mentorEmail === currentUserEmail;
@@ -1483,9 +1489,9 @@ const VisitReportsTable = ({
                                     </td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-start border border-gray-300">
                                         <div className="flex gap-2">
-                                            <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
-                                            {(canManage || isAuthor) && <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>}
-                                            {canManage && <Button size="sm" variant="danger" onClick={() => onDelete(rep.id)}>Delete</Button>}
+                                            <Button size="sm" variant="info" onClick={() => onView(rep.id)}>{t('mentorship_page.buttons.view', 'View')}</Button>
+                                            {(canManage || isAuthor) && <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>{t('mentorship_page.buttons.edit', 'Edit')}</Button>}
+                                            {canManage && <Button size="sm" variant="danger" onClick={() => onDelete(rep.id)}>{t('mentorship_page.buttons.delete', 'Delete')}</Button>}
                                         </div>
                                     </td>
                                 </tr>
@@ -1501,6 +1507,7 @@ const VisitReportsTable = ({
 
 // --- View Visit Report Modal ---
 const ViewVisitReportModal = ({ report, onClose }) => {
+    const { t } = useTranslation();
     if (!report || !report.fullData) return null;
     
     const data = report.fullData;
@@ -1578,7 +1585,7 @@ const ViewVisitReportModal = ({ report, onClose }) => {
                                                     row.immediate_status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                                                     'bg-yellow-100 text-yellow-800'
                                                 }`}>
-                                                    {row.immediate_status || 'Pending'}
+                                                    {row.immediate_status || t('mentorship_page.status.pending', 'Pending')}
                                                 </span>
                                             </td>
                                             <td className="px-2 py-2 border">{row.long_term_solution}</td>
@@ -1588,7 +1595,7 @@ const ViewVisitReportModal = ({ report, onClose }) => {
                                                     row.long_term_status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                                                     'bg-yellow-100 text-yellow-800'
                                                 }`}>
-                                                    {row.long_term_status || 'Pending'}
+                                                    {row.long_term_status || t('mentorship_page.status.pending', 'Pending')}
                                                 </span>
                                             </td>
                                             <td className="px-2 py-2 border">{row.responsible_person}</td>
@@ -1673,10 +1680,13 @@ const SERVICE_TITLES = {
 
 // --- View Submission Modal ---
 const ViewSubmissionModal = ({ submission, onClose }) => {
+    const { t } = useTranslation();
     if (!submission) return null;
 
     const scores = submission.scores || {};
-    const serviceTitle = SERVICE_TITLES[submission.serviceType] || submission.serviceType;
+    const serviceTitle = SERVICE_TITLES[submission.serviceType]
+        ? t(`mentorship_page.service_titles.${submission.serviceType}`, SERVICE_TITLES[submission.serviceType])
+        : submission.serviceType;
 
     const renderScore = (scoreKey, label) => {
         const score = scores[`${scoreKey}_score`];
@@ -1900,6 +1910,7 @@ const MentorshipSubmissionsTable = ({
     filterServiceType,
     selectedIds, onSelectionChange, canManage, currentUserEmail
 }) => {
+    const { t } = useTranslation();
     
     const handleAction = (action, submission) => {
         if (action === 'view') {
@@ -1935,9 +1946,9 @@ const MentorshipSubmissionsTable = ({
 
     return (
         <div dir="ltr" className="p-4"> 
-                <div className="mt-6 w-full overflow-x-auto border border-gray-300 rounded-lg shadow-sm">
+                <PhoneCards className="mt-6 w-full overflow-x-auto border border-gray-300 rounded-lg shadow-sm">
                      {isSubmissionsLoading ? (
-                        <div className="flex justify-center p-8"><Spinner /></div>
+                        <div className="p-4"><SkeletonTable rows={8} columns={6} /></div>
                     ) : (
                         <table className="w-full border-collapse" dir="ltr"> 
                             <thead className="bg-gray-50">
@@ -1952,7 +1963,7 @@ const MentorshipSubmissionsTable = ({
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {submissions.length === 0 ? (
-                                    <tr><td colSpan={canManage ? "12" : "11"} className="border border-gray-300"><EmptyState title="No Records Found" message="No mentorship visits matched the current filters." /></td></tr>
+                                    <tr><td colSpan={canManage ? "12" : "11"} className="border border-gray-300"><EmptyState title={t('mentorship_page.empty.no_records', 'No Records Found')} message={t('mentorship_page.empty.no_visits_matched', 'No mentorship visits matched the current filters.')} /></td></tr>
                                 ) : (
                                     submissions.map((sub, index) => {
                                         const scoreData = sub.scores;
@@ -1965,11 +1976,11 @@ const MentorshipSubmissionsTable = ({
                                         const isMotherSurvey = sub.service === motherServiceType;
                                 
                                         const workerDisplay = isMotherSurvey 
-                                            ? `Survey: ${sub.motherName || 'N/A'}`
+                                            ? t('mentorship_page.table.survey_of', 'Survey: {{name}}', { name: sub.motherName || 'N/A' })
                                             : sub.staff;
                                         const serviceStatus = isMotherSurvey 
-                                            ? 'Mother\'s Survey' 
-                                            : (sub.status === 'draft' ? 'Draft' : 'Complete');
+                                            ? t('mentorship_page.status.mothers_survey', "Mother's Survey") 
+                                            : (sub.status === 'draft' ? t('mentorship_page.status.draft', 'Draft') : t('mentorship_page.status.complete', 'Complete'));
 
                                         const isSelected = selectedIds.includes(sub.id);
                                         const rowBgClass = isSelected ? 'bg-sky-50' : (sub.status === 'draft' ? 'bg-yellow-50' : (isMotherSurvey ? 'bg-blue-50' : 'bg-white'));
@@ -2045,11 +2056,11 @@ const MentorshipSubmissionsTable = ({
 
                                             <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-start border border-gray-300">
                                                 <div className="flex flex-col xl:flex-row gap-1">
-                                                    <Button size="sm" variant="info" onClick={() => handleAction('view', sub)} className="text-xs px-2 py-1">View</Button>
+                                                    <Button size="sm" variant="info" onClick={() => handleAction('view', sub)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.view', 'View')}</Button>
                                                     {canEditRow && (sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS' || sub.service === 'EENC_MOTHERS') && 
-                                                        <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)} className="text-xs px-2 py-1">Edit</Button>
+                                                        <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.edit', 'Edit')}</Button>
                                                     }
-                                                    {canDeleteRow && <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)} className="text-xs px-2 py-1">Del</Button>}
+                                                    {canDeleteRow && <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.del', 'Del')}</Button>}
                                                 </div>
                                             </td>
                                         </tr>
@@ -2058,7 +2069,7 @@ const MentorshipSubmissionsTable = ({
                             </tbody>
                         </table>
                     )}
-                </div>
+                </PhoneCards>
         </div>
     );
 };
@@ -2066,19 +2077,20 @@ const MentorshipSubmissionsTable = ({
 
 // --- Service Selection Component ---
 const ServiceSelector = ({ onSelectService }) => {
+    const { t } = useTranslation();
     const services = [
-        { key: 'IMNCI', title: 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
-        { key: 'EENC', title: 'Mentorship on Early Essential Newborn Care (EENC)', enabled: true },
-        { key: 'ETAT', title: 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)', enabled: true },
-        { key: 'IPC', title: 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)', enabled: true }
+        { key: 'IMNCI', title: t('mentorship_page.services.imnci', 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)'), enabled: true },
+        { key: 'EENC', title: t('mentorship_page.services.eenc', 'Mentorship on Early Essential Newborn Care (EENC)'), enabled: true },
+        { key: 'ETAT', title: t('mentorship_page.services.etat', 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)'), enabled: true },
+        { key: 'IPC', title: t('mentorship_page.services.ipc', 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)'), enabled: true }
     ];
 
     return (
         <Card className="p-6" dir="ltr">
             <div className="text-start flex justify-between items-start">
                 <PageHeader
-                    title="Choose Service for Mentorship"
-                    subtitle="Select a program to begin skills mentorship."
+                    title={t('mentorship_page.services.choose_title', 'Choose Service for Mentorship')}
+                    subtitle={t('mentorship_page.services.choose_subtitle', 'Select a program to begin skills mentorship.')}
                 />
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2094,7 +2106,7 @@ const ServiceSelector = ({ onSelectService }) => {
                             <div>
                                 <div className="font-semibold text-gray-800 text-start">{service.title}</div>
                                 <div className="text-xs text-gray-500 mt-1 text-start">
-                                    {service.enabled ? 'Click to start session' : 'Coming Soon'}
+                                    {service.enabled ? t('mentorship_page.services.click_to_start', 'Click to start session') : t('mentorship_page.services.coming_soon', 'Coming Soon')}
                                 </div>
                             </div>
                         </div>
@@ -2118,6 +2130,7 @@ const SkillsMentorshipView = ({
     publicDashboardMode = false, 
     publicDashboardParams = null 
 }) => {
+    const { t, i18n } = useTranslation();
     useEffect(() => {
         if (publicDashboardMode) {
             const params = new URLSearchParams(window.location.search);
@@ -2191,8 +2204,8 @@ const SkillsMentorshipView = ({
                 'lastServerFetch_eencVisitReports'
             ];
             keys.forEach(k => {
-                const t = parseInt(localStorage.getItem(k) || '0', 10);
-                if (t > lastTimeMs) lastTimeMs = t;
+                const ts = parseInt(localStorage.getItem(k) || '0', 10);
+                if (ts > lastTimeMs) lastTimeMs = ts;
             });
         }
         
@@ -2203,9 +2216,9 @@ const SkillsMentorshipView = ({
                 hour: 'numeric', minute: '2-digit', hour12: true 
             }));
         } else {
-            setLastSyncTime('Never synced');
+            setLastSyncTime(t('mentorship_page.sync.never_synced', 'Never synced'));
         }
-    }, [publicDashboardMode]);
+    }, [publicDashboardMode, t]);
 
     const {
         healthFacilities,
@@ -2324,7 +2337,6 @@ const SkillsMentorshipView = ({
     const [publicData, setPublicData] = useState({ submissions: null, imnci: null, eenc: null });
     const [publicLoading, setPublicLoading] = useState(publicDashboardMode);
 
-    const { i18n } = useTranslation();
     const language = i18n.language;
 
     useEffect(() => {
@@ -2848,7 +2860,7 @@ const SkillsMentorshipView = ({
 
         // UPDATED: Facilitators CAN edit their own visit reports
         if (!canManageMentorship && !isAuthor) {
-            setToast({ show: true, message: 'You do not have permission to edit this report.', type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.no_permission_edit_report', 'You do not have permission to edit this report.'), type: 'error' });
             return;
         }
 
@@ -2871,11 +2883,11 @@ const SkillsMentorshipView = ({
     const handleDeleteVisitReport = async (reportId) => {
         // UPDATED: Only canManageMentorship can delete submitted reports.
         if (!canManageMentorship) {
-             setToast({ show: true, message: 'You do not have permission to delete submitted reports.', type: 'error' });
+             setToast({ show: true, message: t('mentorship_page.toast.no_permission_delete_reports', 'You do not have permission to delete submitted reports.'), type: 'error' });
              return;
         }
         
-        if (await confirmDialog('Are you sure you want to delete this visit report?')) {
+        if (await confirmDialog(t('mentorship_page.confirm.delete_visit_report', 'Are you sure you want to delete this visit report?'))) {
             setDeletedReportIds(prev => new Set(prev).add(reportId));
             try {
                 if (activeService === 'IMNCI') {
@@ -2883,16 +2895,16 @@ const SkillsMentorshipView = ({
                 } else if (activeService === 'EENC') {
                     await deleteEENCVisitReport(reportId);
                 }
-                setToast({ show: true, message: 'Report deleted. (Click Refresh to update table)', type: 'success' });
+                setToast({ show: true, message: t('mentorship_page.toast.report_deleted', 'Report deleted. (Click Refresh to update table)'), type: 'success' });
             } catch (error) {
-                setToast({ show: true, message: `Delete failed: ${error.message}`, type: 'error' });
+                setToast({ show: true, message: t('mentorship_page.toast.delete_failed', 'Delete failed: {{error}}', { error: error.message }), type: 'error' });
             }
         }
     };
 
     const handleBulkDeleteReports = async () => {
         if (!canManageMentorship) return;
-        if (!await confirmDialog(`Are you sure you want to delete ${selectedReportIds.length} reports?`)) return;
+        if (!await confirmDialog(t('mentorship_page.confirm.delete_n_reports', 'Are you sure you want to delete {{count}} reports?', { count: selectedReportIds.length }))) return;
 
         const reportsToDelete = selectedReportIds.map(id => processedVisitReports.find(r => r.id === id)).filter(Boolean);
 
@@ -2907,10 +2919,10 @@ const SkillsMentorshipView = ({
                 if (rep.service === 'IMNCI') return deleteIMNCIVisitReport(rep.id);
                 else return deleteEENCVisitReport(rep.id);
             }));
-            setToast({ show: true, message: 'Selected reports deleted.', type: 'success' });
+            setToast({ show: true, message: t('mentorship_page.toast.selected_reports_deleted', 'Selected reports deleted.'), type: 'success' });
         } catch(error) {
             console.error("Bulk delete error", error);
-            setToast({ show: true, message: 'Some reports failed to delete.', type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.some_reports_failed', 'Some reports failed to delete.'), type: 'error' });
         }
     };
 
@@ -2919,7 +2931,7 @@ const SkillsMentorshipView = ({
         const report = reportList.find(r => r.id === reportId);
         
         if (!report) {
-            setToast({ show: true, message: 'Report not found', type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.report_not_found_short', 'Report not found'), type: 'error' });
             return;
         }
 
@@ -2941,10 +2953,10 @@ const SkillsMentorshipView = ({
             } else {
                 await saveEENCVisitReport(dataToSave, reportId);
             }
-            setToast({ show: true, message: 'Status updated. (Click Refresh to update table)', type: 'success' });
+            setToast({ show: true, message: t('mentorship_page.toast.status_updated', 'Status updated. (Click Refresh to update table)'), type: 'success' });
         } catch (error) {
             console.error("Error updating status:", error);
-            setToast({ show: true, message: `Failed to update status: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.status_update_failed', 'Failed to update status: {{error}}', { error: error.message }), type: 'error' });
         }
     };
 
@@ -3013,13 +3025,13 @@ const SkillsMentorshipView = ({
                 }
                 successCount++;
             }
-            setToast({ show: true, message: `Successfully updated ${successCount} records.`, type: 'success' });
+            setToast({ show: true, message: t('mentorship_page.toast.records_updated', 'Successfully updated {{count}} records.', { count: successCount }), type: 'success' });
             setIsPreviewSyncModalOpen(false);
             setProposedSyncUpdates([]);
             handleRefresh(); 
         } catch (error) {
             console.error("Sync error:", error);
-            setToast({ show: true, message: `Error during sync: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.sync_error', 'Error during sync: {{error}}', { error: error.message }), type: 'error' });
         } finally {
             setIsExecutingSync(false);
         }
@@ -3053,18 +3065,16 @@ const SkillsMentorshipView = ({
         const n = visitsWithoutProject.length;
         if (!n) return;
         const ok = await confirmDialog(
-            `${n} past visit(s) have no project of their own and currently show their facility's current project. ` +
-            `Give each the project that covered its facility on the visit date (from the facility's history)? ` +
-            `After this, changing a facility's project only affects later visits.`
+            t('mentorship_page.confirm.assign_projects', "{{count}} past visit(s) have no project of their own and currently show their facility's current project. Give each the project that covered its facility on the visit date (from the facility's history)? After this, changing a facility's project only affects later visits.", { count: n })
         );
         if (!ok) return;
         setIsAssigningProjects(true);
         try {
             const { updated, byProject } = await assignProjectsToPastVisits(visitsWithoutProject, (done, total) => {
-                setToast?.({ show: true, type: 'info', message: `Assigning projects to past visits… ${done}/${total}` });
+                setToast?.({ show: true, type: 'info', message: t('mentorship_page.toast.assigning_projects', 'Assigning projects to past visits… {{done}}/{{total}}', { done, total }) });
             });
             const summary = Object.entries(byProject).sort((a, b) => b[1] - a[1]).map(([p, c]) => `${p}: ${c}`).join(', ');
-            setToast?.({ show: true, type: 'success', message: `${updated} visit(s) now keep their own project (${summary}).` });
+            setToast?.({ show: true, type: 'success', message: t('mentorship_page.toast.projects_assigned', '{{count}} visit(s) now keep their own project ({{summary}}).', { count: updated, summary }) });
             await Promise.all([
                 fetchSkillMentorshipSubmissions?.(true),
                 fetchIMNCIVisitReports?.(true),
@@ -3072,7 +3082,7 @@ const SkillsMentorshipView = ({
             ]);
         } catch (e) {
             console.error('Assigning projects to past visits failed', e);
-            setToast?.({ show: true, type: 'error', message: `Could not assign projects: ${e.message}` });
+            setToast?.({ show: true, type: 'error', message: t('mentorship_page.toast.assign_projects_failed', 'Could not assign projects: {{error}}', { error: e.message }) });
         } finally {
             setIsAssigningProjects(false);
         }
@@ -3149,7 +3159,7 @@ const SkillsMentorshipView = ({
             }
         }
 
-        setToast({ show: true, message: `Migration complete. Success: ${success}, Failed: ${failed}`, type: 'success' });
+        setToast({ show: true, message: t('mentorship_page.toast.migration_complete', 'Migration complete. Success: {{success}}, Failed: {{failed}}', { success, failed }), type: 'success' });
         setIsMigrating(false);
         setIsMigrationModalOpen(false);
         handleRefresh();
@@ -3204,9 +3214,9 @@ const SkillsMentorshipView = ({
                 await Promise.all(promises);
             }
             updateLastSyncTime();
-            setToast({ show: true, message: "Data refreshed successfully.", type: "success" });
+            setToast({ show: true, message: t('mentorship_page.toast.data_refreshed', 'Data refreshed successfully.'), type: "success" });
         } catch (error) {
-            setToast({ show: true, message: `Failed to refresh: ${error.message}`, type: "error" });
+            setToast({ show: true, message: t('mentorship_page.toast.refresh_failed', 'Failed to refresh: {{error}}', { error: error.message }), type: "error" });
         } finally {
             setIsRefreshing(false);
         }
@@ -3245,19 +3255,19 @@ const SkillsMentorshipView = ({
                     if (sub) {
                         setViewingSubmission(sub);
                     } else {
-                        setToast({ show: true, message: 'Record not found.', type: 'error' });
+                        setToast({ show: true, message: t('mentorship_page.toast.record_not_found', 'Record not found.'), type: 'error' });
                     }
                 } else if (viewType === 'reports') {
                     const rep = processedVisitReports.find(r => r.id === viewId);
                     if (rep) {
                         setViewingVisitReport(rep);
                     } else {
-                        setToast({ show: true, message: 'Report not found.', type: 'error' });
+                        setToast({ show: true, message: t('mentorship_page.toast.report_not_found', 'Report not found.'), type: 'error' });
                     }
                 }
             }
         }
-    }, [publicDashboardMode, publicDashboardParams, publicLoading, processedSubmissions, processedVisitReports, setToast]);
+    }, [publicDashboardMode, publicDashboardParams, publicLoading, processedSubmissions, processedVisitReports, setToast, t]);
 
 
     const availableStates = useMemo(() => {
@@ -3298,10 +3308,10 @@ const SkillsMentorshipView = ({
         }
 
         return [
-            { key: "", label: "Select Locality" },
+            { key: "", label: t('mentorship_page.filters.select_locality', 'Select Locality') },
             ...locs.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => ({ key: l.en, label: l.ar }))
         ];
-    }, [stateFilter, canSeeAllMentorshipData, isLocalityManager, userLocalities]);
+    }, [stateFilter, canSeeAllMentorshipData, isLocalityManager, userLocalities, t]);
 
 
      useEffect(() => {
@@ -3869,15 +3879,15 @@ const SkillsMentorshipView = ({
         const shareUrl = `${baseUrl}?${params.toString()}`;
         
         navigator.clipboard.writeText(shareUrl).then(() => {
-            setToast({ show: true, message: 'Public Dashboard link copied to clipboard!', type: 'success' });
+            setToast({ show: true, message: t('mentorship_page.toast.link_copied', 'Public Dashboard link copied to clipboard!'), type: 'success' });
         }).catch((err) => {
-            setToast({ show: true, message: 'Failed to copy dashboard link.', type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.link_copy_failed', 'Failed to copy dashboard link.'), type: 'error' });
         });
     };
 
     const handleImportMentorships = async (data, originalRows) => {
         if (!canBulkUploadMentorships) {
-             setToast({ show: true, message: 'You do not have permission to import sessions.', type: 'error' });
+             setToast({ show: true, message: t('mentorship_page.toast.no_permission_import', 'You do not have permission to import sessions.'), type: 'error' });
              return;
         }
         setUploadStatus({ inProgress: true, processed: 0, total: data.length, errors: [], message: '' });
@@ -3891,9 +3901,9 @@ const SkillsMentorshipView = ({
             );
             const successCount = successes.length;
             const errorCount = errors.length;
-            let message = `${successCount} sessions imported successfully. (Click Refresh to update table)`;
+            let message = t('mentorship_page.import.success', '{{count}} sessions imported successfully. (Click Refresh to update table)', { count: successCount });
             if (errorCount > 0) {
-                message += `\n${errorCount} rows failed to import. Check results for details.`;
+                message += '\n' + t('mentorship_page.import.failed_rows', '{{count}} rows failed to import. Check results for details.', { count: errorCount });
             }
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
         } catch (error) {
@@ -3902,7 +3912,7 @@ const SkillsMentorshipView = ({
                  processed: 0,
                  total: 0,
                  errors: [{ message: error.message }],
-                 message: `Import failed: ${error.message}`
+                 message: t('mentorship_page.import.failed', 'Import failed: {{error}}', { error: error.message })
             });
         }
     };
@@ -4031,7 +4041,7 @@ const SkillsMentorshipView = ({
         const isAuthor = fullSubmission.supervisorEmail === user?.email || fullSubmission.mentorEmail === user?.email;
         // UPDATED: Facilitators CANNOT edit completed sessions
         if (!canManageMentorship && !(isAuthor && fullSubmission.status === 'draft')) {
-            setToast({ show: true, message: 'You do not have permission to edit completed sessions.', type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.no_permission_edit_sessions', 'You do not have permission to edit completed sessions.'), type: 'error' });
             return;
         }
         
@@ -4073,7 +4083,7 @@ const SkillsMentorshipView = ({
         const isAuthor = submissionToDelete.supervisorEmail === user?.email || submissionToDelete.mentorEmail === user?.email;
         // UPDATED: Facilitators CANNOT delete completed sessions
         if (!canManageMentorship && !(isAuthor && submissionToDelete.status === 'draft')) {
-            setToast({ show: true, message: 'You do not have permission to delete completed sessions.', type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.no_permission_delete_sessions', 'You do not have permission to delete completed sessions.'), type: 'error' });
             return;
         }
 
@@ -4095,7 +4105,7 @@ const SkillsMentorshipView = ({
 
     const handleBulkDeleteSubmissions = async () => {
         if (!canManageMentorship) return;
-        if (!await confirmDialog(`Are you sure you want to delete ${selectedSubmissionIds.length} items?`)) return;
+        if (!await confirmDialog(t('mentorship_page.confirm.delete_n_items', 'Are you sure you want to delete {{count}} items?', { count: selectedSubmissionIds.length }))) return;
 
         const newDeleted = new Set(deletedSubmissionIds);
         selectedSubmissionIds.forEach(id => newDeleted.add(id));
@@ -4106,10 +4116,10 @@ const SkillsMentorshipView = ({
 
         try {
             await Promise.all(idsToDelete.map(id => deleteMentorshipSession(id)));
-            setToast({ show: true, message: 'Selected items deleted.', type: 'success' });
+            setToast({ show: true, message: t('mentorship_page.toast.selected_items_deleted', 'Selected items deleted.'), type: 'success' });
         } catch (error) {
             console.error("Bulk delete error", error);
-            setToast({ show: true, message: 'Some items failed to delete. Refreshing might be needed.', type: 'error' });
+            setToast({ show: true, message: t('mentorship_page.toast.some_items_failed', 'Some items failed to delete. Refreshing might be needed.'), type: 'error' });
         }
     };
 
@@ -4282,7 +4292,7 @@ const SkillsMentorshipView = ({
                             <div className="flex items-center gap-4">
                                 {!publicDashboardMode && (
                                     <Button variant="secondary" onClick={() => setCurrentView('action_menu')} className="mr-4">
-                                        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Main Menu
+                                        <ArrowLeft className="w-4 h-4 mr-2" /> {t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')}
                                     </Button>
                                 )}
 
@@ -4293,13 +4303,13 @@ const SkillsMentorshipView = ({
                                     className="flex items-center gap-2"
                                 >
                                     {isRefreshing ? (
-                                        <> <Spinner size="sm" /> Refreshing... </>
+                                        <> <Spinner size="sm" /> {t('mentorship_page.buttons.refreshing', 'Refreshing...')} </>
                                     ) : (
                                         <>
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                                               <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.759l.274.549a.75.75 0 101.3-.65l-.274-.549a5.479 5.479 0 016.128-4.032.75.75 0 00.573-1.376 6.979 6.979 0 00-7.75-2.088l-.94-.313a.75.75 0 00-.913.655v1.944a.75.75 0 001.5 0V7.32l.94.313a5.479 5.479 0 016.128 4.032zM4.688 8.576a5.5 5.5 0 019.201-2.759l-.274-.549a.75.75 0 10-1.3.65l.274.549a5.479 5.479 0 01-6.128 4.032.75.75 0 00-.573 1.376 6.979 6.979 0 007.75 2.088l.94.313a.75.75 0 00.913-.655V12.06a.75.75 0 00-1.5 0v1.631l-.94-.313a5.479 5.479 0 01-6.128-4.032z" clipRule="evenodd" />
                                             </svg>
-                                            Refresh
+                                            {t('mentorship_page.buttons.refresh', 'Refresh')}
                                         </>
                                     )}
                                 </Button>
@@ -4308,15 +4318,15 @@ const SkillsMentorshipView = ({
                                         <svg className="w-3.5 h-3.5 mr-1.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        Last Updated: {lastSyncTime}
+                                        {t('mentorship_page.sync.last_updated', 'Last Updated: {{time}}', { time: lastSyncTime })}
                                     </div>
                                 )}
                             </div>
                             
                             {activeTab === 'dashboard' && !publicDashboardMode && (
                                 <div className="flex items-center">
-                                    <Button variant="secondary" onClick={handleShareDashboardLink} title="Share Public Dashboard Link">
-                                        <Share2 className="w-4 h-4 mr-2" /> Share Dashboard
+                                    <Button variant="secondary" onClick={handleShareDashboardLink} title={t('mentorship_page.buttons.share_dashboard_title', 'Share Public Dashboard Link')}>
+                                        <Share2 className="w-4 h-4 mr-2" /> {t('mentorship_page.buttons.share_dashboard', 'Share Dashboard')}
                                     </Button>
                                 </div>
                             )}
@@ -4342,7 +4352,7 @@ const SkillsMentorshipView = ({
                                                         : 'text-gray-500 hover:text-gray-700'
                                                 }`}
                                             >
-                                                {tab.label}
+                                                {t(`mentorship_page.ipc_tabs.${tab.key}`, tab.label)}
                                                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-sky-100 text-sky-700' : 'bg-gray-200 text-gray-600'}`} dir="ltr">
                                                     {ipcFormCounts[tab.key] || 0}
                                                 </span>
@@ -4359,7 +4369,7 @@ const SkillsMentorshipView = ({
                                                     : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                         >
-                                            Skills Assessments
+                                            {t('mentorship_page.tabs.skills_assessments', 'Skills Assessments')}
                                         </button>
                                         <button
                                             onClick={() => setActiveTab('mothers_list')}
@@ -4369,7 +4379,7 @@ const SkillsMentorshipView = ({
                                                     : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                         >
-                                            Mothers Surveys
+                                            {t('mentorship_page.tabs.mothers_surveys', 'Mothers Surveys')}
                                         </button>
                                         <button
                                             onClick={() => setActiveTab('visit_reports')}
@@ -4379,7 +4389,7 @@ const SkillsMentorshipView = ({
                                                     : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                         >
-                                            Visit Reports
+                                            {t('mentorship_page.tabs.visit_reports', 'Visit Reports')}
                                         </button>
                                     </>
                                 )}
@@ -4392,7 +4402,7 @@ const SkillsMentorshipView = ({
                                                 : 'text-gray-500 hover:text-gray-700'
                                         }`}
                                     >
-                                        Deleted Items
+                                        {t('mentorship_page.tabs.deleted_items', 'Deleted Items')}
                                     </button>
                                 )}
                             </div>
@@ -4402,93 +4412,93 @@ const SkillsMentorshipView = ({
                             <>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                                     
-                                    <FormGroup label="Start Date" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.start_date', 'Start Date')} className="text-start" dir="ltr">
                                         <Input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="w-full" />
                                     </FormGroup>
                                     
-                                    <FormGroup label="End Date" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.end_date', 'End Date')} className="text-start" dir="ltr">
                                         <Input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="w-full" />
                                     </FormGroup>
 
-                                    <FormGroup label="Date Range" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.date_range', 'Date Range')} className="text-start" dir="ltr">
                                         <Select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
-                                            <option value="">All Time</option>
-                                            <option value="today">Today</option>
-                                            <option value="yesterday">Yesterday</option>
-                                            <option value="this_week">This Week</option>
-                                            <option value="last_week">Last Week</option>
-                                            <option value="this_month">This Month</option>
-                                            <option value="last_month">Last Month</option>
-                                            <option value="this_year">This Year</option>
-                                            <option value="last_year">Last Year</option>
+                                            <option value="">{t('mentorship_page.filters.all_time', 'All Time')}</option>
+                                            <option value="today">{t('mentorship_page.filters.today', 'Today')}</option>
+                                            <option value="yesterday">{t('mentorship_page.filters.yesterday', 'Yesterday')}</option>
+                                            <option value="this_week">{t('mentorship_page.filters.this_week', 'This Week')}</option>
+                                            <option value="last_week">{t('mentorship_page.filters.last_week', 'Last Week')}</option>
+                                            <option value="this_month">{t('mentorship_page.filters.this_month', 'This Month')}</option>
+                                            <option value="last_month">{t('mentorship_page.filters.last_month', 'Last Month')}</option>
+                                            <option value="this_year">{t('mentorship_page.filters.this_year', 'This Year')}</option>
+                                            <option value="last_year">{t('mentorship_page.filters.last_year', 'Last Year')}</option>
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="State" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.state', 'State')} className="text-start" dir="ltr">
                                         <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); setWorkerTypeFilter(''); }}>
                                             {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Locality" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.locality', 'Locality')} className="text-start" dir="ltr">
                                         <Select value={localityFilter} onChange={(e) => { setLocalityFilter(e.target.value); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); setWorkerTypeFilter(''); }} disabled={!stateFilter}>
                                              {availableLocalities.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Facility" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.facility', 'Facility')} className="text-start" dir="ltr">
                                         <Select value={facilityFilter} onChange={(e) => { setFacilityFilter(e.target.value); setWorkerFilter(''); setWorkerTypeFilter(''); }}>
-                                            <option value="">All Facilities</option>
+                                            <option value="">{t('mentorship_page.filters.all_facilities', 'All Facilities')}</option>
                                             {uniqueFacilitiesList.map(f => <option key={f} value={f}>{f}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Health Worker" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.health_worker', 'Health Worker')} className="text-start" dir="ltr">
                                         <Select value={workerFilter} onChange={(e) => setWorkerFilter(e.target.value)}>
-                                            <option value="">All Workers</option>
+                                            <option value="">{t('mentorship_page.filters.all_workers', 'All Workers')}</option>
                                             {uniqueWorkersList.map(w => <option key={w} value={w}>{w}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Job Title" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.job_title', 'Job Title')} className="text-start" dir="ltr">
                                         <Select value={workerTypeFilter} onChange={(e) => setWorkerTypeFilter(e.target.value)}>
-                                            <option value="">All Job Titles</option>
+                                            <option value="">{t('mentorship_page.filters.all_job_titles', 'All Job Titles')}</option>
                                             {uniqueWorkerTypesList.map(w => <option key={w} value={w}>{w}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Project / Partner" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.project_partner', 'Project / Partner')} className="text-start" dir="ltr">
                                         <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-                                            <option value="">All Projects</option>
+                                            <option value="">{t('mentorship_page.filters.all_projects', 'All Projects')}</option>
                                             {uniqueProjectsList.map(p => <option key={p} value={p}>{p}</option>)}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Supervisor" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.supervisor', 'Supervisor')} className="text-start" dir="ltr">
                                         <Select
                                             value={supervisorFilter}
                                             onChange={(e) => setSupervisorFilter(e.target.value)}
                                         >
-                                            <option value="">All Supervisors</option>
+                                            <option value="">{t('mentorship_page.filters.all_supervisors', 'All Supervisors')}</option>
                                             {uniqueSupervisors.map(sup => (
                                                 <option key={sup.email} value={sup.email}>{sup.display}</option>
                                             ))}
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Status" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.status', 'Status')} className="text-start" dir="ltr">
                                         <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                                            <option value="">All Statuses</option>
-                                            <option value="complete">Complete</option>
-                                            <option value="draft">Draft</option>
+                                            <option value="">{t('mentorship_page.filters.all_statuses', 'All Statuses')}</option>
+                                            <option value="complete">{t('mentorship_page.status.complete', 'Complete')}</option>
+                                            <option value="draft">{t('mentorship_page.status.draft', 'Draft')}</option>
                                         </Select>
                                     </FormGroup>
 
-                                    <FormGroup label="Visit Number" className="text-start" dir="ltr">
+                                    <FormGroup label={t('mentorship_page.filters.visit_number', 'Visit Number')} className="text-start" dir="ltr">
                                         <Select value={visitNumberFilter} onChange={(e) => setVisitNumberFilter(e.target.value)}>
-                                            <option value="">All Visits</option>
+                                            <option value="">{t('mentorship_page.filters.all_visits', 'All Visits')}</option>
                                             {uniqueVisitNumbers.map(num => (
-                                                <option key={num} value={num}>Visit {num}</option>
+                                                <option key={num} value={num}>{t('mentorship_page.filters.visit_n', 'Visit {{num}}', { num })}</option>
                                             ))}
                                         </Select>
                                     </FormGroup>
@@ -4498,55 +4508,55 @@ const SkillsMentorshipView = ({
                                     <div className="flex gap-2 flex-wrap">
                                         
                                         {activeTab === 'skills_list' && selectedSubmissionIds.length === 0 && canAddMentorshipData && (
-                                            <Button onClick={handleStartNewVisit}>Add New Skills Observation</Button>
+                                            <Button onClick={handleStartNewVisit}>{t('mentorship_page.buttons.add_skills_observation', 'Add New Skills Observation')}</Button>
                                         )}
                                         {activeTab === 'skills_list' && selectedSubmissionIds.length > 0 && canManageMentorship && (
                                             <Button variant="danger" onClick={handleBulkDeleteSubmissions}>
-                                                <Trash2 className="w-4 h-4 mr-2 inline" /> Delete Selected ({selectedSubmissionIds.length})
+                                                <Trash2 className="w-4 h-4 mr-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedSubmissionIds.length })}
                                             </Button>
                                         )}
                                         
                                         {activeTab === 'mothers_list' && selectedSubmissionIds.length === 0 && canAddMentorshipData && (
-                                            <Button variant="primary" onClick={handleStartMothersForm}>Add Mother's Knowledge & Satisfaction Form</Button>
+                                            <Button variant="primary" onClick={handleStartMothersForm}>{t('mentorship_page.buttons.add_mothers_form', "Add Mother's Knowledge & Satisfaction Form")}</Button>
                                         )}
                                         {activeTab === 'mothers_list' && selectedSubmissionIds.length > 0 && canManageMentorship && (
                                             <Button variant="danger" onClick={handleBulkDeleteSubmissions}>
-                                                <Trash2 className="w-4 h-4 mr-2 inline" /> Delete Selected ({selectedSubmissionIds.length})
+                                                <Trash2 className="w-4 h-4 mr-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedSubmissionIds.length })}
                                             </Button>
                                         )}
 
                                         {activeTab === 'visit_reports' && activeService === 'IMNCI' && selectedReportIds.length === 0 && canAddMentorshipData && (
-                                            <Button variant="primary" onClick={handleStartNewVisitReport}>Add New IMNCI Visit Report</Button>
+                                            <Button variant="primary" onClick={handleStartNewVisitReport}>{t('mentorship_page.buttons.add_imnci_visit_report', 'Add New IMNCI Visit Report')}</Button>
                                         )}
                                         {activeTab === 'visit_reports' && activeService === 'EENC' && selectedReportIds.length === 0 && canAddMentorshipData && (
-                                            <Button variant="primary" onClick={handleStartNewVisitReport}>Add New EENC Visit Report</Button>
+                                            <Button variant="primary" onClick={handleStartNewVisitReport}>{t('mentorship_page.buttons.add_eenc_visit_report', 'Add New EENC Visit Report')}</Button>
                                         )}
                                         {activeTab === 'visit_reports' && selectedReportIds.length > 0 && canManageMentorship && (
                                              <Button variant="danger" onClick={handleBulkDeleteReports}>
-                                                <Trash2 className="w-4 h-4 mr-2 inline" /> Delete Selected ({selectedReportIds.length})
+                                                <Trash2 className="w-4 h-4 mr-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedReportIds.length })}
                                             </Button>
                                         )}
 
                                         {canManageMentorship && ['federal_manager', 'super_user'].includes(permissions?.role) && (
                                             <Button variant="warning" onClick={handlePreviewVisitNumbers} className="bg-amber-500 hover:bg-amber-600 text-white">
-                                                Sync Visit Numbers
+                                                {t('mentorship_page.buttons.sync_visit_numbers', 'Sync Visit Numbers')}
                                             </Button>
                                         )}
 
                                         {activeTab === 'visit_reports' && permissions?.role === 'super_user' && (
                                             <Button variant="info" onClick={handlePrepareMigration} className="bg-teal-600 hover:bg-teal-700 text-white">
-                                                Migrate Facility Data
+                                                {t('mentorship_page.buttons.migrate_facility_data', 'Migrate Facility Data')}
                                             </Button>
                                         )}
 
                                         {activeTab === 'skills_list' && canBulkUploadMentorships && selectedSubmissionIds.length === 0 && canManageMentorship && (
-                                            <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button>
+                                            <Button onClick={() => setIsBulkUploadModalOpen(true)}>{t('mentorship_page.buttons.bulk_upload', 'Bulk Upload')}</Button>
                                         )}
 
                                         {(activeTab === 'skills_list' || activeTab === 'visit_reports') && canAssignVisitProjects && visitsWithoutProject.length > 0 && (
                                             <Button variant="secondary" onClick={handleAssignVisitProjects} disabled={isAssigningProjects}
-                                                title="Give each past visit the project that covered its facility on the visit date">
-                                                {isAssigningProjects ? 'Assigning projects…' : `Assign projects to past visits (${visitsWithoutProject.length})`}
+                                                title={t('mentorship_page.buttons.assign_projects_title', 'Give each past visit the project that covered its facility on the visit date')}>
+                                                {isAssigningProjects ? t('mentorship_page.buttons.assigning_projects', 'Assigning projects…') : t('mentorship_page.buttons.assign_projects', 'Assign projects to past visits ({{count}})', { count: visitsWithoutProject.length })}
                                             </Button>
                                         )}
                                     </div>
@@ -4556,7 +4566,7 @@ const SkillsMentorshipView = ({
 
                         <div>
                             {activeTab === 'deleted' && !publicDashboardMode && permissions?.canUseFederalManagerAdvancedFeatures && (
-                                <Suspense fallback={<Spinner />}>
+                                <Suspense fallback={<PageSkeleton />}>
                                     <DeletedItemsPanel types={['skillMentorship', 'imnciVisitReports', 'eencVisitReports', 'imnciPatientRecords']} />
                                 </Suspense>
                             )}
@@ -4610,14 +4620,11 @@ const SkillsMentorshipView = ({
 
                             {activeTab === 'dashboard' && (
                                 publicLoading ? (
-                                    <div className="flex justify-center items-center p-12">
-                                        <Spinner />
-                                        <span className="ml-3 text-sky-700 font-medium">Loading Dashboard Data...</span>
-                                    </div>
+                                    <PageSkeleton />
                                 ) : publicDashboardParams?.isRecordView ? (
                                     <div className="flex flex-col justify-center items-center p-12 text-slate-500 h-[60vh]">
-                                        <div className="text-xl font-bold text-sky-800 mb-2">Viewing Individual Record</div>
-                                        <p>{(!viewingSubmission && !viewingVisitReport) ? "Record not found or loading..." : "The record details are open in the popup window."}</p>
+                                        <div className="text-xl font-bold text-sky-800 mb-2">{t('mentorship_page.record_view.title', 'Viewing Individual Record')}</div>
+                                        <p>{(!viewingSubmission && !viewingVisitReport) ? t('mentorship_page.record_view.not_found_or_loading', 'Record not found or loading...') : t('mentorship_page.record_view.open_in_popup', 'The record details are open in the popup window.')}</p>
                                     </div>
                                 ) : (
                                     <MentorshipDashboard
@@ -4734,7 +4741,7 @@ const SkillsMentorshipView = ({
                 />
 
                 {isMigrationModalOpen && (
-                    <Modal isOpen={isMigrationModalOpen} onClose={() => !isMigrating && setIsMigrationModalOpen(false)} title="Backfill Facility Data (Super User)" size="md">
+                    <Modal isOpen={isMigrationModalOpen} onClose={() => !isMigrating && setIsMigrationModalOpen(false)} title={t('mentorship_page.migration.title', 'Backfill Facility Data (Super User)')} size="md">
                         <div className="p-6 text-right" dir="rtl">
                             <div className="mb-4 bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-start gap-3">
                                 <AlertTriangle className="text-blue-600 mt-1 flex-shrink-0" />
@@ -4881,7 +4888,7 @@ const SkillsMentorshipView = ({
                             size="full"
                         >
                             <div className="p-0 sm:p-4 bg-gray-100">
-                                <Suspense fallback={<div className="p-8"><Spinner /></div>}>
+                                <Suspense fallback={<PageSkeleton />}>
                                     {activeService === 'IMNCI' ? (
                                         <IMNCIVisitReport
                                             facility={facilityData}
@@ -5169,7 +5176,7 @@ const SkillsMentorshipView = ({
         
         return (
             <>
-                <Suspense fallback={<div className="p-8"><Spinner /></div>}>
+                <Suspense fallback={<PageSkeleton />}>
                     <ReportComponent
                         facility={facilityData}
                         visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked}
@@ -5188,7 +5195,7 @@ const SkillsMentorshipView = ({
                 </Suspense>
                 {isVisitReportModalOpen && (
                     <Modal isOpen={isVisitReportModalOpen} onClose={() => setIsVisitReportModalOpen(false)}>
-                        <div className="p-4">Visit Report is already open.</div>
+                        <div className="p-4">{t('mentorship_page.visit.report_already_open', 'Visit Report is already open.')}</div>
                     </Modal>
                 )}
                 {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100"><MothersForm facility={facilityData} visitNumber={effectiveVisitNumber} lockedVisitNumber={isVisitNumberLocked} existingSessionData={null} onCancel={() => { setIsMothersFormModalOpen(false); }} setToast={setToast} canEditVisitNumber={canEditVisitNumber} /></div></Modal>}
@@ -5588,7 +5595,7 @@ const SkillsMentorshipView = ({
                         size="full"
                     >
                         <div className="p-0 sm:p-4 bg-gray-100">
-                            <Suspense fallback={<div className="p-8"><Spinner /></div>}>
+                            <Suspense fallback={<PageSkeleton />}>
                                 {activeService === 'IMNCI' ? (
                                     <IMNCIVisitReport
                                         facility={selectedFacility}

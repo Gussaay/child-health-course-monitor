@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { Modal, Button, Select, FormGroup } from './CommonComponents';
+import { useTranslation } from 'react-i18next';
 
 const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
+  const { t } = useTranslation();
   const [excelData, setExcelData] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [fieldMappings, setFieldMappings] = useState({});
@@ -33,7 +35,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
         if (jsonData.length < 2) {
-          setError('Excel file must contain at least a header row and one data row');
+          setError(t('admin_pages.excel_import.err_min_rows', 'Excel file must contain at least a header row and one data row'));
           return;
         }
 
@@ -42,7 +44,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
         setCurrentPage(1);
         setError('');
       } catch (err) {
-        setError('Error reading Excel file: ' + err.message);
+        setError(t('admin_pages.excel_import.err_reading', 'Error reading Excel file: {{message}}', { message: err.message }));
       }
     };
     reader.readAsArrayBuffer(file);
@@ -59,10 +61,10 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
     // Validate mappings
     const missingRequired = commonFields
       .filter(field => field.required && !fieldMappings[field.key])
-      .map(field => field.label);
+      .map(field => t(`admin_pages.excel_import.fields.${field.key}`, field.label));
     
     if (missingRequired.length > 0) {
-      setError(`Please map all required fields: ${missingRequired.join(', ')}`);
+      setError(t('admin_pages.excel_import.err_map_required', 'Please map all required fields: {{fields}}', { fields: missingRequired.join(', ') }));
       return;
     }
 
@@ -87,7 +89,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
     
     return (
       <div className="mt-4 overflow-auto max-h-60">
-        <h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4>
+        <h4 className="font-medium mb-2">{t('admin_pages.excel_import.preview', 'Data Preview (first 5 rows)')}</h4>
         <table className="min-w-full border border-gray-200">
           <thead>
             <tr className="bg-gray-100">
@@ -111,13 +113,13 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Import Participants from Excel">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('admin_pages.excel_import.title', 'Import Participants from Excel')}>
       <div className="p-4">
         {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
         
         {currentPage === 0 && (
           <div>
-            <p className="mb-4">Upload an Excel file containing participant information. The first row should contain column headers.</p>
+            <p className="mb-4">{t('admin_pages.excel_import.upload_help', 'Upload an Excel file containing participant information. The first row should contain column headers.')}</p>
             <input
               type="file"
               accept=".xlsx,.xls"
@@ -130,17 +132,17 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
         
         {currentPage === 1 && (
           <div>
-            <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
+            <h4 className="font-medium mb-4">{t('admin_pages.excel_import.map_heading', 'Map Excel columns to application fields')}</h4>
             <div className="grid gap-3 mb-4">
               {commonFields.map(field => (
                 <div key={field.key} className="flex items-center">
-                  <label className="w-40 font-medium">{field.label}{field.required && '*'}</label>
+                  <label className="w-40 font-medium">{t(`admin_pages.excel_import.fields.${field.key}`, field.label)}{field.required && '*'}</label>
                   <Select
                     value={fieldMappings[field.key] || ''}
                     onChange={(e) => handleMappingChange(field.key, e.target.value)}
                     className="flex-1"
                   >
-                    <option value="">-- Select Excel Column --</option>
+                    <option value="">{t('admin_pages.excel_import.select_column', '-- Select Excel Column --')}</option>
                     {headers.map(header => (
                       <option key={header} value={header}>{header}</option>
                     ))}
@@ -152,8 +154,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
             {renderPreview()}
             
             <div className="flex justify-end mt-6 space-x-2">
-              <Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button>
-              <Button onClick={handleImport}>Import Participants</Button>
+              <Button variant="secondary" onClick={() => setCurrentPage(0)}>{t('admin_pages.excel_import.back', 'Back')}</Button>
+              <Button onClick={handleImport}>{t('admin_pages.excel_import.import', 'Import Participants')}</Button>
             </div>
           </div>
         )}
