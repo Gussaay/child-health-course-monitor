@@ -226,7 +226,7 @@ export default function NameStandardizationModal({ isOpen, onClose, facilities =
                                     <div key={entry.name} className={`border rounded-lg p-3 ${action.type === 'delete' ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className={`font-semibold ${action.type === 'delete' ? 'line-through text-red-700' : 'text-gray-900'}`} dir="auto">{entry.name}</span>
-                                            {isNew && <span className="text-[11px] font-bold uppercase text-sky-700 bg-sky-50 px-2 py-0.5 rounded">{t('admin_pages.name_standardization.new_badge', 'new')}</span>}
+                                            {isNew && <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded">{t('admin_pages.name_standardization.new_badge', 'new')}</span>}
                                             <span className="text-xs text-gray-500">{(total === 1 ? t('admin_pages.name_standardization.one_facility', '1 facility') : t('admin_pages.name_standardization.n_facilities', '{{count}} facilities', { count: total }))}</span>
                                             <div className="ms-auto flex flex-wrap items-center gap-2">
                                                 {isNew ? (

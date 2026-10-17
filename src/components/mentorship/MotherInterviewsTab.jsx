@@ -263,7 +263,7 @@ const MotherInterviewsTab = ({
                 
                 {[...imnciOverallSections, ...imnciSections].map((section, idx) => (
                     <div key={idx}>
-                        <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-8 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+                        <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-8 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
                             {t(section.title)}
                         </h3>
                         {renderKpiGrid(section.items)}
@@ -271,7 +271,7 @@ const MotherInterviewsTab = ({
                 ))}
 
                 {/* UPDATED: Separate Bar Charts for Knowledge vs Satisfaction, enforcing correct layout string order for Arabic rendering layout structures */}
-                <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+                <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
                     {t('Overall Mother Interview Scores by')} {t(geographicLevelName)} {scopeTitle}
                 </h3>
                 <div className="grid grid-cols-1 gap-8 mb-10">
@@ -279,7 +279,7 @@ const MotherInterviewsTab = ({
                     <KpiBarChart title={`${t('Average Mother Satisfaction by')} ${t(geographicLevelName)}`} chartData={motherGeographicKpis} dataKey="avgSatisfaction" />
                 </div>
                 
-                <h3 className={`text-xl font-extrabold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+                <h3 className={`text-xl font-extrabold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
                     {t('Detailed Mother Interview Performance')} {scopeTitle}
                 </h3>
                 <div className="mb-10"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="IMNCI" /></div>
@@ -354,19 +354,19 @@ const MotherInterviewsTab = ({
             
             {[...eencOverallSections, ...eencSections].map((section, idx) => (
                 <div key={idx}>
-                    <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-8 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+                    <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-8 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
                         {t(section.title)}
                     </h3>
                     {renderKpiGrid(section.items)}
                 </div>
             ))}
             
-            <h3 className={`text-xl font-bold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+            <h3 className={`text-xl font-bold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
                 {t('Overall Mother Interview Indicators by')} {t(geographicLevelName)} {scopeTitle}
             </h3>
             <div className="mb-10"><KpiBarChart title={`${t('Average Indicator Presence by')} ${t(geographicLevelName)}`} chartData={motherGeographicKpis} dataKey="avgOverall" /></div>
             
-            <h3 className={`text-xl font-bold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+            <h3 className={`text-xl font-bold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
                 {t('Detailed Mother Interview Performance')} {scopeTitle}
             </h3>
             <div className="mb-10"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="EENC" /></div>

@@ -304,7 +304,7 @@ function PlanImportModal({ isOpen, onClose, onImport, existing = [] }) {
                             أعمدة الملف مع حقول الخطة ومراجعة النتيجة قبل الحفظ.
                         </p>
                         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile}
-                            className="block w-full text-sm text-gray-600 file:ml-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
+                            className="block w-full text-sm text-gray-600 file:ms-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
                     </>
                 )}
 
@@ -354,7 +354,7 @@ function PlanImportModal({ isOpen, onClose, onImport, existing = [] }) {
                                 <div className="font-bold mb-1">
                                     {badRows.length} صف به مشكلة ولن يتم استيراده
                                 </div>
-                                <ul className="list-disc mr-5 space-y-0.5 max-h-28 overflow-y-auto">
+                                <ul className="list-disc me-5 space-y-0.5 max-h-28 overflow-y-auto">
                                     {badRows.slice(0, 20).map((b) => (
                                         <li key={b.rowNumber}>صف {b.rowNumber}: {b.problems.join('، ')}</li>
                                     ))}
@@ -1263,7 +1263,7 @@ export default function PlanningView({ permissions = {} }) {
             <div className="flex flex-col items-center justify-center gap-1.5">
                 <div className="flex items-center gap-1">
                     <span className="font-bold text-gray-800 text-sm">{achieved}</span>
-                    <span className={`text-[10px] font-bold px-1 rounded-sm ${p >= 100 ? 'bg-green-100 text-green-700' : p > 0 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-xs font-bold px-1 rounded-sm ${p >= 100 ? 'bg-green-100 text-green-700' : p > 0 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>
                         {p}%
                     </span>
                 </div>
@@ -1407,18 +1407,18 @@ export default function PlanningView({ permissions = {} }) {
                     </div>
                     <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         <Button type="button" variant="secondary" onClick={downloadMasterPlanTemplate} className="flex-1 sm:flex-none">
-                            <Download size={14} className="ml-1" /> تنزيل القالب
+                            <Download size={14} className="ms-1" /> تنزيل القالب
                         </Button>
                         <Button type="button" variant="secondary" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none">
-                            <Upload size={14} className="ml-1" /> رفع Excel
+                            <Upload size={14} className="ms-1" /> رفع Excel
                         </Button>
                         {currentPlan.id && (
                             <Button type="button" variant="secondary" className="flex-1 sm:flex-none" onClick={() => sharePlan(currentPlan)}>
-                                <Share2 size={14} className="ml-1" /> مشاركة
+                                <Share2 size={14} className="ms-1" /> مشاركة
                             </Button>
                         )}
-                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingMatrix(false)}><X size={16} className="ml-1"/> إغلاق</Button>
-                        <Button className="flex-1 sm:flex-none" onClick={handleSaveMasterPlan}><Save size={16} className="ml-1"/> حفظ المصفوفة</Button>
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingMatrix(false)}><X size={16} className="ms-1"/> إغلاق</Button>
+                        <Button className="flex-1 sm:flex-none" onClick={handleSaveMasterPlan}><Save size={16} className="ms-1"/> حفظ المصفوفة</Button>
                     </div>
                 </div>
 
@@ -1437,7 +1437,7 @@ export default function PlanningView({ permissions = {} }) {
                     </div>
 
                     <div className="hidden lg:block bg-white border shadow-sm w-full relative overflow-x-auto rounded-t-lg">
-                        <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[900px]">
+                        <table className="w-full table-fixed border-collapse text-xs text-right whitespace-normal min-w-[900px]">
                             <thead className="bg-slate-800 text-white font-bold">
                                 <tr>
                                     <th className="w-[8%] p-1.5 border border-slate-600">المحور</th>
@@ -1464,14 +1464,14 @@ export default function PlanningView({ permissions = {} }) {
                                     
                                     return (
                                     <tr key={inv.id} className="hover:bg-sky-50 transition-colors bg-white">
-                                        <td className={cellClass}><select className={`${inputClass} text-[10px]`} value={inv.axis} onChange={(e) => update('axis', e.target.value)}>{AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select></td>
+                                        <td className={cellClass}><select className={`${inputClass} text-xs`} value={inv.axis} onChange={(e) => update('axis', e.target.value)}>{AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select></td>
                                         <td className={cellClass}><textarea className={`${inputClass} font-bold h-full`} rows={2} value={inv.name} onChange={(e) => update('name', e.target.value)} placeholder="نشاط..." required /></td>
                                         <td className={cellClass}><SelectWithOther options={INDICATOR_OPTIONS} value={inv.indicator} onChange={(val) => update('indicator', val)} placeholder="- اختر مؤشر -" otherLabel="اخرى حدد" /></td>
                                         <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center`} value={inv.baseline} onChange={(e) => update('baseline', e.target.value)} /></td>
                                         <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center font-bold`} value={inv.target} onChange={(e) => update('target', e.target.value)} /></td>
                                         
                                         <td className={`${cellClass} text-center align-middle bg-green-50/50 p-1`}>
-                                            <button type="button" onClick={() => setScheduleModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-green-700 bg-white border border-green-300 hover:bg-green-100 transition-colors shadow-sm cursor-pointer">
+                                            <button type="button" onClick={() => setScheduleModalIdx(idx)} className="w-full min-h-[30px] rounded text-xs font-bold text-green-700 bg-white border border-green-300 hover:bg-green-100 transition-colors shadow-sm cursor-pointer">
                                                 {inv.q1 || inv.q2 || inv.q3 || inv.q4 ? 
                                                     [inv.q1&&'ر1', inv.q2&&'ر2', inv.q3&&'ر3', inv.q4&&'ر4'].filter(Boolean).join('، ') 
                                                     : '+ الجدولة'}
@@ -1481,7 +1481,7 @@ export default function PlanningView({ permissions = {} }) {
                                         <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center font-bold bg-gray-50`} value={inv.totalCost} onChange={(e) => update('totalCost', e.target.value)} /></td>
                                         
                                         <td className={`${cellClass} text-center align-middle bg-indigo-50/30 p-1`}>
-                                            <button type="button" onClick={() => setSupportModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer">
+                                            <button type="button" onClick={() => setSupportModalIdx(idx)} className="w-full min-h-[30px] rounded text-xs font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer">
                                                 {totalSupport > 0 ? `دعم (${totalSupport.toLocaleString()})` : '+ إضافة تمويل'}
                                             </button>
                                         </td>
@@ -1491,7 +1491,7 @@ export default function PlanningView({ permissions = {} }) {
                                         </td>
 
                                         <td className={cellClass}>
-                                            <textarea className={`${inputClass} text-[10px] h-full`} rows={2} value={inv.notes || ''} onChange={(e) => update('notes', e.target.value)} placeholder="ملاحظات..." />
+                                            <textarea className={`${inputClass} text-xs h-full`} rows={2} value={inv.notes || ''} onChange={(e) => update('notes', e.target.value)} placeholder="ملاحظات..." />
                                         </td>
 
                                         <td className="p-1 border border-slate-300 text-center align-middle">
@@ -1505,7 +1505,7 @@ export default function PlanningView({ permissions = {} }) {
                         </table>
                     </div>
                     <div className="hidden lg:flex p-2 border border-t-0 border-slate-300 bg-slate-50 justify-center rounded-b-lg">
-                        <Button type="button" size="sm" variant="secondary" onClick={() => setCurrentPlan({...currentPlan, interventions: [...(currentPlan.interventions||[]), DEFAULT_INTERVENTION()]})}><Plus size={16} className="ml-1"/> إضافة نشاط جديد</Button>
+                        <Button type="button" size="sm" variant="secondary" onClick={() => setCurrentPlan({...currentPlan, interventions: [...(currentPlan.interventions||[]), DEFAULT_INTERVENTION()]})}><Plus size={16} className="ms-1"/> إضافة نشاط جديد</Button>
                     </div>
 
                     {/* The same plan, as cards, for a phone.
@@ -1584,12 +1584,12 @@ export default function PlanningView({ permissions = {} }) {
                                         <div className="grid grid-cols-2 gap-3">
                                             <button type="button" onClick={() => setScheduleModalIdx(idx)}
                                                 className="rounded-lg border border-green-300 bg-green-50 px-3 py-2.5 text-xs font-bold text-green-800 text-right">
-                                                <span className="block text-[10px] text-green-600 font-normal">الجدولة</span>
+                                                <span className="block text-xs text-green-600 font-normal">الجدولة</span>
                                                 {quarters || '+ اختر الأرباع'}
                                             </button>
                                             <button type="button" onClick={() => setSupportModalIdx(idx)}
                                                 className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2.5 text-xs font-bold text-indigo-800 text-right">
-                                                <span className="block text-[10px] text-indigo-600 font-normal">مصادر التمويل</span>
+                                                <span className="block text-xs text-indigo-600 font-normal">مصادر التمويل</span>
                                                 {totalSupport > 0 ? totalSupport.toLocaleString('en-US') : '+ إضافة تمويل'}
                                             </button>
                                         </div>
@@ -1611,7 +1611,7 @@ export default function PlanningView({ permissions = {} }) {
 
                         <Button type="button" variant="secondary" className="w-full justify-center border-dashed border-2 border-sky-300 text-sky-700"
                             onClick={() => setCurrentPlan({ ...currentPlan, interventions: [...(currentPlan.interventions || []), DEFAULT_INTERVENTION()] })}>
-                            <Plus size={16} className="ml-1" /> إضافة نشاط جديد
+                            <Plus size={16} className="ms-1" /> إضافة نشاط جديد
                         </Button>
                     </div>
 
@@ -1663,12 +1663,12 @@ export default function PlanningView({ permissions = {} }) {
                                         <h4 className="font-bold text-blue-800 mb-3 text-sm flex items-center gap-2">الدعم الحكومي (مشاريع الدولة)</h4>
                                         <div className="grid grid-cols-5 gap-3">
                                             <div className="col-span-3">
-                                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">اسم المشروع</label>
+                                                <label className="text-xs text-gray-500 font-bold mb-1 block">اسم المشروع</label>
                                                 <SelectWithOther options={GOV_PROJECT_OPTIONS} value={currentPlan.interventions[supportModalIdx].govSource} onChange={(val) => updateMasterPlanIntervention(supportModalIdx, 'govSource', val)} placeholder="- اختر أو اكتب -" />
                                             </div>
                                             <div className="col-span-2">
-                                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة (المبلغ)</label>
-                                                <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-left" dir="ltr" value={currentPlan.interventions[supportModalIdx].govValue} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, 'govValue', e.target.value)} placeholder="0" />
+                                                <label className="text-xs text-gray-500 font-bold mb-1 block">القيمة (المبلغ)</label>
+                                                <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-start" dir="ltr" value={currentPlan.interventions[supportModalIdx].govValue} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, 'govValue', e.target.value)} placeholder="0" />
                                             </div>
                                         </div>
                                     </div>
@@ -1677,12 +1677,12 @@ export default function PlanningView({ permissions = {} }) {
                                         {[1, 2, 3].map(num => (
                                             <div key={num} className="bg-orange-50/50 p-3.5 rounded-lg border border-orange-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
                                                 <div className="flex-1 w-full">
-                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">الشريك {num}</label>
+                                                    <label className="text-xs text-gray-500 font-bold mb-1 block">الشريك {num}</label>
                                                     <SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={currentPlan.interventions[supportModalIdx][`extSource${num}`]} onChange={(val) => updateMasterPlanIntervention(supportModalIdx, `extSource${num}`, val)} placeholder="- اختر الشريك -" />
                                                 </div>
                                                 <div className="w-full sm:w-1/3">
-                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">قيمة الدعم</label>
-                                                    <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-left" dir="ltr" value={currentPlan.interventions[supportModalIdx][`extValue${num}`]} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
+                                                    <label className="text-xs text-gray-500 font-bold mb-1 block">قيمة الدعم</label>
+                                                    <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-start" dir="ltr" value={currentPlan.interventions[supportModalIdx][`extValue${num}`]} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
                                                 </div>
                                             </div>
                                         ))}
@@ -1690,7 +1690,7 @@ export default function PlanningView({ permissions = {} }) {
                                 </div>
                                 <div className="bg-white p-4 border-t border-slate-200 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 relative">
                                      <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-500 font-bold">العجز المتبقي (Gap)</span>
+                                        <span className="text-xs text-gray-500 font-bold">العجز المتبقي (Gap)</span>
                                         <span className={`font-bold text-lg ${calculateGap(currentPlan.interventions[supportModalIdx]) > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                             {calculateGap(currentPlan.interventions[supportModalIdx]).toLocaleString()}
                                         </span>
@@ -1715,14 +1715,14 @@ export default function PlanningView({ permissions = {} }) {
                     </div>
                     <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         <Button type="button" variant="secondary" onClick={downloadOpPlanTemplate} className="flex-1 sm:flex-none">
-                            <Download size={14} className="ml-1" /> تنزيل القالب
+                            <Download size={14} className="ms-1" /> تنزيل القالب
                         </Button>
                         <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-bold transition-colors bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 h-9 px-3 flex-1 sm:flex-none">
-                            <Upload size={14} className="ml-1" /> رفع Excel
+                            <Upload size={14} className="ms-1" /> رفع Excel
                             <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleOpPlanUpload} />
                         </label>
-                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingOpPlan(false)}><X size={16} className="ml-1"/> إغلاق</Button>
-                        <Button className="flex-1 sm:flex-none" onClick={handleSaveOpPlan}><Save size={16} className="ml-1"/> حفظ الخطة</Button>
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingOpPlan(false)}><X size={16} className="ms-1"/> إغلاق</Button>
+                        <Button className="flex-1 sm:flex-none" onClick={handleSaveOpPlan}><Save size={16} className="ms-1"/> حفظ الخطة</Button>
                     </div>
                 </div>
 
@@ -1769,18 +1769,18 @@ export default function PlanningView({ permissions = {} }) {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b bg-gray-50 gap-2">
                             <h4 className="font-bold text-gray-700 text-sm sm:text-base">تحديد الأنشطة والميزانية للفترة المحددة</h4>
                             <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => setCurrentOpPlan({...currentOpPlan, activities: [...(currentOpPlan.activities||[]), DEFAULT_OP_ACTIVITY()]})}>
-                                <Plus size={16} className="ml-1"/> إضافة نشاط
+                                <Plus size={16} className="ms-1"/> إضافة نشاط
                             </Button>
                         </div>
                         
                         <div className="overflow-x-auto w-full pb-16">
-                            <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[1000px]">
+                            <table className="w-full table-fixed border-collapse text-xs text-right whitespace-normal min-w-[1000px]">
                                 <thead className="bg-slate-800 text-white font-bold">
                                     <tr>
                                         <th className="w-[6%] p-1.5 border border-slate-600 text-center">النوع</th>
                                         <th className="w-[14%] p-1.5 border border-slate-600 text-center">الخطة / المحور</th>
                                         <th className="w-[18%] p-1.5 border border-slate-600 text-center">النشاط</th>
-                                        <th className="w-[12%] p-1.5 border border-slate-600 text-center text-[10px]">المؤسسات المستهدفة</th>
+                                        <th className="w-[12%] p-1.5 border border-slate-600 text-center text-xs">المؤسسات المستهدفة</th>
                                         <th className="w-[10%] p-1.5 border border-slate-600 text-center">المؤشر</th>
                                         <th className="w-[6%] p-1.5 border border-slate-600 text-center">الهدف</th>
                                         <th className="w-[8%] p-1.5 border border-slate-600 text-center">التكلفة الإجمالية</th>
@@ -1805,7 +1805,7 @@ export default function PlanningView({ permissions = {} }) {
                                         return (
                                             <tr key={act.id} className={`hover:bg-slate-50 transition-colors ${act.isUnplanned ? 'bg-amber-50/30' : 'bg-white'}`}>
                                                 <td className={`${cellClass} text-center align-middle p-1`}>
-                                                    <label className="flex flex-col items-center justify-center gap-1 text-[9px] font-bold cursor-pointer text-amber-700">
+                                                    <label className="flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer text-amber-700">
                                                         <input type="checkbox" className="w-4 h-4 cursor-pointer rounded" checked={act.isUnplanned} onChange={(e) => {
                                                             const newActs = [...currentOpPlan.activities];
                                                             newActs[idx].isUnplanned = e.target.checked;
@@ -1823,12 +1823,12 @@ export default function PlanningView({ permissions = {} }) {
 
                                                 <td className={cellClass}>
                                                     {act.isUnplanned ? (
-                                                        <select className={`${inputClass} text-[10px]`} value={act.axis} onChange={(e) => update('axis', e.target.value)}>
+                                                        <select className={`${inputClass} text-xs`} value={act.axis} onChange={(e) => update('axis', e.target.value)}>
                                                             <option value="">- المحور -</option>
                                                             {AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                                                         </select>
                                                     ) : (
-                                                        <select className={`${inputClass} text-[10px]`} value={act.masterPlanId} onChange={(e) => {
+                                                        <select className={`${inputClass} text-xs`} value={act.masterPlanId} onChange={(e) => {
                                                             const newActs = [...currentOpPlan.activities];
                                                             newActs[idx].masterPlanId = e.target.value;
                                                             newActs[idx].interventionId = '';
@@ -1844,7 +1844,7 @@ export default function PlanningView({ permissions = {} }) {
                                                     {act.isUnplanned ? (
                                                         <textarea className={`${inputClass} font-bold h-full bg-white`} rows={2} value={act.name} onChange={(e) => update('name', e.target.value)} placeholder="اسم النشاط..." />
                                                     ) : (
-                                                        <select className={`${inputClass} font-bold text-[10px]`} value={act.interventionId} onChange={(e) => {
+                                                        <select className={`${inputClass} font-bold text-xs`} value={act.interventionId} onChange={(e) => {
                                                             const newActs = [...currentOpPlan.activities];
                                                             newActs[idx].interventionId = e.target.value;
                                                             const selInv = availableInvs.find(i => i.id === e.target.value);
@@ -1863,7 +1863,7 @@ export default function PlanningView({ permissions = {} }) {
                                                     <div className="flex flex-col h-full bg-gray-50 overflow-y-auto max-h-[50px] p-1 gap-1 min-h-[40px]">
                                                         <div className="flex flex-wrap gap-1">
                                                             {(act.targetFacilities || []).map(facility => (
-                                                                <span key={facility} className="text-[8px] bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded flex items-center gap-1 border border-indigo-200 shadow-sm">
+                                                                <span key={facility} className="text-xs bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded flex items-center gap-1 border border-indigo-200 shadow-sm">
                                                                     {facility}
                                                                     <button 
                                                                         type="button" 
@@ -1876,7 +1876,7 @@ export default function PlanningView({ permissions = {} }) {
                                                             ))}
                                                         </div>
                                                         <select 
-                                                            className="w-full text-[9px] bg-white border border-gray-300 mt-auto outline-none cursor-pointer rounded p-0.5" 
+                                                            className="w-full text-xs bg-white border border-gray-300 mt-auto outline-none cursor-pointer rounded p-0.5" 
                                                             value=""
                                                             onChange={(e) => {
                                                                 const val = e.target.value;
@@ -1897,7 +1897,7 @@ export default function PlanningView({ permissions = {} }) {
                                                     {act.isUnplanned ? (
                                                         <SelectWithOther options={INDICATOR_OPTIONS} value={act.indicator} onChange={(val) => update('indicator', val)} placeholder="- مؤشر -" />
                                                     ) : (
-                                                        <div className="w-full h-full min-h-[32px] px-1 py-1 text-gray-600 bg-gray-50 flex items-center text-[10px]">
+                                                        <div className="w-full h-full min-h-[32px] px-1 py-1 text-gray-600 bg-gray-50 flex items-center text-xs">
                                                             {act.indicator || '-'}
                                                         </div>
                                                     )}
@@ -1907,7 +1907,7 @@ export default function PlanningView({ permissions = {} }) {
                                                 <td className={cellClass}><input type="number" inputMode="decimal" className={`${inputClass} text-center font-bold bg-gray-50`} value={act.totalCost} onChange={(e) => update('totalCost', e.target.value)} placeholder="0" /></td>
                                                 
                                                 <td className={`${cellClass} text-center align-middle bg-indigo-50/30 p-1`}>
-                                                    <button type="button" onClick={() => setOpSupportModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer">
+                                                    <button type="button" onClick={() => setOpSupportModalIdx(idx)} className="w-full min-h-[30px] rounded text-xs font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer">
                                                         {totalSupport > 0 ? `دعم (${totalSupport.toLocaleString()})` : '+ إضافة تمويل'}
                                                     </button>
                                                 </td>
@@ -1917,7 +1917,7 @@ export default function PlanningView({ permissions = {} }) {
                                                 </td>
 
                                                 <td className={cellClass}>
-                                                    <textarea className={`${inputClass} text-[10px] h-full`} rows={2} value={act.notes || ''} onChange={(e) => update('notes', e.target.value)} placeholder="ملاحظات..." />
+                                                    <textarea className={`${inputClass} text-xs h-full`} rows={2} value={act.notes || ''} onChange={(e) => update('notes', e.target.value)} placeholder="ملاحظات..." />
                                                 </td>
 
                                                 <td className="p-1 border border-slate-300 text-center align-middle">
@@ -1951,12 +1951,12 @@ export default function PlanningView({ permissions = {} }) {
                                         <h4 className="font-bold text-blue-800 mb-3 text-sm flex items-center gap-2">الدعم الحكومي</h4>
                                         <div className="grid grid-cols-5 gap-3">
                                             <div className="col-span-3">
-                                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">المشروع</label>
+                                                <label className="text-xs text-gray-500 font-bold mb-1 block">المشروع</label>
                                                 <SelectWithOther options={GOV_PROJECT_OPTIONS} value={currentOpPlan.activities[opSupportModalIdx].govSource} onChange={(val) => updateOpPlanActivity(opSupportModalIdx, 'govSource', val)} placeholder="- اختر -" />
                                             </div>
                                             <div className="col-span-2">
-                                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة</label>
-                                                <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 outline-none text-left" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx].govValue} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, 'govValue', e.target.value)} placeholder="0" />
+                                                <label className="text-xs text-gray-500 font-bold mb-1 block">القيمة</label>
+                                                <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 outline-none text-start" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx].govValue} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, 'govValue', e.target.value)} placeholder="0" />
                                             </div>
                                         </div>
                                     </div>
@@ -1965,12 +1965,12 @@ export default function PlanningView({ permissions = {} }) {
                                         {[1, 2, 3].map(num => (
                                             <div key={num} className="bg-orange-50/50 p-3.5 rounded-lg border border-orange-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
                                                 <div className="flex-1 w-full">
-                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">الشريك {num}</label>
+                                                    <label className="text-xs text-gray-500 font-bold mb-1 block">الشريك {num}</label>
                                                     <SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={currentOpPlan.activities[opSupportModalIdx][`extSource${num}`]} onChange={(val) => updateOpPlanActivity(opSupportModalIdx, `extSource${num}`, val)} placeholder="- اختر -" />
                                                 </div>
                                                 <div className="w-full sm:w-1/3">
-                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة</label>
-                                                    <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 outline-none text-left" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx][`extValue${num}`]} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
+                                                    <label className="text-xs text-gray-500 font-bold mb-1 block">القيمة</label>
+                                                    <input type="number" inputMode="decimal" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 outline-none text-start" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx][`extValue${num}`]} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
                                                 </div>
                                             </div>
                                         ))}
@@ -1978,7 +1978,7 @@ export default function PlanningView({ permissions = {} }) {
                                 </div>
                                 <div className="bg-white p-4 border-t border-slate-200 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 relative">
                                      <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-500 font-bold">العجز المتبقي (Gap)</span>
+                                        <span className="text-xs text-gray-500 font-bold">العجز المتبقي (Gap)</span>
                                         <span className={`font-bold text-lg ${calculateGap(currentOpPlan.activities[opSupportModalIdx]) > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                             {calculateGap(currentOpPlan.activities[opSupportModalIdx]).toLocaleString()}
                                         </span>
@@ -2002,8 +2002,8 @@ export default function PlanningView({ permissions = {} }) {
                         <p className="text-xs sm:text-sm text-gray-500 mt-1">{currentOpPlan.periodName} - عام {currentOpPlan.year} (خطة قومية)</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingTracking(false)}><X size={16} className="ml-1"/> إغلاق</Button>
-                        <Button variant="success" className="flex-1 sm:flex-none" onClick={handleSaveTracking}><Save size={16} className="ml-1"/> حفظ الإنجازات</Button>
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingTracking(false)}><X size={16} className="ms-1"/> إغلاق</Button>
+                        <Button variant="success" className="flex-1 sm:flex-none" onClick={handleSaveTracking}><Save size={16} className="ms-1"/> حفظ الإنجازات</Button>
                     </div>
                 </div>
                 
@@ -2105,16 +2105,16 @@ export default function PlanningView({ permissions = {} }) {
                         
                         <div className="flex gap-2 w-full sm:w-auto">
                             <Button onClick={exportAllMasterPlansExcel} variant="secondary" className="w-full sm:w-auto justify-center">
-                                <Download size={18} className="ml-2"/> تصدير كل الخطط (Excel)
+                                <Download size={18} className="ms-2"/> تصدير كل الخطط (Excel)
                             </Button>
                             <Button onClick={openCreateMasterPlan} className="w-full sm:w-auto justify-center">
-                                <Plus size={18} className="ml-2"/> إضافة خطة نتيجة
+                                <Plus size={18} className="ms-2"/> إضافة خطة نتيجة
                             </Button>
                         </div>
                     </div>
 
                     {filteredPlans.length === 0 ? (
-                        <EmptyState message="لا توجد خطط سنوية استراتيجية مسجلة مطابقة للبحث." />
+                        <EmptyState filtered message="لا توجد خطط سنوية استراتيجية مسجلة مطابقة للبحث." />
                     ) : (
                         <div className="space-y-4">
                             {filteredPlans.map(plan => (
@@ -2145,14 +2145,14 @@ export default function PlanningView({ permissions = {} }) {
                                                 return (
                                                     <div key={inv.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                                                         <div className="font-bold text-sm text-gray-800 break-words">{inv.name}</div>
-                                                        {inv.axis && <div className="text-[11px] text-gray-500 mb-2">{inv.axis}</div>}
+                                                        {inv.axis && <div className="text-xs text-gray-500 mb-2">{inv.axis}</div>}
                                                         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                                                             <div className="col-span-2"><span className="text-gray-500">المؤشر: </span><span className="text-gray-700">{inv.indicator || '-'}</span></div>
                                                             <div><span className="text-gray-500">الهدف: </span><span className="font-bold">{inv.target}</span></div>
                                                             <div><span className="text-gray-500">الجداول: </span><span className="font-bold text-green-700">{quarters || '-'}</span></div>
                                                             <div><span className="text-gray-500">التكلفة: </span><span className="font-bold">{Number(inv.totalCost).toLocaleString()}</span></div>
                                                             <div><span className="text-gray-500">العجز / Gap: </span><span className={`font-bold ${gap > 0 ? 'text-red-600' : 'text-gray-500'}`}>{gap > 0 ? gap.toLocaleString() : '-'}</span></div>
-                                                            {inv.notes && <div className="col-span-2 text-[11px] text-gray-500"><span>ملاحظات: </span>{inv.notes}</div>}
+                                                            {inv.notes && <div className="col-span-2 text-xs text-gray-500"><span>ملاحظات: </span>{inv.notes}</div>}
                                                         </div>
                                                     </div>
                                                 );
@@ -2196,12 +2196,12 @@ export default function PlanningView({ permissions = {} }) {
                                                                     </div>
                                                                 </td>
                                                                 <td className="p-2 border-l border-slate-200 text-center font-bold">{Number(inv.totalCost).toLocaleString()}</td>
-                                                                <td className="p-2 border-l border-slate-200 text-center text-blue-700"><div className="text-[10px]">{inv.govSource}</div><div className="font-bold">{Number(inv.govValue).toLocaleString()}</div></td>
-                                                                <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-[10px]">{inv.extSource1}</div><div className="font-bold">{Number(inv.extValue1).toLocaleString()}</div></td>
-                                                                <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-[10px]">{inv.extSource2}</div><div className="font-bold">{Number(inv.extValue2).toLocaleString()}</div></td>
-                                                                <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-[10px]">{inv.extSource3}</div><div className="font-bold">{Number(inv.extValue3).toLocaleString()}</div></td>
+                                                                <td className="p-2 border-l border-slate-200 text-center text-blue-700"><div className="text-xs">{inv.govSource}</div><div className="font-bold">{Number(inv.govValue).toLocaleString()}</div></td>
+                                                                <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-xs">{inv.extSource1}</div><div className="font-bold">{Number(inv.extValue1).toLocaleString()}</div></td>
+                                                                <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-xs">{inv.extSource2}</div><div className="font-bold">{Number(inv.extValue2).toLocaleString()}</div></td>
+                                                                <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-xs">{inv.extSource3}</div><div className="font-bold">{Number(inv.extValue3).toLocaleString()}</div></td>
                                                                 <td className={`p-2 border-l border-slate-200 text-center font-bold ${gap > 0 ? 'text-red-600 bg-red-50' : 'text-gray-500'}`}>{gap > 0 ? gap.toLocaleString() : '-'}</td>
-                                                                <td className="p-2 text-gray-500 text-[10px] whitespace-normal">{inv.notes}</td>
+                                                                <td className="p-2 text-gray-500 text-xs whitespace-normal">{inv.notes}</td>
                                                             </tr>
                                                         );
                                                     })}
@@ -2227,10 +2227,10 @@ export default function PlanningView({ permissions = {} }) {
                         </h3>
                         <div className="flex gap-2 w-full sm:w-auto">
                             <Button onClick={exportAllOpPlansExcel} variant="secondary" className="w-full sm:w-auto justify-center">
-                                <Download size={18} className="ml-2"/> تصدير كل الخطط (Excel)
+                                <Download size={18} className="ms-2"/> تصدير كل الخطط (Excel)
                             </Button>
                             <Button onClick={() => openCreateOpPlan(PLAN_TYPES[activeTab.toUpperCase()])} className="w-full sm:w-auto justify-center">
-                                <Plus size={18} className="ml-2"/> {`إنشاء خطة ${activeTab === 'quarterly' ? 'ربعية' : activeTab === 'monthly' ? 'شهرية' : 'أسبوعية'}`}
+                                <Plus size={18} className="ms-2"/> {`إنشاء خطة ${activeTab === 'quarterly' ? 'ربعية' : activeTab === 'monthly' ? 'شهرية' : 'أسبوعية'}`}
                             </Button>
                         </div>
                     </div>
@@ -2241,7 +2241,7 @@ export default function PlanningView({ permissions = {} }) {
                                 <CardBody className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div>
                                         <div className="flex gap-2 mb-1">
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800">
+                                            <span className="text-xs font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800">
                                                 اتحادي
                                             </span>
                                         </div>
@@ -2252,7 +2252,7 @@ export default function PlanningView({ permissions = {} }) {
                                         {/* INTEGRATED TRACKING BUTTON FOR MONTHLY/WEEKLY PLANS */}
                                         {(op.planType === PLAN_TYPES.MONTHLY || op.planType === PLAN_TYPES.WEEKLY) && (
                                             <Button variant="success" size="sm" onClick={() => { setCurrentOpPlan(op); setIsEditingTracking(true); }}>
-                                                <CheckCircle2 size={16} className="ml-1"/> إدخال التنفيذ
+                                                <CheckCircle2 size={16} className="ms-1"/> إدخال التنفيذ
                                             </Button>
                                         )}
                                         <Button variant="secondary" size="sm" onClick={() => handleEditOpPlan(op)}><Edit size={16}/></Button>
@@ -2344,31 +2344,31 @@ export default function PlanningView({ permissions = {} }) {
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
                                 <Card className="bg-indigo-50 border border-indigo-100 col-span-2 sm:col-span-1">
                                     <CardBody className="text-center p-3">
-                                        <div className="text-[10px] text-indigo-600 font-bold mb-1">إجمالي الأنشطة المشمولة</div>
+                                        <div className="text-xs text-indigo-600 font-bold mb-1">إجمالي الأنشطة المشمولة</div>
                                         <div className="text-lg sm:text-xl font-bold text-indigo-900">{evalData.totalActivities}</div>
                                     </CardBody>
                                 </Card>
                                 <Card className="bg-sky-50 border border-sky-100">
                                     <CardBody className="text-center p-3">
-                                        <div className="text-[10px] text-sky-600 font-bold mb-1">متوسط الأنشطة / شهر</div>
+                                        <div className="text-xs text-sky-600 font-bold mb-1">متوسط الأنشطة / شهر</div>
                                         <div className="text-lg sm:text-xl font-bold text-sky-900">{evalData.meanPerMonth}</div>
                                     </CardBody>
                                 </Card>
                                 <Card className="bg-green-50 border border-green-100">
                                     <CardBody className="text-center p-3">
-                                        <div className="text-[10px] text-green-600 font-bold mb-1">مكتملة كلياً</div>
+                                        <div className="text-xs text-green-600 font-bold mb-1">مكتملة كلياً</div>
                                         <div className="text-lg sm:text-xl font-bold text-green-700">{evalData.fullyCompleted}</div>
                                     </CardBody>
                                 </Card>
                                 <Card className="bg-orange-50 border border-orange-100">
                                     <CardBody className="text-center p-3">
-                                        <div className="text-[10px] text-orange-600 font-bold mb-1">مكتملة جزئياً</div>
+                                        <div className="text-xs text-orange-600 font-bold mb-1">مكتملة جزئياً</div>
                                         <div className="text-lg sm:text-xl font-bold text-orange-700">{evalData.partiallyCompleted}</div>
                                     </CardBody>
                                 </Card>
                                 <Card className="bg-red-50 border border-red-100">
                                     <CardBody className="text-center p-3">
-                                        <div className="text-[10px] text-red-600 font-bold mb-1">لم تنفذ</div>
+                                        <div className="text-xs text-red-600 font-bold mb-1">لم تنفذ</div>
                                         <div className="text-lg sm:text-xl font-bold text-red-700">{evalData.notImplemented}</div>
                                     </CardBody>
                                 </Card>
@@ -2384,10 +2384,10 @@ export default function PlanningView({ permissions = {} }) {
                             </div>
                             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                                 <Button size="sm" variant="secondary" onClick={() => exportEvaluationExcel(evalData)} className="w-full sm:w-auto justify-center">
-                                    <Download size={14} className="ml-1" /> تصدير Excel
+                                    <Download size={14} className="ms-1" /> تصدير Excel
                                 </Button>
                                 <Button size="sm" variant="secondary" onClick={() => exportEvaluationPDF(evalData)} className="w-full sm:w-auto justify-center">
-                                    <FileText size={14} className="ml-1" /> تصدير PDF
+                                    <FileText size={14} className="ms-1" /> تصدير PDF
                                 </Button>
                             </div>
                         </div>
@@ -2412,8 +2412,8 @@ export default function PlanningView({ permissions = {} }) {
                                                 <div className="flex items-start justify-between gap-2 mb-2">
                                                     <div className="font-bold text-sm text-gray-800 break-words">{row.name}</div>
                                                     {row.type === 'غير مخطط'
-                                                        ? <span className="shrink-0 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">غير مخطط</span>
-                                                        : <span className="shrink-0 bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">مخطط</span>}
+                                                        ? <span className="shrink-0 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">غير مخطط</span>
+                                                        : <span className="shrink-0 bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">مخطط</span>}
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                                                     <div><span className="text-gray-500">المحور: </span><span className="text-gray-700">{row.axis || '-'}</span></div>
@@ -2424,7 +2424,7 @@ export default function PlanningView({ permissions = {} }) {
                                                             <div className={`h-1 rounded-full ${pct >= 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(pct, 100)}%` }}></div>
                                                         </div>
                                                     </div>
-                                                    <div className="col-span-2 text-[11px] text-gray-600">
+                                                    <div className="col-span-2 text-xs text-gray-600">
                                                         ر1: <b>{row.achievedQ1}</b> · ر2: <b>{row.achievedQ2}</b> · ر3: <b>{row.achievedQ3}</b> · ر4: <b>{row.achievedQ4}</b> · نصف سنوي: <b>{row.achievedH1}</b>
                                                     </div>
                                                     <div><span className="text-gray-500">الميزانية السنوية: </span><span className="font-medium">{row.budget.toLocaleString()}</span></div>
@@ -2478,11 +2478,11 @@ export default function PlanningView({ permissions = {} }) {
                                                 return (
                                                     <tr key={`${row.id}_${idx}`} className={`hover:bg-slate-50 transition-colors ${row.type === 'غير مخطط' ? 'bg-amber-50/20' : 'bg-white'}`}>
                                                         <td className="p-3 border-l border-slate-200 font-bold text-gray-800 break-words whitespace-normal">{row.name}</td>
-                                                        <td className="p-3 border-l border-slate-200 text-gray-600 text-[10px] sm:text-xs text-center">{row.axis}</td>
+                                                        <td className="p-3 border-l border-slate-200 text-gray-600 text-xs text-center">{row.axis}</td>
                                                         <td className="p-3 border-l border-slate-200 text-center">
                                                             {row.type === 'غير مخطط' 
-                                                                ? <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold whitespace-nowrap">غير مخطط</span>
-                                                                : <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold whitespace-nowrap">مخطط</span>
+                                                                ? <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold whitespace-nowrap">غير مخطط</span>
+                                                                : <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold whitespace-nowrap">مخطط</span>
                                                             }
                                                         </td>
                                                         <td className="p-3 border-l border-slate-200 text-center font-bold text-indigo-600 text-base sm:text-lg">{row.targetAnnual}</td>

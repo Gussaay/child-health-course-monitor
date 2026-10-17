@@ -788,7 +788,8 @@ export default function SupervisionView({ permissions = {} }) {
                         <Table headers={headers} cardsOnPhone>
                             {rows.length === 0 ? (
                                 <EmptyState colSpan={headers.length}
-                                    message={t('trackers.supervision.empty', 'No assessments yet. Use New assessment to start one.')} />
+                                    message={t('trackers.supervision.empty', 'No assessments yet. Use New assessment to start one.')}
+                                    action={canEdit ? { label: t('trackers.supervision.new', 'New assessment'), onClick: () => setEditing({ checklistId }) } : undefined} />
                             ) : rows.map((row) => (
                                 <tr key={row.id}>
                                     <td className="text-gray-600">{row.assessmentDate || '—'}</td>

@@ -215,7 +215,7 @@ export function ClaudeChatPanel({ isOpen, onClose }) {
                                 {m.content}
                             </div>
                             {m.usedTools?.length > 0 && (
-                                <div className="text-[11px] text-slate-400 mt-1">
+                                <div className="text-xs text-slate-400 mt-1">
                                     {t('admin_pages.claude_assistant.read_label', 'read:')} {[...new Set(m.usedTools.map((tool) => tool.input?.collection).filter(Boolean))].join(', ') || t('admin_pages.claude_assistant.catalogue', 'catalogue')}
                                 </div>
                             )}

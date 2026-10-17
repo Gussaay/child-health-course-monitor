@@ -129,7 +129,7 @@ export default function AboutDeveloperPage({ permissions }) {
                                     
                                     <div className="text-center sm:text-start w-full">
                                         <h4 className="text-lg font-bold text-slate-800 leading-tight">{member.name}</h4>
-                                        <p className="text-[11px] font-bold text-sky-500 uppercase tracking-wider mt-1">{member.title}</p>
+                                        <p className="text-xs font-bold text-sky-500 mt-1">{member.title}</p>
                                         
                                         <div className="mt-3 space-y-1.5">
                                             <p className="text-sm text-slate-600 font-medium">{member.spec}</p>

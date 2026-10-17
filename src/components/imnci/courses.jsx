@@ -294,7 +294,7 @@ function ExerciseLinkBlock({ block }) {
             <div className="px-4 py-2.5 bg-slate-800 text-white flex flex-wrap items-center gap-2">
                 <GraduationCap size={16} className="shrink-0" />
                 <span className="font-bold text-sm flex-1">{ex.title}</span>
-                <span className="text-[11px] text-slate-300">
+                <span className="text-xs text-slate-300">
                     {ex.estimatedMinutes ? t('imnci_ui.courses.exlink.minutes', '{{n}} min · ', { n: ex.estimatedMinutes }) : ''}{t('imnci_ui.courses.exlink.pass', 'pass {{n}}%', { n: ex.passMark ?? 80 })}
                 </span>
             </div>
@@ -708,7 +708,7 @@ function ConvertBookModal({ isOpen, onClose, courseId, modules, existingFor, onR
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('imnci_ui.courses.convert.module_book', 'Module book (PDF)')}</label>
                     <input type="file" accept=".pdf,application/pdf" onChange={handleFile} disabled={busy}
-                        className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
+                        className="block w-full text-sm text-gray-600 file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
                 </div>
 
                 {busy && (
@@ -1658,7 +1658,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
 
                 <div className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm">
                     <div className="px-5 pt-5 pb-4 bg-gradient-to-br from-sky-700 to-sky-900 text-white">
-                        <div className="text-[11px] uppercase tracking-widest text-sky-200">
+                        <div className="text-xs uppercase tracking-widest text-sky-200">
                             {openModule?.title}
                         </div>
                         <h2 className="text-xl font-bold mt-0.5">{openSection.title}</h2>
@@ -1677,7 +1677,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                     <Icon size={15} />
                                     {isArabic ? tb.labelAr : tb.label}
                                     {n > 0 && (
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                                             active ? 'bg-sky-100 text-sky-700' : 'bg-slate-200 text-slate-600'}`}>{n}</span>
                                     )}
                                     {active && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-sky-600" />}
@@ -1730,11 +1730,11 @@ export default function OnlineCoursesView({ permissions = {} }) {
                             // screen two narrow columns would defeat that.
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="lg:max-h-[38rem] lg:overflow-y-auto pe-1">
-                                    <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">{t('imnci_ui.courses.main.converted_text', 'Converted text')}</div>
+                                    <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">{t('imnci_ui.courses.main.converted_text', 'Converted text')}</div>
                                     <ContentBlocks blocks={content} scale={fontScale} />
                                 </div>
                                 <div className="lg:max-h-[38rem] lg:overflow-y-auto ps-1 border-s">
-                                    <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">{t('imnci_ui.courses.main.the_book', 'The book')}</div>
+                                    <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">{t('imnci_ui.courses.main.the_book', 'The book')}</div>
                                     <ContentBlocks blocks={pages} />
                                 </div>
                             </div>
@@ -1966,7 +1966,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                             <div className="absolute bottom-4 start-52 w-10 h-10 rounded-full bg-white/50" />
                         </div>
                         <div className="relative">
-                            <div className="text-[11px] uppercase tracking-widest text-sky-200">{t('imnci_ui.courses.main.course', 'Course')}</div>
+                            <div className="text-xs uppercase tracking-widest text-sky-200">{t('imnci_ui.courses.main.course', 'Course')}</div>
                             <h1 className="text-2xl font-bold mt-1">{openCourse.title}</h1>
                             {openCourse.description && (
                                 <p className="text-sky-100 text-sm mt-2 max-w-2xl">{openCourse.description}</p>
@@ -1986,7 +1986,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                             <div className="h-full bg-emerald-400 rounded-full transition-all"
                                                 style={{ width: `${pct}%` }} />
                                         </div>
-                                        <div className="text-[11px] text-sky-100 mt-1">
+                                        <div className="text-xs text-sky-100 mt-1">
                                             {t('imnci_ui.courses.main.progress_line', '{{done}} of {{total}} sections · {{pct}}%', { done: doneCount, total: courseSections.length, pct })}
                                         </div>
                                     </div>
@@ -2200,7 +2200,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                     </div>
                                     <BookOpen size={30} className="absolute bottom-3 start-4 text-white/90" />
                                     {!c.isPublished && (
-                                        <span className="absolute top-3 end-3 px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold uppercase tracking-wide">
+                                        <span className="absolute top-3 end-3 px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 text-xs font-bold uppercase tracking-wide">
                                             {t('imnci_ui.courses.main.draft', 'draft')}
                                         </span>
                                     )}
@@ -2223,7 +2223,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
                                             <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                                 <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
                                             </div>
-                                            <div className="text-[11px] text-slate-500 mt-1">
+                                            <div className="text-xs text-slate-500 mt-1">
                                                 {t('imnci_ui.courses.main.card_progress', '{{done}} of {{total}} sections complete', { done, total: secs.length })}
                                             </div>
                                         </div>

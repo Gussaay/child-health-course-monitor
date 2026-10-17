@@ -164,7 +164,7 @@ const MentorshipDashboard = ({
 
         if (canEditStatus) {
             return (
-                <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-[11px] font-bold border border-black rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${isResolvedOrDone ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
+                <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-xs font-bold border border-black rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${isResolvedOrDone ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
                     <option value="Pending">{t('mentorship_extra.dashboard.status.pending', 'Pending')}</option>
                     <option value="In Progress">{t('mentorship_extra.dashboard.status.in_progress', 'In Progress')}</option>
                     <option value="Resolved/Done">{t('mentorship_extra.dashboard.status.resolved_done', 'Resolved / Done')}</option>
@@ -172,7 +172,7 @@ const MentorshipDashboard = ({
             );
         } else {
             return (
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide shadow-sm border border-black ${isResolvedOrDone ? 'bg-emerald-50 text-emerald-700' : displayStatus === 'In Progress' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold tracking-wide shadow-sm border border-black ${isResolvedOrDone ? 'bg-emerald-50 text-emerald-700' : displayStatus === 'In Progress' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
                     {displayStatus === 'Resolved/Done' ? t('mentorship_extra.dashboard.status.resolved_done', 'Resolved / Done') : displayStatus === 'Pending' ? t('mentorship_extra.dashboard.status.pending', 'Pending') : displayStatus === 'In Progress' ? t('mentorship_extra.dashboard.status.in_progress', 'In Progress') : displayStatus}
                 </span>
             );
@@ -897,7 +897,7 @@ const MentorshipDashboard = ({
     const FilterControls = (
         <div className="flex flex-row flex-wrap gap-4 w-full">
             <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
-                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('Start Date') || 'Start Date'}</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 ">{t('Start Date') || 'Start Date'}</label>
                 <input 
                     type="date" 
                     value={formatDateForInput(customStartDate)} 
@@ -906,7 +906,7 @@ const MentorshipDashboard = ({
                 />
             </div>
             <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
-                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('End Date') || 'End Date'}</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 ">{t('End Date') || 'End Date'}</label>
                 <input 
                     type="date" 
                     value={formatDateForInput(customEndDate)} 
@@ -916,7 +916,7 @@ const MentorshipDashboard = ({
             </div>
 
             <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
-                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{t('filter.date')}</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 ">{t('filter.date')}</label>
                 <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}>
                     <option value="">{t('filter.all.time')}</option>
                     <option value="today">{t('date.today')}</option>
@@ -966,7 +966,7 @@ const MentorshipDashboard = ({
             
             {/* 1. OPTIMIZED HEADER: Tighter spacing and hierarchy */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-3 md:mb-6">
-                <h3 className={`text-2xl font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-left'} tracking-tight flex flex-col`}>
+                <h3 className={`text-2xl font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-start'} tracking-tight flex flex-col`}>
                     {!IS_NATIVE && (
                     <div className="flex items-center gap-3">
                         {t('app.title')}: {serviceTitle}

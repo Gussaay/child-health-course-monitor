@@ -63,6 +63,7 @@ import { useStandardNames } from '../hooks/useNameRegistry';
 import { canonicalOptions } from '../utils/nameRegistry';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
+import { countsForCoverage } from '../utils/coverageEligibility';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
@@ -323,7 +324,7 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                                 <p className="text-sm text-yellow-700 mb-4">{t('course_page.migration.unmatched_help', 'Because spelling or spacing differs (e.g., "Alaeldein" vs "Alaeldin"), the system skipped these names to be safe.')} <strong>{t('course_page.migration.unmatched_must_select', 'You must select the correct facilitator below for their dashboard scores to update.')}</strong></p>
                                 
                                 <div className="border border-yellow-300 rounded overflow-hidden">
-                                    <table className="w-full text-sm text-left">
+                                    <table className="w-full text-sm text-start">
                                         <thead className="bg-yellow-100 text-yellow-800 border-b border-yellow-300">
                                             <tr>
                                                 <th className="p-2 w-1/2">{t('course_page.migration.col_historical', 'Historical Name (Old Course)')}</th>
@@ -354,7 +355,7 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                             </div>
                         ) : (
                             <div className="bg-green-50 border border-green-200 p-4 rounded-lg text-green-800 font-medium">
-                                <CheckCircle className="inline mr-2" />
+                                <CheckCircle className="inline me-2" />
                                 {t('course_page.migration.all_matched', 'All names found perfectly matched current facilitators!')}
                             </div>
                         )}
@@ -729,7 +730,7 @@ export function PublicParticipantRegistrationView({ courseId }) {
                 <p className="text-lg text-gray-600 mb-1">{course.course_type}</p>
                 <p className="text-sm text-gray-500 mb-8">{course.state} - {course.locality} ({course.start_date})</p>
 
-                <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6 text-left text-sm text-blue-800">
+                <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6 text-start text-sm text-blue-800">
                     <p><strong>{t('course_page.registration.note', 'Note:')}</strong> {t('course_page.registration.note_text', 'Use this form to register yourself or a participant if you are not already on the list.')}</p>
                 </div>
 
@@ -769,7 +770,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
             <PageHeader title={t('course_page.packages.select_title', 'Select a Course Package')} subtitle={t('course_page.packages.select_subtitle', 'Choose a monitoring package to begin.')} />
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {items.map(it => (
-                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-4 md:p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
+                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-4 md:p-6 text-start transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
                         <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
                             {it.key === 'ICCM' ? <IccmIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'Comprehensive Package For Community Midwives' ? <Users className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
@@ -980,9 +981,9 @@ export function CoursesTable({
             
             {/* Desktop View (Standard Table) */}
             <div className="hidden md:block overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
-                <table className="w-full text-left border-collapse text-sm">
+                <table className="w-full text-start border-collapse text-sm">
                     <thead>
-                        <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
+                        <tr className="bg-slate-100 text-xs text-slate-600 whitespace-nowrap">
                             <th className="p-3 font-semibold border-b border-slate-300 w-1/3">{t('course_page.table.location_subcourses', 'Location & Subcourses')}</th>
                             <th className="p-3 font-semibold border-b border-slate-300 w-1/6">{t('course_page.table.status', 'Status')}</th>
                             <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">{t('course_page.table.activity', 'Activity')}</th>
@@ -1012,9 +1013,9 @@ export function CoursesTable({
                                                 <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">
                                                     {formatLocation(c.state)} - {formatLocation(c.locality)}
                                                 </span>
-                                                {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold whitespace-nowrap">{t('course_page.table.deleting', '(Deleting)')}</span>}
+                                                {isPendingDeletion && <span className="text-xs text-red-600 font-bold whitespace-nowrap">{t('course_page.table.deleting', '(Deleting)')}</span>}
                                             </div>
-                                            <span className="text-[11px] font-medium text-slate-500 truncate max-w-[250px]" title={subcourses}>
+                                            <span className="text-xs font-medium text-slate-500 truncate max-w-[250px]" title={subcourses}>
                                                 {subcourses}
                                             </span>
                                             {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-1" />}
@@ -1023,17 +1024,17 @@ export function CoursesTable({
 
                                     <td className="p-3 align-middle border-b border-slate-200">
                                         {c.approvalStatus === 'pending' ? (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 border border-yellow-200">{t('course_page.status.pending', 'Pending')}</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">{t('course_page.status.pending', 'Pending')}</span>
                                         ) : c.approvalStatus === 'rejected' ? (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200">{t('course_page.status.rejected', 'Rejected')}</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-200">{t('course_page.status.rejected', 'Rejected')}</span>
                                         ) : active ? (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-800 border border-green-200">{t('course_page.status.active', 'Active')}</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-200">{t('course_page.status.active', 'Active')}</span>
                                         ) : (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-800 border border-gray-200">{t('course_page.status.inactive', 'Inactive')}</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-800 border border-gray-200">{t('course_page.status.inactive', 'Inactive')}</span>
                                         )}
                                     </td>
                                     
-                                    <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
+                                    <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-xs text-gray-500 whitespace-nowrap">
                                         <div>{createdDate}</div>
                                         <div className="truncate max-w-[120px]" title={c.createdBy || t('course_page.table.legacy_data', 'Legacy Data')}>
                                             {t('course_page.table.by', 'By: {{name}}', { name: c.createdBy || t('course_page.table.legacy_data', 'Legacy Data') })}
@@ -1042,24 +1043,24 @@ export function CoursesTable({
 
                                     <td className="p-3 align-middle border-b border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
-                                            <Button variant="primary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => onOpen(c.id)} disabled={isProcessing}>
+                                            <Button variant="primary" className="px-2.5 py-1 text-xs flex items-center gap-1" onClick={() => onOpen(c.id)} disabled={isProcessing}>
                                                 <ExternalLink size={12} /> {t('course_page.buttons.open', 'Open')}
                                             </Button>
-                                            <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
+                                            <Button variant="secondary" className="px-2.5 py-1 text-xs flex items-center gap-1" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
                                                 <FileText size={12} /> {t('course_page.buttons.reports', 'Reports')}
                                             </Button>
                                             {canManageFinalReportDocument && (
-                                                <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
+                                                <Button variant="secondary" className="px-2.5 py-1 text-xs flex items-center gap-1 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
                                                     <FileSignature size={12} /> {t('course_page.buttons.final_report', 'Final report')}
                                                 </Button>
                                             )}
-                                            <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
+                                            <Button variant="secondary" className="px-2.5 py-1 text-xs flex items-center gap-1" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
                                                 <Share2 size={12} /> {t('course_page.buttons.share', 'Share')}
                                             </Button>
-                                            <Button variant="secondary" className="px-2.5 py-1 text-[11px] text-gray-600 flex items-center gap-1" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
+                                            <Button variant="secondary" className="px-2.5 py-1 text-xs text-gray-600 flex items-center gap-1" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
                                                 <Edit size={12} /> {t('course_page.buttons.edit', 'Edit')}
                                             </Button>
-                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                            <Button variant="danger" className="px-2.5 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                                 <Trash2 size={12} /> {t('course_page.buttons.delete', 'Delete')}
                                             </Button>
                                         </div>
@@ -1096,15 +1097,15 @@ export function CoursesTable({
                                     <p className="text-sm text-gray-600 line-clamp-1">{subcourses}</p>
                                     <div className="mt-2 flex gap-2 items-center flex-wrap">
                                         {c.approvalStatus === 'pending' ? (
-                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-800">{t('course_page.status.pending', 'Pending')}</span>
+                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{t('course_page.status.pending', 'Pending')}</span>
                                         ) : c.approvalStatus === 'rejected' ? (
-                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-red-100 text-red-800">{t('course_page.status.rejected', 'Rejected')}</span>
+                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">{t('course_page.status.rejected', 'Rejected')}</span>
                                         ) : active ? (
-                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-green-100 text-green-800">{t('course_page.status.active', 'Active')}</span>
+                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{t('course_page.status.active', 'Active')}</span>
                                         ) : (
-                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-800">{t('course_page.status.inactive', 'Inactive')}</span>
+                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{t('course_page.status.inactive', 'Inactive')}</span>
                                         )}
-                                        {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold">{t('course_page.table.deletion_pending', '(Deletion Pending)')}</span>}
+                                        {isPendingDeletion && <span className="text-xs text-red-600 font-bold">{t('course_page.table.deletion_pending', '(Deletion Pending)')}</span>}
                                     </div>
                                     {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-2" />}
                                 </div>
@@ -1336,7 +1337,7 @@ export function CoursesTable({
                         
                         <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenReport(reportModalCourse.id); setReportModalCourse(null); }}>
                             <div className="bg-blue-100 p-2 rounded-full"><BarChart2 className="text-blue-600" size={20} /></div>
-                            <div className="text-left">
+                            <div className="text-start">
                                 <div className="font-semibold text-gray-800">{t('course_page.reports.analytics', 'Course Analytics')}</div>
                                 <div className="text-xs text-gray-500">{t('course_page.reports.analytics_desc', 'View charts and performance metrics')}</div>
                             </div>
@@ -1344,7 +1345,7 @@ export function CoursesTable({
 
                         <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenAttendanceManager(reportModalCourse.id); setReportModalCourse(null); }}>
                             <div className="bg-green-100 p-2 rounded-full"><ClipboardList className="text-green-600" size={20} /></div>
-                            <div className="text-left">
+                            <div className="text-start">
                                 <div className="font-semibold text-gray-800">{t('course_page.reports.attendance', 'Attendance Dashboard')}</div>
                                 <div className="text-xs text-gray-500">{t('course_page.reports.attendance_desc', 'View daily attendance logs')}</div>
                             </div>
@@ -1353,7 +1354,7 @@ export function CoursesTable({
                         {(['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(reportModalCourse.course_type)) && (
                             <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenTestForm(reportModalCourse.id); setReportModalCourse(null); }}>
                                 <div className="bg-orange-100 p-2 rounded-full"><CheckCircle className="text-orange-600" size={20} /></div>
-                                <div className="text-left">
+                                <div className="text-start">
                                     <div className="font-semibold text-gray-800">{t('course_page.reports.test_scores', 'Test Scores Dashboard')}</div>
                                     <div className="text-xs text-gray-500">{t('course_page.reports.test_scores_desc', 'Manage pre-test and post-test scores')}</div>
                                 </div>
@@ -1363,7 +1364,7 @@ export function CoursesTable({
                         {canManageFinalReport && (
                             <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onAddFinalReport(reportModalCourse.id); setReportModalCourse(null); }}>
                                 <div className="bg-purple-100 p-2 rounded-full"><FileText className="text-purple-600" size={20} /></div>
-                                <div className="text-left">
+                                <div className="text-start">
                                     <div className="font-semibold text-gray-800">{t('course_page.reports.final_report', 'Final Report')}</div>
                                     <div className="text-xs text-gray-500">{t('course_page.reports.final_report_desc', 'Generate or view the narrative report')}</div>
                                 </div>
@@ -1376,7 +1377,7 @@ export function CoursesTable({
                             shareViaWhatsApp(text, t('course_page.reports.link_copied', 'Report link copied to clipboard!'));
                         }}>
                             <div className="bg-indigo-100 p-2 rounded-full"><LinkIcon className="text-indigo-600" size={20} /></div>
-                            <div className="text-left">
+                            <div className="text-start">
                                 <div className="font-semibold text-gray-800">{t('course_page.reports.share_link', 'Share Report Link')}</div>
                                 <div className="text-xs text-gray-500">{t('course_page.reports.share_link_desc', 'Copy & share report link via WhatsApp')}</div>
                             </div>
@@ -1420,9 +1421,9 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
             </div>
 
             <PhoneCards className="overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
-                <table className="w-full text-left border-collapse text-sm">
+                <table className="w-full text-start border-collapse text-sm">
                     <thead>
-                        <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
+                        <tr className="bg-slate-100 text-xs text-slate-600 whitespace-nowrap">
                             <th className="p-3 font-semibold border-b border-slate-300 w-1/4">{t('course_page.table.course_type', 'Course Type')}</th>
                             <th className="p-3 font-semibold border-b border-slate-300 w-1/3">{t('course_page.table.location_start', 'Location & Start Date')}</th>
                             <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">{t('course_page.table.activity', 'Activity')}</th>
@@ -1440,7 +1441,7 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
                                     <td className="p-3 align-middle border-b border-slate-200">
                                         <div className="font-bold text-gray-900 text-[13px] whitespace-nowrap">{c.course_type}</div>
                                         {c.approvalStatus === 'rejected' && (
-                                            <span className="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 border border-red-200">{t('course_page.status.rejected', 'Rejected')}</span>
+                                            <span className="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-200">{t('course_page.status.rejected', 'Rejected')}</span>
                                         )}
                                     </td>
                                     
@@ -1448,10 +1449,10 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
                                         <div className="font-semibold text-gray-800 whitespace-nowrap">
                                             {formatLocation(c.state)} - {formatLocation(c.locality)}
                                         </div>
-                                        <div className="text-[11px] text-gray-500 whitespace-nowrap">{t('course_page.table.started', 'Started: {{date}}', { date: c.start_date })}</div>
+                                        <div className="text-xs text-gray-500 whitespace-nowrap">{t('course_page.table.started', 'Started: {{date}}', { date: c.start_date })}</div>
                                     </td>
                                     
-                                    <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
+                                    <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-xs text-gray-500 whitespace-nowrap">
                                         <div>{createdDate}</div>
                                         <div className="truncate max-w-[120px]" title={c.createdBy || t('course_page.table.legacy_data', 'Legacy Data')}>
                                             {t('course_page.table.by', 'By: {{name}}', { name: c.createdBy || t('course_page.table.legacy_data', 'Legacy Data') })}
@@ -1460,10 +1461,10 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
 
                                     <td className="p-3 align-middle border-b border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
-                                            <Button variant="secondary" className="px-2.5 py-1 text-[11px] flex items-center gap-1" onClick={() => onRestore(c)} disabled={isProcessing}>
+                                            <Button variant="secondary" className="px-2.5 py-1 text-xs flex items-center gap-1" onClick={() => onRestore(c)} disabled={isProcessing}>
                                                 <RefreshCw size={12} /> {t('course_page.buttons.restore', 'Restore')}
                                             </Button>
-                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={() => onPermanentDelete(c.id)} disabled={isProcessing}>
+                                            <Button variant="danger" className="px-2.5 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={() => onPermanentDelete(c.id)} disabled={isProcessing}>
                                                 <X size={12} /> {t('course_page.buttons.delete_forever', 'Delete Forever')}
                                             </Button>
                                         </div>
@@ -1507,9 +1508,9 @@ function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProce
                 </div>
                 
                 <PhoneCards className="overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
-                    <table className="w-full text-left border-collapse text-sm">
+                    <table className="w-full text-start border-collapse text-sm">
                         <thead>
-                            <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
+                            <tr className="bg-slate-100 text-xs text-slate-600 whitespace-nowrap">
                                 <th className="p-3 font-semibold border-b border-slate-300 w-1/4">{t('course_page.table.course_type', 'Course Type')}</th>
                                 <th className="p-3 font-semibold border-b border-slate-300 w-1/3">{t('course_page.table.location_start', 'Location & Start Date')}</th>
                                 <th className="p-3 font-semibold border-b border-slate-300 hidden lg:table-cell w-1/4">{t('course_page.table.coordinator', 'Coordinator')}</th>
@@ -1527,19 +1528,19 @@ function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProce
                                         <div className="font-semibold text-gray-800 whitespace-nowrap">
                                             {formatLocation(c.state)} - {formatLocation(c.locality)}
                                         </div>
-                                        <div className="text-[11px] text-gray-500 whitespace-nowrap">{t('course_page.table.started', 'Started: {{date}}', { date: c.start_date })}</div>
+                                        <div className="text-xs text-gray-500 whitespace-nowrap">{t('course_page.table.started', 'Started: {{date}}', { date: c.start_date })}</div>
                                     </td>
                                     
-                                    <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
+                                    <td className="p-3 align-middle border-b border-slate-200 hidden lg:table-cell text-xs text-gray-500 whitespace-nowrap">
                                         <div className="truncate max-w-[150px]" title={c.coordinator || t('course_page.na', 'N/A')}>{c.coordinator || t('course_page.na', 'N/A')}</div>
                                     </td>
 
                                     <td className="p-3 align-middle border-b border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
-                                            <Button variant="primary" className="px-2.5 py-1 text-[11px] bg-green-600 hover:bg-green-700 flex items-center gap-1" onClick={() => onApproveCourse(c.id)} disabled={isProcessing}>
+                                            <Button variant="primary" className="px-2.5 py-1 text-xs bg-green-600 hover:bg-green-700 flex items-center gap-1" onClick={() => onApproveCourse(c.id)} disabled={isProcessing}>
                                                 <Check size={12} /> {t('course_page.buttons.approve', 'Approve')}
                                             </Button>
-                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={() => onRejectCourse(c.id)} disabled={isProcessing}>
+                                            <Button variant="danger" className="px-2.5 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={() => onRejectCourse(c.id)} disabled={isProcessing}>
                                                 <X size={12} /> {t('course_page.buttons.reject', 'Reject')}
                                             </Button>
                                         </div>
@@ -1915,7 +1916,8 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     const phcFacilities = healthFacilities
                         .filter(facilitiesFilter)
                         .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
-                        .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
+                        .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']))
+                        .filter(countsForCoverage);
 
                     const totalPhc = phcFacilities.length;
                     let currentImnciPhcs = 0;
@@ -2155,7 +2157,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         !isGlobalView && selectedCourse && { id: 'reports', label: t('course_page.tabs.individual_report', 'Individual Participant Report'), short: t('ui.short.report', 'Report'), go: () => setActiveCoursesTab('reports') },
         showTestScores && { id: 'enter-test-scores', label: t('course_page.tabs.test_scores', 'Test Scores'), short: t('ui.short.tests', 'Tests'), go: () => setActiveCoursesTab('enter-test-scores') },
         showExercises && { id: 'exercises', label: t('course_page.tabs.exercises', 'Exercises'), short: t('ui.short.exercises', 'Exercises'), go: () => setActiveCoursesTab('exercises') },
-        !isGlobalView && selectedCourse && canManageCourseCertificates && { id: 'course-certificates', label: <>{t('course_page.tabs.certificates', 'Certificates')}{selectedCourse.isCertificateApproved && <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>}</>, short: t('ui.short.certificates', 'Certificates'), go: openTab('course-certificates') },
+        !isGlobalView && selectedCourse && canManageCourseCertificates && { id: 'course-certificates', label: <>{t('course_page.tabs.certificates', 'Certificates')}{selectedCourse.isCertificateApproved && <span className="ms-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>}</>, short: t('ui.short.certificates', 'Certificates'), go: openTab('course-certificates') },
     ];
     const activeCourseTabId =
         ['courses', 'add-course', 'edit-course'].includes(activeCoursesTab) ? 'courses'
@@ -2199,7 +2201,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                 <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing || isProcessing} />
                                 <PageActions className="mb-4">
                                         {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">{t('course_page.buttons.add_course', 'Add New Course')}</Button>}
-                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> {t('course_page.buttons.refresh', 'Refresh Data')}</>}</Button>
+                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="me-1"/> {t('course_page.buttons.refresh', 'Refresh Data')}</>}</Button>
                                         
                                         {/* TRIGGER BUTTON FOR MIGRATION MODAL */}
                                         {canUseSuperUserAdvancedFeatures && (
@@ -2207,7 +2209,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                                 {t('course_page.buttons.total_sync', 'Total Sync Tool')}
                                             </Button>
                                         )}
-                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="bg-indigo-600 text-white hover:bg-indigo-700 md:ms-auto"><ClipboardList size={14} className="mr-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
+                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="md:ms-auto"><ClipboardList size={14} className="me-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
                                         <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>
                                 </PageActions>
                                 
@@ -2498,7 +2500,7 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, d
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-xl max-h-60 overflow-y-auto">
                     {options.map(opt => (
                         <label key={opt.value} className="flex items-center p-2 hover:bg-sky-50 cursor-pointer border-b border-gray-100 last:border-0 m-0">
-                            <input type="checkbox" checked={selectedValues.includes(opt.value)} onChange={() => toggleSelection(opt.value)} className="ml-3 h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500 cursor-pointer" />
+                            <input type="checkbox" checked={selectedValues.includes(opt.value)} onChange={() => toggleSelection(opt.value)} className="ms-3 h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500 cursor-pointer" />
                             <span className="text-sm text-gray-700 font-medium">{opt.label}</span>
                         </label>
                     ))}

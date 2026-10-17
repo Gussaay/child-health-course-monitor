@@ -22,7 +22,7 @@ import {
 } from '../CommonComponents';
 import {
     Award, AlertTriangle, ArrowLeft, BookOpen, CheckCircle, Clock, RefreshCw,
-    Stethoscope, Users, XCircle, Languages,
+    Stethoscope, Users, XCircle, Languages, X,
 } from 'lucide-react';
 import {
     getCourseById,
@@ -422,10 +422,10 @@ function ResultDetail({ result, exercise }) {
                         <table className="w-full text-sm min-w-[540px]">
                             <thead>
                                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
-                                    <th className="text-left p-2.5 font-semibold">{t('imnci_ui.exercises.result.part_of_form', 'Part of the form')}</th>
+                                    <th className="text-start p-2.5 font-semibold">{t('imnci_ui.exercises.result.part_of_form', 'Part of the form')}</th>
                                     <th className="p-2.5 font-semibold w-20">{t('imnci_ui.exercises.result.score', 'Score')}</th>
-                                    <th className="text-left p-2.5 font-semibold">{t('imnci_ui.exercises.result.correct', 'Correct')}</th>
-                                    <th className="text-left p-2.5 font-semibold">{t('imnci_ui.exercises.result.wrong', 'Wrong')}</th>
+                                    <th className="text-start p-2.5 font-semibold">{t('imnci_ui.exercises.result.correct', 'Correct')}</th>
+                                    <th className="text-start p-2.5 font-semibold">{t('imnci_ui.exercises.result.wrong', 'Wrong')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -767,9 +767,9 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
                                         onChange(cur.includes(i) ? cur.filter(x => x !== i) : [...cur, i]);
                                     } else onChange([i]);
                                 }}
-                                className={`w-full text-left border rounded-md px-3 py-2 text-sm transition-colors ${
+                                className={`w-full text-start border rounded-md px-3 py-2 text-sm transition-colors ${
                                     chosen ? 'bg-sky-50 border-sky-500 ring-1 ring-sky-400' : 'bg-white border-slate-200 hover:border-slate-400'}`}>
-                                <span className="text-slate-400 font-mono text-xs mr-2">{String.fromCharCode(97 + i)}</span>{opt}
+                                <span className="text-slate-400 font-mono text-xs me-2">{String.fromCharCode(97 + i)}</span>{opt}
                             </button>
                         );
                     })}
@@ -1030,7 +1030,7 @@ export function ExerciseListView({
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="font-semibold text-slate-800 text-sm leading-snug">{ex.title}</p>
-                                            <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-500">
+                                            <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
                                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{t('imnci_ui.exercises.list.minutes', '{{n}} min', { n: ex.estimatedMinutes || 15 })}</span>
                                                 <span>{t('imnci_ui.exercises.list.pass', 'Pass {{n}}%', { n: ex.passMark ?? 80 })}</span>
                                                 {ex.kind === 'quiz' && <span className="text-purple-600 font-semibold">{t('imnci_ui.exercises.badges.quiz', 'QUIZ')}</span>}
@@ -1159,7 +1159,7 @@ export function ExerciseResultsTable({ course, participants = [] }) {
                 <table className="w-full text-sm">
                     <thead className="bg-slate-50">
                         <tr>
-                            <th className="p-3 text-left font-semibold border-b border-slate-200">{t('imnci_ui.exercises.common.participant', 'Participant')}</th>
+                            <th className="p-3 text-start font-semibold border-b border-slate-200">{t('imnci_ui.exercises.common.participant', 'Participant')}</th>
                             {exercises.map(e => (
                                 <th key={e.id} className="p-3 text-center font-semibold border-b border-slate-200 whitespace-nowrap">
                                     {e.title.split('—')[0].trim()}
@@ -1584,7 +1584,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                     <table className="w-full text-sm min-w-[820px]">
                         <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
                             <tr>
-                                <th className="p-3 text-left font-semibold">{t('imnci_ui.exercises.report.exercise', 'Exercise')}</th>
+                                <th className="p-3 text-start font-semibold">{t('imnci_ui.exercises.report.exercise', 'Exercise')}</th>
                                 <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.attempted_by', 'Attempted by')}</th>
                                 <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.avg_first', 'Avg 1st attempt')}</th>
                                 <th className="p-3 font-semibold">{t('imnci_ui.exercises.report.avg_best', 'Avg best')}</th>
@@ -1598,7 +1598,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                                 <tr key={e.id} className={e.attemptedBy === 0 ? 'opacity-50' : ''}>
                                     <td className="p-3 font-medium text-slate-800">
                                         {e.title}
-                                        {e.draft && <span className="ml-2 text-[10px] font-bold text-amber-600">{t('imnci_ui.exercises.badges.draft', 'DRAFT')}</span>}
+                                        {e.draft && <span className="ms-2 text-xs font-bold text-amber-600">{t('imnci_ui.exercises.badges.draft', 'DRAFT')}</span>}
                                     </td>
                                     <td className="p-3 text-center">{e.attemptedBy}<span className="text-slate-400"> / {model.roster.length}</span></td>
                                     <td className="p-3 text-center">{e.initialAvg != null ? `${e.initialAvg}%` : '—'}</td>
@@ -1629,7 +1629,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                             <div key={`${m.group}-${m.label}`}>
                                 <div className="flex items-center justify-between gap-3 mb-1">
                                     <span className="text-sm text-slate-700">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400 mr-2">{groupLabel(m.group)}</span>
+                                        <span className="text-xs font-bold uppercase text-slate-400 me-2">{groupLabel(m.group)}</span>
                                         {m.label}
                                     </span>
                                     <span className="text-xs text-slate-500 flex-shrink-0 whitespace-nowrap">{m.count} · {m.percent}%</span>
@@ -1652,7 +1652,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                     <table className="w-full text-sm min-w-[720px]">
                         <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
                             <tr>
-                                <th className="p-3 text-left font-semibold">{t('imnci_ui.exercises.common.participant', 'Participant')}</th>
+                                <th className="p-3 text-start font-semibold">{t('imnci_ui.exercises.common.participant', 'Participant')}</th>
                                 {exercises.map(e => (
                                     <th key={e.id} className="p-3 font-semibold whitespace-nowrap" title={e.title}>
                                         {e.title.split('—')[0].trim()}
@@ -1680,7 +1680,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
                                                             {best}%
                                                         </span>
                                                         {first !== best && (
-                                                            <span className="text-[10px] text-slate-400 mt-0.5">{t('imnci_ui.exercises.report.first_pct', '1st {{n}}%', { n: first })}</span>
+                                                            <span className="text-xs text-slate-400 mt-0.5">{t('imnci_ui.exercises.report.first_pct', '1st {{n}}%', { n: first })}</span>
                                                         )}
                                                     </div>
                                                 )}
@@ -1863,7 +1863,7 @@ export function ParticipantExerciseSummary({ course, participant, subCourse = ON
                             <div key={ex.id} className="px-4 py-3 flex items-center justify-between gap-3">
                                 <div className="min-w-0">
                                     <p className="text-sm text-slate-800 truncate">{ex.title}</p>
-                                    <p className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                                    <p className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
                                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{t('imnci_ui.exercises.participant.n_attempts', '{{n}} attempt(s)', { n: count })}</span>
                                         <span>{t('imnci_ui.exercises.list.minutes', '{{n}} min', { n: Math.round((b.durationSeconds || 0) / 60) })}</span>
                                     </p>
@@ -2044,7 +2044,7 @@ function TriState({ value, onChange }) {
         <div className="flex gap-1">
             {opts.map(o => (
                 <button key={String(o.label)} type="button" onClick={() => onChange(o.v)}
-                    className={`px-2 py-1 rounded text-[11px] border transition-colors ${
+                    className={`px-2 py-1 rounded text-xs border transition-colors ${
                         value === o.v
                             ? (o.v === undefined ? 'bg-slate-500 text-white border-slate-500'
                                 : o.v ? 'bg-sky-600 text-white border-sky-600' : 'bg-slate-600 text-white border-slate-600')
@@ -2067,7 +2067,7 @@ function YesNoState({ value, onChange }) {
         <div className="flex gap-1">
             {opts.map(o => (
                 <button key={o.label} type="button" onClick={() => onChange(o.v)}
-                    className={`px-2 py-1 rounded text-[11px] border transition-colors ${
+                    className={`px-2 py-1 rounded text-xs border transition-colors ${
                         value === o.v
                             ? (o.v === undefined ? 'bg-slate-500 text-white border-slate-500' : 'bg-sky-600 text-white border-sky-600')
                             : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
@@ -2119,7 +2119,8 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                     <button type="button" disabled={index === total - 1} onClick={() => onMove(index, 1)}
                         className="text-xs px-2 py-1 border border-slate-200 rounded disabled:opacity-30">↓</button>
                     <button type="button" onClick={() => onRemove(index)}
-                        className="text-xs px-2 py-1 border border-rose-200 text-rose-600 rounded">✕</button>
+                        aria-label={t('shared_ui.common.remove', 'Remove')}
+                        className="text-xs px-2 py-1 border border-rose-200 text-rose-600 rounded flex items-center justify-center"><X size={14} aria-hidden="true" /></button>
                 </div>
             </div>
 
@@ -2141,7 +2142,8 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                                     options: q.options.filter((_, j) => j !== i),
                                     correct: (q.correct || []).filter(c => c !== i).map(c => (c > i ? c - 1 : c)),
                                 })}
-                                className="text-xs px-2 py-1 border border-slate-200 rounded text-slate-500">✕</button>
+                                aria-label={t('shared_ui.common.remove', 'Remove')}
+                                className="text-xs px-2 py-1 border border-slate-200 rounded text-slate-500 flex items-center justify-center"><X size={14} aria-hidden="true" /></button>
                         </div>
                     ))}
                     <Button variant="secondary" onClick={() => setQ({ options: [...(q.options || []), ''] })}>{t('imnci_ui.exercises.qeditor.add_option', 'Add option')}</Button>
@@ -2294,7 +2296,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h3 className="font-bold text-slate-900">
                     {initial ? t('imnci_ui.exercises.editor.edit_exercise', 'Edit exercise') : t('imnci_ui.exercises.editor.new_exercise', 'New exercise')}
-                    {isBuiltIn && <span className="ml-2 text-xs font-normal text-amber-600">{t('imnci_ui.exercises.editor.builtin_note', 'editing a built-in — saving creates an override')}</span>}
+                    {isBuiltIn && <span className="ms-2 text-xs font-normal text-amber-600">{t('imnci_ui.exercises.editor.builtin_note', 'editing a built-in — saving creates an override')}</span>}
                 </h3>
                 <Actions />
             </div>
@@ -2676,7 +2678,7 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
                             <div key={ex.id} className="p-4 flex flex-wrap items-center justify-between gap-3">
                                 <div className="min-w-0">
                                     <p className="font-medium text-sm text-slate-800">{ex.title}</p>
-                                    <p className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
+                                    <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
                                         <code>{ex.id}</code>
                                         <span>{t('imnci_ui.exercises.manager.order_n', 'order {{n}}', { n: ex.order })}</span>
                                         {ex.kind === 'quiz'
@@ -2942,11 +2944,11 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                     <EmptyState message={t('imnci_ui.exercises.live.no_submissions', 'No submissions yet. This updates the moment someone presses Save.')} />
                 ) : perExercise.map(({ ex, attempts: n, participants: np, avg, passed }) => (
                     <button key={ex.id} onClick={() => setFocusId(focusId === ex.id ? '' : ex.id)}
-                        className={`w-full text-left border rounded-lg p-3 transition-colors ${focusId === ex.id ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-400'}`}>
+                        className={`w-full text-start border rounded-lg p-3 transition-colors ${focusId === ex.id ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-400'}`}>
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="min-w-0">
                                 <p className="text-sm font-medium text-slate-800 truncate">{ex.title}</p>
-                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                <p className="text-xs text-slate-500 mt-0.5">
                                     {t('imnci_ui.exercises.live.row_summary', '{{np}} participant(s) · {{n}} submission(s) · {{passed}} passed', { np, n, passed })}
                                 </p>
                             </div>

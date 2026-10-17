@@ -767,7 +767,7 @@ function ImportModal({
                             onChange={handleFileUpload}
                             ref={fileInputRef}
                             disabled={busy}
-                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                            className="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
                         />
                         <div className="text-xs text-gray-500">
                             {t('trackers.population.import.greyed_help', 'If your file appears greyed out, it may be an online-only Google Drive file — open it once so it downloads locally, then try again.')}
@@ -854,7 +854,7 @@ function ImportModal({
                                     <thead className="bg-gray-100 sticky top-0">
                                         <tr>
                                             {headers.map((h) => (
-                                                <th key={h.index} className="border-b border-gray-300 p-2 text-left whitespace-nowrap">
+                                                <th key={h.index} className="border-b border-gray-300 p-2 text-start whitespace-nowrap">
                                                     {h.label}
                                                 </th>
                                             ))}
@@ -1202,6 +1202,7 @@ export default function PopulationManagementView({ permissions = {} }) {
                             {visible.length === 0 ? (
                                 <EmptyState
                                     colSpan={headers.length}
+                                    filtered={population.hasData}
                                     message={population.hasData
                                         ? t('trackers.population.no_match', 'No localities match this filter.')
                                         : t('trackers.population.empty', 'No population targets for {{year}} yet. Use Bulk upload to import them.', { year: activeYear })}

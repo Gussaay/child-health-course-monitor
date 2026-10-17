@@ -72,7 +72,7 @@ function ActionToggle({ options, currentValue, onClick }) {
                 if (idx === 0) roundedClass = "rounded-l-md";
                 if (idx === options.length - 1) roundedClass = "rounded-r-md";
                 if (options.length === 1) roundedClass = "rounded-md";
-                if (idx > 0) roundedClass += " -ml-px border border-gray-300";
+                if (idx > 0) roundedClass += " -ms-px border border-gray-300";
                 else roundedClass += " border border-gray-300";
 
                 return (
@@ -312,7 +312,7 @@ export function ObservationView({ course, participant, participants, onChangePar
             {error && <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{t('monitoring_page.observation.load_error', "Could not load participant's data. Please check your internet connection and try again.")}</div></Card>}
             
             {/* Success Modal Pop-up */}
-            <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} title={t('monitoring_page.observation.success_title', 'Submission Successful')}>
+            <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} title={t('monitoring_page.observation.success_title', 'Submitted')}>
                 <div className="p-6 text-center">
                     <div className="flex justify-center mb-4">
                         <div className="rounded-full bg-green-100 p-3">
@@ -321,7 +321,7 @@ export function ObservationView({ course, participant, participants, onChangePar
                             </svg>
                         </div>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">{t('monitoring_page.observation.success_heading', 'Case Saved Successfully!')}</h3>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{t('monitoring_page.observation.success_heading', 'Case saved.')}</h3>
                     <p className="text-gray-600 mb-6">{t('monitoring_page.observation.success_body', 'The clinical observation has been recorded.')}</p>
                     <Button onClick={() => { setShowSuccessModal(false); setShowGrid(false); setShowSetupModal(true); }} className="w-full bg-green-600 hover:bg-green-700 border-green-600">
                         {t('monitoring_page.observation.continue_next', 'Continue to Next Case')}
@@ -471,9 +471,9 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
                             <button 
                                 type="button"
                                 onClick={() => toggleDomain(d)} 
-                                className={`w-full flex items-center justify-between gap-3 p-4 text-left transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                className={`w-full flex items-center justify-between gap-3 p-4 text-start transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
                             >
-                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-left break-words">{title}</h4>
+                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-start break-words">{title}</h4>
                                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             
@@ -543,9 +543,9 @@ function EtatMonitoringGrid({ buffer, toggle }) {
                             <button 
                                 type="button"
                                 onClick={() => toggleDomain(d)} 
-                                className={`w-full flex items-center justify-between gap-3 p-4 text-left transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                className={`w-full flex items-center justify-between gap-3 p-4 text-start transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
                             >
-                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-left break-words">{title}</h4>
+                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-start break-words">{title}</h4>
                                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             
@@ -632,9 +632,9 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                             <button 
                                 type="button"
                                 onClick={() => toggleDomain(d)} 
-                                className={`w-full flex items-center justify-between gap-3 p-4 text-left transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                className={`w-full flex items-center justify-between gap-3 p-4 text-start transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
                             >
-                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-left break-words">{title}</h4>
+                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-start break-words">{title}</h4>
                                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             
@@ -704,9 +704,9 @@ function IccmMonitoringGrid({ buffer, toggle }) {
                             <button 
                                 type="button"
                                 onClick={() => toggleDomain(d)} 
-                                className={`w-full flex items-center justify-between gap-3 p-4 text-left transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                className={`w-full flex items-center justify-between gap-3 p-4 text-start transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
                             >
-                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-left break-words">{title}</h4>
+                                <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-start break-words">{title}</h4>
                                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                             
@@ -853,7 +853,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
             {/* Desktop View */}
             <div className="hidden md:block overflow-x-auto p-4">
                 <Table headers={headers}>
-                    {caseRows.length === 0 ? <EmptyState message={t('monitoring_page.submitted.no_match', 'No cases match the current filters.')} colSpan={headers.length} /> : caseRows.map((c, idx) => (
+                    {caseRows.length === 0 ? <EmptyState message={t('monitoring_page.submitted.no_match', 'No cases match the current filters.')} filtered colSpan={headers.length} /> : caseRows.map((c, idx) => (
                         <tr key={idx} className="odd:bg-white even:bg-slate-50 hover:bg-sky-100 text-sm">
                             <td className="p-2 border-b border-slate-300">{c.date}</td>
                             <td className="p-2 border-b border-slate-300 text-center">{c.day ?? ''}</td>
@@ -1177,8 +1177,8 @@ function MentorshipRunningScore({ scores }) {
             dir="rtl"
         >
             <div className="font-bold text-base sm:text-lg leading-none">{pct}%</div>
-            <div className="text-[10px] sm:text-xs mt-1 text-center leading-tight">الدرجة الكلية</div>
-            <div className="text-[10px] sm:text-xs leading-tight">({overall.score}/{overall.maxScore})</div>
+            <div className="text-xs mt-1 text-center leading-tight">الدرجة الكلية</div>
+            <div className="text-xs leading-tight">({overall.score}/{overall.maxScore})</div>
         </div>
     );
 }
@@ -1264,7 +1264,7 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
             <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full text-sm">
                     <thead>
-                        <tr className="bg-slate-100 text-left">
+                        <tr className="bg-slate-100 text-start">
                             <th className="p-2">#</th>
                             <th className="p-2">{t('monitoring_page.common.date', 'Date')}</th>
                             <th className="p-2">{t('monitoring_page.common.day', 'Day')}</th>
@@ -1285,7 +1285,7 @@ function MentorshipSavedSessions({ cases, observations, onEdit, onDelete }) {
                                 <td className="p-2 whitespace-nowrap">{caseBadge(c)}</td>
                                 <td className="p-2 text-right whitespace-nowrap">
                                     <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>{t('monitoring_page.common.edit', 'Edit')}</Button>
-                                    <Button variant="danger" size="sm" className="ml-2" onClick={() => onDelete(c)}>{t('monitoring_page.common.delete', 'Delete')}</Button>
+                                    <Button variant="danger" size="sm" className="ms-2" onClick={() => onDelete(c)}>{t('monitoring_page.common.delete', 'Delete')}</Button>
                                 </td>
                             </tr>
                         ))}
@@ -1708,7 +1708,7 @@ export function LegacyMentorshipMonitoringView({
                     </div>
 
                     {savedComparison && (
-                        <div className="mt-5 p-3 border rounded-lg bg-slate-50 text-left">
+                        <div className="mt-5 p-3 border rounded-lg bg-slate-50 text-start">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2 sm:gap-3">
                                 <h4 className="min-w-0 font-bold text-slate-800 break-words">
                                     {t('monitoring_page.legacy.vs_standard', 'Mentor vs stored standard — case {{id}}', { id: savedComparison.scenarioId })}
@@ -1788,7 +1788,7 @@ export function LegacyMentorshipMonitoringView({
                                     disabled={opt.disabled}
                                     title={opt.disabled ? t('monitoring_page.legacy.visit_disabled', 'A visit report summarises a whole facility visit, so it has no course participant equivalent.') : undefined}
                                     onClick={() => !opt.disabled && setRecordType(opt.key)}
-                                    className={`text-left p-3 rounded-lg border transition-colors ${
+                                    className={`text-start p-3 rounded-lg border transition-colors ${
                                         opt.disabled
                                             ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed'
                                             : recordType === opt.key
@@ -2240,7 +2240,7 @@ function MothersFormRow({ label, value, options, onChange }) {
     const answered = value !== '' && value != null;
     return (
         <div dir="rtl" className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:px-5 hover:bg-sky-50 transition-colors ${answered ? 'row-answered' : 'row-unanswered'}`}>
-            <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right min-w-0 flex-grow sm:mr-4 w-full sm:w-auto break-words">{label}</span>
+            <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right min-w-0 flex-grow sm:me-4 w-full sm:w-auto break-words">{label}</span>
             <div className="flex gap-2 w-full sm:w-auto sm:flex-shrink-0 mt-1 sm:mt-0">
                 {options.map(([text, val, cls]) => (
                     <button

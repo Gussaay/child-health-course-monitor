@@ -9,6 +9,7 @@ import {
 } from "react-simple-maps";
 import { geoCentroid } from "d3-geo";
 import { useTranslation } from "react-i18next";
+import { coverageColor, STATUS_COLORS, FACILITY_DOT } from './utils/statusColors';
 
 // The two GeoJSON files are 3 MB together. Importing them compiled them into
 // the JavaScript bundle, so they were parsed as JS on every load of any screen
@@ -106,13 +107,7 @@ const SudanMap = ({
   const dataMap = useMemo(() => new Map((data || []).map(item => [item.state, item])), [data]);
   const localityDataMap = useMemo(() => new Map((localityData || []).map(item => [item.key, item])), [localityData]);
 
-  const getColorForPercentage = (percentage) => {
-    if (percentage === undefined || percentage === null || isNaN(percentage)) return "#6B6B6B";
-    if (percentage < 40) return "#6B6B6B";
-    if (percentage >= 75) return "#313695"; 
-    if (percentage >= 40) return "#6266B1"; 
-    return "#6B6B6B"; 
-  };
+  const getColorForPercentage = coverageColor;
 
   const getLabelStyle = (percentage) => {
     return { fill: "#FFFFFF", stroke: "#374151" }; 
@@ -133,7 +128,7 @@ const SudanMap = ({
             
             let fillColor = (viewLevel === 'locality' && isFocused)
                 ? "#525252" 
-                : (choroplethEnabled ? (stateData?.statusColor || getColorForPercentage(stateData ? stateData.percentage : undefined)) : "#6B6B6B");
+                : (choroplethEnabled ? (stateData?.statusColor || getColorForPercentage(stateData ? stateData.percentage : undefined)) : STATUS_COLORS.none);
 
             if (!stateData?.statusColor && choroplethEnabled && viewLevel === 'state' && stateData && stateData.hasPlannedOnly) {
                 fillColor = "#F59E0B";
@@ -175,7 +170,7 @@ const SudanMap = ({
             geographies.map(geo => {
               const lData = localityDataMap.get(geo.properties.admin_2);
               const coverage = lData ? (lData.percentage !== undefined ? lData.percentage : lData.coverage) : undefined;
-              let fillColor = choroplethEnabled ? (lData?.statusColor || getColorForPercentage(coverage)) : "#6B6B6B";
+              let fillColor = choroplethEnabled ? (lData?.statusColor || getColorForPercentage(coverage)) : STATUS_COLORS.none;
               
               if (!lData?.statusColor && choroplethEnabled && lData && lData.hasPlannedOnly) {
                   fillColor = "#F59E0B";
@@ -216,7 +211,7 @@ const SudanMap = ({
               textAnchor="middle"
               y={6}
               style={{
-                  fontFamily: "system-ui, sans-serif",
+                  fontFamily: "inherit",
                   fill: getLabelStyle(percentage).fill,
                   fontSize: "14px",
                   fontWeight: "bold",
@@ -241,12 +236,12 @@ const SudanMap = ({
 
           return (
               <Marker key={feature.properties.admin_2} coordinates={centroid}>
-                  <text textAnchor="middle" style={{ fontFamily: "system-ui", fontSize: "10px", fontWeight: "bold", paintOrder: "stroke", strokeWidth: "0.4px", strokeLinejoin: "round", ...labelStyle }}>{displayName}</text>
+                  <text textAnchor="middle" style={{ fontFamily: "inherit", fontSize: "10px", fontWeight: "bold", paintOrder: "stroke", strokeWidth: "0.4px", strokeLinejoin: "round", ...labelStyle }}>{displayName}</text>
                   <text
                     textAnchor="middle"
                     y={12}
                     style={{
-                        fontFamily: "system-ui",
+                        fontFamily: "inherit",
                         fontSize: "12px",
                         fontWeight: "bold",
                         paintOrder: "stroke",
@@ -264,7 +259,7 @@ const SudanMap = ({
         <Marker key={key} coordinates={coordinates}>
           <circle
             r={4}
-            fill={color || "#313695"} 
+            fill={color || FACILITY_DOT} 
             stroke="#FFFFFF"
             strokeWidth={1.5}
             style={{ cursor: 'pointer' }}

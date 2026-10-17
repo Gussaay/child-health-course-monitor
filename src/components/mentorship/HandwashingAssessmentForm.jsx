@@ -288,7 +288,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
         <Card className="relative pb-20 text-right w-full" dir="rtl">
             <div className={`fixed top-2 left-2 sm:top-4 sm:left-4 z-50 flex flex-col items-center justify-center p-2 sm:p-3 w-20 h-20 sm:w-32 sm:h-32 rounded-full ${sessionStats.compliance >= 80 ? 'bg-green-600' : sessionStats.compliance >= 50 ? 'bg-yellow-500' : 'bg-red-600'} text-white shadow-2xl transition-all duration-300 border-2 sm:border-4 border-white`}>
                 <div className="font-bold text-xl sm:text-3xl leading-none drop-shadow-md">{sessionStats.compliance}%</div>
-                <div className="text-[10px] sm:text-sm mt-0.5 sm:mt-1 text-center font-medium opacity-90">نسبة الامتثال</div>
+                <div className="text-xs sm:text-sm mt-0.5 sm:mt-1 text-center font-medium opacity-90">نسبة الامتثال</div>
             </div>
 
             <form onSubmit={handleSubmit} className="w-full text-right" dir="rtl">
@@ -326,7 +326,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                                         <h4 className="font-bold text-sky-800 text-right">
                                             <span className="align-middle">البطاقة رقم {idx + 1}</span>
                                             {stats.opp > 0 && (
-                                                <span className="mr-3 align-middle text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">
+                                                <span className="me-3 align-middle text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">
                                                     فرص مكتملة: {stats.opp}
                                                 </span>
                                             )}
@@ -351,11 +351,11 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                                         <div className={`hidden ${ROW_GRID} bg-slate-50 border-b border-slate-200`}>
                                             <div className="p-3 text-right font-bold text-slate-800 text-sm">الدواعي</div>
                                             {ACTIONS.map(act => (
-                                                <div key={act.id} title={act.label} className={`flex items-center justify-center p-2 text-center font-bold text-[11px] leading-tight border-r border-slate-200 ${act.id === 'missed' ? 'text-slate-600' : 'text-slate-800'}`}>
+                                                <div key={act.id} title={act.label} className={`flex items-center justify-center p-2 text-center font-bold text-xs leading-tight border-r border-slate-200 ${act.id === 'missed' ? 'text-slate-600' : 'text-slate-800'}`}>
                                                     {act.label}
                                                 </div>
                                             ))}
-                                            <div title="استخدام القفازات وقت التفويت" className="flex items-center justify-center p-2 text-center font-bold text-[11px] leading-tight text-amber-700 border-r border-slate-200">
+                                            <div title="استخدام القفازات وقت التفويت" className="flex items-center justify-center p-2 text-center font-bold text-xs leading-tight text-amber-700 border-r border-slate-200">
                                                 قفازات
                                             </div>
                                         </div>
@@ -438,7 +438,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
 
                     <div className="bg-sky-50 border border-sky-200 rounded-xl p-6 shadow-sm mb-4 w-full text-right block">
                         <div className="mb-6 border-b border-sky-200 pb-4 text-right block">
-                            <h3 className="inline-block align-middle text-xl font-bold text-sky-900 ml-4">تجميع البيانات لكل جلسة</h3>
+                            <h3 className="inline-block align-middle text-xl font-bold text-sky-900 ms-4">تجميع البيانات لكل جلسة</h3>
                             <span className="inline-block align-middle bg-white text-sky-800 border border-sky-300 px-4 py-1.5 rounded-full text-sm font-bold">
                                 الفئات المهنية المسجلة: {workerTypeStats.length > 0 ? workerTypeStats.map(w => w.workerType).join(' • ') : 'لا يوجد'}
                             </span>
@@ -496,14 +496,14 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
                         )}
 
                         <div className="bg-white p-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 text-right block">
-                            <span className="font-bold text-sky-800 ml-2">معادلة الحساب:</span>
+                            <span className="font-bold text-sky-800 ms-2">معادلة الحساب:</span>
                             نسبة الامتثال (%) = (إجمالي الإجراءات المُنفذة ÷ إجمالي الفرص) × 100
                         </div>
                     </div>
                 </div>
 
-                <div className="p-4 border-t bg-gray-100 rounded-b-2xl sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] w-full text-left block" dir="ltr">
-                    <Button className="inline-block ml-4 px-8 py-2 text-sm font-bold bg-sky-700 hover:bg-sky-800 text-white shadow-lg" disabled={isSaving} type="submit">
+                <div className="p-4 border-t bg-gray-100 rounded-b-2xl sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] w-full text-start block" dir="ltr">
+                    <Button className="inline-block ms-4 px-8 py-2 text-sm font-bold bg-sky-700 hover:bg-sky-800 text-white shadow-lg" disabled={isSaving} type="submit">
                         {isSaving ? 'جاري الحفظ...' : 'حفظ وإنهاء التقييم'}
                     </Button>
                     <Button className="inline-block px-6 py-2 text-sm font-bold bg-white text-gray-700 hover:bg-gray-50 border-gray-300" onClick={onExit} type="button" variant="secondary">

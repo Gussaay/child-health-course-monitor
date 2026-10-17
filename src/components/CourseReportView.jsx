@@ -32,6 +32,7 @@ import { FinalReportManager, ReportDocumentManager } from './FinalReportManager'
 import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl } from '../utils/publicLink';
+import { countsForCoverage } from '../utils/coverageEligibility';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 
@@ -63,7 +64,7 @@ const LinkIcon = () => (
 
 // --- LEGEND COMPONENTS ---
 const LegendBadge = ({ colorClass, label, range }) => (
-    <div className="flex items-center space-x-1.5 text-[11px] whitespace-nowrap">
+    <div className="flex items-center space-x-1.5 text-xs whitespace-nowrap">
         <span className={`px-1.5 py-0.5 rounded font-bold ${colorClass} border border-black/10`}>{label}</span>
         <span className="text-gray-500 font-medium">{range}</span>
     </div>
@@ -173,7 +174,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                <div className="flex flex-col sm:flex-row items-center sm:space-x-4 space-y-3 sm:space-y-0 text-center sm:text-left">
+                <div className="flex flex-col sm:flex-row items-center sm:space-x-4 space-y-3 sm:space-y-0 text-center sm:text-start">
                     <div className="flex-shrink-0 bg-sky-100 p-3 rounded-full">
                         <ShareIcon />
                     </div>
@@ -1500,7 +1501,8 @@ function CourseReportBody({
                 const historicalPhcFacilities = historicalFacilities
                     .filter(facilitiesFilter)
                     .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
-                    .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
+                    .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']))
+                    .filter(countsForCoverage);
                 
                 let totalPhc = historicalPhcFacilities.length;
                 
@@ -2025,7 +2027,7 @@ function CourseReportBody({
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     {mod.parts.map(part => (
                                                         <div key={part.key} className={`border-2 rounded-lg px-3 py-2 ${EMONC_PART_CHIP_STYLES[part.key] || 'bg-gray-50 border-gray-300 text-gray-800'}`}>
-                                                            <div className="text-[11px] font-bold uppercase tracking-wider opacity-80">{t('course_report.emonc.part_n', 'Part {{n}}', { n: part.part })}</div>
+                                                            <div className="text-xs font-bold opacity-80">{t('course_report.emonc.part_n', 'Part {{n}}', { n: part.part })}</div>
                                                             <div className="font-semibold text-sm">{part.title}</div>
                                                             <div className="text-sm mt-1">
                                                                 {t('course_report.emonc.pre', 'Pre')} <span className="font-bold">{fmtPct(part.preAvg)}</span>
@@ -2047,7 +2049,7 @@ function CourseReportBody({
                                     <div key={`table-${mod.module}`} className="mb-8">
                                         <h4 className={`text-base font-bold px-3 py-2 rounded-t-lg ${style.header}`}>{mod.label} &mdash; {t('course_report.results.title', 'Participant Results')}</h4>
                                         <div className={`w-full max-w-full overflow-x-auto touch-pan-x border-2 border-t-0 ${style.border} rounded-b-lg`}>
-                                            <table className="w-full text-left border-collapse bg-white text-sm">
+                                            <table className="w-full text-start border-collapse bg-white text-sm">
                                                 <thead className="bg-gray-50 border-b border-gray-200">
                                                     <tr>
                                                         {['#', 'Participant Name', 'Group', 'Pre-Test', 'Post-Test', '% Increase', 'Average Improvement'].map(h => (
@@ -2055,7 +2057,7 @@ function CourseReportBody({
                                                         ))}
                                                         {mod.sections.map(sec => (
                                                             <th key={sec.key} className={`p-3 font-semibold text-center whitespace-nowrap border-l ${EMONC_PART_CHIP_STYLES[sec.key] || ''}`}>
-                                                                {t('course_report.emonc.part_n_title', 'Part {{n}}: {{title}}', { n: sec.part, title: sec.shortTitle })}<div className="text-[11px] font-normal">{t('course_report.emonc.pre_to_post', 'Pre → Post')}</div>
+                                                                {t('course_report.emonc.part_n_title', 'Part {{n}}: {{title}}', { n: sec.part, title: sec.shortTitle })}<div className="text-xs font-normal">{t('course_report.emonc.pre_to_post', 'Pre → Post')}</div>
                                                             </th>
                                                         ))}
                                                     </tr>
@@ -2430,12 +2432,12 @@ function CourseReportBody({
                                                 <table className="w-full text-center text-sm whitespace-nowrap">
                                                     <thead>
                                                         <tr>
-                                                            <th className="px-4 py-3 bg-white text-left text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">{t('course_report.results.practical_category', 'Practical Score Category')}</th>
+                                                            <th className="px-4 py-3 bg-white text-start text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">{t('course_report.results.practical_category', 'Practical Score Category')}</th>
                                                             {practicalScoreCategories.map((cat, i) => (
                                                                 <th key={cat.key} className={`px-3 py-2 font-bold border-b border-gray-200 ${cat.colorClass} ${i !== practicalScoreCategories.length - 1 ? 'border-r border-black/5' : ''} min-w-[120px]`}>
                                                                     <div className="flex flex-col items-center justify-center">
                                                                         <span className="text-sm">{catLabel(cat.name)}</span>
-                                                                        {cat.range && cat.range !== 'N/A' && <span className="text-[11px] font-medium opacity-75 mt-0.5">{cat.range}</span>}
+                                                                        {cat.range && cat.range !== 'N/A' && <span className="text-xs font-medium opacity-75 mt-0.5">{cat.range}</span>}
                                                                     </div>
                                                                 </th>
                                                             ))}
@@ -2443,7 +2445,7 @@ function CourseReportBody({
                                                     </thead>
                                                     <tbody className="bg-white">
                                                         <tr>
-                                                            <td className="px-4 py-3 text-left text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">{t('course_report.results.participant_count', 'Participant Count')}</td>
+                                                            <td className="px-4 py-3 text-start text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">{t('course_report.results.participant_count', 'Participant Count')}</td>
                                                             {practicalScoreCategories.map((cat, i) => (
                                                                 <td key={cat.key} className={`px-3 py-3 text-2xl font-black text-sky-900 ${i !== practicalScoreCategories.length - 1 ? 'border-r border-gray-200' : ''}`}>
                                                                     {caseCorrectnessDistribution[cat.key] || 0}
@@ -2467,7 +2469,7 @@ function CourseReportBody({
 
                                     <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2" id="practical-details-table">
                                         <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
-                                            <table className="w-full text-left border-collapse bg-white">
+                                            <table className="w-full text-start border-collapse bg-white">
                                                 <thead className="bg-gray-50 border-b border-gray-200">
                                                     <tr>
                                                         {practicalTableHeaders.map(h => <th key={h} className="p-3 text-sm font-semibold text-gray-700 text-center">{headerLabel(h)}</th>)}
@@ -2542,12 +2544,12 @@ function CourseReportBody({
                                                 <table className="w-full text-center text-sm whitespace-nowrap">
                                                     <thead>
                                                         <tr>
-                                                            <th className="px-4 py-3 bg-white text-left text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">{t('course_report.results.improvement_level', 'Improvement Level')}</th>
+                                                            <th className="px-4 py-3 bg-white text-start text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">{t('course_report.results.improvement_level', 'Improvement Level')}</th>
                                                             {correctnessCategories.map((cat, i) => (
                                                                 <th key={cat.key} className={`px-3 py-2 font-bold border-b border-gray-200 ${cat.colorClass} ${i !== correctnessCategories.length - 1 ? 'border-r border-black/5' : ''} min-w-[120px]`}>
                                                                     <div className="flex flex-col items-center justify-center">
                                                                         <span className="text-sm">{catLabel(cat.name)}</span>
-                                                                        {cat.range && cat.range !== 'N/A' && <span className="text-[11px] font-medium opacity-75 mt-0.5">{cat.range}</span>}
+                                                                        {cat.range && cat.range !== 'N/A' && <span className="text-xs font-medium opacity-75 mt-0.5">{cat.range}</span>}
                                                                     </div>
                                                                 </th>
                                                             ))}
@@ -2555,7 +2557,7 @@ function CourseReportBody({
                                                     </thead>
                                                     <tbody className="bg-white">
                                                         <tr>
-                                                            <td className="px-4 py-3 text-left text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">{t('course_report.results.participant_count', 'Participant Count')}</td>
+                                                            <td className="px-4 py-3 text-start text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">{t('course_report.results.participant_count', 'Participant Count')}</td>
                                                             {correctnessCategories.map((cat, i) => (
                                                                 <td key={cat.key} className={`px-3 py-3 text-2xl font-black text-indigo-900 ${i !== correctnessCategories.length - 1 ? 'border-r border-gray-200' : ''}`}>
                                                                     {avgImprovementDistribution[cat.key] || 0}
@@ -2579,7 +2581,7 @@ function CourseReportBody({
 
                                     <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2" id="written-details-table">
                                         <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
-                                            <table className="w-full text-left border-collapse bg-white">
+                                            <table className="w-full text-start border-collapse bg-white">
                                                 <thead className="bg-gray-50 border-b border-gray-200">
                                                     <tr>
                                                         {writtenTableHeaders.map(h => <th key={h} className="p-3 text-sm font-semibold text-gray-700 text-center">{headerLabel(h)}</th>)}

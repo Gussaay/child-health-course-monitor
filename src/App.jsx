@@ -132,7 +132,7 @@ import {
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton } from './components/CommonComponents';
-import { auth, db } from './firebase';
+import { auth, db, isOnline } from './firebase';
 
 import { doc, getDoc, getDocFromServer, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
 
@@ -144,6 +144,8 @@ import NotificationBell from './components/NotificationBell.jsx';
 import { notify, confirmDialog, DialogHost } from './components/dialogs';
 import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
+import SudanMiniMap from './components/SudanMiniMap';
+import { coverageColor } from './utils/statusColors';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
@@ -321,11 +323,11 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
             </div>
             <div className="grid grid-cols-2 gap-2 text-center">
                 <div>
-                    <div className="text-[10px] text-gray-400 uppercase">{t('app_extra.monitor.reads', 'Reads')}</div>
+                    <div className="text-xs text-gray-400 ">{t('app_extra.monitor.reads', 'Reads')}</div>
                     <div className="text-xl font-mono font-bold text-green-400">{counts.reads}</div>
                 </div>
                 <div>
-                    <div className="text-[10px] text-gray-400 uppercase">{t('app_extra.monitor.writes', 'Writes')}</div>
+                    <div className="text-xs text-gray-400 ">{t('app_extra.monitor.writes', 'Writes')}</div>
                     <div className="text-xl font-mono font-bold text-yellow-400">{counts.writes}</div>
                 </div>
             </div>
@@ -337,19 +339,20 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
 // Tailwind keeps only class names it can see whole in the source, so each
 // tile's colours are written out rather than built from a colour name.
 const TILE_TINTS = {
-    sky: { icon: 'bg-sky-50 text-sky-700', ring: 'group-hover:ring-sky-200' },
-    violet: { icon: 'bg-violet-50 text-violet-700', ring: 'group-hover:ring-violet-200' },
-    emerald: { icon: 'bg-emerald-50 text-emerald-700', ring: 'group-hover:ring-emerald-200' },
     teal: { icon: 'bg-teal-50 text-teal-700', ring: 'group-hover:ring-teal-200' },
-    rose: { icon: 'bg-rose-50 text-rose-700', ring: 'group-hover:ring-rose-200' },
+    violet: { icon: 'bg-violet-50 text-violet-700', ring: 'group-hover:ring-violet-200' },
     amber: { icon: 'bg-amber-50 text-amber-700', ring: 'group-hover:ring-amber-200' },
-    indigo: { icon: 'bg-indigo-50 text-indigo-700', ring: 'group-hover:ring-indigo-200' },
-    cyan: { icon: 'bg-cyan-50 text-cyan-700', ring: 'group-hover:ring-cyan-200' },
-    lime: { icon: 'bg-lime-50 text-lime-700', ring: 'group-hover:ring-lime-200' },
-    orange: { icon: 'bg-orange-50 text-orange-700', ring: 'group-hover:ring-orange-200' },
-    fuchsia: { icon: 'bg-fuchsia-50 text-fuchsia-700', ring: 'group-hover:ring-fuchsia-200' },
     slate: { icon: 'bg-slate-100 text-slate-700', ring: 'group-hover:ring-slate-200' },
 };
+
+// The main menu's tile groups, in order. Each group has one colour, so the
+// colour tells you which area a tile belongs to.
+const MODULE_GROUPS = [
+    { id: 'services', tint: 'teal', label: 'Services and coverage' },
+    { id: 'training', tint: 'violet', label: 'Training and people' },
+    { id: 'planning', tint: 'amber', label: 'Planning and follow-up' },
+    { id: 'general', tint: 'slate', label: 'App and team' },
+];
 
 function ModuleTile({ label, tagline, icon: Icon, tint, onClick }) {
     const { icon: iconCls, ring: ringCls } = TILE_TINTS[tint];
@@ -369,9 +372,9 @@ function ModuleTile({ label, tagline, icon: Icon, tint, onClick }) {
 
 // The greeting card's colour and label follow the person's programme level.
 const LEVEL_CARDS = {
-    federal: 'from-sky-700 via-sky-600 to-cyan-500 shadow-sky-700/20',
-    state: 'from-emerald-700 via-emerald-600 to-teal-500 shadow-emerald-700/20',
-    locality: 'from-violet-700 via-violet-600 to-indigo-500 shadow-violet-700/20',
+    federal: 'bg-sky-700',
+    state: 'bg-emerald-700',
+    locality: 'bg-violet-700',
 };
 
 // `value` null: still loading (`busy`) or could not be loaded.
@@ -398,22 +401,22 @@ function pageTitles(t) {
 function buildModules(t, permissions) {
     const tile = (key, fallback) => t(`landing.taglines.${key}`, fallback);
     return [
-        { label: t('landing.modules.dashboard', 'Dashboard'), tagline: tile('dashboard', 'Key indicators at a glance'), view: 'dashboard', icon: Home, tint: 'sky', permission: true },
-        { label: t('landing.modules.courses', 'Courses'), tagline: tile('courses', 'Courses, participants and reports'), view: 'courses', icon: Book, tint: 'violet', permission: permissions.canViewCourse },
-        { label: t('landing.modules.human_resources', 'Human Resources'), tagline: tile('human_resources', 'Facilitators, teams and partners'), view: 'humanResources', icon: Users, tint: 'emerald', permission: permissions.canViewHumanResource },
-        { label: t('landing.modules.facilities', 'Child Health Services'), tagline: tile('facilities', 'Facilities and service coverage'), view: 'childHealthServices', icon: Hospital, tint: 'teal', permission: permissions.canViewFacilities },
-        { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', icon: ClipboardCheck, tint: 'rose', permission: permissions.canViewSkillsMentorship },
-        { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', icon: Activity, tint: 'amber', permission: permissions.canViewCourse },
-        { label: t('landing.modules.projects', 'Project Tracker'), tagline: tile('projects', 'Track project tasks'), view: 'projects', icon: FolderKanban, tint: 'indigo', permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: t('landing.modules.meetings', 'Meeting Tracker'), tagline: tile('meetings', 'Meetings and attendance'), view: 'meetings', icon: CalendarDays, tint: 'cyan', permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: t('landing.modules.planning', 'Master Plan'), tagline: tile('planning', 'The annual master plan'), view: 'planning', icon: TrendingUp, tint: 'lime', permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), tagline: tile('locality_plan', 'Plans from the localities'), view: 'localityPlan', icon: Layers, tint: 'orange', permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', icon: Package, tint: 'fuchsia', permission: permissions.canViewSupplyChain },
-        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', icon: ClipboardCheck, tint: 'sky', permission: permissions.canViewSupervision },
-        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', icon: BookOpen, tint: 'violet', permission: permissions.canViewOnlineCourses },
-        { label: t('landing.modules.downloads', 'App Files & Downloads'), tagline: tile('downloads', 'Files saved on this device'), view: 'downloads', icon: HardDrive, tint: 'slate', permission: Capacitor.isNativePlatform() },
-        { label: t('landing.modules.admin', 'Admin'), tagline: tile('admin', 'Users, roles and settings'), view: 'admin', icon: User, tint: 'slate', permission: permissions.canViewAdmin },
-        { label: t('landing.modules.about', 'About Team'), tagline: tile('about', 'The programme team'), view: 'about', icon: Info, tint: 'slate', permission: true },
+        { label: t('landing.modules.dashboard', 'Dashboard'), tagline: tile('dashboard', 'Key indicators at a glance'), view: 'dashboard', group: 'services', icon: Home, permission: true },
+        { label: t('landing.modules.courses', 'Courses'), tagline: tile('courses', 'Courses, participants and reports'), view: 'courses', group: 'training', icon: Book, permission: permissions.canViewCourse },
+        { label: t('landing.modules.human_resources', 'Human Resources'), tagline: tile('human_resources', 'Facilitators, teams and partners'), view: 'humanResources', group: 'training', icon: Users, permission: permissions.canViewHumanResource },
+        { label: t('landing.modules.facilities', 'Child Health Services'), tagline: tile('facilities', 'Facilities and service coverage'), view: 'childHealthServices', group: 'services', icon: Hospital, permission: permissions.canViewFacilities },
+        { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
+        { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
+        { label: t('landing.modules.projects', 'Project Tracker'), tagline: tile('projects', 'Track project tasks'), view: 'projects', group: 'planning', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: t('landing.modules.meetings', 'Meeting Tracker'), tagline: tile('meetings', 'Meetings and attendance'), view: 'meetings', group: 'planning', icon: CalendarDays, permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: t('landing.modules.planning', 'Master Plan'), tagline: tile('planning', 'The annual master plan'), view: 'planning', group: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), tagline: tile('locality_plan', 'Plans from the localities'), view: 'localityPlan', group: 'planning', icon: Layers, permission: permissions.canViewLocalityPlan },
+        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
+        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
+        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
+        { label: t('landing.modules.downloads', 'App Files & Downloads'), tagline: tile('downloads', 'Files saved on this device'), view: 'downloads', group: 'general', icon: HardDrive, permission: Capacitor.isNativePlatform() },
+        { label: t('landing.modules.admin', 'Admin'), tagline: tile('admin', 'Users, roles and settings'), view: 'admin', group: 'general', icon: User, permission: permissions.canViewAdmin },
+        { label: t('landing.modules.about', 'About Team'), tagline: tile('about', 'The programme team'), view: 'about', group: 'general', icon: Info, permission: true },
     ];
 }
 
@@ -423,7 +426,7 @@ function StatBox({ value, label, busy, icon: Icon, format = (v) => v.toLocaleStr
         <div className="rounded-2xl bg-white/15 backdrop-blur-sm px-3 py-2.5 min-w-0 ring-1 ring-white/10">
             <div className="flex items-center gap-1.5 text-white/80">
                 {Icon && <Icon size={13} className="shrink-0" />}
-                <p className="text-[11px] leading-tight truncate">{label}</p>
+                <p className="text-xs leading-tight truncate">{label}</p>
             </div>
             {loading
                 ? <Skeleton className="shimmer-light h-6 w-12 mt-1" />
@@ -444,14 +447,14 @@ const COVERAGE_ITEMS = [
 function CoverageChip({ label, value, loading, strong = false }) {
     return (
         <div className={`shrink-0 min-w-[5.5rem] flex-1 rounded-2xl px-3 py-2 ring-1 ${strong ? 'bg-white text-slate-800 ring-white' : 'bg-white/15 ring-white/10'}`}>
-            <p className={`text-[11px] leading-tight truncate ${strong ? 'font-semibold text-slate-500' : 'text-white/80'}`}>{label}</p>
+            <p className={`text-xs leading-tight truncate ${strong ? 'font-semibold text-slate-500' : 'text-white/80'}`}>{label}</p>
             {loading
                 ? <Skeleton className={`${strong ? '' : 'shimmer-light'} h-5 w-10 mt-1`} />
                 : (
                     <>
                         <p className="text-lg font-bold leading-tight mt-0.5">{value === null || value === undefined ? '—' : `${value}%`}</p>
                         <div className={`mt-1 h-1 rounded-full overflow-hidden ${strong ? 'bg-slate-200' : 'bg-white/20'}`}>
-                            <div className={`h-full rounded-full ${strong ? 'bg-sky-500' : 'bg-white'}`} style={{ width: `${Math.min(100, value || 0)}%` }} />
+                            <div className={`h-full rounded-full ${strong ? '' : 'bg-white'}`} style={{ width: `${Math.min(100, value || 0)}%`, backgroundColor: strong ? coverageColor(value) : undefined }} />
                         </div>
                     </>
                 )}
@@ -500,7 +503,7 @@ function homeFacts(t, stats, level) {
     return facts;
 }
 
-function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats }) {
+function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
     const { t } = useTranslation();
     const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
     const facts = homeFacts(t, stats, level);
@@ -508,20 +511,20 @@ function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats })
     const fact = facts.length ? facts[pick % facts.length] : null;
     const FactIcon = fact?.icon;
     return (
-        <section className={`md:hidden relative overflow-hidden rounded-2xl bg-gradient-to-br ${LEVEL_CARDS[level]} text-white px-4 py-3 shadow-md`}>
-            <span className="absolute -end-8 -top-10 h-28 w-28 rounded-full bg-white/10" />
+        <section className={`md:hidden relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3`}>
+            <SudanMiniMap highlight={states} all={level === 'federal'} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 text-white" />
             <div className="relative flex items-center gap-2 min-w-0">
                 <h2 className="text-base font-bold leading-tight truncate">
-                    {greeting}{firstName ? `, ${firstName}` : ''} 👋
+                    {greeting}{firstName ? `, ${firstName}` : ''}
                 </h2>
-                <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-[11px] font-semibold">{scope || levelLabel}</span>
+                <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-xs font-semibold">{scope || levelLabel}</span>
             </div>
             {fact ? (
                 <button
                     type="button"
                     onClick={() => setPick(p => p + 1)}
                     title={t('ui.next_fact', 'Show another highlight')}
-                    className="relative mt-1 flex w-full items-center gap-1.5 text-start text-[13px] text-white/90 min-w-0"
+                    className="relative mt-1 flex w-full items-center gap-1.5 text-start text-sm text-white/90 min-w-0"
                 >
                     <FactIcon size={14} className="shrink-0" />
                     <span className="truncate">{fact.text}</span>
@@ -529,7 +532,7 @@ function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats })
             ) : loading ? (
                 <Skeleton className="shimmer-light relative mt-1.5 h-4 w-2/3" />
             ) : (
-                <p className="relative mt-1 text-[13px] text-white/80 truncate">{levelLabel}</p>
+                <p className="relative mt-1 text-sm text-white/80 truncate">{levelLabel}</p>
             )}
         </section>
     );
@@ -552,18 +555,16 @@ function Landing({ navigate, permissions, user, roles = [], userStates = [], use
     const scope = places.filter(Boolean).join(i18n.language?.startsWith('ar') ? '، ' : ', ');
 
     const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
-    const chip = 'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold';
+    const chip = 'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold';
 
     return (
         <div className="flex flex-col min-h-full space-y-4">
-            <PhoneGreeting greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} />
-            <section className={`hidden md:block relative overflow-hidden rounded-3xl bg-gradient-to-br ${LEVEL_CARDS[level]} text-white p-4 sm:p-5 shadow-lg`}>
-                <span className="absolute -end-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-                <span className="absolute end-16 -bottom-12 h-28 w-28 rounded-full bg-white/10" />
-                <div className="relative">
+            <PhoneGreeting greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
+            <section className={`hidden md:flex items-start gap-5 rounded-3xl ${LEVEL_CARDS[level]} text-white p-4 sm:p-5`}>
+                <div className="relative flex-1 min-w-0">
                     <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <h2 className="shrink-0 text-lg sm:text-xl font-bold leading-tight">
-                            {greeting}{firstName ? `, ${firstName}` : ''} 👋
+                            {greeting}{firstName ? `, ${firstName}` : ''}
                         </h2>
                         <span className={`${chip} bg-white text-slate-800`}>{levelLabel}</span>
                         {scope && <span className={`${chip} bg-white/20`}>{scope}</span>}
@@ -586,15 +587,27 @@ function Landing({ navigate, permissions, user, roles = [], userStates = [], use
                             onOpen={permissions.canViewFacilities ? () => navigate('childHealthServices') : undefined}
                         />
                     )}
-                    {stats && <p className="mt-2 text-[11px] text-white/70">{t('landing.stats_year', 'This year')} ({new Date().getFullYear()})</p>}
+                    {stats && <p className="mt-2 text-xs text-white/70">{t('landing.stats_year', 'This year')} ({new Date().getFullYear()})</p>}
                 </div>
+                <SudanMiniMap highlight={userStates} all={level === 'federal'} title={scope || levelLabel} className="hidden lg:block shrink-0 w-36 xl:w-44 text-white" />
             </section>
 
             {accessibleButtons.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {accessibleButtons.map(btn => (
-                        <ModuleTile key={btn.view} label={btn.label} tagline={btn.tagline} icon={btn.icon} tint={btn.tint} onClick={() => navigate(btn.view)} />
-                    ))}
+                <div className="space-y-5">
+                    {MODULE_GROUPS.map(group => {
+                        const tiles = accessibleButtons.filter(btn => btn.group === group.id);
+                        if (!tiles.length) return null;
+                        return (
+                            <section key={group.id} aria-labelledby={`group-${group.id}`}>
+                                <h3 id={`group-${group.id}`} className="mb-2 text-sm font-semibold text-slate-500">{t(`landing.groups.${group.id}`, group.label)}</h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                    {tiles.map(btn => (
+                                        <ModuleTile key={btn.view} label={btn.label} tagline={btn.tagline} icon={btn.icon} tint={group.tint} onClick={() => navigate(btn.view)} />
+                                    ))}
+                                </div>
+                            </section>
+                        );
+                    })}
                 </div>
             ) : (
                 <Card><div className="p-8 text-center text-gray-500">{t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')}</div></Card>
@@ -650,7 +663,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
                             title={item.label} 
                         >
                             {Icon && <Icon className="w-6 h-6 mb-1 shrink-0" />}
-                            <span className="w-full text-center text-[10px] sm:text-[11px] leading-tight truncate px-0.5 block">
+                            <span className="w-full text-center text-xs leading-tight truncate px-0.5 block">
                                 {item.label}
                             </span>
                         </button>
@@ -658,7 +671,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
                 })}
             </div>
             
-            <div className="bg-slate-900 text-slate-300 text-[10px] py-1.5 px-2 w-full border-t border-slate-700 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
+            <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-2 w-full border-t border-slate-700 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
                 <AppCredit />
             </div>
         </nav>
@@ -705,7 +718,7 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
                     </div>
                     <p className="text-lg font-bold mt-3 truncate">{user?.displayName || user?.email}</p>
                     {user?.displayName && <p className="text-xs text-white/80 truncate">{user?.email}</p>}
-                    <div className="flex flex-wrap gap-1.5 mt-2 text-[11px]">
+                    <div className="flex flex-wrap gap-1.5 mt-2 text-xs">
                         {levelLabel && <span className="rounded-full bg-white text-slate-800 px-2 py-0.5 font-bold">{levelLabel}</span>}
                         {roleLabel && <span className="rounded-full bg-white/20 px-2 py-0.5 font-semibold capitalize">{roleLabel}</span>}
                     </div>
@@ -717,13 +730,13 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
                     >
                         <Home size={20} className="text-sky-600 shrink-0" /> {t('landing.modules.home', 'Home')}
                     </button>
-                    {modules.map(({ view, label, icon: Icon, tint }) => (
+                    {modules.map(({ view, label, icon: Icon, group }) => (
                         <button
                             key={view}
                             onClick={go(() => onNavigate(view))}
                             className={`w-full flex items-center gap-4 px-5 py-2.5 text-start ${currentView === view ? 'bg-sky-50 text-sky-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'}`}
                         >
-                            <span className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${TILE_TINTS[tint]?.icon || ''}`}><Icon size={16} /></span>
+                            <span className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${TILE_TINTS[MODULE_GROUPS.find(g => g.id === group)?.tint]?.icon || ''}`}><Icon size={16} /></span>
                             <span className="truncate">{label}</span>
                         </button>
                     ))}
@@ -756,7 +769,7 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
 function SplashScreen() {
     const { t } = useTranslation();
     return (
-        <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
+        <div className="fixed inset-0 bg-surface flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-20 w-20 object-contain" /></div>
             <div>
                 <h1 className="text-3xl font-bold text-slate-800">{t('app.title', 'National Child Health Program')}</h1>
@@ -1745,6 +1758,25 @@ export default function App() {
         if (view === 'landing') { fetchCourses(); fetchParticipants(); fetchSkillMentorshipSubmissions(); fetchCoordinators(); fetchHealthFacilities(); }
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
 
+    // The offline cache only holds what THIS device last read. Tests and scores
+    // entered on another phone (or a cache that never held this course's tests,
+    // which comes back as an empty list rather than a miss) stay invisible until
+    // the server is asked, so every cache hit is followed by a server refresh.
+    const refreshCourseDetailsFromServer = useCallback(async (courseId) => {
+        if (!courseId || !isOnline()) return;
+        try {
+            const [serverParticipants, serverTests] = await Promise.all([
+                listAllParticipantsForCourse(courseId, { source: 'server' }),
+                listParticipantTestsForCourse(courseId, { source: 'server' })
+            ]);
+            const activeParticipants = (serverParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+            const activeTests = (serverTests || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
+            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests } }));
+        } catch (error) {
+            console.error("Server refresh of course participants/tests failed:", error);
+        }
+    }, []);
+
     useEffect(() => {
         if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
             const fetchFullCourseDetails = async () => {
@@ -1774,6 +1806,7 @@ export default function App() {
 
                     if (!isCacheMiss) {
                         processAndSet(participantsData, allCourseData, finalReport, testData);
+                        refreshCourseDetailsFromServer(selectedCourseId);
                     } else {
                         const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
                             listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]),
@@ -1791,7 +1824,7 @@ export default function App() {
             };
             fetchFullCourseDetails();
         }
-    }, [selectedCourseId, courseDetailsCache, courseDetailsLoading]); 
+    }, [selectedCourseId, courseDetailsCache, courseDetailsLoading, refreshCourseDetailsFromServer]); 
 
     const canSeeAllData = useMemo(() => permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures, [permissions]);
 
@@ -2108,7 +2141,7 @@ export default function App() {
         setSelectedCourseId(courseId);
         navigate('courseReport', { courseId });
 
-        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) return;
+        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { refreshCourseDetailsFromServer(courseId); return; }
         // Already being fetched by another path; its result lands in the same
         // cache entry and the open page picks it up.
         if (courseDetailsLoading) return;
@@ -2148,6 +2181,7 @@ export default function App() {
             const activeFinalReport = (finalFinalReport && finalFinalReport.isDeleted !== true && finalFinalReport.isDeleted !== "true") ? finalFinalReport : null;
             
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests } }));
+            if (!isCacheMiss) refreshCourseDetailsFromServer(courseId);
         } catch (error) { 
             console.error("Error loading course report data:", error); 
             setToast({ show: true, message: t('app_extra.toast.course_report_load_failed', 'Failed to load course report data. Please try again.'), type: 'error' }); 
@@ -2160,15 +2194,16 @@ export default function App() {
         } finally { 
             setLoading(false); setCourseDetailsLoading(false); 
         }
-    }, [navigate, courseDetailsCache, courseDetailsLoading, t]);
+    }, [navigate, courseDetailsCache, courseDetailsLoading, t, refreshCourseDetailsFromServer]);
 
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
         setLoading(true); setSelectedCourseId(courseId); setSelectedParticipantId(null); 
         try {
             let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null);
             let testData = await listParticipantTestsForCourse(courseId, { source: 'cache' }).catch(()=>null);
+            const servedFromCache = participantsData !== null && testData !== null;
 
-            if (participantsData === null || testData === null) {
+            if (!servedFromCache) {
                  [participantsData, testData] = await Promise.all([ 
                      listAllParticipantsForCourse(courseId, { source: 'server' }), 
                      listParticipantTestsForCourse(courseId, { source: 'server' }) 
@@ -2178,6 +2213,7 @@ export default function App() {
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests } }));
+            if (servedFromCache) refreshCourseDetailsFromServer(courseId);
             setActiveCoursesTab('test-dashboard'); setView('courses');
         } catch (error) { 
             console.error("Error loading data for test form:", error); 
@@ -2186,7 +2222,7 @@ export default function App() {
         } finally { 
             setLoading(false); 
         }
-    }, [navigate, t]); 
+    }, [navigate, t, refreshCourseDetailsFromServer]); 
 
     const handleApproveSubmission = useCallback(async (submission) => {
         if (await confirmDialog(t('app_extra.confirm.approve', 'Approve {{name}}?', { name: submission.name }))) {
@@ -2820,7 +2856,7 @@ case 'meetings':
     );
 
     return (
-        <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
+        <div className="min-h-screen bg-surface flex flex-col pt-0 relative">
             
             <style>{`
                 @media (max-width: 768px) {
@@ -2908,7 +2944,7 @@ case 'meetings':
                                     <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span
                                         onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
-                                        className="bg-slate-700 text-sky-300 text-[10px] px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
+                                        className="bg-slate-700 text-sky-300 text-xs px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
                                         title={t('app_extra.header.check_updates', 'Tap to check for updates')}
                                     >
                                         v{appVersion}
@@ -2969,12 +3005,12 @@ case 'meetings':
 
                             <div className="flex items-center gap-1 flex-nowrap overflow-hidden">
                                 {userRoles && userRoles.length > 0 && userRoles.map((r, idx) => (
-                                    idx === 0 && <span key={r} className="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0">
+                                    idx === 0 && <span key={r} className="bg-sky-500 text-white text-xs px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0">
                                         {r.replace(/_/g, ' ')}
                                     </span>
                                 ))}
                                 {userHRProfile && userHRProfile.role && (
-                                    <span className="bg-teal-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0 hidden sm:inline-flex">
+                                    <span className="bg-teal-500 text-white text-xs px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0 hidden sm:inline-flex">
                                         {userHRProfile.role}
                                     </span>
                                 )}
@@ -3005,7 +3041,7 @@ case 'meetings':
 
             <main className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 w-full flex-grow pb-32 md:pb-8 overflow-x-clip">
                 {/* keyed on `view` so navigating away from a crashed screen clears the error */}
-                <ErrorBoundary key={view} onGoHome={() => navigate('landing')}>
+                <ErrorBoundary key={view} screen={view} onGoHome={() => navigate('landing')}>
                     <Suspense fallback={<PageSkeleton />}>
                         {mainContent}
                     </Suspense>
@@ -3077,7 +3113,7 @@ case 'meetings':
                                     </div>
                                 </div>
                                 
-                                <div className="shrink-0 ml-4">
+                                <div className="shrink-0 ms-4">
                                     {isEditingProfile ? (
                                         <div className="flex space-x-2">
                                             <Button variant="secondary" onClick={() => setIsEditingProfile(false)}>{t('app_extra.buttons.cancel', 'Cancel')}</Button>
@@ -3093,12 +3129,12 @@ case 'meetings':
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">{t('app_extra.profile.email', 'Email Address')}</span>
+                                    <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.email', 'Email Address')}</span>
                                     <span className="text-gray-800 font-medium">{user.email}</span>
                                 </div>
 
                                 <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">{t('app_extra.profile.registered', 'Date of Registration')}</span>
+                                    <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.registered', 'Date of Registration')}</span>
                                     <span className="text-gray-800 font-medium">
                                         {user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', {
                                             year: 'numeric',
@@ -3109,7 +3145,7 @@ case 'meetings':
                                 </div>
 
                                 <div className="border border-gray-200 p-4 rounded-lg bg-white shadow-sm md:col-span-2">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-3">{t('app_extra.profile.roles', 'Roles & Designations')}</span>
+                                    <span className="block text-xs text-gray-500 font-bold mb-3">{t('app_extra.profile.roles', 'Roles & Designations')}</span>
                                     <div className="flex flex-col gap-2">
                                         
                                         <div className="flex flex-col gap-2 bg-sky-50 p-2.5 rounded border border-sky-100">
@@ -3159,14 +3195,14 @@ case 'meetings':
                                 </div>
                                 
                                 <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">{t('app_extra.profile.states', 'Assigned States')}</span>
+                                    <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.states', 'Assigned States')}</span>
                                     <span className="text-gray-800 font-medium">
                                         {userStates?.length > 0 ? userStates.join(', ') : t('app_extra.profile.global_none', 'Global / None')}
                                     </span>
                                 </div>
                                 
                                 <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
-                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">{t('app_extra.profile.localities', 'Assigned Localities')}</span>
+                                    <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.localities', 'Assigned Localities')}</span>
                                     <span className="text-gray-800 font-medium">
                                         {userLocalities?.length > 0 ? userLocalities.join(', ') : t('app_extra.profile.all_localities', 'All Localities in State / None')}
                                     </span>

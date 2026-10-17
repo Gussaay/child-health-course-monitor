@@ -513,7 +513,7 @@ function CourseTestReports({ course, participants, allTests }) {
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`test-group-summary-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">{g}{isEmonc ? ` - ${getEmoncModuleLabel(moduleFilter)}` : ''}</h3>
                         <div className="overflow-x-auto no-scroll-wrapper">
-                            <table className="min-w-full text-sm text-left">
+                            <table className="min-w-full text-sm text-start">
                                 <thead className="bg-gray-50 border-b">
                                     <tr>
                                         <th className="py-2 px-3 border">{t('reports_views.reports.table.participant', 'Participant')}</th>
@@ -524,7 +524,7 @@ function CourseTestReports({ course, participants, allTests }) {
                                         <th className="py-2 px-3 border text-center">{t('reports_views.reports.test.improvement', 'Improvement')}</th>
                                         {sections && sections.map(section => (
                                             <th key={section.key} className={`py-2 px-3 border text-center ${getReportSectionStyle(section.key).chip}`}>
-                                                <div className="text-[10px] font-bold uppercase tracking-wider">{t('reports_views.reports.test.part', 'Part {{part}}', { part: section.part })}</div>
+                                                <div className="text-xs font-bold ">{t('reports_views.reports.test.part', 'Part {{part}}', { part: section.part })}</div>
                                                 <div>{t('reports_views.reports.test.pre_post', '{{title}} (Pre → Post)', { title: section.shortTitle })}</div>
                                             </th>
                                         ))}
@@ -594,7 +594,7 @@ function CourseTestReports({ course, participants, allTests }) {
                             </div>
                             {kpiStats.partStats && kpiStats.partStats.map(part => (
                                 <div key={part.key} className={`p-4 rounded-lg border-2 shadow-sm md:col-span-1 ${getReportSectionStyle(part.key).chip}`}>
-                                    <div className="text-xs font-bold uppercase tracking-wider opacity-80">{t('reports_views.reports.test.part_correctness', 'Part {{part}} Correctness', { part: part.part })}</div>
+                                    <div className="text-xs font-bold opacity-80">{t('reports_views.reports.test.part_correctness', 'Part {{part}} Correctness', { part: part.part })}</div>
                                     <div className="font-semibold">{part.title}</div>
                                     <div className="text-2xl font-bold mt-1">{fmtPct(part.pct)}</div>
                                 </div>
@@ -613,7 +613,7 @@ function CourseTestReports({ course, participants, allTests }) {
                                     <table className="w-full text-xs border-collapse border">
                                         <thead>
                                             <tr className="bg-gray-100 border-b">
-                                                <th className="py-2 px-2 border text-left w-1/3">{t('reports_views.reports.test.question', 'Question')}</th>
+                                                <th className="py-2 px-2 border text-start w-1/3">{t('reports_views.reports.test.question', 'Question')}</th>
                                                 {parts.map(p => (
                                                     <th key={p.id} className="py-2 px-1 border text-center align-bottom" style={{ minWidth: '80px' }}>
                                                         <div className="whitespace-normal text-xs break-words">{p.name}</div>
@@ -826,7 +826,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
-                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead>{tab === 'case' ? (<tr className="text-left border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.ipd_cases', 'IPD Cases')}</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.opd_cases', 'OPD Cases')}</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.total', 'Total')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_overall', '% Overall')}</th></tr>) : (<tr className="text-left border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.ipd_class', 'IPD Class.')}</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.opd_class', 'OPD Class.')}</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.total', 'Total')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_overall', '% Overall')}</th></tr>)}</thead><tbody>{ids.map(id => { const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct; const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct; const pctIn = calcPct(inCor, inSeen), pctOut = calcPct(outCor, outSeen), pctAll = calcPct(inCor + outCor, inSeen + outSeen); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{inSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctIn)}`}>{fmtPct(pctIn)}</td><td className="py-2 pr-4">{outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctOut)}`}>{fmtPct(pctOut)}</td><td className="py-2 pr-4">{inSeen + outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctAll)}`}>{fmtPct(pctAll)}</td></tr>); })}</tbody></table></div>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead>{tab === 'case' ? (<tr className="text-start border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.ipd_cases', 'IPD Cases')}</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.opd_cases', 'OPD Cases')}</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.total', 'Total')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_overall', '% Overall')}</th></tr>) : (<tr className="text-start border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.ipd_class', 'IPD Class.')}</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.opd_class', 'OPD Class.')}</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">{t('reports_views.reports.table.total', 'Total')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_overall', '% Overall')}</th></tr>)}</thead><tbody>{ids.map(id => { const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct; const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct; const pctIn = calcPct(inCor, inSeen), pctOut = calcPct(outCor, outSeen), pctAll = calcPct(inCor + outCor, inSeen + outSeen); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{inSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctIn)}`}>{fmtPct(pctIn)}</td><td className="py-2 pr-4">{outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctOut)}`}>{fmtPct(pctOut)}</td><td className="py-2 pr-4">{inSeen + outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctAll)}`}>{fmtPct(pctAll)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -840,7 +840,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                         <div className="no-scroll-wrapper">
                             <table className="w-full text-xs">
                                 <thead>
-                                    <tr className="text-left border-b bg-gray-50 sticky top-0">
+                                    <tr className="text-start border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.classification', 'Classification')}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>
@@ -994,7 +994,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
-                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.total_cases', 'Total Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.correct_cases', 'Correct Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_correct_cases', '% Correct Cases')}</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-start border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.total_cases', 'Total Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.correct_cases', 'Correct Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_correct_cases', '% Correct Cases')}</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -1009,7 +1009,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                         <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm">
                                 <thead>
-                                    <tr className="text-left border-b">
+                                    <tr className="text-start border-b">
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th>
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.total_class', 'Total Class.')}</th>
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.correct_class', 'Correct Class.')}</th>
@@ -1045,7 +1045,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                         <div className="no-scroll-wrapper">
                             <table className="w-full text-xs">
                                 <thead>
-                                    <tr className="text-left border-b bg-gray-50 sticky top-0">
+                                    <tr className="text-start border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.skill', 'Skill')}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>
@@ -1200,7 +1200,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
                 return (
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">{t('reports_views.reports.group_heading', 'Group: {{group}}', { group: g.replace('Group ', '') })}</h3>
-                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.total_cases', 'Total Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.correct_cases', 'Correct Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_correct_cases', '% Correct Cases')}</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-start border-b"><th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.total_cases', 'Total Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.correct_cases', 'Correct Cases')}</th><th className="py-2 pr-4">{t('reports_views.reports.table.pct_correct_cases', '% Correct Cases')}</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -1215,7 +1215,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
                         <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm">
                                 <thead>
-                                    <tr className="text-left border-b">
+                                    <tr className="text-start border-b">
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th>
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.total_class', 'Total Class.')}</th>
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.correct_class', 'Correct Class.')}</th>
@@ -1251,7 +1251,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
                         <div className="no-scroll-wrapper">
                             <table className="w-full text-xs">
                                 <thead>
-                                    <tr className="text-left border-b bg-gray-50 sticky top-0">
+                                    <tr className="text-start border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4">{t('reports_views.reports.table.skill', 'Skill')}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>
@@ -1431,7 +1431,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                 <div className="no-scroll-wrapper">
                     <table className="min-w-full text-xs">
                         <thead>
-                            <tr className="text-left border-b bg-gray-50 sticky top-0">
+                            <tr className="text-start border-b bg-gray-50 sticky top-0">
                                 <th className="py-2 pr-4">{t('reports_views.reports.table.skill', 'Skill')}</th>
                                 {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                             </tr>
@@ -1517,13 +1517,13 @@ function EencReports({ course, participants, allObs, allCases }) {
                         <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm">
                                 <thead>
-                                    <tr className="text-left border-b bg-gray-50">
+                                    <tr className="text-start border-b bg-gray-50">
                                         <th rowSpan={2} className="py-2 px-2 border">{t('reports_views.reports.table.participant', 'Participant')}</th>
                                         <th colSpan={3} className="py-2 px-2 border text-center">{t('reports_views.reports.eenc.total_performance', 'Total Performance')}</th>
                                         <th colSpan={3} className="py-2 px-2 border text-center">{t('reports_views.reports.eenc.breathing', 'Breathing Baby')}</th>
                                         <th colSpan={3} className="py-2 px-2 border text-center">{t('reports_views.reports.eenc.not_breathing', 'Not Breathing Baby')}</th>
                                     </tr>
-                                    <tr className="text-left border-b bg-gray-50">
+                                    <tr className="text-start border-b bg-gray-50">
                                         <th className="py-2 px-2 border">{t('reports_views.reports.table.cases', 'Cases')}</th><th className="py-2 px-2 border">{t('reports_views.reports.table.score', 'Score')}</th><th className="py-2 px-2 border">%</th>
                                         <th className="py-2 px-2 border">{t('reports_views.reports.table.cases', 'Cases')}</th><th className="py-2 px-2 border">{t('reports_views.reports.table.score', 'Score')}</th><th className="py-2 px-2 border">%</th>
                                         <th className="py-2 px-2 border">{t('reports_views.reports.table.cases', 'Cases')}</th><th className="py-2 px-2 border">{t('reports_views.reports.table.score', 'Score')}</th><th className="py-2 px-2 border">%</th>
@@ -1725,7 +1725,7 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
                 <div className="no-scroll-wrapper">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-left border-b bg-gray-50">
+                            <tr className="text-start border-b bg-gray-50">
                                 <th className="py-2 pr-4">{t('reports_views.reports.table.participant', 'Participant')}</th>
                                 <th className="py-2 pr-4">{t('reports_views.reports.filters.group', 'Group')}</th>
                                 <th className="py-2 pr-4">{t('reports_views.reports.mentor.sessions', 'Sessions')}</th>
@@ -1777,7 +1777,7 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
                         <div className="no-scroll-wrapper">
                             <table className="w-full text-xs">
                                 <thead>
-                                    <tr className="text-left border-b bg-gray-50 sticky top-0">
+                                    <tr className="text-start border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4">{recordType === 'MOTHERS' ? t('reports_views.reports.test.question', 'Question') : t('reports_views.reports.table.skill', 'Skill')}</th>
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center">{p.name}</th>)}
                                     </tr>

@@ -71,7 +71,7 @@ export default function NotificationBell({ user, navigate }) {
                         if (targetView) {
                             setActionAlert({ id: notifId, actionView: targetView, ...data });
                         } else {
-                            setToast({ show: true, message: `🔔 ${data.title}`, type: 'info' });
+                            setToast({ show: true, message: data.title, type: 'info' });
                         }
                     }
                 }
@@ -125,7 +125,7 @@ export default function NotificationBell({ user, navigate }) {
             >
                 <Bell size={18} />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white ring-2 ring-slate-700">
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white ring-2 ring-slate-700">
                         {unreadCount}
                     </span>
                 )}
@@ -195,13 +195,13 @@ export default function NotificationBell({ user, navigate }) {
                                                 <div className="flex-1 truncate">
                                                     <h4 className={`text-sm font-bold truncate ${isRead ? 'text-gray-800' : 'text-sky-900'}`}>
                                                         {notif.title}
-                                                        {!isRead && <span className="ml-2 inline-block w-2 h-2 bg-red-500 rounded-full"></span>}
+                                                        {!isRead && <span className="ms-2 inline-block w-2 h-2 bg-red-500 rounded-full"></span>}
                                                     </h4>
                                                     <p className="text-xs text-gray-500 truncate mt-0.5">{notif.message || notif.body}</p>
                                                 </div>
-                                                <div className="text-[10px] text-gray-400 shrink-0 flex items-center">
+                                                <div className="text-xs text-gray-400 shrink-0 flex items-center">
                                                     {notif.createdAt ? new Date(notif.createdAt.seconds * 1000).toLocaleDateString() : t('shared_ui.notifications.new', 'New')}
-                                                    <ChevronRight size={16} className="ml-1 text-gray-300" />
+                                                    <ChevronRight size={16} className="ms-1 text-gray-300" />
                                                 </div>
                                             </div>
                                         </div>
@@ -241,7 +241,7 @@ export default function NotificationBell({ user, navigate }) {
                     <div className="p-4 border-t border-gray-200 bg-white flex justify-between items-center rounded-b-xl">
                         {selectedNotif ? (
                             <Button onClick={() => setSelectedNotif(null)} variant="secondary" className="px-4">
-                                <ArrowLeft size={16} className="mr-2" /> {t('shared_ui.notifications.back_to_list', 'Back to List')}
+                                <ArrowLeft size={16} className="me-2" /> {t('shared_ui.notifications.back_to_list', 'Back to List')}
                             </Button>
                         ) : (
                             <div></div>

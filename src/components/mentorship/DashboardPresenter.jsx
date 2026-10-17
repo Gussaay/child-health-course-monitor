@@ -609,7 +609,7 @@ export default function DashboardPresenter({ containerRef, deckTitle, deckSubtit
             <button
                 type="button"
                 onClick={openSetup}
-                className="exclude-from-export flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-2.5 px-4 rounded-xl shadow-sm transition-colors"
+                className="exclude-from-export flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm py-2.5 px-4 rounded-xl shadow-sm transition-colors"
                 title={t('Show each chart full screen, one at a time, for presenting')}
             >
                 <Icon d={ICONS.present} />
@@ -639,7 +639,7 @@ export default function DashboardPresenter({ containerRef, deckTitle, deckSubtit
                             type="button"
                             onClick={start}
                             disabled={scanning || deckSlides.length === 0}
-                            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2 shrink-0"
+                            className="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2 shrink-0"
                         >
                             <Icon d={ICONS.play} className="w-4 h-4" /> {t('Start presentation')} ({deckSlides.length})
                         </button>
@@ -697,7 +697,7 @@ export default function DashboardPresenter({ containerRef, deckTitle, deckSubtit
                                         <span className="text-slate-400 font-semibold me-2">{i + 1}.</span>
                                         {c.sectionLabel && <span className="text-sky-700 font-semibold me-1">{c.sectionLabel} —</span>}
                                         <span className="font-semibold text-slate-800">{c.title || t('Untitled')}</span>
-                                        <span className="ms-2 text-[11px] font-bold uppercase text-slate-400">{c.kind === 'kpi' ? t('Key figures') : c.hasChart ? t('Chart') : t('Table')}</span>
+                                        <span className="ms-2 text-xs font-bold text-slate-400">{c.kind === 'kpi'? t('Key figures') : c.hasChart ? t('Chart') : t('Table')}</span>
                                     </label>
                                 </li>
                             ))}

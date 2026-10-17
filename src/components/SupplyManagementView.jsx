@@ -739,7 +739,7 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                         accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                         onChange={handleFile}
                         disabled={busy}
-                        className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                        className="block w-full text-sm text-gray-600 file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
                     />
                 </div>
 
@@ -757,7 +757,7 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                                 <div className="mt-1 text-xs">
                                     {SUPPLY_CATEGORIES.map((c) => {
                                         const n = preview.rows.filter((r) => r.category === c.id).length;
-                                        return n ? <span key={c.id} className="mr-3">{c.label}: {n}</span> : null;
+                                        return n ? <span key={c.id} className="me-3">{c.label}: {n}</span> : null;
                                     })}
                                 </div>
                             </div>
@@ -769,7 +769,7 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                                     <AlertTriangle size={16} />
                                     {t('trackers.supply.import.skipped', '{{count}} row(s) skipped', { count: preview.unknown.length })}
                                 </div>
-                                <ul className="mt-2 ml-5 list-disc space-y-0.5 max-h-32 overflow-y-auto">
+                                <ul className="mt-2 ms-5 list-disc space-y-0.5 max-h-32 overflow-y-auto">
                                     {preview.unknown.slice(0, 10).map((u, i) => (
                                         <li key={i}>
                                             {t('trackers.supply.import.row_issue', 'Row {{row}}: “{{name}}” — {{reason}}', { row: u.row, name: u.name, reason: u.reason.includes('category') ? t('trackers.supply.import.unrecognised_category', 'unrecognised category') : t('trackers.supply.import.unrecognised_service', 'unrecognised service') })}
@@ -791,7 +791,7 @@ function SupplyImportModal({ isOpen, onClose, onImported }) {
                                 <thead className="bg-gray-100 sticky top-0">
                                     <tr>
                                         {[t('trackers.supply.form.category', 'Category'), t('trackers.supply.form.service', 'Service'), t('trackers.supply.table.item', 'Item'), t('trackers.supply.table.code', 'Code'), t('trackers.supply.table.unit', 'Unit')].map((h) => (
-                                            <th key={h} className="border-b p-2 text-left">{h}</th>
+                                            <th key={h} className="border-b p-2 text-start">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -979,7 +979,7 @@ export default function SupplyManagementView({ permissions = {} }) {
                             />
                         </div>
                         <div className="text-sm text-gray-600 pb-2">
-                            <Package size={16} className="inline mr-1" />
+                            <Package size={16} className="inline me-1" />
                             {t('trackers.supply.item_count', '{{count}} item(s)', { count: visibleItems.length })}
                         </div>
                     </div>
@@ -989,6 +989,8 @@ export default function SupplyManagementView({ permissions = {} }) {
                             {visibleItems.length === 0 ? (
                                 <EmptyState
                                     colSpan={headers.length}
+                                    filtered={Boolean(search || service !== 'all')}
+                                    onClearFilters={() => { setSearch(''); setService('all'); }}
                                     message={
                                         search || service !== 'all'
                                             ? t('trackers.supply.no_match', 'No items match this filter.')
@@ -1056,7 +1058,7 @@ export default function SupplyManagementView({ permissions = {} }) {
                                                     {item.service}
                                                 </span>
                                                 {item.isEssential === false && (
-                                                    <span className="ml-1 text-gray-400 text-xs">{t('trackers.supply.not_on_list', '(not on list)')}</span>
+                                                    <span className="ms-1 text-gray-400 text-xs">{t('trackers.supply.not_on_list', '(not on list)')}</span>
                                                 )}
                                             </td>
                                         </>

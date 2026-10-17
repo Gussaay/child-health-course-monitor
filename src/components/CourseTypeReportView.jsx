@@ -600,7 +600,7 @@ export default function CourseTypeReportView({
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     {mod.parts.map((part) => (
                                                         <div key={part.key} className="border rounded-lg px-3 py-2 bg-white text-sm">
-                                                            <div className="text-[11px] font-bold uppercase opacity-70">{t('reports_views.course_type.emonc.part', 'Part {{part}}', { part: part.part })}</div>
+                                                            <div className="text-xs font-bold opacity-70">{t('reports_views.course_type.emonc.part', 'Part {{part}}', { part: part.part })}</div>
                                                             <div className="font-semibold">{part.title}</div>
                                                             <div>{t('reports_views.course_type.emonc.pre', 'Pre')} <b>{fmtPct(part.preAvg)}</b> → {t('reports_views.course_type.emonc.post', 'Post')} <b>{fmtPct(part.postAvg)}</b></div>
                                                         </div>

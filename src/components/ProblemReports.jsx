@@ -297,7 +297,7 @@ export function ProblemReportsTab() {
                                         </div>
                                     </div>
 
-                                    <span className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold shrink-0 ${
+                                    <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold shrink-0 ${
                                         (STATUSES[r.status] || STATUSES.new).chip}`}>
                                         {t(`admin_pages.problem_reports.status.${STATUSES[r.status] ? r.status : 'new'}`, (STATUSES[r.status] || STATUSES.new).label)}
                                     </span>
@@ -314,8 +314,15 @@ export function ProblemReportsTab() {
                                             </div>
                                         )}
 
+                                        {r.note && (
+                                            <div className="text-sm">
+                                                <span className="font-semibold text-slate-600">{t('admin_pages.problem_reports.user_note', 'Note from the user:')} </span>
+                                                {r.note}
+                                            </div>
+                                        )}
+
                                         {r.stack && (
-                                            <pre className="text-[11px] bg-slate-900 text-slate-100 p-3 rounded overflow-x-auto max-h-56">
+                                            <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded overflow-x-auto max-h-56">
                                                 {r.stack}
                                             </pre>
                                         )}

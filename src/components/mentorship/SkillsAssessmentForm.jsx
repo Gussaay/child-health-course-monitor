@@ -770,21 +770,21 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                         {/* Facility Info */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-0.5" dir="rtl">
-                                <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['الولاية'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['المحلية'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">اسم المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['اسم_المؤسسة'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">نوع المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['نوع_المؤسسةالصحية'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">العدد الكلي للكوادر الطبية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين'] ?? 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">الكوادر المدربة (IMNCI):</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['الولاية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['المحلية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">اسم المؤسسة:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['اسم_المؤسسة'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">نوع المؤسسة:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['نوع_المؤسسةالصحية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">العدد الكلي للكوادر الطبية:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين'] ?? 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">الكوادر المدربة (IMNCI):</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? 'غير محدد'}</span></div>
                             </div>
                         </div>
                         {/* Health Worker Info */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5" dir="rtl">
-                                <div><span className="text-sm font-medium text-gray-500">اسم العامل الصحي:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerName || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">الوصف الوظيفي:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerJobTitle || 'غير محدد'}</span></div>
-                                <div className="whitespace-nowrap overflow-hidden text-ellipsis"><span className="text-sm font-medium text-gray-500">تاريخ اخر تدريب (IMNCI):</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerTrainingDate || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">رقم الهاتف:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerPhone || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">اسم العامل الصحي:</span><span className="text-sm font-semibold text-gray-900 me-2">{healthWorkerName || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">الوصف الوظيفي:</span><span className="text-sm font-semibold text-gray-900 me-2">{healthWorkerJobTitle || 'غير محدد'}</span></div>
+                                <div className="whitespace-nowrap overflow-hidden text-ellipsis"><span className="text-sm font-medium text-gray-500">تاريخ اخر تدريب (IMNCI):</span><span className="text-sm font-semibold text-gray-900 me-2">{healthWorkerTrainingDate || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">رقم الهاتف:</span><span className="text-sm font-semibold text-gray-900 me-2">{healthWorkerPhone || 'غير محدد'}</span></div>
                             </div>
                         </div>
                         
@@ -795,7 +795,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                 <div className="text-sm flex flex-col justify-end">
                                     <div>
                                         <span className="font-medium text-gray-500">اسم المشرف:</span>
-                                        <span className="font-semibold text-gray-900 mr-2">
+                                        <span className="font-semibold text-gray-900 me-2">
                                             {existingSessionData 
                                                 ? (existingSessionData.mentorName || existingSessionData.mentorEmail || 'غير معروف') 
                                                 : (user?.displayName || user?.email || '...')}
@@ -816,15 +816,15 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                         value={formData.session_date} 
                                         onChange={handleFormChange} 
                                         required 
-                                        className="p-1 text-sm mr-2 w-auto"
+                                        className="p-1 text-sm me-2 w-auto"
                                     />
                                 </div>
                                 <div className="text-sm">
                                     <span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span>
-                                    <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span> 
+                                    <span className="font-semibold text-gray-900 me-2">{lastSessionDate || '---'}</span> 
                                 </div>
                                 <div className="text-sm flex items-center">
-                                    <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
+                                    <span className="font-medium text-gray-700 ms-2">رقم الجلسة:</span>
                                     {canEditVisitNumber ? (
                                         <Input 
                                             type="number" inputMode="decimal" 
@@ -834,7 +834,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                             className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"
                                         />
                                     ) : (
-                                        <span className="text-lg font-bold text-sky-700 mr-2">{currentVisitNumber}</span>
+                                        <span className="text-lg font-bold text-sky-700 me-2">{currentVisitNumber}</span>
                                     )}
                                 </div>
                             </div>

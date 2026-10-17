@@ -13,7 +13,7 @@ import {
     deleteParticipantTest,
     repairParticipantScoreFields
 } from '../data.js';
-import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X, AlertTriangle } from 'lucide-react'; 
+import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X, AlertTriangle, Search } from 'lucide-react'; 
 import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl } from '../utils/publicLink';
@@ -847,7 +847,7 @@ const SectionScoreBreakdown = ({ sectionScores, compact = false }) => {
         return (
             <div className="flex flex-col gap-0.5">
                 {sectionScores.map(sec => (
-                    <span key={sec.key} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${getSectionTheme(sec.key).chip}`}>
+                    <span key={sec.key} className={`text-xs px-1.5 py-0.5 rounded border font-semibold ${getSectionTheme(sec.key).chip}`}>
                         P{sec.part} {sectionShortLabel(sec, t)}: {sec.score}/{sec.total}
                     </span>
                 ))}
@@ -856,10 +856,10 @@ const SectionScoreBreakdown = ({ sectionScores, compact = false }) => {
     }
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4 text-left">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4 text-start">
             {sectionScores.map(sec => (
                 <div key={sec.key} className={`border-2 rounded-lg p-3 ${getSectionTheme(sec.key).chip}`}>
-                    <div className="text-xs font-bold uppercase tracking-wider opacity-80">{t('course_tests.tests.part_n', 'Part {{part}}', { part: sec.part })}</div>
+                    <div className="text-xs font-bold opacity-80">{t('course_tests.tests.part_n', 'Part {{part}}', { part: sec.part })}</div>
                     <div className="font-semibold">{sectionTitleLabel(sec, t)}</div>
                     <div className="text-2xl font-bold mt-1">{Number(sec.percentage || 0).toFixed(1)}%</div>
                     <div className="text-xs opacity-80">{t('course_tests.tests.n_of_total_points', '{{score}} / {{total}} points', { score: sec.score, total: sec.total })}</div>
@@ -1159,12 +1159,12 @@ const TestScoresDashboard = ({
                     </span>
                     <SectionScoreBreakdown sectionScores={sectionScores} compact />
                     {test.isLegacy && (
-                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" title={t('course_tests.tests.legacy_title', 'Score recorded using older version')}>
+                        <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold "title={t('course_tests.tests.legacy_title', 'Score recorded using older version')}>
                             {t('course_tests.tests.legacy_record', 'Legacy Record')}
                         </span>
                     )}
                     {test.hasOpenQuestions && !test.isGraded && (
-                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                        <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold ">
                             {t('course_tests.tests.pending_grade', 'Pending Grade')}
                         </span>
                     )}
@@ -1244,7 +1244,7 @@ const TestScoresDashboard = ({
                      </div>
                      {canManageTests && (
                          <Button onClick={() => onOpenEntry('pre-test', null, true)}>
-                             <PlusCircle size={16} className="mr-2" />
+                             <PlusCircle size={16} className="me-2" />
                              {t('course_tests.tests.register_new_participant', 'Register New Participant')}
                          </Button>
                      )}
@@ -1276,10 +1276,10 @@ const TestScoresDashboard = ({
                              <table className="w-full text-sm">
                                  <thead className="bg-amber-100">
                                      <tr>
-                                         <th className="p-2 text-left">{t('course_tests.tests.table.participant', 'Participant')}</th>
-                                         <th className="p-2 text-left">{t('course_tests.tests.table.group', 'Group')}</th>
-                                         <th className="p-2 text-left">{t('course_tests.tests.table.module', 'Module')}</th>
-                                         <th className="p-2 text-left">{t('course_tests.tests.repair.profile_field', 'Profile field')}</th>
+                                         <th className="p-2 text-start">{t('course_tests.tests.table.participant', 'Participant')}</th>
+                                         <th className="p-2 text-start">{t('course_tests.tests.table.group', 'Group')}</th>
+                                         <th className="p-2 text-start">{t('course_tests.tests.table.module', 'Module')}</th>
+                                         <th className="p-2 text-start">{t('course_tests.tests.repair.profile_field', 'Profile field')}</th>
                                          <th className="p-2 text-center">{t('course_tests.tests.repair.now', 'Now')}</th>
                                          <th className="p-2 text-center">{t('course_tests.tests.repair.after_fix', 'After fix')}</th>
                                      </tr>
@@ -1478,7 +1478,7 @@ const FacilitySelectionModal = ({
                         filteredOptions.map(opt => (
                             <button
                                 key={opt.id}
-                                className="w-full text-left p-3 hover:bg-sky-50 transition-colors focus:outline-none focus:bg-sky-50"
+                                className="w-full text-start p-3 hover:bg-sky-50 transition-colors focus:outline-none focus:bg-sky-50"
                                 onClick={() => {
                                     onSelect(opt);
                                     onClose();
@@ -1582,7 +1582,7 @@ function EencResultCorrection({ course, participants, participantTests, onSaveTe
                     </p>
 
                     <div className="border rounded max-h-72 overflow-y-auto">
-                        <table className="w-full text-sm text-left">
+                        <table className="w-full text-sm text-start">
                             <thead className="bg-slate-100 sticky top-0">
                                 <tr>
                                     <th className="p-2">{t('course_tests.tests.table.participant', 'Participant')}</th>
@@ -2355,7 +2355,7 @@ export function CourseTestForm({
                                     </div>
 
                                     {isGradingMode && (
-                                        <div className="flex gap-1 shrink-0 ml-2">
+                                        <div className="flex gap-1 shrink-0 ms-2">
                                             <button
                                                 type="button"
                                                 onClick={() => handleLineScoreChange(q.id, index, 1)}
@@ -2399,7 +2399,7 @@ export function CourseTestForm({
                             <div className="grid gap-3 sm:grid-cols-2">
                                 {((isPublicView && effectiveLockedModule && (isEmoncCourseType(courseType) || isSsnbCourseType(courseType))) || selectedParticipantModule) && (
                                     <div className="border-2 border-sky-200 bg-sky-50 rounded-lg px-4 py-3">
-                                        <div className="text-xs font-bold uppercase tracking-wider text-sky-700">
+                                        <div className="text-xs font-bold text-sky-700">
                                             {selectedParticipantModule && !(isPublicView && effectiveLockedModule) ? t('course_tests.tests.module_from_group', 'Module (from participant\'s group)') : t('course_tests.tests.table.module', 'Module')}
                                         </div>
                                         <div className="font-semibold text-gray-800">
@@ -2411,7 +2411,7 @@ export function CourseTestForm({
                                 )}
                                 {isTestTypeLocked && (
                                     <div className="border-2 border-indigo-200 bg-indigo-50 rounded-lg px-4 py-3">
-                                        <div className="text-xs font-bold uppercase tracking-wider text-indigo-700">{t('course_tests.tests.test_type', 'Test Type')}</div>
+                                        <div className="text-xs font-bold text-indigo-700">{t('course_tests.tests.test_type', 'Test Type')}</div>
                                         <div className="font-semibold text-gray-800">{testType === 'post-test' ? t('course_tests.tests.post_test', 'Post-Test') : t('course_tests.tests.pre_test', 'Pre-Test')}</div>
                                     </div>
                                 )}
@@ -2568,7 +2568,7 @@ export function CourseTestForm({
                                                 )
                                             }
                                         </span>
-                                        <span className="text-gray-400 ml-2">🔍</span>
+                                        <Search size={16} className="text-gray-400 ms-2 shrink-0" aria-hidden="true" />
                                     </div>
                                 </FormGroup>
                             )}
@@ -2705,14 +2705,14 @@ export function CourseTestForm({
 
                     {testSections && (
                         <div className="mt-6 mb-2 p-5 bg-white border-2 border-gray-200 rounded-xl shadow-sm">
-                            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800 uppercase tracking-wide text-center">
+                            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wide text-center">
                                 {t('course_tests.tests.module_heading', '{{module}} Module', { module: moduleFullLabel(activeEmoncModule, t) })}
                             </h2>
                             <p className="text-gray-600 font-medium mt-1 text-center">{t('course_tests.tests.separate_parts', 'This test has {{count}} separate parts. Please answer all questions in both parts.', { count: testSections.length })}</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                                 {testSections.map(section => (
                                     <div key={section.key} className={`border-2 rounded-lg px-4 py-3 ${getSectionTheme(section.key).chip}`}>
-                                        <div className="text-xs font-bold uppercase tracking-wider opacity-80">{t('course_tests.tests.part_n', 'Part {{part}}', { part: section.part })}</div>
+                                        <div className="text-xs font-bold opacity-80">{t('course_tests.tests.part_n', 'Part {{part}}', { part: section.part })}</div>
                                         <div className="font-semibold">{sectionTitleLabel(section, t)}</div>
                                         <div className="text-xs opacity-80">{t('course_tests.tests.questions_range_count', 'Questions {{from}} – {{to}} ({{count}} questions)', { from: section.from, to: section.to, count: section.questions.length })}</div>
                                     </div>
@@ -2723,7 +2723,7 @@ export function CourseTestForm({
 
                     {(course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') && (
                         <div className="mt-6 mb-2 text-center p-5 bg-sky-50 border-2 border-sky-300 rounded-xl shadow-sm">
-                            <h2 className="text-3xl md:text-4xl font-extrabold text-sky-800 uppercase tracking-wide">
+                            <h2 className="text-3xl md:text-4xl font-extrabold text-sky-800 tracking-wide">
                                 {t('course_tests.tests.part_heading', '{{module}} Part', { module: course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC' ? ssnbModuleLabel(ssnbSubCourse, t) : emoncSubCourse })}
                             </h2>
                             <p className="text-sky-600 font-medium mt-1">{t('course_tests.tests.answer_module_questions', 'Please answer the questions below for this specific module.')}</p>
@@ -2761,7 +2761,7 @@ export function CourseTestForm({
                                             {idx > 0 && (
                                                 <div className="flex items-center gap-3 my-10" aria-hidden="true">
                                                     <div className={`flex-1 border-t-4 border-dashed ${getSectionTheme(testSections[idx - 1].key).divider}`} />
-                                                    <span className="text-xs font-bold uppercase tracking-widest text-gray-500 whitespace-nowrap">
+                                                    <span className="text-xs font-bold text-gray-500 whitespace-nowrap">
                                                         {t('course_tests.tests.end_start_part', 'End of Part {{prev}} · Start of Part {{next}}', { prev: testSections[idx - 1].part, next: section.part })}
                                                     </span>
                                                     <div className={`flex-1 border-t-4 border-dashed ${theme.divider}`} />
@@ -2770,7 +2770,7 @@ export function CourseTestForm({
                                             <section className={`rounded-xl border-2 ${theme.wrapper} overflow-hidden shadow-sm`}>
                                                 <div className={`${theme.header} text-white px-5 py-4 flex flex-wrap justify-between items-center gap-3`}>
                                                     <div>
-                                                        <div className="text-xs font-bold uppercase tracking-widest opacity-90">
+                                                        <div className="text-xs font-bold opacity-90">
                                                             {t('course_tests.tests.part_of', 'Part {{part}} of {{count}}', { part: section.part, count: testSections.length })}
                                                         </div>
                                                         <h3 className="text-xl md:text-2xl font-extrabold leading-tight">{sectionTitleLabel(section, t)}</h3>

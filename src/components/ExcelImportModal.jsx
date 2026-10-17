@@ -94,7 +94,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
           <thead>
             <tr className="bg-gray-100">
               {headers.map((header, idx) => (
-                <th key={idx} className="border border-gray-300 p-2 text-left text-xs">{header}</th>
+                <th key={idx} className="border border-gray-300 p-2 text-start text-xs">{header}</th>
               ))}
             </tr>
           </thead>
@@ -125,7 +125,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course }) => {
               accept=".xlsx,.xls"
               onChange={handleFileUpload}
               ref={fileInputRef}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
         )}

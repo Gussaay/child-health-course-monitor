@@ -504,7 +504,7 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
             <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full text-sm">
                     <thead>
-                        <tr className="bg-slate-100 text-left">
+                        <tr className="bg-slate-100 text-start">
                             <th className="p-2">#</th>
                             <th className="p-2">{t('compiled_reports.course_mentorship.labels.training', 'Training')}</th>
                             <th className="p-2">{t('compiled_reports.course_mentorship.labels.form', 'Form')}</th>
@@ -522,7 +522,7 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
                                 <td className="p-2">
                                     {label}
                                     {c.status === 'draft' && (
-                                        <span className="ml-2 px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">
+                                        <span className="ms-2 px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">
                                             {t('compiled_reports.course_mentorship.labels.draft', 'Draft')}
                                         </span>
                                     )}
@@ -534,7 +534,7 @@ function SavedPracticeSessions({ cases, observations, onEdit, onDelete }) {
                                     {PRACTICE_FORMS[c.form_key]?.canReopen !== false && (
                                         <Button variant="secondary" size="sm" onClick={() => onEdit(c)}>{t('compiled_reports.course_mentorship.buttons.open', 'Open')}</Button>
                                     )}
-                                    <Button variant="danger" size="sm" className="ml-2" onClick={() => onDelete(c)}>
+                                    <Button variant="danger" size="sm" className="ms-2" onClick={() => onDelete(c)}>
                                         {t('compiled_reports.course_mentorship.buttons.delete', 'Delete')}
                                     </Button>
                                 </td>
@@ -560,7 +560,7 @@ function ScenarioCheckPanel({ check }) {
         : result.withinTolerance;
 
     return (
-        <div className="mt-5 text-left">
+        <div className="mt-5 text-start">
             <div className={`p-3 rounded-lg border ${
                 ok ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-300'
             }`}>
@@ -585,7 +585,7 @@ function ScenarioCheckPanel({ check }) {
                                 {t('compiled_reports.course_mentorship.check.correct', 'Correct — this case calls for {{list}}, and that is what you opened.', { list: result.expected.join(t('compiled_reports.course_mentorship.check.and', ' and ')) })}
                             </p>
                         ) : (
-                            <ul className="list-disc ml-5 text-amber-900">
+                            <ul className="list-disc ms-5 text-amber-900">
                                 {result.missing.length > 0 && (
                                     <li>{t('compiled_reports.course_mentorship.check.missed', 'Missed: {{list}} — the case needed this and it was not opened.', { list: result.missing.join(', ') })}</li>
                                 )}
@@ -632,7 +632,7 @@ function ScenarioCheckPanel({ check }) {
                     {Array.isArray(scenario.expectedManagement) ? (
                         <>
                             <div className="font-semibold text-slate-700">{t('compiled_reports.course_mentorship.check.expected_management', 'Expected management')}</div>
-                            <ul className="list-disc ml-5 text-slate-700 mt-1 space-y-1">
+                            <ul className="list-disc ms-5 text-slate-700 mt-1 space-y-1">
                                 {scenario.expectedManagement.map((line, i) => <li key={i}>{line}</li>)}
                             </ul>
                         </>
@@ -1141,7 +1141,7 @@ export function MentorshipMonitoringView({
                 <div className="p-4">
                     {applicableServices.length === 1 ? (
                         <div className="mb-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-                            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('compiled_reports.course_mentorship.labels.training', 'Training')}</div>
+                            <div className="text-xs font-semibold text-slate-500 tracking-wide">{t('compiled_reports.course_mentorship.labels.training', 'Training')}</div>
                             <div className="font-semibold text-slate-800 mt-0.5">
                                 {PRACTICE_SERVICES[applicableServices[0]]?.label}
                             </div>
@@ -1159,7 +1159,7 @@ export function MentorshipMonitoringView({
                                             key={key}
                                             type="button"
                                             onClick={() => setService(key)}
-                                            className={`text-left p-3 rounded-lg border transition-colors ${
+                                            className={`text-start p-3 rounded-lg border transition-colors ${
                                                 service === key
                                                     ? 'bg-sky-600 border-sky-600 text-white'
                                                     : 'bg-white border-slate-300 hover:bg-slate-50'
@@ -1178,7 +1178,7 @@ export function MentorshipMonitoringView({
 
                     {availableForms.length === 1 ? (
                         <div className="mb-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-                            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('compiled_reports.course_mentorship.labels.form', 'Form')}</div>
+                            <div className="text-xs font-semibold text-slate-500 tracking-wide">{t('compiled_reports.course_mentorship.labels.form', 'Form')}</div>
                             <div className="font-semibold text-slate-800 mt-0.5">
                                 {formTitle(t, availableForms[0].key)}
                             </div>
@@ -1192,7 +1192,7 @@ export function MentorshipMonitoringView({
                                         key={opt.key}
                                         type="button"
                                         onClick={() => setFormKey(opt.key)}
-                                        className={`text-left p-3 rounded-lg border transition-colors ${
+                                        className={`text-start p-3 rounded-lg border transition-colors ${
                                             formKey === opt.key
                                                 ? 'bg-sky-600 border-sky-600 text-white'
                                                 : 'bg-white border-slate-300 hover:bg-slate-50'

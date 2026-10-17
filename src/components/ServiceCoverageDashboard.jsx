@@ -11,6 +11,8 @@ import SudanMap from '../SudanMap';
 import { useStandardNames } from '../hooks/useNameRegistry';
 import { canonicalOptions } from '../utils/nameRegistry';
 import { useRememberedState } from '../utils/rememberedState';
+import { STATUS_COLORS, FACILITY_DOT } from '../utils/statusColors';
+import { countsForCoverage } from '../utils/coverageEligibility';
 // --- HELPER COMPONENTS ---
 
 const mapCoordinates = {
@@ -72,17 +74,17 @@ const ValueTotalPercentageCard = ({ title, value, total, percentage, borderClass
     const { t } = useTranslation();
     return (
     <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} percentage={percentage} colorTheme={colorTheme} className={className}>
-        <h3 className="text-xs md:text-sm font-extrabold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
+        <h3 className="text-xs md:text-sm font-extrabold text-slate-500 leading-snug mb-1">{title}</h3>
         <div className="flex flex-col items-start mt-1">
             <span className={`text-3xl md:text-5xl font-black tracking-tight leading-none ${valueClass}`}>{value}</span>
-            {total > 0 && <span className="text-[11px] md:text-xs text-slate-400 font-bold uppercase tracking-wider mt-1.5">{t('dashboard.cards.out_of', 'out of')} {total}</span>}
+            {total > 0 && <span className="text-xs text-slate-400 font-bold mt-1.5">{t('dashboard.cards.out_of', 'out of')} {total}</span>}
         </div>
     </KPIWrapper>
 )};
 
 const TotalCountCard = ({ title, count, borderClass = 'border-s-slate-500', valueClass = 'text-slate-700', decorationColor = 'bg-slate-500', className = '' }) => (
     <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} className={className}>
-        <h3 className="text-xs md:text-sm font-extrabold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
+        <h3 className="text-xs md:text-sm font-extrabold text-slate-500 leading-snug mb-1">{title}</h3>
         <div className="flex flex-col items-start mt-1">
             <span className={`text-3xl md:text-5xl font-black tracking-tight leading-none ${valueClass}`}>{count}</span>
         </div>
@@ -116,9 +118,9 @@ const MapLegend = ({ isPlanningMap = false }) => {
         return (
             <div className="flex justify-center items-center flex-wrap gap-x-3 gap-y-1 md:gap-4 text-sm text-gray-700">
                 <span className="hidden md:inline font-bold">{t('dashboard.map.legend', 'Legend')}</span>
-                <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#22c55e]"></div><span className='text-xs font-medium'>{t('dashboard.map.has_unit', 'Has Unit (Green)')}</span></div>
-                <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#eab308]"></div><span className='text-xs font-medium'>{t('dashboard.map.planned_only', 'Planned Only (Yellow)')}</span></div>
-                <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm bg-[#ef4444]"></div><span className='text-xs font-medium'>{t('dashboard.map.no_unit', 'No Unit (Red)')}</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm " style={{ backgroundColor: STATUS_COLORS.good }}></div><span className='text-xs font-medium'>{t('dashboard.map.has_unit', 'Has Unit (Green)')}</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm " style={{ backgroundColor: STATUS_COLORS.partial }}></div><span className='text-xs font-medium'>{t('dashboard.map.planned_only', 'Planned Only (Yellow)')}</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-4 h-4 shadow-sm " style={{ backgroundColor: STATUS_COLORS.poor }}></div><span className='text-xs font-medium'>{t('dashboard.map.no_unit', 'No Unit (Red)')}</span></div>
             </div>
         );
     }
@@ -126,10 +128,15 @@ const MapLegend = ({ isPlanningMap = false }) => {
     return (
     <div className="flex justify-center items-center flex-wrap gap-x-3 gap-y-1 md:gap-4 text-sm text-gray-700">
         <span className="hidden md:inline font-bold">{t('dashboard.map.legend', 'Legend')}</span>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>{t('dashboard.map.no_data', '0-39% (or No Data)')}</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_mid', '40-74%')}</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_high', '≥75%')}</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full border-2 border-white shadow-sm ring-1 ring-[#313695] bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.facility', 'Facility')}</span></div>
+        {[
+            [STATUS_COLORS.poor, t('dashboard.map.range_low', 'Below 40%')],
+            [STATUS_COLORS.partial, t('dashboard.map.range_mid', '40-74%')],
+            [STATUS_COLORS.good, t('dashboard.map.range_high', '≥75%')],
+            [STATUS_COLORS.none, t('dashboard.map.no_data', 'No data')],
+        ].map(([color, label]) => (
+            <div key={color} className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }}></div><span className='text-xs font-medium'>{label}</span></div>
+        ))}
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full border-2 border-white shadow-sm ring-1" style={{ backgroundColor: FACILITY_DOT, '--tw-ring-color': FACILITY_DOT }}></div><span className='text-xs font-medium'>{t('dashboard.map.facility', 'Facility')}</span></div>
     </div>
 );};
 
@@ -433,9 +440,9 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         return Object.values(sum).map(s => {
             const hasActive = s.totalActive > 0;
             const hasPlanned = s.totalPlanned > 0;
-            let statusColor = '#ef4444'; // Red
-            if (hasActive) statusColor = '#22c55e'; // Green
-            else if (hasPlanned) statusColor = '#eab308'; // Yellow
+            let statusColor = STATUS_COLORS.poor;
+            if (hasActive) statusColor = STATUS_COLORS.good;
+            else if (hasPlanned) statusColor = STATUS_COLORS.partial;
             
             return {
                 ...s,
@@ -494,11 +501,11 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         }
         if (!levelVal) levelVal = 'No';
         
-        let color = '#22c55e'; 
-        if (!showPlanningMap) color = '#313695'; 
+        let color = STATUS_COLORS.good;
+        if (!showPlanningMap) color = FACILITY_DOT;
 
-        if (levelVal === 'Planned') color = '#EAB308'; 
-        else if (levelVal === 'No' || f['هل_المؤسسة_تعمل'] !== 'Yes') color = '#EF4444'; 
+        if (levelVal === 'Planned') color = STATUS_COLORS.partial;
+        else if (levelVal === 'No' || f['هل_المؤسسة_تعمل'] !== 'Yes') color = STATUS_COLORS.poor;
 
         return {
             key:f.id,
@@ -725,7 +732,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                             <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
                                 <h3 className="text-sm md:text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
-                                <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
+                                <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-xs font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
                             <div className="flex-grow h-[280px] md:h-auto md:min-h-[400px] p-1 md:p-2 relative flex flex-col">
                                 <div className='flex-grow min-h-0 h-full w-full'>
@@ -769,16 +776,16 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.scnu_coverage', `Neonatal (${displayTargetLevel}) Coverage by`)} {aggregationLevelName}</h3>
-                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
+                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
                            <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[25%]">{aggregationLevelName}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">{t('dashboard.table.total_supposed', 'Total Supposed')}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">{t('dashboard.table.with_scnu', 'With Unit')}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[45%]">{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 w-[25%]">{aggregationLevelName}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 w-[15%]">{t('dashboard.table.total_supposed', 'Total Supposed')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 w-[15%]">{t('dashboard.table.with_scnu', 'With Unit')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 w-[45%]">{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -791,7 +798,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                             <td className="p-3 align-middle text-start">
                                                 <div className="flex items-center w-full">
                                                     <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.coverage >= 75 ? 'bg-sky-700' : row.coverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.coverage, 1)}%` }}></div></div>
-                                                    <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.coverage}%</span>
+                                                    <span className="ms-3 text-xs font-bold text-gray-700 w-8 text-end">{row.coverage}%</span>
                                                 </div>
                                             </td>
                                         </tr>
@@ -806,12 +813,12 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.neonatal_equipment', 'Neonatal Unit Equipment Availability')}</h3>
-                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
+                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="w-full overflow-x-auto p-4">
-                            <table ref={equipmentTableRef} className="w-full table-fixed border-collapse text-[10px] border border-gray-200">
+                            <table ref={equipmentTableRef} className="w-full table-fixed border-collapse text-xs border border-gray-200">
                                 <thead className="bg-slate-50 border-b border-gray-200">
-                                    <tr>{equipmentHeaders.map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom leading-tight ${index === 0 ? 'w-[15%]' : ''}`}> <div className='font-bold break-words text-center'>{header}</div> </th> ))}</tr>
+                                    <tr>{equipmentHeaders.map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold text-gray-600 align-bottom leading-tight ${index === 0 ? 'w-[15%]': ''}`}> <div className='font-bold break-words text-center'>{header}</div> </th> ))}</tr>
                                 </thead>
                                 <tbody>
                                     {equipmentTableData.map(row => ( 
@@ -841,7 +848,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                 </button>
                                 
                                 <button onClick={() => copyTableAsImage(scnuListTableRef, setTable3CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> 
-                                    {table3CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table3CopyStatus}</span> : <CopyIcon />} 
+                                    {table3CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table3CopyStatus}</span> : <CopyIcon />} 
                                 </button>
                             </div>
                         </div>
@@ -849,12 +856,12 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                             <table ref={scnuListTableRef} className="min-w-full table-auto border-collapse text-sm border border-gray-200">
                                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm border-b border-gray-200">
                                     <tr>
-                                        <th className="p-3 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.state', 'State')}</th>
-                                        <th className="p-3 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.locality', 'Locality')}</th>
-                                        <th className="p-3 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.hospital_name', 'Facility Name')}</th>
-                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.incubators', 'Incubators')}</th>
-                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.cots', 'Cots')}</th>
-                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.total_beds', 'Total Beds')}</th>
+                                        <th className="p-3 text-start font-semibold text-gray-600 text-xs ">{t('dashboard.table.state', 'State')}</th>
+                                        <th className="p-3 text-start font-semibold text-gray-600 text-xs ">{t('dashboard.table.locality', 'Locality')}</th>
+                                        <th className="p-3 text-start font-semibold text-gray-600 text-xs ">{t('dashboard.table.hospital_name', 'Facility Name')}</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 text-xs ">{t('dashboard.table.incubators', 'Incubators')}</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 text-xs ">{t('dashboard.table.cots', 'Cots')}</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 text-xs ">{t('dashboard.table.total_beds', 'Total Beds')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1105,7 +1112,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
                                  <h3 className="text-sm md:text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
-                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
+                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-xs font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
                             <div className="flex-grow h-[280px] md:h-auto md:min-h-[400px] p-1 md:p-2 relative flex flex-col">
                                  <div className='flex-grow min-h-0 h-full w-full'>
@@ -1137,17 +1144,17 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.eenc_coverage', 'EENC Coverage by')} {aggregationLevelName}</h3>
-                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
+                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
                             <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[20%]'>{aggregationLevelName}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>{t('dashboard.table.total_emonc', 'Total EmONC')}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>{t('dashboard.table.functional_emonc', 'Functional EmONC')}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>{t('dashboard.table.with_eenc', 'With EENC')}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[35%]'>{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 w-[20%]'>{aggregationLevelName}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 w-[15%]'>{t('dashboard.table.total_emonc', 'Total EmONC')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 w-[15%]'>{t('dashboard.table.functional_emonc', 'Functional EmONC')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 w-[15%]'>{t('dashboard.table.with_eenc', 'With EENC')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 w-[35%]'>{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1161,7 +1168,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                                             <td className="p-3 align-middle text-start">
                                                 <div className="flex items-center w-full">
                                                     <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.eencCoverage >= 75 ? 'bg-sky-700' : row.eencCoverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.eencCoverage, 1)}%` }}></div></div>
-                                                    <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.eencCoverage}%</span>
+                                                    <span className="ms-3 text-xs font-bold text-gray-700 w-8 text-end">{row.eencCoverage}%</span>
                                                 </div>
                                             </td>
                                         </tr> 
@@ -1176,14 +1183,14 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.eenc_equipment', 'EENC Equipment Availability by Unit')}</h3>
-                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
+                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="overflow-x-auto p-4">
-                            <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse text-[10px] border border-gray-200">
+                            <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse text-xs border border-gray-200">
                                 <thead className="bg-slate-50 border-b border-gray-200">
                                     <tr>
-                                        <th className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName}</div></th>
-                                        {Object.values(EENC_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom w-20`}><div className='font-bold break-words text-center'>{t(`dashboard.equip.${header}`, header)}</div></th> ))}
+                                        <th className={`p-2 text-start font-semibold text-gray-600 align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName}</div></th>
+                                        {Object.values(EENC_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold text-gray-600 align-bottom w-20`}><div className='font-bold break-words text-center'>{t(`dashboard.equip.${header}`, header)}</div></th> ))}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1263,7 +1270,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
         });
     }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, canonicalProject]); 
 
-    const functioningPhcs = useMemo(() => locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية'])), [locationFilteredFacilities]);
+    const functioningPhcs = useMemo(() => locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']) && countsForCoverage(f)), [locationFilteredFacilities]);
     const imnciInPhcs = useMemo(() => functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'), [functioningPhcs]);
     
     const ortCornerInPhcs = useMemo(() => functioningPhcs.filter(f => f['غرفة_إرواء'] === 'Yes'), [functioningPhcs]);
@@ -1280,7 +1287,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
         const aggKey = isFacilityView ? 'اسم_المؤسسة' : (isLocalityView ? 'المحلية' : 'الولاية');
 
         locationFilteredFacilities.forEach(f=>{
-            const isPhc=f['هل_المؤسسة_تعمل']==='Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']);
+            const isPhc=f['هل_المؤسسة_تعمل']==='Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']) && countsForCoverage(f);
             if(!isPhc) return;
 
             const key=f[aggKey];
@@ -1368,7 +1375,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
             const k = f['الولاية'];
             if (!k || k === 'إتحادي') return;
             if (!s[k]) s[k] = { tFP: 0, tPI: 0 };
-            if (f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية'])) {
+            if (f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']) && countsForCoverage(f)) {
                 s[k].tFP++;
                 if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') s[k].tPI++;
             }
@@ -1429,7 +1436,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
                                  <h3 className="text-sm md:text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
-                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
+                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-xs font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
                             <div className="flex-grow h-[280px] md:h-auto md:min-h-[400px] p-1 md:p-2 relative flex flex-col">
                                  <div className='flex-grow min-h-0 h-full w-full'>
@@ -1459,16 +1466,16 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.imnci_coverage', 'IMNCI Coverage by')} {aggregationLevelName}</h3>
-                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
+                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
                             <table ref={coverageTableRef} className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
                                 <thead>
                                     <tr>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[25%]">{aggregationLevelName}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[15%]">{t('dashboard.table.functioning_phcs', 'Functioning PHCs')}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[15%]">{t('dashboard.table.phcs_with_imnci', 'PHCs with IMNCI')}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[45%]">{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 text-xs w-[25%]">{aggregationLevelName}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 text-xs w-[15%]">{t('dashboard.table.functioning_phcs', 'Functioning PHCs')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 text-xs w-[15%]">{t('dashboard.table.phcs_with_imnci', 'PHCs with IMNCI')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 text-xs w-[45%]">{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1488,7 +1495,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                                                         style={{ width: `${Math.max(row.coverage, 1)}%` }}
                                                     ></div>
                                                 </div>
-                                                <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.coverage}%</span>
+                                                <span className="ms-3 text-xs font-bold text-gray-700 w-8 text-end">{row.coverage}%</span>
                                             </div>
                                          </td>
                                      </tr>
@@ -1505,7 +1512,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                         <div className="p-4 border-b flex flex-col gap-2 bg-slate-50/50">
                             <div className="flex justify-between items-center">
                                 <h3 className="text-lg font-bold text-gray-800"> {t('dashboard.headers.imnci_tools', 'IMNCI Tools Availability by')} {aggregationLevelName} </h3>
-                                <button onClick={() => copyTableAsImage(toolsTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
+                                <button onClick={() => copyTableAsImage(toolsTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                             </div>
                             <div className="flex items-center gap-3 text-xs mt-2">
                                 <span className="font-bold text-gray-600">{t('dashboard.map.legend', 'Legend')}</span>
@@ -1528,14 +1535,14 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                                             t('dashboard.table.imnci_chartbooklet', 'Chart Booklet'), 
                                             t('dashboard.table.imnci_registers', 'Register') 
                                         ].map((h, i) => (
-                                            <th key={i} className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{h}</th>
+                                            <th key={i} className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 text-xs ">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                  {toolsAverages && !isFacilityView && (
                                      <tr className="bg-slate-100/80 font-bold border-b-2 border-gray-300">
-                                         <td className="p-3 border-e border-gray-200 text-gray-800 uppercase text-[11px] tracking-wider text-start">{t('dashboard.table.overall_average', 'Overall Average')}</td>
+                                         <td className="p-3 border-e border-gray-200 text-gray-800 text-xs text-start">{t('dashboard.table.overall_average', 'Overall Average')}</td>
                                          <td className="p-3 border-e border-gray-200 text-center font-black text-slate-700">{toolsAverages.total}</td>
                                          <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pScale)}`}>{toolsAverages.totalScale} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pScale}%)</span></td>
                                          <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pHeight)}`}>{toolsAverages.totalHeight} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pHeight}%)</span></td>
@@ -1749,7 +1756,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
                                  <h3 className="text-sm md:text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
-                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
+                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-xs font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
                             <div className="flex-grow h-[280px] md:h-auto md:min-h-[400px] p-1 md:p-2 relative flex flex-col">
                                  <div className='flex-grow min-h-0 h-full w-full'>
@@ -1779,18 +1786,18 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.critical_care_coverage', 'Critical Care Coverage by')} {aggregationLevelName}</h3>
-                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
+                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
                             <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider'>{aggregationLevelName}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>{t('dashboard.table.target_hospitals', 'Target Hospitals')}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>{t('dashboard.table.with_hdu', 'With HDU')}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>{t('dashboard.table.with_picu', 'With PICU')}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>{t('dashboard.table.with_etat', 'With ETAT')}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[35%]'>{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 '>{aggregationLevelName}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 '>{t('dashboard.table.target_hospitals', 'Target Hospitals')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 '>{t('dashboard.table.with_hdu', 'With HDU')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 '>{t('dashboard.table.with_picu', 'With PICU')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 '>{t('dashboard.table.with_etat', 'With ETAT')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 w-[35%]'>{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1805,7 +1812,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                                             <td className="p-3 align-middle text-start">
                                                 <div className="flex items-center w-full">
                                                     <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.etatCoverage >= 75 ? 'bg-sky-700' : row.etatCoverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.etatCoverage, 1)}%` }}></div></div>
-                                                    <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.etatCoverage}%</span>
+                                                    <span className="ms-3 text-xs font-bold text-gray-700 w-8 text-end">{row.etatCoverage}%</span>
                                                 </div>
                                             </td>
                                         </tr> 
@@ -1820,14 +1827,14 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
                             <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.critical_care_capacity', 'Critical Care Capacity & Equipment')}</h3>
-                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
+                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-xs font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="overflow-x-auto p-4">
-                            <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse text-[10px] border border-gray-200">
+                            <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse text-xs border border-gray-200">
                                 <thead className="bg-slate-50 border-b border-gray-200">
                                     <tr>
-                                        <th className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName}</div></th>
-                                        {Object.values(CRITICAL_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom w-20`}><div className='font-bold break-words text-center'>{t(`dashboard.equip.${header}`, header)}</div></th> ))}
+                                        <th className={`p-2 text-start font-semibold text-gray-600 align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName}</div></th>
+                                        {Object.values(CRITICAL_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold text-gray-600 align-bottom w-20`}><div className='font-bold break-words text-center'>{t(`dashboard.equip.${header}`, header)}</div></th> ))}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1854,10 +1861,10 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
 const CompactKPICard = ({ percentage, title, numeratorLabel, numeratorValue, denominatorLabel, denominatorValue, colorClass = "bg-sky-600", className = "" }) => (
     <div className={`bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow ${className}`}>
         <div className={`px-3 py-2.5 text-white flex justify-between items-center ${colorClass}`}>
-            <h3 className="text-xs md:text-sm font-bold leading-tight w-2/3 text-end" dir="rtl">{title}</h3>
-            <span className="text-xl md:text-2xl font-extrabold">% {percentage}</span>
+            <h3 className="text-xs md:text-sm font-bold leading-tight w-2/3 text-start">{title}</h3>
+            <span className="text-xl md:text-2xl font-extrabold" dir="ltr">{percentage}%</span>
         </div>
-        <div className="px-3 py-2 bg-gray-50 text-[11px] md:text-xs text-gray-700 space-y-1.5 flex flex-col justify-center flex-grow" dir="rtl">
+        <div className="px-3 py-2 bg-gray-50 text-xs text-gray-700 space-y-1.5 flex flex-col justify-center flex-grow">
             <div className="flex justify-between border-b border-gray-200 pb-1.5">
                 <span className="text-gray-500">{numeratorLabel}:</span>
                 <span className="font-bold text-gray-900">{numeratorValue}</span>
@@ -1880,7 +1887,7 @@ const CombinedMapTooltip = ({ data }) => {
             <div className="text-sm font-bold text-sky-700 mb-3 text-start">
                 {t('dashboard.kpi.overall_coverage', 'Overall Coverage')}: {data.percentage}%
             </div>
-            <div className="space-y-2 text-xs text-start" dir="rtl">
+            <div className="space-y-2 text-xs text-start">
                 <div className="flex justify-between items-center bg-sky-50 p-1.5 rounded">
                     <span className="font-semibold text-gray-700">IMNCI:</span>
                     <span>{data.raw.imnci.perc}% <span className="text-gray-500 font-normal">({data.raw.imnci.n}/{data.raw.imnci.d})</span></span>
@@ -1929,11 +1936,11 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     }, [activeFacilities, stateFilter, localityFilter]); 
 
     const kpiData = useMemo(() => {
-        const functioningPhcs = locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
+        const functioningPhcs = locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']) && countsForCoverage(f));
         const imnciInPhcs = functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes');
         const imnciPerc = functioningPhcs.length > 0 ? ((imnciInPhcs.length / functioningPhcs.length) * 100).toFixed(1) : 0;
 
-        const supposedEtatFacilities = locationFilteredFacilities.filter(f => ['مستشفى', 'مستشفى ريفي'].includes(f['نوع_المؤسسةالصحية']) || f.eenc_service_type === 'pediatric');
+        const supposedEtatFacilities = locationFilteredFacilities.filter(f => (['مستشفى', 'مستشفى ريفي'].includes(f['نوع_المؤسسةالصحية']) || f.eenc_service_type === 'pediatric') && countsForCoverage(f));
         const facilitiesWithEtat = supposedEtatFacilities.filter(f => f.etat_has_service === 'Yes');
         const etatPerc = supposedEtatFacilities.length > 0 ? ((facilitiesWithEtat.length / supposedEtatFacilities.length) * 100).toFixed(1) : 0;
 
@@ -1963,6 +1970,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
         facilitiesToAggregate.forEach(f => {
             const key = f[groupByField];
             if (!key || key === 'إتحادي') return;
+            if (!countsForCoverage(f)) return;
             if (!agg[key]) {
                 agg[key] = { imnci: {n:0, d:0}, etat: {n:0, d:0}, eenc: {n:0, d:0}, scnu: {n:0, d:0} };
             }
@@ -2102,7 +2110,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                             <div className="flex items-center gap-3">
                                 <h3 className="text-sm md:text-lg font-bold text-gray-800">{t('dashboard.headers.geographic_coverage', 'Geographic Coverage & Service Performance')}</h3>
                                 <button onClick={handleCopyCombined} title={t('dashboard.copy_image', 'Copy Dashboard Image')} className="text-gray-400 hover:text-sky-600 transition-colors p-1" disabled={!!combinedCopyStatus && combinedCopyStatus !== 'Failed'}>
-                                    {combinedCopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{combinedCopyStatus}</span> : <CopyIcon />}
+                                    {combinedCopyStatus ? <span className="text-xs font-semibold text-sky-600">{combinedCopyStatus}</span> : <CopyIcon />}
                                 </button>
                             </div>
                         </div>

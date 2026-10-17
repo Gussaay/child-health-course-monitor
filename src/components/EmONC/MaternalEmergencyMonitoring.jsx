@@ -512,7 +512,7 @@ function ActionToggle({ currentValue, onClick }) {
                 if (idx === 0) roundedClass = "rounded-l-md";
                 if (idx === options.length - 1) roundedClass = "rounded-r-md";
                 if (options.length === 1) roundedClass = "rounded-md";
-                if (idx > 0) roundedClass += " -ml-px border border-gray-300";
+                if (idx > 0) roundedClass += " -ms-px border border-gray-300";
                 else roundedClass += " border border-gray-300";
                 return <button key={value} type="button" className={`${baseClass} ${activeState} ${roundedClass}`} onClick={() => onClick(value)}>{label}</button>;
             })}
@@ -759,7 +759,7 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                         <div>
                             <h3 className="text-lg font-semibold">{editingCase ? t('clinical_ui.maternal.grid.editing', 'Editing Case #{{n}}', { n: editingCase.case_serial }) : t('clinical_ui.maternal.grid.new', 'New Case Observation')}</h3>
                             <p className="text-sm text-slate-600 mt-1">
-                                <span className="font-semibold">{t('clinical_ui.maternal.grid.day', 'Day:')}</span> {dayOfCourse} &bull; <span className="font-semibold ml-2">{t('clinical_ui.maternal.grid.date', 'Date:')}</span> {encounterDate} &bull; <span className="font-semibold ml-2">{t('clinical_ui.maternal.grid.checklist', 'Checklist:')}</span> {currentChecklist.title}
+                                <span className="font-semibold">{t('clinical_ui.maternal.grid.day', 'Day:')}</span> {dayOfCourse} &bull; <span className="font-semibold ms-2">{t('clinical_ui.maternal.grid.date', 'Date:')}</span> {encounterDate} &bull; <span className="font-semibold ms-2">{t('clinical_ui.maternal.grid.checklist', 'Checklist:')}</span> {currentChecklist.title}
                             </p>
                         </div>
                         <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>{t('clinical_ui.maternal.btn.edit_setup', 'Edit Setup')}</Button>
@@ -777,7 +777,7 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                             return (
                                 <div key={d} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200">
                                     <button type="button" onClick={() => toggleDomain(d)} className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}>
-                                        <h4 className="text-base font-bold text-slate-800 text-left">{d}</h4>
+                                        <h4 className="text-base font-bold text-slate-800 text-start">{d}</h4>
                                     </button>
                                     {isExpanded && (
                                         <div className="divide-y divide-slate-100 bg-white">
@@ -834,7 +834,7 @@ function SubmittedMaternalCases({ cases, observations, onEditCase, onDeleteCase 
                             <td className="p-2">{checklistName}</td>
                             <td className={`p-2 text-center font-mono ${pctBgClass(pct)}`}>{fmtPct(pct)} ({correct}/{total})</td>
                             <td className="p-2 text-right">
-                                <Button size="sm" variant="secondary" onClick={() => onEditCase(c)} className="mr-2">{t('clinical_ui.maternal.btn.edit', 'Edit')}</Button>
+                                <Button size="sm" variant="secondary" onClick={() => onEditCase(c)} className="me-2">{t('clinical_ui.maternal.btn.edit', 'Edit')}</Button>
                                 <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>{t('clinical_ui.maternal.btn.delete', 'Delete')}</Button>
                             </td>
                         </tr>

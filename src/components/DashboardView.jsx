@@ -123,7 +123,7 @@ function DashboardView({ userStates, userLocalities }) {
             {isDashboardLoading ? (
                 <div className="py-3 md:py-4">
                     <PageSkeleton />
-                    <p className="mt-4 text-center text-sm font-semibold text-gray-500 tracking-wide uppercase">
+                    <p className="mt-4 text-center text-sm font-semibold text-gray-500 tracking-wide ">
                         {t('dashboard.syncing', 'Syncing Dashboard Data...')}
                     </p>
                 </div>

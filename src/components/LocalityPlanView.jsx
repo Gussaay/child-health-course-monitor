@@ -83,14 +83,14 @@ const TargetedFacilitiesSelect = ({ options, selectedIds, onChange, disabled }) 
     };
 
     if (!options || options.length === 0) {
-        return <div className="text-[10px] text-gray-400 text-center py-2 bg-gray-50 border border-gray-200 rounded">مغطاة بالكامل / لا فجوة</div>;
+        return <div className="text-xs text-gray-400 text-center py-2 bg-gray-50 border border-gray-200 rounded">مغطاة بالكامل / لا فجوة</div>;
     }
 
     return (
         <div className="relative w-full" ref={wrapperRef}>
             <div 
                 onClick={() => !disabled && setIsOpen(!isOpen)}
-                className={`border rounded p-2 text-[11px] font-bold flex justify-between items-center cursor-pointer min-h-[48px] ${disabled ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white border-teal-300 text-teal-800 hover:bg-teal-50'}`}
+                className={`border rounded p-2 text-xs font-bold flex justify-between items-center cursor-pointer min-h-[48px] ${disabled ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white border-teal-300 text-teal-800 hover:bg-teal-50'}`}
             >
                 <span className="truncate flex-1 text-right pl-2">
                     {selectedIds.length === 0 ? 'اختر المؤسسات المستهدفة...' : `تم تحديد (${selectedIds.length}) مؤسسة`}
@@ -100,7 +100,7 @@ const TargetedFacilitiesSelect = ({ options, selectedIds, onChange, disabled }) 
             
             {isOpen && !disabled && (
                 <div className="absolute z-50 mt-1 w-64 bg-white border border-teal-200 rounded-lg shadow-xl max-h-48 overflow-y-auto right-0">
-                    <div className="p-2 border-b border-gray-100 bg-teal-50 text-[10px] font-bold text-teal-800 flex justify-between">
+                    <div className="p-2 border-b border-gray-100 bg-teal-50 text-xs font-bold text-teal-800 flex justify-between">
                         <span>المؤسسات التي بها فجوة ({options.length})</span>
                         {selectedIds.length > 0 && (
                             <button onClick={() => onChange([])} className="text-red-500 hover:text-red-700 underline">مسح الكل</button>
@@ -628,10 +628,10 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button variant="secondary" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 sm:flex-none justify-center h-12">
-                            <X size={18} className="ml-1"/> إغلاق
+                            <X size={18} className="ms-1"/> إغلاق
                         </Button>
                         <Button variant="primary" onClick={handleSaveMaster} disabled={isSaving} className="flex-1 sm:flex-none justify-center h-12">
-                            {isSaving ? <Spinner size="sm" className="ml-2" /> : <Save size={18} className="ml-1"/>}
+                            {isSaving ? <Spinner size="sm" className="ms-2" /> : <Save size={18} className="ms-1"/>}
                             {isSaving ? 'جاري الحفظ...' : 'حفظ الخطة'}
                         </Button>
                     </div>
@@ -744,7 +744,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                         {systemData.hasGapTargeting ? (
                                                             <TargetedFacilitiesSelect options={systemData.gapFacilities} selectedIds={inv.targetedFacilities || []} onChange={(newIds) => updateIntervention(idx, 'targetedFacilities', newIds)} />
                                                         ) : (
-                                                            <div className="text-[11px] text-gray-400 py-2 bg-gray-50 border border-gray-200 rounded">لا ينطبق</div>
+                                                            <div className="text-xs text-gray-400 py-2 bg-gray-50 border border-gray-200 rounded">لا ينطبق</div>
                                                         )}
                                                     </td>
                                                     <td className="p-0 border border-gray-200">
@@ -778,7 +778,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                         </table>
                         <div className="p-4 border-t border-gray-200">
                             <Button variant="secondary" onClick={addIntervention} className="w-full sm:w-auto border-dashed border-2 border-teal-300 text-teal-700 hover:bg-teal-50 justify-center">
-                                <Plus size={18} className="ml-2" /> إضافة نشاط جديد
+                                <Plus size={18} className="ms-2" /> إضافة نشاط جديد
                             </Button>
                         </div>
                     </div>
@@ -853,7 +853,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                             <p className="text-xs text-gray-500 font-medium mt-1">القوالب الإتحادية المخصصة لتكون أساساً لخطط المحليات.</p>
                         </div>
                         <Button onClick={() => handleCreateNewMaster(true)} className="w-full sm:w-auto justify-center bg-teal-600 hover:bg-teal-700 text-white border-0 py-3 sm:py-2 h-12 sm:h-auto">
-                            <Plus size={18} className="ml-2"/> إعداد قالب إتحادي جديد للربع
+                            <Plus size={18} className="ms-2"/> إعداد قالب إتحادي جديد للربع
                         </Button>
                     </div>
 
@@ -886,11 +886,11 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                     {plan.interventions?.map(inv => (
                                                         <div key={inv.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                                                             <div className="font-bold text-sm text-gray-800 break-words">{inv.name}</div>
-                                                            <div className="text-[11px] text-gray-500 mb-2">{inv.axis}</div>
+                                                            <div className="text-xs text-gray-500 mb-2">{inv.axis}</div>
                                                             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                                                                 <div className="col-span-2"><span className="text-gray-500">المؤشر: </span><span className="font-bold text-teal-700">{inv.indicator || '-'}</span></div>
                                                                 <div className="col-span-2"><span className="text-gray-500">سعر الوحدة الافتراضي (ج.س): </span><span className="font-bold text-orange-600">{Number(inv.unitPrice||0).toLocaleString('en-US')}</span></div>
-                                                                {inv.notes && <div className="col-span-2 text-[11px] text-gray-500">ملاحظات: {inv.notes}</div>}
+                                                                {inv.notes && <div className="col-span-2 text-xs text-gray-500">ملاحظات: {inv.notes}</div>}
                                                             </div>
                                                         </div>
                                                     ))}
@@ -940,7 +940,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                             {canEditPlan && (
                                 <Button onClick={() => handleCreateNewMaster(false)} className="w-full sm:w-auto justify-center bg-teal-600 hover:bg-teal-700 text-white border-0 py-3 sm:py-2 h-12 sm:h-auto">
-                                    <Plus size={18} className="ml-2"/> إدخال خطة قاعدية ربعية جديدة
+                                    <Plus size={18} className="ms-2"/> إدخال خطة قاعدية ربعية جديدة
                                 </Button>
                             )}
                         </div>
@@ -999,8 +999,8 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                 <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
                                                     <h5 className="text-xs font-bold text-indigo-800 mb-2 flex items-center gap-1"><Target size={14}/> ملخص مؤشرات المُخطط:</h5>
                                                     <div className="flex flex-wrap gap-2">
-                                                        <span className="bg-white border border-orange-200 text-orange-700 text-[10px] sm:text-xs font-bold px-2 py-1 rounded">
-                                                            إجمالي الميزانية (ج.س): <span className="text-gray-800 ml-1">
+                                                        <span className="bg-white border border-orange-200 text-orange-700 text-xs font-bold px-2 py-1 rounded">
+                                                            إجمالي الميزانية (ج.س): <span className="text-gray-800 ms-1">
                                                                 {plan.interventions?.reduce((sum, inv) => {
                                                                     const fedTemplate = federalTemplates.find(p => p.quarter === plan.quarter && String(p.year) === String(plan.year));
                                                                     const fedInv = fedTemplate?.interventions?.find(f => f.name === inv.name);
@@ -1011,8 +1011,8 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                             </span>
                                                         </span>
                                                         {planKpisArr.map((kpi, kIdx) => (
-                                                            <span key={kIdx} className="bg-white border border-indigo-200 text-indigo-700 text-[10px] sm:text-xs font-bold px-2 py-1 rounded">
-                                                                {kpi.name}: <span className="text-gray-800 ml-1">{kpi.count.toLocaleString('en-US')}</span>
+                                                            <span key={kIdx} className="bg-white border border-indigo-200 text-indigo-700 text-xs font-bold px-2 py-1 rounded">
+                                                                {kpi.name}: <span className="text-gray-800 ms-1">{kpi.count.toLocaleString('en-US')}</span>
                                                             </span>
                                                         ))}
                                                     </div>
@@ -1031,7 +1031,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                         return (
                                                             <div key={inv.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                                                                 <div className="font-bold text-sm text-gray-800 break-words">{inv.name}</div>
-                                                                <div className="text-[11px] text-gray-500 mb-2">{inv.axis}{(ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator) ? ` · ${ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator}` : ''}</div>
+                                                                <div className="text-xs text-gray-500 mb-2">{inv.axis}{(ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator) ? ` · ${ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator}` : ''}</div>
                                                                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                                                                     <div><span className="text-gray-500">المُخطط: </span><span className="font-bold text-indigo-600">{Number(inv.planned||0).toLocaleString('en-US')}</span></div>
                                                                     <div><span className="text-gray-500">الابتدائي: </span><span className="font-bold">{Number(inv.baseline||0).toLocaleString('en-US')}</span></div>
@@ -1046,7 +1046,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                                     <div><span className="text-gray-500">سعر الوحدة (ج.س): </span><span className="font-bold text-orange-600">{displayUnitPrice.toLocaleString('en-US')}</span></div>
                                                                     <div><span className="text-gray-500">التكلفة (ج.س): </span><span className="font-bold text-indigo-800">{displayTotalCost.toLocaleString('en-US')}</span></div>
                                                                     {(inv.notes || inv.targetedFacilities?.length > 0) && (
-                                                                        <div className="col-span-2 text-[11px] text-gray-500">
+                                                                        <div className="col-span-2 text-xs text-gray-500">
                                                                             {inv.notes && <span>ملاحظات: {inv.notes}</span>}
                                                                             {inv.targetedFacilities?.length > 0 && <span className="block text-teal-600 font-semibold">المستهدف: {inv.targetedFacilities.length} مؤسسة</span>}
                                                                         </div>
@@ -1099,8 +1099,8 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                                         <td className="p-3 border-l border-slate-200 text-xs text-gray-500 whitespace-normal">
                                                                             {inv.notes || '-'}
                                                                             {inv.targetedFacilities && inv.targetedFacilities.length > 0 && (
-                                                                                <div className="mt-1 text-[10px] text-teal-600 font-semibold bg-teal-50 p-1 rounded">
-                                                                                    <CheckSquare size={10} className="inline mr-1" /> المستهدف: {inv.targetedFacilities.length} مؤسسة
+                                                                                <div className="mt-1 text-xs text-teal-600 font-semibold bg-teal-50 p-1 rounded">
+                                                                                    <CheckSquare size={10} className="inline me-1" /> المستهدف: {inv.targetedFacilities.length} مؤسسة
                                                                                 </div>
                                                                             )}
                                                                         </td>
@@ -1129,7 +1129,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                             <h4 className="font-bold text-gray-800 text-sm sm:text-base">لوحة المؤشرات والتصدير</h4>
                         </div>
                         <Button size="sm" variant="primary" onClick={exportDashboardPDF} disabled={isPdfGenerating} className="w-full sm:w-auto justify-center bg-teal-600 hover:bg-teal-700 border-0 h-12 sm:h-auto">
-                            {isPdfGenerating ? <Spinner size="sm" className="ml-2" /> : <Download size={14} className="ml-1" />}
+                            {isPdfGenerating ? <Spinner size="sm" className="ms-2" /> : <Download size={14} className="ms-1" />}
                             {isPdfGenerating ? 'جاري التصدير...' : 'تصدير التقرير PDF'}
                         </Button>
                     </div>
@@ -1166,7 +1166,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                     return (
                                         <div key={idx} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                                             <div className="font-bold text-sm text-gray-800 break-words">{row.name}</div>
-                                            <div className="text-[11px] text-teal-800 mb-2">{row.axis}{row.indicator ? ` · ${row.indicator}` : ''}</div>
+                                            <div className="text-xs text-teal-800 mb-2">{row.axis}{row.indicator ? ` · ${row.indicator}` : ''}</div>
                                             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                                                 <div><span className="text-gray-500">الابتدائي الإجمالي: </span><span className="font-bold">{row.baseline.toLocaleString('en-US')}</span></div>
                                                 <div><span className="text-gray-500">المُخطط الإجمالي: </span><span className="font-bold">{row.planned.toLocaleString('en-US')}</span></div>
@@ -1260,10 +1260,10 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                         </div>
                                         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                                             <Button size="sm" variant="success" onClick={() => handleRestorePlan(plan)} className="px-4 py-2">
-                                                <RefreshCw size={16} className="ml-1"/> استعادة
+                                                <RefreshCw size={16} className="ms-1"/> استعادة
                                             </Button>
                                             <Button size="sm" variant="danger" onClick={() => handlePermanentDelete(plan.id)} className="px-4 py-2 bg-red-700 hover:bg-red-800">
-                                                <Trash2 size={16} className="ml-1"/> حذف نهائي
+                                                <Trash2 size={16} className="ms-1"/> حذف نهائي
                                             </Button>
                                         </div>
                                     </div>

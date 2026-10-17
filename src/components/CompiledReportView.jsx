@@ -17,10 +17,11 @@ import { fetchFacilitiesHistoryMultiDate, upsertCourse } from '../data.js';
 import { useDataCache } from '../DataContext';
 import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { countsForCoverage } from '../utils/coverageEligibility';
 
 // --- Helper Components ---
 const Select = (props) => <select {...props} className={`border border-gray-300 rounded-md p-2 text-sm w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`}>{props.children}</select>;
-const FormGroup = ({ label, children }) => (<div className="flex flex-col gap-1 mb-2"><label className="font-semibold text-gray-700 text-xs uppercase tracking-wide">{label}</label>{children}</div>);
+const FormGroup = ({ label, children }) => (<div className="flex flex-col gap-1 mb-2"><label className="font-semibold text-gray-700 text-xs tracking-wide">{label}</label>{children}</div>);
 
 // --- Styles Helper ---
 const getScoreColorClass = (value, type = 'percentage') => {
@@ -128,7 +129,8 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                 const historicalPhcFacilities = historicalFacilities
                     .filter(facilitiesFilter)
                     .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
-                    .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
+                    .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']))
+                    .filter(countsForCoverage);
                 
                 let totalPhc = historicalPhcFacilities.length;
                 if (isNational) {
@@ -570,7 +572,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                     </p>
                 </div>
                 <Button onClick={handlePdfExport} disabled={isGeneratingPdf || filteredCourses.length === 0} variant="secondary">
-                    {isGeneratingPdf ? <Spinner size="sm" /> : <><PdfIcon className="w-4 h-4 mr-2"/> {t('compiled_reports.compiled.export_report', 'Export Report')}</>}
+                    {isGeneratingPdf ? <Spinner size="sm" /> : <><PdfIcon className="w-4 h-4 me-2"/> {t('compiled_reports.compiled.export_report', 'Export Report')}</>}
                 </Button>
             </div>
 
@@ -604,7 +606,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
             </Card>
 
             {filteredCourses.length === 0 ? (
-                <EmptyState message={t('compiled_reports.compiled.empty', 'No data matches the selected filters.')} />
+                <EmptyState message={t('compiled_reports.compiled.empty', 'No data matches the selected filters.')} filtered />
             ) : (
                 <>
                     {/* Overall Summaries */}
@@ -691,27 +693,27 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                                 {/* Specific KPIs for this Course Type */}
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6 text-center">
                                     <div className="p-3 bg-blue-50 rounded border border-blue-100">
-                                        <div className="text-xs text-blue-700 font-semibold uppercase">{t('compiled_reports.compiled.kpi.total_inv', 'Total Inv.')}</div>
+                                        <div className="text-xs text-blue-700 font-semibold ">{t('compiled_reports.compiled.kpi.total_inv', 'Total Inv.')}</div>
                                         <div className="text-lg font-bold text-blue-800">{fmtCurrency(data.kpis.totalBudget)}</div>
                                     </div>
                                     <div className="p-3 bg-yellow-50 rounded border border-yellow-100">
-                                        <div className="text-xs text-yellow-700 font-semibold uppercase">{t('compiled_reports.compiled.kpi.cost_pax', 'Cost/Pax')}</div>
+                                        <div className="text-xs text-yellow-700 font-semibold ">{t('compiled_reports.compiled.kpi.cost_pax', 'Cost/Pax')}</div>
                                         <div className="text-lg font-bold text-yellow-800">{fmtCurrency(data.kpis.costPerPax)}</div>
                                     </div>
                                     <div className="p-3 bg-purple-50 rounded border border-purple-100">
-                                        <div className="text-xs text-purple-700 font-semibold uppercase">{t('compiled_reports.compiled.kpi.cost_fac', 'Cost/Fac')}</div>
+                                        <div className="text-xs text-purple-700 font-semibold ">{t('compiled_reports.compiled.kpi.cost_fac', 'Cost/Fac')}</div>
                                         <div className="text-lg font-bold text-purple-800">{fmtCurrency(data.kpis.costPerFac)}</div>
                                     </div>
                                     <div className="p-3 bg-gray-50 rounded border border-gray-200">
-                                        <div className="text-xs text-gray-600 font-semibold uppercase">{t('compiled_reports.compiled.kpi.avg_pre', 'Avg Pre')}</div>
+                                        <div className="text-xs text-gray-600 font-semibold ">{t('compiled_reports.compiled.kpi.avg_pre', 'Avg Pre')}</div>
                                         <div className="text-lg font-bold">{data.kpis.avgPre.toFixed(1)}%</div>
                                     </div>
                                     <div className="p-3 bg-gray-50 rounded border border-gray-200">
-                                        <div className="text-xs text-gray-600 font-semibold uppercase">{t('compiled_reports.compiled.kpi.avg_post', 'Avg Post')}</div>
+                                        <div className="text-xs text-gray-600 font-semibold ">{t('compiled_reports.compiled.kpi.avg_post', 'Avg Post')}</div>
                                         <div className="text-lg font-bold">{data.kpis.avgPost.toFixed(1)}%</div>
                                     </div>
                                     <div className={`p-3 rounded border ${getScoreColorClass(data.kpis.avgImp, 'improvement')}`}>
-                                        <div className="text-xs font-semibold uppercase">{t('compiled_reports.compiled.kpi.avg_imp', 'Avg Imp')}</div>
+                                        <div className="text-xs font-semibold ">{t('compiled_reports.compiled.kpi.avg_imp', 'Avg Imp')}</div>
                                         <div className="text-lg font-bold">{data.kpis.avgImp.toFixed(1)}%</div>
                                     </div>
                                 </div>

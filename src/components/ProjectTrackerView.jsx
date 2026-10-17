@@ -491,24 +491,24 @@ export default function ProjectTrackerView({ permissions }) {
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                     <div className="bg-gray-50 border-l-4 border-l-sky-500 p-4 rounded-r-lg shadow-sm">
-                                        <div className="text-gray-500 text-xs font-bold uppercase mb-1">{t('trackers.projects.kpi.total_projects', 'Total Projects')}</div>
+                                        <div className="text-gray-500 text-xs font-bold mb-1">{t('trackers.projects.kpi.total_projects', 'Total Projects')}</div>
                                         <div className="text-2xl font-black text-gray-900">{kpiStats.totalProjects}</div>
                                     </div>
                                     <div className="bg-gray-50 border-l-4 border-l-indigo-500 p-4 rounded-r-lg shadow-sm">
-                                        <div className="text-gray-500 text-xs font-bold uppercase mb-1">{t('trackers.projects.kpi.total_tasks', 'Total Tasks')}</div>
+                                        <div className="text-gray-500 text-xs font-bold mb-1">{t('trackers.projects.kpi.total_tasks', 'Total Tasks')}</div>
                                         <div className="text-2xl font-black text-gray-900">{kpiStats.totalTasks}</div>
                                     </div>
                                     <div className="bg-green-50 border-l-4 border-l-green-500 p-4 rounded-r-lg shadow-sm relative overflow-hidden">
-                                        <div className="text-green-700 text-xs font-bold uppercase mb-1">{t('trackers.projects.kpi.completion_rate', 'Completion Rate')}</div>
+                                        <div className="text-green-700 text-xs font-bold mb-1">{t('trackers.projects.kpi.completion_rate', 'Completion Rate')}</div>
                                         <div className="text-2xl font-black text-green-800">{kpiStats.completionRate}%</div>
                                         <div className="absolute bottom-0 left-0 h-1 bg-green-500 transition-all" style={{ width: `${kpiStats.completionRate}%`}}></div>
                                     </div>
                                     <div className="bg-red-50 border-l-4 border-l-red-500 p-4 rounded-r-lg shadow-sm">
-                                        <div className="text-red-600 text-xs font-bold uppercase mb-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> {t('trackers.projects.kpi.overdue', 'Overdue')}</div>
+                                        <div className="text-red-600 text-xs font-bold mb-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> {t('trackers.projects.kpi.overdue', 'Overdue')}</div>
                                         <div className="text-2xl font-black text-red-700">{kpiStats.overdueTasks}</div>
                                     </div>
                                     <div className="bg-amber-50 border-l-4 border-l-amber-500 p-4 rounded-r-lg shadow-sm">
-                                        <div className="text-amber-700 text-xs font-bold uppercase mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> {t('trackers.projects.kpi.due_soon', 'Due Soon (7 Days)')}</div>
+                                        <div className="text-amber-700 text-xs font-bold mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> {t('trackers.projects.kpi.due_soon', 'Due Soon (7 Days)')}</div>
                                         <div className="text-2xl font-black text-amber-800">{kpiStats.upcomingTasks}</div>
                                     </div>
                                 </div>
@@ -568,12 +568,12 @@ export default function ProjectTrackerView({ permissions }) {
                                         <table className="min-w-full divide-y divide-gray-200 border">
                                             <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('trackers.projects.team.member', 'Team Member')}</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase border-l">{t('trackers.projects.team.total_assigned', 'Total Assigned')}</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('trackers.projects.team.completed', 'Completed')}</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('trackers.projects.team.pending_prog', 'Pending/Prog')}</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-red-500 uppercase border-l">{t('trackers.projects.kpi.overdue', 'Overdue')}</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border-l">{t('trackers.projects.kpi.completion_rate', 'Completion Rate')}</th>
+                                                    <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 ">{t('trackers.projects.team.member', 'Team Member')}</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 border-l">{t('trackers.projects.team.total_assigned', 'Total Assigned')}</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 ">{t('trackers.projects.team.completed', 'Completed')}</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 ">{t('trackers.projects.team.pending_prog', 'Pending/Prog')}</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-medium text-red-500 border-l">{t('trackers.projects.kpi.overdue', 'Overdue')}</th>
+                                                    <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 border-l">{t('trackers.projects.kpi.completion_rate', 'Completion Rate')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
@@ -636,7 +636,7 @@ export default function ProjectTrackerView({ permissions }) {
                                         )}
                                     </div>
                                     <Button size="sm" variant="primary" onClick={handleShareFilteredView} className="shrink-0 shadow-sm border border-blue-600">
-                                        <Share2 className="w-4 h-4 mr-2" /> {t('trackers.projects.share.view', 'Share View')}
+                                        <Share2 className="w-4 h-4 me-2" /> {t('trackers.projects.share.view', 'Share View')}
                                     </Button>
                                 </div>
 
@@ -740,7 +740,7 @@ export default function ProjectTrackerView({ permissions }) {
                                         });
                                         setIsSubtaskModalOpen(true);
                                     }}>
-                                        <Plus className="w-4 h-4 mr-1" /> {t('trackers.projects.add_task', 'Add Task')}
+                                        <Plus className="w-4 h-4 me-1" /> {t('trackers.projects.add_task', 'Add Task')}
                                     </Button>
                                 </div>
                                 
@@ -856,7 +856,7 @@ export default function ProjectTrackerView({ permissions }) {
                                 const current = currentSubtask?.subActivities || [];
                                 setCurrentSubtask({...currentSubtask, subActivities: [...current, { title: '', completed: false }]});
                             }}>
-                                <Plus className="w-4 h-4 mr-1" /> {t('trackers.projects.modal.add_sub_activity', 'Add Sub-Activity')}
+                                <Plus className="w-4 h-4 me-1" /> {t('trackers.projects.modal.add_sub_activity', 'Add Sub-Activity')}
                             </Button>
                         </FormGroup>
 

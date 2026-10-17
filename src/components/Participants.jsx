@@ -80,13 +80,13 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
 
     return (
         <div className="relative flex flex-col gap-1" ref={ref}>
-            <label className="font-semibold text-gray-700 text-xs uppercase">{label}</label>
+            <label className="font-semibold text-gray-700 text-xs ">{label}</label>
             <div 
                 className="border border-gray-300 rounded px-3 py-1.5 bg-white text-sm cursor-pointer min-w-0 md:min-w-[160px] flex justify-between items-center hover:border-blue-400"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <span className="truncate mr-2 text-gray-700">{displayValue}</span>
-                <span className="text-gray-500 text-[10px]">▼</span>
+                <span className="truncate me-2 text-gray-700">{displayValue}</span>
+                <span className="text-gray-500 text-xs">▼</span>
             </div>
             {isOpen && (
                 <div className="absolute top-full left-0 z-20 mt-1 w-full md:min-w-[220px] bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -102,7 +102,7 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
                         <label key={i} className="flex items-center p-2.5 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-50 last:border-none">
                             <input 
                                 type="checkbox" 
-                                className="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                className="me-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
                                 checked={selected.includes(opt)}
                                 onChange={() => toggleOption(opt)}
                             />
@@ -468,13 +468,13 @@ const ParticipantCertificateActionModal = ({ isOpen, onClose, participant, onDow
             <div className="p-4 flex flex-col gap-3">
                 <p className="text-sm text-gray-600 mb-4">{t('participants_page.cert_action.intro', "Choose an action for this participant's certificate.")}</p>
                 <Button variant="primary" className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 border-transparent focus:ring-emerald-500" onClick={() => { onClose(); onDownload(); }}>
-                    <Printer className="w-4 h-4 mr-3" /> {t('participants_page.cert_action.download_pdf', 'Download as PDF')}
+                    <Printer className="w-4 h-4 me-3" /> {t('participants_page.cert_action.download_pdf', 'Download as PDF')}
                 </Button>
                 <Button variant="secondary" className="w-full justify-start text-gray-700" onClick={() => { onClose(); onEmail(); }} disabled={!participant.email}>
-                    <Mail className="w-4 h-4 mr-3" /> {t('participants_page.cert_action.share_email', 'Share by Email')} {!participant.email && <span className="text-xs text-red-500 ml-1">{t('participants_page.cert_action.no_email', '(No email saved)')}</span>}
+                    <Mail className="w-4 h-4 me-3" /> {t('participants_page.cert_action.share_email', 'Share by Email')} {!participant.email && <span className="text-xs text-red-500 ms-1">{t('participants_page.cert_action.no_email', '(No email saved)')}</span>}
                 </Button>
                 <Button variant="secondary" className="w-full justify-start text-gray-700" onClick={() => { onClose(); onShare(); }}>
-                    <RefreshCw className="w-4 h-4 mr-3" /> {t('participants_page.cert_action.share_link', 'Share Direct Link')}
+                    <RefreshCw className="w-4 h-4 me-3" /> {t('participants_page.cert_action.share_link', 'Share Direct Link')}
                 </Button>
             </div>
         </Modal>
@@ -1033,7 +1033,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, facilitiesList, onSave
                 )}
 
                 <div className="flex justify-end items-center mt-6 pt-4 border-t">
-                    <Button variant="secondary" onClick={onClose} className="mr-2" disabled={isUpdating}>{t('participants_page.common.cancel', 'Cancel')}</Button>
+                    <Button variant="secondary" onClick={onClose} className="me-2" disabled={isUpdating}>{t('participants_page.common.cancel', 'Cancel')}</Button>
                     <Button
                         onClick={handleApplyChange}
                         disabled={isUpdating || !selectedFieldKey || !fromValue || !toValue || fromValue === toValue || affectedParticipantsCount === 0}
@@ -1415,7 +1415,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
                             accept=".xlsx,.xls"
                             onChange={handleFileUpload}
                             ref={fileInputRef}
-                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            className="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
                     </div>
                 )}
@@ -1796,7 +1796,7 @@ export function BulkEditParticipantsView({ participants, course, onCancel, onSav
                 </div>
 
                 <div className="overflow-x-auto border border-gray-200 rounded max-h-[60vh]">
-                    <table className="w-full text-left border-collapse border border-slate-300 text-sm">
+                    <table className="w-full text-start border-collapse border border-slate-300 text-sm">
                         <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
                             <tr>
                                 {editableFields.map(f => (
@@ -2702,7 +2702,7 @@ export function ParticipantsView({
                                 <div className="font-bold text-gray-900 flex items-center gap-2 mb-2">
                                     <Building2 className="w-4 h-4 text-gray-400" />
                                     {fac['اسم_المؤسسة']} 
-                                    <span className="text-xs text-gray-500 font-medium ml-auto bg-gray-100 px-2 py-0.5 rounded-full">
+                                    <span className="text-xs text-gray-500 font-medium ms-auto bg-gray-100 px-2 py-0.5 rounded-full">
                                         {fac['الولاية']} / {fac['المحلية']}
                                     </span>
                                 </div>
@@ -2729,7 +2729,7 @@ export function ParticipantsView({
                         <Button variant="secondary" onClick={() => setSyncPreviewModal(prev => ({ ...prev, isOpen: false }))} disabled={isProcessing}>
                             {t('participants_page.common.cancel', 'Cancel')}
                         </Button>
-                        <Button variant="primary" onClick={handleConfirmSyncToFirebase} disabled={isProcessing} className="bg-indigo-600 hover:bg-indigo-700">
+                        <Button variant="primary" onClick={handleConfirmSyncToFirebase} disabled={isProcessing}>
                             {isProcessing ? <Spinner size="sm" /> : t('participants_page.sync.confirm', 'Confirm & Push to Firebase')}
                         </Button>
                     </div>
@@ -2766,8 +2766,8 @@ export function ParticipantsView({
                             <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setActiveScreen('migration'); }} disabled={!participants || participants.length === 0 || isProcessing}>
                                 {t('participants_page.advanced.bulk_migrate', 'Bulk Migrate to Facilities')}
                             </Button>
-                            <Button variant="primary" className="w-full justify-start bg-indigo-600 hover:bg-indigo-700" onClick={handlePrepareSyncPreview} disabled={!participants || participants.length === 0 || isProcessing}>
-                                <RefreshCw className="w-4 h-4 mr-2" /> 
+                            <Button variant="primary" className="w-full justify-start" onClick={handlePrepareSyncPreview} disabled={!participants || participants.length === 0 || isProcessing}>
+                                <RefreshCw className="w-4 h-4 me-2" /> 
                                 {t('participants_page.advanced.sync_all', 'Sync All Participants to Facilities')}
                             </Button>
                         </>
@@ -2809,7 +2809,7 @@ export function ParticipantsView({
                                 {t('participants_page.cert_mgmt.share_public', 'Share Public Page')}
                             </Button>
                             <Button variant="secondary" className="w-full justify-start border-green-600 text-green-700 hover:bg-green-50" onClick={() => { setIsCertManagementModalOpen(false); handleOpenBulkEmail(); }} disabled={!filtered || filtered.length === 0 || isProcessing}>
-                                <Mail className="w-4 h-4 mr-2" /> {t('participants_page.cert_mgmt.email_all', 'Email All Certs')}
+                                <Mail className="w-4 h-4 me-2" /> {t('participants_page.cert_mgmt.email_all', 'Email All Certs')}
                             </Button>
                         </>
                     ) : (
@@ -2839,7 +2839,7 @@ export function ParticipantsView({
                             <Button variant="secondary" onClick={() => setIsDeletedModalOpen(true)} disabled={isProcessing}>
                                 {t('participants_page.list.deleted_participants', 'Deleted Participants')}
                                 {pendingReaddCount > 0 && (
-                                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5" title={t('participants_page.list.readd_waiting', 'Re-add requests waiting for approval')}>
+                                    <span className="ms-2 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5" title={t('participants_page.list.readd_waiting', 'Re-add requests waiting for approval')}>
                                         {pendingReaddCount}
                                     </span>
                                 )}
@@ -2879,9 +2879,9 @@ export function ParticipantsView({
             </div>
 
             <div className="hidden md:block overflow-hidden bg-white rounded-xl shadow-sm">
-                <table className="w-full text-left border-collapse border border-slate-300 text-sm">
+                <table className="w-full text-start border-collapse border border-slate-300 text-sm">
                     <thead>
-                        <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
+                        <tr className="bg-slate-100 text-xs text-slate-600 whitespace-nowrap">
                             <th className="p-3 font-semibold border border-slate-300 w-1/3">{t('participants_page.table.participant_role', 'Participant & Role')}</th>
                             <th className="p-3 font-semibold border border-slate-300 w-1/3">{t('participants_page.table.facility_location', 'Facility & Location')}</th>
                             <th className="p-3 font-semibold border border-slate-300 hidden lg:table-cell w-24">{t('participants_page.table.activity', 'Activity')}</th>
@@ -2907,13 +2907,13 @@ export function ParticipantsView({
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">{p.name}</span>
                                                 {certAwaiting && (
-                                                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wider"
+                                                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-bold "
                                                         title={t('participants_page.list.stale_tooltip', 'Name or sub-course changed after this course was approved')}>
                                                         {t('participants_page.list.reapprove', 'Re-approve')}
                                                     </span>
                                                 )}
                                             </div>
-                                            <span className="text-[11px] font-medium text-slate-500">{p.job_title}</span>
+                                            <span className="text-xs font-medium text-slate-500">{p.job_title}</span>
                                         </div>
                                     </td>
 
@@ -2921,10 +2921,10 @@ export function ParticipantsView({
                                         <div className="text-[12px] font-semibold text-gray-700 whitespace-nowrap truncate max-w-[220px]">
                                             {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : p.center_name}
                                         </div>
-                                        {p.locality && <div className="text-[11px] text-gray-500 whitespace-nowrap">{t('participants_page.list.locality_value', 'Locality: {{locality}}', { locality: p.locality })}</div>}
+                                        {p.locality && <div className="text-xs text-gray-500 whitespace-nowrap">{t('participants_page.list.locality_value', 'Locality: {{locality}}', { locality: p.locality })}</div>}
                                     </td>
                                     
-                                    <td className="p-3 align-middle border border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
+                                    <td className="p-3 align-middle border border-slate-200 hidden lg:table-cell text-xs text-gray-500 whitespace-nowrap">
                                         <div>{createdDate}</div>
                                         <div className="truncate max-w-[90px]" title={p.createdBy || t('participants_page.list.legacy', 'Legacy')}>{t('participants_page.list.by', 'By: {{name}}', { name: p.createdBy || t('participants_page.list.legacy', 'Legacy') })}</div>
                                     </td>
@@ -2932,22 +2932,22 @@ export function ParticipantsView({
                                     <td className="p-3 align-middle border border-slate-200 text-right">
                                         <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
                                             
-                                            <Button variant="primary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>
+                                            <Button variant="primary" className="px-2.5 py-1 text-xs" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>
                                                 {t('participants_page.actions.monitor', 'Monitor')}
                                             </Button>
 
-                                            <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>
+                                            <Button variant="secondary" className="px-2.5 py-1 text-xs" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>
                                                 {t('participants_page.actions.report', 'Report')}
                                             </Button>
 
                                             {participantSubCourse === 'online IMCI course' && (
-                                                <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>
+                                                <Button variant="secondary" className="px-2.5 py-1 text-xs" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>
                                                     {t('participants_page.actions.exercises', 'Exercises')}
                                                 </Button>
                                             )}
 
                                             {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') && (
-                                                <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>
+                                                <Button variant="secondary" className="px-2.5 py-1 text-xs" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>
                                                     {t('participants_page.actions.test', 'Test')}
                                                 </Button>
                                             )}
@@ -2955,7 +2955,7 @@ export function ParticipantsView({
                                             {isCertApproved && finalCertPerm && (
                                                 <Button 
                                                     variant="secondary" 
-                                                    className="px-2.5 py-1 text-[11px] border-emerald-200 text-emerald-700 hover:bg-emerald-50" 
+                                                    className="px-2.5 py-1 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50" 
                                                     onClick={() => setCertActionModal({ isOpen: true, data: { p, participantSubCourse } })}
                                                     disabled={isCacheLoading || isProcessing || processingRowId === p.id}
                                                     title={t('participants_page.actions.manage_certificate', 'Manage Certificate')}
@@ -2964,11 +2964,11 @@ export function ParticipantsView({
                                                 </Button>
                                             )}
 
-                                            <Button variant="secondary" className="px-2.5 py-1 text-[11px] text-gray-600" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>
+                                            <Button variant="secondary" className="px-2.5 py-1 text-xs text-gray-600" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>
                                                 {t('participants_page.actions.edit', 'Edit')}
                                             </Button>
                                             
-                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent" onClick={() => handleDeleteParticipant(p.id)} disabled={!canDelete || isProcessing}>
+                                            <Button variant="danger" className="px-2.5 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent" onClick={() => handleDeleteParticipant(p.id)} disabled={!canDelete || isProcessing}>
                                                 {processingRowId === p.id ? <Spinner size="sm" /> : t('participants_page.actions.delete', 'Delete')}
                                             </Button>
                                             
@@ -3011,7 +3011,7 @@ export function ParticipantsView({
                                     <div className="flex flex-wrap items-center gap-2 mt-2">
                                         <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">{t('participants_page.list.group_value', 'Group: {{group}}', { group: p.group })}</span>
                                         {certAwaiting && (
-                                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-amber-100 rounded text-amber-800">
+                                            <span className="text-xs font-bold px-2 py-1 bg-amber-100 rounded text-amber-800">
                                                 {t('participants_page.list.cert_needs_reapproval', 'Certificate needs re-approval')}
                                             </span>
                                         )}
@@ -3717,7 +3717,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                             className={`relative ${(!locality || isSaving) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                                         >
                                             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                                <Search className="w-5 h-5 text-gray-400 mr-2" />
+                                                <Search className="w-5 h-5 text-gray-400 me-2" />
                                             </div>
                                             <Input
                                                 value={selectedFacility ? selectedFacility['اسم_المؤسسة'] : center}
@@ -3767,8 +3767,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 </FormGroup>
                             )}
 
-                            <FormGroup label="رقم الهاتف"><Input disabled={isSaving} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" className="text-left" /></FormGroup>
-                            <FormGroup label="البريد الإلكتروني (اختياري)"><Input disabled={isSaving} type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="text-left" /></FormGroup>
+                            <FormGroup label="رقم الهاتف"><Input disabled={isSaving} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" className="text-start" /></FormGroup>
+                            <FormGroup label="البريد الإلكتروني (اختياري)"><Input disabled={isSaving} type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="text-start" /></FormGroup>
                         </div>
                     </div>
 

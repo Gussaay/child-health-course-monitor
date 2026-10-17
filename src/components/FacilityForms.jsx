@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle, ArrowRightLeft, AlertTriangle } from 'lucide-react';
 import { db } from '../firebase'; 
 import { collection, getDocs, doc, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { getFunctions, httpsCallable } from 'firebase/functions'; 
@@ -76,7 +76,7 @@ export const PendingBadge = ({ fieldKey, pendingData, currentData, valueMap }) =
     else if (displayVal === 'Planned') displayVal = 'مخططة';
 
     return (
-        <span className="mr-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300" title="تحديث معلق في انتظار الموافقة">
+        <span className="me-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300" title="تحديث معلق في انتظار الموافقة">
             ⏳ تحديث معلق: {displayVal}
         </span>
     );
@@ -175,7 +175,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
                         {Object.entries(groupedOptions).map(([groupName, opts]) => (
                             <React.Fragment key={groupName}>
                                 {groupName !== 'ungrouped' && opts.length > 0 && (
-                                    <li className="text-sky-700 bg-sky-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md mt-2 mb-1">
+                                    <li className="text-sky-700 bg-sky-50 px-3 py-1.5 text-xs font-bold rounded-md mt-2 mb-1">
                                         {groupName}
                                     </li>
                                 )}
@@ -330,7 +330,7 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     if (error) return <div className="p-8 text-center text-red-600 bg-red-50 border border-red-200 rounded-md font-bold">{error}</div>;
 
     return (
-        <div className="min-h-screen bg-sky-50 p-4 sm:p-6 lg:p-8 flex justify-center">
+        <div className="min-h-screen bg-surface p-4 sm:p-6 lg:p-8 flex justify-center">
             <div className="w-full max-w-7xl">
                 <GenericFacilityForm
                     initialData={initialData}
@@ -549,7 +549,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     {showBack && (
                         <div className="flex justify-start mb-2">
                             <Button variant="secondary" onClick={() => window.history.back()} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
-                                <ArrowLeft className="w-5 h-5 ml-2" /> الرجوع للخلف
+                                <ArrowLeft className="w-5 h-5 ms-2" /> الرجوع للخلف
                             </Button>
                         </div>
                     )}
@@ -629,7 +629,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             <div className="w-full max-w-7xl space-y-4">
                 <div className="flex justify-start" dir="rtl">
                     <Button variant="secondary" onClick={() => setStep('selection')} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
-                        <ArrowLeft className="w-5 h-5 ml-2" /> العودة للبحث عن منشأة
+                        <ArrowLeft className="w-5 h-5 ms-2" /> العودة للبحث عن منشأة
                     </Button>
                 </div>
                 <GenericFacilityForm
@@ -802,7 +802,7 @@ export const SharedFacilityFields = ({ formData, pendingData, handleChange, hand
                                             <span>تحديث الموقع التلقائي</span>
                                         </h4>
                                         <p className="text-sm text-amber-700 font-medium leading-relaxed">
-                                            ⚠️ الرجاء استخدام هذا الزر <span className="font-bold underline">فقط</span> إذا كنت متواجداً حالياً داخل المنشأة الصحية لمنع تسجيل إحداثيات خاطئة.
+                                            <AlertTriangle size={16} className="inline-block align-text-bottom me-1" aria-hidden="true" />الرجاء استخدام هذا الزر <span className="font-bold underline">فقط</span> إذا كنت متواجداً حالياً داخل المنشأة الصحية لمنع تسجيل إحداثيات خاطئة.
                                         </p>
                                         {locationError && <p className="text-sm text-red-600 mt-2 font-semibold">{locationError}</p>}
                                     </div>
@@ -1400,7 +1400,7 @@ export const StaffTable = ({ serviceKey, formData, pendingData, isReadOnly, hand
                 <div>
                     <span>معلومات الكادر بالاسم ({staffList.length})</span>
                     {hasPendingStaff && (
-                        <span className="mr-3 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                        <span className="me-3 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
                             ⏳ يوجد تعديل معلق على الكوادر
                         </span>
                     )}
@@ -1465,12 +1465,12 @@ export const StaffTable = ({ serviceKey, formData, pendingData, isReadOnly, hand
                 </Button>
                 {onOpenMoveDeptModal && (
                     <Button type="button" onClick={(e) => { e.preventDefault(); onOpenMoveDeptModal(serviceKey); }} variant="secondary" className="font-bold shadow-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200" disabled={isReadOnly}>
-                        <ArrowRightLeft className="w-4 h-4 mr-2 inline" /> نقل لقسم آخر
+                        <ArrowRightLeft className="w-4 h-4 me-2 inline" /> نقل لقسم آخر
                     </Button>
                 )}
                 {onOpenTransferFacModal && (
                     <Button type="button" onClick={(e) => { e.preventDefault(); onOpenTransferFacModal(serviceKey); }} variant="secondary" className="font-bold shadow-sm bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200" disabled={isReadOnly}>
-                        <Building2 className="w-4 h-4 mr-2 inline" /> نقل لمنشأة أخرى
+                        <Building2 className="w-4 h-4 me-2 inline" /> نقل لمنشأة أخرى
                     </Button>
                 )}
             </div>

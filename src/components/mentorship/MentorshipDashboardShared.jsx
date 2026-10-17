@@ -313,7 +313,7 @@ export const KpiCard = ({ title, value, unit = '', scoreValue = null, trend = nu
             <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <CopyImageButton targetRef={cardRef} title={t(title)} kind="kpi" />
             </div>
-            <h4 className="text-xs sm:text-sm font-bold text-slate-500 mb-2 sm:mb-3 text-center uppercase tracking-wider break-words w-full px-2 sm:px-4" title={t(title)}>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-500 mb-2 sm:mb-3 text-center break-words w-full px-2 sm:px-4"title={t(title)}>
                 {t(title)}
             </h4>
             <div className="flex items-baseline justify-center gap-1.5 mt-auto">
@@ -326,7 +326,7 @@ export const KpiCard = ({ title, value, unit = '', scoreValue = null, trend = nu
             </div>
             {trend && (
                 <div className={`mt-2 flex items-center justify-center text-xs font-bold ${trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-rose-600' : 'text-slate-400'}`}>
-                    {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '−'} <span className="ml-1">{trendText}</span>
+                    {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '−'} <span className="ms-1">{trendText}</span>
                 </div>
             )}
         </div>
@@ -400,7 +400,7 @@ export const FilterSelect = ({ label, value, onChange, options, disabled = false
     const isSelected = value !== "" && value !== null && value !== undefined;
     return (
         <div className="w-full sm:flex-1 sm:min-w-[150px]">
-            <label htmlFor={label} className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{label}</label>
+            <label htmlFor={label} className="block text-xs font-bold text-slate-500 mb-1.5 ">{label}</label>
             <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isSelected ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}>
                 <option value="">{defaultOption}</option>
                 {options.map(option => (<option key={option.key || option} value={option.key || option}>{option.name || option}</option>))}
@@ -610,17 +610,17 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
             {chartData.length > 0 && (
                 <div className="flex justify-between items-start gap-2 sm:gap-4 mb-6 px-1 sm:px-4">
                     <div className="flex flex-col items-center shrink-0">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 text-center">{t('Visit 1')}</span>
+                        <span className="text-xs font-bold text-slate-500 mb-1 text-center">{t('Visit 1')}</span>
                         <div className="border border-slate-300 bg-white rounded-lg px-3 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center justify-center text-center">
                             <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-center">{calcV1Value !== null && calcV1Value !== undefined ? `${Math.round(calcV1Value)}%` : '-'}</span>
-                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap text-center">
+                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-xs font-bold text-slate-400 mt-0.5 whitespace-nowrap text-center">
                                 {v1Numerator !== undefined && v1Denominator !== undefined ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
                             </span>
                         </div>
                     </div>
                     
                     <div className="flex flex-col items-center shrink-0">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 text-center">{t('Average')}</span>
+                        <span className="text-xs font-bold text-slate-500 mb-1 text-center">{t('Average')}</span>
                         <div className="border border-slate-800 bg-white rounded-xl px-4 sm:px-8 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center text-center">
                             <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className={`font-extrabold text-xl sm:text-2xl text-center ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
                                 {avgValue !== null && avgValue !== undefined ? `${Math.round(avgValue)}%` : '-'}
@@ -634,10 +634,10 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                     </div>
 
                     <div className="flex flex-col items-center shrink-0">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 text-center">{t('Visit 4')}</span>
+                        <span className="text-xs font-bold text-slate-500 mb-1 text-center">{t('Visit 4')}</span>
                         <div className="border border-slate-300 bg-white rounded-lg px-3 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center justify-center text-center">
                             <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-center">{calcV4Value !== null && calcV4Value !== undefined ? `${Math.round(calcV4Value)}%` : '-'}</span>
-                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap text-center">
+                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className="text-xs font-bold text-slate-400 mt-0.5 whitespace-nowrap text-center">
                                 {v4Numerator !== undefined && v4Denominator !== undefined ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
                             </span>
                         </div>
@@ -811,9 +811,9 @@ export const CompactSkillsTable = ({ overallKpis }) => {
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-start'} tracking-wide uppercase border-l border-black`}>{t('Skill')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase border-l border-black">{t('Count (Yes / Total)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase">{t('Percentage')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Skill')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-l border-black">{t('Count (Yes / Total)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide ">{t('Percentage')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -916,9 +916,9 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-start'} uppercase tracking-wide border-l border-black`}>{t('Skill (EENC)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide border-l border-black">{t('Count (Yes / Partial / No)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide">{t('Percentage')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Skill (EENC)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-l border-black">{t('Count (Yes / Partial / No)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide">{t('Percentage')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1175,9 +1175,9 @@ export const ETATCompactSkillsTable = ({ overallKpis }) => {
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-start'} uppercase tracking-wide border-l border-black`}>{t('Skill (ETAT)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide border-l border-black">{t('Count (Done / Not done / N.A.)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide">{t('Percentage')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Skill (ETAT)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-l border-black">{t('Count (Done / Not done / N.A.)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide">{t('Percentage')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1241,9 +1241,9 @@ export const ETATChecklistCoverageTable = ({ title, overallKpis }) => {
             <table className="w-full border-collapse">
                 <thead>
                     <tr className="bg-slate-200 border-b border-black">
-                        <th className={`p-3 text-xs font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-start'} uppercase tracking-wide border-l border-black`}>{t('Checklist')}</th>
-                        <th className="p-3 text-xs font-extrabold text-slate-800 text-center uppercase tracking-wide border-l border-black">{t('Sessions Assessed')}</th>
-                        <th className="p-3 text-xs font-extrabold text-slate-800 text-center uppercase tracking-wide">{t('Average Score')}</th>
+                        <th className={`p-3 text-xs font-extrabold text-slate-800 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Checklist')}</th>
+                        <th className="p-3 text-xs font-extrabold text-slate-800 text-center tracking-wide border-l border-black">{t('Sessions Assessed')}</th>
+                        <th className="p-3 text-xs font-extrabold text-slate-800 text-center tracking-wide">{t('Average Score')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1276,9 +1276,9 @@ export const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-start'} tracking-wide uppercase border-l border-black`}>{t('Question (Mother Survey)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase border-l border-black">{t('Count (Yes / Total)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase">{t('Percentage')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Question (Mother Survey)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-l border-black">{t('Count (Yes / Total)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide ">{t('Percentage')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1299,16 +1299,16 @@ export const renderTrendArrows = (val, type, t = (key, def, opts) => def.replace
     if (isNaN(numVal)) return null;
 
     if (type === 'visits') {
-        if (numVal < 2) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.critically_below', 'Critically below ideal ({{ideal}})', { ideal: 4 })}>▼▼▼</span>;
-        if (numVal < 3) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.below', 'Below ideal ({{ideal}})', { ideal: 4 })}>▼▼</span>;
-        if (numVal < 4) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.slightly_below', 'Slightly below ideal ({{ideal}})', { ideal: 4 })}>▼</span>;
-        if (numVal > 4) return <span className="text-emerald-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.above', 'Above ideal ({{ideal}})', { ideal: 4 })}>▲</span>;
+        if (numVal < 2) return <span className="text-red-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.critically_below', 'Critically below ideal ({{ideal}})', { ideal: 4 })}>▼▼▼</span>;
+        if (numVal < 3) return <span className="text-red-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.below', 'Below ideal ({{ideal}})', { ideal: 4 })}>▼▼</span>;
+        if (numVal < 4) return <span className="text-red-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.slightly_below', 'Slightly below ideal ({{ideal}})', { ideal: 4 })}>▼</span>;
+        if (numVal > 4) return <span className="text-emerald-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.above', 'Above ideal ({{ideal}})', { ideal: 4 })}>▲</span>;
     } else if (type === 'cases') {
-        if (numVal < 2) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.critically_below', 'Critically below ideal ({{ideal}})', { ideal: 3 })}>▼▼</span>;
-        if (numVal < 3) return <span className="text-red-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.below', 'Below ideal ({{ideal}})', { ideal: 3 })}>▼</span>;
-        if (numVal > 5) return <span className="text-emerald-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.exceptionally_above', 'Exceptionally above ideal ({{ideal}})', { ideal: 3 })}>▲▲▲</span>;
-        if (numVal > 4) return <span className="text-emerald-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.well_above', 'Well above ideal ({{ideal}})', { ideal: 3 })}>▲▲</span>;
-        if (numVal > 3) return <span className="text-emerald-500 text-[10px] ml-1" title={t('mentorship_extra.dashboard_shared.trend.above', 'Above ideal ({{ideal}})', { ideal: 3 })}>▲</span>;
+        if (numVal < 2) return <span className="text-red-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.critically_below', 'Critically below ideal ({{ideal}})', { ideal: 3 })}>▼▼</span>;
+        if (numVal < 3) return <span className="text-red-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.below', 'Below ideal ({{ideal}})', { ideal: 3 })}>▼</span>;
+        if (numVal > 5) return <span className="text-emerald-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.exceptionally_above', 'Exceptionally above ideal ({{ideal}})', { ideal: 3 })}>▲▲▲</span>;
+        if (numVal > 4) return <span className="text-emerald-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.well_above', 'Well above ideal ({{ideal}})', { ideal: 3 })}>▲▲</span>;
+        if (numVal > 3) return <span className="text-emerald-500 text-xs ms-1" title={t('mentorship_extra.dashboard_shared.trend.above', 'Above ideal ({{ideal}})', { ideal: 3 })}>▲</span>;
     }
     return null;
 };
@@ -1325,7 +1325,7 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
             <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
-                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
+                    <thead className="bg-slate-200 text-xs text-slate-700 ">
                         <tr>
                             <th className={`px-5 py-4 border-b border-black font-extrabold border-l border-black ${isAr ? 'text-right' : 'text-start'}`}>{t(locationLabel)}</th>
                             <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-sky-50">{t('Total Completed Visits')}</th>
@@ -1369,7 +1369,7 @@ export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWork
             <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
-                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
+                    <thead className="bg-slate-200 text-xs text-slate-700 ">
                         <tr>
                             <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold min-w-[200px] ${isAr ? 'text-right' : 'text-start'}`}>{t('KPI Name')}</th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-100 whitespace-nowrap">{t('Overall Score')}</th>
@@ -1615,15 +1615,15 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
             <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
-                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
+                    <thead className="bg-slate-200 text-xs text-slate-700 ">
                         <tr>
                             <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Mentor Name')}</th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-teal-50">{t('Facility Updates')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Forms Saved')}</div></th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-teal-50">{t('Facility Updates')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Forms Saved')}</div></th>
                             <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Health Workers')}</th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-50">{t('Total Visits')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Visits per HW')}</div></th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Total Cases')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Cases per Visit')}</div></th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-emerald-50">{t('Mother Forms')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Forms per Visit')}</div></th>
-                            <th className="px-5 py-4 border-b border-black font-extrabold text-center bg-purple-50">{t('Visit Reports')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('% of Completed Visits')}</div></th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-50">{t('Total Visits')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Visits per HW')}</div></th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Total Cases')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Cases per Visit')}</div></th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-emerald-50">{t('Mother Forms')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Forms per Visit')}</div></th>
+                            <th className="px-5 py-4 border-b border-black font-extrabold text-center bg-purple-50">{t('Visit Reports')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('% of Completed Visits')}</div></th>
                         </tr>
                     </thead>
                     <tbody>

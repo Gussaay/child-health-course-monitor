@@ -209,13 +209,13 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                     : t('admin_pages.notification_sender.sending', 'Sending...');
 
                                 const targetDisplay = notif.targetUser === 'all' 
-                                    ? <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-bold uppercase tracking-wider">{t('admin_pages.notification_sender.all_users', 'All Users')}</span>
-                                    : <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-[10px] font-bold uppercase tracking-wider">{usersMap[notif.targetUser] || t('admin_pages.notification_sender.unknown_user', 'Unknown User')}</span>;
+                                    ? <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold ">{t('admin_pages.notification_sender.all_users', 'All Users')}</span>
+                                    : <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold ">{usersMap[notif.targetUser] || t('admin_pages.notification_sender.unknown_user', 'Unknown User')}</span>;
 
                                 return (
                                     <tr key={notif.id} className="hover:bg-gray-50 group">
                                         <td className="whitespace-nowrap text-xs text-gray-500">
-                                            <div className="flex items-center"><Clock className="w-3 h-3 mr-1"/> {dateStr}</div>
+                                            <div className="flex items-center"><Clock className="w-3 h-3 me-1"/> {dateStr}</div>
                                         </td>
                                         <td className="whitespace-nowrap">{targetDisplay}</td>
                                         <td>
@@ -231,10 +231,10 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                         >
                                             <div className="flex flex-col gap-1.5 text-xs">
                                                 <div className={`flex items-center font-bold ${deliveredCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
-                                                    <CheckCircle className="w-3.5 h-3.5 mr-1" /> {t('admin_pages.notification_sender.n_delivered', '{{count}} Delivered', { count: deliveredCount })}
+                                                    <CheckCircle className="w-3.5 h-3.5 me-1" /> {t('admin_pages.notification_sender.n_delivered', '{{count}} Delivered', { count: deliveredCount })}
                                                 </div>
                                                 <div className={`flex items-center font-bold ${readCount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                                                    <Eye className="w-3.5 h-3.5 mr-1" /> {t('admin_pages.notification_sender.n_read', '{{count}} Read', { count: readCount })}
+                                                    <Eye className="w-3.5 h-3.5 me-1" /> {t('admin_pages.notification_sender.n_read', '{{count}} Read', { count: readCount })}
                                                 </div>
                                             </div>
                                         </td>
@@ -266,8 +266,8 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                             <h4 className="font-bold text-gray-900 text-lg mb-1">{statsNotif.title}</h4>
                             <p className="text-sm text-gray-600 mb-3">{statsNotif.message}</p>
-                            <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                                <Clock className="w-3 h-3 mr-1" />
+                            <div className="flex items-center text-xs text-gray-400 font-bold ">
+                                <Clock className="w-3 h-3 me-1" />
                                 {statsNotif.createdAt ? new Date(statsNotif.createdAt.seconds * 1000).toLocaleString() : t('admin_pages.notification_sender.just_now', 'Just now')}
                                 <span className="mx-2">•</span>
                                 {t('admin_pages.notification_sender.target_label', 'Target:')} {statsNotif.targetUser === 'all' ? t('admin_pages.notification_sender.all_users', 'All Users') : usersMap[statsNotif.targetUser] || t('admin_pages.notification_sender.unknown', 'Unknown')}
@@ -279,7 +279,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                             {/* Column 1: DELIVERED */}
                             <div className="bg-white rounded-xl border border-blue-100 shadow-sm flex flex-col">
                                 <div className="bg-blue-50 px-4 py-3 border-b border-blue-100 font-bold text-blue-900 flex items-center justify-between rounded-t-xl">
-                                    <span className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-blue-600"/> {t('admin_pages.notification_sender.delivered_to_device', 'Delivered To Device')}</span>
+                                    <span className="flex items-center"><CheckCircle className="w-4 h-4 me-2 text-blue-600"/> {t('admin_pages.notification_sender.delivered_to_device', 'Delivered To Device')}</span>
                                     <span className="bg-blue-200 text-blue-900 px-2.5 py-0.5 rounded-full text-xs shadow-sm">
                                         {(statsNotif.deliveredTo || []).length}
                                     </span>
@@ -291,7 +291,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                         ) : (
                                             statsNotif.deliveredTo.map(uid => (
                                                 <li key={uid} className="px-4 py-2.5 text-sm text-gray-700 flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0">
                                                         {(usersMap[uid] || '?')[0].toUpperCase()}
                                                     </div>
                                                     <span className="truncate">{usersMap[uid] || uid}</span>
@@ -305,7 +305,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                             {/* Column 2: READ */}
                             <div className="bg-white rounded-xl border border-green-100 shadow-sm flex flex-col">
                                 <div className="bg-green-50 px-4 py-3 border-b border-green-100 font-bold text-green-900 flex items-center justify-between rounded-t-xl">
-                                    <span className="flex items-center"><Eye className="w-4 h-4 mr-2 text-green-600"/> {t('admin_pages.notification_sender.clicked_read', 'Clicked & Read')}</span>
+                                    <span className="flex items-center"><Eye className="w-4 h-4 me-2 text-green-600"/> {t('admin_pages.notification_sender.clicked_read', 'Clicked & Read')}</span>
                                     <span className="bg-green-200 text-green-900 px-2.5 py-0.5 rounded-full text-xs shadow-sm">
                                         {(statsNotif.readBy || []).length}
                                     </span>
@@ -318,7 +318,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                                             statsNotif.readBy.map(uid => (
                                                 <li key={uid} className="px-4 py-2.5 text-sm text-gray-700 flex items-center justify-between gap-2">
                                                     <div className="flex items-center gap-2 truncate">
-                                                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold shrink-0">
                                                             {(usersMap[uid] || '?')[0].toUpperCase()}
                                                         </div>
                                                         <span className="truncate">{usersMap[uid] || uid}</span>

@@ -425,8 +425,8 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
                                 <table className="w-full text-sm border-collapse text-right">
                                     <tbody>
                                         <tr className="bg-slate-50 font-bold border-b-2 border-slate-800">
-                                            <td className="p-3 border-l border-slate-300 w-1/2">عدد الاطفال (اقل من عمر شهرين): <span className="text-blue-600 ml-2">{stats.infants}</span></td>
-                                            <td className="p-3">عدد الاطفال من عمر شهرين الى أقل من خمسة سنوات: <span className="text-blue-600 ml-2">{stats.children}</span></td>
+                                            <td className="p-3 border-l border-slate-300 w-1/2">عدد الاطفال (اقل من عمر شهرين): <span className="text-blue-600 ms-2">{stats.infants}</span></td>
+                                            <td className="p-3">عدد الاطفال من عمر شهرين الى أقل من خمسة سنوات: <span className="text-blue-600 ms-2">{stats.children}</span></td>
                                         </tr>
                                         <tr className="bg-slate-200 border-y border-slate-800 font-bold text-center">
                                             <td colSpan={2} className="p-2">تصنيفات وعدد الحالات المرضية للمترددين من الأطفال عمر أقل من شهرين:</td>
@@ -604,7 +604,7 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
                                 <div 
                                     key={i} 
                                     onClick={() => isClickable && onToggleTreatment(tItem)}
-                                    className={`w-full flex items-start text-left gap-2 p-2 rounded-lg border transition-all ${
+                                    className={`w-full flex items-start text-start gap-2 p-2 rounded-lg border transition-all ${
                                         isClickable ? 'cursor-pointer hover:shadow-sm hover:border-sky-300' : ''
                                     } ${
                                         isSelected 
@@ -628,7 +628,7 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
                                         </span>
                                         {doseBadge && (
                                             <div>
-                                                <span className={`inline-block border font-bold px-2 py-0.5 rounded text-[10px] sm:text-[11px] shadow-sm whitespace-normal break-words ${isSelected ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                                <span className={`inline-block border font-bold px-2 py-0.5 rounded text-xs shadow-sm whitespace-normal break-words ${isSelected ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
                                                     {doseBadge}
                                                 </span>
                                             </div>
@@ -844,7 +844,7 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <div className="space-y-3 bg-slate-50 p-3 rounded border border-slate-200">
                             <div className="flex justify-between items-center text-sm border-b pb-2"><span>{t('imci.infant.is_breastfed')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="breastfed" value="yes" checked={assessments.breastfed==='yes'} onChange={handleRadioChange}/> {t('imci.common.yes')}</label><label className="cursor-pointer"><input type="radio" name="breastfed" value="no" checked={assessments.breastfed==='no'} onChange={handleRadioChange}/> {t('imci.common.no')}</label></div></div>
-                            {assessments.breastfed === 'yes' && (<div className="flex items-center gap-2 text-sm ml-4"><span>{t('imci.infant.times_24h')}</span><input type="number" inputMode="decimal" name="breastfeedTimes" value={assessments.breastfeedTimes} onChange={(e) => setAssessments(p=>({...p, breastfeedTimes: e.target.value}))} className="w-16 rounded border-slate-300 p-1"/><span>{t('imci.infant.times')}</span></div>)}
+                            {assessments.breastfed === 'yes' && (<div className="flex items-center gap-2 text-sm ms-4"><span>{t('imci.infant.times_24h')}</span><input type="number" inputMode="decimal" name="breastfeedTimes" value={assessments.breastfeedTimes} onChange={(e) => setAssessments(p=>({...p, breastfeedTimes: e.target.value}))} className="w-16 rounded border-slate-300 p-1"/><span>{t('imci.infant.times')}</span></div>)}
                             <div className="flex justify-between items-center text-sm border-b pb-2"><span>{t('imci.infant.other_foods')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="otherFoods" value="yes" checked={assessments.otherFoods==='yes'} onChange={handleRadioChange}/> {t('imci.common.yes')}</label><label className="cursor-pointer"><input type="radio" name="otherFoods" value="no" checked={assessments.otherFoods==='no'} onChange={handleRadioChange}/> {t('imci.common.no')}</label></div></div>
                         </div>
                         <div className="space-y-3 bg-slate-50 p-3 rounded border border-slate-200">
@@ -871,7 +871,7 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
             
             <FormActions className="md:pb-8">
                 <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
-                    <ClipboardList className="w-5 h-5 mr-2 inline-block"/> {isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_infant', 'Save Infant Record')}
+                    <ClipboardList className="w-5 h-5 me-2 inline-block"/> {isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_infant', 'Save Infant Record')}
                 </Button>
             </FormActions>
         </div>
@@ -1118,14 +1118,14 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="neckStiffness" checked={assessments.neckStiffness} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.neck_stiffness')}</span></label>
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="measlesRash" checked={assessments.measlesRash} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.measles_rash')}</span></label>
                             <div className="text-sm border-t border-slate-200 pt-2">
-                                <span className="font-medium mr-2">{t('imci.child.malaria_test')}</span><span className="text-xs text-slate-500">{t('imci.child.if_no_danger')}</span>
-                                <div className="flex gap-4 mt-2 ml-2"><label className="flex items-center space-x-1 text-sm cursor-pointer"><input type="radio" name="malariaTest" value="positive" checked={assessments.malariaTest==='positive'} onChange={handleRadioChange} className="text-sky-600 w-4 h-4" /><span>{t('imci.child.positive')}</span></label><label className="flex items-center space-x-1 text-sm cursor-pointer"><input type="radio" name="malariaTest" value="negative" checked={assessments.malariaTest==='negative'} onChange={handleRadioChange} className="text-sky-600 w-4 h-4" /><span>{t('imci.child.negative')}</span></label></div>
+                                <span className="font-medium me-2">{t('imci.child.malaria_test')}</span><span className="text-xs text-slate-500">{t('imci.child.if_no_danger')}</span>
+                                <div className="flex gap-4 mt-2 ms-2"><label className="flex items-center space-x-1 text-sm cursor-pointer"><input type="radio" name="malariaTest" value="positive" checked={assessments.malariaTest==='positive'} onChange={handleRadioChange} className="text-sky-600 w-4 h-4" /><span>{t('imci.child.positive')}</span></label><label className="flex items-center space-x-1 text-sm cursor-pointer"><input type="radio" name="malariaTest" value="negative" checked={assessments.malariaTest==='negative'} onChange={handleRadioChange} className="text-sky-600 w-4 h-4" /><span>{t('imci.child.negative')}</span></label></div>
                             </div>
                         </div>
                     </div>
                     <div className="border border-amber-200 bg-amber-50 p-3 rounded-md grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="text-sm font-bold text-amber-800 col-span-full">{t('imci.child.if_measles')}</div>
-                        <div className="space-y-2"><div className="flex flex-col gap-2 text-sm"><label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="mouthUlcers" checked={assessments.mouthUlcers} onChange={handleCheckboxChange} className="rounded text-amber-600 w-4 h-4" /><span>{t('imci.child.mouth_ulcers')}</span></label>{assessments.mouthUlcers && <label className="flex items-center space-x-2 ml-6 cursor-pointer"><input type="checkbox" name="deepExtensiveUlcers" checked={assessments.deepExtensiveUlcers} onChange={handleCheckboxChange} className="rounded text-amber-600 w-4 h-4" /><span>{t('imci.child.deep_ulcers')}</span></label>}</div></div>
+                        <div className="space-y-2"><div className="flex flex-col gap-2 text-sm"><label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" name="mouthUlcers" checked={assessments.mouthUlcers} onChange={handleCheckboxChange} className="rounded text-amber-600 w-4 h-4" /><span>{t('imci.child.mouth_ulcers')}</span></label>{assessments.mouthUlcers && <label className="flex items-center space-x-2 ms-6 cursor-pointer"><input type="checkbox" name="deepExtensiveUlcers" checked={assessments.deepExtensiveUlcers} onChange={handleCheckboxChange} className="rounded text-amber-600 w-4 h-4" /><span>{t('imci.child.deep_ulcers')}</span></label>}</div></div>
                         <div className="space-y-2"><label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="pusFromEye" checked={assessments.pusFromEye} onChange={handleCheckboxChange} className="rounded text-amber-600 w-4 h-4" /><span>{t('imci.child.pus_eye')}</span></label><label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="corneaClouding" checked={assessments.corneaClouding} onChange={handleCheckboxChange} className="rounded text-amber-600 w-4 h-4" /><span>{t('imci.child.cornea')}</span></label></div>
                     </div>
                 </AssessmentRow>
@@ -1186,7 +1186,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
 
             <FormActions className="md:pb-8">
                 <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
-                    <ClipboardList className="w-5 h-5 mr-2 inline-block"/> 
+                    <ClipboardList className="w-5 h-5 me-2 inline-block"/> 
                     {isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_child', 'Save Child Record')}
                 </Button>
             </FormActions>
@@ -1347,7 +1347,7 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
                     <Button variant="secondary" onClick={() => setActiveView(
                         activeView === 'infant' || activeView === 'child' ? 'patients' : 'hub'
                     )}>
-                        <ArrowLeft size={16} className="inline ml-1" /> رجوع
+                        <ArrowLeft size={16} className="inline ms-1" /> رجوع
                     </Button>
                 </div>
             )}

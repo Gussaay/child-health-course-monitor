@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, MoreHorizontal, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, Inbox, MoreHorizontal, RefreshCw, SearchX, SlidersHorizontal } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { addInPageBack } from '../utils/inPageBack';
 
@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 // Card & Page Layout Components
 // =============================================================================
 
-export const Card = ({ children, className = '' }) => <section className={`bg-white rounded-lg shadow-md ${className}`}>{children}</section>;
+export const Card = ({ children, className = '' }) => <section className={`bg-white rounded-xl border border-slate-200 shadow-sm ${className}`}>{children}</section>;
 export const CardHeader = ({ children, className = '' }) => <div className={`p-4 md:p-6 border-b border-gray-200 ${className}`}><h3 className="text-lg font-semibold text-gray-800">{children}</h3></div>;
 // A form's Save / Cancel row. On phones it stays pinned just above the bottom
 // bar while the form is on screen, so there is no scrolling down to save.
@@ -59,7 +59,7 @@ export function FilterPanel({ activeCount = 0, className = '', children }) {
                 >
                     <SlidersHorizontal size={16} className="text-sky-600 shrink-0" />
                     <span className="truncate">{t('ui.filters', 'Filters')}</span>
-                    {activeCount > 0 && <span className="rounded-full bg-sky-600 px-1.5 text-[11px] leading-5 text-white">{activeCount}</span>}
+                    {activeCount > 0 && <span className="rounded-full bg-sky-600 px-1.5 text-xs leading-5 text-white">{activeCount}</span>}
                     <ChevronDown size={16} className={`ms-auto shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
                 </button>
                 {tools}
@@ -244,10 +244,10 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
                             onClick={() => onChange(tab.id)}
                             disabled={tab.disabled}
                             title={typeof tab.label === 'string' ? tab.label : undefined}
-                            className={`relative min-w-0 disabled:opacity-40 rounded-lg px-1 py-1.5 text-[11px] font-bold leading-tight text-center transition-colors ${on ? 'shrink-0 bg-sky-600 text-white shadow-sm' : 'flex-auto text-slate-500 active:bg-sky-50'}`}
+                            className={`relative min-w-0 disabled:opacity-40 rounded-lg px-1 py-1.5 text-xs font-bold leading-tight text-center transition-colors ${on ? 'shrink-0 bg-sky-600 text-white shadow-sm' : 'flex-auto text-slate-500 active:bg-sky-50'}`}
                         >
                             <span className="block truncate">{tab.short || tab.label}</span>
-                            {tab.count > 0 && <span className="absolute -top-1.5 -end-0.5 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-[9px] leading-4 text-white">{tab.count}</span>}
+                            {tab.count > 0 && <span className="absolute -top-1.5 -end-0.5 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-xs leading-4 text-white">{tab.count}</span>}
                         </button>
                     );
                 })}
@@ -259,7 +259,7 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
                         <Button key={tab.id} variant="tab" isActive={active === tab.id} disabled={tab.disabled} onClick={() => onChange(tab.id)}>
                             {Icon && <Icon size={16} />}
                             {tab.label}
-                            {tab.count > 0 && <span className="ms-1 rounded-full bg-red-500 px-1.5 text-[11px] text-white">{tab.count}</span>}
+                            {tab.count > 0 && <span className="ms-1 rounded-full bg-red-500 px-1.5 text-xs text-white">{tab.count}</span>}
                         </Button>
                     );
                 })}
@@ -351,7 +351,7 @@ export function FileUpload({ accept, onChange, ...props }) {
                     accept={accept}
                     onChange={onChange}
                     className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
+                    file:me-4 file:py-2 file:px-4
                     file:rounded-full file:border-0
                     file:text-sm file:font-semibold
                     file:bg-sky-50 file:text-sky-700
@@ -382,9 +382,9 @@ export const Table = ({ headers, children, cardsOnPhone = false }) => {
     <Wrapper className="overflow-x-auto border border-gray-200 rounded-lg my-4">
       <table className="min-w-full text-sm divide-y divide-gray-200 table-fixed">
         <thead className="bg-gray-100">
-          <tr className="text-left text-gray-700">
+          <tr className="text-start text-gray-700">
             {tableHeaders.map((header, index) => (
-              <th key={index} scope="col" className={`${cellClassName} font-semibold tracking-wider`}>
+              <th key={index} scope="col"className={`${cellClassName} font-semibold `}>
                 {header}
               </th>
             ))}
@@ -396,7 +396,7 @@ export const Table = ({ headers, children, cardsOnPhone = false }) => {
 
             // Handle EmptyState component specifically
             if (row.type === EmptyState) {
-                return row; // Render EmptyState directly (it already renders a <tr><td>...)
+                return React.cloneElement(row, { asRow: true, colSpan: row.props.colSpan || tableHeaders.length });
             }
 
             // For regular table rows
@@ -442,15 +442,43 @@ export const PhoneCards = ({ children, className = '' }) => {
     return <div ref={ref} className={`cards-on-phone ${className}`}>{children}</div>;
 };
 
-// --- MODIFICATION: Updated EmptyState to render a table row ---
-export const EmptyState = ({ message, colSpan = 1 }) => (
-    <tr>
-        <td colSpan={colSpan} className="py-12 text-center text-gray-500 border border-gray-200">
-            {message}
-        </td>
-    </tr>
-);
-// --- END MODIFICATION ---
+// What a list shows when it has nothing in it: an icon, a short line and,
+// where it helps, what to do next. `filtered` says the list is empty because
+// of the search or filters, and adds a hint (or a "Clear filters" button when
+// `onClearFilters` is given). `action` is { label, onClick } for the next step,
+// such as adding the first item. Inside a table (or with `colSpan`) it fills
+// one full-width row; elsewhere it is a plain block.
+export const EmptyState = ({ message, title, hint, icon, action, filtered = false, onClearFilters, colSpan, asRow = false }) => {
+    const { t } = useTranslation();
+    const Icon = icon || (filtered ? SearchX : Inbox);
+    const shownHint = hint ?? (filtered && !onClearFilters
+        ? t('shared_ui.empty.filtered_hint', 'Try a different search or clear the filters.')
+        : null);
+    const block = (
+        <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400" aria-hidden="true">
+                <Icon className="h-5 w-5" />
+            </span>
+            {title && <p className="font-semibold text-slate-800">{title}</p>}
+            {message && <p className={title ? 'max-w-md text-sm text-slate-500' : 'max-w-md text-sm font-medium text-slate-600'}>{message}</p>}
+            {shownHint && <p className="max-w-md text-xs text-slate-500">{shownHint}</p>}
+            {(action || (filtered && onClearFilters)) && (
+                <div className="mt-2 flex flex-wrap justify-center gap-2">
+                    {filtered && onClearFilters && (
+                        <Button variant="secondary" onClick={onClearFilters}>{t('shared_ui.empty.clear_filters', 'Clear filters')}</Button>
+                    )}
+                    {action && <Button onClick={action.onClick}>{action.label}</Button>}
+                </div>
+            )}
+        </div>
+    );
+    if (!asRow && !colSpan) return block;
+    return (
+        <tr className="empty-row">
+            <td colSpan={colSpan || 1}>{block}</td>
+        </tr>
+    );
+};
 
 // Shimmer placeholders for content that is still loading (styles in index.css).
 export const Skeleton = ({ className = '' }) => <div className={`shimmer rounded ${className}`} aria-hidden="true" />;
@@ -620,10 +648,10 @@ export function Toast({ message, type, onClose }) {
     }, [onClose]);
 
     return (
-        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center p-4 rounded-lg shadow-lg text-white border-t-4 ${bgColor} ${borderColor} z-50`}>
+        <div role="status" className={`fixed bottom-[calc(var(--bottom-nav,0px)+1rem)] left-1/2 -translate-x-1/2 w-max max-w-[calc(100vw-2rem)] flex items-center p-4 rounded-lg shadow-lg text-white border-t-4 ${bgColor} ${borderColor} z-[70]`}>
             {icon}
-            <div className="ml-3 text-sm font-medium">{message}</div>
-            <button onClick={onClose} className="ml-auto -mx-1.5 -my-1.5 bg-transparent rounded-lg p-1.5 inline-flex h-8 w-8 text-white hover:bg-white hover:bg-opacity-20 focus:outline-none focus:ring-2 focus:ring-white">
+            <div className="mx-3 text-sm font-medium">{message}</div>
+            <button onClick={onClose} className="ms-auto -my-1.5 bg-transparent rounded-lg p-1.5 inline-flex h-8 w-8 text-white hover:bg-white hover:bg-opacity-20 focus:outline-none focus:ring-2 focus:ring-white">
                 <span className="sr-only">{t('shared_ui.common.dismiss', 'Dismiss')}</span>
                 <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -651,7 +679,7 @@ export const finalReportStatus = (report) => {
 export function FinalReportStatusBadges({ report, className = '' }) {
     const { t } = useTranslation();
     const s = finalReportStatus(report);
-    const pill = 'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap';
+    const pill = 'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold border whitespace-nowrap';
     return (
         <div className={`flex flex-wrap gap-1 ${className}`}>
             {s.uploaded

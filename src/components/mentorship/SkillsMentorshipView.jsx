@@ -386,7 +386,7 @@ const PreviewSyncModal = ({ isOpen, onClose, onConfirm, proposedUpdates, isSynci
                     <Button variant="secondary" onClick={onClose} disabled={isSyncing}>إلغاء</Button>
                     <Button variant="primary" onClick={onConfirm} disabled={isSyncing} className="px-6">
                         {isSyncing ? (
-                            <><Spinner size="sm" className="ml-2"/> جاري التحديث...</>
+                            <><Spinner size="sm" className="ms-2"/> جاري التحديث...</>
                         ) : (
                             'تأكيد وتحديث الكل'
                         )}
@@ -519,7 +519,7 @@ const VisitSessionModal = ({
                     <div className="flex items-center justify-between gap-3 bg-sky-50 border border-sky-200 rounded-lg px-4 py-3">
                         <div>
                             <div className="text-xs font-bold text-sky-800">رقم الزيارة</div>
-                            <div className="text-[11px] text-sky-700">
+                            <div className="text-xs text-sky-700">
                                 {isResume
                                     ? 'رقم الزيارة الحالية — يسري على كل نماذج هذه الزيارة'
                                     : (canEditVisitNumber
@@ -567,7 +567,7 @@ const VisitSessionModal = ({
                     )}
                 </div>
 
-                <p className="text-[11px] text-gray-500 mt-3">
+                <p className="text-xs text-gray-500 mt-3">
                     يبدأ توقيت الزيارة تلقائياً عند التأكيد، وذلك لضمان إدخال البيانات أثناء الزيارة الميدانية وليس بعد انتهائها.
                 </p>
 
@@ -616,7 +616,7 @@ const VisitChooserModal = ({ isOpen, session, onContinue, onStartNew, onCancel }
                     <div className="mt-1 text-xs text-emerald-700">
                         زيارة رقم <span className="font-bold">{session.visitNumber}</span> — بدأت الساعة {formatVisitClock(session.startedAt)}
                     </div>
-                    <div className="mt-2 text-[11px] text-emerald-700">
+                    <div className="mt-2 text-xs text-emerald-700">
                         كل النماذج التي ستُدخلها ستُحفظ تحت نفس رقم الزيارة.
                     </div>
                 </button>
@@ -707,7 +707,7 @@ const VisitCountdownBadge = ({ session, onEndVisit }) => {
             <button
                 type="button"
                 onClick={onEndVisit}
-                className="text-[10px] underline opacity-80 hover:opacity-100 flex-shrink-0"
+                className="text-xs underline opacity-80 hover:opacity-100 flex-shrink-0"
             >
                 {t('mentorship_page.visit.end_visit', 'End visit')}
             </button>
@@ -862,11 +862,11 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
                     size="sm"
                     className="py-1.5 px-3 text-sm"
                 >
-                    <ArrowLeft className="w-4 h-4 mr-2" /> {t('mentorship_page.buttons.back', 'Back')}
+                    <ArrowLeft className="w-4 h-4 me-2" /> {t('mentorship_page.buttons.back', 'Back')}
                 </Button>
                 )}
                 {activeService && (
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full">
+                    <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                         {t('mentorship_page.menu.service_mentorship', '{{service}} Mentorship', { service: activeService })}
                     </span>
                 )}
@@ -878,7 +878,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
                     <span className="text-xs font-bold text-emerald-800">
                         {t('mentorship_page.visit.open_visit', 'Open visit — {{facility}} (visit #{{number}})', { facility: activeVisitSession.facilityName || 'N/A', number: activeVisitSession.visitNumber })}
                     </span>
-                    <span className="text-[11px] text-emerald-700" dir="ltr">
+                    <span className="text-xs text-emerald-700" dir="ltr">
                         {formatVisitClock(activeVisitSession.startedAt)} – {formatVisitClock(activeVisitSession.expiresAt)}
                     </span>
                 </div>
@@ -1081,7 +1081,7 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
         return (
             <div className="flex flex-col gap-1">
                 {weaknesses.map((w, idx) => (
-                    <div key={idx} className="text-[10px] sm:text-xs font-semibold bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded leading-tight">
+                    <div key={idx} className="text-xs font-semibold bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded leading-tight">
                         {w.label} <span dir="ltr">({w.pct}%)</span>
                     </div>
                 ))}
@@ -1094,7 +1094,7 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
             <div className="p-6">
                 <div className="flex items-center gap-4 mb-6 border-b pb-4">
                     <Button variant="secondary" onClick={onBack}>
-                        <ArrowLeft className="w-4 h-4 ml-2" /> العودة للقائمة
+                        <ArrowLeft className="w-4 h-4 ms-2" /> العودة للقائمة
                     </Button>
                     <div>
                         <h2 className="text-2xl font-bold text-sky-800">جدول أولويات التدريب للكوادر</h2>
@@ -1127,17 +1127,17 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-sky-50">
                             <tr>
-                                <th className="px-4 py-3 text-right text-xs font-extrabold text-sky-900 uppercase tracking-wider border-l border-gray-200 min-w-[150px]">المنشأة</th>
-                                <th className="px-4 py-3 text-right text-xs font-extrabold text-sky-900 uppercase tracking-wider border-l border-gray-200 min-w-[150px]">العامل الصحي</th>
-                                <th className="px-4 py-3 text-center text-xs font-extrabold text-sky-900 uppercase tracking-wider border-l border-gray-200">الزيارات</th>
+                                <th className="px-4 py-3 text-right text-xs font-extrabold text-sky-900 border-l border-gray-200 min-w-[150px]">المنشأة</th>
+                                <th className="px-4 py-3 text-right text-xs font-extrabold text-sky-900 border-l border-gray-200 min-w-[150px]">العامل الصحي</th>
+                                <th className="px-4 py-3 text-center text-xs font-extrabold text-sky-900 border-l border-gray-200">الزيارات</th>
                                 
                                 {Array.from({ length: workerData.maxVisits }).map((_, i) => (
-                                    <th key={i} className="px-4 py-3 text-center text-xs font-extrabold text-gray-600 uppercase tracking-wider border-l border-gray-200 min-w-[200px]">
+                                    <th key={i} className="px-4 py-3 text-center text-xs font-extrabold text-gray-600 border-l border-gray-200 min-w-[200px]">
                                         الزيارة رقم {i + 1}
                                     </th>
                                 ))}
                                 
-                                <th className="px-4 py-3 text-center text-xs font-extrabold text-amber-900 bg-amber-100 uppercase tracking-wider min-w-[250px]">
+                                <th className="px-4 py-3 text-center text-xs font-extrabold text-amber-900 bg-amber-100 min-w-[250px]">
                                     الضعف التراكمي المجمع
                                 </th>
                             </tr>
@@ -1332,7 +1332,7 @@ const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData
                             <ul className="list-disc pr-6 space-y-2">
                                 {currentWeaknesses.map((w, i) => (
                                     <li key={i} className="text-sm font-semibold text-gray-800">
-                                        {w.label} <span className="text-red-600 mr-2" dir="ltr">({w.pct}%)</span>
+                                        {w.label} <span className="text-red-600 me-2" dir="ltr">({w.pct}%)</span>
                                     </li>
                                 ))}
                             </ul>
@@ -1348,7 +1348,7 @@ const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData
                         <ul className="list-disc pr-6 space-y-2">
                             {historyWeaknesses.map((w, i) => (
                                 <li key={i} className="text-sm font-semibold text-gray-800">
-                                    {w.label} <span className="text-yellow-600 mr-2" dir="ltr">({w.pct}%)</span>
+                                    {w.label} <span className="text-yellow-600 me-2" dir="ltr">({w.pct}%)</span>
                                 </li>
                             ))}
                         </ul>
@@ -1455,13 +1455,13 @@ const VisitReportsTable = ({
                                     />
                                 </th>
                             )}
-                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Facility')}</th>
-                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('State')}</th>
-                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Locality')}</th>
-                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Visit Date')}</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Visit #')}</th>
-                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Supervisor')}</th>
-                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Action')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Facility')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('State')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Locality')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Visit Date')}</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 border border-gray-300">{t('Visit #')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Supervisor')}</th>
+                            <th className="px-4 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Action')}</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -1588,7 +1588,7 @@ const ViewVisitReportModal = ({ report, onClose }) => {
                                             <td className="px-2 py-2 border">{row.problem}</td>
                                             <td className="px-2 py-2 border">{row.immediate_solution}</td>
                                             <td className="px-2 py-2 border">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                                                     row.immediate_status === 'Done' ? 'bg-green-100 text-green-800' :
                                                     row.immediate_status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                                                     'bg-yellow-100 text-yellow-800'
@@ -1598,7 +1598,7 @@ const ViewVisitReportModal = ({ report, onClose }) => {
                                             </td>
                                             <td className="px-2 py-2 border">{row.long_term_solution}</td>
                                             <td className="px-2 py-2 border">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                                                     row.long_term_status === 'Done' ? 'bg-green-100 text-green-800' :
                                                     row.long_term_status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                                                     'bg-yellow-100 text-yellow-800'
@@ -1661,17 +1661,17 @@ const MentorshipTableColumns = ({ allSelected, someSelected, onSelectAll, canMan
                  />
             </th>
         )}
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">#</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Facility')}</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Project / Partner')}</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Health Worker/Service')}</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Job Title')}</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Supervisor')}</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Date')}</th>
-        <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Visit #')}</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Status')}</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Score')}</th>
-        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">{t('Action')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">#</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Facility')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Project / Partner')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Health Worker/Service')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Job Title')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Supervisor')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Date')}</th>
+        <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 border border-gray-300">{t('Visit #')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Status')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Score')}</th>
+        <th className="px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300">{t('Action')}</th>
     </>
     );
 };
@@ -1713,7 +1713,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                 <span className="font-medium text-gray-700">{label}</span>
                 <span className="font-bold text-gray-900">
                     {percentage !== null ? `${percentage}%` : 'N/A'}
-                    <span className="text-xs font-normal text-gray-500 mr-2" dir="ltr">({score !== undefined ? score : 0}/{maxScore !== undefined ? maxScore : 0})</span>
+                    <span className="text-xs font-normal text-gray-500 me-2" dir="ltr">({score !== undefined ? score : 0}/{maxScore !== undefined ? maxScore : 0})</span>
                 </span>
             </li>
         );
@@ -1738,7 +1738,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                      {mothersSatisfaction.other_note && (
                          <li className="p-2 bg-yellow-50 rounded">
                             <span className="font-medium text-gray-700">ملاحظات أخرى (رضا):</span>
-                            <span className="font-bold text-gray-900 mr-2">{mothersSatisfaction.other_note}</span>
+                            <span className="font-bold text-gray-900 me-2">{mothersSatisfaction.other_note}</span>
                         </li>
                      )}
                 </ul>
@@ -4306,8 +4306,8 @@ const SkillsMentorshipView = ({
                         <div className="flex flex-wrap justify-between items-center gap-2 md:gap-3 mb-3 md:mb-6 border-b border-gray-200 pb-2">
                             <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
                                 {!publicDashboardMode && !IS_NATIVE && (
-                                    <Button variant="secondary" onClick={() => setCurrentView('action_menu')} className="mr-4">
-                                        <ArrowLeft className="w-4 h-4 mr-2" /> {t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')}
+                                    <Button variant="secondary" onClick={() => setCurrentView('action_menu')} className="me-4">
+                                        <ArrowLeft className="w-4 h-4 me-2" /> {t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')}
                                     </Button>
                                 )}
 
@@ -4331,7 +4331,7 @@ const SkillsMentorshipView = ({
                                 </Button>
                                 {lastSyncTime && (
                                     <div className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-600 border border-slate-300 shadow-sm">
-                                        <svg className="w-3.5 h-3.5 mr-1.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <svg className="w-3.5 h-3.5 me-1.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         {t('mentorship_page.sync.last_updated', 'Last Updated: {{time}}', { time: lastSyncTime })}
@@ -4342,7 +4342,7 @@ const SkillsMentorshipView = ({
                             {activeTab === 'dashboard' && !publicDashboardMode && (
                                 <div className="flex items-center">
                                     <Button variant="secondary" onClick={handleShareDashboardLink} title={t('mentorship_page.buttons.share_dashboard_title', 'Share Public Dashboard Link')}>
-                                        <Share2 className="w-4 h-4 mr-2" /> {t('mentorship_page.buttons.share_dashboard', 'Share Dashboard')}
+                                        <Share2 className="w-4 h-4 me-2" /> {t('mentorship_page.buttons.share_dashboard', 'Share Dashboard')}
                                     </Button>
                                 </div>
                             )}
@@ -4487,7 +4487,7 @@ const SkillsMentorshipView = ({
                                         )}
                                         {activeTab === 'skills_list' && selectedSubmissionIds.length > 0 && canManageMentorship && (
                                             <Button variant="danger" onClick={handleBulkDeleteSubmissions}>
-                                                <Trash2 className="w-4 h-4 mr-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedSubmissionIds.length })}
+                                                <Trash2 className="w-4 h-4 me-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedSubmissionIds.length })}
                                             </Button>
                                         )}
                                         
@@ -4496,7 +4496,7 @@ const SkillsMentorshipView = ({
                                         )}
                                         {activeTab === 'mothers_list' && selectedSubmissionIds.length > 0 && canManageMentorship && (
                                             <Button variant="danger" onClick={handleBulkDeleteSubmissions}>
-                                                <Trash2 className="w-4 h-4 mr-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedSubmissionIds.length })}
+                                                <Trash2 className="w-4 h-4 me-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedSubmissionIds.length })}
                                             </Button>
                                         )}
 
@@ -4508,7 +4508,7 @@ const SkillsMentorshipView = ({
                                         )}
                                         {activeTab === 'visit_reports' && selectedReportIds.length > 0 && canManageMentorship && (
                                              <Button variant="danger" onClick={handleBulkDeleteReports}>
-                                                <Trash2 className="w-4 h-4 mr-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedReportIds.length })}
+                                                <Trash2 className="w-4 h-4 me-2 inline" /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedReportIds.length })}
                                             </Button>
                                         )}
 
@@ -4735,7 +4735,7 @@ const SkillsMentorshipView = ({
                                 <Button variant="secondary" onClick={() => setIsMigrationModalOpen(false)} disabled={isMigrating}>إلغاء</Button>
                                 <Button variant="primary" onClick={handleExecuteMigration} disabled={isMigrating || migrationCandidates.length === 0} className="px-6 bg-teal-600 hover:bg-teal-700">
                                     {isMigrating ? (
-                                        <><Spinner size="sm" className="ml-2"/> جاري التحديث...</>
+                                        <><Spinner size="sm" className="ms-2"/> جاري التحديث...</>
                                     ) : (
                                         'تأكيد وتحديث'
                                     )}
@@ -5259,7 +5259,7 @@ const SkillsMentorshipView = ({
                                     <div className="flex flex-col justify-center items-center p-4 gap-2">
                                         <div className="flex items-center">
                                             <Spinner />
-                                            <span className="mr-2 text-gray-500 text-sm">جاري تحميل قائمة المؤسسات...</span>
+                                            <span className="me-2 text-gray-500 text-sm">جاري تحميل قائمة المؤسسات...</span>
                                         </div>
                                     </div>
                                 ) : (
@@ -5294,7 +5294,7 @@ const SkillsMentorshipView = ({
                                             </div>
                                         )}
                                         {facilitiesLoadError && (!localHealthFacilities || localHealthFacilities.length === 0) && !isFacilitiesLoading && (
-                                            <p className="text-[11px] text-gray-500 mt-1">تأكد من اتصالك بالإنترنت ثم أعد المحاولة.</p>
+                                            <p className="text-xs text-gray-500 mt-1">تأكد من اتصالك بالإنترنت ثم أعد المحاولة.</p>
                                         )}
                                     </FormGroup>
                                 )}
@@ -5347,7 +5347,7 @@ const SkillsMentorshipView = ({
                                             <Target className="h-4 w-4 text-amber-300 flex-shrink-0" />
                                             <span className="text-sm font-bold">ملخص أولويات التدريب</span>
                                         </div>
-                                        <span className="text-[11px] text-slate-300">
+                                        <span className="text-xs text-slate-300">
                                             {trainingPrioritySummary.sessionsCount > 0
                                                 ? `${trainingPrioritySummary.sessionsCount} جلسة سابقة • آخر جلسة: ${trainingPrioritySummary.lastSessionDate}`
                                                 : "لا توجد جلسات سابقة"}
@@ -5372,7 +5372,7 @@ const SkillsMentorshipView = ({
                                                     {trainingPrioritySummary.topWeaknesses.map((w, i) => (
                                                         <li key={w.key || i} className="flex items-center justify-between gap-3 bg-gray-50 rounded px-3 py-1.5 border border-gray-100">
                                                             <span className="flex items-center gap-2 text-sm text-gray-800 min-w-0">
-                                                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+                                                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-700 text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
                                                                 <span className="truncate">{w.label}</span>
                                                             </span>
                                                             <span

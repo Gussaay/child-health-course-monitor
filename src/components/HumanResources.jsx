@@ -117,7 +117,7 @@ export function HumanResourcesPage({
                         {!IS_NATIVE && (
                         <div className="mb-6 border-b border-gray-200 pb-4">
                             <Button variant="secondary" onClick={() => setActiveTab('menu')}>
-                                <ArrowLeft className="w-4 h-4 mr-2" /> Back to HR Menu
+                                <ArrowLeft className="w-4 h-4 me-2" /> Back to HR Menu
                             </Button>
                         </div>
                         )}

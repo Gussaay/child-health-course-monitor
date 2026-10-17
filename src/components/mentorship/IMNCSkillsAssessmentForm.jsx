@@ -39,7 +39,7 @@ export function ActionToggle({ options, currentValue, onClick, name }) {
                 if (idx === 0) roundedClass = "rounded-r-md";
                 if (idx === options.length - 1) roundedClass = "rounded-l-md";
                 if (options.length === 1) roundedClass = "rounded-md";
-                if (idx > 0) roundedClass += " -mr-px border border-gray-300"; 
+                if (idx > 0) roundedClass += " -me-px border border-gray-300"; 
                 else roundedClass += " border border-gray-300";
 
                 return (
@@ -79,8 +79,8 @@ const SubgroupAccordion = ({ title, scoreData, children, isMainSymptom = false, 
             >
                 <div className="flex items-center text-right text-base font-bold text-slate-800">
                     {scoreData && <ScoreCircle score={scoreData.score} maxScore={scoreData.maxScore} />}
-                    <span className="mr-2">{title}</span>
-                    {isCompleted && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
+                    <span className="me-2">{title}</span>
+                    {isCompleted && !isExpanded && <span className="me-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
@@ -119,8 +119,8 @@ export const SkillChecklistItem = ({ label, value, onChange, name, showNaOption 
 
     return (
         <div dir="rtl" className={containerClasses}>
-            <span className="font-medium text-slate-700 break-words group-hover:text-slate-900 text-right flex items-start sm:items-center flex-grow mr-4">
-                {scoreCircle && <span className="ml-2 flex-shrink-0 self-start sm:self-auto">{scoreCircle}</span>} 
+            <span className="font-medium text-slate-700 break-words group-hover:text-slate-900 text-right flex items-start sm:items-center flex-grow me-4">
+                {scoreCircle && <span className="ms-2 flex-shrink-0 self-start sm:self-auto">{scoreCircle}</span>} 
                 <span className="w-full sm:w-auto">{label}</span> 
             </span>
             <div className="flex gap-4 flex-shrink-0 mt-2 sm:mt-0"> 
@@ -937,7 +937,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                             <h3 dir="rtl" className="flex justify-between items-center text-xl font-bold mb-4 text-white bg-sky-900 p-2 rounded-md text-right">
                                 <span className="flex items-center">
                                     {groupScoreData && <ScoreCircle score={groupScoreData.score} maxScore={groupScoreData.maxScore} />}
-                                    <span className="mr-2">{group.group}</span>
+                                    <span className="me-2">{group.group}</span>
                                 </span>
                             </h3>
                             <div className="mb-4 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
@@ -969,7 +969,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                         <h3 dir="rtl" className={`flex justify-between items-center text-xl font-bold mb-4 border-b pb-2 text-right ${ group.group.includes('الأعراض الأساسية') ? 'text-white bg-sky-900 p-2 rounded-md border-b-0' : 'text-gray-800 border-gray-300' }`}>
                             <span className="flex items-center">
                                 {groupScoreData && <ScoreCircle score={groupScoreData.score} maxScore={groupScoreData.maxScore} />}
-                                <span className="mr-2">{group.group}</span>
+                                <span className="me-2">{group.group}</span>
                             </span>
                         </h3>
                         {Array.isArray(group.subgroups) && group.subgroups.map(subgroup => {
@@ -990,7 +990,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                     <div key={subgroup.subgroupTitle} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
                                         <h4 dir="rtl" className="flex items-center text-sm font-bold mb-4 text-sky-800 text-right">
                                             {subgroupScoreData && <ScoreCircle score={subgroupScoreData.score} maxScore={subgroupScoreData.maxScore} />}
-                                            <span className="mr-2">{subgroup.subgroupTitle}</span>
+                                            <span className="me-2">{subgroup.subgroupTitle}</span>
                                         </h4>
                                         {subgroup.symptomGroups.map(symptomGroup => {
                                             const mainSkill = symptomGroup.mainSkill; if (!mainSkill?.key) return null;
@@ -1032,7 +1032,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                     {showSubQuestions && (
                                                         <div dir="rtl" className="p-4 pt-2 bg-white space-y-4 text-right rounded-b-xl border-t border-slate-100 divide-y divide-slate-100">
                                                             <div className={`flex flex-col sm:flex-row justify-between sm:items-center py-2 px-1 hover:bg-sky-50 transition-colors ${formData.assessment_skills[supervisorConfirmsKey] === '' ? 'row-unanswered' : 'row-answered'}`}>
-                                                                <span className="text-sm font-medium text-slate-800 mb-2 sm:mb-0 sm:ml-4 text-right">{supervisorConfirmLabel}</span>
+                                                                <span className="text-sm font-medium text-slate-800 mb-2 sm:mb-0 sm:ms-4 text-right">{supervisorConfirmLabel}</span>
                                                                 <div className="flex gap-4 mt-1 sm:mt-0 flex-shrink-0">
                                                                     <ActionToggle
                                                                         options={[

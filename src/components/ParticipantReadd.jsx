@@ -219,10 +219,10 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
                                     </div>
                                     <div className="flex gap-2 mt-3">
                                         <Button variant="primary" onClick={() => handleApprove(r)} disabled={!!busyId}>
-                                            {busyId === r.id ? <Spinner size="sm" /> : <><CheckCircle className="w-4 h-4 mr-1" /> {t('shared_ui.readd.approve_add', 'Approve and add')}</>}
+                                            {busyId === r.id ? <Spinner size="sm" /> : <><CheckCircle className="w-4 h-4 me-1" /> {t('shared_ui.readd.approve_add', 'Approve and add')}</>}
                                         </Button>
                                         <Button variant="secondary" onClick={() => handleReject(r)} disabled={!!busyId}>
-                                            <XCircle className="w-4 h-4 mr-1" /> {t('shared_ui.readd.reject', 'Reject')}
+                                            <XCircle className="w-4 h-4 me-1" /> {t('shared_ui.readd.reject', 'Reject')}
                                         </Button>
                                     </div>
                                 </li>
@@ -241,7 +241,7 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
                                     {p.lastUpdatedAt && <div className="text-xs text-gray-400">{t('shared_ui.readd.deleted_at', 'Deleted {{when}}', { when: formatWhen(p.lastUpdatedAt) })}</div>}
                                 </div>
                                 <Button variant="danger" onClick={() => handleHardDelete(p)} disabled={!!busyId} className="shrink-0">
-                                    {busyId === p.id ? <Spinner size="sm" /> : <><Trash2 className="w-4 h-4 mr-1" /> {t('shared_ui.readd.delete_permanently', 'Delete permanently')}</>}
+                                    {busyId === p.id ? <Spinner size="sm" /> : <><Trash2 className="w-4 h-4 me-1" /> {t('shared_ui.readd.delete_permanently', 'Delete permanently')}</>}
                                 </Button>
                             </li>
                         ))}

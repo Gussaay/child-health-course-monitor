@@ -1853,7 +1853,7 @@ export const CertificateDownloadBanner = () => {
     if (jobs.length === 0) return null;
 
     return (
-        <div className="fixed bottom-4 inset-x-3 sm:inset-x-auto sm:end-4 sm:w-80 z-[60] space-y-2 print-hide">
+        <div className="fixed bottom-[calc(var(--bottom-nav,0px)+1rem)] inset-x-3 sm:inset-x-auto sm:end-4 sm:w-80 z-[70] space-y-2 print-hide">
             {jobs.map((job) => {
                 const pct = job.total > 0 ? Math.round((job.current / job.total) * 100) : 0;
                 const done = job.status === 'done';

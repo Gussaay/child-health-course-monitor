@@ -2888,6 +2888,11 @@ export async function recordCrash({ message, stack, screen }) {
     }
 }
 
+// The signed-in person's email, for reports sent from outside React state.
+export function currentUserEmail() {
+    return firebaseAuth.currentUser?.email || null;
+}
+
 export async function listProblemReports() {
     const snap = await getDocs(query(
         collection(db, "problemReports"), orderBy("createdAt", "desc"), limit(300)));

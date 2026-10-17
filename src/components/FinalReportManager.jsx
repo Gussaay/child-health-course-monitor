@@ -91,15 +91,15 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
         <div className="bg-white rounded-xl shadow-md border border-blue-200 overflow-hidden">
             <div className="flex justify-between items-center p-4 bg-blue-50 border-b border-blue-200" dir={isArabic ? "rtl" : "ltr"}>
                 <h4 className="text-lg font-bold text-blue-900 flex items-center gap-2">
-                    <BookOpen className={`w-5 h-5 text-blue-600 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} />
+                    <BookOpen className={`w-5 h-5 text-blue-600 ${isArabic ? 'ms-2 me-0' : 'me-2 ms-0'}`} />
                     {subCourse === 'Unspecified Sub-course' ? t('final_report.annex.unspecified_subcourse', 'Unspecified Sub-course') : subCourse}
                 </h4>
                 <div className="flex gap-2">
                     <Button variant="secondary" size="sm" onClick={copyAsText} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
-                        <Copy className={`w-4 h-4 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} /> {isArabic ? 'نسخ كجدول' : t('final_report.annex.copy_table', 'Copy as Table')}
+                        <Copy className={`w-4 h-4 ${isArabic ? 'ms-2 me-0' : 'me-2 ms-0'}`} /> {isArabic ? 'نسخ كجدول' : t('final_report.annex.copy_table', 'Copy as Table')}
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => copyAsImage(tableRef, t)} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
-                        <ImageIcon className={`w-4 h-4 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} /> {isArabic ? 'نسخ كصورة' : t('final_report.annex.copy_image', 'Copy as Image')}
+                        <ImageIcon className={`w-4 h-4 ${isArabic ? 'ms-2 me-0' : 'me-2 ms-0'}`} /> {isArabic ? 'نسخ كصورة' : t('final_report.annex.copy_image', 'Copy as Image')}
                     </Button>
                 </div>
             </div>
@@ -109,7 +109,7 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
                     <thead className="bg-blue-600">
                         <tr>
                             {displayHeaders.map((h, i) => (
-                                <th key={i} className="px-4 py-3 text-start text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                                <th key={i} className="px-4 py-3 text-start text-xs font-semibold text-white whitespace-nowrap">
                                     {h}
                                 </th>
                             ))}
@@ -164,10 +164,10 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                         </h3>
                         <div className="flex gap-2">
                             <Button variant="secondary" size="sm" onClick={copyFacilitatorsAsText} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
-                                <Copy className="w-4 h-4 mr-2" /> {t('final_report.annex.copy_table', 'Copy as Table')}
+                                <Copy className="w-4 h-4 me-2" /> {t('final_report.annex.copy_table', 'Copy as Table')}
                             </Button>
                             <Button variant="secondary" size="sm" onClick={() => copyAsImage(facilitatorTableRef, t)} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
-                                <ImageIcon className="w-4 h-4 mr-2" /> {t('final_report.annex.copy_image', 'Copy as Image')}
+                                <ImageIcon className="w-4 h-4 me-2" /> {t('final_report.annex.copy_image', 'Copy as Image')}
                             </Button>
                         </div>
                     </div>
@@ -177,7 +177,7 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                             <thead className="bg-blue-600">
                                 <tr>
                                     {facilitatorHeaders.map((h, i) => (
-                                        <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                                        <th key={i} className="px-4 py-3 text-start text-xs font-semibold text-white whitespace-nowrap">
                                             {h}
                                         </th>
                                     ))}
@@ -706,16 +706,16 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
 
                 <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => setPadOpen(true)} disabled={!pageSize || padOpen}>
-                        <PenLine className="w-4 h-4 mr-1" /> {t('final_report.sign.draw_signature', 'Draw signature')}
+                        <PenLine className="w-4 h-4 me-1" /> {t('final_report.sign.draw_signature', 'Draw signature')}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => pickUpload('signature')} disabled={!pageSize}>
-                        <ImageIcon className="w-4 h-4 mr-1" /> {t('final_report.sign.signature_image', 'Signature image')}
+                        <ImageIcon className="w-4 h-4 me-1" /> {t('final_report.sign.signature_image', 'Signature image')}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => pickUpload('stamp')} disabled={!pageSize}>
-                        <Stamp className="w-4 h-4 mr-1" /> {t('final_report.sign.stamp_image', 'Stamp image')}
+                        <Stamp className="w-4 h-4 me-1" /> {t('final_report.sign.stamp_image', 'Stamp image')}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={addApproval} disabled={!pageSize}>
-                        <Type className="w-4 h-4 mr-1" /> {t('final_report.sign.approved_by_date', 'Approved by + date')}
+                        <Type className="w-4 h-4 me-1" /> {t('final_report.sign.approved_by_date', 'Approved by + date')}
                     </Button>
                     <input ref={uploadInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onUpload} />
                 </div>
@@ -1307,16 +1307,16 @@ export function ReportDocumentCard({ report, course, children }) {
                 {docInfo && (
                     <div className="grid grid-cols-3 sm:flex gap-2 shrink-0">
                         <a href={docInfo.url} target="_blank" rel="noopener noreferrer" className="contents">
-                            <Button variant="secondary" className="justify-center text-sm"><Eye className="w-4 h-4 mr-1" />{t('final_report.buttons.view', 'View')}</Button>
+                            <Button variant="secondary" className="justify-center text-sm"><Eye className="w-4 h-4 me-1" />{t('final_report.buttons.view', 'View')}</Button>
                         </a>
                         <Button variant="secondary" className="justify-center text-sm" disabled={!!busy}
                             onClick={run('download', () => downloadReportPdf(docInfo.url, docInfo.fileName))}>
-                            {busy === 'download' ? <Spinner size="sm" /> : <><Download className="w-4 h-4 mr-1" />{t('final_report.buttons.download', 'Download')}</>}
+                            {busy === 'download' ? <Spinner size="sm" /> : <><Download className="w-4 h-4 me-1" />{t('final_report.buttons.download', 'Download')}</>}
                         </Button>
                         <Button variant="secondary" className="justify-center text-sm" disabled={!!busy}
                             onClick={run('share', () => shareReportPdf(docInfo.url, docInfo.fileName,
                                 `Final report — ${course?.course_type || ''} ${course?.state || ''}`.trim()))}>
-                            {busy === 'share' ? <Spinner size="sm" /> : <><Share2 className="w-4 h-4 mr-1" />{t('final_report.buttons.share', 'Share')}</>}
+                            {busy === 'share' ? <Spinner size="sm" /> : <><Share2 className="w-4 h-4 me-1" />{t('final_report.buttons.share', 'Share')}</>}
                         </Button>
                     </div>
                 )}
@@ -1452,13 +1452,13 @@ export function ReportDocumentManager({ course, finalReport, onChanged: notifyCh
                 {reportUrl && (signedUrl ? (
                     <>
                         <Button variant="primary" disabled={!!busy || !ready} onClick={() => setSignerOpen(true)} className={btn}>
-                            {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />{t('final_report.buttons.edit_signature', 'Edit signature')}</>}
+                            {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 me-1" />{t('final_report.buttons.edit_signature', 'Edit signature')}</>}
                         </Button>
                         <Button variant="danger" disabled={!!busy || !ready} onClick={deleteSignature} className={btn}>{t('final_report.buttons.delete_signature', 'Delete signature')}</Button>
                     </>
                 ) : (
                     <Button variant="primary" disabled={!!busy || !ready} onClick={() => setSignerOpen(true)} className={btn}>
-                        {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 mr-1" />{t('final_report.buttons.sign_stamp', 'Sign & stamp')}</>}
+                        {busy === 'signed' ? <Spinner size="sm" /> : <><PenLine className="w-4 h-4 me-1" />{t('final_report.buttons.sign_stamp', 'Sign & stamp')}</>}
                     </Button>
                 ))}
                 {reportUrl && (
@@ -1706,7 +1706,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
     );
     const tab = (id, label, count) => (
         <Button variant="tab" isActive={view === id} onClick={() => setView(id)}>
-            {label}{count != null && <span className="ml-1.5 text-xs bg-slate-200 text-slate-700 rounded-full px-1.5">{count}</span>}
+            {label}{count != null && <span className="ms-1.5 text-xs bg-slate-200 text-slate-700 rounded-full px-1.5">{count}</span>}
         </Button>
     );
 
@@ -1763,7 +1763,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                 return (
                                     <div key={course.id} className="border rounded-lg bg-white">
                                         <div className="p-3 flex flex-col md:flex-row md:items-center justify-between gap-2">
-                                            <button type="button" className="text-left min-w-0" onClick={() => setExpanded(e => ({ ...e, [course.id]: !open }))}>
+                                            <button type="button" className="text-start min-w-0" onClick={() => setExpanded(e => ({ ...e, [course.id]: !open }))}>
                                                 <div className="font-semibold text-slate-800">{courseLabelOf(course)}</div>
                                                 <div className="text-xs text-slate-500">
                                                     {courseDateOf(course)?.toLocaleDateString() || t('final_report.dashboard.no_start_date', 'No start date')}
@@ -1776,7 +1776,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                                     {open ? t('final_report.dashboard.hide_details', 'Hide details') : t('final_report.dashboard.details', 'Details')}
                                                 </Button>
                                                 <Button className="text-xs" onClick={() => setManageCourse(course)}>
-                                                    <PenLine className="w-4 h-4 mr-1" />{status.uploaded ? t('final_report.dashboard.manage', 'Manage') : t('final_report.dashboard.add_report', 'Add report')}
+                                                    <PenLine className="w-4 h-4 me-1" />{status.uploaded ? t('final_report.dashboard.manage', 'Manage') : t('final_report.dashboard.add_report', 'Add report')}
                                                 </Button>
                                             </div>
                                         </div>
@@ -1793,7 +1793,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                                         <ul className="space-y-1">
                                                             {recs.map((r, i) => (
                                                                 <li key={i} className="text-sm flex flex-wrap items-start gap-2">
-                                                                    <span className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>{recStatusText(t, r.status)}</span>
+                                                                    <span className={`text-xs font-semibold rounded px-1.5 py-0.5 ${REC_STATUS_STYLE[r.status] || 'bg-slate-100 text-slate-600'}`}>{recStatusText(t, r.status)}</span>
                                                                     <span className="flex-1 min-w-0">{r.recommendation}{r.responsible && <span className="text-slate-500"> — {r.responsible}</span>}</span>
                                                                 </li>
                                                             ))}
@@ -1844,7 +1844,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                 {[['state', t('final_report.dashboard.state', 'State')], ['year', t('final_report.dashboard.year', 'Year')], ['course', t('final_report.table.course', 'Course')]].map(([v, l]) => (
                                     <Button key={v} variant={matrixBy === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => { setMatrixBy(v); setCell(null); }}>{l}</Button>
                                 ))}
-                                <span className="text-sm text-slate-600 ml-2">{t('final_report.dashboard.show', 'Show:')}</span>
+                                <span className="text-sm text-slate-600 ms-2">{t('final_report.dashboard.show', 'Show:')}</span>
                                 {[['open', t('final_report.dashboard.scope.open', 'Pending only')], ['all', t('final_report.dashboard.scope.all', 'All (pending / total)')]].map(([v, l]) => (
                                     <Button key={v} variant={matrixScope === v ? 'primary' : 'secondary'} className="text-xs" onClick={() => { setMatrixScope(v); setCell(null); }}>{l}</Button>
                                 ))}
@@ -1856,10 +1856,10 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                     <table className="text-sm border-collapse min-w-full">
                                         <thead>
                                             <tr className="bg-slate-100">
-                                                <th className="p-2 border text-left sticky left-0 bg-slate-100 z-10 min-w-[12rem]">{t('final_report.table.theme', 'Theme')}</th>
+                                                <th className="p-2 border text-start sticky left-0 bg-slate-100 z-10 min-w-[12rem]">{t('final_report.table.theme', 'Theme')}</th>
                                                 {matrix.cols.map(col => (
                                                     <th key={col} className="p-2 border text-xs font-semibold align-bottom">
-                                                        <button type="button" className="hover:underline max-w-[9rem] text-left" onClick={() => setCell({ theme: null, col })}>{colLabelOf(col)}</button>
+                                                        <button type="button" className="hover:underline max-w-[9rem] text-start" onClick={() => setCell({ theme: null, col })}>{colLabelOf(col)}</button>
                                                     </th>
                                                 ))}
                                                 <th className="p-2 border text-xs font-semibold bg-slate-200">{t('final_report.dashboard.total', 'Total')}</th>
@@ -1868,8 +1868,8 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                         <tbody>
                                             {matrix.themes.map(th => (
                                                 <tr key={th.id}>
-                                                    <th className="p-2 border text-left font-medium sticky left-0 bg-white z-10">
-                                                        <button type="button" className="hover:underline text-left" onClick={() => setCell({ theme: th.id, col: null })}>{themeText(t, th.id)}</button>
+                                                    <th className="p-2 border text-start font-medium sticky left-0 bg-white z-10">
+                                                        <button type="button" className="hover:underline text-start" onClick={() => setCell({ theme: th.id, col: null })}>{themeText(t, th.id)}</button>
                                                     </th>
                                                     {matrix.cols.map(col => {
                                                         const c = matrix.cells[`${th.id}|${col}`];
@@ -1890,7 +1890,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                                                 </tr>
                                             ))}
                                             <tr className="bg-slate-50 font-semibold">
-                                                <th className="p-2 border text-left sticky left-0 bg-slate-50 z-10">{t('final_report.dashboard.total', 'Total')}</th>
+                                                <th className="p-2 border text-start sticky left-0 bg-slate-50 z-10">{t('final_report.dashboard.total', 'Total')}</th>
                                                 {matrix.cols.map(col => (
                                                     <td key={col} className="p-2 border text-center">{countText(matrix.scoped.filter(r => colKeyOf(r) === col))}</td>
                                                 ))}
@@ -2339,17 +2339,17 @@ export function FinalReportManager({
                                         {(existingSignedPdfUrl || signedPdfFile) ? (
                                             <>
                                                 <Button variant="primary" onClick={() => setSignerOpen(true)} disabled={!reportSource}>
-                                                    <PenLine className="w-4 h-4 mr-1" /> {t('final_report.buttons.edit_signature', 'Edit signature')}
+                                                    <PenLine className="w-4 h-4 me-1" /> {t('final_report.buttons.edit_signature', 'Edit signature')}
                                                 </Button>
                                                 <Button variant="danger" onClick={deleteSignature}>
-                                                    <Trash2 className="w-4 h-4 mr-1" /> {t('final_report.buttons.delete_signature', 'Delete signature')}
+                                                    <Trash2 className="w-4 h-4 me-1" /> {t('final_report.buttons.delete_signature', 'Delete signature')}
                                                 </Button>
                                                 {signedPdfFile && <p className="text-sm text-emerald-700">{t('final_report.editor.signed_saved_with', 'Signed — saved with the report.')}</p>}
                                             </>
                                         ) : (
                                             <>
                                                 <Button variant="primary" onClick={() => setSignerOpen(true)} disabled={!reportSource}>
-                                                    <PenLine className="w-4 h-4 mr-1" /> {t('final_report.buttons.sign_stamp', 'Sign & stamp')}
+                                                    <PenLine className="w-4 h-4 me-1" /> {t('final_report.buttons.sign_stamp', 'Sign & stamp')}
                                                 </Button>
                                                 {!reportSource && <p className="text-xs text-gray-500">{t('final_report.editor.attach_first', 'Attach the final report PDF first.')}</p>}
                                             </>

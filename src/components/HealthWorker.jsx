@@ -436,14 +436,14 @@ export function HealthWorkerView({ permissions, userStates }) {
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-8">
                             {/* Total Card */}
                             <div className="col-span-2 md:col-span-1 lg:col-span-1 p-5 bg-gradient-to-br from-indigo-600 to-sky-600 rounded-xl shadow-md text-white flex flex-col justify-between">
-                                <div className="text-indigo-100 text-sm font-medium uppercase tracking-wider mb-2">{t('hr_misc.health_workers.total_participants', 'Total Participants')}</div>
+                                <div className="text-indigo-100 text-sm font-medium mb-2">{t('hr_misc.health_workers.total_participants', 'Total Participants')}</div>
                                 <div className="text-4xl font-extrabold">{participantKPIs.total}</div>
                             </div>
                             
                             {/* Course Specific Cards */}
                             {Object.entries(participantKPIs.byCourse).sort().map(([course, count]) => (
                                 <div key={course} className="p-5 bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-sky-500 flex flex-col justify-between hover:shadow-md transition-shadow">
-                                    <div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">{course}</div>
+                                    <div className="text-gray-500 text-xs font-semibold mb-2">{course}</div>
                                     <div className="text-3xl font-bold text-gray-800">{count}</div>
                                 </div>
                             ))}
@@ -473,7 +473,7 @@ export function HealthWorkerView({ permissions, userStates }) {
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full text-sm border-collapse">
                                             <thead className="bg-white border-b-2 border-gray-100">
-                                                <tr className="text-left text-gray-500 uppercase tracking-wider text-xs">
+                                                <tr className="text-start text-gray-500 text-xs">
                                                     {trainedByCadreAndCourse.headers.map((h, i) => (
                                                         <th key={i} className="py-4 px-6 font-bold">{i === 0 ? t('hr_misc.health_workers.health_cadre', 'Health Cadre') : h}</th>
                                                     ))}
@@ -493,7 +493,7 @@ export function HealthWorkerView({ permissions, userStates }) {
                                             <tfoot className="bg-gray-50 border-t border-gray-200 text-gray-900">
                                                 <tr>
                                                     {trainedByCadreAndCourse.totals.map((cell, index) => (
-                                                        <td key={index} className={`py-4 px-6 ${index === 0 ? 'font-extrabold uppercase text-xs tracking-wider' : 'font-bold'}`}>
+                                                        <td key={index} className={`py-4 px-6 ${index === 0 ? 'font-extrabold text-xs ': 'font-bold'}`}>
                                                             {index === 0 ? t('hr_misc.health_workers.total', 'Total') : cell}
                                                         </td>
                                                     ))}
@@ -503,7 +503,7 @@ export function HealthWorkerView({ permissions, userStates }) {
                                     </div>
                                 ) : (
                                     <div className="p-8">
-                                        <EmptyState message={t('hr_misc.health_workers.empty_trained', 'No trained participants match your current filters.')} />
+                                        <EmptyState message={t('hr_misc.health_workers.empty_trained', 'No trained participants match your current filters.')} filtered />
                                     </div>
                                 )}
                             </div>

@@ -239,7 +239,7 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
         <div className="max-w-7xl mx-auto p-4 space-y-6 animate-fade-in" dir="rtl">
             <div className="flex items-center gap-4 mb-2">
                 <Button variant="secondary" onClick={onBack} className="flex items-center gap-2 shadow-sm">
-                    <ArrowLeft className="w-4 h-4 ml-1" /> الرجوع
+                    <ArrowLeft className="w-4 h-4 ms-1" /> الرجوع
                 </Button>
                 <div>
                     <h2 className="text-2xl font-extrabold text-sky-900">لوحة متابعة تحديثات المنشآت</h2>
@@ -252,7 +252,7 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
                 <Card className="p-5 flex items-start gap-4 border-t-4 border-t-emerald-500 shadow-sm bg-gradient-to-b from-white to-emerald-50/30">
                     <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600"><Calendar className="w-6 h-6" /></div>
                     <div>
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">تحديثات هذا الشهر</p>
+                        <p className="text-xs text-gray-500 font-bold mb-1">تحديثات هذا الشهر</p>
                         <h3 className="text-lg font-extrabold text-gray-800 leading-tight">{updatedThisMonth}</h3>
                         <p className="text-sm font-semibold text-emerald-600 mt-1">{t('admin_pages.update_dashboard.activity_month', 'Activity in current month')}</p>
                     </div>
@@ -261,7 +261,7 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
                 <Card className="p-5 flex items-start gap-4 border-t-4 border-t-amber-500 shadow-sm bg-gradient-to-b from-white to-amber-50/30">
                     <div className="p-3 bg-amber-100 rounded-xl text-amber-600"><MapPin className="w-6 h-6" /></div>
                     <div>
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">أكثر ولاية تحديثاً</p>
+                        <p className="text-xs text-gray-500 font-bold mb-1">أكثر ولاية تحديثاً</p>
                         <h3 className="text-lg font-extrabold text-gray-800 leading-tight">
                             {topState ? (STATE_LOCALITIES[topState[0]]?.ar || topState[0]) : 'لا يوجد'}
                         </h3>
@@ -272,7 +272,7 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
                 <Card className="p-5 flex items-start gap-4 border-t-4 border-t-indigo-500 shadow-sm bg-gradient-to-b from-white to-indigo-50/30">
                     <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><TrendingUp className="w-6 h-6" /></div>
                     <div>
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">أكثر محلية تحديثاً</p>
+                        <p className="text-xs text-gray-500 font-bold mb-1">أكثر محلية تحديثاً</p>
                         <h3 className="text-lg font-extrabold text-gray-800 leading-tight">
                             {topLocality ? getLocalityName(topLocality[0]) : 'لا يوجد'}
                         </h3>
@@ -283,7 +283,7 @@ export const UpdateDashboard = ({ facilities, onBack }) => {
                 <Card className="p-5 flex items-start gap-4 border-t-4 border-t-pink-500 shadow-sm bg-gradient-to-b from-white to-pink-50/30">
                     <div className="p-3 bg-pink-100 rounded-xl text-pink-600"><UserCheck className="w-6 h-6" /></div>
                     <div>
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">أكثر مستخدم نشاطاً</p>
+                        <p className="text-xs text-gray-500 font-bold mb-1">أكثر مستخدم نشاطاً</p>
                         <h3 className="text-lg font-extrabold text-gray-800 leading-tight truncate max-w-[150px]" title={topUpdater ? topUpdater[0] : ''}>
                             {topUpdater ? (topUpdater[0] === 'System / Unknown' ? t('admin_pages.update_dashboard.system_unknown', 'System / Unknown') : topUpdater[0]) : 'لا يوجد'}
                         </h3>

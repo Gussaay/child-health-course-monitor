@@ -85,7 +85,7 @@ const FacilitySnapshotSummary = ({ facility, serviceType }) => {
                     return (
                         <div key={item.key} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-slate-200">
                             <span className="text-xs font-bold text-slate-700">{item.label}</span>
-                            <span className={`text-[10px] font-extrabold px-2 py-1 rounded ${isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                            <span className={`text-xs font-extrabold px-2 py-1 rounded ${isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                                 {isAvailable ? 'متوفر' : 'غير متوفر'}
                             </span>
                         </div>
@@ -145,12 +145,12 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
                             <tr key={`${prob.reportId}_${prob.challengeId}_${idx}`} className="border-b hover:bg-white">
                                 <td className="px-2 py-2 border align-top">
                                     <div className="font-semibold">{prob.visitDate}</div>
-                                    <div className="text-gray-500 text-[10px]">زيارة رقم {prob.visitNumber}</div>
+                                    <div className="text-gray-500 text-xs">زيارة رقم {prob.visitNumber}</div>
                                 </td>
                                 <td className="px-2 py-2 border align-top whitespace-pre-wrap">{prob.problem}</td>
                                 <td className="px-2 py-2 border align-top">{prob.responsible_person}</td>
                                 <td className="px-2 py-2 border align-top">
-                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                                         prob.status === 'Resolved' ? 'bg-green-100 text-green-800' :
                                         prob.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                                         'bg-yellow-100 text-yellow-800'
@@ -743,12 +743,12 @@ export const IMNCIVisitReport = ({
                     <td className={`px-4 py-2 border border-gray-300 font-semibold text-sm ${isStrong ? 'text-gray-600' : 'text-gray-900'}`}>
                         {skillsObj[key]}
                         {isWeakness && (
-                            <span className="mr-3 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                            <span className="me-3 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-200">
                                 نقطة ضعف مسجلة (أقل من 75%)
                             </span>
                         )}
                         {isStrong && (
-                            <span className="mr-3 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
+                            <span className="me-3 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-200">
                                 مهارة جيدة لا تحتاج تدريب
                             </span>
                         )}
@@ -845,7 +845,7 @@ export const IMNCIVisitReport = ({
                         <div className="mb-6">
                             <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">
                                 مصفوفة التدريب والمهارات
-                                <span className="text-xs text-gray-500 font-normal mr-2">(نقاط الضعف تظهر في الأعلى لكل مجموعة، والمهارات الجيدة تظهر في الأسفل)</span>
+                                <span className="text-xs text-gray-500 font-normal me-2">(نقاط الضعف تظهر في الأعلى لكل مجموعة، والمهارات الجيدة تظهر في الأسفل)</span>
                             </h3>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
@@ -1021,7 +1021,7 @@ export const IMNCIVisitReport = ({
                                                     <td className="border p-1"><Textarea value={row.problem} onChange={(e) => handleChallengeChange(row.id, 'problem', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
                                                     <td className="border p-1"><Textarea value={row.solution} onChange={(e) => handleChallengeChange(row.id, 'solution', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
                                                     <td className="border align-top p-1">
-                                                        <Select value={row.status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'status', e.target.value)} className="text-[11px] font-bold p-1 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
+                                                        <Select value={row.status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'status', e.target.value)} className="text-xs font-bold p-1 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                                                             <option value="Pending">{t('mentorship_extra.visit_reports.status.pending', 'Pending')}</option>
                                                             <option value="In Progress">{t('mentorship_extra.visit_reports.status.in_progress', 'In Progress')}</option>
                                                             <option value="Resolved">{t('mentorship_extra.visit_reports.status.resolved', 'Resolved')}</option>
@@ -1031,7 +1031,7 @@ export const IMNCIVisitReport = ({
                                                         <Select 
                                                             value={isCustomResp ? 'أخرى حدد' : row.responsible_person} 
                                                             onChange={(e) => handleChallengeChange(row.id, 'responsible_person', e.target.value === 'أخرى حدد' ? 'أخرى حدد' : e.target.value)} 
-                                                            className="text-[11px] font-bold p-1 w-full border-gray-300 focus:border-sky-500 focus:ring-sky-500"
+                                                            className="text-xs font-bold p-1 w-full border-gray-300 focus:border-sky-500 focus:ring-sky-500"
                                                         >
                                                             <option value="">-- اختر --</option>
                                                             <option value="مدير المركز">مدير المركز</option>
@@ -1056,7 +1056,7 @@ export const IMNCIVisitReport = ({
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex justify-start mt-2"><Button type="button" variant="outline" size="sm" onClick={addChallengeRow}><PlusCircle size={16} className="ml-1"/> إضافة صف</Button></div>
+                            <div className="flex justify-start mt-2"><Button type="button" variant="outline" size="sm" onClick={addChallengeRow}><PlusCircle size={16} className="ms-1"/> إضافة صف</Button></div>
                         </div>
 
                         {/* --- PREVIOUS PROBLEMS --- */}
@@ -1519,12 +1519,12 @@ export const EENCVisitReport = ({
                     <td className={`px-4 py-2 border border-gray-300 font-semibold text-sm ${isStrong ? 'text-gray-600' : 'text-gray-900'}`}>
                         {skillsObj[key]}
                         {isWeakness && (
-                            <span className="mr-3 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                            <span className="me-3 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-200">
                                 نقطة ضعف مسجلة (أقل من 75%)
                             </span>
                         )}
                         {isStrong && (
-                            <span className="mr-3 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
+                            <span className="me-3 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-200">
                                 مهارة جيدة لا تحتاج تدريب
                             </span>
                         )}
@@ -1618,7 +1618,7 @@ export const EENCVisitReport = ({
                         <div className="mb-6">
                             <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">
                                 مصفوفة التدريب والمهارات (EENC)
-                                <span className="text-xs text-gray-500 font-normal mr-2">(نقاط الضعف تظهر في الأعلى لكل مجموعة، والمهارات الجيدة تظهر في الأسفل)</span>
+                                <span className="text-xs text-gray-500 font-normal me-2">(نقاط الضعف تظهر في الأعلى لكل مجموعة، والمهارات الجيدة تظهر في الأسفل)</span>
                             </h3>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
@@ -1798,7 +1798,7 @@ export const EENCVisitReport = ({
                                                     <td className="border p-1"><Textarea value={row.problem} onChange={(e) => handleChallengeChange(row.id, 'problem', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
                                                     <td className="border p-1"><Textarea value={row.solution} onChange={(e) => handleChallengeChange(row.id, 'solution', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
                                                     <td className="border align-top p-1">
-                                                        <Select value={row.status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'status', e.target.value)} className="text-[11px] font-bold p-1 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
+                                                        <Select value={row.status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'status', e.target.value)} className="text-xs font-bold p-1 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
                                                             <option value="Pending">{t('mentorship_extra.visit_reports.status.pending', 'Pending')}</option>
                                                             <option value="In Progress">{t('mentorship_extra.visit_reports.status.in_progress', 'In Progress')}</option>
                                                             <option value="Resolved">{t('mentorship_extra.visit_reports.status.resolved', 'Resolved')}</option>
@@ -1808,7 +1808,7 @@ export const EENCVisitReport = ({
                                                         <Select 
                                                             value={isCustomResp ? 'أخرى حدد' : row.responsible_person} 
                                                             onChange={(e) => handleChallengeChange(row.id, 'responsible_person', e.target.value === 'أخرى حدد' ? 'أخرى حدد' : e.target.value)} 
-                                                            className="text-[11px] font-bold p-1 w-full border-gray-300 focus:border-sky-500 focus:ring-sky-500"
+                                                            className="text-xs font-bold p-1 w-full border-gray-300 focus:border-sky-500 focus:ring-sky-500"
                                                         >
                                                             <option value="">-- اختر --</option>
                                                             <option value="مدير المركز">مدير المركز</option>
@@ -1833,7 +1833,7 @@ export const EENCVisitReport = ({
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex justify-start mt-2"><Button type="button" variant="outline" size="sm" onClick={addChallengeRow}><PlusCircle size={16} className="ml-1"/> إضافة صف</Button></div>
+                            <div className="flex justify-start mt-2"><Button type="button" variant="outline" size="sm" onClick={addChallengeRow}><PlusCircle size={16} className="ms-1"/> إضافة صف</Button></div>
                         </div>
 
                         {/* --- PREVIOUS PROBLEMS --- */}

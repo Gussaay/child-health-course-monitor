@@ -193,7 +193,7 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
                             accept="image/*" 
                             onChange={onImageUpload} 
                             disabled={isUploadingImage}
-                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                            className="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
                         />
                     </div>
                 </div>
@@ -603,7 +603,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 
                     <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-4">
-                            <div>{t('program_teams.links.status', 'Status:')} <span className={`font-bold px-2 py-1 rounded-full text-xs ml-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{settings.isActive ? t('program_teams.links.active', 'Active') : t('program_teams.links.inactive', 'Inactive')}</span></div>
+                            <div>{t('program_teams.links.status', 'Status:')} <span className={`font-bold px-2 py-1 rounded-full text-xs ms-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{settings.isActive ? t('program_teams.links.active', 'Active') : t('program_teams.links.inactive', 'Inactive')}</span></div>
                             <div><span className="font-medium">{t('program_teams.links.links_opened', 'Links Opened:')}</span> {t('program_teams.links.times', '{{n}} times', { n: settings.openCount || 0 })}</div>
                         </div>
                         <Button variant={settings.isActive ? 'danger' : 'success'} onClick={onToggleStatus}>
@@ -964,13 +964,13 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                                 <table className="min-w-full divide-y divide-gray-200 border">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('program_teams.dashboard.table.state', 'State')}</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">{t('program_teams.dashboard.hr_state_level', 'HR in State Level')}</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 border-l border-gray-200">مدير البرنامج</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">رئيس وحدة</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">عضو في وحدة</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">سكرتارية</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">{t('program_teams.dashboard.hr_locality_level', 'HR in Locality Level')}</th>
+                                            <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 ">{t('program_teams.dashboard.table.state', 'State')}</th>
+                                            <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 border-l border-gray-200">{t('program_teams.dashboard.hr_state_level', 'HR in State Level')}</th>
+                                            <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 bg-blue-50 border-l border-gray-200">مدير البرنامج</th>
+                                            <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 bg-blue-50">رئيس وحدة</th>
+                                            <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 bg-blue-50">عضو في وحدة</th>
+                                            <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 bg-blue-50">سكرتارية</th>
+                                            <th className="px-6 py-3 text-start text-xs font-medium text-gray-500 border-l border-gray-200">{t('program_teams.dashboard.hr_locality_level', 'HR in Locality Level')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -1082,12 +1082,12 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                         <table id="hr-list-table" className="min-w-full border-collapse border border-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.state', 'State')}</th>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.name', 'Name')}</th>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.phone', 'Phone Number')}</th>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.job', 'Job Description')}</th>
-                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.experience', 'Overall Experience')}</th>
-                                    {showLocality && <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">{t('program_teams.dashboard.table.locality', 'Locality')}</th>}
+                                    <th className="border p-3 text-start text-xs font-medium text-gray-500 ">{t('program_teams.dashboard.table.state', 'State')}</th>
+                                    <th className="border p-3 text-start text-xs font-medium text-gray-500 ">{t('program_teams.dashboard.table.name', 'Name')}</th>
+                                    <th className="border p-3 text-start text-xs font-medium text-gray-500 ">{t('program_teams.dashboard.table.phone', 'Phone Number')}</th>
+                                    <th className="border p-3 text-start text-xs font-medium text-gray-500 ">{t('program_teams.dashboard.table.job', 'Job Description')}</th>
+                                    <th className="border p-3 text-start text-xs font-medium text-gray-500 ">{t('program_teams.dashboard.table.experience', 'Overall Experience')}</th>
+                                    {showLocality && <th className="border p-3 text-start text-xs font-medium text-gray-500 ">{t('program_teams.dashboard.table.locality', 'Locality')}</th>}
                                 </tr>
                             </thead>
                             <tbody className="bg-white">
@@ -1503,7 +1503,7 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                                 type="file" 
                                 accept=".xlsx" 
                                 onChange={handleFileUpload} 
-                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                className="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                             />
                         </div>
                     </div>
@@ -1606,7 +1606,7 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                 {step === 3 && (
                     <div className="space-y-6 text-center py-6">
                         <h3 className="text-2xl font-bold text-gray-800">{t('program_teams.bulk.ready', 'Ready to Import')}</h3>
-                        <div className="bg-gray-100 inline-block p-6 rounded-lg text-left">
+                        <div className="bg-gray-100 inline-block p-6 rounded-lg text-start">
                             <ul className="space-y-2 text-lg">
                                 <li><span className="font-bold text-blue-600">{summary.updates}</span> {t('program_teams.bulk.records_will_be', 'records will be')} <strong>{t('program_teams.bulk.updated', 'updated')}</strong>.</li>
                                 <li><span className="font-bold text-green-600">{summary.adds}</span> {t('program_teams.bulk.new_records_will_be', 'new records will be')} <strong>{t('program_teams.bulk.added', 'added')}</strong>.</li>
@@ -1617,7 +1617,7 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                         <div className="flex justify-center gap-4 mt-8">
                             <Button variant="secondary" onClick={() => setStep(1)} disabled={isExecuting}>{t('program_teams.common.cancel', 'Cancel')}</Button>
                             <Button variant="primary" onClick={executeImport} disabled={isExecuting}>
-                                {isExecuting ? <><Spinner size="sm" className="mr-2" /> {t('program_teams.common.processing', 'Processing...')}</> : t('program_teams.bulk.execute', 'Execute Import')}
+                                {isExecuting ? <><Spinner size="sm" className="me-2" /> {t('program_teams.common.processing', 'Processing...')}</> : t('program_teams.bulk.execute', 'Execute Import')}
                             </Button>
                         </div>
                     </div>
@@ -1753,13 +1753,13 @@ function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators
                     {member.imageUrl ? (
                         <img src={member.imageUrl} alt={t('program_teams.common.profile_alt', 'Profile')} className="w-full h-full object-cover" crossOrigin="anonymous" />
                     ) : (
-                        <span className="text-gray-400 text-[9px]">{t('program_teams.common.no_photo', 'No Photo')}</span>
+                        <span className="text-gray-400 text-xs">{t('program_teams.common.no_photo', 'No Photo')}</span>
                     )}
                 </div>
                 {/* Full name logic: break-words so it wraps naturally instead of truncating */}
                 <h4 className="font-bold text-xs text-gray-800 break-words w-full leading-snug">{member.nameAr || member.name}</h4>
-                <p className="text-[11px] font-bold text-blue-600 mt-1">{titleOverride || member.role}</p>
-                <p className="text-[10px] text-gray-500 mt-1 bg-gray-100 px-2 py-1 rounded-md w-full break-words leading-tight">
+                <p className="text-xs font-bold text-blue-600 mt-1">{titleOverride || member.role}</p>
+                <p className="text-xs text-gray-500 mt-1 bg-gray-100 px-2 py-1 rounded-md w-full break-words leading-tight">
                     {member.jobTitle === 'اخرى' ? member.jobTitleOther : member.jobTitle}
                 </p>
             </div>
@@ -1813,7 +1813,7 @@ function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators
                                     {/* Unit Head */}
                                     <div className="mb-3 flex flex-col items-center">
                                         {/* Unit Title wrapping without truncation */}
-                                        <div className="text-[11px] font-bold text-gray-600 mb-1 text-center break-words leading-tight max-w-[10rem]">
+                                        <div className="text-xs font-bold text-gray-600 mb-1 text-center break-words leading-tight max-w-[10rem]">
                                             {unit.name}
                                         </div>
                                         <OrgNode member={unit.head} titleOverride="رئيس وحدة" />
@@ -1825,7 +1825,7 @@ function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators
                                             <div className="w-0.5 h-4 bg-gray-300"></div>
                                             {/* Compact padding and vertical stacking (flex-col) */}
                                             <div className="flex flex-col gap-3 p-3 border border-dashed border-gray-300 rounded-xl bg-white w-full items-center relative">
-                                                <span className="text-[10px] text-gray-400 font-bold bg-white px-2 absolute -top-2">الأعضاء</span>
+                                                <span className="text-xs text-gray-400 font-bold bg-white px-2 absolute -top-2">الأعضاء</span>
                                                 {unit.members.map(member => (
                                                     <OrgNode key={member.id} member={member} titleOverride="عضو في وحدة" />
                                                 ))}
@@ -1837,9 +1837,9 @@ function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators
 
                             {/* Render Locality Managers (Only for State Level) */}
                             {localities.length > 0 && (
-                                <div className="flex flex-col items-center relative mr-6">
+                                <div className="flex flex-col items-center relative me-6">
                                     <div className="absolute -top-4 w-0.5 h-4 bg-blue-300"></div>
-                                    <div className="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-lg font-bold text-[11px] mb-4 border border-emerald-200 shadow-sm">
+                                    <div className="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-lg font-bold text-xs mb-4 border border-emerald-200 shadow-sm">
                                         مدراء المحليات
                                     </div>
                                     {/* Vertical layout for Locality Managers too */}
@@ -2607,9 +2607,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">{t('program_teams.normalize.unmapped', 'المسمى غير القياسي (Unmapped)')}</th>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">{t('program_teams.normalize.count', 'عدد الأعضاء (Count)')}</th>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase border-b">{t('program_teams.normalize.map_to', 'تعيين إلى (Map To)')}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 border-b">{t('program_teams.normalize.unmapped', 'المسمى غير القياسي (Unmapped)')}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 border-b">{t('program_teams.normalize.count', 'عدد الأعضاء (Count)')}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 border-b">{t('program_teams.normalize.map_to', 'تعيين إلى (Map To)')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">

@@ -168,7 +168,7 @@ export default function DownloadedFilesView({ onBack, setToast }) {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                                    <div className="flex items-center gap-2 shrink-0 ms-2">
                                         <button 
                                             onClick={() => handleOpenFile(file)}
                                             className="p-2 text-sky-600 hover:bg-sky-100 rounded-md transition-colors"

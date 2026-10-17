@@ -128,17 +128,17 @@ const InfoKpiTrendCard = ({
 
             <div className="flex justify-between items-center gap-2 sm:gap-4 mb-6">
                 <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 1')}</span>
+                    <span className="text-xs font-bold text-slate-500 mb-1">{t('Visit 1')}</span>
                     <div className="border border-slate-300 bg-white rounded-lg px-3 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
                         {v1Denominator > 0 && v1Value !== null && v1Value !== undefined ? `${Math.round(v1Value)}%` : '-'}
-                        <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
+                        <span className="text-xs font-bold text-slate-400 mt-0.5 whitespace-nowrap">
                             {v1Denominator > 0 ? `${v1Numerator} / ${v1Denominator}` : '- / -'}
                         </span>
                     </div>
                 </div>
 
                 <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Average')}</span>
+                    <span className="text-xs font-bold text-slate-500 mb-1">{t('Average')}</span>
                     <div className="border border-slate-800 bg-white rounded-xl px-4 sm:px-10 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center">
                         <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
                             {totalDenominator > 0 && avgValue !== null && avgValue !== undefined && !isNaN(avgValue) ? `${Math.round(avgValue)}%` : '-'}
@@ -152,10 +152,10 @@ const InfoKpiTrendCard = ({
                 </div>
 
                 <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('Visit 4')}</span>
+                    <span className="text-xs font-bold text-slate-500 mb-1">{t('Visit 4')}</span>
                     <div className="border border-slate-300 bg-white rounded-lg px-3 sm:px-4 py-1.5 font-bold text-slate-700 shadow-sm text-sm flex flex-col items-center">
                         {v4Denominator > 0 && v4Value !== null && v4Value !== undefined ? `${Math.round(v4Value)}%` : '-'}
-                        <span className="text-[10px] font-bold text-slate-400 mt-0.5 whitespace-nowrap">
+                        <span className="text-xs font-bold text-slate-400 mt-0.5 whitespace-nowrap">
                             {v4Denominator > 0 ? `${v4Numerator} / ${v4Denominator}` : '- / -'}
                         </span>
                     </div>
@@ -519,7 +519,7 @@ const FacilityInformationDashboardTab = ({
             </div>
 
             <div className="mb-10">
-                <h3 className={`text-xl font-extrabold text-slate-800 mb-5 tracking-wide flex items-center gap-2 ${isAr ? 'text-right' : 'text-left'}`}>
+                <h3 className={`text-xl font-extrabold text-slate-800 mb-5 tracking-wide flex items-center gap-2 ${isAr ? 'text-right' : 'text-start'}`}>
                     <SlidersHorizontal className="w-6 h-6 text-sky-600" />
                     {t('Essential Infrastructure & Tools Availability Progress')}
                 </h3>

@@ -539,7 +539,7 @@ export function useAppUpdate() {
         } ${className}`}
       >
         {look.icon}
-        {showVersion && <span className="font-mono text-[10px]">v{ota.currentVersion}</span>}
+        {showVersion && <span className="font-mono text-xs">v{ota.currentVersion}</span>}
       </button>
     );
   }, [updateStatus, handleUpdateButton, ota.currentVersion, ota.progress, apkDownloading, apkProgress, t]);
@@ -667,7 +667,7 @@ export function useAppUpdate() {
                   type="button"
                   onClick={() => downloadApk(nativeUpdatePrompt)}
                   disabled={apkDownloading}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                  className="flex-1 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-60"
                 >
                   {apkDownloading ? t('admin_pages.app_update.downloading', 'Downloading…') : t('admin_pages.app_update.download_install', 'Download and install')}
                 </button>
@@ -727,7 +727,7 @@ export function useAppUpdate() {
                   type="button"
                   onClick={installNow}
                   disabled={ota.installing}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                  className="flex-1 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-60"
                 >
                   {ota.installing ? t('admin_pages.app_update.installing', 'Installing…') : t('admin_pages.app_update.restart_install', 'Restart and install')}
                 </button>

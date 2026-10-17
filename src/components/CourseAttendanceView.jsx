@@ -461,13 +461,13 @@ export function AttendanceManagerView({ course, onClose }) {
                         />
                     </div>
                     <Button variant="primary" onClick={handleAddColumn} size="sm" className="px-2 md:px-3 text-xs md:text-sm">
-                        <PlusCircle className="w-3 h-3 md:w-4 md:h-4 md:mr-1" /> <span className="hidden md:inline">{t('course_tests.attendance.add_session', 'Add Session')}</span>
+                        <PlusCircle className="w-3 h-3 md:w-4 md:h-4 md:me-1" /> <span className="hidden md:inline">{t('course_tests.attendance.add_session', 'Add Session')}</span>
                     </Button>
                     <Button variant="secondary" onClick={handleGeneratePdf} disabled={isPdfGenerating} size="sm" className="px-2 md:px-3 text-xs md:text-sm">
-                        {isPdfGenerating ? <Spinner size="sm" className="md:mr-1" /> : <Download className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />}
+                        {isPdfGenerating ? <Spinner size="sm" className="md:me-1" /> : <Download className="w-3 h-3 md:w-4 md:h-4 md:me-1" />}
                         <span className="hidden md:inline">{isPdfGenerating ? t('course_tests.attendance.generating', 'Generating...') : 'PDF'}</span>
                     </Button>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 ml-1 md:ml-2" title={t('course_tests.attendance.close', 'Close')} aria-label={t('course_tests.attendance.close', 'Close')}>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 ms-1 md:ms-2" title={t('course_tests.attendance.close', 'Close')} aria-label={t('course_tests.attendance.close', 'Close')}>
                         <X className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
                 </div>
@@ -476,15 +476,15 @@ export function AttendanceManagerView({ course, onClose }) {
             <div className="p-2 md:p-4 grid grid-cols-3 gap-2 md:gap-4 border-b">
                 <div className="bg-blue-50 p-2 md:p-4 rounded-lg border border-blue-100 text-center">
                     <div className="text-lg md:text-2xl font-bold text-blue-700">{totalParticipants}</div>
-                    <div className="text-[10px] md:text-xs text-blue-600 uppercase font-semibold leading-tight">{t('course_tests.attendance.total_participants', 'Total Participants')}</div>
+                    <div className="text-xs text-blue-600 font-semibold leading-tight">{t('course_tests.attendance.total_participants', 'Total Participants')}</div>
                 </div>
                 <div className="bg-green-50 p-2 md:p-4 rounded-lg border border-green-100 text-center">
                     <div className="text-lg md:text-2xl font-bold text-green-700">{avgAttendance.toFixed(1)}%</div>
-                    <div className="text-[10px] md:text-xs text-green-600 uppercase font-semibold leading-tight">{t('course_tests.attendance.avg_rate', 'Avg. Rate')}</div>
+                    <div className="text-xs text-green-600 font-semibold leading-tight">{t('course_tests.attendance.avg_rate', 'Avg. Rate')}</div>
                 </div>
                 <div className="bg-purple-50 p-2 md:p-4 rounded-lg border border-purple-100 text-center">
                     <div className="text-lg md:text-2xl font-bold text-purple-700">{totalSessions}</div>
-                    <div className="text-[10px] md:text-xs text-purple-600 uppercase font-semibold leading-tight">{t('course_tests.attendance.sessions', 'Sessions')}</div>
+                    <div className="text-xs text-purple-600 font-semibold leading-tight">{t('course_tests.attendance.sessions', 'Sessions')}</div>
                 </div>
             </div>
 
@@ -492,19 +492,19 @@ export function AttendanceManagerView({ course, onClose }) {
                 {updating && <div className="text-center text-xs md:text-sm text-blue-600 mb-2 font-semibold">{t('course_tests.attendance.updating', 'Updating records...')}</div>}
                 
                 {sessionDates.length === 0 ? (
-                    <EmptyState message={t('course_tests.attendance.empty', "No attendance sessions recorded yet. Click 'Add Session' to start.")} />
+                    <EmptyState message={t('course_tests.attendance.empty', "No attendance sessions recorded yet. Click 'Add Session' to start.")} action={{ label: t('course_tests.attendance.add_session', 'Add Session'), onClick: handleAddColumn }} />
                 ) : (
-                    <table className="w-full text-left border-collapse table-auto border border-gray-200">
+                    <table className="w-full text-start border-collapse table-auto border border-gray-200">
                         <thead className="bg-gray-100">
                             <tr>
-                                <th className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase w-6 md:w-8">#</th>
-                                <th className="p-1 border text-[10px] md:text-xs font-medium text-gray-500 uppercase w-1/4">{t('course_tests.attendance.table.participant', 'Participant')}</th>
-                                <th className="p-1 border text-[10px] md:text-xs font-medium text-gray-500 uppercase w-1/4">{t('course_tests.attendance.table.details', 'Details')}</th>
+                                <th className="p-1 border text-center text-xs font-medium text-gray-500 w-6 md:w-8">#</th>
+                                <th className="p-1 border text-xs font-medium text-gray-500 w-1/4">{t('course_tests.attendance.table.participant', 'Participant')}</th>
+                                <th className="p-1 border text-xs font-medium text-gray-500 w-1/4">{t('course_tests.attendance.table.details', 'Details')}</th>
                                 {sessionDates.map((date, idx) => (
-                                    <th key={date} className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase relative group" title={date}>
+                                    <th key={date} className="p-1 border text-center text-xs font-medium text-gray-500 relative group"title={date}>
                                         <div className="flex flex-col items-center">
                                             <span>S{idx + 1}</span>
-                                            <span className="text-[8px] md:text-[9px] text-gray-400 font-normal leading-tight whitespace-nowrap">{date}</span>
+                                            <span className="text-xs text-gray-400 font-normal leading-tight whitespace-nowrap">{date}</span>
                                             <div className="absolute top-0 right-0 flex opacity-0 group-hover:opacity-100 transition-opacity bg-white border rounded shadow-sm scale-75 md:scale-90 z-20">
                                                 <button onClick={() => handleEditDate(date)} className="p-1 text-blue-500 hover:bg-blue-50" title={t('course_tests.attendance.edit_date', 'Edit date')}><Edit2 className="w-3 h-3" /></button>
                                                 <button onClick={() => handleDeleteDate(date)} className="p-1 text-red-500 hover:bg-red-50" title={t('course_tests.attendance.delete_date', 'Delete date')}><Trash2 className="w-3 h-3" /></button>
@@ -512,8 +512,8 @@ export function AttendanceManagerView({ course, onClose }) {
                                         </div>
                                     </th>
                                 ))}
-                                <th className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase w-10 md:w-16">{t('course_tests.attendance.table.total', 'Total')}</th>
-                                <th className="p-1 border text-center text-[10px] md:text-xs font-medium text-gray-500 uppercase w-12 md:w-20">{t('course_tests.attendance.table.status', 'Status')}</th>
+                                <th className="p-1 border text-center text-xs font-medium text-gray-500 w-10 md:w-16">{t('course_tests.attendance.table.total', 'Total')}</th>
+                                <th className="p-1 border text-center text-xs font-medium text-gray-500 w-12 md:w-20">{t('course_tests.attendance.table.status', 'Status')}</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white">
@@ -524,13 +524,13 @@ export function AttendanceManagerView({ course, onClose }) {
 
                                 return (
                                     <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="p-1 border text-[10px] md:text-xs text-center text-gray-500">{index + 1}</td>
-                                        <td className="p-1 border text-[10px] md:text-sm font-medium text-gray-900 break-words">{p.name}</td>
-                                        <td className="p-1 border text-[10px] md:text-xs text-gray-500 break-words">
+                                        <td className="p-1 border text-xs text-center text-gray-500">{index + 1}</td>
+                                        <td className="p-1 border text-xs md:text-sm font-medium text-gray-900 break-words">{p.name}</td>
+                                        <td className="p-1 border text-xs text-gray-500 break-words">
                                             <div className="font-semibold leading-tight">{p.center_name || p.health_facility || '-'}</div>
                                             <div className="text-gray-400 flex items-center gap-1 flex-wrap mt-0.5">
                                                 <span>{p.state}</span>
-                                                {p.group && <span className="px-1 rounded-sm bg-gray-100 border text-[8px] md:text-[10px]">{p.group}</span>}
+                                                {p.group && <span className="px-1 rounded-sm bg-gray-100 border text-xs">{p.group}</span>}
                                             </div>
                                         </td>
                                         {sessionDates.map(date => {
@@ -548,14 +548,14 @@ export function AttendanceManagerView({ course, onClose }) {
                                                 </td>
                                             );
                                         })}
-                                        <td className="p-1 border text-center text-[10px] md:text-sm font-bold text-gray-700 bg-gray-50 align-middle">
+                                        <td className="p-1 border text-center text-xs md:text-sm font-bold text-gray-700 bg-gray-50 align-middle">
                                             <div className="flex flex-col items-center leading-tight">
                                                 <span>{daysCount}</span>
-                                                <span className="text-[8px] md:text-[10px] font-normal text-gray-500">({percentage}%)</span>
+                                                <span className="text-xs font-normal text-gray-500">({percentage}%)</span>
                                             </div>
                                         </td>
                                         <td className="p-1 border text-center font-bold bg-gray-50 align-middle">
-                                            <span className={`px-1 py-0.5 rounded border text-[8px] md:text-xs inline-block text-center leading-tight break-words max-w-full ${status.class}`}>
+                                            <span className={`px-1 py-0.5 rounded border text-xs inline-block text-center leading-tight break-words max-w-full ${status.class}`}>
                                                 {statusLabel(status.text)}
                                             </span>
                                         </td>
@@ -565,8 +565,8 @@ export function AttendanceManagerView({ course, onClose }) {
                         </tbody>
                         <tfoot className="bg-gray-50 font-semibold shadow-inner">
                             <tr>
-                                <td colSpan="3" className="p-1 border text-right text-[10px] md:text-xs text-gray-600 uppercase">{t('course_tests.attendance.daily_presence', 'Daily Presence:')}</td>
-                                {dailyCounts.map((d, i) => <td key={i} className="p-1 border text-center text-[10px] md:text-xs text-gray-800">{d.count}</td>)}
+                                <td colSpan="3"className="p-1 border text-right text-xs text-gray-600 ">{t('course_tests.attendance.daily_presence', 'Daily Presence:')}</td>
+                                {dailyCounts.map((d, i) => <td key={i} className="p-1 border text-center text-xs text-gray-800">{d.count}</td>)}
                                 <td colSpan="2" className="p-1 border bg-gray-50"></td>
                             </tr>
                         </tfoot>
@@ -667,7 +667,7 @@ export function PublicAttendanceView({ courseId }) {
                             <p className="text-sm md:text-base text-gray-600">{course.course_type} - {course.state}</p>
                         </div>
                         <div className="text-right bg-blue-50 px-3 py-1.5 md:px-4 md:py-2 rounded-lg border border-blue-100">
-                            <span className="block text-[10px] md:text-xs text-blue-600 font-bold uppercase">{t('course_tests.attendance.date', 'Date')}</span>
+                            <span className="block text-xs text-blue-600 font-bold ">{t('course_tests.attendance.date', 'Date')}</span>
                             <span className="text-base md:text-lg font-bold text-blue-900">{targetDate}</span>
                         </div>
                     </div>
@@ -689,12 +689,12 @@ export function PublicAttendanceView({ courseId }) {
                         <table className="w-full divide-y divide-gray-200 table-fixed">
                             <thead className="bg-gray-100">
                                 <tr>
-                                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[35%] md:w-[25%]">{t('course_tests.attendance.table.name', 'Name')}</th>
-                                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[20%] md:w-[15%]">{t('course_tests.attendance.table.state', 'State')}</th>
+                                    <th className="px-2 py-2 md:px-4 md:py-3 text-start text-xs font-bold text-gray-500 w-[35%] md:w-[25%]">{t('course_tests.attendance.table.name', 'Name')}</th>
+                                    <th className="px-2 py-2 md:px-4 md:py-3 text-start text-xs font-bold text-gray-500 w-[20%] md:w-[15%]">{t('course_tests.attendance.table.state', 'State')}</th>
                                     {/* Hide Facility and Status on Mobile */}
-                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider md:w-[30%]">{t('course_tests.attendance.table.facility', 'Facility')}</th>
-                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider md:w-[15%]">{t('course_tests.attendance.table.status', 'Status')}</th>
-                                    <th className="px-2 py-2 md:px-4 md:py-3 text-right text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider w-[45%] md:w-[15%]">{t('course_tests.attendance.table.action', 'Action')}</th>
+                                    <th className="hidden md:table-cell px-4 py-3 text-start text-xs font-bold text-gray-500 md:w-[30%]">{t('course_tests.attendance.table.facility', 'Facility')}</th>
+                                    <th className="hidden md:table-cell px-4 py-3 text-start text-xs font-bold text-gray-500 md:w-[15%]">{t('course_tests.attendance.table.status', 'Status')}</th>
+                                    <th className="px-2 py-2 md:px-4 md:py-3 text-right text-xs font-bold text-gray-500 w-[45%] md:w-[15%]">{t('course_tests.attendance.table.action', 'Action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -703,7 +703,7 @@ export function PublicAttendanceView({ courseId }) {
                                     return (
                                         <tr key={p.id} className={isPresent ? "bg-green-50" : "hover:bg-gray-50"}>
                                             <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm font-medium text-gray-900 break-words">{p.name}</td>
-                                            <td className="px-2 py-2 md:px-4 md:py-3 text-[10px] md:text-sm text-gray-500 break-words">{p.state}</td>
+                                            <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-gray-500 break-words">{p.state}</td>
                                             <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-500 break-words">{p.center_name || p.health_facility || p.facilityName || '-'}</td>
                                             <td className="hidden md:table-cell px-4 py-3 text-sm">
                                                 {isPresent ? 
@@ -717,10 +717,10 @@ export function PublicAttendanceView({ courseId }) {
                                                     disabled={isPresent}
                                                     size="sm"
                                                     variant={isPresent ? "secondary" : "primary"}
-                                                    className={`text-[10px] md:text-sm px-2 py-1 md:px-3 md:py-1.5 ${isPresent ? "opacity-70 cursor-not-allowed bg-white border-gray-300 w-full" : "w-full"}`}
+                                                    className={`text-xs md:text-sm px-2 py-1 md:px-3 md:py-1.5 ${isPresent ? "opacity-70 cursor-not-allowed bg-white border-gray-300 w-full" : "w-full"}`}
                                                 >
                                                     {isPresent ? (
-                                                        <span className="flex items-center justify-center"><CheckCircle className="w-3 h-3 md:w-4 md:h-4 mr-1 text-green-600" /> {t('course_tests.attendance.confirmed', 'Confirmed')}</span>
+                                                        <span className="flex items-center justify-center"><CheckCircle className="w-3 h-3 md:w-4 md:h-4 me-1 text-green-600" /> {t('course_tests.attendance.confirmed', 'Confirmed')}</span>
                                                     ) : t('course_tests.attendance.confirm', 'Confirm')}
                                                 </Button>
                                             </td>

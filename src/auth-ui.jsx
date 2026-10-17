@@ -384,7 +384,7 @@ export function SignInBox() {
 
   if (isMissingName) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-surface p-4">
           <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
             <h1 className="text-3xl font-bold text-gray-800">{t('auth.complete_profile', "Complete Your Profile")}</h1>
             <p className="mt-2 text-gray-600">{t('auth.name_to_continue', "Please enter your full name to continue.")}</p>
@@ -404,7 +404,7 @@ export function SignInBox() {
               />
               <button
                 type="submit"
-                className="w-full px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition duration-300 disabled:bg-gray-400"
+                className="w-full px-4 py-2 font-bold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition duration-300 disabled:bg-gray-400"
                 disabled={isLoading}
               >
                 {isLoading ? (message ? message : t('auth.updating_profile_btn', "Updating Profile...")) : t('auth.save_continue', "Save and Continue")}
@@ -416,7 +416,7 @@ export function SignInBox() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-surface p-4">
       <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">{t('auth.system_title', "Monitoring System")}</h1>

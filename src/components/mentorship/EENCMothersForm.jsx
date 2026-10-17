@@ -37,7 +37,7 @@ const ScoreCircle = ({ score, maxScore }) => {
 
     return (
         <div
-            className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${bgColor} text-white font-bold text-xs shadow-md ml-2`} 
+            className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${bgColor} text-white font-bold text-xs shadow-md ms-2`} 
             title={`${score} / ${maxScore} (${maxScore > 0 ? percentage + '%' : 'N/A'})`}
         >
             {maxScore === 0 ? 'N/A' : `${percentage}%`}
@@ -66,8 +66,8 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
             dir="ltr"
         >
             <div className="font-bold text-sm sm:text-lg leading-none">{totalMaxScore === 0 ? 'N/A' : `${percentage}%`}</div>
-            <div className="text-[10px] sm:text-xs mt-1 text-center leading-tight">{t('mentorship_extra.eenc_mothers.overall_score', 'Overall Score')}</div>
-            <div className="text-[10px] sm:text-xs mt-0 leading-tight">({totalScore}/{totalMaxScore})</div>
+            <div className="text-xs mt-1 text-center leading-tight">{t('mentorship_extra.eenc_mothers.overall_score', 'Overall Score')}</div>
+            <div className="text-xs mt-0 leading-tight">({totalScore}/{totalMaxScore})</div>
         </div>
     );
 };
@@ -94,8 +94,8 @@ const MothersSectionAccordion = ({ title, scoreData, children, isCompleted = fal
             >
                 <div className="flex items-center text-right text-base font-bold text-slate-800">
                     {scoreData && <ScoreCircle score={scoreData.score} maxScore={scoreData.max} />}
-                    <span className="mr-2">{title}</span>
-                    {isCompleted && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
+                    <span className="me-2">{title}</span>
+                    {isCompleted && !isExpanded && <span className="me-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
@@ -122,7 +122,7 @@ const EENCFormRow = ({ label, value, onChange }) => {
 
     return (
         <div dir="rtl" className={containerClasses}>
-            <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex-grow mr-4 w-full sm:w-auto">
+            <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex-grow me-4 w-full sm:w-auto">
                 {label} <span className="text-red-500 text-lg align-middle">*</span>
             </span>
             <div className="flex gap-4 flex-shrink-0 mt-1 sm:mt-0">
@@ -425,9 +425,9 @@ const EENCMothersForm = ({
 
                     <div className="p-3 border rounded-lg bg-gray-50 text-right space-y-0.5 mb-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1" dir="rtl">
-                            <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['الولاية'] || 'غير محدد'}</span></div>
-                            <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['المحلية'] || 'غير محدد'}</span></div>
-                            <div><span className="text-sm font-medium text-gray-500">المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['اسم_المؤسسة'] || 'غير محدد'}</span></div>
+                            <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility['الولاية'] || 'غير محدد'}</span></div>
+                            <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility['المحلية'] || 'غير محدد'}</span></div>
+                            <div><span className="text-sm font-medium text-gray-500">المؤسسة:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility['اسم_المؤسسة'] || 'غير محدد'}</span></div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-1 pt-3 border-t mt-3">
                              <FormGroup label="تاريخ الجلسة" className="text-right">

@@ -341,7 +341,7 @@ const ChecklistSelector = ({ selected, onToggle, onStart, onExit, isEditing }) =
     const dir = isAr ? 'rtl' : 'ltr';
 
     return (
-        <div dir={dir} className={`max-w-4xl mx-auto ${isAr ? 'text-right' : 'text-left'}`}>
+        <div dir={dir} className={`max-w-4xl mx-auto ${isAr ? 'text-right' : 'text-start'}`}>
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-sky-800">
                     {t('Emergency Triage, Assessment and Treatment (ETAT) Skills Mentorship')}
@@ -360,7 +360,7 @@ const ChecklistSelector = ({ selected, onToggle, onStart, onExit, isEditing }) =
                             key={cl.key}
                             type="button"
                             onClick={() => onToggle(cl.key)}
-                            className={`${isAr ? 'text-right' : 'text-left'} p-4 rounded-2xl border-2 transition-all shadow-sm hover:shadow-md ${isSelected ? colors.ring : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                            className={`${isAr ? 'text-right' : 'text-start'} p-4 rounded-2xl border-2 transition-all shadow-sm hover:shadow-md ${isSelected ? colors.ring : 'border-slate-200 bg-white hover:border-slate-300'}`}
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-start gap-3">
@@ -432,9 +432,9 @@ const ETATSkillRow = ({ item, value, onChange }) => {
             dir={isAr ? 'rtl' : 'ltr'}
             className={`flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group ${isAnswered ? 'row-answered' : 'row-unanswered'}`}
         >
-            <span className={`font-medium text-slate-700 break-words group-hover:text-slate-900 ${isAr ? 'text-right mr-4' : 'text-left ml-4'} flex items-start sm:items-center flex-grow`}>
+            <span className={`font-medium text-slate-700 break-words group-hover:text-slate-900 ${isAr ? 'text-right me-4' : 'text-start ms-4'} flex items-start sm:items-center flex-grow`}>
                 {item.critical && (
-                    <span className={`flex-shrink-0 text-amber-500 ${isAr ? 'ml-2' : 'mr-2'}`} title={t('Critical step')}>★</span>
+                    <span className={`flex-shrink-0 text-amber-500 ${isAr ? 'ms-2' : 'me-2'}`} title={t('Critical step')}>★</span>
                 )}
                 <span className="w-full sm:w-auto">{t(item.label)}</span>
             </span>
@@ -472,7 +472,7 @@ const ChecklistBlock = ({ checklist, formData, scores, onSkillChange, defaultOpe
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
             >
-                <div className={`flex items-center gap-2 ${isAr ? 'text-right' : 'text-left'}`}>
+                <div className={`flex items-center gap-2 ${isAr ? 'text-right' : 'text-start'}`}>
                     {clScore && <ScoreCircle score={clScore.score} maxScore={clScore.maxScore} />}
                     <span className={`w-8 h-8 rounded-full ${colors.dot} text-white text-sm font-extrabold flex items-center justify-center`}>
                         {checklist.icon}
@@ -482,8 +482,8 @@ const ChecklistBlock = ({ checklist, formData, scores, onSkillChange, defaultOpe
                         <div className="text-xs text-slate-500 font-semibold">{t(checklist.subtitle)}</div>
                     </div>
                     {complete
-                        ? <span className={`${isAr ? 'mr-3' : 'ml-3'} text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold`}>{t('Complete')}</span>
-                        : <span className={`${isAr ? 'mr-3' : 'ml-3'} text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold`} dir="ltr">{answered}/{total}</span>}
+                        ? <span className={`${isAr ? 'me-3' : 'ms-3'} text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold`}>{t('Complete')}</span>
+                        : <span className={`${isAr ? 'me-3' : 'ms-3'} text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold`} dir="ltr">{answered}/{total}</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -497,7 +497,7 @@ const ChecklistBlock = ({ checklist, formData, scores, onSkillChange, defaultOpe
                         return (
                             <div key={section.id}>
                                 <div className="flex items-center justify-between px-4 sm:px-5 py-2 bg-slate-50 border-y border-slate-200">
-                                    <div className={`text-sm font-bold text-sky-900 ${isAr ? 'text-right' : 'text-left'}`}>
+                                    <div className={`text-sm font-bold text-sky-900 ${isAr ? 'text-right' : 'text-start'}`}>
                                         {t(section.title)}
                                     </div>
                                     {sScore && sScore.maxScore > 0 && (
@@ -534,10 +534,10 @@ const StickyOverallScore = ({ score, maxScore, criticalScore, criticalMax }) => 
     return (
         <div className={`fixed top-4 left-4 z-50 flex flex-col items-center justify-center p-2 w-20 rounded-lg ${bg} text-white shadow-2xl`}>
             <div className="font-bold text-lg leading-none">{pct}%</div>
-            <div className="text-[10px] mt-1 text-center leading-tight">{t('Overall Score')}</div>
-            <div className="text-[10px] leading-tight" dir="ltr">({score}/{maxScore})</div>
+            <div className="text-xs mt-1 text-center leading-tight">{t('Overall Score')}</div>
+            <div className="text-xs leading-tight" dir="ltr">({score}/{maxScore})</div>
             {criticalMax > 0 && (
-                <div className="text-[10px] mt-1 border-t border-white/40 pt-1 leading-tight" dir="ltr">★ {criticalScore}/{criticalMax}</div>
+                <div className="text-xs mt-1 border-t border-white/40 pt-1 leading-tight" dir="ltr">★ {criticalScore}/{criticalMax}</div>
             )}
         </div>
     );
@@ -767,7 +767,7 @@ const ETATSkillsAssessmentForm = ({
 
                     {/* Facility info */}
                     <div className="space-y-2 mb-4">
-                        <div className={`p-2 border rounded-lg bg-gray-50 ${isAr ? 'text-right' : 'text-left'}`}>
+                        <div className={`p-2 border rounded-lg bg-gray-50 ${isAr ? 'text-right' : 'text-start'}`}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-0.5">
                                 <div><span className="text-sm font-medium text-gray-500">{t('State')}:</span><span className="text-sm font-semibold text-gray-900 mx-2">{facility?.['الولاية'] || notSpecified}</span></div>
                                 <div><span className="text-sm font-medium text-gray-500">{t('Locality')}:</span><span className="text-sm font-semibold text-gray-900 mx-2">{facility?.['المحلية'] || notSpecified}</span></div>
@@ -776,7 +776,7 @@ const ETATSkillsAssessmentForm = ({
                         </div>
 
                         {/* Health worker info */}
-                        <div className={`p-2 border rounded-lg bg-gray-50 ${isAr ? 'text-right' : 'text-left'}`}>
+                        <div className={`p-2 border rounded-lg bg-gray-50 ${isAr ? 'text-right' : 'text-start'}`}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5">
                                 <div><span className="text-sm font-medium text-gray-500">{t('Health Worker Name')}:</span><span className="text-sm font-semibold text-gray-900 mx-2">{healthWorkerName || notSpecified}</span></div>
                                 <div><span className="text-sm font-medium text-gray-500">{t('Job Title')}:</span><span className="text-sm font-semibold text-gray-900 mx-2">{healthWorkerJobTitle || notSpecified}</span></div>
@@ -786,7 +786,7 @@ const ETATSkillsAssessmentForm = ({
                         </div>
 
                         {/* Session info */}
-                        <div className={`p-2 border rounded-lg bg-gray-50 ${isAr ? 'text-right' : 'text-left'}`}>
+                        <div className={`p-2 border rounded-lg bg-gray-50 ${isAr ? 'text-right' : 'text-start'}`}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5 items-end">
                                 <div className="text-sm">
                                     <span className="font-medium text-gray-500">{t('Supervisor Name')}:</span>
@@ -812,7 +812,7 @@ const ETATSkillsAssessmentForm = ({
                                     <span className="font-semibold text-gray-900 mx-2">{lastSessionDate || '---'}</span>
                                 </div>
                                 <div className="text-sm flex items-center">
-                                    <span className={`font-medium text-gray-700 ${isAr ? 'ml-2' : 'mr-2'}`}>{t('Visit Number')}:</span>
+                                    <span className={`font-medium text-gray-700 ${isAr ? 'ms-2' : 'me-2'}`}>{t('Visit Number')}:</span>
                                     {canEditVisitNumber ? (
                                         <Input
                                             type="number" inputMode="decimal"
@@ -869,7 +869,7 @@ const ETATSkillsAssessmentForm = ({
                     {/* Score summary */}
                     {scores.overallScore?.maxScore > 0 && (
                         <div className="bg-white border border-slate-300 rounded-xl p-4 mb-4">
-                            <h4 className={`font-extrabold text-slate-800 mb-3 ${isAr ? 'text-right' : 'text-left'}`}>{t('Score Summary')}</h4>
+                            <h4 className={`font-extrabold text-slate-800 mb-3 ${isAr ? 'text-right' : 'text-start'}`}>{t('Score Summary')}</h4>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {selectedChecklists.map(cl => (
                                     <div key={cl.key} className="p-3 border border-slate-200 rounded-lg bg-slate-50 text-center">
@@ -895,7 +895,7 @@ const ETATSkillsAssessmentForm = ({
                         </div>
                     )}
 
-                    <FormGroup label={t('General Notes')} className={isAr ? 'text-right' : 'text-left'}>
+                    <FormGroup label={t('General Notes')} className={isAr ? 'text-right' : 'text-start'}>
                         <Textarea
                             name="notes"
                             value={formData.notes}

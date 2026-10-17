@@ -242,10 +242,10 @@ const CustomTreatmentAdder = ({ onAdd, dosages }) => {
     const [val, setVal] = useState('');
     return (
         <div className="flex flex-col gap-1.5 mt-auto pt-3 border-t border-emerald-200">
-            <label className="text-[9px] font-bold text-emerald-800 uppercase">{t('clinical_ui.protocol.custom.title', 'Add Custom Treatment (If not in list)')}</label>
+            <label className="text-xs font-bold text-emerald-800 uppercase">{t('clinical_ui.protocol.custom.title', 'Add Custom Treatment (If not in list)')}</label>
             <div className="flex flex-col xl:flex-row gap-1.5 items-stretch xl:items-center">
                 <select 
-                    className="text-[10px] p-1.5 border border-emerald-300 rounded w-full xl:w-28 bg-emerald-50 text-emerald-800 font-bold" 
+                    className="text-xs p-1.5 border border-emerald-300 rounded w-full xl:w-28 bg-emerald-50 text-emerald-800 font-bold" 
                     onChange={(e) => { setVal(v => v + (v ? ' ' : '') + `{{dose:${e.target.value}}}`); e.target.value = ''; }}
                 >
                     <option value="">{t('clinical_ui.protocol.custom.dose_tag', '+ Dose Tag')}</option>
@@ -607,12 +607,12 @@ export default function ProtocolEditor() {
                         placeholder={isDosagesTab ? t('clinical_ui.protocol.search.drug', 'Find a drug…') : t('clinical_ui.protocol.search.rule', 'Find a category, classification, condition or treatment…')}
                         className="w-64 p-2 border border-slate-300 rounded text-sm focus:ring-sky-500"
                     />
-                    <Button onClick={handleLoadDefaults} className="bg-amber-500 hover:bg-amber-600 text-white border-0"><DownloadCloud size={16} className="mr-2 inline" /> {t('clinical_ui.protocol.btn.load_defaults', 'Load Defaults')}</Button>
+                    <Button onClick={handleLoadDefaults} className="bg-amber-500 hover:bg-amber-600 text-white border-0"><DownloadCloud size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.load_defaults', 'Load Defaults')}</Button>
                     {!isDosagesTab && (
-                        <Button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><FolderPlus size={16} className="mr-2 inline" /> {t('clinical_ui.protocol.btn.add_category', 'Add Category')}</Button>
+                        <Button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><FolderPlus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_category', 'Add Category')}</Button>
                     )}
                     {isDosagesTab && (
-                        <Button onClick={addNewDrug} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><Plus size={16} className="mr-2 inline" /> {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}</Button>
+                        <Button onClick={addNewDrug} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><Plus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}</Button>
                     )}
                 </div>
             </div>
@@ -634,7 +634,7 @@ export default function ProtocolEditor() {
                                 </span>
                             )}
                             <Button onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 py-1.5 px-4 h-auto text-sm">
-                                {isSaving ? t('clinical_ui.protocol.btn.saving', 'Saving...') : <><Save size={16} className="mr-1 inline" /> {t('clinical_ui.protocol.btn.save_db', 'Save Database')}</>}
+                                {isSaving ? t('clinical_ui.protocol.btn.saving', 'Saving...') : <><Save size={16} className="me-1 inline" /> {t('clinical_ui.protocol.btn.save_db', 'Save Database')}</>}
                             </Button>
                         </div>
                     </div>
@@ -699,17 +699,17 @@ export default function ProtocolEditor() {
                                         <div className="p-3 space-y-4">
                                             <div className="flex gap-4">
                                                 <div className="w-1/2">
-                                                    <label className="text-[10px] font-bold text-sky-700 uppercase block mb-1">{t('clinical_ui.protocol.drug.display_label', 'Display Label')}</label>
+                                                    <label className="text-xs font-bold text-sky-700 uppercase block mb-1">{t('clinical_ui.protocol.drug.display_label', 'Display Label')}</label>
                                                     <input type="text" value={drug.label} onChange={(e) => handleDrugChange(drugIndex, 'label', e.target.value)} className="w-full font-bold text-slate-800 p-1.5 border border-sky-200 rounded focus:ring-sky-500 text-sm" placeholder={t('clinical_ui.protocol.drug.label_ph', 'e.g. Amoxicillin (Oral)')}/>
                                                 </div>
                                                 <div className="flex-1">
-                                                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">{t('clinical_ui.protocol.drug.fallback', 'Fallback Text (If Out of Range)')}</label>
+                                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-1">{t('clinical_ui.protocol.drug.fallback', 'Fallback Text (If Out of Range)')}</label>
                                                     <input type="text" value={drug.fallback} onChange={(e) => handleDrugChange(drugIndex, 'fallback', e.target.value)} className="w-full p-1.5 border border-slate-300 rounded focus:ring-sky-500 text-sm" placeholder={t('clinical_ui.protocol.drug.fallback_ph', 'e.g. Check manual chart')}/>
                                                 </div>
                                             </div>
 
                                             <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
-                                                <div className="bg-slate-200 p-1.5 grid grid-cols-12 gap-1 text-[9px] font-bold text-slate-700 uppercase text-center border-b border-slate-300">
+                                                <div className="bg-slate-200 p-1.5 grid grid-cols-12 gap-1 text-xs font-bold text-slate-700 uppercase text-center border-b border-slate-300">
                                                     <div className="col-span-1">{t('clinical_ui.protocol.drug.min_mo', 'Min Mo')}</div>
                                                     <div className="col-span-1">{t('clinical_ui.protocol.drug.max_mo', 'Max Mo')}</div>
                                                     <div className="col-span-1">{t('clinical_ui.protocol.drug.min_kg', 'Min Kg')}</div>
@@ -734,7 +734,7 @@ export default function ProtocolEditor() {
                                                     </div>
                                                 ))}
                                                 <div className="p-1.5 bg-slate-100 border-t border-slate-200">
-                                                    <Button size="sm" variant="secondary" onClick={() => addDrugRange(drugIndex)} className="w-full py-1 h-auto text-xs bg-white"><Plus size={14} className="mr-1 inline"/> {t('clinical_ui.protocol.btn.add_range', 'Add Dose Range')}</Button>
+                                                    <Button size="sm" variant="secondary" onClick={() => addDrugRange(drugIndex)} className="w-full py-1 h-auto text-xs bg-white"><Plus size={14} className="me-1 inline"/> {t('clinical_ui.protocol.btn.add_range', 'Add Dose Range')}</Button>
                                                 </div>
                                             </div>
                                         </div>
@@ -774,7 +774,7 @@ export default function ProtocolEditor() {
                                             <span className="text-xs text-slate-500 font-mono hidden md:inline">({catKey})</span>
                                         </div>
                                         <div className="flex gap-2 shrink-0">
-                                            <Button size="sm" variant="secondary" onClick={(e) => addNewRule(catKey, e)} className="py-1 px-2 h-auto text-xs"><Plus size={14} className="mr-1 inline" /> {t('clinical_ui.protocol.btn.add_rule', 'Add Rule')}</Button>
+                                            <Button size="sm" variant="secondary" onClick={(e) => addNewRule(catKey, e)} className="py-1 px-2 h-auto text-xs"><Plus size={14} className="me-1 inline" /> {t('clinical_ui.protocol.btn.add_rule', 'Add Rule')}</Button>
                                             <button onClick={(e) => removeCategory(catKey, e)} className="p-1 text-slate-500 hover:text-red-600 hover:bg-white rounded transition-colors" title={t('clinical_ui.protocol.dlg.del_cat_title2', 'Delete Category')}><Trash2 size={16} /></button>
                                         </div>
                                     </div>
@@ -803,7 +803,7 @@ export default function ProtocolEditor() {
                                                     <div className="lg:col-span-3 space-y-3">
                                                         <div className="flex gap-2">
                                                             <div className="flex-1">
-                                                                <label className="text-[10px] font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.logic', 'Logic')}</label>
+                                                                <label className="text-xs font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.logic', 'Logic')}</label>
                                                                 <select value={rule.type} onChange={(e) => handleRuleChange(catKey, ruleIndex, 'type', e.target.value)} className="w-full text-xs p-1.5 border border-slate-300 rounded font-bold bg-slate-50">
                                                                     <option value="ANY">ANY (OR)</option>
                                                                     <option value="ALL">ALL (AND)</option>
@@ -812,18 +812,18 @@ export default function ProtocolEditor() {
                                                             </div>
                                                             {rule.type === 'COUNT_GTE' && (
                                                                 <div className="w-1/3">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.need', 'Need')}</label>
+                                                                    <label className="text-xs font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.need', 'Need')}</label>
                                                                     <input type="number" inputMode="decimal" value={rule.threshold || 2} onChange={(e) => handleRuleChange(catKey, ruleIndex, 'threshold', parseInt(e.target.value, 10))} className="w-full text-xs p-1.5 border border-slate-300 rounded text-center" />
                                                                 </div>
                                                             )}
                                                         </div>
                                                         
                                                         <div>
-                                                            <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Globe size={10} className="text-sky-500"/> {t('clinical_ui.protocol.rule.label', 'Label')}</label>
+                                                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Globe size={10} className="text-sky-500"/> {t('clinical_ui.protocol.rule.label', 'Label')}</label>
                                                             <input type="text" value={rule.classification.label} onChange={(e) => handleClassificationChange(catKey, ruleIndex, 'label', e.target.value)} className="w-full text-xs p-1.5 border border-slate-300 rounded font-bold" dir="auto" />
                                                         </div>
                                                         <div>
-                                                            <label className="text-[10px] font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.color', 'Color')}</label>
+                                                            <label className="text-xs font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.color', 'Color')}</label>
                                                             <select value={rule.classification.color} onChange={(e) => handleClassificationChange(catKey, ruleIndex, 'color', e.target.value)} className="w-full text-xs p-1.5 border border-slate-300 rounded">
                                                                 {IMNCI_SEVERITIES.map((sev) => (
                                                                     <option key={sev.id} value={sev.protocolColor}>{sev.label}</option>
@@ -831,8 +831,8 @@ export default function ProtocolEditor() {
                                                             </select>
                                                         </div>
                                                         <div>
-                                                            <label className="text-[10px] font-bold text-slate-400 uppercase">{t('clinical_ui.protocol.rule.id', 'Rule ID')}</label>
-                                                            <div className="text-[10px] font-mono text-slate-400 bg-slate-100 p-1.5 rounded border border-slate-200 flex items-center gap-1 cursor-not-allowed">
+                                                            <label className="text-xs font-bold text-slate-400 uppercase">{t('clinical_ui.protocol.rule.id', 'Rule ID')}</label>
+                                                            <div className="text-xs font-mono text-slate-400 bg-slate-100 p-1.5 rounded border border-slate-200 flex items-center gap-1 cursor-not-allowed">
                                                                 <Lock size={10} /> {rule.id}
                                                             </div>
                                                         </div>
@@ -840,18 +840,18 @@ export default function ProtocolEditor() {
 
                                                     {/* CENTER COLUMN: Conditions */}
                                                     <div className="lg:col-span-4 bg-slate-50 p-3 rounded border border-slate-200 flex flex-col">
-                                                        <label className="text-[10px] font-bold text-slate-700 uppercase mb-2 border-b border-slate-200 pb-1">{t('clinical_ui.protocol.rule.conditions', 'Conditions')}</label>
+                                                        <label className="text-xs font-bold text-slate-700 uppercase mb-2 border-b border-slate-200 pb-1">{t('clinical_ui.protocol.rule.conditions', 'Conditions')}</label>
                                                         <div className="flex flex-wrap gap-1.5 mb-3">
                                                             {(rule.conditions || []).map(cond => (
-                                                                <span key={cond} className="px-2 py-1 text-[10px] font-mono rounded border bg-sky-600 text-white border-sky-700 shadow-inner flex items-center gap-1">
+                                                                <span key={cond} className="px-2 py-1 text-xs font-mono rounded border bg-sky-600 text-white border-sky-700 shadow-inner flex items-center gap-1">
                                                                     {cond}
-                                                                    <button onClick={() => toggleCondition(catKey, ruleIndex, cond)} className="hover:text-red-200 ml-1"><X size={10}/></button>
+                                                                    <button onClick={() => toggleCondition(catKey, ruleIndex, cond)} className="hover:text-red-200 ms-1"><X size={10}/></button>
                                                                 </span>
                                                             ))}
                                                             {(!rule.conditions || rule.conditions.length === 0) && <span className="text-xs text-slate-400 italic">{t('clinical_ui.protocol.empty.no_conditions', 'No conditions added.')}</span>}
                                                         </div>
                                                         <select
-                                                            className="text-[10px] p-1.5 border border-slate-300 rounded focus:ring-sky-500 w-full mt-auto"
+                                                            className="text-xs p-1.5 border border-slate-300 rounded focus:ring-sky-500 w-full mt-auto"
                                                             onChange={(e) => {
                                                                 if (e.target.value) {
                                                                     toggleCondition(catKey, ruleIndex, e.target.value);
@@ -868,7 +868,7 @@ export default function ProtocolEditor() {
 
                                                     {/* RIGHT COLUMN: Fully Editable Treatments */}
                                                     <div className="lg:col-span-5 bg-emerald-50/50 p-3 rounded border border-emerald-100 flex flex-col">
-                                                        <label className="text-[10px] font-bold text-emerald-800 uppercase mb-2 border-b border-emerald-200 pb-1 flex items-center gap-1">
+                                                        <label className="text-xs font-bold text-emerald-800 uppercase mb-2 border-b border-emerald-200 pb-1 flex items-center gap-1">
                                                             <Globe size={10}/> {t('clinical_ui.protocol.rule.treatments', 'Treatments (Editable)')}
                                                         </label>
                                                         
@@ -878,7 +878,7 @@ export default function ProtocolEditor() {
                                                                     <textarea 
                                                                         value={t}
                                                                         onChange={(e) => editTreatment(catKey, ruleIndex, tIdx, e.target.value)}
-                                                                        className="w-full bg-emerald-600 border border-emerald-700 rounded p-1.5 text-white text-[11px] font-semibold shadow-inner focus:ring-2 focus:ring-emerald-400 focus:outline-none leading-tight"
+                                                                        className="w-full bg-emerald-600 border border-emerald-700 rounded p-1.5 text-white text-xs font-semibold shadow-inner focus:ring-2 focus:ring-emerald-400 focus:outline-none leading-tight"
                                                                         rows={2}
                                                                         dir="auto"
                                                                     />
@@ -895,7 +895,7 @@ export default function ProtocolEditor() {
 
                                                         <div className="mt-auto space-y-2">
                                                             <select
-                                                                className="text-[10px] p-1.5 border border-emerald-300 rounded text-emerald-800 font-bold w-full bg-white"
+                                                                className="text-xs p-1.5 border border-emerald-300 rounded text-emerald-800 font-bold w-full bg-white"
                                                                 onChange={(e) => {
                                                                     if (e.target.value) {
                                                                         addTreatment(catKey, ruleIndex, e.target.value);

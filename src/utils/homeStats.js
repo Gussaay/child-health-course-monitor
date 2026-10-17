@@ -5,6 +5,8 @@
 // work only, the newborn unit sees newborn courses only, everyone else sees
 // all of it. Each number is for the current year.
 
+import { countsForCoverage } from './coverageEligibility';
+
 const isLive = (x) => x && x.isDeleted !== true && x.isDeleted !== 'true';
 
 // Unit names as stored on programme team members (ProgramTeamView).
@@ -130,7 +132,7 @@ export function computeCoverage({ level, states = [], localities = [], facilitie
 
     const services = {};
     COVERAGE_SERVICES.forEach(({ key, target, has }) => {
-        const targets = list.filter(target);
+        const targets = list.filter(target).filter(countsForCoverage);
         const n = targets.filter(has).length;
         services[key] = { n, d: targets.length, perc: targets.length ? round1((n / targets.length) * 100) : 0 };
     });

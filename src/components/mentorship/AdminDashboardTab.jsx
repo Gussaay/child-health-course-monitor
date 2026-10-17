@@ -638,7 +638,7 @@ const HealthWorkerVisitsTable = ({
 
             <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
-                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
+                    <thead className="bg-slate-200 text-xs text-slate-700 ">
                         <tr>
                             <th className={thBase}>#</th>
                             <th className={`px-4 py-3 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Health Worker')}</th>
@@ -651,11 +651,11 @@ const HealthWorkerVisitsTable = ({
                             <th className={`${thBase}`}>{t('Last Visit')}</th>
                             <th className={`${thBase} bg-emerald-50`}>
                                 {t('Visit 1 → Visit 4')}
-                                <div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('days')}</div>
+                                <div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('days')}</div>
                             </th>
                             <th className={`${thBase} bg-amber-50`}>
                                 {t('Average Interval')}
-                                <div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('days between visits')}</div>
+                                <div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('days between visits')}</div>
                             </th>
                         </tr>
                     </thead>
@@ -679,7 +679,7 @@ const HealthWorkerVisitsTable = ({
                                         {row.visitCount}
                                     </span>
                                     {row.visitNumbers.length > 0 && (
-                                        <div className="text-[10px] text-slate-500 mt-1">#{row.visitNumbers.join(', ')}</div>
+                                        <div className="text-xs text-slate-500 mt-1">#{row.visitNumbers.join(', ')}</div>
                                     )}
                                 </td>
                                 <td className="px-4 py-3 border-l border-black text-center text-slate-600 whitespace-nowrap" dir="ltr">{fmtDate(row.firstDate)}</td>
@@ -789,7 +789,7 @@ const AdminDashboardTab = ({
                 <VolumeLineChart title="Visits & Cases by Visit Number" chartData={volumeChartData} kpiKeys={volumeChartKeys} />
             </div>
             
-            <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+            <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
                 {t('Program Performance by')} {t(geographicLevelName)} {scopeTitle}
             </h3>
             <GeographicVolumeTable 
@@ -799,13 +799,13 @@ const AdminDashboardTab = ({
             />
 
             {/* MENTOR PERFORMANCE TABLE WITH COPY FUNCTION */}
-            <div className={`flex flex-col sm:flex-row sm:items-center justify-between mb-5 mt-10 gap-4 ${isAr ? 'text-right' : 'text-left'}`}>
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between mb-5 mt-10 gap-4 ${isAr ? 'text-right' : 'text-start'}`}>
                 <h3 className="text-xl font-extrabold text-slate-800 tracking-wide m-0">
                     {t('Mentor Performance & Compliance')} {scopeTitle}
                 </h3>
                 <button 
                     onClick={handleCopyTable}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition-colors text-sm"
+                    className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition-colors text-sm"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
@@ -824,7 +824,7 @@ const AdminDashboardTab = ({
             </div>
 
             {/* MENTORED HEALTH WORKERS: VISIT COUNTS & INTERVALS */}
-            <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+            <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
                 {t('Mentored Health Workers - Visits & Intervals')} {scopeTitle}
             </h3>
             <HealthWorkerVisitsTable 

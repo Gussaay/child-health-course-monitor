@@ -27,6 +27,7 @@ import {
 
 import { useStandardNames } from '../hooks/useNameRegistry';
 import { canonicalOptions } from '../utils/nameRegistry';
+import { IMNCI_FIELD, IMNCI_UNKNOWN } from '../utils/coverageEligibility';
 // --- CONSTANTS ---
 const LOCALITY_EN_TO_AR_MAP = Object.values(STATE_LOCALITIES).flatMap(s => s.localities).reduce((acc, loc) => {
     acc[loc.en] = loc.ar;
@@ -60,7 +61,8 @@ const calculateKPIs = (targetFacilities, updates, serviceCategory) => {
     // 1. IMNCI Logic
     const functioningPhcs = targetFacilities.filter(f => 
         isYes(getVal(f, 'هل_المؤسسة_تعمل', updates)) && 
-        ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(getVal(f, 'نوع_المؤسسةالصحية', updates))
+        ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(getVal(f, 'نوع_المؤسسةالصحية', updates)) &&
+        getVal(f, IMNCI_FIELD, updates) !== IMNCI_UNKNOWN
     );
     const imnciInPhcs = functioningPhcs.filter(f => isYes(getVal(f, 'وجود_العلاج_المتكامل_لامراض_الطفولة', updates)));
 
@@ -995,7 +997,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                     
                     {/* Multi-Select Filter for Service Types */}
                     <div className="w-full flex flex-wrap gap-2 items-center border-t border-slate-200 pt-3">
-                        <span className="text-sm font-semibold text-slate-700 ml-2">تصفية بنوع الخدمة:</span>
+                        <span className="text-sm font-semibold text-slate-700 ms-2">تصفية بنوع الخدمة:</span>
                         {SERVICE_TYPE_OPTIONS.map(opt => (
                             <button
                                 key={opt.value}
@@ -1012,7 +1014,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                         {selectedServiceTypes.length > 0 && (
                             <button 
                                 onClick={() => setSelectedServiceTypes([])} 
-                                className="text-xs text-red-500 hover:underline mr-2 font-semibold"
+                                className="text-xs text-red-500 hover:underline me-2 font-semibold"
                             >
                                 مسح الخدمات
                             </button>
@@ -1035,7 +1037,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                 {isFetchingData && (
                     <div className="absolute top-2 left-2 z-10 flex items-center bg-white/80 px-3 py-1 rounded shadow-sm border border-sky-100">
                         <Spinner size="sm" />
-                        <span className="ml-2 text-xs font-bold text-sky-700">جاري المزامنة...</span>
+                        <span className="ms-2 text-xs font-bold text-sky-700">جاري المزامنة...</span>
                     </div>
                 )}
                 
@@ -1043,13 +1045,13 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                     <table ref={tableRef} className="w-full table-fixed divide-y divide-gray-200 border-collapse bg-white">
                         <thead className="bg-slate-100">
                             <tr>
-                                <th className="px-1 py-1 text-center text-xs font-bold text-slate-800 uppercase w-12 border border-slate-300">#</th>
-                                <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-48 whitespace-normal break-words align-bottom border border-slate-300">اسم المؤسسة</th>
-                                <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-28 whitespace-normal break-words align-bottom border border-slate-300">النوع</th>
+                                <th className="px-1 py-1 text-center text-xs font-bold text-slate-800 w-12 border border-slate-300">#</th>
+                                <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 w-48 whitespace-normal break-words align-bottom border border-slate-300">اسم المؤسسة</th>
+                                <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 w-28 whitespace-normal break-words align-bottom border border-slate-300">النوع</th>
                                 {config.columns.map(col => (
-                                    <th key={col.key} className={`px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase whitespace-normal break-words align-bottom border border-slate-300 ${col.type === 'staff_names' ? 'w-40' : ''}`}>{col.label}</th>
+                                    <th key={col.key} className={`px-1 py-1 text-right text-xs font-bold text-slate-800 whitespace-normal break-words align-bottom border border-slate-300 ${col.type === 'staff_names'? 'w-40': ''}`}>{col.label}</th>
                                 ))}
-                                <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-16 whitespace-normal break-words align-bottom border border-slate-300">الحالة</th>
+                                <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 w-16 whitespace-normal break-words align-bottom border border-slate-300">الحالة</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -1060,7 +1062,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                     </td>
                                     <td className="px-1 py-1 text-xs font-medium text-right border border-slate-300 whitespace-normal break-words leading-tight">{f['اسم_المؤسسة']}</td>
                                     <td className="px-1 py-1 border border-slate-300 align-top">
-                                        <div className="text-[10px] py-1 px-1 w-full bg-slate-100 text-slate-700 border border-slate-200 rounded-sm cursor-not-allowed text-right whitespace-normal break-words leading-tight min-h-[28px] flex items-center">
+                                        <div className="text-xs py-1 px-1 w-full bg-slate-100 text-slate-700 border border-slate-200 rounded-sm cursor-not-allowed text-right whitespace-normal break-words leading-tight min-h-[28px] flex items-center">
                                             {f['نوع_المؤسسةالصحية'] || '-'}
                                         </div>
                                     </td>
@@ -1076,7 +1078,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                                         {staffArr.length > 0 ? (
                                                             <div className="flex flex-col w-full">
                                                                 {staffArr.map((s, idx) => (
-                                                                    <div key={idx} className="text-[10px] h-7 flex items-center whitespace-nowrap w-full border-b border-gray-200 last:border-0 overflow-hidden text-ellipsis px-1">
+                                                                    <div key={idx} className="text-xs h-7 flex items-center whitespace-nowrap w-full border-b border-gray-200 last:border-0 overflow-hidden text-ellipsis px-1">
                                                                         {col.type === 'staff_names' && (s.name || '-')}
                                                                         {col.type === 'staff_training' && (s.is_trained === 'Yes' ? 'نعم' : (s.is_trained === 'Planned' ? 'مخططة' : 'لا'))}
                                                                         {col.type === 'staff_phones' && (s.phone || '-')}
@@ -1084,7 +1086,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                                                 ))}
                                                             </div>
                                                         ) : (
-                                                            <span className="text-gray-400 italic text-[10px] p-1 block">-</span>
+                                                            <span className="text-gray-400 italic text-xs p-1 block">-</span>
                                                         )}
                                                     </button>
                                                     {col.type === 'staff_names' && (
@@ -1114,7 +1116,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                             }
                                             return (
                                                 <td key={`${f.id}-${col.key}`} className="px-1 py-1 border border-slate-300 align-top">
-                                                    <div className="text-[9px] py-1 px-1 h-7 w-full bg-slate-100 text-slate-500 border border-slate-200 rounded-sm cursor-not-allowed flex items-center overflow-hidden text-ellipsis whitespace-nowrap" title={displayVal || '-'}>
+                                                    <div className="text-xs py-1 px-1 h-7 w-full bg-slate-100 text-slate-500 border border-slate-200 rounded-sm cursor-not-allowed flex items-center overflow-hidden text-ellipsis whitespace-nowrap" title={displayVal || '-'}>
                                                         {displayVal || '-'}
                                                     </div>
                                                 </td>
@@ -1129,7 +1131,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                         return (
                                             <td key={`${f.id}-${col.key}`} className="px-1 py-1 border border-slate-300 align-top">
                                                 {col.type === 'select' ? (
-                                                    <Select value={val ?? ''} onChange={(e) => handleInputChange(f.id, col.key, e.target.value)} className={`text-[10px] py-0 px-1 h-7 w-full border rounded-sm focus:ring-1 focus:ring-sky-500 ${selectColorClass}`}>
+                                                    <Select value={val ?? ''} onChange={(e) => handleInputChange(f.id, col.key, e.target.value)} className={`text-xs py-0 px-1 h-7 w-full border rounded-sm focus:ring-1 focus:ring-sky-500 ${selectColorClass}`}>
                                                         <option value="">-</option>
                                                         {[...col.options, ...(val && !col.options.includes(val) ? [val] : [])].map(opt => (
                                                             <option key={opt} value={opt}>
@@ -1138,13 +1140,13 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                                         ))}
                                                     </Select>
                                                 ) : (
-                                                    <Input type={col.type} value={val ?? ''} onChange={(e) => handleInputChange(f.id, col.key, e.target.value)} className="text-[10px] py-0 px-1 h-7 w-full border border-gray-200 rounded-sm focus:ring-1 focus:ring-sky-500" />
+                                                    <Input type={col.type} value={val ?? ''} onChange={(e) => handleInputChange(f.id, col.key, e.target.value)} className="text-xs py-0 px-1 h-7 w-full border border-gray-200 rounded-sm focus:ring-1 focus:ring-sky-500" />
                                                 )}
                                             </td>
                                         );
                                     })}
                                     <td className="px-1 py-1 text-center border border-slate-300">
-                                        {updates[f.id] ? <span className="text-blue-600 text-[10px] font-bold whitespace-nowrap">تم التعديل</span> : <span className="text-slate-300 text-[10px]">-</span>}
+                                        {updates[f.id] ? <span className="text-blue-600 text-xs font-bold whitespace-nowrap">تم التعديل</span> : <span className="text-slate-300 text-xs">-</span>}
                                     </td>
                                 </tr>
                             )) : (

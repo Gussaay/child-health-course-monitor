@@ -45,7 +45,7 @@ export function ActionToggle({ options, currentValue, onClick, name }) {
                 if (idx === 0) roundedClass = "rounded-r-md";
                 if (idx === options.length - 1) roundedClass = "rounded-l-md";
                 if (options.length === 1) roundedClass = "rounded-md";
-                if (idx > 0) roundedClass += " -mr-px border border-gray-300"; 
+                if (idx > 0) roundedClass += " -me-px border border-gray-300"; 
                 else roundedClass += " border border-gray-300";
 
                 return (
@@ -221,7 +221,7 @@ const ScoreCircle = ({ score, maxScore }) => {
     else if (percentage >= 50) colorClasses = 'bg-yellow-100 text-yellow-700 border-yellow-200';
 
     return (
-        <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full border-2 text-xs font-bold ml-3 shadow-sm ${colorClasses}`} title={`${score}/${maxScore}`}>
+        <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full border-2 text-xs font-bold ms-3 shadow-sm ${colorClasses}`} title={`${score}/${maxScore}`}>
             {percentage}%
         </div>
     );
@@ -266,7 +266,7 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange, showPartial = fal
 
     return (
         <div dir="rtl" className={containerClass}>
-            <span className="font-medium text-slate-700 break-words group-hover:text-slate-900 text-right flex items-start sm:items-center flex-grow mr-4">
+            <span className="font-medium text-slate-700 break-words group-hover:text-slate-900 text-right flex items-start sm:items-center flex-grow me-4">
                 <span className="w-full sm:w-auto">{label}</span> 
             </span>
             <div className="flex gap-4 flex-shrink-0 mt-2 sm:mt-0"> 
@@ -307,8 +307,8 @@ const SectionRenderer = ({ title, items, formData, handleSkillChange, score, max
             >
                 <div className="flex items-center text-right">
                     <ScoreCircle score={score} maxScore={maxScore} />
-                    <h4 className="text-base font-bold text-slate-800 mr-3">{title}</h4>
-                    {isCompleted && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
+                    <h4 className="text-base font-bold text-slate-800 me-3">{title}</h4>
+                    {isCompleted && !isExpanded && <span className="me-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
@@ -381,8 +381,8 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
             >
                 <div className="flex items-center text-right">
                     <ScoreCircle score={score} maxScore={maxScore} />
-                    <h4 className="text-base font-bold text-slate-800 mr-3">4. إنعاش الوليد (الدقيقة الذهبية)</h4>
-                    {isSectionComplete && !isExpanded && <span className="mr-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
+                    <h4 className="text-base font-bold text-slate-800 me-3">4. إنعاش الوليد (الدقيقة الذهبية)</h4>
+                    {isSectionComplete && !isExpanded && <span className="me-3 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">مكتمل</span>}
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
@@ -556,11 +556,11 @@ export const EENCFormRenderer = ({ formData, setFormData, scores, handleFormChan
                 <div className="p-2 border rounded-lg bg-gray-50 text-right mb-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 items-end" dir="rtl">
                         <div className="text-sm flex items-center">
-                            <span className="font-medium text-gray-500 ml-2">تاريخ الجلسة:</span>
-                            <Input type="date" name="session_date" value={formData.session_date} onChange={handleFormChange} className="p-1 text-sm mr-2 w-auto" />
+                            <span className="font-medium text-gray-500 ms-2">تاريخ الجلسة:</span>
+                            <Input type="date" name="session_date" value={formData.session_date} onChange={handleFormChange} className="p-1 text-sm me-2 w-auto" />
                         </div>
                         <div className="text-sm flex items-center">
-                            <span className="font-medium text-gray-500 ml-2">نوع التقييم:</span>
+                            <span className="font-medium text-gray-500 ms-2">نوع التقييم:</span>
                             <select
                                 className="p-1 border rounded bg-white text-sm font-bold text-sky-700 border-sky-300 focus:ring-sky-500 outline-none"
                                 value={formData.delivery_type}
@@ -881,19 +881,19 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                     <div className="space-y-2 mb-4">
                         <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-0.5" dir="rtl">
-                                <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['الولاية'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['المحلية'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">اسم المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['اسم_المؤسسة'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['الولاية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['المحلية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">اسم المؤسسة:</span><span className="text-sm font-semibold text-gray-900 me-2">{facility?.['اسم_المؤسسة'] || 'غير محدد'}</span></div>
                             </div>
                         </div>
                         <div className="p-2 border rounded-lg bg-gray-50 text-right">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5 items-end" dir="rtl">
                                 <div className="text-sm">
                                     <span className="font-medium text-gray-500">تاريخ الجلسة:</span>
-                                    <Input type="date" name="session_date" value={formData.session_date} onChange={handleFormChange} required className="p-1 text-sm mr-2 w-auto"/>
+                                    <Input type="date" name="session_date" value={formData.session_date} onChange={handleFormChange} required className="p-1 text-sm me-2 w-auto"/>
                                 </div>
                                 <div className="text-sm flex items-center">
-                                    <span className="font-medium text-gray-500 ml-2">نوع التقييم:</span>
+                                    <span className="font-medium text-gray-500 ms-2">نوع التقييم:</span>
                                     <select 
                                         className="p-1 border rounded bg-white text-sm font-bold text-sky-700 border-sky-300 focus:ring-sky-500 outline-none" 
                                         value={formData.delivery_type} 
@@ -906,11 +906,11 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                                     </select>
                                 </div>
                                 <div className="text-sm flex items-center">
-                                    <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
+                                    <span className="font-medium text-gray-700 ms-2">رقم الجلسة:</span>
                                     {canEditVisitNumber ? (
                                         <Input type="number" inputMode="decimal" min="1" value={currentVisitNumber} onChange={(e) => setCurrentVisitNumber(e.target.value)} className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"/>
                                     ) : (
-                                        <span className="text-lg font-bold text-sky-700 mr-2">{currentVisitNumber}</span>
+                                        <span className="text-lg font-bold text-sky-700 me-2">{currentVisitNumber}</span>
                                     )}
                                 </div>
                             </div>

@@ -150,7 +150,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
                     <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg mt-6">
                         <div className="flex items-center gap-4">
                             <div>{t('facilitators_page.link_modal.status', 'Status:')}
-                                <span className={`font-bold px-2 py-1 rounded-full text-xs ml-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                <span className={`font-bold px-2 py-1 rounded-full text-xs ms-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                     {settings.isActive ? t('facilitators_page.link_modal.active', 'Active') : t('facilitators_page.link_modal.inactive', 'Inactive')}
                                 </span>
                             </div>
@@ -314,7 +314,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
                         <p className="mb-4">{t('facilitators_page.import.intro', 'You can download an Excel template with existing data to update records, or upload your own file.')}</p>
                         <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">{t('facilitators_page.import.download_template', 'Download Template')}</Button>
                         <p className="mb-2">{t('facilitators_page.import.upload_own', 'Or, upload your own Excel file (first row must be headers).')}</p>
-                        <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                        <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                     </div>
                 )}
                 {currentPage === 1 && (
@@ -469,7 +469,7 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                                                     {!isPublicForm && certificateUrls[course] && (
                                                         <a href={certificateUrls[course]} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">{t('facilitators_page.form.view_current_certificate', 'View Current Certificate')}</a>
                                                     )}
-                                                    <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange(course, e.target.files[0])} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                                    <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange(course, e.target.files[0])} className="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                                                 </FormGroup>
                                             )}
                                         </div>
@@ -930,7 +930,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.team_leaders', 'Team Leaders')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.teamLeaders}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.follow_up_supervisors', 'Follow-up Supervisors')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.followUpSupervisors}</div></div>
                                     <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.mentors', 'Trained Mentors')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentors}</div></div>
-                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.declaration_current', 'Mentors: Declaration Current')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentorsDeclarationCurrent}</div><div className="text-[11px] text-gray-500 mt-1">{t('facilitators_page.kpi.of_trained', 'of {{n}} trained', { n: dashboardKpis.mentors })}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">{t('facilitators_page.kpi.declaration_current', 'Mentors: Declaration Current')}</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.mentorsDeclarationCurrent}</div><div className="text-xs text-gray-500 mt-1">{t('facilitators_page.kpi.of_trained', 'of {{n}} trained', { n: dashboardKpis.mentors })}</div></div>
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-6 mb-6">
                                     <Card className="p-0 border-0 shadow-none">
@@ -975,7 +975,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                                             </tr>
                                         );
                                     })
-                                ) : ( <EmptyState key="empty-facilitators" message={t('facilitators_page.list.no_match', 'No facilitators found matching your search.')} colSpan={5} /> )}
+                                ) : ( <EmptyState key="empty-facilitators" message={t('facilitators_page.list.no_match', 'No facilitators found matching your search.')} filtered colSpan={5} /> )}
                             </Table>
                         )}
 

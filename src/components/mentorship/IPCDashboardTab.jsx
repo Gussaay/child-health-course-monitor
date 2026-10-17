@@ -298,11 +298,11 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-8">
           <div className="bg-slate-50 border border-black rounded-xl px-8 py-4 text-center">
-            <div className="text-sm font-bold text-slate-500 uppercase tracking-wide">{t('Total Score')}</div>
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{t('Total Score')}</div>
             <div className="text-3xl font-black text-slate-800" dir="ltr">{totalScore} / {totalMax}</div>
           </div>
           <div className={`bg-white border border-black rounded-xl px-8 py-4 text-center shadow-md ${levelColor}`}>
-            <div className="text-sm font-bold text-slate-500 uppercase tracking-wide">{t('IPC Level')}</div>
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{t('IPC Level')}</div>
             <div className={`text-3xl font-black ${levelColor}`}>{level}</div>
           </div>
         </div>
@@ -371,7 +371,7 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
       {geographicKpis && geographicKpis.length > 0 && (
         <div>
-          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
             {t('IPC Adherence by')} {t(geographicLevelName)} {scopeTitle}
           </h3>
           <KpiBarChart
@@ -421,11 +421,11 @@ const AMSView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName, t, isA
 
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-8">
           <div className="bg-slate-50 border border-black rounded-xl px-8 py-4 text-center">
-            <div className="text-sm font-bold text-slate-500 uppercase tracking-wide">{isAr ? 'متوسط الدرجة' : 'Average Score'}</div>
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{isAr ? 'متوسط الدرجة': 'Average Score'}</div>
             <div className="text-3xl font-black text-slate-800" dir="ltr">{totalScore} / {AMS_MAX_TOTAL}</div>
           </div>
           <div className={`bg-white border border-black rounded-xl px-8 py-4 text-center shadow-md ${levelColor}`}>
-            <div className="text-sm font-bold text-slate-500 uppercase tracking-wide">{isAr ? 'المستوى' : 'Level'}</div>
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{isAr ? 'المستوى': 'Level'}</div>
             <div className={`text-3xl font-black ${levelColor}`}>{level}</div>
           </div>
         </div>
@@ -491,7 +491,7 @@ const AMSView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName, t, isA
 
       {geographicKpis && geographicKpis.length > 0 && (
         <div>
-          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
             {isAr ? 'الإشراف على مضادات الميكروبات حسب' : 'Antimicrobial stewardship by'} {t(geographicLevelName)} {scopeTitle}
           </h3>
           <KpiBarChart
@@ -546,11 +546,11 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-8">
           <div className="bg-slate-50 border border-black rounded-xl px-8 py-4 text-center">
-            <div className="text-sm font-bold text-slate-500 uppercase tracking-wide">{isAr ? 'إجراءات مُنفذة / فرص' : 'Actions / Opportunities'}</div>
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{isAr ? 'إجراءات مُنفذة / فرص': 'Actions / Opportunities'}</div>
             <div className="text-3xl font-black text-slate-800" dir="ltr">{wash + rub} / {totalOpportunities}</div>
           </div>
           <div className={`bg-white border border-black rounded-xl px-8 py-4 text-center shadow-md ${levelColor}`}>
-            <div className="text-sm font-bold text-slate-500 uppercase tracking-wide">{isAr ? 'المستوى' : 'Level'}</div>
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{isAr ? 'المستوى': 'Level'}</div>
             <div className={`text-3xl font-black ${levelColor}`}>{level}</div>
           </div>
         </div>
@@ -667,7 +667,7 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
       {geographicKpis && geographicKpis.length > 0 && (
         <div>
-          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-left'}`}>
+          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
             {isAr ? 'الامتثال بنظافة الأيدي حسب' : 'Hand hygiene compliance by'} {t(geographicLevelName)} {scopeTitle}
           </h3>
           <KpiBarChart
@@ -763,7 +763,7 @@ const IPCDashboardTab = ({
           >
             {isAr ? tab.labelAr : t(tab.labelEn)}
             <span
-              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${activeForm === tab.key ? 'bg-white/20 text-white' : 'bg-slate-300 text-slate-700'}`}
+              className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeForm === tab.key ? 'bg-white/20 text-white' : 'bg-slate-300 text-slate-700'}`}
               dir="ltr"
             >
               {formCounts[tab.key] || 0}

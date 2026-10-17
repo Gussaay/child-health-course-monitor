@@ -128,10 +128,10 @@ export default function DeletedItemsPanel({ types, note, onDeleted }) {
                         </FormGroup>
                     )}
                     <Button variant="secondary" onClick={load} disabled={busy || isLoading}>
-                        <RefreshCw className="w-4 h-4 mr-1" /> {t('shared_ui.deleted_items.refresh', 'Refresh')}
+                        <RefreshCw className="w-4 h-4 me-1" /> {t('shared_ui.deleted_items.refresh', 'Refresh')}
                     </Button>
                     <Button variant="danger" onClick={() => deleteForGood([...selected])} disabled={busy || selected.size === 0}>
-                        {busy ? <Spinner size="sm" /> : <><Trash2 className="w-4 h-4 mr-1" /> {t('shared_ui.deleted_items.delete_selected', 'Delete selected permanently ({{count}})', { count: selected.size })}</>}
+                        {busy ? <Spinner size="sm" /> : <><Trash2 className="w-4 h-4 me-1" /> {t('shared_ui.deleted_items.delete_selected', 'Delete selected permanently ({{count}})', { count: selected.size })}</>}
                     </Button>
                 </div>
 

@@ -18,8 +18,8 @@ export default defineConfig({
         name: 'National Child Health Program',
         short_name: 'NCHP',
         description: 'Program & Course Monitoring System',
-        theme_color: '#0284c7',
-        background_color: '#f0f9ff',
+        theme_color: '#1e293b',
+        background_color: '#f8fafc',
         // child.png is a single 2362x2362, 479 KB image that was declared at
         // both icon sizes, so every install downloaded half a megabyte for a
         // launcher icon. These are the same artwork resized properly.

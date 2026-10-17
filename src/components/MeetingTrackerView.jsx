@@ -239,7 +239,7 @@ export default function MeetingTrackerView({ permissions }) {
                                     
                                     {activeMeeting.sessionDates?.length > 0 ? (
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-left text-sm border-collapse">
+                                            <table className="w-full text-start text-sm border-collapse">
                                                 <thead className="bg-gray-100 text-gray-600">
                                                     <tr>
                                                         <th className="p-3 border font-semibold">{t('trackers.meetings.invitee_name', 'Invitee Name')}</th>

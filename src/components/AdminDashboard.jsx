@@ -9,7 +9,7 @@ import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { STATE_LOCALITIES } from './constants';
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle } from 'lucide-react';
 
 // Lazy: the reports carry screenshots, and nobody opening Manage User Roles
 // should pay to download a screen they are not looking at.
@@ -99,7 +99,7 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                 {PERMISSION_CATEGORIES.map((category, catIndex) => (
                     <div key={category.title} className={catIndex > 0 ? 'border-t-4 border-gray-100' : ''}>
                         <div className={`px-6 py-3 bg-gray-100 border-b border-gray-200 sticky top-0 z-20 shadow-sm ${catIndex === 0 ? 'rounded-t-xl' : ''}`}>
-                            <h5 className="text-gray-800 font-black text-sm uppercase tracking-wider">
+                            <h5 className="text-gray-800 font-black text-sm ">
                                 {category.title}
                             </h5>
                         </div>
@@ -118,12 +118,12 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                             <div className="flex-1 pr-4">
                                                 <div className="text-lg font-bold capitalize text-gray-700 flex items-center gap-3">
                                                     {formattedTitle}
-                                                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 border border-gray-300 shadow-sm">{t('admin_pages.admin_dashboard.derived', 'Derived')}</span>
+                                                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 border border-gray-300 shadow-sm">{t('admin_pages.admin_dashboard.derived', 'Derived')}</span>
                                                 </div>
                                                 <div className="text-sm mt-1 text-gray-500">{description || t('admin_pages.admin_dashboard.derived_permission', 'Derived permission.')}</div>
                                             </div>
                                             <div className="shrink-0">
-                                                <span className={`text-xs uppercase font-bold tracking-wide px-3 py-1.5 rounded-full border shadow-sm ${value ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                                <span className={`text-xs font-bold tracking-wide px-3 py-1.5 rounded-full border shadow-sm ${value ? 'bg-green-50 text-green-700 border-green-200': 'bg-red-50 text-red-700 border-red-200'}`}>
                                                     {t('admin_pages.admin_dashboard.effective', 'Effective:')} {value ? t('admin_pages.admin_dashboard.yes', 'Yes') : t('admin_pages.admin_dashboard.no', 'No')}
                                                 </span>
                                             </div>
@@ -149,7 +149,7 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                                         onChange={(e) => handlePermissionChangeInternal(permission, e.target.checked)} 
                                                         disabled={disabled || isStandardUser} 
                                                     />
-                                                    <span className={`ml-3 font-bold text-sm ${value ? 'text-green-700' : 'text-gray-600'}`}>
+                                                    <span className={`ms-3 font-bold text-sm ${value ? 'text-green-700' : 'text-gray-600'}`}>
                                                         {value ? t('admin_pages.admin_dashboard.allowed', 'Allowed') : t('admin_pages.admin_dashboard.denied', 'Denied')}
                                                     </span>
                                                 </label>
@@ -854,8 +854,8 @@ export function AdminDashboard() {
                             {t('admin_pages.admin_dashboard.updates.ota_desc', 'OTA updates happen entirely automatically. Whenever GitHub Actions finishes a build, Capgo serves these UI changes to users instantly in the background.')}
                         </p>
                     </div>
-                    <div className="ml-auto text-right">
-                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">{t('admin_pages.admin_dashboard.updates.live_ota', 'Live OTA Version')}</div>
+                    <div className="ms-auto text-right">
+                        <div className="text-xs text-gray-400 font-bold mb-1">{t('admin_pages.admin_dashboard.updates.live_ota', 'Live OTA Version')}</div>
                         <div className="text-2xl font-black text-emerald-600 border border-emerald-100 bg-emerald-50 px-3 py-1 rounded-lg">v{otaVersion}</div>
                     </div>
                 </div>
@@ -887,7 +887,7 @@ export function AdminDashboard() {
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
                         >
-                            <CloudDownload className="w-4 h-4 mr-2" /> {t('admin_pages.admin_dashboard.updates.load_latest', '1-Click Load Latest APK')}
+                            <CloudDownload className="w-4 h-4 me-2" /> {t('admin_pages.admin_dashboard.updates.load_latest', '1-Click Load Latest APK')}
                         </Button>
                     </div>
                 )}
@@ -903,7 +903,7 @@ export function AdminDashboard() {
 
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center">
-                        <History className="w-5 h-5 text-gray-500 mr-3 shrink-0" />
+                        <History className="w-5 h-5 text-gray-500 me-3 shrink-0" />
                         <div>
                             <h3 className="text-md font-bold text-gray-800">{t('admin_pages.admin_dashboard.updates.history_title', 'Deployment History Log')}</h3>
                             <p className="text-xs text-gray-500">{t('admin_pages.admin_dashboard.updates.history_desc', 'Record of previously configured Native APK versions automatically tracked by GitHub Actions.')}</p>
@@ -936,7 +936,7 @@ export function AdminDashboard() {
                                                     
                                                     {isActiveUpdate ? (
                                                         <span className="inline-flex items-center bg-green-600 border border-green-700 text-white font-bold text-xs px-2.5 py-1.5 rounded shadow-sm select-none">
-                                                            <CheckCircle className="w-3.5 h-3.5 mr-1" /> {t('admin_pages.admin_dashboard.updates.active_update', 'Active Update')}
+                                                            <CheckCircle className="w-3.5 h-3.5 me-1" /> {t('admin_pages.admin_dashboard.updates.active_update', 'Active Update')}
                                                         </span>
                                                     ) : (
                                                         <Button 
@@ -1020,7 +1020,7 @@ export function AdminDashboard() {
 
             <FilterPanel activeCount={[searchQuery, filterRole, filterState, filterLocality].filter(Boolean).length}>
                 <div className="hidden md:flex items-center text-gray-800 font-bold mb-4">
-                    <Filter className="w-5 h-5 mr-2 text-sky-500" /> {t('admin_pages.admin_dashboard.roles_tab.filter_search', 'Filter & Search Directory')}
+                    <Filter className="w-5 h-5 me-2 text-sky-500" /> {t('admin_pages.admin_dashboard.roles_tab.filter_search', 'Filter & Search Directory')}
                 </div>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
                     <div className="col-span-2 md:col-span-1">
@@ -1054,7 +1054,7 @@ export function AdminDashboard() {
 
             <Card className="overflow-hidden shadow-sm border border-gray-100">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold text-gray-800">{t('admin_pages.admin_dashboard.roles_tab.user_directory', 'User Directory')} <span className="text-sm font-normal text-gray-500 ml-2">{t('admin_pages.admin_dashboard.roles_tab.n_users', '({{count}} users)', { count: filteredUsers.length })}</span></h3>
+                    <h3 className="text-lg font-bold text-gray-800">{t('admin_pages.admin_dashboard.roles_tab.user_directory', 'User Directory')} <span className="text-sm font-normal text-gray-500 ms-2">{t('admin_pages.admin_dashboard.roles_tab.n_users', '({{count}} users)', { count: filteredUsers.length })}</span></h3>
                 </div>
                 {filteredUsers.length > 0 ? (
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -1074,7 +1074,7 @@ export function AdminDashboard() {
                                 const lastWebAccess = user.lastWebAccess || userStats.lastWebAccess;
 
                                 const renderVersionInfo = (version, timestamp) => {
-                                    if (!version && !timestamp) return <span className="text-gray-400 text-[10px] italic">{t('admin_pages.admin_dashboard.roles_tab.no_record', 'No record')}</span>;
+                                    if (!version && !timestamp) return <span className="text-gray-400 text-xs italic">{t('admin_pages.admin_dashboard.roles_tab.no_record', 'No record')}</span>;
                                     
                                     let dateStr = t('admin_pages.admin_dashboard.roles_tab.unknown_date', 'Unknown date');
                                     if (timestamp?.seconds) {
@@ -1087,11 +1087,11 @@ export function AdminDashboard() {
 
                                     return (
                                         <div className="flex flex-col gap-1 items-start min-w-[90px]">
-                                            <div className="font-mono text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100 shadow-sm">
+                                            <div className="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100 shadow-sm">
                                                 {version ? `v${version}` : t('admin_pages.admin_dashboard.roles_tab.unknown_version', 'Unknown v')}
                                             </div>
-                                            <div className="text-[9px] text-gray-500 flex items-center font-medium whitespace-nowrap">
-                                                <Clock className="w-2.5 h-2.5 mr-1" /> {dateStr}
+                                            <div className="text-xs text-gray-500 flex items-center font-medium whitespace-nowrap">
+                                                <Clock className="w-2.5 h-2.5 me-1" /> {dateStr}
                                             </div>
                                         </div>
                                     );
@@ -1112,7 +1112,7 @@ export function AdminDashboard() {
                                         <td className="py-3">
                                             <div className="flex flex-wrap gap-1.5 max-w-[200px]">
                                                 {userRoles.map(r => (
-                                                    <span key={r} className={`border text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm whitespace-nowrap ${getRoleBadgeStyle(r)}`}>
+                                                    <span key={r} className={`border text-xs font-bold px-2 py-0.5 rounded shadow-sm whitespace-nowrap ${getRoleBadgeStyle(r)}`}>
                                                         {roleLabel(r)}
                                                     </span>
                                                 ))}
@@ -1131,7 +1131,7 @@ export function AdminDashboard() {
                                                     }}
                                                     className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-sky-600 w-full justify-start"
                                                 >
-                                                    <Edit3 className="w-3 h-3 mr-2" /> {t('admin_pages.admin_dashboard.roles_tab.edit_roles', 'Edit Roles')}
+                                                    <Edit3 className="w-3 h-3 me-2" /> {t('admin_pages.admin_dashboard.roles_tab.edit_roles', 'Edit Roles')}
                                                 </Button>
                                                 <Button 
                                                     size="sm" 
@@ -1142,7 +1142,7 @@ export function AdminDashboard() {
                                                     }}
                                                     className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-purple-600 w-full justify-start"
                                                 >
-                                                    <Shield className="w-3 h-3 mr-2" /> {t('admin_pages.admin_dashboard.roles_tab.custom_perms', 'Custom Perms')}
+                                                    <Shield className="w-3 h-3 me-2" /> {t('admin_pages.admin_dashboard.roles_tab.custom_perms', 'Custom Perms')}
                                                 </Button>
                                                 <Button 
                                                     size="sm" 
@@ -1153,7 +1153,7 @@ export function AdminDashboard() {
                                                     }}
                                                     className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-emerald-600 w-full justify-start"
                                                 >
-                                                    <Bell className="w-3 h-3 mr-2" /> {t('admin_pages.admin_dashboard.roles_tab.message', 'Message')}
+                                                    <Bell className="w-3 h-3 me-2" /> {t('admin_pages.admin_dashboard.roles_tab.message', 'Message')}
                                                 </Button>
                                             </div>
                                         </td>
@@ -1172,14 +1172,14 @@ export function AdminDashboard() {
                                                         {currentLocalities.map(loc => (<option key={loc.en} value={loc.en}>{loc.ar}</option>))}
                                                     </Select>
                                                 )}
-                                                {!isLocalityAssignable && isStateAssignable && <span className="text-[10px] text-gray-400">{t('admin_pages.admin_dashboard.all_localities', 'All Localities')}</span>}
+                                                {!isLocalityAssignable && isStateAssignable && <span className="text-xs text-gray-400">{t('admin_pages.admin_dashboard.all_localities', 'All Localities')}</span>}
                                             </div>
                                         </td>
                                         <td className="py-3">
                                             {renderVersionInfo(appVersion, lastAppAccess)}
                                             {user.fcmToken && (
-                                                <div className="mt-1 flex items-center text-[9px] font-bold text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded shadow-sm max-w-fit">
-                                                    <Bell className="w-2.5 h-2.5 mr-1" /> {t('admin_pages.admin_dashboard.roles_tab.push_ready', 'Push Ready')}
+                                                <div className="mt-1 flex items-center text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded shadow-sm max-w-fit">
+                                                    <Bell className="w-2.5 h-2.5 me-1" /> {t('admin_pages.admin_dashboard.roles_tab.push_ready', 'Push Ready')}
                                                 </div>
                                             )}
                                         </td>
@@ -1207,7 +1207,7 @@ export function AdminDashboard() {
             <div className="bg-sky-50 border border-sky-100 p-5 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h3 className="text-lg font-bold text-sky-900 flex items-center">
-                        <Shield className="w-5 h-5 mr-2 text-sky-500" /> {t('admin_pages.admin_dashboard.perm_tab.title', 'Global Role Definitions')}
+                        <Shield className="w-5 h-5 me-2 text-sky-500" /> {t('admin_pages.admin_dashboard.perm_tab.title', 'Global Role Definitions')}
                     </h3>
                     <p className="text-sm text-sky-700 mt-1 max-w-2xl">
                         {t('admin_pages.admin_dashboard.perm_tab.desc_before', 'Adjusting permissions here defines the default blueprint for each role. Changes are')} <strong>{t('admin_pages.admin_dashboard.perm_tab.desc_strong', 'automatically saved and incrementally synced')}</strong> {t('admin_pages.admin_dashboard.perm_tab.desc_after', 'to affected users when you close the configuration menu.')}
@@ -1221,7 +1221,7 @@ export function AdminDashboard() {
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-sky-400 to-blue-600"></div>
                         <div className="flex-grow pt-1">
                             <h4 className="text-lg font-bold text-gray-800 mb-2">{roleLabel(role)}</h4>
-                            <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${getRoleBadgeStyle(role)} border shadow-sm`}>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${getRoleBadgeStyle(role)} border shadow-sm`}>
                                 {t('admin_pages.admin_dashboard.perm_tab.blueprint', 'Blueprint Definition')}
                             </span>
                         </div>
@@ -1231,7 +1231,7 @@ export function AdminDashboard() {
                             size="sm"
                             className="mt-6 w-full justify-center bg-gray-50 border-gray-200 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 shadow-sm"
                         >
-                            <Settings className="w-4 h-4 mr-2" /> {t('admin_pages.admin_dashboard.perm_tab.configure', 'Configure Permissions')}
+                            <Settings className="w-4 h-4 me-2" /> {t('admin_pages.admin_dashboard.perm_tab.configure', 'Configure Permissions')}
                         </Button>
                     </div>
                 ))}
@@ -1258,29 +1258,29 @@ export function AdminDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl shadow-sm flex items-center relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity"><Database className="w-32 h-32 text-emerald-600" /></div>
-                        <div className="p-3 bg-emerald-100 rounded-xl mr-4 z-10"><Database className="text-emerald-600 w-6 h-6" /></div>
+                        <div className="p-3 bg-emerald-100 rounded-xl me-4 z-10"><Database className="text-emerald-600 w-6 h-6" /></div>
                         <div className="z-10">
-                            <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">{t('admin_pages.admin_dashboard.usage.total_reads', 'Total System Reads')}</div>
+                            <div className="text-xs font-bold text-emerald-700 mb-1">{t('admin_pages.admin_dashboard.usage.total_reads', 'Total System Reads')}</div>
                             <div className="text-3xl font-black text-emerald-900">{aggregates.totalReads.toLocaleString()}</div>
                         </div>
                     </div>
 
                     <div className="bg-amber-50 border border-amber-100 p-6 rounded-2xl shadow-sm flex items-center relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity"><Edit3 className="w-32 h-32 text-amber-600" /></div>
-                        <div className="p-3 bg-amber-100 rounded-xl mr-4 z-10"><Edit3 className="text-amber-600 w-6 h-6" /></div>
+                        <div className="p-3 bg-amber-100 rounded-xl me-4 z-10"><Edit3 className="text-amber-600 w-6 h-6" /></div>
                         <div className="z-10">
-                            <div className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">{t('admin_pages.admin_dashboard.usage.total_writes', 'Total System Writes')}</div>
+                            <div className="text-xs font-bold text-amber-700 mb-1">{t('admin_pages.admin_dashboard.usage.total_writes', 'Total System Writes')}</div>
                             <div className="text-3xl font-black text-amber-900">{aggregates.totalWrites.toLocaleString()}</div>
                         </div>
                     </div>
 
                     <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl shadow-sm flex items-center relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity"><Clock className="w-32 h-32 text-blue-600" /></div>
-                        <div className="p-3 bg-blue-100 rounded-xl mr-4 z-10"><Clock className="text-blue-600 w-6 h-6" /></div>
+                        <div className="p-3 bg-blue-100 rounded-xl me-4 z-10"><Clock className="text-blue-600 w-6 h-6" /></div>
                         <div className="z-10">
-                            <div className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">{t('admin_pages.admin_dashboard.usage.mean_time', 'Mean Active Time')}</div>
+                            <div className="text-xs font-bold text-blue-700 mb-1">{t('admin_pages.admin_dashboard.usage.mean_time', 'Mean Active Time')}</div>
                             <div className="text-3xl font-black text-blue-900">{formatDuration(aggregates.meanDurationMs, t)}</div>
-                            <div className="text-[10px] font-semibold text-blue-500 mt-1 uppercase">{t('admin_pages.admin_dashboard.usage.sum', 'Sum: {{value}}', { value: formatDuration(aggregates.totalDurationMs, t) })}</div>
+                            <div className="text-xs font-semibold text-blue-500 mt-1 ">{t('admin_pages.admin_dashboard.usage.sum', 'Sum: {{value}}', { value: formatDuration(aggregates.totalDurationMs, t) })}</div>
                         </div>
                     </div>
                 </div>
@@ -1358,7 +1358,7 @@ export function AdminDashboard() {
                                     onChange={(e) => setHistoryPushModal({...historyPushModal, mandatory: e.target.checked})}
                                 />
                             </div>
-                            <div className="ml-3">
+                            <div className="ms-3">
                                 <span className="block font-bold text-gray-800 text-sm">{t('admin_pages.admin_dashboard.push_modal.mandatory', 'Enforce Mandatory Update')}</span>
                                 <span className="block text-xs text-gray-500 mt-0.5">{t('admin_pages.admin_dashboard.push_modal.mandatory_desc', 'If checked, users cannot dismiss the prompt and must download the APK.')}</span>
                             </div>
@@ -1371,7 +1371,7 @@ export function AdminDashboard() {
                                     onChange={(e) => setHistoryPushModal({...historyPushModal, notify: e.target.checked})}
                                 />
                             </div>
-                            <div className="ml-3">
+                            <div className="ms-3">
                                 <span className="block font-bold text-gray-800 text-sm">{t('admin_pages.admin_dashboard.push_modal.notify', 'Send Push Notification')}</span>
                                 <span className="block text-xs text-gray-500 mt-0.5">{t('admin_pages.admin_dashboard.push_modal.notify_desc', 'Alert all outdated users via FCM that this specific version is available.')}</span>
                             </div>
@@ -1381,7 +1381,7 @@ export function AdminDashboard() {
                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                         <Button variant="secondary" onClick={() => setHistoryPushModal({ ...historyPushModal, isOpen: false })}>{t('admin_pages.admin_dashboard.cancel', 'Cancel')}</Button>
                         <Button variant="primary" onClick={handlePushHistoryVersion} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 shadow-md border-emerald-700">
-                            <CloudDownload className="w-4 h-4 mr-2" /> {t('admin_pages.admin_dashboard.push_modal.push_now', 'Push Version Now')}
+                            <CloudDownload className="w-4 h-4 me-2" /> {t('admin_pages.admin_dashboard.push_modal.push_now', 'Push Version Now')}
                         </Button>
                     </div>
                 </div>
@@ -1392,7 +1392,7 @@ export function AdminDashboard() {
                 <CardBody className="p-0 bg-gray-50/50">
                     <div className="p-6 bg-white border-b border-gray-200">
                         <p className="text-sm text-gray-600 mb-1">{t('admin_pages.admin_dashboard.roles_modal.adjusting', 'Adjusting roles for:')}</p>
-                        <div className="font-bold text-gray-800 flex items-center text-xl"><Users className="w-5 h-5 mr-2 text-sky-500"/> {editingRolesUser?.displayName || editingRolesUser?.email}</div>
+                        <div className="font-bold text-gray-800 flex items-center text-xl"><Users className="w-5 h-5 me-2 text-sky-500"/> {editingRolesUser?.displayName || editingRolesUser?.email}</div>
                     </div>
                     <div className="p-4">
                         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -1420,7 +1420,7 @@ export function AdminDashboard() {
                                                 className="form-checkbox h-5 w-5 text-sky-600 rounded border-gray-300 transition duration-150 ease-in-out focus:ring-sky-500"
                                             />
                                             <span className={`font-bold ${isChecked ? 'text-sky-900' : 'text-gray-700'}`}>{roleLabel(key)}</span>
-                                            {isChecked && <div className={`ml-auto text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${getRoleBadgeStyle(key)}`}>{t('admin_pages.admin_dashboard.roles_modal.active', 'Active')}</div>}
+                                            {isChecked && <div className={`ms-auto text-xs font-bold px-2 py-0.5 rounded-full ${getRoleBadgeStyle(key)}`}>{t('admin_pages.admin_dashboard.roles_modal.active', 'Active')}</div>}
                                         </label>
                                     );
                                 })}
@@ -1438,7 +1438,7 @@ export function AdminDashboard() {
 
                             return (
                                 <div className="mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl shadow-inner space-y-3 animate-in fade-in zoom-in duration-200">
-                                    <h4 className="text-sm font-bold text-sky-900 flex items-center"><Filter className="w-4 h-4 mr-2"/> {t('admin_pages.admin_dashboard.roles_modal.geo_title', 'Required Geographic Assignment')}</h4>
+                                    <h4 className="text-sm font-bold text-sky-900 flex items-center"><Filter className="w-4 h-4 me-2"/> {t('admin_pages.admin_dashboard.roles_modal.geo_title', 'Required Geographic Assignment')}</h4>
                                     <p className="text-xs text-sky-700 font-medium">{t('admin_pages.admin_dashboard.roles_modal.geo_desc', 'The selected roles require you to assign a specific geographic boundary.')}</p>
                                     
                                     <div className="pt-2 space-y-3">
@@ -1462,7 +1462,7 @@ export function AdminDashboard() {
                             );
                         })()}
 
-                        <p className="text-xs text-gray-500 mt-4 flex items-start px-1"><Shield className="w-3.5 h-3.5 mr-1.5 mt-0.5 shrink-0"/> {t('admin_pages.admin_dashboard.roles_modal.multi_note', 'Assigning multiple roles will automatically grant the highest level of permissions derived from all selected blueprints.')}</p>
+                        <p className="text-xs text-gray-500 mt-4 flex items-start px-1"><Shield className="w-3.5 h-3.5 me-1.5 mt-0.5 shrink-0"/> {t('admin_pages.admin_dashboard.roles_modal.multi_note', 'Assigning multiple roles will automatically grant the highest level of permissions derived from all selected blueprints.')}</p>
                     </div>
                 </CardBody>
                 <CardFooter className="bg-white border-t border-gray-100">
@@ -1495,9 +1495,9 @@ export function AdminDashboard() {
             <Modal isOpen={!!editingPermissionRole} onClose={() => {}} title={t('admin_pages.admin_dashboard.blueprint_modal.title', 'Configure Blueprint Permissions')}>
                 <CardBody className="p-0 bg-gray-50/50">
                     <div className="p-6 border-b border-gray-200 bg-white">
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">{t('admin_pages.admin_dashboard.blueprint_modal.editing', 'Editing Permissions Blueprint for:')}</p>
+                        <p className="text-xs text-gray-500 font-bold mb-2">{t('admin_pages.admin_dashboard.blueprint_modal.editing', 'Editing Permissions Blueprint for:')}</p>
                         <div className="font-black text-sky-900 flex items-center text-3xl">
-                            <Shield className="w-8 h-8 mr-3 text-sky-500"/> {editingPermissionRole && roleLabel(editingPermissionRole)}
+                            <Shield className="w-8 h-8 me-3 text-sky-500"/> {editingPermissionRole && roleLabel(editingPermissionRole)}
                         </div>
                     </div>
                     {editingPermissionRole && (
@@ -1515,7 +1515,7 @@ export function AdminDashboard() {
                 <CardFooter className="bg-white border-t border-gray-100">
                     <div className="flex justify-end gap-3 w-full pt-1">
                         <Button variant="primary" onClick={handleCloseAndSyncBlueprint} disabled={loading} className="px-8 shadow-sm">
-                            {loading ? <><Spinner size="sm" className="mr-2" /> {t('admin_pages.admin_dashboard.saving', 'Saving...')}</> : t('admin_pages.admin_dashboard.blueprint_modal.done', 'Done & Sync')}
+                            {loading ? <><Spinner size="sm" className="me-2" /> {t('admin_pages.admin_dashboard.saving', 'Saving...')}</> : t('admin_pages.admin_dashboard.blueprint_modal.done', 'Done & Sync')}
                         </Button>
                     </div>
                 </CardFooter>
@@ -1525,12 +1525,13 @@ export function AdminDashboard() {
             <Modal isOpen={!!editingUserPermissions} onClose={() => setEditingUserPermissions(null)} title={t('admin_pages.admin_dashboard.custom_modal.title', 'Configure Custom User Permissions')}>
                 <CardBody className="p-0 bg-gray-50/50">
                     <div className="p-6 border-b border-gray-200 bg-white">
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">{t('admin_pages.admin_dashboard.custom_modal.editing', 'Editing Custom Permissions For:')}</p>
+                        <p className="text-xs text-gray-500 font-bold mb-2">{t('admin_pages.admin_dashboard.custom_modal.editing', 'Editing Custom Permissions For:')}</p>
                         <div className="font-black text-purple-900 flex items-center text-2xl">
-                            <Shield className="w-6 h-6 mr-3 text-purple-500"/> {editingUserPermissions?.displayName || editingUserPermissions?.email}
+                            <Shield className="w-6 h-6 me-3 text-purple-500"/> {editingUserPermissions?.displayName || editingUserPermissions?.email}
                         </div>
-                        <p className="text-xs text-amber-600 mt-2 font-medium flex items-center">
-                            {t('admin_pages.admin_dashboard.custom_modal.warning', "⚠️ Changing this user's role later will reset these custom permissions back to the role defaults.")}
+                        <p className="text-xs text-amber-600 mt-2 font-medium flex items-center gap-1.5">
+                            <AlertTriangle size={14} className="shrink-0" aria-hidden="true" />
+                            {t('admin_pages.admin_dashboard.custom_modal.warning', "Changing this user's role later will reset these custom permissions back to the role defaults.")}
                         </p>
                     </div>
                     {editingUserPermissions && (
@@ -1567,7 +1568,7 @@ export function AdminDashboard() {
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">{viewingUser.displayName || t('admin_pages.admin_dashboard.profile.no_name', 'No Name Set')}</h3>
                                 <div className="flex flex-wrap gap-1.5">
                                     {(viewingUser.roles || [viewingUser.role]).map(r => (
-                                        <span key={r} className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full shadow-sm border ${getRoleBadgeStyle(r)}`}>
+                                        <span key={r} className={`text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm border ${getRoleBadgeStyle(r)}`}>
                                             {roleLabel(r)}
                                         </span>
                                     ))}
@@ -1577,34 +1578,34 @@ export function AdminDashboard() {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
-                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.email', 'Email Identity')}</span>
+                                <span className="block text-xs text-gray-500 font-bold tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.email', 'Email Identity')}</span>
                                 <span className="text-gray-800 font-medium">{viewingUser.email}</span>
                             </div>
 
                             <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
-                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.last_login', 'Last Active Login')}</span>
+                                <span className="block text-xs text-gray-500 font-bold tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.last_login', 'Last Active Login')}</span>
                                 <span className="text-gray-800 font-medium flex items-center">
-                                    <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400"/>
+                                    <Clock className="w-3.5 h-3.5 me-1.5 text-gray-400"/>
                                     {viewingUser.lastLogin ? new Date(viewingUser.lastLogin.seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : t('admin_pages.admin_dashboard.profile.never', 'Never Logged In')}
                                 </span>
                             </div>
 
                             <div className="bg-sky-50 border border-sky-100 p-4 rounded-xl md:col-span-2">
-                                <span className="block text-xs text-sky-600 font-bold uppercase tracking-wide mb-2">{t('admin_pages.admin_dashboard.profile.access', 'Aggregate System Access')}</span>
+                                <span className="block text-xs text-sky-600 font-bold tracking-wide mb-2">{t('admin_pages.admin_dashboard.profile.access', 'Aggregate System Access')}</span>
                                 <span className="text-sky-900 font-bold capitalize text-base">
                                     {(viewingUser.roles || [viewingUser.role]).map(r => roleLabel(r)).join(' • ') || t('admin_pages.admin_dashboard.roles.user', 'Standard User')}
                                 </span>
                             </div>
                             
                             <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
-                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.geo_state', 'Geographic State')}</span>
+                                <span className="block text-xs text-gray-500 font-bold tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.geo_state', 'Geographic State')}</span>
                                 <span className="text-gray-900 font-bold">
                                     {viewingUser.assignedState || t('admin_pages.admin_dashboard.profile.global', 'Global (No Restrictions)')}
                                   </span>
                             </div>
                             
                             <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
-                                <span className="block text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.geo_locality', 'Geographic Locality')}</span>
+                                <span className="block text-xs text-gray-500 font-bold tracking-wide mb-1">{t('admin_pages.admin_dashboard.profile.geo_locality', 'Geographic Locality')}</span>
                                 <span className="text-gray-900 font-bold">
                                     {viewingUser.assignedLocality || t('admin_pages.admin_dashboard.profile.all_in_area', 'All Localities in Area')}
                                 </span>

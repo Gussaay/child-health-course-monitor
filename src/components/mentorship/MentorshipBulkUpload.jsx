@@ -1489,7 +1489,7 @@ const DetailedMentorshipBulkUploadModal = ({
         <div className="mt-4 overflow-auto max-h-60">
             <h4 className="font-medium mb-2">{t('mentorship_extra.bulk_upload.preview_title', 'Data Preview (first 5 rows)')}</h4>
             <table className="min-w-full border border-gray-200">
-                <thead><tr className="bg-gray-100">{headers.map((header, idx) => <th key={idx} className="border border-gray-300 p-2 text-left text-xs">{header}</th>)}</tr></thead>
+                <thead><tr className="bg-gray-100">{headers.map((header, idx) => <th key={idx} className="border border-gray-300 p-2 text-start text-xs">{header}</th>)}</tr></thead>
                 <tbody>{excelData.slice(0, 5).map((row, rowIdx) => <tr key={rowIdx}>{row.map((cell, cellIdx) => <td key={cellIdx} className="border border-gray-300 p-2 text-xs">{cell instanceof Date ? cell.toLocaleDateString() : cell}</td>)}</tr>)}</tbody>
             </table>
         </div>
@@ -1549,7 +1549,7 @@ const DetailedMentorshipBulkUploadModal = ({
             </div>
             <div className="flex justify-end mt-6">
                  {failedRows.length > 0 && (
-                     <Button variant="secondary" onClick={() => setCurrentPage('correction')} className="mr-2">
+                     <Button variant="secondary" onClick={() => setCurrentPage('correction')} className="me-2">
                          {t('mentorship_extra.bulk_upload.result.go_to_correction', 'Go to Correction Screen ({{count}})', { count: failedRows.length })}
                      </Button>
                  )}
@@ -1565,9 +1565,9 @@ const DetailedMentorshipBulkUploadModal = ({
                 <table className="min-w-full text-sm">
                     <thead className="bg-gray-100 sticky top-0">
                         <tr>
-                            <th className="p-2 border-r text-left">{t('mentorship_extra.bulk_upload.correction.row_no', 'Row #')}</th>
-                            <th className="p-2 border-r text-left">{t('mentorship_extra.bulk_upload.correction.error', 'Error')}</th>
-                            {headers.map(header => <th key={header} className="p-2 border-r text-left whitespace-nowrap">{header}</th>)}
+                            <th className="p-2 border-r text-start">{t('mentorship_extra.bulk_upload.correction.row_no', 'Row #')}</th>
+                            <th className="p-2 border-r text-start">{t('mentorship_extra.bulk_upload.correction.error', 'Error')}</th>
+                            {headers.map(header => <th key={header} className="p-2 border-r text-start whitespace-nowrap">{header}</th>)}
                         </tr>
                     </thead>
                     <tbody>
@@ -1602,16 +1602,16 @@ const DetailedMentorshipBulkUploadModal = ({
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
                 {currentPage === 0 && (
-                    <div dir="ltr" className="text-left">
+                    <div dir="ltr" className="text-start">
                         <p className="mb-4">{t('mentorship_extra.bulk_upload.step0.instructions', `Download the detailed template for {{service}}. If data exists, it will be pre-filled. Use Arabic or English names for State. Use Arabic names for Locality. Use 'yes', 'no', 'na' (or 'partial' for EENC) for skill checks. For IMNCI, use comma-separated values for multi-select classifications (e.g., "بعض الجفاف,دسنتاريا").`, { service: activeService })}</p>
                         <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">{t('mentorship_extra.bulk_upload.step0.download', 'Download Template / Data')}</Button>
                         <hr className="my-4" />
                         <p className="mb-2">{t('mentorship_extra.bulk_upload.step0.or_upload', 'Or, upload your completed Excel file (first row must be headers).')}</p>
-                        <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                        <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                     </div>
                 )}
                 {currentPage === 1 && (
-                    <div dir="ltr" className="text-left">
+                    <div dir="ltr" className="text-start">
                         <h4 className="font-medium mb-4">{t('mentorship_extra.bulk_upload.step1.title', 'Map Excel columns to application fields')}</h4>
                         <p className="text-sm text-gray-600 mb-4">{t('mentorship_extra.bulk_upload.step1.desc', "Match columns to fields. Base fields marked * are required for basic processing. **Note: Input standardization is applied (case/space insensitive) to 'yes/no/na' and classification fields.**")}</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-4 max-h-[50vh] overflow-y-auto p-2 border rounded">

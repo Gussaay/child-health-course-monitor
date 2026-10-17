@@ -91,4 +91,14 @@ describe('home coverage', () => {
         expect(c.services.imnci).toEqual({ n: 1, d: 1, perc: 100 });
         expect(c.services.etat.d).toBe(0);
     });
+
+    it('leaves out facilities whose IMNCI status is unknown', () => {
+        const unknown = [
+            { 'الولاية': 'Gezira', 'هل_المؤسسة_تعمل': 'Yes', 'نوع_المؤسسةالصحية': 'وحدة صحة الاسرة', 'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Unknown' },
+            { 'الولاية': 'Gezira', 'هل_المؤسسة_تعمل': 'Yes', 'نوع_المؤسسةالصحية': 'مستشفى ريفي', 'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Unknown' },
+        ];
+        const before = computeCoverage({ level: 'federal', facilities });
+        const after = computeCoverage({ level: 'federal', facilities: [...facilities, ...unknown] });
+        expect(after).toEqual(before);
+    });
 });

@@ -334,7 +334,7 @@ const MultiLineChart = ({ dates, lines, title }) => {
             <div className="flex flex-wrap gap-3 mt-4 justify-center">
                 {lines.map((lineDef, idx) => (
                     <div key={idx} className="flex items-center text-xs font-medium text-gray-600">
-                        <span className="w-3 h-3 rounded-full mr-1.5 inline-block" style={{ backgroundColor: lineDef.color }}></span>
+                        <span className="w-3 h-3 rounded-full me-1.5 inline-block" style={{ backgroundColor: lineDef.color }}></span>
                         {lineDef.label}
                     </div>
                 ))}
@@ -503,8 +503,8 @@ export const AggregateHistoryDashboard = ({ userStates, onBack }) => {
         <Card>
             <div className="p-6">
                 <div className="flex items-center gap-4 mb-6 border-b pb-4">
-                    <Button variant="secondary" onClick={onBack} className="mr-4">
-                        <ArrowLeft className="w-4 h-4 mr-1 inline" /> {t('facilities_page.common.back', 'Back')}
+                    <Button variant="secondary" onClick={onBack} className="me-4">
+                        <ArrowLeft className="w-4 h-4 me-1 inline" /> {t('facilities_page.common.back', 'Back')}
                     </Button>
                     <PageHeader 
                         title={t('facilities_page.history.agg_title', 'Comprehensive Service & Tool Coverage')} 
@@ -554,7 +554,7 @@ export const AggregateHistoryDashboard = ({ userStates, onBack }) => {
                     </FormGroup>
 
                     <div className="flex-1 min-w-[150px]">
-                        <Button variant="primary" onClick={handleFetchData} className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md">{t('facilities_page.history.load_apply', 'Load / Apply Filters')}</Button>
+                        <Button variant="primary" onClick={handleFetchData} className="w-full ">{t('facilities_page.history.load_apply', 'Load / Apply Filters')}</Button>
                     </div>
                 </div>
 
