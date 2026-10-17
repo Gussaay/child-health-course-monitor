@@ -2,6 +2,7 @@
 //   node apply-rapid-report.cjs --key <service-account.json>            dry run (reads only)
 //   node apply-rapid-report.cjs --key <service-account.json> --commit   writes
 //   node apply-rapid-report.cjs --key <service-account.json> --undo     removes what --commit wrote
+//   add --payload payload-darfur-kordofan.json to any of these for the second batch
 // Status changes go to facilitySubmissions as pending submissions, the same
 // way a field update does, so they wait for approval in Child Health Services.
 // Each one is the facility as it is now with only هل_المؤسسة_تعمل changed.
@@ -21,7 +22,7 @@ if (!args.includes('--key') || !keyPath || !fs.existsSync(keyPath)) {
 }
 const COMMIT = args.includes('--commit');
 const UNDO = args.includes('--undo');
-const BATCH = 'rapid-report-2025-03';
+const payloadFile = args.includes('--payload') ? args[args.indexOf('--payload') + 1] : 'payload.json';
 const SUBMITTER = 'Rapid report Feb-Mar 2025 (Qusay Eltayeb)';
 const FN = 'هل_المؤسسة_تعمل';
 const IMNCI = 'وجود_العلاج_المتكامل_لامراض_الطفولة';
@@ -30,7 +31,9 @@ const DROP = ['id', 'createdAt', 'lastSnapshotAt', '_mergedSubmissionIds', 'stat
 admin.initializeApp({ credential: admin.credential.cert(require(path.resolve(keyPath))) });
 const db = admin.firestore();
 const { FieldValue, Timestamp } = admin.firestore;
-const payload = JSON.parse(fs.readFileSync(path.join(__dirname, 'payload.json'), 'utf8'));
+const payload = JSON.parse(fs.readFileSync(path.join(__dirname, payloadFile), 'utf8'));
+// A second payload (Darfur/Kordofan facilities last updated in 2026) has its own batch name and may include 2026 records.
+const BATCH = payload.batch || 'rapid-report-2025-03';
 
 async function commitAll(writes) {
   for (let i = 0; i < writes.length; i += 400) {
@@ -44,7 +47,11 @@ async function undo() {
   let n = 0;
   for (const col of ['facilitySubmissions', 'healthFacilities', 'facilitySnapshots']) {
     const snap = await db.collection(col).where('importBatch', '==', BATCH).get();
-    const docs = col === 'facilitySubmissions' ? snap.docs.filter((d) => d.data().status === 'pending') : snap.docs;
+    // Approving a submission copies importBatch onto the existing facility and
+    // its new snapshot; those carry originalFacilityId and must never be deleted.
+    const docs = col === 'facilitySubmissions'
+      ? snap.docs.filter((d) => d.data().status === 'pending')
+      : snap.docs.filter((d) => !d.data().originalFacilityId);
     if (col === 'facilitySubmissions' && docs.length < snap.size) console.log(`${snap.size - docs.length} submissions were already approved or rejected and are left as they are.`);
     await commitAll(docs.map((d) => (b) => b.delete(d.ref)));
     console.log(`${col}: removed ${docs.length}`);
@@ -67,7 +74,7 @@ async function main() {
     if (!doc.exists) { skipped.push(`${s.name}: no longer in the app`); continue; }
     const f = doc.data();
     if (f[FN] !== s.from_fn && !(s.from_fn === '' && (f[FN] == null || f[FN] === ''))) { skipped.push(`${s.name}: status changed since the export`); continue; }
-    if (String(f.date_of_visit || '').startsWith('2026')) { skipped.push(`${s.name}: updated in 2026`); continue; }
+    if (!payload.allow2026 && String(f.date_of_visit || '').startsWith('2026')) { skipped.push(`${s.name}: updated in 2026`); continue; }
     const data = { ...f };
     DROP.forEach((k) => delete data[k]);
     Object.assign(data, {

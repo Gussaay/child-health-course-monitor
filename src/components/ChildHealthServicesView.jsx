@@ -392,15 +392,19 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
     );
 };
 
-const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
+const PendingSubmissionsTab = ({ submissions, onApprove, onReject, selectedIds, onToggle, onToggleAll, disabled }) => {
     const { t } = useTranslation();
+    const allSelected = submissions.length > 0 && submissions.every(s => selectedIds.has(s.submissionId));
     return (
-        <Table cardsOnPhone headers={[t('facilities_page.services.col.submission_date', 'Submission Date'), t('facilities_page.services.col.facility_name', 'Facility Name'), t('facilities_page.services.col.state', 'State'), t('facilities_page.services.col.locality', 'Locality'), t('facilities_page.services.col.submitted_by', 'Submitted By'), t('facilities_page.common.actions', 'Actions')]}>
+        <Table cardsOnPhone headers={[
+            <Checkbox key="all" checked={allSelected} disabled={disabled || submissions.length === 0} onChange={() => onToggleAll(!allSelected)} aria-label={t('facilities_page.services.select_all_shown', 'Select all shown')} />,
+            t('facilities_page.services.col.submission_date', 'Submission Date'), t('facilities_page.services.col.facility_name', 'Facility Name'), t('facilities_page.services.col.state', 'State'), t('facilities_page.services.col.locality', 'Locality'), t('facilities_page.services.col.submitted_by', 'Submitted By'), t('facilities_page.common.actions', 'Actions')]}>
             {(!submissions || submissions.length === 0) ? (
-                <EmptyState message={t('facilities_page.services.no_pending', 'No pending submissions found.')} colSpan={6} />
+                <EmptyState message={t('facilities_page.services.no_pending', 'No pending submissions found.')} colSpan={7} />
             ) : (
                 submissions.map(s => (
-                    <tr key={s.submissionId}>
+                    <tr key={s.submissionId} className={selectedIds.has(s.submissionId) ? 'bg-sky-50' : undefined}>
+                        <td><Checkbox checked={selectedIds.has(s.submissionId)} disabled={disabled} onChange={() => onToggle(s.submissionId)} /></td>
                         <td>{s.submittedAt?.toDate ? s.submittedAt.toDate().toLocaleDateString() : t('facilities_page.common.na', 'N/A')}</td>
                         <td>
                             {s['اسم_المؤسسة']}
@@ -410,8 +414,8 @@ const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
                         <td>{s['المحلية']}</td>
                         <td>{s.updated_by || t('facilities_page.services.public_submission', 'Public Submission')}</td>
                         <td className="flex flex-wrap gap-2">
-                            <Button variant="success" size="sm" onClick={() => onApprove(s)}>{t('facilities_page.services.view_approve', 'View / Approve')}</Button>
-                            <Button variant="danger" size="sm" onClick={() => onReject(s._mergedSubmissionIds || [s.submissionId], s._action === 'DELETE')}>{t('facilities_page.services.reject', 'Reject')}</Button>
+                            <Button variant="success" size="sm" disabled={disabled} onClick={() => onApprove(s)}>{t('facilities_page.services.view_approve', 'View / Approve')}</Button>
+                            <Button variant="danger" size="sm" disabled={disabled} onClick={() => onReject(s._mergedSubmissionIds || [s.submissionId], s._action === 'DELETE')}>{t('facilities_page.services.reject', 'Reject')}</Button>
                         </td>
                     </tr>
                 ))
@@ -1199,6 +1203,11 @@ const ChildHealthServicesView = ({
     const [searchQuery, setSearchQuery] = useRememberedState('chs.search', '');
     const [pendingStartDate, setPendingStartDate] = useRememberedState('chs.pending.startDate', '');
     const [pendingEndDate, setPendingEndDate] = useRememberedState('chs.pending.endDate', '');
+    const [pendingStateFilter, setPendingStateFilter] = useState('');
+    const [pendingLocalityFilter, setPendingLocalityFilter] = useState('');
+    const [pendingSubmitterFilter, setPendingSubmitterFilter] = useState('');
+    const [selectedPendingIds, setSelectedPendingIds] = useState(() => new Set());
+    const [bulkProgress, setBulkProgress] = useState(null);
     const hasFetchedPendingRef = useRef(false); 
     
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
@@ -1497,6 +1506,48 @@ const ChildHealthServicesView = ({
         });
     }, [pendingSubmissions, pendingStartDate, pendingEndDate, activeHealthFacilities]);
 
+    const filteredPendingSubmissions = useMemo(() => uniquePendingSubmissions.filter(s =>
+        (!pendingStateFilter || s['الولاية'] === pendingStateFilter) &&
+        (!pendingLocalityFilter || s['المحلية'] === pendingLocalityFilter) &&
+        (!pendingSubmitterFilter || (s.updated_by || '') === pendingSubmitterFilter)
+    ), [uniquePendingSubmissions, pendingStateFilter, pendingLocalityFilter, pendingSubmitterFilter]);
+
+    const pendingFilterOptions = useMemo(() => {
+        const states = new Set(), localities = new Set(), submitters = new Set();
+        uniquePendingSubmissions.forEach(s => {
+            if (s['الولاية']) states.add(s['الولاية']);
+            if (s['المحلية'] && (!pendingStateFilter || s['الولاية'] === pendingStateFilter)) localities.add(s['المحلية']);
+            submitters.add(s.updated_by || '');
+        });
+        const sort = (set) => [...set].sort((a, b) => String(a).localeCompare(String(b)));
+        return { states: sort(states), localities: sort(localities), submitters: sort(submitters) };
+    }, [uniquePendingSubmissions, pendingStateFilter]);
+
+    // Keep the selection to submissions that are still pending.
+    useEffect(() => {
+        setSelectedPendingIds(prev => {
+            const live = new Set(uniquePendingSubmissions.map(s => s.submissionId));
+            const next = new Set([...prev].filter(id => live.has(id)));
+            return next.size === prev.size ? prev : next;
+        });
+    }, [uniquePendingSubmissions]);
+
+    const togglePendingSelection = useCallback((id) => {
+        setSelectedPendingIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }, []);
+
+    const toggleAllShownPending = useCallback((select) => {
+        setSelectedPendingIds(prev => {
+            const next = new Set(prev);
+            filteredPendingSubmissions.forEach(s => { if (select) next.add(s.submissionId); else next.delete(s.submissionId); });
+            return next;
+        });
+    }, [filteredPendingSubmissions]);
+
     const filteredFacilities = useMemo(() => {
         if (!scopedFacilities || !hasManuallySelected) return [];
 
@@ -1687,6 +1738,66 @@ const ChildHealthServicesView = ({
         } catch (error) {
              setUploadStatus({ inProgress: false, processed: 0, total: 0, errors: [{ message: error.message }], message: t('facilities_page.services.import_failed', 'Import failed: {{message}}', { message: error.message }) });
         }
+    };
+
+    // Applies one approval and returns the submission ids it handled.
+    const applyApproval = async (submissionData) => {
+        // --- FIX 2: Strip undefined fields before interacting with Firestore ---
+        const cleanSubmissionData = removeUndefinedProperties(submissionData);
+        if (cleanSubmissionData._action === 'DELETE') {
+            // --- FIX 3: Target originalFacilityId explicitly for deletions, fallback to id ---
+            const targetId = cleanSubmissionData.originalFacilityId || cleanSubmissionData.id;
+            if (!targetId) throw new Error("Missing facility ID for deletion.");
+            await deleteHealthFacility(targetId);
+            await removeFromCache('healthFacilities', [targetId]);
+            const idsToClean = (cleanSubmissionData._mergedSubmissionIds || [cleanSubmissionData.submissionId]).filter(Boolean);
+            await Promise.all(idsToClean.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Approver')));
+        } else {
+            await approveFacilitySubmission(cleanSubmissionData, auth.currentUser?.email || 'Unknown Approver');
+            if (cleanSubmissionData._mergedSubmissionIds && cleanSubmissionData._mergedSubmissionIds.length > 1) {
+                const redundantIds = cleanSubmissionData._mergedSubmissionIds.filter(id => id !== cleanSubmissionData.submissionId).filter(Boolean);
+                await Promise.all(redundantIds.map(id => rejectFacilitySubmission(id, 'Merged into a combined submission')));
+            }
+        }
+        return (cleanSubmissionData._mergedSubmissionIds || [cleanSubmissionData.submissionId]).filter(Boolean);
+    };
+
+    // Approves or rejects every ticked submission, a few at a time.
+    const handleBulkDecision = async (approve) => {
+        if (!permissions.canApproveSubmissions || bulkProgress) return;
+        const chosen = uniquePendingSubmissions.filter(s => selectedPendingIds.has(s.submissionId));
+        if (chosen.length === 0) return;
+        const question = approve
+            ? t('facilities_page.services.confirm_bulk_approve', 'Approve {{count}} submissions? Each facility will be updated with what was submitted.', { count: chosen.length })
+            : t('facilities_page.services.confirm_bulk_reject', 'Reject {{count}} submissions?', { count: chosen.length });
+        if (!(await confirmDialog(question))) return;
+        const handled = [];
+        let failed = 0;
+        setBulkProgress({ done: 0, total: chosen.length, approve });
+        for (let i = 0; i < chosen.length; i += 5) {
+            const results = await Promise.allSettled(chosen.slice(i, i + 5).map(s => approve
+                ? applyApproval(s)
+                : (async () => {
+                    const ids = (s._mergedSubmissionIds || [s.submissionId]).filter(Boolean);
+                    await Promise.all(ids.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Rejector')));
+                    return ids;
+                })()));
+            results.forEach(r => { if (r.status === 'fulfilled') handled.push(...r.value); else failed++; });
+            setBulkProgress({ done: Math.min(i + 5, chosen.length), total: chosen.length, approve });
+        }
+        dropPendingSubmissions(handled);
+        setSelectedPendingIds(new Set());
+        setBulkProgress(null);
+        const okCount = chosen.length - failed;
+        setToast({
+            show: true,
+            type: failed ? 'error' : 'success',
+            message: (approve
+                ? t('facilities_page.services.bulk_approved', '{{count}} submissions approved.', { count: okCount })
+                : t('facilities_page.services.bulk_rejected', '{{count}} submissions rejected.', { count: okCount }))
+                + (failed ? ' ' + t('facilities_page.services.bulk_failed', '{{count}} failed and are still pending.', { count: failed }) : ''),
+        });
+        if (approve && okCount > 0) await fetchHealthFacilities({}, 'sync');
     };
 
     const handleConfirmApproval = async (submissionData) => {
@@ -1961,7 +2072,32 @@ const ChildHealthServicesView = ({
         else if (!hasManuallySelected) { emptyStateMessage = t('facilities_page.services.empty.select_state_or_filters', 'Please select a State or apply other filters to begin viewing facilities.'); }
 
         const tabsContent = {
-            [TABS.PENDING]: <PendingSubmissionsTab submissions={uniquePendingSubmissions || []} onApprove={handleReviewSubmission} onReject={handleReject} />,
+            [TABS.PENDING]: (
+                <>
+                    {permissions.canApproveSubmissions && (
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <span className="text-sm text-gray-700">
+                                {bulkProgress
+                                    ? t('facilities_page.services.bulk_progress', '{{done}} of {{total}} done…', { done: bulkProgress.done, total: bulkProgress.total })
+                                    : t('facilities_page.services.selected_count', '{{count}} selected of {{shown}} shown', { count: selectedPendingIds.size, shown: filteredPendingSubmissions.length })}
+                            </span>
+                            <Button size="sm" variant="secondary" disabled={!!bulkProgress || filteredPendingSubmissions.length === 0} onClick={() => toggleAllShownPending(true)}>{t('facilities_page.services.select_all_shown_count', 'Select all {{count}} shown', { count: filteredPendingSubmissions.length })}</Button>
+                            {selectedPendingIds.size > 0 && !bulkProgress && <Button size="sm" variant="secondary" onClick={() => setSelectedPendingIds(new Set())}>{t('facilities_page.services.clear_selection', 'Clear selection')}</Button>}
+                            <Button size="sm" variant="success" disabled={!!bulkProgress || selectedPendingIds.size === 0} onClick={() => handleBulkDecision(true)}>{t('facilities_page.services.approve_selected', 'Approve selected')}</Button>
+                            <Button size="sm" variant="danger" disabled={!!bulkProgress || selectedPendingIds.size === 0} onClick={() => handleBulkDecision(false)}>{t('facilities_page.services.reject_selected', 'Reject selected')}</Button>
+                        </div>
+                    )}
+                    <PendingSubmissionsTab
+                        submissions={filteredPendingSubmissions}
+                        onApprove={handleReviewSubmission}
+                        onReject={handleReject}
+                        selectedIds={selectedPendingIds}
+                        onToggle={togglePendingSelection}
+                        onToggleAll={toggleAllShownPending}
+                        disabled={!!bulkProgress}
+                    />
+                </>
+            ),
             [TABS.ALL]: <AllFacilitiesTab facilities={paginatedFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} onGenerateLink={handleGenerateLink} onOpenMap={handleOpenMapModal} onOpenHistory={handleOpenHistoryModal} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities} />,
         };
         const availableTabs = Object.values(TABS).filter(tab => tab === TABS.PENDING ? permissions.canManageFacilities : true);
@@ -2020,8 +2156,26 @@ const ChildHealthServicesView = ({
                 />
 
                 {activeTab === TABS.PENDING && (
-                     <FilterPanel className="my-4" activeCount={[pendingStartDate, pendingEndDate].filter(Boolean).length}>
+                     <FilterPanel className="my-4" activeCount={[pendingStartDate, pendingEndDate, pendingStateFilter, pendingLocalityFilter, pendingSubmitterFilter].filter(Boolean).length}>
                      <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 items-end">
+                        <FormGroup label={t('facilities_page.services.filter_state', 'Filter by State')}>
+                            <Select value={pendingStateFilter} onChange={(e) => { setPendingStateFilter(e.target.value); setPendingLocalityFilter(''); }}>
+                                <option value="">{t('facilities_page.services.all_states', 'All States')}</option>
+                                {pendingFilterOptions.states.map(st => <option key={st} value={st}>{STATE_LOCALITIES[st]?.ar || st}</option>)}
+                            </Select>
+                        </FormGroup>
+                        <FormGroup label={t('facilities_page.services.filter_locality', 'Filter by Locality')}>
+                            <Select value={pendingLocalityFilter} onChange={(e) => setPendingLocalityFilter(e.target.value)}>
+                                <option value="">{t('facilities_page.services.all_localities', 'All Localities')}</option>
+                                {pendingFilterOptions.localities.map(l => <option key={l} value={l}>{(pendingStateFilter && STATE_LOCALITIES[pendingStateFilter]?.localities.find(x => x.en === l)?.ar) || l}</option>)}
+                            </Select>
+                        </FormGroup>
+                        <FormGroup label={t('facilities_page.services.filter_submitter', 'Filter by Submitter')}>
+                            <Select value={pendingSubmitterFilter} onChange={(e) => setPendingSubmitterFilter(e.target.value)}>
+                                <option value="">{t('facilities_page.services.all_submitters', 'All Submitters')}</option>
+                                {pendingFilterOptions.submitters.filter(Boolean).map(u => <option key={u} value={u}>{u}</option>)}
+                            </Select>
+                        </FormGroup>
                         <FormGroup label={t('facilities_page.services.filter_submission_start', 'Filter by Submission Start Date')}>
                             <Input type="date" value={pendingStartDate} onChange={(e) => setPendingStartDate(e.target.value)} />
                         </FormGroup>

@@ -62,6 +62,14 @@ const SYNC_OVERLAP_MS = 10 * 60 * 1000; // 10 minutes
 
 const rewindWatermark = (ms) => (ms > 0 ? Math.max(0, ms - SYNC_OVERLAP_MS) : 0);
 
+// --- BACKGROUND REVALIDATION ---
+// A cache hit used to be the end of the story for up to an hour (CACHE_TTL_MS),
+// so a record approved, edited or deleted on another device kept showing here.
+// Now a cache hit is shown at once and then checked against the server in the
+// background with a delta query. A delta query that finds nothing costs one
+// read, so the check is throttled per list instead of skipped.
+const REVALIDATE_MIN_INTERVAL_MS = 30 * 1000;
+
 // --- SIGNATURE STRIPPING BEFORE DISK CACHE ---
 // Signature and stamp images are stored inline (base64) on the course document
 // so they are covered by Firestore rules instead of living behind a permanent
@@ -264,13 +272,30 @@ export const DataProvider = ({ children }) => {
     
     useEffect(() => { cacheRef.current = cache; }, [cache]);
     useEffect(() => { lastFacilitiesFetchTimeRef.current = lastFacilitiesFetchTime; }, [lastFacilitiesFetchTime]);
-    
+
+    // Called whenever a fetcher answers from memory or IndexedDB without asking
+    // the server. Runs `refresh` (a 'sync' delta fetch) on the next tick, so the
+    // cached answer is on screen first and the server's version replaces it a
+    // moment later. Skipped offline, while a fetch for the same list is already
+    // running, and when the server was asked less than REVALIDATE_MIN_INTERVAL_MS ago.
+    const revalidatedAtRef = useRef({});
+    const scheduleRevalidate = useCallback((throttleKey, lastServerFetch, refresh) => {
+        if (!navigator.onLine) return;
+        const now = Date.now();
+        const last = Math.max(lastServerFetch || 0, revalidatedAtRef.current[throttleKey] || 0);
+        if (now - last < REVALIDATE_MIN_INTERVAL_MS) return;
+        revalidatedAtRef.current[throttleKey] = now;
+        setTimeout(() => {
+            refresh().catch(e => console.warn(`[sync] background refresh failed for ${throttleKey}:`, e));
+        }, 0);
+    }, []);
+
     const createFetcher = useCallback((key, fetchFn) => {
         if (key === 'healthFacilities') {
              // force: false = cache-first; 'sync' = ask the server now, but only
              // for facilities changed since the last fetch (use after this
              // device saved or approved a facility); true = full re-download.
-             return async (filters = {}, force = false) => { 
+             const fetchFacilities = async (filters = {}, force = false) => {
                 const filterKey = getFilterKey(filters);
                 const internalCache = facilitiesFilterCacheRef.current;
                 
@@ -287,6 +312,7 @@ export const DataProvider = ({ children }) => {
                         currentFacilitiesFilterKeyRef.current = filterKey;
                     }
                     setIsLoading(prev => prev.healthFacilities === false ? prev : { ...prev, healthFacilities: false });
+                    scheduleRevalidate(timeKey, lastFetchTime, () => fetchFacilities(filters, 'sync'));
                     return cachedData;
                 }
 
@@ -315,7 +341,8 @@ export const DataProvider = ({ children }) => {
                             
                             if (!shouldForceServer && navigator.onLine) {
                                 fetchingRef.current[filterKey] = false;
-                                return localData; 
+                                scheduleRevalidate(timeKey, lastFetchTime, () => fetchFacilities(filters, 'sync'));
+                                return localData;
                             }
                         }
                     } catch (e) {
@@ -392,6 +419,7 @@ export const DataProvider = ({ children }) => {
                     fetchingRef.current[filterKey] = false;
                 }
             };
+            return fetchFacilities;
         }
         
         // General Data Fetchers
@@ -416,7 +444,17 @@ export const DataProvider = ({ children }) => {
         // for a 10-minute overlap window, and a doc written seconds ago sits well
         // inside it. Soft deletes also bump lastUpdatedAt, so they arrive in the
         // delta too. Only a poisoned watermark needs 'full' (or clearLocalCache).
-        return async (mode = false) => {
+        //
+        // --- MERGE OR REPLACE ---
+        // A delta answer only lists what changed, so it is merged into the cache.
+        // A complete answer (a full download, or a fetcher such as the Pending
+        // lists that takes no lastSync and always returns the whole result)
+        // REPLACES the cache. Merging a complete answer meant a record that left
+        // the result, e.g. a submission approved on another device and so no
+        // longer "pending", was never removed and stayed on screen for good.
+        const returnsWholeResult = fetchFn.length < 2;
+
+        const fetcher = async (mode = false) => {
             const force = mode === true || mode === 'sync' || mode === 'full';
             const fullReload = mode === 'full';
 
@@ -431,6 +469,7 @@ export const DataProvider = ({ children }) => {
 
             if (hasData && !shouldForceServer && !isDefaultSettings) {
                 setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
+                scheduleRevalidate(timeKey, lastFetchTime, () => fetcher('sync'));
                 return currentCache;
             }
 
@@ -460,6 +499,7 @@ export const DataProvider = ({ children }) => {
                         }
                         
                         if (!shouldForceServer && navigator.onLine) {
+                            scheduleRevalidate(timeKey, lastFetchTime, () => fetcher('sync'));
                             return localData;
                         }
                     }
@@ -498,8 +538,12 @@ export const DataProvider = ({ children }) => {
                 const newOrUpdatedData = await fetchWithTimeout(fetchFn({ source: 'server' }, effectiveLastFetchTime), 60000); 
                 
                 let finalMergedData = localData;
+                const isCompleteAnswer = returnsWholeResult || effectiveLastFetchTime === 0;
 
-                if (Array.isArray(newOrUpdatedData) && newOrUpdatedData.length > 0) {
+                if (Array.isArray(newOrUpdatedData) && isCompleteAnswer) {
+                    finalMergedData = newOrUpdatedData.filter(item => item && item.id);
+                    await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
+                } else if (Array.isArray(newOrUpdatedData) && newOrUpdatedData.length > 0) {
                     const dataMap = new Map((Array.isArray(localData) ? localData : []).map(item => [item.id, item]));
                     newOrUpdatedData.forEach(newItem => {
                         if (newItem && newItem.id) {
@@ -534,7 +578,8 @@ export const DataProvider = ({ children }) => {
                 fetchingRef.current[key] = null;
             }
         };
-    }, []); 
+        return fetcher;
+    }, [scheduleRevalidate]); 
 
     const fetchers = useMemo(() => ({
         fetchCourses: createFetcher('courses', (opts, lastSync) => listAllCourses(opts, lastSync)),

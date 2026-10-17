@@ -25,7 +25,8 @@ import {
     deleteField,
     arrayUnion,
     onSnapshot,
-    waitForPendingWrites
+    waitForPendingWrites,
+    runTransaction
 } from "firebase/firestore";
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { storage } from './firebase';
@@ -894,17 +895,41 @@ export async function listPendingFacilitatorSubmissions(sourceOptions = {}) {
     const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+// Approving checks the submission on the server, inside a transaction, so an
+// entry that another device already approved or rejected cannot be approved
+// again from a stale Pending list. The facilitator also takes the submission's
+// id, so even two approvals racing each other write one record, not two.
 export async function approveFacilitatorSubmission(submission, approverEmail) {
     const { id: submissionId, status, submittedAt, ...facilitatorData } = submission;
-    const batch = writeBatch(db);
-    const newFacRef = doc(collection(db, "facilitators"));
-    batch.set(newFacRef, { ...facilitatorData, lastUpdatedAt: serverTimestamp() });
+    if (!isOnline()) {
+        throw new Error("Approving needs an internet connection, so the app can check this request was not already handled on another device.");
+    }
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
-    batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
-    await batch.commit();
+    const newFacRef = doc(db, "facilitators", submissionId);
+    await runTransaction(db, async (tx) => {
+        const current = await tx.get(submissionRef);
+        if (!current.exists()) throw new Error("This request no longer exists.");
+        const data = current.data();
+        if (data.status !== 'pending') {
+            const by = data.approvedBy || data.rejectedBy;
+            throw new Error(`This request was already ${data.status}${by ? ` by ${by}` : ''}.`);
+        }
+        tx.set(newFacRef, { ...facilitatorData, lastUpdatedAt: serverTimestamp() });
+        tx.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp(), facilitatorId: newFacRef.id });
+    });
+    dispatchOpEvent('read', 1);
+    dispatchOpEvent('write', 2);
 }
 export async function rejectFacilitatorSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
+    if (isOnline()) {
+        const current = await getDoc(submissionRef);
+        const data = current.exists() ? current.data() : null;
+        if (data && data.status !== 'pending') {
+            const by = data.approvedBy || data.rejectedBy;
+            throw new Error(`This request was already ${data.status}${by ? ` by ${by}` : ''}.`);
+        }
+    }
     await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
 export async function getFacilitatorApplicationSettings(sourceOptions = {}) {
