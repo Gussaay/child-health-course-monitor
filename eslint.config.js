@@ -75,7 +75,7 @@ export default [
   },
   {
     // Node scripts and config files.
-    files: ['*.config.js', '*.cjs', 'scripts/**/*.js', 'server.js', 'electron.js', 'preload.js', 'set-first-admin.js', 'fix-capgo.js'],
+    files: ['*.config.js', '**/*.cjs', 'scripts/**/*.js', 'server.js', 'electron.js', 'preload.js', 'set-first-admin.js', 'fix-capgo.js'],
     languageOptions: {
       globals: { ...globals.node },
       sourceType: 'module',
