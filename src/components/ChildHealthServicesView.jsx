@@ -55,6 +55,7 @@ import { STATE_LOCALITIES } from "./constants.js";
 import { notify, confirmDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
+import { leaveForm } from '../utils/leaveGuard';
 
 // MISSING IMPLEMENTATION — generateFacilityListPdf is called below but has never
 // been defined in this file or imported from anywhere, so the facility-list PDF
@@ -1974,7 +1975,7 @@ const ChildHealthServicesView = ({
 
         const FormComponent = FORM_KEY_TO_COMPONENT[formTypeKey] || IMNCIFormFields;
 
-        const handleBackClick = () => {
+        const handleBackClick = () => leaveForm(() => {
             setEditingFacility(null);
             if (updateSelectionService) {
                 setUpdateSelectionService(null);
@@ -1982,7 +1983,7 @@ const ChildHealthServicesView = ({
             } else {
                 setView('list');
             }
-        };
+        });
 
         const pendingFacilityData = editingFacility 
             ? (uniquePendingSubmissions || []).find(s => 
@@ -2325,8 +2326,10 @@ const ChildHealthServicesView = ({
     // Android app: the top-bar arrow steps back from the list and the form.
     useInPageBack(() => {
         if (view === 'form') {
-            setEditingFacility(null);
-            if (updateSelectionService) { setUpdateSelectionService(null); setView('action_menu'); } else setView('list');
+            leaveForm(() => {
+                setEditingFacility(null);
+                if (updateSelectionService) { setUpdateSelectionService(null); setView('action_menu'); } else setView('list');
+            });
         } else {
             setView('action_menu');
         }

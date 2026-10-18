@@ -18,7 +18,7 @@ import {
     MessageSquareWarning, Send, Trash2, X,
 } from 'lucide-react';
 
-import { Button, Card, CardBody, Input, Modal, Spinner, Textarea } from './CommonComponents';
+import { Button, Card, CardBody, Input, Modal, Textarea, SkeletonTable } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
 import {
     submitProblemReport, listProblemReports, setProblemReportStatus, deleteProblemReport,
@@ -242,7 +242,7 @@ export function ProblemReportsTab() {
         } finally { setBusy(null); }
     };
 
-    if (reports === null) return <Spinner />;
+    if (reports === null) return <SkeletonTable />;
 
     const counts = {
         open: (reports || []).filter((r) => r.status !== 'resolved').length,

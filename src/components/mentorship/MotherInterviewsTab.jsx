@@ -272,7 +272,7 @@ const MotherInterviewsTab = ({
 
                 {/* UPDATED: Separate Bar Charts for Knowledge vs Satisfaction, enforcing correct layout string order for Arabic rendering layout structures */}
                 <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-                    {t('Overall Mother Interview Scores by')} {t(geographicLevelName)} {scopeTitle}
+                    {t('Overall Mother Interview Scores by')} {t(geographicLevelName)} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
                 </h3>
                 <div className="grid grid-cols-1 gap-8 mb-10">
                     <KpiBarChart title={`${t('Average Mother Knowledge by')} ${t(geographicLevelName)}`} chartData={motherGeographicKpis} dataKey="avgKnowledge" />
@@ -280,7 +280,7 @@ const MotherInterviewsTab = ({
                 </div>
                 
                 <h3 className={`text-xl font-extrabold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-                    {t('Detailed Mother Interview Performance')} {scopeTitle}
+                    {t('Detailed Mother Interview Performance')} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
                 </h3>
                 <div className="mb-10"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="IMNCI" /></div>
             </div>
@@ -362,12 +362,12 @@ const MotherInterviewsTab = ({
             ))}
             
             <h3 className={`text-xl font-bold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-                {t('Overall Mother Interview Indicators by')} {t(geographicLevelName)} {scopeTitle}
+                {t('Overall Mother Interview Indicators by')} {t(geographicLevelName)} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
             </h3>
             <div className="mb-10"><KpiBarChart title={`${t('Average Indicator Presence by')} ${t(geographicLevelName)}`} chartData={motherGeographicKpis} dataKey="avgOverall" /></div>
             
             <h3 className={`text-xl font-bold text-slate-800 mb-5 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-                {t('Detailed Mother Interview Performance')} {scopeTitle}
+                {t('Detailed Mother Interview Performance')} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
             </h3>
             <div className="mb-10"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="EENC" /></div>
         </div>

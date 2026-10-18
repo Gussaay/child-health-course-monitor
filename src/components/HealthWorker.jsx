@@ -5,8 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { 
     Button, Card, CardBody, EmptyState, FormGroup, Input, 
-    PageHeader, Select, Table, Modal, CardFooter, Spinner 
-} from './CommonComponents';
+    PageHeader, Select, Table, Modal, CardFooter, Spinner, PageSkeleton } from './CommonComponents';
 import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES } from './constants';
 import { Download, Eye, Users, CheckCircle, AlertCircle, RefreshCw, BookOpen, FileText } from 'lucide-react';
@@ -338,7 +337,7 @@ export function HealthWorkerView({ permissions, userStates }) {
     const untrainedCount = totalWorkers - trainedCount;
 
     if (isLoading.participants || isLoading.healthFacilities || isLoading.courses) {
-        return <div className="flex justify-center p-12"><Spinner /></div>;
+        return <PageSkeleton />;
     }
 
     return (

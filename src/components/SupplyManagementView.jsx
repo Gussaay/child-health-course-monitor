@@ -15,8 +15,7 @@ import { Plus, Pencil, Trash2, Package, Upload, Download, AlertTriangle, CheckCi
 
 import {
     Card, CardBody, PageHeader, Button, Tabs, Table, EmptyState, Spinner,
-    Modal, Input, Select, Textarea, Checkbox, FormGroup, ActionGroup,
-} from './CommonComponents';
+    Modal, Input, Select, Textarea, Checkbox, FormGroup, ActionGroup, SkeletonTable } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
 import { useDataCache } from '../DataContext';
 import { upsertSupplyItem, deleteSupplyItem, bulkUpsertSupplyItems } from '../data';
@@ -984,7 +983,7 @@ export default function SupplyManagementView({ permissions = {} }) {
                         </div>
                     </div>
 
-                    {isLoading?.supplyItems && !supplyItems ? <Spinner /> : (
+                    {isLoading?.supplyItems && !supplyItems ? <SkeletonTable /> : (
                         <Table headers={headers} cardsOnPhone>
                             {visibleItems.length === 0 ? (
                                 <EmptyState

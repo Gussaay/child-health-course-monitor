@@ -1,6 +1,6 @@
 // src/components/ProjectTrackerView.jsx
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, PageTabs, PhoneCards } from './CommonComponents';
+import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, PageTabs, PhoneCards, PageSkeleton } from './CommonComponents';
 import { upsertProject, deleteProject } from '../data';
 import { useDataCache } from '../DataContext';
 import { db } from '../firebase'; 
@@ -444,7 +444,7 @@ export default function ProjectTrackerView({ permissions }) {
         );
     };
 
-    if (isLoading.projects) return <Spinner />;
+    if (isLoading.projects) return <PageSkeleton />;
 
     return (
         <div className="space-y-6">

@@ -1,12 +1,13 @@
 import React, { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KpiCard, CopyImageButton, ScoreText } from './MentorshipDashboardShared';
+import { KpiCard, CopyImageButton, ScoreText, wrapNarrowLabel, ChartEmpty } from './MentorshipDashboardShared';
 import { Line, Bar } from 'react-chartjs-2';
 import { SlidersHorizontal, Activity, AlertTriangle } from 'lucide-react';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
     LineElement, BarElement, Title, Tooltip, Filler
 } from 'chart.js';
+import { CHART_COLORS } from '../chartSetup';
 
 ChartJS.register(
     CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler
@@ -81,8 +82,9 @@ const InfoKpiTrendCard = ({
             data: lineData,
             borderColor: color,
             backgroundColor: color + '26',
-            fill: true,
-            tension: 0.4,
+            fill: false,
+            tension: 0.3,
+            cubicInterpolationMode: 'monotone',
             pointRadius: 4,
             pointHoverRadius: 6,
             pointBackgroundColor: '#ffffff',
@@ -100,8 +102,8 @@ const InfoKpiTrendCard = ({
             legend: { display: false },
             tooltip: {
                 backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' },
-                bodyFont: { size: 12, family: "'Inter', sans-serif" },
+                titleFont: { size: 13, weight: 'bold' },
+                bodyFont: { size: 12 },
                 padding: 12, cornerRadius: 8, boxPadding: 6,
                 callbacks: { label: (context) => ` ${context.dataset.label}: ${context.raw}%` }
             }
@@ -110,11 +112,11 @@ const InfoKpiTrendCard = ({
             y: {
                 beginAtZero: true, max: 100,
                 grid: { color: '#e2e8f0', drawBorder: false },
-                ticks: { stepSize: 20, callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' } }
+                ticks: { stepSize: 20, callback: (value) => `${value}%`, color: '#475569', font: { size: 11, weight: '600' } }
             },
             x: {
-                reverse: isAr, grid: { display: false },
-                ticks: { color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' } }
+                reverse: isAr, offset: true, grid: { display: false },
+                ticks: { maxRotation: 0, callback: wrapNarrowLabel, color: '#475569', font: { size: 11, weight: '600' } }
             }
         }
     };
@@ -122,8 +124,8 @@ const InfoKpiTrendCard = ({
     const hasData = totalDenominator > 0 && lineLabels.length > 0;
 
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 h-full flex flex-col relative">
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
             <h4 className="text-sm sm:text-base font-extrabold text-slate-800 mb-4 sm:mb-6 text-center tracking-wide pr-8 break-words">{title}</h4>
 
             <div className="flex justify-between items-center gap-2 sm:gap-4 mb-6">
@@ -140,7 +142,7 @@ const InfoKpiTrendCard = ({
                 <div className="flex flex-col items-center">
                     <span className="text-xs font-bold text-slate-500 mb-1">{t('Average')}</span>
                     <div className="border border-slate-800 bg-white rounded-xl px-4 sm:px-10 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center">
-                        <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
+                        <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                             {totalDenominator > 0 && avgValue !== null && avgValue !== undefined && !isNaN(avgValue) ? `${Math.round(avgValue)}%` : '-'}
                         </span>
                         {totalDenominator > 0 && (
@@ -166,9 +168,7 @@ const InfoKpiTrendCard = ({
                 {hasData ? (
                     <Line options={options} data={chartData} />
                 ) : (
-                    <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs text-center p-4">
-                        {t('No data available.')}
-                    </div>
+                    <ChartEmpty />
                 )}
             </div>
         </div>
@@ -183,7 +183,7 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
         labels: stats.labels,
         datasets: [{
             data: [stats.stat1, stats.stat2, stats.stat3],
-            backgroundColor: ['#f97316', '#6366f1', '#84cc16'],
+            backgroundColor: [CHART_COLORS[2], CHART_COLORS[3], CHART_COLORS[1]],
             borderRadius: 6,
             barPercentage: 0.5
         }]
@@ -230,19 +230,19 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
                 max: 100,
                 display: true,
                 grid: { color: '#e2e8f0', drawBorder: false },
-                ticks: { callback: (val) => `${val}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 10, weight: '600' } }
+                ticks: { callback: (val) => `${val}%`, color: '#475569', font: { size: 10, weight: '600' } }
             },
             x: {
                 grid: { display: false, drawBorder: false },
-                ticks: { font: { size: 11, weight: 'bold' }, color: '#475569' }
+                ticks: { maxRotation: 0, callback: wrapNarrowLabel, font: { size: 11, weight: 'bold' }, color: '#475569' }
             }
         },
         layout: { padding: { top: 15 } }
     };
 
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative justify-center">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t('Integrated Child/Maternal Health Services')} /></div>
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 h-full flex flex-col relative justify-center">
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t('Integrated Child/Maternal Health Services')} /></div>
             <div className="flex items-center justify-center gap-3 mb-6">
                 <Activity className="w-5 h-5 text-sky-600" />
                 <h4 className="text-sm sm:text-base font-extrabold text-slate-800 text-center tracking-wide pr-8 break-words">
@@ -256,9 +256,7 @@ const IntegratedServicesBarKpi = ({ stats, t }) => {
                 {stats.total > 0 ? (
                     <Bar data={data} options={options} plugins={[verticalBarLabelPlugin]} />
                 ) : (
-                    <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs text-center p-4">
-                        {t('No data available.')}
-                    </div>
+                    <ChartEmpty />
                 )}
             </div>
         </div>

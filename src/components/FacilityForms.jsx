@@ -9,8 +9,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select,
-    Spinner, Checkbox, Modal, FormActions
-} from './CommonComponents';
+    Spinner, Checkbox, Modal, FormActions, SkeletonCard } from './CommonComponents';
 import {
     getHealthFacilityById,
     listHealthFacilities,
@@ -22,6 +21,7 @@ import {
 } from "./constants.js";
 import { notify } from './dialogs';
 import StandardNameSelect from './StandardNameSelect';
+import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
 
 const SERVICE_LABELS = {
     'imnci_staff': 'العلاج المتكامل (IMNCI)',
@@ -326,7 +326,7 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
         }
     };
 
-    if (loading) return <div className="p-8 text-center"><Spinner /></div>;
+    if (loading) return <SkeletonCard />;
     if (error) return <div className="p-8 text-center text-red-600 bg-red-50 border border-red-200 rounded-md font-bold">{error}</div>;
 
     return (
@@ -1059,6 +1059,7 @@ export const GenericFacilityForm = React.forwardRef(({
     isSubmitting = false 
 }, ref) => {
     const { t } = useTranslation();
+    useLeaveGuard(!isReadOnly);
     const [isLocalSubmitting, setIsLocalSubmitting] = useState(false); 
     const [showNamePrompt, setShowNamePrompt] = useState(false);
 
@@ -1356,7 +1357,7 @@ export const GenericFacilityForm = React.forwardRef(({
                         )}
 
                         <FormActions className="mt-8 md:gap-3 md:border-t md:pt-6">
-                            <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); onCancel(); }} disabled={currentlySubmitting} className="px-6">
+                            <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); leaveForm(onCancel); }} disabled={currentlySubmitting} className="px-6">
                                 {cancelButtonText}
                             </Button>
                             <Button type="submit" variant={saveButtonVariant} disabled={currentlySubmitting} className="px-8 font-bold">

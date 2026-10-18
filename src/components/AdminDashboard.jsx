@@ -193,7 +193,7 @@ const formatDuration = (milliseconds, t) => {
 // -----------------------------------------------------------------------------
 // Main AdminDashboard Component
 // -----------------------------------------------------------------------------
-export function AdminDashboard() {
+export function AdminDashboard({ appRoles = [] }) {
     const { t } = useTranslation();
     const roleLabel = (r) => (ROLES[r] ? t(`admin_pages.admin_dashboard.roles.${r}`, ROLES[r]) : r);
     const [users, setUsers] = useState([]);
@@ -207,6 +207,11 @@ export function AdminDashboard() {
     const [currentUserRole, setCurrentUserRole] = useState(null);
     const [currentUserRoles, setCurrentUserRoles] = useState([]); 
     const [currentUserPermissions, setCurrentUserPermissions] = useState({}); 
+    // The roles App already resolved. Used when this page's own read comes back
+    // without a role (a partial local copy, or the read failed), so the Admin
+    // page never treats a super user as a standard user.
+    const appRolesRef = useRef(appRoles);
+    appRolesRef.current = appRoles;
     
     const [activeTab, setActiveTab] = useState('roles');
     const [notificationTargetId, setNotificationTargetId] = useState('all');
@@ -261,12 +266,16 @@ export function AdminDashboard() {
                     let roles = ['user'];
                     let perms = {};
                     
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        role = data.role || 'user';
+                    const data = docSnap.exists() ? docSnap.data() : null;
+                    if (data && (data.role || (Array.isArray(data.roles) && data.roles.length > 0))) {
+                        role = data.role || data.roles[0];
                         roles = data.roles || [role];
                         perms = data.permissions || {};
-                    } 
+                    } else if (appRolesRef.current.length > 0) {
+                        roles = appRolesRef.current;
+                        role = roles[0];
+                        perms = data?.permissions || {};
+                    }
                     
                     setCurrentUserRole(role);
                     setCurrentUserRoles(roles);
@@ -276,6 +285,13 @@ export function AdminDashboard() {
                     loadData(effectiveRole);
                 }).catch(error => {
                     console.error("Error fetching current user's role:", error);
+                    const fallback = appRolesRef.current;
+                    if (fallback.length > 0) {
+                        setCurrentUserRole(fallback[0]);
+                        setCurrentUserRoles(fallback);
+                        loadData(fallback.includes('super_user') ? 'super_user' : fallback[0]);
+                        return;
+                    }
                     setCurrentUserRole(null);
                     setCurrentUserRoles([]);
                     setLoading(false);

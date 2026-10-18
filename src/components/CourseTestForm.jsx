@@ -17,6 +17,7 @@ import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X, Ale
 import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl } from '../utils/publicLink';
+import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
 
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -1713,6 +1714,7 @@ export function CourseTestForm({
     const [isSaving, setIsSaving] = useState(false);
     const [submissionResult, setSubmissionResult] = useState(null);
     const [isSetupModalOpen, setIsSetupModalOpen] = useState(true); 
+    useLeaveGuard(viewMode === 'entry' && !isSetupModalOpen && !submissionResult);
     const [selectedSetupGroup, setSelectedSetupGroup] = useState(''); 
     const [isEditing, setIsEditing] = useState(false);
     const [isNewParticipantModalOpen, setIsNewParticipantModalOpen] = useState(false);
@@ -2581,7 +2583,7 @@ export function CourseTestForm({
                  </CardBody>
                  <CardFooter className="p-4 border-t flex justify-end gap-3" style={{ direction: 'ltr' }}>
                      <Button variant="secondary" onClick={() => setIsNewParticipantModalOpen(false)} disabled={isSaving}>{t('course_tests.tests.cancel', 'Cancel')}</Button>
-                     <Button onClick={handleSaveParticipantInfo} disabled={isSaving}>{isSaving ? <Spinner /> : t('course_tests.tests.save_participant', 'Save Participant')}</Button>
+                     <Button onClick={handleSaveParticipantInfo} disabled={isSaving}>{isSaving ? <Spinner size="sm" /> : t('course_tests.tests.save_participant', 'Save Participant')}</Button>
                  </CardFooter>
             </Modal>
 
@@ -2799,9 +2801,9 @@ export function CourseTestForm({
                     </fieldset>
 
                     <FormActions className="mt-8 md:border-t md:pt-6">
-                        <Button variant="secondary" onClick={handleBackToDashboard} disabled={isSaving}>{t('course_tests.tests.cancel', 'Cancel')}</Button>
+                        <Button variant="secondary" onClick={() => leaveForm(handleBackToDashboard)} disabled={isSaving}>{t('course_tests.tests.cancel', 'Cancel')}</Button>
                         <Button onClick={handleSubmit} disabled={submitDisabled}>
-                            {isSaving ? <Spinner /> : (isEditing ? t('course_tests.tests.save_grading', 'Save Grading & Score') : t('course_tests.tests.submit_view_score', 'Submit & View Score'))}
+                            {isSaving ? <Spinner size="sm" /> : (isEditing ? t('course_tests.tests.save_grading', 'Save Grading & Score') : t('course_tests.tests.submit_view_score', 'Submit & View Score'))}
                         </Button>
                     </FormActions>
                 </div>

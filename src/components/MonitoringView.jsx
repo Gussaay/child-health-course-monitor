@@ -1,8 +1,7 @@
 // MonitoringView.jsx
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
-    Card, PageHeader, Button, FormGroup, Input, Select, Table, EmptyState, Spinner, Modal
-} from "./CommonComponents";
+    Card, PageHeader, Button, FormGroup, Input, Select, Table, EmptyState, Modal, SkeletonCard } from "./CommonComponents";
 import {
     pctBgClass, fmtPct, calcPct,
     SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAINS_BREATHING, EENC_DOMAINS_NOT_BREATHING,
@@ -421,7 +420,7 @@ export function ObservationView({ course, participant, participants, onChangePar
                 </Card>
             )}
             
-            {loading ? <Card><Spinner /></Card> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />}
+            {loading ? <SkeletonCard /> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />}
         </div>
     );
 }
@@ -1977,7 +1976,7 @@ export function LegacyMentorshipMonitoringView({
             )}
 
             {loading
-                ? <Card><Spinner /></Card>
+                ? <SkeletonCard />
                 : <MentorshipSavedSessions cases={visibleCases} observations={observations} onEdit={handleEditCase} onDelete={handleDeleteSession} />}
         </div>
     );

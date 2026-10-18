@@ -11,7 +11,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trash2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, FormGroup, Select, Spinner } from './CommonComponents';
+import { Button, FormGroup, Select, Spinner, SkeletonTable } from './CommonComponents';
 import { RECYCLE_BIN_TYPES, recordTitle, recordSubtitle, mergeRemovals } from '../utils/recycleBin.js';
 import { listSoftDeletedRecords, permanentlyDeleteRecord, RECYCLE_BIN_PAGE } from '../data.js';
 import { useDataCache } from '../DataContext';
@@ -138,7 +138,7 @@ export default function DeletedItemsPanel({ types, note, onDeleted }) {
                 {note && <p className="text-xs text-gray-500">{note}</p>}
 
                 {isLoading ? (
-                    <div className="flex justify-center p-8"><Spinner /></div>
+                    <SkeletonTable />
                 ) : rows.length === 0 ? (
                     <p className="py-10 text-center text-sm text-gray-500">{t('shared_ui.deleted_items.none', 'No deleted {{type}}.', { type: typeLabel(typeInfo).toLowerCase() })}</p>
                 ) : (

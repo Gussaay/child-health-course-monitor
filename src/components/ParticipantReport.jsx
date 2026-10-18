@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Bar } from 'react-chartjs-2';
-import './chartSetup'; // registers the scales and elements these charts use
+import { CHART_COLORS } from './chartSetup'; // also registers the scales and elements these charts use
 import { getElementAtEvent } from 'react-chartjs-2';
 import {
     Card, PageHeader, Button, FormGroup, Select, Table, EmptyState, Spinner, PdfIcon, Modal
@@ -441,8 +441,8 @@ export function ParticipantReportView({
                                         <Bar ref={caseChartByDayRef} options={chartOptions} data={{
                                                 labels: casePerformanceByDay.map(d => t('shared_ui.participant_report.day_n', 'Day {{day}}', { day: d.day })),
                                                 datasets: [
-                                                    { label: t('shared_ui.participant_report.opd', 'Out-Patient (OPD)'), data: casePerformanceByDay.map(d => d.opdTotal), backgroundColor: '#3b82f6' },
-                                                    { label: t('shared_ui.participant_report.ipd', 'In-Patient (IPD)'), data: casePerformanceByDay.map(d => d.ipdTotal), backgroundColor: '#10b981' }
+                                                    { label: t('shared_ui.participant_report.opd', 'Out-Patient (OPD)'), data: casePerformanceByDay.map(d => d.opdTotal), backgroundColor: CHART_COLORS[0] },
+                                                    { label: t('shared_ui.participant_report.ipd', 'In-Patient (IPD)'), data: casePerformanceByDay.map(d => d.ipdTotal), backgroundColor: CHART_COLORS[1] }
                                                 ]
                                             }} 
                                             onClick={handleChartClick}

@@ -14,6 +14,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Chart } from 'chart.js';
+import '../chartSetup';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../CommonComponents';
 

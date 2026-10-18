@@ -4,11 +4,12 @@ import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { Bar, Line } from 'react-chartjs-2';
-import {Button, Card, EmptyState, PageHeader, PdfIcon, Table, Spinner, Modal, Input, FormGroup, Select} from './CommonComponents';
+import {Button, Card, EmptyState, PageHeader, PdfIcon, Table, Spinner, Modal, Input, FormGroup, Select, PageSkeleton } from './CommonComponents';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
     PointElement, LineElement
 } from 'chart.js';
+import { CHART_COLORS, fadeColor } from './chartSetup';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { amiriFontBase64 } from './AmiriFont.js';
 import { Capacitor } from '@capacitor/core';
@@ -245,7 +246,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                         <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
                             <Button variant="secondary" onClose={onClose} className="w-full sm:w-auto">{t('course_report.buttons.cancel', 'Cancel')}</Button>
                             <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
-                                {isSaving ? <Spinner /> : t('course_report.buttons.save_changes', 'Save Changes')}
+                                {isSaving ? <Spinner size="sm" /> : t('course_report.buttons.save_changes', 'Save Changes')}
                             </Button>
                         </div>
                     </div>
@@ -1739,13 +1740,13 @@ function CourseReportBody({
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
     const showTestScoresOnScreen = course.course_type !== 'IMNCI' || (course.course_type === 'IMNCI' && !excludedImnciSubtypes.includes(course.imci_sub_type));
 
-    if (isLoading) return <Card><Spinner /></Card>;
+    if (isLoading) return <PageSkeleton />;
 
     const combinedChartData = {
         labels: groupsWithData,
         datasets: [
-            { type: 'bar', label: t('course_report.kpi.total_cases', 'Total Cases'), data: groupsWithData.map(g => groupPerformance[g].totalCases), backgroundColor: '#3b82f6', yAxisID: 'y' },
-            { type: 'bar', label: t('course_report.kpi.total_correct_cases', 'Total Correct Cases'), data: groupsWithData.map(g => groupPerformance[g].correctCases), backgroundColor: '#10b981', yAxisID: 'y' }
+            { type: 'bar', label: t('course_report.kpi.total_cases', 'Total Cases'), data: groupsWithData.map(g => groupPerformance[g].totalCases), backgroundColor: CHART_COLORS[0], yAxisID: 'y' },
+            { type: 'bar', label: t('course_report.kpi.total_correct_cases', 'Total Correct Cases'), data: groupsWithData.map(g => groupPerformance[g].correctCases), backgroundColor: CHART_COLORS[1], yAxisID: 'y' }
         ]
     };
     const combinedChartOptions = {
@@ -1757,8 +1758,8 @@ function CourseReportBody({
     const dailyChartData = {
         labels: dailyChartLabels.map(dayLabel),
         datasets: [
-            { type: 'bar', label: t('course_report.kpi.total_cases', 'Total Cases'), data: dailyChartLabels.map(day => { let sum = 0; groupsWithData.forEach(g => { if(dailyPerformance[day][g]) sum+= dailyPerformance[day][g].cases }); return sum; }), backgroundColor: '#3b82f6', yAxisID: 'y' },
-            { type: 'bar', label: t('course_report.kpi.total_correct_cases', 'Total Correct Cases'), data: dailyChartLabels.map(day => { let sum = 0; groupsWithData.forEach(g => { if(dailyPerformance[day][g]) sum+= dailyPerformance[day][g].correctCases }); return sum; }), backgroundColor: '#10b981', yAxisID: 'y' }
+            { type: 'bar', label: t('course_report.kpi.total_cases', 'Total Cases'), data: dailyChartLabels.map(day => { let sum = 0; groupsWithData.forEach(g => { if(dailyPerformance[day][g]) sum+= dailyPerformance[day][g].cases }); return sum; }), backgroundColor: CHART_COLORS[0], yAxisID: 'y' },
+            { type: 'bar', label: t('course_report.kpi.total_correct_cases', 'Total Correct Cases'), data: dailyChartLabels.map(day => { let sum = 0; groupsWithData.forEach(g => { if(dailyPerformance[day][g]) sum+= dailyPerformance[day][g].correctCases }); return sum; }), backgroundColor: CHART_COLORS[1], yAxisID: 'y' }
         ]
     };
     const dailyChartOptions = {
@@ -1780,8 +1781,8 @@ function CourseReportBody({
     const testScoreChartData = {
         labels: participantLabels,
         datasets: [
-            { label: t('course_report.charts.pre_test_score', 'Pre-Test Score'), data: preScores, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.2)', tension: 0.4, fill: false, pointRadius: showCompactLabels ? 3 : 5, pointBackgroundColor: '#6366f1' },
-            { label: t('course_report.charts.post_test_score', 'Post-Test Score'), data: postScores, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', tension: 0.4, fill: false, pointRadius: showCompactLabels ? 3 : 5, pointBackgroundColor: '#10b981' }
+            { label: t('course_report.charts.pre_test_score', 'Pre-Test Score'), data: preScores, borderColor: CHART_COLORS[3], backgroundColor: fadeColor(CHART_COLORS[3]), tension: 0.4, fill: false, pointRadius: showCompactLabels ? 3 : 5, pointBackgroundColor: CHART_COLORS[3] },
+            { label: t('course_report.charts.post_test_score', 'Post-Test Score'), data: postScores, borderColor: CHART_COLORS[1], backgroundColor: fadeColor(CHART_COLORS[1]), tension: 0.4, fill: false, pointRadius: showCompactLabels ? 3 : 5, pointBackgroundColor: CHART_COLORS[1] }
         ]
     };
     const testScoreChartOptions = {

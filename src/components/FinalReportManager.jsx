@@ -797,7 +797,7 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
                 <div className="flex justify-end gap-2 pt-2 border-t">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>{t('final_report.buttons.cancel', 'Cancel')}</Button>
                     <Button onClick={apply} disabled={!items.length || saving || loading}>
-                        {saving ? <Spinner /> : t('final_report.sign.save_signed', 'Save signed report')}
+                        {saving ? <Spinner size="sm" /> : t('final_report.sign.save_signed', 'Save signed report')}
                     </Button>
                 </div>
             </div>
@@ -1181,7 +1181,7 @@ export function CaptureReportContentModal({ isOpen, onClose, capture, existing, 
                 <div className="flex justify-end gap-2 pt-2 border-t">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>{t('final_report.capture.skip', 'Skip')}</Button>
                     <Button onClick={apply} disabled={saving || (!summary.trim() && !recs.some(r => r.recommendation?.trim()))}>
-                        {saving ? <Spinner /> : t('final_report.capture.save', 'Save to the final report')}
+                        {saving ? <Spinner size="sm" /> : t('final_report.capture.save', 'Save to the final report')}
                     </Button>
                 </div>
             </div>
@@ -2318,7 +2318,7 @@ export function FinalReportManager({
                                     {existingPdfUrl ? (
                                         <div className="flex flex-wrap gap-2">
                                             <a href={existingPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">{t('final_report.buttons.view', 'View')}</Button></a>
-                                            <Button variant="primary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : t('final_report.buttons.download', 'Download')}</Button>
+                                            <Button variant="primary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner size="sm" /> : t('final_report.buttons.download', 'Download')}</Button>
                                             <Button variant="danger" onClick={() => { setExistingPdfUrl(null); setPdfFile(null); setFileName(null); }}>{t('final_report.buttons.delete', 'Delete')}</Button>
                                         </div>
                                     ) : ( <div className="flex flex-col sm:flex-row sm:items-center gap-2"><input type="file" accept=".pdf" onChange={handleFileUpload} />{fileName && <p className="text-sm text-gray-500 break-all">{t('final_report.editor.file_selected', 'File selected: {{name}}', { name: fileName })}</p>}</div> )}

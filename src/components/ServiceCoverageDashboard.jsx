@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { Card, Spinner, FormGroup, Select, FilterPanel } from './CommonComponents';
+import { Card, FormGroup, Select, FilterPanel, SkeletonTable, Skeleton } from './CommonComponents';
 import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES, getLocalizedStateName, getLocalizedLocalityName } from "./constants.js";
 import SudanMap from '../SudanMap';
@@ -715,7 +715,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
 
             <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 items-stretch relative">
                 <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4 h-full">
-                    {loading ? <Spinner/> : (
+                    {loading ? <>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.total_pediatrics_emonc', 'Total Target Facilities')} count={kpiData.totalSupposed} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" colorTheme="slate" />
                             <ValueTotalPercentageCard title={displayDynamicTitle} value={kpiData.totalWithUnit} total={kpiData.totalSupposed} percentage={kpiData.unitCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
@@ -727,7 +727,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                         </>
                     )}
                 </div>
-                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64 order-first lg:order-none"><Spinner/></div> : (
+                 {loading ? <Skeleton className="lg:col-span-2 h-80 rounded-xl order-first lg:order-none" /> : (
                     <div className="lg:col-span-2 flex flex-col h-full order-first lg:order-none">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                             <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
@@ -1098,7 +1098,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
 
              <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 items-stretch relative">
                  <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4 h-full">
-                    {loading ? <Spinner/> : (
+                    {loading ? <>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.total_emonc', 'Total EmONC Facilities')} count={kpiData.totalEmONC} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
                             <ValueTotalPercentageCard title={t('dashboard.cards.functional_emonc', 'Functional EmONC Facilities')} value={kpiData.totalFunctionalEmONC} total={kpiData.totalEmONC} percentage={kpiData.functionalEmoncPercentage} className="flex-1" borderClass="border-s-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" colorTheme="indigo" />
@@ -1107,7 +1107,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                     )}
                 </div>
 
-                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64 order-first lg:order-none"><Spinner/></div> : (
+                 {loading ? <Skeleton className="lg:col-span-2 h-80 rounded-xl order-first lg:order-none" /> : (
                     <div className="lg:col-span-2 flex flex-col h-full order-first lg:order-none">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
@@ -1422,7 +1422,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
 
              <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 items-stretch relative">
                  <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4 h-full">
-                    {loading ? <Spinner/> : (
+                    {loading ? <>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.total_functioning_phc', 'Total Functioning PHC Facilities')} count={functioningPhcs.length} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
                             <ValueTotalPercentageCard title={t('dashboard.cards.total_phc_imnci', 'Total PHC Facilities with IMNCI')} value={imnciInPhcs.length} total={functioningPhcs.length} percentage={imnciCoveragePercentage} className="flex-1" borderClass="border-s-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" colorTheme="indigo" />
@@ -1431,7 +1431,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                     )}
                 </div>
 
-                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64 order-first lg:order-none"><Spinner/></div> : (
+                 {loading ? <Skeleton className="lg:col-span-2 h-80 rounded-xl order-first lg:order-none" /> : (
                     <div className="lg:col-span-2 flex flex-col h-full order-first lg:order-none">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
@@ -1739,7 +1739,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
 
             <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 items-stretch relative">
                 <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4 h-full">
-                    {loading ? <Spinner/> : (
+                    {loading ? <>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</> : (
                         <>
                             <TotalCountCard title={t('dashboard.cards.target_hospitals_etat', 'Target Hospitals (ETAT)')} count={kpiData.totalTarget} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
                             <ValueTotalPercentageCard title={t('dashboard.cards.hospitals_etat', 'Hospitals with ETAT')} value={kpiData.totalETAT} total={kpiData.totalTarget} percentage={kpiData.etatCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
@@ -1751,7 +1751,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                     )}
                 </div>
 
-                {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64 order-first lg:order-none"><Spinner/></div> : (
+                {loading ? <Skeleton className="lg:col-span-2 h-80 rounded-xl order-first lg:order-none" /> : (
                     <div className="lg:col-span-2 flex flex-col h-full order-first lg:order-none">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="px-3 py-2 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-center md:items-start gap-4">
@@ -2103,7 +2103,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                 </div>
             </FilterPanel>
 
-            {loading ? <div className="flex justify-center items-center h-64"><Spinner/></div> : (
+            {loading ? <Card className="p-4 md:p-6"><SkeletonTable /></Card> : (
                 <div ref={combinedExportRef}>
                     <Card className="p-0 flex flex-col shadow-sm border border-gray-200 rounded-xl">
                         <div className="px-3 py-2 md:p-5 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center bg-slate-50/50 rounded-t-xl gap-4 sm:gap-0">

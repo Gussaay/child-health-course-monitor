@@ -4,7 +4,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 import { Trash2, File, ExternalLink, ArrowLeft, RefreshCw, HardDrive } from 'lucide-react';
-import { Card, PageHeader, Button, Spinner, EmptyState, IS_NATIVE } from './CommonComponents';
+import { Card, PageHeader, Button, EmptyState, IS_NATIVE, SkeletonTable } from './CommonComponents';
 import { confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 
@@ -148,7 +148,7 @@ export default function DownloadedFilesView({ onBack, setToast }) {
                 
                 <div className="p-3 md:p-4">
                     {loading ? (
-                        <div className="flex justify-center p-8"><Spinner /></div>
+                        <SkeletonTable />
                     ) : files.length === 0 ? (
                         <EmptyState message={t('admin_pages.downloaded_files.empty', 'No downloaded files found on this device.')} />
                     ) : (

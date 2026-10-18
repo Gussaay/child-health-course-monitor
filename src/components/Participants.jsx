@@ -45,6 +45,7 @@ import { whatsappLink } from '../utils/whatsapp';
 import { sharePdf, certificateFileName } from '../utils/sharePdf';
 import { Capacitor } from '@capacitor/core';
 import { useRememberedState } from '../utils/rememberedState';
+import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
 
 
 // ====================================================================
@@ -1437,7 +1438,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, fac
                         <div className="flex justify-end mt-6 space-x-2">
                             <Button variant="secondary" onClick={() => setCurrentPage(0)}>{t('participants_page.common.back', 'Back')}</Button>
                             <Button onClick={handleValidate} disabled={isValidating}>
-                                {isValidating ? <Spinner/> : t('participants_page.import.validate', 'Validate & Review')}
+                                {isValidating ? <Spinner size="sm" /> : t('participants_page.import.validate', 'Validate & Review')}
                             </Button>
                         </div>
                     </div>
@@ -1978,6 +1979,7 @@ export function ParticipantsView({
     const [expandedParticipantId, setExpandedParticipantId] = useState(null);
 
     const [isBulkEditing, setIsBulkEditing] = useState(false); 
+    useLeaveGuard(activeScreen === 'form' || activeScreen === 'migration' || isBulkEditing);
     const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
     
     const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
@@ -2556,7 +2558,7 @@ export function ParticipantsView({
                 <ParticipantForm 
                     course={course} 
                     initialData={editingParticipant} 
-                    onCancel={() => setActiveScreen('list')} 
+                    onCancel={() => leaveForm(() => setActiveScreen('list'))} 
                     onSave={handleSaveParticipant} 
                 />
             </>
@@ -2568,7 +2570,7 @@ export function ParticipantsView({
             <ParticipantMigrationMappingView 
                 course={course} 
                 participants={participants} 
-                onCancel={() => setActiveScreen('list')} 
+                onCancel={() => leaveForm(() => setActiveScreen('list'))} 
                 onSave={handleExecuteBulkMigration} 
                 setToast={setToast} 
             />
@@ -2580,7 +2582,7 @@ export function ParticipantsView({
             <BulkEditParticipantsView
                 participants={filtered}
                 course={course}
-                onCancel={() => setIsBulkEditing(false)}
+                onCancel={() => leaveForm(() => setIsBulkEditing(false))}
                 onSave={async (pData, fData) => {
                     await handleAdvancedSave(pData, fData);
                     const updatedParticipantsList = participants.map(orig => pData.find(u => u.id === orig.id) || orig);

@@ -2,15 +2,16 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KpiCard, KpiBarChart, ScoreText, IPC_CORE_COMPONENTS } from './MentorshipDashboardShared';
+import { PageTabs, EmptyState } from '../CommonComponents';
 
 // =====================================================================
 // The three IPC forms all save with serviceType 'IPC', so they are split
 // per form here. Each tab below gets its own KPIs on its own scale.
 // =====================================================================
 const IPC_FORM_TABS = [
-  { key: 'ipc', labelEn: 'IPC Facility Assessment', labelAr: 'تقييم مكافحة العدوى' },
-  { key: 'ams', labelEn: 'Antimicrobial Stewardship', labelAr: 'الإشراف على مضادات الميكروبات' },
-  { key: 'handwashing', labelEn: 'Hand Hygiene', labelAr: 'نظافة الأيدي' }
+  { key: 'ipc', labelEn: 'IPC Facility Assessment', labelAr: 'تقييم مكافحة العدوى', shortEn: 'IPC', shortAr: 'مكافحة العدوى' },
+  { key: 'ams', labelEn: 'Antimicrobial Stewardship', labelAr: 'الإشراف على مضادات الميكروبات', shortEn: 'Antimicrobials', shortAr: 'المضادات' },
+  { key: 'handwashing', labelEn: 'Hand Hygiene', labelAr: 'نظافة الأيدي', shortEn: 'Hand hygiene', shortAr: 'نظافة الأيدي' }
 ];
 
 const AMS_SECTIONS = [
@@ -264,7 +265,7 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
   if (totalScore >= 601) { level = t('Advanced'); levelColor = 'text-emerald-700'; }
   else if (totalScore >= 401) { level = t('Intermediate'); levelColor = 'text-blue-700'; }
   else if (totalScore >= 201) { level = t('Basic'); levelColor = 'text-amber-700'; }
-  else { level = t('Inadequate'); levelColor = 'text-rose-700'; }
+  else { level = t('Inadequate'); levelColor = 'text-red-600'; }
 
   const barData = IPC_CORE_COMPONENTS.map(cc => ({
     stateName: t(cc.label),
@@ -279,7 +280,7 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
   }));
 
   const classificationRanges = [
-    { range: '0–200', level: t('Inadequate'), color: 'bg-rose-100 text-rose-800' },
+    { range: '0–200', level: t('Inadequate'), color: 'bg-red-100 text-red-700' },
     { range: '201–400', level: t('Basic'), color: 'bg-amber-100 text-amber-800' },
     { range: '401–600', level: t('Intermediate'), color: 'bg-blue-100 text-blue-800' },
     { range: '601–800', level: t('Advanced'), color: 'bg-emerald-100 text-emerald-800' }
@@ -293,15 +294,15 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
         <KpiCard title={t('Average Overall Score')} scoreValue={avgOverall} />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-md border border-black p-4 sm:p-6 mb-10">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 mb-10">
         <h3 className="text-xl font-extrabold text-slate-800 mb-4 text-center">{t('IPC Classification Summary')}</h3>
 
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-8">
-          <div className="bg-slate-50 border border-black rounded-xl px-8 py-4 text-center">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-8 py-4 text-center">
             <div className="text-sm font-bold text-slate-500 tracking-wide">{t('Total Score')}</div>
             <div className="text-3xl font-black text-slate-800" dir="ltr">{totalScore} / {totalMax}</div>
           </div>
-          <div className={`bg-white border border-black rounded-xl px-8 py-4 text-center shadow-md ${levelColor}`}>
+          <div className={`bg-white border border-slate-200 rounded-xl px-8 py-4 text-center ${levelColor}`}>
             <div className="text-sm font-bold text-slate-500 tracking-wide">{t('IPC Level')}</div>
             <div className={`text-3xl font-black ${levelColor}`}>{level}</div>
           </div>
@@ -309,13 +310,13 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
         <div className="overflow-x-auto mb-8">
           <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{t('Core Component Scores')}</h4>
-          <table className="w-full border-collapse border border-black text-sm" dir={isAr ? 'rtl' : 'ltr'}>
+          <table className="w-full border-collapse border border-slate-200 text-sm" dir={isAr ? 'rtl' : 'ltr'}>
             <thead className="bg-slate-200">
               <tr>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'العنصر الأساسي' : 'Core Component'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'الدرجة' : 'Score'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'الدرجة القصوى' : 'Max Score'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'النسبة المئوية' : 'Percentage'}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Core Component')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Score')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Max Score')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Percentage')}</th>
               </tr>
             </thead>
             <tbody>
@@ -323,18 +324,18 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
                 const pct = row.max > 0 ? (row.score / row.max) : 0;
                 return (
                   <tr key={idx} className="hover:bg-sky-50">
-                    <td className="border border-black p-2">{row.label}</td>
-                    <td className="border border-black p-2 text-center font-bold" dir="ltr">{row.score}</td>
-                    <td className="border border-black p-2 text-center" dir="ltr">{row.max}</td>
-                    <td className="border border-black p-2 text-center"><ScoreText value={pct} /></td>
+                    <td className="border border-slate-200 p-2">{row.label}</td>
+                    <td className="border border-slate-200 p-2 text-center font-bold" dir="ltr">{row.score}</td>
+                    <td className="border border-slate-200 p-2 text-center" dir="ltr">{row.max}</td>
+                    <td className="border border-slate-200 p-2 text-center"><ScoreText value={pct} /></td>
                   </tr>
                 );
               })}
               <tr className="bg-slate-100 font-bold">
-                <td className="border border-black p-2 text-center">{isAr ? 'المجموع النهائي' : 'Final Total'}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{totalScore}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{totalMax}</td>
-                <td className="border border-black p-2 text-center"><ScoreText value={avgOverall} /></td>
+                <td className="border border-slate-200 p-2 text-center">{t('Final Total')}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{totalScore}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{totalMax}</td>
+                <td className="border border-slate-200 p-2 text-center"><ScoreText value={avgOverall} /></td>
               </tr>
             </tbody>
           </table>
@@ -342,18 +343,18 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
         <div className="overflow-x-auto">
           <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{t('IPC Level Classification')}</h4>
-          <table className="w-full border-collapse border border-black text-sm" dir={isAr ? 'rtl' : 'ltr'}>
+          <table className="w-full border-collapse border border-slate-200 text-sm" dir={isAr ? 'rtl' : 'ltr'}>
             <thead className="bg-slate-200">
               <tr>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'مجموع الدرجات' : 'Total Score Range'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'مستوى IPC' : 'IPC Level'}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Total Score Range')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('IPC Level')}</th>
               </tr>
             </thead>
             <tbody>
               {classificationRanges.map((item, idx) => (
                 <tr key={idx} className="hover:bg-sky-50">
-                  <td className="border border-black p-2 text-center font-medium" dir="ltr">{item.range}</td>
-                  <td className={`border border-black p-2 text-center font-bold ${item.color}`}>{item.level}</td>
+                  <td className="border border-slate-200 p-2 text-center font-medium" dir="ltr">{item.range}</td>
+                  <td className={`border border-slate-200 p-2 text-center font-bold ${item.color}`}>{item.level}</td>
                 </tr>
               ))}
             </tbody>
@@ -371,8 +372,8 @@ const IPCFacilityView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
       {geographicKpis && geographicKpis.length > 0 && (
         <div>
-          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-            {t('IPC Adherence by')} {t(geographicLevelName)} {scopeTitle}
+          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide text-start`}>
+            {t('IPC Adherence by')} {t(geographicLevelName)} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
           </h3>
           <KpiBarChart
             title={`${t('Average IPC Score by')} ${t(geographicLevelName)}`}
@@ -393,17 +394,17 @@ const AMSView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName, t, isA
 
   let level = '';
   let levelColor = '';
-  if (pct >= 75) { level = isAr ? 'جيد' : 'Good'; levelColor = 'text-emerald-700'; }
-  else if (pct >= 50) { level = isAr ? 'متوسط' : 'Moderate'; levelColor = 'text-amber-700'; }
-  else { level = isAr ? 'ضعيف' : 'Weak'; levelColor = 'text-rose-700'; }
+  if (pct >= 80) { level = t('Good'); levelColor = 'text-emerald-700'; }
+  else if (pct >= 50) { level = t('Moderate'); levelColor = 'text-amber-700'; }
+  else { level = t('Weak'); levelColor = 'text-red-600'; }
 
   const bySection = kpis.bySection || [];
   const barData = bySection.map(sec => ({ stateName: isAr ? sec.labelAr : sec.labelEn, avgScore: sec.avg }));
 
   const classificationRanges = [
-    { range: '0–49%', level: isAr ? 'ضعيف' : 'Weak', color: 'bg-rose-100 text-rose-800' },
-    { range: '50–74%', level: isAr ? 'متوسط' : 'Moderate', color: 'bg-amber-100 text-amber-800' },
-    { range: '75–100%', level: isAr ? 'جيد' : 'Good', color: 'bg-emerald-100 text-emerald-800' }
+    { range: '0–49%', level: t('Weak'), color: 'bg-red-100 text-red-700' },
+    { range: '50–79%', level: t('Moderate'), color: 'bg-amber-100 text-amber-800' },
+    { range: '80–100%', level: t('Good'), color: 'bg-emerald-100 text-emerald-800' }
   ];
 
   return (
@@ -414,66 +415,66 @@ const AMSView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName, t, isA
         <KpiCard title={t('Average Overall Score')} scoreValue={avgOverall} />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-md border border-black p-4 sm:p-6 mb-10">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 mb-10">
         <h3 className="text-xl font-extrabold text-slate-800 mb-4 text-center">
-          {isAr ? 'ملخص الإشراف على مضادات الميكروبات' : 'Antimicrobial Stewardship Summary'}
+          {t('Antimicrobial Stewardship Summary')}
         </h3>
 
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-8">
-          <div className="bg-slate-50 border border-black rounded-xl px-8 py-4 text-center">
-            <div className="text-sm font-bold text-slate-500 tracking-wide">{isAr ? 'متوسط الدرجة': 'Average Score'}</div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-8 py-4 text-center">
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{t('Average Score')}</div>
             <div className="text-3xl font-black text-slate-800" dir="ltr">{totalScore} / {AMS_MAX_TOTAL}</div>
           </div>
-          <div className={`bg-white border border-black rounded-xl px-8 py-4 text-center shadow-md ${levelColor}`}>
-            <div className="text-sm font-bold text-slate-500 tracking-wide">{isAr ? 'المستوى': 'Level'}</div>
+          <div className={`bg-white border border-slate-200 rounded-xl px-8 py-4 text-center ${levelColor}`}>
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{t('Level')}</div>
             <div className={`text-3xl font-black ${levelColor}`}>{level}</div>
           </div>
         </div>
 
         <div className="overflow-x-auto mb-8">
-          <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{isAr ? 'درجات المحاور' : 'Section Scores'}</h4>
-          <table className="w-full border-collapse border border-black text-sm" dir={isAr ? 'rtl' : 'ltr'}>
+          <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{t('Section Scores')}</h4>
+          <table className="w-full border-collapse border border-slate-200 text-sm" dir={isAr ? 'rtl' : 'ltr'}>
             <thead className="bg-slate-200">
               <tr>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'المحور' : 'Section'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'متوسط الدرجة' : 'Avg Score'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'الدرجة القصوى' : 'Max Score'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'النسبة المئوية' : 'Percentage'}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Section')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Avg Score')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Max Score')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Percentage')}</th>
               </tr>
             </thead>
             <tbody>
               {bySection.map(sec => (
                 <tr key={sec.key} className="hover:bg-sky-50">
-                  <td className="border border-black p-2">{isAr ? sec.labelAr : sec.labelEn}</td>
-                  <td className="border border-black p-2 text-center font-bold" dir="ltr">{sec.score}</td>
-                  <td className="border border-black p-2 text-center" dir="ltr">{sec.max}</td>
-                  <td className="border border-black p-2 text-center"><ScoreText value={sec.avg} /></td>
+                  <td className="border border-slate-200 p-2">{isAr ? sec.labelAr : sec.labelEn}</td>
+                  <td className="border border-slate-200 p-2 text-center font-bold" dir="ltr">{sec.score}</td>
+                  <td className="border border-slate-200 p-2 text-center" dir="ltr">{sec.max}</td>
+                  <td className="border border-slate-200 p-2 text-center"><ScoreText value={sec.avg} /></td>
                 </tr>
               ))}
               <tr className="bg-slate-100 font-bold">
-                <td className="border border-black p-2 text-center">{isAr ? 'المجموع' : 'Total'}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{totalScore}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{AMS_MAX_TOTAL}</td>
-                <td className="border border-black p-2 text-center"><ScoreText value={avgOverall} /></td>
+                <td className="border border-slate-200 p-2 text-center">{t('Total')}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{totalScore}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{AMS_MAX_TOTAL}</td>
+                <td className="border border-slate-200 p-2 text-center"><ScoreText value={avgOverall} /></td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div className="overflow-x-auto">
-          <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{isAr ? 'تصنيف المستوى' : 'Level Classification'}</h4>
-          <table className="w-full border-collapse border border-black text-sm" dir={isAr ? 'rtl' : 'ltr'}>
+          <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{t('Level Classification')}</h4>
+          <table className="w-full border-collapse border border-slate-200 text-sm" dir={isAr ? 'rtl' : 'ltr'}>
             <thead className="bg-slate-200">
               <tr>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'النسبة' : 'Score Range'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'المستوى' : 'Level'}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Score Range')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Level')}</th>
               </tr>
             </thead>
             <tbody>
               {classificationRanges.map((item, idx) => (
                 <tr key={idx} className="hover:bg-sky-50">
-                  <td className="border border-black p-2 text-center font-medium" dir="ltr">{item.range}</td>
-                  <td className={`border border-black p-2 text-center font-bold ${item.color}`}>{item.level}</td>
+                  <td className="border border-slate-200 p-2 text-center font-medium" dir="ltr">{item.range}</td>
+                  <td className={`border border-slate-200 p-2 text-center font-bold ${item.color}`}>{item.level}</td>
                 </tr>
               ))}
             </tbody>
@@ -483,7 +484,7 @@ const AMSView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName, t, isA
 
       <div className="mb-10">
         <KpiBarChart
-          title={`${isAr ? 'متوسط درجة كل محور' : 'Average score per section'} ${scopeTitle}`}
+          title={`${t('Average score per section')} ${scopeTitle}`}
           chartData={barData}
           dataKey="avgScore"
         />
@@ -491,11 +492,11 @@ const AMSView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName, t, isA
 
       {geographicKpis && geographicKpis.length > 0 && (
         <div>
-          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-            {isAr ? 'الإشراف على مضادات الميكروبات حسب' : 'Antimicrobial stewardship by'} {t(geographicLevelName)} {scopeTitle}
+          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide text-start`}>
+            {t('Antimicrobial stewardship by')} {t(geographicLevelName)} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
           </h3>
           <KpiBarChart
-            title={`${isAr ? 'متوسط الدرجة حسب' : 'Average score by'} ${t(geographicLevelName)}`}
+            title={`${t('Average score by')} ${t(geographicLevelName)}`}
             chartData={geographicKpis.map(g => ({ stateName: g.stateName, avgScore: g.avgOverall }))}
             dataKey="avgScore"
           />
@@ -512,9 +513,9 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
   let level = '';
   let levelColor = '';
-  if (pct >= 80) { level = isAr ? 'التزام جيد' : 'Good'; levelColor = 'text-emerald-700'; }
-  else if (pct >= 50) { level = isAr ? 'التزام متوسط' : 'Moderate'; levelColor = 'text-amber-700'; }
-  else { level = isAr ? 'التزام ضعيف' : 'Poor'; levelColor = 'text-rose-700'; }
+  if (pct >= 80) { level = t('Good'); levelColor = 'text-emerald-700'; }
+  else if (pct >= 50) { level = t('Moderate'); levelColor = 'text-amber-700'; }
+  else { level = t('Poor'); levelColor = 'text-red-600'; }
 
   const byIndication = kpis.byIndication || [];
   const byWorkerType = kpis.byWorkerType || [];
@@ -524,7 +525,7 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
     .map(row => ({ stateName: isAr ? row.labelAr : row.labelEn, avgScore: row.compliance }));
 
   const workerBarData = byWorkerType.map(row => ({
-    stateName: row.workerType === 'Unknown' ? (isAr ? 'غير محدد' : 'Unknown') : row.workerType,
+    stateName: row.workerType === 'Unknown' ? (t('Unknown')) : row.workerType,
     avgScore: row.compliance
   }));
 
@@ -533,81 +534,81 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
   return (
     <div className="animate-fade-in">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6">
-        <KpiCard title={isAr ? 'عدد الجلسات' : 'Observation Sessions'} value={totalVisits} />
+        <KpiCard title={t('Observation Sessions')} value={totalVisits} />
         <KpiCard title={t('Total Facilities Assessed')} value={totalFacilities} />
-        <KpiCard title={isAr ? 'إجمالي الفرص' : 'Total Opportunities'} value={totalOpportunities} />
-        <KpiCard title={isAr ? 'نسبة الامتثال' : 'Compliance Rate'} scoreValue={compliance} />
+        <KpiCard title={t('Total Opportunities')} value={totalOpportunities} />
+        <KpiCard title={t('Compliance Rate')} scoreValue={compliance} />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-md border border-black p-4 sm:p-6 mb-10">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 mb-10">
         <h3 className="text-xl font-extrabold text-slate-800 mb-4 text-center">
-          {isAr ? 'ملخص الالتزام بنظافة الأيدي' : 'Hand Hygiene Compliance Summary'}
+          {t('Hand Hygiene Compliance Summary')}
         </h3>
 
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-8">
-          <div className="bg-slate-50 border border-black rounded-xl px-8 py-4 text-center">
-            <div className="text-sm font-bold text-slate-500 tracking-wide">{isAr ? 'إجراءات مُنفذة / فرص': 'Actions / Opportunities'}</div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-8 py-4 text-center">
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{t('Actions / Opportunities')}</div>
             <div className="text-3xl font-black text-slate-800" dir="ltr">{wash + rub} / {totalOpportunities}</div>
           </div>
-          <div className={`bg-white border border-black rounded-xl px-8 py-4 text-center shadow-md ${levelColor}`}>
-            <div className="text-sm font-bold text-slate-500 tracking-wide">{isAr ? 'المستوى': 'Level'}</div>
+          <div className={`bg-white border border-slate-200 rounded-xl px-8 py-4 text-center ${levelColor}`}>
+            <div className="text-sm font-bold text-slate-500 tracking-wide">{t('Level')}</div>
             <div className={`text-3xl font-black ${levelColor}`}>{level}</div>
           </div>
         </div>
 
         <div className="overflow-x-auto mb-8">
-          <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{isAr ? 'توزيع الإجراءات' : 'Action Breakdown'}</h4>
-          <table className="w-full border-collapse border border-black text-sm" dir={isAr ? 'rtl' : 'ltr'}>
+          <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{t('Action Breakdown')}</h4>
+          <table className="w-full border-collapse border border-slate-200 text-sm" dir={isAr ? 'rtl' : 'ltr'}>
             <thead className="bg-slate-200">
               <tr>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'الإجراء' : 'Action'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'العدد' : 'Count'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'النسبة من الفرص' : 'Share of Opportunities'}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Action')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Count')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Share of Opportunities')}</th>
               </tr>
             </thead>
             <tbody>
               <tr className="hover:bg-sky-50">
-                <td className="border border-black p-2">{isAr ? 'غسل بالصابون' : 'Handwash with soap'}</td>
-                <td className="border border-black p-2 text-center font-bold" dir="ltr">{wash}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{share(wash)}%</td>
+                <td className="border border-slate-200 p-2">{t('Handwash with soap')}</td>
+                <td className="border border-slate-200 p-2 text-center font-bold" dir="ltr">{wash}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{share(wash)}%</td>
               </tr>
               <tr className="hover:bg-sky-50">
-                <td className="border border-black p-2">{isAr ? 'فرك بالكحول' : 'Alcohol handrub'}</td>
-                <td className="border border-black p-2 text-center font-bold" dir="ltr">{rub}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{share(rub)}%</td>
+                <td className="border border-slate-200 p-2">{t('Alcohol handrub')}</td>
+                <td className="border border-slate-200 p-2 text-center font-bold" dir="ltr">{rub}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{share(rub)}%</td>
               </tr>
               <tr className="hover:bg-sky-50">
-                <td className="border border-black p-2">{isAr ? 'عدم غسل أو تطهير' : 'Missed'}</td>
-                <td className="border border-black p-2 text-center font-bold text-rose-700" dir="ltr">{missed}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{share(missed)}%</td>
+                <td className="border border-slate-200 p-2">{t('Missed')}</td>
+                <td className="border border-slate-200 p-2 text-center font-bold text-red-600" dir="ltr">{missed}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{share(missed)}%</td>
               </tr>
               <tr className="bg-slate-100 font-bold">
-                <td className="border border-black p-2">{isAr ? 'تفويت أثناء ارتداء القفازات' : 'Missed while wearing gloves'}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{glovesWhenMissed}</td>
-                <td className="border border-black p-2 text-center" dir="ltr">{share(glovesWhenMissed)}%</td>
+                <td className="border border-slate-200 p-2">{t('Missed while wearing gloves')}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{glovesWhenMissed}</td>
+                <td className="border border-slate-200 p-2 text-center" dir="ltr">{share(glovesWhenMissed)}%</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div className="overflow-x-auto mb-8">
-          <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{isAr ? 'الامتثال حسب الداعي' : 'Compliance by Indication'}</h4>
-          <table className="w-full border-collapse border border-black text-sm" dir={isAr ? 'rtl' : 'ltr'}>
+          <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{t('Compliance by Indication')}</h4>
+          <table className="w-full border-collapse border border-slate-200 text-sm" dir={isAr ? 'rtl' : 'ltr'}>
             <thead className="bg-slate-200">
               <tr>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'الداعي' : 'Indication'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'الفرص' : 'Opportunities'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'إجراءات مُنفذة' : 'Actions Performed'}</th>
-                <th className="border border-black p-2 text-center font-bold">{isAr ? 'الامتثال' : 'Compliance'}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Indication')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Opportunities')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Actions Performed')}</th>
+                <th className="border border-slate-200 p-2 text-center font-bold">{t('Compliance')}</th>
               </tr>
             </thead>
             <tbody>
               {byIndication.map(row => (
                 <tr key={row.key} className="hover:bg-sky-50">
-                  <td className="border border-black p-2">{isAr ? row.labelAr : row.labelEn}</td>
-                  <td className="border border-black p-2 text-center" dir="ltr">{row.opportunities}</td>
-                  <td className="border border-black p-2 text-center font-bold" dir="ltr">{row.performed}</td>
-                  <td className="border border-black p-2 text-center"><ScoreText value={row.compliance} /></td>
+                  <td className="border border-slate-200 p-2">{isAr ? row.labelAr : row.labelEn}</td>
+                  <td className="border border-slate-200 p-2 text-center" dir="ltr">{row.opportunities}</td>
+                  <td className="border border-slate-200 p-2 text-center font-bold" dir="ltr">{row.performed}</td>
+                  <td className="border border-slate-200 p-2 text-center"><ScoreText value={row.compliance} /></td>
                 </tr>
               ))}
             </tbody>
@@ -616,27 +617,27 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
         {byWorkerType.length > 0 && (
           <div className="overflow-x-auto">
-            <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{isAr ? 'الامتثال حسب الفئة المهنية' : 'Compliance by Cadre'}</h4>
-            <table className="w-full border-collapse border border-black text-sm" dir={isAr ? 'rtl' : 'ltr'}>
+            <h4 className="text-lg font-bold text-slate-700 mb-3 text-center">{t('Compliance by Cadre')}</h4>
+            <table className="w-full border-collapse border border-slate-200 text-sm" dir={isAr ? 'rtl' : 'ltr'}>
               <thead className="bg-slate-200">
                 <tr>
-                  <th className="border border-black p-2 text-center font-bold">{isAr ? 'الفئة المهنية' : 'Cadre'}</th>
-                  <th className="border border-black p-2 text-center font-bold">{isAr ? 'الفرص' : 'Opportunities'}</th>
-                  <th className="border border-black p-2 text-center font-bold">{isAr ? 'غسل' : 'Wash'}</th>
-                  <th className="border border-black p-2 text-center font-bold">{isAr ? 'فرك' : 'Rub'}</th>
-                  <th className="border border-black p-2 text-center font-bold">{isAr ? 'تفويت' : 'Missed'}</th>
-                  <th className="border border-black p-2 text-center font-bold">{isAr ? 'الامتثال' : 'Compliance'}</th>
+                  <th className="border border-slate-200 p-2 text-center font-bold">{t('Cadre')}</th>
+                  <th className="border border-slate-200 p-2 text-center font-bold">{t('Opportunities')}</th>
+                  <th className="border border-slate-200 p-2 text-center font-bold">{t('Wash')}</th>
+                  <th className="border border-slate-200 p-2 text-center font-bold">{t('Rub')}</th>
+                  <th className="border border-slate-200 p-2 text-center font-bold">{t('Missed')}</th>
+                  <th className="border border-slate-200 p-2 text-center font-bold">{t('Compliance')}</th>
                 </tr>
               </thead>
               <tbody>
                 {byWorkerType.map(row => (
                   <tr key={row.workerType} className="hover:bg-sky-50">
-                    <td className="border border-black p-2">{row.workerType === 'Unknown' ? (isAr ? 'غير محدد' : 'Unknown') : row.workerType}</td>
-                    <td className="border border-black p-2 text-center" dir="ltr">{row.opportunities}</td>
-                    <td className="border border-black p-2 text-center" dir="ltr">{row.wash}</td>
-                    <td className="border border-black p-2 text-center" dir="ltr">{row.rub}</td>
-                    <td className="border border-black p-2 text-center text-rose-700 font-bold" dir="ltr">{row.missed}</td>
-                    <td className="border border-black p-2 text-center"><ScoreText value={row.compliance} /></td>
+                    <td className="border border-slate-200 p-2">{row.workerType === 'Unknown' ? (t('Unknown')) : row.workerType}</td>
+                    <td className="border border-slate-200 p-2 text-center" dir="ltr">{row.opportunities}</td>
+                    <td className="border border-slate-200 p-2 text-center" dir="ltr">{row.wash}</td>
+                    <td className="border border-slate-200 p-2 text-center" dir="ltr">{row.rub}</td>
+                    <td className="border border-slate-200 p-2 text-center text-red-600 font-bold" dir="ltr">{row.missed}</td>
+                    <td className="border border-slate-200 p-2 text-center"><ScoreText value={row.compliance} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -648,7 +649,7 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
       {indicationBarData.length > 0 && (
         <div className="mb-10">
           <KpiBarChart
-            title={`${isAr ? 'الامتثال حسب الداعي' : 'Compliance per indication'} ${scopeTitle}`}
+            title={`${t('Compliance per indication')} ${scopeTitle}`}
             chartData={indicationBarData}
             dataKey="avgScore"
           />
@@ -658,7 +659,7 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
       {workerBarData.length > 0 && (
         <div className="mb-10">
           <KpiBarChart
-            title={`${isAr ? 'الامتثال حسب الفئة المهنية' : 'Compliance per cadre'} ${scopeTitle}`}
+            title={`${t('Compliance per cadre')} ${scopeTitle}`}
             chartData={workerBarData}
             dataKey="avgScore"
           />
@@ -667,11 +668,11 @@ const HandHygieneView = ({ kpis, geographicKpis, scopeTitle, geographicLevelName
 
       {geographicKpis && geographicKpis.length > 0 && (
         <div>
-          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-            {isAr ? 'الامتثال بنظافة الأيدي حسب' : 'Hand hygiene compliance by'} {t(geographicLevelName)} {scopeTitle}
+          <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide text-start`}>
+            {t('Hand hygiene compliance by')} {t(geographicLevelName)} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
           </h3>
           <KpiBarChart
-            title={`${isAr ? 'نسبة الامتثال حسب' : 'Compliance by'} ${t(geographicLevelName)}`}
+            title={`${t('Compliance by')} ${t(geographicLevelName)}`}
             chartData={geographicKpis.map(g => ({ stateName: g.stateName, avgScore: g.compliance }))}
             dataKey="avgScore"
           />
@@ -728,7 +729,7 @@ const IPCDashboardTab = ({
 
   const hasAnyData = (formCounts.ipc + formCounts.ams + formCounts.handwashing) > 0;
   if (!hasAnyData) {
-    return <div className="text-center p-8 font-bold text-slate-500">{t('No IPC data available.')}</div>;
+    return <EmptyState message={t('No IPC data available.')} />;
   }
 
   const hasFormData = activeForm === 'handwashing'
@@ -736,9 +737,9 @@ const IPCDashboardTab = ({
     : formKpis.totalVisits > 0;
 
   const emptyMessage = activeForm === 'ams'
-    ? (isAr ? 'لا توجد بيانات للإشراف على مضادات الميكروبات.' : 'No antimicrobial stewardship data available.')
+    ? (t('No antimicrobial stewardship data available.'))
     : activeForm === 'handwashing'
-      ? (isAr ? 'لا توجد بيانات لنظافة الأيدي.' : 'No hand hygiene data available.')
+      ? (t('No hand hygiene data available.'))
       : t('No IPC data available.');
 
   const viewProps = {
@@ -753,27 +754,23 @@ const IPCDashboardTab = ({
   return (
     <div className="animate-fade-in">
       {/* Each IPC form gets its own tab and its own KPIs */}
-      <div className="flex flex-wrap gap-2 mb-6 bg-slate-100 p-1.5 rounded-xl border border-slate-300 w-fit">
-        {IPC_FORM_TABS.map(tab => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveForm(tab.key)}
-            className={`py-2 px-4 sm:px-5 font-semibold text-sm rounded-lg transition-all flex items-center gap-2 ${activeForm === tab.key ? 'bg-sky-600 shadow-md text-white border border-transparent' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-200 border border-transparent'}`}
-          >
-            {isAr ? tab.labelAr : t(tab.labelEn)}
-            <span
-              className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeForm === tab.key ? 'bg-white/20 text-white' : 'bg-slate-300 text-slate-700'}`}
-              dir="ltr"
-            >
-              {formCounts[tab.key] || 0}
-            </span>
-          </button>
-        ))}
-      </div>
+      <PageTabs
+        tabs={IPC_FORM_TABS.map(tab => ({
+          id: tab.key,
+          short: isAr ? tab.shortAr : tab.shortEn,
+          label: (
+            <>
+              {isAr ? tab.labelAr : t(tab.labelEn)}
+              <span className="ms-1 rounded-full bg-slate-100 px-1.5 text-xs font-bold text-slate-600" dir="ltr">{formCounts[tab.key] || 0}</span>
+            </>
+          ),
+        }))}
+        active={activeForm}
+        onChange={setActiveForm}
+      />
 
       {!hasFormData ? (
-        <div className="text-center p-8 font-bold text-slate-500">{emptyMessage}</div>
+        <EmptyState message={emptyMessage} />
       ) : activeForm === 'ams' ? (
         <AMSView {...viewProps} />
       ) : activeForm === 'handwashing' ? (

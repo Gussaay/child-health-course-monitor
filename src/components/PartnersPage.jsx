@@ -1,6 +1,6 @@
 // PartnersPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, FormGroup, Input, PageHeader, Spinner, Table, Modal, CardBody, EmptyState, Select } from './CommonComponents';
+import { Button, Card, FormGroup, Input, PageHeader, Table, Modal, CardBody, EmptyState, Select, SkeletonTable } from './CommonComponents';
 import { upsertFunder, deleteFunder } from '../data.js';
 import { STATE_LOCALITIES } from './constants.js';
 import { useDataCache } from '../DataContext'; 
@@ -128,7 +128,7 @@ export function PartnersPage({ permissions, userStates }) {
                     {canManage && <Button onClick={handleAddNew}>{t('hr_misc.partners.add_new', 'Add New Partner')}</Button>}
                 </div>
             
-                {loading ? <Spinner /> : (
+                {loading ? <SkeletonTable /> : (
                     <Table cardsOnPhone headers={[t('hr_misc.partners.org_name', 'Organization Name'), t('hr_misc.partners.state', 'State'), t('hr_misc.partners.projects', 'Projects'), t('hr_misc.partners.focal_person', 'Focal Person'), t('hr_misc.partners.phone', 'Phone'), t('hr_misc.partners.actions', 'Actions')]}>
                         {/* --- FIX: This check is now safe --- */}
                         {filteredPartners.length > 0 ? filteredPartners.map(p => (

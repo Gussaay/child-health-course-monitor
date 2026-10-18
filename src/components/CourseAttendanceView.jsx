@@ -3,8 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { 
-    Button, Spinner, Card, PageHeader, EmptyState, Input 
-} from './CommonComponents'; 
+    Button, Spinner, Card, PageHeader, EmptyState, Input, SkeletonTable, PageSkeleton } from './CommonComponents'; 
 import { 
     listAllParticipantsForCourse, getCourseById 
 } from '../data.js'; 
@@ -441,7 +440,7 @@ export function AttendanceManagerView({ course, onClose }) {
         'Not Accepted': t('course_tests.attendance.status.not_accepted', 'Not Accepted'),
     })[text] || text;
 
-    if (loading) return <div className="p-8 flex justify-center"><Spinner /></div>;
+    if (loading) return <SkeletonTable />;
 
     return (
         <div className="flex flex-col h-full bg-white rounded-lg overflow-hidden shadow-sm">
@@ -640,7 +639,7 @@ export function PublicAttendanceView({ courseId }) {
             .sort((a,b) => a.name.localeCompare(b.name));
     }, [participants, searchTerm]);
 
-    if (loading) return <div className="flex justify-center p-8"><Spinner /></div>;
+    if (loading) return <PageSkeleton />;
     
     if (isWrongDate) {
         return (

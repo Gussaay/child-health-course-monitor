@@ -14,8 +14,11 @@ import {
   Legend,
   Filler 
 } from 'chart.js';
+import { STATUS_COLORS } from '../../utils/statusColors';
+import '../chartSetup';
 
-import { Spinner, Modal } from '../CommonComponents'; 
+import { Spinner, Modal, EmptyState } from '../CommonComponents'; 
+import { ChevronDown, Inbox } from 'lucide-react';
 import { useTranslation } from 'react-i18next'; 
 
 import { 
@@ -291,7 +294,7 @@ export const CopyImageButton = ({ targetRef, title, kind = 'chart' }) => {
     );
 };
 
-export const ScoreText = ({ value, showPercentage = true }) => {
+export const ScoreText = ({ value, showPercentage = true, size = 'sm' }) => {
     const { t } = useTranslation();
     let colorClass = 'text-slate-800';
     let text = t('N/A');
@@ -299,18 +302,18 @@ export const ScoreText = ({ value, showPercentage = true }) => {
         const percentage = Math.round(value * 100);
         if (percentage >= 80) colorClass = 'text-emerald-700';
         else if (percentage >= 50) colorClass = 'text-amber-600';
-        else colorClass = 'text-rose-700';
+        else colorClass = 'text-red-600';
         text = showPercentage ? `${percentage}%` : percentage.toString();
     }
-    return (<span className={`font-extrabold text-sm ${colorClass}`} dir="ltr">{text}</span>);
+    return (<span className={`${size === 'lg' ? 'text-3xl sm:text-4xl font-black tracking-tight' : 'font-extrabold text-sm'} ${colorClass}`} dir="ltr">{text}</span>);
 };
 
 export const KpiCard = ({ title, value, unit = '', scoreValue = null, trend = null, trendText = '' }) => {
     const { t } = useTranslation();
     const cardRef = useRef(null);
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 border-t-4 border-t-sky-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full relative group">
-            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-sky-600 flex flex-col justify-center items-center h-full relative group">
+            <div className="absolute top-2 end-2 z-10">
                 <CopyImageButton targetRef={cardRef} title={t(title)} kind="kpi" />
             </div>
             <h4 className="text-xs sm:text-sm font-bold text-slate-500 mb-2 sm:mb-3 text-center break-words w-full px-2 sm:px-4"title={t(title)}>
@@ -318,17 +321,74 @@ export const KpiCard = ({ title, value, unit = '', scoreValue = null, trend = nu
             </h4>
             <div className="flex items-baseline justify-center gap-1.5 mt-auto">
                 {scoreValue !== null ? (
-                    <ScoreText value={scoreValue} />
+                    <ScoreText value={scoreValue} size="lg" />
                 ) : (
                     <span className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight" dir="ltr">{value}</span>
                 )}
                 {unit && <span className="text-xs sm:text-sm font-bold text-slate-400">{unit}</span>}
             </div>
             {trend && (
-                <div className={`mt-2 flex items-center justify-center text-xs font-bold ${trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-rose-600' : 'text-slate-400'}`}>
+                <div className={`mt-2 flex items-center justify-center text-xs font-bold ${trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-red-600' : 'text-slate-400'}`}>
                     {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '−'} <span className="ms-1">{trendText}</span>
                 </div>
             )}
+        </div>
+    );
+};
+
+// Headline counts. Phones: one compact card with the numbers in a 3-column
+// grid, so the charts start near the top. Wider screens: the usual KPI cards.
+// items: [{ title, value }]
+export const StatStrip = ({ items }) => {
+    const { t } = useTranslation();
+    return (
+        <>
+            <div className="md:hidden grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 mb-4">
+                {items.map(item => (
+                    <div key={item.title} className="bg-white px-1.5 py-2.5 text-center">
+                        <div className="text-lg font-black text-slate-800 leading-tight" dir="ltr">{item.value ?? 0}</div>
+                        <div className="mt-0.5 text-xs font-semibold text-slate-500 leading-tight">{t(item.title)}</div>
+                    </div>
+                ))}
+            </div>
+            <div className="hidden md:grid grid-cols-3 gap-6 mb-8">
+                {items.map(item => <KpiCard key={item.title} title={item.title} value={item.value} />)}
+            </div>
+        </>
+    );
+};
+
+const isWideScreen = () => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches;
+
+// A titled group of skill charts that folds away. Open on wider screens;
+// on phones only the sections marked `defaultOpen` start open, so the page is
+// a short list of headings. Charts in a closed section are not drawn.
+export const SkillSection = ({ title, count, defaultOpen = false, children }) => {
+    const [open, setOpen] = useState(() => defaultOpen || isWideScreen());
+    return (
+        <section className="mb-4 md:mb-8">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-expanded={open}
+                className="w-full flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-start shadow-sm active:bg-slate-50"
+            >
+                <span className="flex-1 min-w-0 font-bold text-slate-800">{title}</span>
+                {count > 0 && <span className="shrink-0 rounded-full bg-slate-100 px-2 text-xs font-semibold leading-5 text-slate-600" dir="ltr">{count}</span>}
+                <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && <div className="mt-3 md:mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">{children}</div>}
+        </section>
+    );
+};
+
+// What a chart shows in place of its lines or bars when there is nothing to draw.
+export const ChartEmpty = () => {
+    const { t } = useTranslation();
+    return (
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-sm text-slate-500" dir="auto">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-400" aria-hidden="true"><Inbox size={18} /></span>
+            {t('No data available.')}
         </div>
     );
 };
@@ -337,9 +397,9 @@ export const KpiGridItem = ({ title, scoreValue, numerator, denominator }) => {
     const { t } = useTranslation();
     const itemRef = useRef(null);
     return (
-        <div ref={itemRef} className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-black text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group relative">
+        <div ref={itemRef} className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group relative">
             <h5 className="text-xs font-bold text-slate-700 mb-2 leading-snug group-hover:text-sky-800 break-words" title={t(title)}>{t(title)}</h5>
-            <div className="mt-auto bg-white inline-flex justify-center items-center gap-2 mx-auto px-3 py-1 rounded-lg border border-black shadow-sm">
+            <div className="mt-auto bg-white inline-flex justify-center items-center gap-2 mx-auto px-3 py-1 rounded-lg border border-slate-200 shadow-sm">
                 {numerator !== undefined && denominator !== undefined && (
                     <span className="text-xs font-bold text-slate-500">{numerator}/{denominator}</span>
                 )}
@@ -356,7 +416,7 @@ export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
     const gridColsClass = cols === 3 ? 'sm:grid-cols-3' : (cols === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2');
     
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 relative flex flex-col h-full">
             <div className="flex justify-between items-start mb-4 sm:mb-5">
                 <h4 className={`text-base font-extrabold text-slate-800 ${language === 'ar' ? 'text-right' : 'text-start'} tracking-wide w-full pe-8 break-words`} title={t(title)}>{t(title)}</h4>
                 <div className="absolute top-4 end-4"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
@@ -373,17 +433,17 @@ export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 h-full flex flex-col relative">
             <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
-            <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-4 sm:mb-5 pb-3 border-b border-black pr-10 gap-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-4 sm:mb-5 pb-3 border-b border-slate-200 pe-10 gap-2">
                 <h4 className={`text-base font-extrabold text-slate-800 ${language === 'ar' ? 'text-right' : 'text-start'} tracking-wide break-words`} title={t(title)}>{t(title)}</h4>
-                {overallScore !== null && (<div className="bg-sky-50 border border-black rounded-lg px-3 py-1 shadow-sm whitespace-nowrap"><ScoreText value={overallScore} /></div>)}
+                {overallScore !== null && (<div className="bg-sky-50 border border-slate-200 rounded-lg px-3 py-1 shadow-sm whitespace-nowrap"><ScoreText value={overallScore} /></div>)}
             </div>
             <div className="space-y-2 sm:space-y-3 flex-grow">
                 {kpis.map(kpi => (
-                    <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-black shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
-                        <h5 className={`text-xs font-bold text-slate-700 ${language === 'ar' ? 'text-right pl-2' : 'text-start pr-2'} group-hover:text-sky-800`}>{t(kpi.title)}</h5>
-                        <div className="bg-white px-2 sm:px-3 py-1 rounded-lg shadow-sm border border-black whitespace-nowrap flex items-center gap-2">
+                    <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
+                        <h5 className={`text-xs font-bold text-slate-700 text-start pe-2`}>{t(kpi.title)}</h5>
+                        <div className="bg-white px-2 sm:px-3 py-1 rounded-lg shadow-sm border border-slate-200 whitespace-nowrap flex items-center gap-2">
                             {kpi.numerator !== undefined && kpi.denominator !== undefined && (
                                 <span className="text-xs font-bold text-slate-500">{kpi.numerator}/{kpi.denominator}</span>
                             )}
@@ -399,7 +459,7 @@ export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
 export const FilterSelect = ({ label, value, onChange, options, disabled = false, defaultOption }) => {
     const isSelected = value !== "" && value !== null && value !== undefined;
     return (
-        <div className="w-full sm:flex-1 sm:min-w-[150px]">
+        <div className="min-w-0 md:flex-1 md:min-w-[150px]">
             <label htmlFor={label} className="block text-xs font-bold text-slate-500 mb-1.5 ">{label}</label>
             <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isSelected ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}>
                 <option value="">{defaultOption}</option>
@@ -410,6 +470,16 @@ export const FilterSelect = ({ label, value, onChange, options, disabled = false
 };
 
 // --- Charts ---
+// On a phone, category names ("Visit 1", a state's name) break onto two lines
+// instead of being slanted and cut off at the chart's edge.
+export function wrapNarrowLabel(value) {
+    const label = this.getLabelForValue(value);
+    if (typeof label !== 'string' || this.chart.width >= 480 || label.length <= 10 || !label.includes(' ')) return label;
+    const words = label.split(' ');
+    const half = Math.ceil(words.length / 2);
+    return [words.slice(0, half).join(' '), words.slice(half).join(' ')];
+}
+
 export const getSharedChartOptions = (language) => {
     const isAr = language === 'ar';
     return {
@@ -417,19 +487,19 @@ export const getSharedChartOptions = (language) => {
         maintainAspectRatio: false, 
         animation: { duration: 1000, easing: 'easeOutQuart' }, 
         interaction: { mode: 'index', intersect: false },
-        layout: {
-            // Further increased bottom padding to 20 to prevent chart text from bleeding into the parent container's padding
-            padding: { left: 50, right: 50, top: 10, bottom: 20 } 
-        },
+        // Room at the top for a point at 100%; the x axis is offset so the
+        // first and last visits sit inside the chart, not on its edges.
+        layout: { padding: { left: 4, right: 4, top: 12, bottom: 4 } },
         plugins: { 
             legend: { 
                 position: 'bottom', 
-                labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } 
+ 
+                labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 12, weight: '600' }, color: '#334155' } 
             }, 
             tooltip: { 
                 backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, 
-                bodyFont: { size: 12, family: "'Inter', sans-serif" }, 
+                titleFont: { size: 13, weight: 'bold' }, 
+                bodyFont: { size: 12 }, 
                 padding: 12, 
                 cornerRadius: 8, 
                 boxPadding: 6, 
@@ -442,41 +512,42 @@ export const getSharedChartOptions = (language) => {
                 max: 100, 
                 position: isAr ? 'right' : 'left',
                 grid: { color: '#e2e8f0', drawBorder: false }, 
-                ticks: { stepSize: 10, autoSkip: false, callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
+                ticks: { stepSize: 20, autoSkip: false, callback: (value) => `${value}%`, color: '#475569', font: { size: 11, weight: '600' }, padding: 6 } 
             }, 
             x: { 
                 reverse: isAr, 
+                offset: true,
                 grid: { display: false, drawBorder: false }, 
-                ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
+                ticks: { maxTicksLimit: 10, autoSkip: true, maxRotation: 0, callback: wrapNarrowLabel, color: '#475569', font: { size: 11, weight: '600' }, padding: 6 } 
             } 
         }
     };
 };
 
 export const getLineDatasetStyle = (title, key, colors, data) => ({
-    label: title, data: data, borderColor: colors[key] || '#64748b', backgroundColor: (colors[key] || '#64748b') + '26', fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#ffffff', pointBorderColor: colors[key] || '#64748b', pointBorderWidth: 2, borderWidth: 2.5, 
+    label: title, data: data, borderColor: colors[key] || '#64748b', backgroundColor: colors[key] || '#64748b', fill: false, tension: 0.3, cubicInterpolationMode: 'monotone', pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#ffffff', pointBorderColor: colors[key] || '#64748b', pointBorderWidth: 2, borderWidth: 2.5, clip: false,
 });
 
 export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
     const { t, i18n } = useTranslation();
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
-    const colors = { 'Cases Observed': '#3b82f6', 'Completed Visits': '#10b981' };
+    const colors = { 'Cases Observed': '#0284c7', 'Completed Visits': '#059669' };
     const isAr = language === 'ar';
     
     const options = {
         responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' }, interaction: { mode: 'index', intersect: false },
-        layout: { padding: { left: 50, right: 50, top: 10, bottom: 20 } },
-        plugins: { legend: { display: kpiKeys.length > 1, position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, bodyFont: { size: 12, family: "'Inter', sans-serif" }, padding: 12, cornerRadius: 8, boxPadding: 6, callbacks: { label: (context) => ` ${context.dataset.label}: ${context.parsed.y}` } } },
-        scales: { y: { beginAtZero: true, position: isAr ? 'right' : 'left', grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, autoSkip: false, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } }, x: { reverse: isAr, grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } } }
+        layout: { padding: { left: 4, right: 4, top: 12, bottom: 4 } },
+        plugins: { legend: { display: kpiKeys.length > 1, position: 'bottom', labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 12, weight: '600' }, color: '#334155' } }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, weight: 'bold' }, bodyFont: { size: 12 }, padding: 12, cornerRadius: 8, boxPadding: 6, callbacks: { label: (context) => ` ${context.dataset.label}: ${context.parsed.y}` } } },
+        scales: { y: { beginAtZero: true, position: isAr ? 'right' : 'left', grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, autoSkip: false, color: '#475569', font: { size: 11, weight: '600' }, padding: 8 } }, x: { reverse: isAr, offset: true, grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, maxRotation: 0, callback: wrapNarrowLabel, color: '#475569', font: { size: 11, weight: '600' }, padding: 6 } } }
     };
 
     const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 h-full flex flex-col relative">
             <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pe-8 break-words">{t(title)}</h4>
-            <div className="relative flex-grow min-h-[250px]" dir="ltr">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
+            <div className="relative flex-grow min-h-[250px]" dir="ltr">{chartData.length > 0 ? <Line options={options} data={data} /> : <ChartEmpty />}</div>
         </div>
     );
 };
@@ -603,7 +674,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
     }
 
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 h-full flex flex-col relative">
             <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <h4 className={`text-base font-extrabold text-slate-800 mt-6 sm:mt-3 mb-4 sm:mb-6 text-center break-words px-10 leading-relaxed ${isAr ? '' : 'tracking-wide'}`}>{t(title)}</h4>
             
@@ -622,7 +693,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
                     <div className="flex flex-col items-center shrink-0">
                         <span className="text-xs font-bold text-slate-500 mb-1 text-center">{t('Average')}</span>
                         <div className="border border-slate-800 bg-white rounded-xl px-4 sm:px-8 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center text-center">
-                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className={`font-extrabold text-xl sm:text-2xl text-center ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
+                            <span dir="ltr" style={{ unicodeBidi: 'isolate' }} className={`font-extrabold text-xl sm:text-2xl text-center ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                                 {avgValue !== null && avgValue !== undefined ? `${Math.round(avgValue)}%` : '-'}
                             </span>
                             {totalNumerator !== undefined && totalDenominator !== undefined && totalDenominator > 0 && (
@@ -646,7 +717,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys, overallScore, totalNum
             )}
 
             <div className="relative flex-grow min-h-[250px]" dir="ltr">
-                {chartData.length > 0 ? <Line options={customOptions} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}
+                {chartData.length > 0 ? <Line options={customOptions} data={data} /> : <ChartEmpty />}
             </div>
         </div>
     );
@@ -673,7 +744,7 @@ export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) 
     };
 
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 flex flex-col h-full relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 flex flex-col h-full relative">
             <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pe-8 break-words" title={t(title)}>{t(title)}</h4>
             
@@ -682,7 +753,7 @@ export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) 
             </div>
             
             <div className="relative flex-grow min-h-[200px]" dir="ltr">
-                {chartData.length > 0 ? <Line options={customOptions} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}
+                {chartData.length > 0 ? <Line options={customOptions} data={data} /> : <ChartEmpty />}
             </div>
         </div>
     );
@@ -693,16 +764,16 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const cardRef = useRef(null);
     const isAr = language === 'ar';
-    const getBarColor = (value) => { if (value >= 80) return '#10b981'; if (value >= 50) return '#f59e0b'; return '#ef4444'; };
-    const getHoverColor = (value) => { if (value >= 80) return '#059669'; if (value >= 50) return '#d97706'; return '#dc2626'; };
+    const getBarColor = (value) => { if (value >= 80) return STATUS_COLORS.good; if (value >= 50) return STATUS_COLORS.partial; return STATUS_COLORS.poor; };
+    const getHoverColor = (value) => { if (value >= 80) return '#047857'; if (value >= 50) return '#b45309'; return '#b91c1c'; };
 
     const data = { 
         labels: chartData.map(d => d.stateName), 
         datasets: [{ 
             label: t('Value'), 
             data: chartData.map(d => d[dataKey] ? Math.round(d[dataKey] * (dataKey === 'count' ? 1 : 100)) : null), 
-            backgroundColor: chartData.map(d => dataKey === 'count' ? '#3b82f6' : getBarColor(d[dataKey] ? d[dataKey] * 100 : 0)), 
-            hoverBackgroundColor: chartData.map(d => dataKey === 'count' ? '#2563eb' : getHoverColor(d[dataKey] ? d[dataKey] * 100 : 0)), 
+            backgroundColor: chartData.map(d => dataKey === 'count' ? '#0284c7' : getBarColor(d[dataKey] ? d[dataKey] * 100 : 0)), 
+            hoverBackgroundColor: chartData.map(d => dataKey === 'count' ? '#0369a1' : getHoverColor(d[dataKey] ? d[dataKey] * 100 : 0)), 
             borderRadius: 6, 
             borderSkipped: false, 
             barPercentage: 0.6,
@@ -725,7 +796,7 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
                 const text = `${value}${dataKey === 'count' ? '' : '%'}`;
                 // Follows the axis text, which presentation mode enlarges.
                 const size = chart.options.scales?.y?.ticks?.font?.size || 12;
-                ctx.font = `bold ${size}px "Inter", sans-serif`;
+                ctx.font = `bold ${size}px ${ChartJS.defaults.font.family}`;
                 ctx.fillStyle = '#334155'; 
                 ctx.textBaseline = 'middle';
                 
@@ -748,31 +819,31 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
         animation: { duration: 1000, easing: 'easeOutQuart' },
         layout: {
             padding: {
-                left: isAr ? 45 : 0,
-                right: isAr ? 0 : 45
+                left: isAr ? 52 : 0,
+                right: isAr ? 0 : 52
             }
         },
         plugins: { 
             legend: { display: false }, 
-            tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif" }, bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' }, padding: 10, cornerRadius: 8, callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}${dataKey === 'count' ? '' : '%'}` } } 
+            tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13 }, bodyFont: { size: 12, weight: 'bold' }, padding: 10, cornerRadius: 8, callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}${dataKey === 'count' ? '' : '%'}` } } 
         }, 
         scales: { 
-            x: { reverse: isAr, beginAtZero: true, max: dataKey === 'count' ? undefined : 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { stepSize: dataKey === 'count' ? undefined : 10, autoSkip: false, callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } }, 
-            y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { autoSkip: false, color: '#334155', font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' } } } 
+            x: { reverse: isAr, beginAtZero: true, max: dataKey === 'count' ? undefined : 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { stepSize: dataKey === 'count' ? undefined : 25, autoSkip: false, maxRotation: 0, callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { weight: '500' } } }, 
+            y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { autoSkip: false, callback: wrapNarrowLabel, color: '#334155', font: { size: 12, weight: 'bold' } } } 
         } 
     };
     
-    const chartHeight = Math.max(300, chartData.length * 40); 
+    const chartHeight = Math.max(180, chartData.length * 44 + 50); 
     
     return (
-        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 relative">
             <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pe-8 break-words">{t(title)}</h4>
             <div className="relative" style={{ height: `${chartHeight}px` }} dir="ltr">
                 {chartData.length > 0 ? (
                     <Bar options={options} data={data} plugins={[barLabelPlugin]} />
                 ) : (
-                    <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>
+                    <ChartEmpty />
                 )}
             </div>
         </div>
@@ -784,10 +855,10 @@ export const CompactSkillRow = ({ label, stats }) => {
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const yes = stats?.yes || 0; const no = stats?.no || 0; const total = yes + no; const percentage = total > 0 ? (yes / total) : null;
     return (
-        <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
+        <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-slate-200">
             <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${language === 'ar' ? 'text-right' : 'text-start'} group-hover:text-sky-800`}>{label}</td>
-            <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center" dir="ltr">{yes} / {total}</td>
-            <td className="p-3 border-l border-black w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50"><ScoreText value={percentage} /></td>
+            <td className="p-3 text-xs font-bold text-slate-600 border-e border-slate-200 w-1/5 text-center" dir="ltr">{yes} / {total}</td>
+            <td className="p-3 border-e border-slate-200 w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50"><ScoreText value={percentage} /></td>
         </tr>
     );
 };
@@ -797,7 +868,7 @@ export const CompactSkillsTable = ({ overallKpis }) => {
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const skillStats = overallKpis?.skillStats;
-    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No detailed skill data available.')}</div>);
+    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white rounded-xl border border-slate-200"><EmptyState message={t('No detailed skill data available.')} /></div>);
     
     const getAggregatedScore = (skillKeys) => {
         if (!skillKeys || skillKeys.length === 0) return null;
@@ -807,12 +878,12 @@ export const CompactSkillsTable = ({ overallKpis }) => {
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
             <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
+                <thead className="sticky top-0 z-10 shadow-sm border-b border-slate-200">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Skill')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-l border-black">{t('Count (Yes / Total)')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-e border-slate-200`}>{t('Skill')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-e border-slate-200">{t('Count (Yes / Total)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide ">{t('Percentage')}</th>
                     </tr>
                 </thead>
@@ -830,10 +901,10 @@ export const CompactSkillsTable = ({ overallKpis }) => {
 
                         return (
                             <React.Fragment key={group.group}>
-                                <tr className="bg-slate-800 text-white border-b border-black">
-                                    <td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-l border-black`} colSpan="2">{groupName}</td>
+                                <tr className="bg-slate-800 text-white border-b border-slate-200">
+                                    <td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-e border-slate-200`} colSpan="2">{groupName}</td>
                                     <td className="p-3 text-center">
-                                        {groupAggregateScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={groupAggregateScore} showPercentage={true}/></div>)}
+                                        {groupAggregateScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-slate-200 shadow-inner"><ScoreText value={groupAggregateScore} showPercentage={true}/></div>)}
                                     </td>
                                 </tr>
                                 {group.subgroups?.map(subgroup => {
@@ -851,7 +922,7 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                                             
                                             return (
                                                 <React.Fragment key={symptomKey}>
-                                                    <tr className="bg-sky-600 text-white border-b border-black"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-start'} border-l border-black`} colSpan="2">{symptomGroupName}</td><td className="p-2.5 text-center">{symptomScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={symptomScore} showPercentage={true} /></div>)}</td></tr>
+                                                    <tr className="bg-sky-600 text-white border-b border-slate-200"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-start'} border-e border-slate-200`} colSpan="2">{symptomGroupName}</td><td className="p-2.5 text-center">{symptomScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-slate-200"><ScoreText value={symptomScore} showPercentage={true} /></div>)}</td></tr>
                                                     {skillsToRender.map(skillKey => {
                                                         const label = t(IMNCI_ENGLISH_LABELS[skillKey] || skillKey);
                                                         return <CompactSkillRow key={skillKey} label={label} stats={skillStats[skillKey]} />;
@@ -864,7 +935,7 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                                     const subgroupTitle = t(IMNCI_ENGLISH_LABELS[subgroup.subgroupTitle] || subgroup.subgroupTitle);
                                     return (
                                         <React.Fragment key={subgroup.subgroupTitle}>
-                                            <tr className="bg-sky-600 text-white border-b border-black"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-start'} border-l border-black`} colSpan="2">{subgroupTitle}</td><td className="p-2.5 text-center">{subgroupScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={subgroupScore} showPercentage={true}/></div>)}</td></tr>
+                                            <tr className="bg-sky-600 text-white border-b border-slate-200"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-start'} border-e border-slate-200`} colSpan="2">{subgroupTitle}</td><td className="p-2.5 text-center">{subgroupScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-slate-200"><ScoreText value={subgroupScore} showPercentage={true}/></div>)}</td></tr>
                                             {subgroup.skills?.map(skill => {
                                                 const label = t(IMNCI_ENGLISH_LABELS[skill.key] || skill.label);
                                                 return <CompactSkillRow key={skill.key} label={label} stats={skillStats[skill.key]} />;
@@ -888,12 +959,12 @@ export const EENCCompactSkillRow = ({ label, stats }) => {
     const isAr = language === 'ar';
     const yes = stats?.yes || 0; const partial = stats?.partial || 0; const no = stats?.no || 0; const totalResponses = yes + partial + no; const score = (yes * 2) + (partial * 1); const maxScore = totalResponses * 2; const percentage = maxScore > 0 ? (score / maxScore) : null;
     return (
-        <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
+        <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-slate-200">
             <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${isAr ? 'text-right' : 'text-start'} group-hover:text-sky-800`}>{label}</td>
-            <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center" dir="ltr">
-                <span title={t("Yes")} className="text-emerald-600">{yes}</span> / <span title={t("Partial")} className="text-amber-500">{partial}</span> / <span title={t("No")} className="text-rose-600">{no}</span>
+            <td className="p-3 text-xs font-bold text-slate-600 border-e border-slate-200 w-1/5 text-center" dir="ltr">
+                <span title={t("Yes")} className="text-emerald-600">{yes}</span> / <span title={t("Partial")} className="text-amber-500">{partial}</span> / <span title={t("No")} className="text-red-600">{no}</span>
             </td>
-            <td className="p-3 border-l border-black w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50"><ScoreText value={percentage} /></td>
+            <td className="p-3 border-e border-slate-200 w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50"><ScoreText value={percentage} /></td>
         </tr>
     );
 };
@@ -903,7 +974,7 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const skillStats = overallKpis?.skillStats;
-    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No detailed EENC skill data available.')}</div>);
+    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white rounded-xl border border-slate-200"><EmptyState message={t('No detailed EENC skill data available.')} /></div>);
     const sections = [
         { title: t('Pre-delivery Preparation'), items: PREPARATION_ITEMS, score: overallKpis.avgPreparation }, 
         { title: t('Drying, Stimulation, Warming & Suction'), items: DRYING_STIMULATION_ITEMS, score: overallKpis.avgDrying }, 
@@ -912,12 +983,12 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
     ];
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
             <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
+                <thead className="sticky top-0 z-10 shadow-sm border-b border-slate-200">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Skill (EENC)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-l border-black">{t('Count (Yes / Partial / No)')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-e border-slate-200`}>{t('Skill (EENC)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-e border-slate-200">{t('Count (Yes / Partial / No)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide">{t('Percentage')}</th>
                     </tr>
                 </thead>
@@ -927,7 +998,7 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
                         if (!hasData) return null; 
                         return (
                             <React.Fragment key={section.title}>
-                                <tr className="bg-slate-800 text-white border-b border-black"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-l border-black`} colSpan="2">{section.title}</td><td className="p-3 text-center">{section.score !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={section.score} showPercentage={true}/></div>)}</td></tr>
+                                <tr className="bg-slate-800 text-white border-b border-slate-200"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-e border-slate-200`} colSpan="2">{section.title}</td><td className="p-3 text-center">{section.score !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-slate-200 shadow-inner"><ScoreText value={section.score} showPercentage={true}/></div>)}</td></tr>
                                 {section.items.map(item => {
                                     const label = t(EENC_SKILL_KEYS_TO_ENGLISH[item.key] || item.label);
                                     return <EENCCompactSkillRow key={item.key} label={label} stats={skillStats[item.key]} />;
@@ -1142,15 +1213,15 @@ export const ETATCompactSkillRow = ({ label, critical, stats }) => {
     const percentage = assessed > 0 ? (yes / assessed) : null;
 
     return (
-        <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
+        <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-slate-200">
             <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${isAr ? 'text-right' : 'text-start'} group-hover:text-sky-800`}>
                 {critical && <span className="text-amber-500 mx-1" title={t('Critical step')}>★</span>}
                 {label}
             </td>
-            <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center" dir="ltr">
-                <span title={t('Done correctly')} className="text-emerald-600">{yes}</span> / <span title={t('Not done')} className="text-rose-600">{no}</span> / <span title={t('Not applicable')} className="text-slate-400">{na}</span>
+            <td className="p-3 text-xs font-bold text-slate-600 border-e border-slate-200 w-1/5 text-center" dir="ltr">
+                <span title={t('Done correctly')} className="text-emerald-600">{yes}</span> / <span title={t('Not done')} className="text-red-600">{no}</span> / <span title={t('Not applicable')} className="text-slate-400">{na}</span>
             </td>
-            <td className="p-3 border-l border-black w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50">
+            <td className="p-3 border-e border-slate-200 w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50">
                 <ScoreText value={percentage} />
             </td>
         </tr>
@@ -1164,19 +1235,17 @@ export const ETATCompactSkillsTable = ({ overallKpis }) => {
 
     if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) {
         return (
-            <div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">
-                {t('No detailed ETAT skill data available.')}
-            </div>
+            <div className="bg-white rounded-xl border border-slate-200"><EmptyState message={t('No detailed ETAT skill data available.')} /></div>
         );
     }
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
             <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
+                <thead className="sticky top-0 z-10 shadow-sm border-b border-slate-200">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Skill (ETAT)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-l border-black">{t('Count (Done / Not done / N.A.)')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-e border-slate-200`}>{t('Skill (ETAT)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-e border-slate-200">{t('Count (Done / Not done / N.A.)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide">{t('Percentage')}</th>
                     </tr>
                 </thead>
@@ -1188,13 +1257,13 @@ export const ETATCompactSkillsTable = ({ overallKpis }) => {
 
                         return (
                             <React.Fragment key={checklist.key}>
-                                <tr className="bg-slate-800 text-white border-b border-black">
-                                    <td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-l border-black`} colSpan="2">
+                                <tr className="bg-slate-800 text-white border-b border-slate-200">
+                                    <td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide border-e border-slate-200`} colSpan="2">
                                         {t(checklist.title)}
                                     </td>
                                     <td className="p-3 text-center">
                                         {overallKpis[`avg_${checklist.key}`] != null && (
-                                            <div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner">
+                                            <div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-slate-200 shadow-inner">
                                                 <ScoreText value={overallKpis[`avg_${checklist.key}`]} showPercentage={true} />
                                             </div>
                                         )}
@@ -1202,8 +1271,8 @@ export const ETATCompactSkillsTable = ({ overallKpis }) => {
                                 </tr>
                                 {checklist.sections.map(section => (
                                     <React.Fragment key={`${checklist.key}_${section.id}`}>
-                                        <tr className="bg-slate-100 border-b border-black">
-                                            <td className={`p-2 text-xs font-extrabold text-slate-700 ${isAr ? 'text-right' : 'text-start'} border-l border-black`} colSpan="3">
+                                        <tr className="bg-slate-100 border-b border-slate-200">
+                                            <td className={`p-2 text-xs font-extrabold text-slate-700 ${isAr ? 'text-right' : 'text-start'} border-e border-slate-200`} colSpan="3">
                                                 {t(section.title)}
                                             </td>
                                         </tr>
@@ -1236,24 +1305,24 @@ export const ETATChecklistCoverageTable = ({ title, overallKpis }) => {
     if (!total) return null;
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
-            {title && <div className="p-4 border-b border-black bg-slate-100"><h4 className={`text-sm font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{title}</h4></div>}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
+            {title && <div className="p-4 border-b border-slate-200 bg-slate-100"><h4 className={`text-sm font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{title}</h4></div>}
             <table className="w-full border-collapse">
                 <thead>
-                    <tr className="bg-slate-200 border-b border-black">
-                        <th className={`p-3 text-xs font-extrabold text-slate-800 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Checklist')}</th>
-                        <th className="p-3 text-xs font-extrabold text-slate-800 text-center tracking-wide border-l border-black">{t('Sessions Assessed')}</th>
+                    <tr className="bg-slate-200 border-b border-slate-200">
+                        <th className={`p-3 text-xs font-extrabold text-slate-800 ${isAr ? 'text-right': 'text-start'} tracking-wide border-e border-slate-200`}>{t('Checklist')}</th>
+                        <th className="p-3 text-xs font-extrabold text-slate-800 text-center tracking-wide border-e border-slate-200">{t('Sessions Assessed')}</th>
                         <th className="p-3 text-xs font-extrabold text-slate-800 text-center tracking-wide">{t('Average Score')}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {ETAT_CHECKLIST_STRUCTURE.map(cl => (
-                        <tr key={cl.key} className="bg-white hover:bg-sky-50 border-b border-black">
-                            <td className={`p-3 text-xs font-bold text-slate-700 ${isAr ? 'text-right' : 'text-start'} border-l border-black`}>
+                        <tr key={cl.key} className="bg-white hover:bg-sky-50 border-b border-slate-200">
+                            <td className={`p-3 text-xs font-bold text-slate-700 ${isAr ? 'text-right' : 'text-start'} border-e border-slate-200`}>
                                 <span className="inline-block w-2.5 h-2.5 rounded-full mx-2" style={{ backgroundColor: cl.color }} />
                                 {t(cl.title)}
                             </td>
-                            <td className="p-3 text-xs font-bold text-slate-600 text-center border-l border-black" dir="ltr">{counts[cl.key] || 0}</td>
+                            <td className="p-3 text-xs font-bold text-slate-600 text-center border-e border-slate-200" dir="ltr">{counts[cl.key] || 0}</td>
                             <td className="p-3 text-center bg-slate-50/50"><ScoreText value={overallKpis[`avg_${cl.key}`]} /></td>
                         </tr>
                     ))}
@@ -1268,23 +1337,23 @@ export const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const skillStats = motherKpis?.skillStats;
-    if (!motherKpis || !skillStats) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No mother survey data available.')}</div>);
+    if (!motherKpis || !skillStats) return (<div className="bg-white rounded-xl border border-slate-200"><EmptyState message={t('No mother survey data available.')} /></div>);
     const items = serviceType === 'IMNCI' ? IMNCI_MOTHER_SURVEY_ITEMS_EN : EENC_MOTHER_SURVEY_ITEMS_EN;
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
             <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
+                <thead className="sticky top-0 z-10 shadow-sm border-b border-slate-200">
                     <tr className="bg-slate-200">
-                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-l border-black`}>{t('Question (Mother Survey)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-l border-black">{t('Count (Yes / Total)')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right': 'text-start'} tracking-wide border-e border-slate-200`}>{t('Question (Mother Survey)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide border-e border-slate-200">{t('Count (Yes / Total)')}</th>
                         <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide ">{t('Percentage')}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {items.map(group => (
                         <React.Fragment key={group.title}>
-                            <tr className="bg-slate-800 text-white border-b border-black"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide`} colSpan="3">{t(group.title)}</td></tr>
+                            <tr className="bg-slate-800 text-white border-b border-slate-200"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-start'} tracking-wide`} colSpan="3">{t(group.title)}</td></tr>
                             {group.items.map(item => (<CompactSkillRow key={item.key} label={t(item.label)} stats={skillStats[item.key]} />))}
                         </React.Fragment>
                     ))}
@@ -1313,26 +1382,38 @@ export const renderTrendArrows = (val, type, t = (key, def, opts) => def.replace
     return null;
 };
 
+// A table section with nothing to list keeps its heading and says so, rather
+// than disappearing from the page.
+const EmptyTableCard = ({ title }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-10">
+            <div className="p-5 border-b border-slate-200 bg-slate-100"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
+            <EmptyState message={t('No data for the selected filters.')} />
+        </div>
+    );
+};
+
 export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
     const { t, i18n } = useTranslation();
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const tableRef = useRef(null);
-    if (!data || data.length === 0) return null;
+    if (!data || data.length === 0) return <EmptyTableCard title={title} />;
     return (
-        <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
-            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
+        <div ref={tableRef} className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-10 relative">
+            <div className="absolute top-3 end-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
+            <div className="p-5 border-b border-slate-200 bg-slate-100 flex justify-between items-center pe-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs text-slate-700 ">
                         <tr>
-                            <th className={`px-5 py-4 border-b border-black font-extrabold border-l border-black ${isAr ? 'text-right' : 'text-start'}`}>{t(locationLabel)}</th>
-                            <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-sky-50">{t('Total Completed Visits')}</th>
-                            <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-sky-50">{t('Visits per HW')}</th>
-                            <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center">{t('Total HWs Visited')}</th>
-                            <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-emerald-50">{t('Total Cases Observed')}</th>
-                            <th className="px-5 py-4 border-b border-black font-extrabold text-center bg-emerald-50">{t('Cases per Visit')}</th>
+                            <th className="sticky-col bg-slate-200 px-3 sm:px-5 py-4 border-b border-slate-200 font-extrabold border-e text-start">{t(locationLabel)}</th>
+                            <th className="px-5 py-4 border-b border-slate-200 font-extrabold border-e border-slate-200 text-center bg-sky-50">{t('Total Completed Visits')}</th>
+                            <th className="px-5 py-4 border-b border-slate-200 font-extrabold border-e border-slate-200 text-center bg-sky-50">{t('Visits per HW')}</th>
+                            <th className="px-5 py-4 border-b border-slate-200 font-extrabold border-e border-slate-200 text-center">{t('Total HWs Visited')}</th>
+                            <th className="px-5 py-4 border-b border-slate-200 font-extrabold border-e border-slate-200 text-center bg-emerald-50">{t('Total Cases Observed')}</th>
+                            <th className="px-5 py-4 border-b border-slate-200 font-extrabold text-center bg-emerald-50">{t('Cases per Visit')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1340,12 +1421,12 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
                             const visitsPerHw = row.totalHealthWorkers > 0 ? (row.totalVisits / row.totalHealthWorkers).toFixed(1) : '0';
                             const casesPerVisit = row.totalVisits > 0 ? (row.totalCasesObserved / row.totalVisits).toFixed(1) : '0';
                             return (
-                                <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                    <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{row.stateName}</td>
-                                    <td className="px-5 py-3 border-l border-black text-center font-bold text-sky-800 bg-sky-50/50" dir="ltr">{row.totalVisits}</td>
-                                    <td className="px-5 py-3 border-l border-black text-center text-slate-600 bg-sky-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{visitsPerHw}</span>{renderTrendArrows(visitsPerHw, 'visits', t)}</div></td>
-                                    <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">{row.totalHealthWorkers}</td>
-                                    <td className="px-5 py-3 border-l border-black text-center font-bold text-emerald-800 bg-emerald-50/50" dir="ltr">{row.totalCasesObserved}</td>
+                                <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-slate-200">
+                                    <td className="sticky-col bg-white px-3 sm:px-5 py-3 border-e border-slate-200 font-bold text-slate-800 text-start">{row.stateName}</td>
+                                    <td className="px-5 py-3 border-e border-slate-200 text-center font-bold text-sky-800 bg-sky-50/50" dir="ltr">{row.totalVisits}</td>
+                                    <td className="px-5 py-3 border-e border-slate-200 text-center text-slate-600 bg-sky-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{visitsPerHw}</span>{renderTrendArrows(visitsPerHw, 'visits', t)}</div></td>
+                                    <td className="px-5 py-3 border-e border-slate-200 text-center font-bold text-slate-700" dir="ltr">{row.totalHealthWorkers}</td>
+                                    <td className="px-5 py-3 border-e border-slate-200 text-center font-bold text-emerald-800 bg-emerald-50/50" dir="ltr">{row.totalCasesObserved}</td>
                                     <td className="px-5 py-3 text-center text-slate-600 bg-emerald-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{casesPerVisit}</span>{renderTrendArrows(casesPerVisit, 'cases', t)}</div></td>
                                 </tr>
                             );
@@ -1362,26 +1443,26 @@ export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWork
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
     const isAr = language === 'ar';
     const tableRef = useRef(null);
-    if (!overallKpis || !kpisByWorkerType || kpisByWorkerType.length === 0) return null;
+    if (!overallKpis || !kpisByWorkerType || kpisByWorkerType.length === 0) return <EmptyTableCard title={title} />;
     return (
-        <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
-            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
+        <div ref={tableRef} className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-10 relative">
+            <div className="absolute top-3 end-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
+            <div className="p-5 border-b border-slate-200 bg-slate-100 flex justify-between items-center pe-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs text-slate-700 ">
                         <tr>
-                            <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold min-w-[200px] ${isAr ? 'text-right' : 'text-start'}`}>{t('KPI Name')}</th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-100 whitespace-nowrap">{t('Overall Score')}</th>
-                            {kpisByWorkerType.map(group => (<th key={group.workerType} className="px-5 py-4 border-b border-l border-black font-extrabold text-center whitespace-nowrap">{t(group.workerType)}</th>))}
+                            <th className="sticky-col bg-slate-200 px-3 sm:px-5 py-4 border-b border-e border-slate-200 font-extrabold min-w-[140px] sm:min-w-[200px] text-start">{t('KPI Name')}</th>
+                            <th className="px-5 py-4 border-b border-slate-200 border-e border-slate-200 font-extrabold text-center bg-sky-100 whitespace-nowrap">{t('Overall Score')}</th>
+                            {kpisByWorkerType.map(group => (<th key={group.workerType} className="px-5 py-4 border-b border-e border-slate-200 font-extrabold text-center whitespace-nowrap">{t(group.workerType)}</th>))}
                         </tr>
                     </thead>
                     <tbody>
                         {kpiDefinitions.map((kpi, idx) => (
-                            <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{t(kpi.label)}</td>
-                                <td className="px-5 py-3 border-l border-black text-center bg-sky-50/50"><ScoreText value={kpi.getValue(overallKpis)} /></td>
-                                {kpisByWorkerType.map(group => (<td key={group.workerType} className="px-5 py-3 border-l border-black text-center"><ScoreText value={kpi.getValue(group.kpis)} /></td>))}
+                            <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-slate-200">
+                                <td className="sticky-col bg-white px-3 sm:px-5 py-3 border-e border-slate-200 font-bold text-slate-800 text-start">{t(kpi.label)}</td>
+                                <td className="px-5 py-3 border-e border-slate-200 text-center bg-sky-50/50"><ScoreText value={kpi.getValue(overallKpis)} /></td>
+                                {kpisByWorkerType.map(group => (<td key={group.workerType} className="px-5 py-3 border-e border-slate-200 text-center"><ScoreText value={kpi.getValue(group.kpis)} /></td>))}
                             </tr>
                         ))}
                     </tbody>
@@ -1493,10 +1574,10 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
         }).sort((a, b) => a.mentorName.localeCompare(b.mentorName));
     }, [submissions, visitReports, activeService]);
 
-    if (!data || data.length === 0) return null;
+    if (!data || data.length === 0) return <EmptyTableCard title={title} />;
 
     const renderModalContent = () => {
-        if (!modalConfig.data || modalConfig.data.length === 0) return <div className="p-4 text-center">{t('No data available')}</div>;
+        if (!modalConfig.data || modalConfig.data.length === 0) return <EmptyState message={t('No data available')} />;
 
         if (modalConfig.type === 'healthWorkers') {
             return (
@@ -1557,7 +1638,7 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                         {modalConfig.data.map((item, idx) => (
                             <tr key={idx} className="hover:bg-slate-50 border-b border-slate-200">
                                 <td className="p-2 border-l border-r border-slate-300">{item.facility}</td>
-                                <td className="p-2 border-l border-r border-slate-300">{modalConfig.type === 'cases' ? item.staff : item.motherName || 'N/A'}</td>
+                                <td className="p-2 border-l border-r border-slate-300">{modalConfig.type === 'cases' ? item.staff : item.motherName || '—'}</td>
                                 <td className="p-2 border-l border-r border-slate-300" dir="ltr">{item.date || item.sessionDate}</td>
                                 <td className="p-2 border-l border-r border-slate-300 text-center">
                                     <button 
@@ -1610,41 +1691,41 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
     };
 
     return (
-        <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
-            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
+        <div ref={tableRef} className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-10 relative">
+            <div className="absolute top-3 end-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
+            <div className="p-5 border-b border-slate-200 bg-slate-100 flex justify-between items-center pe-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs text-slate-700 ">
                         <tr>
-                            <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Mentor Name')}</th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-teal-50">{t('Facility Updates')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Forms Saved')}</div></th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Health Workers')}</th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-50">{t('Total Visits')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Visits per HW')}</div></th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Total Cases')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Cases per Visit')}</div></th>
-                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-emerald-50">{t('Mother Forms')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Forms per Visit')}</div></th>
-                            <th className="px-5 py-4 border-b border-black font-extrabold text-center bg-purple-50">{t('Visit Reports')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('% of Completed Visits')}</div></th>
+                            <th className="sticky-col bg-slate-200 px-3 sm:px-5 py-4 border-b border-e border-slate-200 font-extrabold text-start">{t('Mentor Name')}</th>
+                            <th className="px-5 py-4 border-b border-slate-200 border-e border-slate-200 font-extrabold text-center bg-teal-50">{t('Facility Updates')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Forms Saved')}</div></th>
+                            <th className="px-5 py-4 border-b border-slate-200 border-e border-slate-200 font-extrabold text-center">{t('Health Workers')}</th>
+                            <th className="px-5 py-4 border-b border-slate-200 border-e border-slate-200 font-extrabold text-center bg-sky-50">{t('Total Visits')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Visits per HW')}</div></th>
+                            <th className="px-5 py-4 border-b border-slate-200 border-e border-slate-200 font-extrabold text-center">{t('Total Cases')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Cases per Visit')}</div></th>
+                            <th className="px-5 py-4 border-b border-slate-200 border-e border-slate-200 font-extrabold text-center bg-emerald-50">{t('Mother Forms')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('Forms per Visit')}</div></th>
+                            <th className="px-5 py-4 border-b border-slate-200 font-extrabold text-center bg-purple-50">{t('Visit Reports')}<div className="text-xs text-slate-500 normal-case mt-1 tracking-normal">{t('% of Completed Visits')}</div></th>
                         </tr>
                     </thead>
                     <tbody>
                         {data.map((row, idx) => (
-                            <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{row.mentorName}</td>
+                            <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-slate-200">
+                                <td className="sticky-col bg-white px-3 sm:px-5 py-3 border-e border-slate-200 font-bold text-slate-800 text-start">{row.mentorName}</td>
                                 
-                                <td className="px-5 py-3 border-l border-black text-center bg-teal-50/50" dir="ltr">
+                                <td className="px-5 py-3 border-e border-slate-200 text-center bg-teal-50/50" dir="ltr">
                                     <div className="font-bold text-teal-800 text-base">
                                         {row.facilityUpdatesCount}
                                     </div>
-                                    <div className="text-xs text-slate-500 font-semibold">{row.uniqueFacilitiesCount} {t('facilities')}</div>
+                                    <div className="text-xs text-slate-500 font-semibold" dir="auto">{t('{{count}} facilities', { count: row.uniqueFacilitiesCount })}</div>
                                 </td>
 
-                                <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">
+                                <td className="px-5 py-3 border-e border-slate-200 text-center font-bold text-slate-700" dir="ltr">
                                     {row.hwCount > 0 ? (
                                         <button onClick={() => handleCellClick(row.mentorName, 'healthWorkers', row.hwList, 'Health Workers')} className="hover:underline text-sky-700 hover:text-sky-900 transition-colors">{row.hwCount}</button>
                                     ) : row.hwCount}
                                 </td>
                                 
-                                <td className="px-5 py-3 border-l border-black text-center bg-sky-50/50" dir="ltr">
+                                <td className="px-5 py-3 border-e border-slate-200 text-center bg-sky-50/50" dir="ltr">
                                     <div className="font-bold text-sky-800 text-base">
                                         {row.visitCount > 0 ? (
                                             <button onClick={() => handleCellClick(row.mentorName, 'visits', row.visitsList, 'Total Visits')} className="hover:underline text-sky-700 hover:text-sky-900 transition-colors">{row.visitCount}</button>
@@ -1653,7 +1734,7 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                                     <div className="text-xs text-slate-500 font-semibold">{row.visitsPerHw} {t('visits/hw')}</div>
                                 </td>
                                 
-                                <td className="px-5 py-3 border-l border-black text-center" dir="ltr">
+                                <td className="px-5 py-3 border-e border-slate-200 text-center" dir="ltr">
                                     <div className="font-bold text-slate-700 text-base">
                                         {row.casesCount > 0 ? (
                                             <button onClick={() => handleCellClick(row.mentorName, 'cases', row.casesList, 'Total Cases')} className="hover:underline text-sky-700 hover:text-sky-900 transition-colors">{row.casesCount}</button>
@@ -1662,7 +1743,7 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                                     <div className="text-xs text-slate-500 font-semibold">{row.casesPerVisit} {t('cases/visit')}</div>
                                 </td>
                                 
-                                <td className="px-5 py-3 border-l border-black text-center bg-emerald-50/50" dir="ltr">
+                                <td className="px-5 py-3 border-e border-slate-200 text-center bg-emerald-50/50" dir="ltr">
                                     <div className="font-bold text-emerald-800 text-base">
                                         {row.mothersCount > 0 ? (
                                             <button onClick={() => handleCellClick(row.mentorName, 'mothers', row.mothersList, 'Mother Forms')} className="hover:underline text-emerald-700 hover:text-emerald-900 transition-colors">{row.mothersCount}</button>
@@ -1677,7 +1758,7 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                                             <button onClick={() => handleCellClick(row.mentorName, 'reports', row.reportsList, 'Visit Reports')} className="hover:underline text-purple-700 hover:text-purple-900 transition-colors">{row.reportsCount}</button>
                                         ) : row.reportsCount}
                                     </div>
-                                    <div className={`text-xs font-bold ${row.reportCompliance >= 100 ? 'text-emerald-600' : 'text-rose-600'}`}>{row.reportCompliance}% {t('submitted')}</div>
+                                    <div className={`text-xs font-bold ${row.reportCompliance >= 100 ? 'text-emerald-600' : 'text-red-600'}`}>{row.reportCompliance}% {t('submitted')}</div>
                                 </td>
                             </tr>
                         ))}

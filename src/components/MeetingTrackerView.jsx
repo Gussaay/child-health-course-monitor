@@ -7,7 +7,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { amiriFontBase64 } from './AmiriFont.js';
 
-import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, PageTabs } from './CommonComponents';
+import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, PageTabs, PageSkeleton } from './CommonComponents';
 import { upsertUnitMeeting, deleteUnitMeeting } from '../data';
 import { useDataCache } from '../DataContext';
 import { promptDialog } from './dialogs';
@@ -129,7 +129,7 @@ export default function MeetingTrackerView({ permissions }) {
         });
     };
 
-    if (isLoading.unitMeetings) return <Spinner />;
+    if (isLoading.unitMeetings) return <PageSkeleton />;
 
     return (
         <div className="space-y-6">

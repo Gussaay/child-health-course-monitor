@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, Timestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { listSnapshotsForFacility, fetchFacilitiesHistoryMultiDate } from "../data.js"; 
-import { Modal, Spinner, EmptyState, Select, Table, Button, Card, PageHeader, FormGroup, Input } from './CommonComponents';
+import { Modal, Spinner, EmptyState, Select, Table, Button, Card, PageHeader, FormGroup, Input, SkeletonTable } from './CommonComponents';
 import { STATE_LOCALITIES } from './constants';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -184,7 +184,7 @@ const FacilityHistoryView = ({ isOpen, onClose, facility }) => {
     }, [snapshots]);
 
     const renderContent = () => {
-        if (isLoading) return <div className="flex justify-center p-8"><Spinner /></div>;
+        if (isLoading) return <SkeletonTable />;
         if (error) return <div className="p-4 text-red-600 bg-red-50 text-center">{t('facilities_page.history.load_failed', 'Failed to load history: {{message}}', { message: error })}</div>;
         if (snapshots.length === 0) return <div className="p-8"><EmptyState message={t('facilities_page.history.no_snapshots', 'No historical snapshots found for this facility.')} /></div>;
 

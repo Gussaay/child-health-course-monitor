@@ -7,6 +7,9 @@ import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
     LineElement, BarElement, Title, Tooltip, Legend, Filler
 } from 'chart.js';
+import '../chartSetup';
+import { wrapNarrowLabel, ChartEmpty } from './MentorshipDashboardShared';
+import { EmptyState } from '../CommonComponents';
 
 ChartJS.register(
     CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler
@@ -64,28 +67,28 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
         animation: { duration: 1000, easing: 'easeOutQuart' },
         plugins: { 
             legend: { display: false },
-            tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif" }, bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' }, padding: 10, cornerRadius: 8 }
+            tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13 }, bodyFont: { size: 12, weight: 'bold' }, padding: 10, cornerRadius: 8 }
         },
         scales: {
-            x: { reverse: isAr, beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } },
-            y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { color: '#334155', font: { size: 11, family: "'Inter', sans-serif", weight: 'bold' } } }
+            x: { reverse: isAr, beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, color: '#475569', font: { weight: '500' } } },
+            y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { callback: wrapNarrowLabel, color: '#334155', font: { size: 11, weight: 'bold' } } }
         }
     };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" ref={cardRef}>
-            <div className="bg-white p-6 rounded-2xl shadow-md border border-black flex flex-col relative h-full">
-                <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-                <div className="flex justify-between items-center mb-5 pb-3 border-b border-black pr-10">
+            <div className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col relative h-full">
+                <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
+                <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-200 pe-10">
                     <h4 className={`text-base font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{resolveTitle(t, title)}</h4>
                 </div>
                 <div className="space-y-3 flex-grow">
                     {details.map((d, i) => (
-                        <div key={i} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-black shadow-sm group hover:border-sky-500 hover:bg-sky-50 transition-all duration-200">
+                        <div key={i} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-200 shadow-sm group hover:border-sky-500 hover:bg-sky-50 transition-all duration-200">
                             <h5 className={`text-xs font-bold text-slate-700 ${isAr ? 'text-right pl-4' : 'text-start pr-4'} group-hover:text-sky-800`}>{t(d.label)}</h5>
                             <div className="flex items-center gap-3" dir="ltr">
-                                <span className="text-xs font-extrabold text-slate-500 bg-white px-2 py-1 rounded border border-black">{t('Count')}: {d.count}</span>
-                                <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black min-w-[60px] text-center" title={t("% of Total Training Sessions")}>
+                                <span className="text-xs font-extrabold text-slate-500 bg-white px-2 py-1 rounded border border-slate-200">{t('Count')}: {d.count}</span>
+                                <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-200 min-w-[60px] text-center" title={t("% of Total Training Sessions")}>
                                     <ScoreText value={d.pct / 100} showPercentage={true} />
                                 </div>
                             </div>
@@ -94,7 +97,7 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
                 </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl shadow-md border border-black flex flex-col h-full min-h-[300px] relative">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 flex flex-col h-full min-h-[300px] relative">
                 <h4 className="text-sm font-extrabold text-slate-800 mb-4 text-center tracking-wide">{resolveTitle(t, title)} ({t('Count')})</h4>
                 <div className="relative flex-grow w-full" dir="ltr">
                     {details.some(d => d.count > 0) ? <Bar options={options} data={chartData} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs">{t('No training data recorded.')}</div>}
@@ -120,8 +123,9 @@ const InfoKpiTrendCard = ({
             data: lineData,
             borderColor: color,
             backgroundColor: color + '26',
-            fill: true,
-            tension: 0.4,
+            fill: false,
+            tension: 0.3,
+            cubicInterpolationMode: 'monotone',
             pointRadius: 4,
             pointHoverRadius: 6,
             pointBackgroundColor: '#ffffff',
@@ -139,8 +143,8 @@ const InfoKpiTrendCard = ({
             legend: { display: false }, 
             tooltip: { 
                 backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, 
-                bodyFont: { size: 12, family: "'Inter', sans-serif" }, 
+                titleFont: { size: 13, weight: 'bold' }, 
+                bodyFont: { size: 12 }, 
                 padding: 12, cornerRadius: 8, boxPadding: 6,
                 callbacks: { label: (context) => ` ${context.dataset.label}: ${context.raw}%` } 
             } 
@@ -149,18 +153,18 @@ const InfoKpiTrendCard = ({
             y: { 
                 beginAtZero: true, max: 100, 
                 grid: { color: '#e2e8f0', drawBorder: false },
-                ticks: { stepSize: 20, callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' } }
+                ticks: { stepSize: 20, callback: (value) => `${value}%`, color: '#475569', font: { size: 11, weight: '600' } }
             }, 
             x: { 
-                reverse: isAr, grid: { display: false },
-                ticks: { color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' } }
+                reverse: isAr, offset: true, grid: { display: false },
+                ticks: { maxRotation: 0, callback: wrapNarrowLabel, color: '#475569', font: { size: 11, weight: '600' } }
             } 
         }
     };
 
     return (
-        <div ref={cardRef} className="bg-white p-2 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
+        <div ref={cardRef} className="bg-white p-2 sm:p-6 rounded-xl border border-slate-200 h-full flex flex-col relative">
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-2 sm:mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
             
             <div className="flex justify-between items-center gap-1 sm:gap-4 mb-6 px-1 sm:px-6">
@@ -177,7 +181,7 @@ const InfoKpiTrendCard = ({
                 <div className="flex flex-col items-center">
                     <span className="text-xs font-bold text-slate-500 mb-1">{t('Average')}</span>
                     <div className="border border-slate-800 bg-white rounded-xl px-3 sm:px-10 py-2 sm:py-3 shadow-sm flex flex-col items-center justify-center">
-                        <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-rose-700'}`}>
+                        <span className={`font-extrabold text-xl sm:text-2xl ${avgValue >= 80 ? 'text-emerald-700' : avgValue >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                             {avgValue !== null && avgValue !== undefined && !isNaN(avgValue) ? `${Math.round(avgValue)}%` : '-'}
                         </span>
                         {totalNumerator !== undefined && totalDenominator !== undefined && totalDenominator > 0 && (
@@ -203,7 +207,7 @@ const InfoKpiTrendCard = ({
                 {lineLabels.length > 0 ? (
                     <Line options={options} data={chartData} />
                 ) : (
-                    <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs">{t('No data available.')}</div>
+                    <ChartEmpty />
                 )}
             </div>
         </div>
@@ -232,7 +236,7 @@ const VisitReportDashboardTab = ({
     // State for filtering problems by their status
     const [statusFilter, setStatusFilter] = useState('All');
 
-    if (!visitReportStats) return null;
+    if (!visitReportStats) return <EmptyState message={t('No data for the selected filters.')} />;
 
     const rawReports = visitReportStats.rawReports;
     const isIMNCI = activeService === 'IMNCI';
@@ -539,9 +543,9 @@ const VisitReportDashboardTab = ({
                 <KpiBarChart title={`${t('Total Visits by')} ${t(geographicLevelName)}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
             </div>
 
-            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                <div className={`p-5 border-b border-black bg-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isAr ? 'text-right' : 'text-start'}`}>
-                    <h4 className="text-lg font-extrabold text-slate-800 flex items-center gap-3">
+            <div className="mb-8 bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 text-start">
+                    <h4 className="text-base sm:text-lg font-extrabold text-slate-800 flex items-center gap-3">
                         {t('Facility Problems & Solutions (Combined)')}
                         <span className="bg-white text-sky-700 text-sm font-bold px-2.5 py-0.5 rounded-full border border-slate-300 shadow-sm">
                             {filteredTotalProblems}
@@ -561,44 +565,82 @@ const VisitReportDashboardTab = ({
                         </select>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
+                {/* Phones: one card per problem, grouped by place. */}
+                <div className="md:hidden">
+                    {filteredTotalProblems === 0 && <EmptyState filtered message={t('No problems match the selected filter.')} />}
+                    {Object.keys(filteredGroupedProblems).sort().map(locName => {
+                        const problems = filteredGroupedProblems[locName];
+                        return (
+                            <div key={locName} className="border-b border-slate-200 last:border-b-0">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-sm font-bold text-slate-800">
+                                    <span className="min-w-0 flex-1">{locName}</span>
+                                    <span className="shrink-0 rounded-full bg-white border border-slate-200 px-2 text-xs leading-5 text-slate-600">{problems.length}</span>
+                                </div>
+                                {problems.map((item, idx) => (
+                                    <article key={`${locName}-${idx}`} className="px-4 py-3 space-y-2 border-t border-slate-100">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <p className="min-w-0 text-xs text-slate-500">
+                                                {dynamicLocationLevel !== 'Facility' && <>{item.facility} · <bdi dir="ltr" className="whitespace-nowrap">{item.date}</bdi></>}
+                                            </p>
+                                            <div className="shrink-0 w-36">{renderStatusCell(item.status, item.reportId, item.challengeId, 'status')}</div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-semibold text-red-600">{t('Problem / Challenge')}</p>
+                                            <p className="text-sm text-slate-800 whitespace-pre-wrap">{item.problem}</p>
+                                        </div>
+                                        {item.solution && (
+                                            <div>
+                                                <p className="text-xs font-semibold text-emerald-700">{t('Implemented Solution')}</p>
+                                                <p className="text-sm text-slate-800 whitespace-pre-wrap">{item.solution}</p>
+                                            </div>
+                                        )}
+                                        {item.person && (
+                                            <p className="text-xs text-slate-500">{t('Responsible Person')}: <span className="font-semibold text-slate-700">{item.person}</span></p>
+                                        )}
+                                    </article>
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
-                        <thead className="bg-slate-200 text-xs text-slate-700 sticky top-0 z-10 shadow-sm border-b border-black">
+                        <thead className="bg-slate-200 text-xs text-slate-700 sticky top-0 z-10 shadow-sm border-b border-slate-200">
                             <tr>
-                                <th className={`px-4 py-4 border-black ${isAr ? 'border-l text-right' : 'border-r text-start'} w-[15%]`}>{t(dynamicLocationLabel)}</th>
-                                <th className={`px-4 py-4 border-black ${isAr ? 'border-l text-right' : 'border-r text-start'} w-[30%]`}>{t('Problem / Challenge')}</th>
-                                <th className={`px-4 py-4 border-black ${isAr ? 'border-l text-right' : 'border-r text-start'} w-[30%]`}>{t('Implemented Solution')}</th>
-                                <th className={`px-4 py-4 border-black ${isAr ? 'border-l' : 'border-r'} w-[15%] text-center`}>{t('Status')}</th>
+                                <th className={`px-4 py-4 border-slate-200 ${isAr ? 'border-l text-right' : 'border-r text-start'} w-[15%]`}>{t(dynamicLocationLabel)}</th>
+                                <th className={`px-4 py-4 border-slate-200 ${isAr ? 'border-l text-right' : 'border-r text-start'} w-[30%]`}>{t('Problem / Challenge')}</th>
+                                <th className={`px-4 py-4 border-slate-200 ${isAr ? 'border-l text-right' : 'border-r text-start'} w-[30%]`}>{t('Implemented Solution')}</th>
+                                <th className={`px-4 py-4 border-slate-200 ${isAr ? 'border-l' : 'border-r'} w-[15%] text-center`}>{t('Status')}</th>
                                 <th className="px-4 py-4 w-[10%] text-center">{t('Responsible Person')}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredTotalProblems === 0 && (
-                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">{t('No problems match the selected filter.')}</td></tr>
+                                <EmptyState asRow colSpan={5} filtered message={t('No problems match the selected filter.')} />
                             )}
                             {Object.keys(filteredGroupedProblems).sort().map(locName => {
                                 const problems = filteredGroupedProblems[locName];
                                 return problems.map((item, idx) => (
-                                    <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                    <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-slate-200">
                                         {idx === 0 && (
-                                            <td rowSpan={problems.length} className={`px-4 py-3 border-black ${isAr ? 'border-l' : 'border-r'} align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black`}>
+                                            <td rowSpan={problems.length} className={`px-4 py-3 border-slate-200 ${isAr ? 'border-l' : 'border-r'} align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-slate-200`}>
                                                 {locName}
                                             </td>
                                         )}
-                                        <td className={`px-4 py-3 border-black ${isAr ? 'border-l text-right' : 'border-r text-start'} align-top text-xs text-rose-700 whitespace-pre-wrap font-medium`}>
+                                        <td className={`px-4 py-3 border-slate-200 ${isAr ? 'border-l text-right' : 'border-r text-start'} align-top text-sm text-slate-800 whitespace-pre-wrap`}>
                                             {item.problem}
                                             {dynamicLocationLevel !== 'Facility' && (
-                                                <div className="mt-2 text-xs text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300" dir="ltr">
-                                                    {item.facility} - {item.date}
+                                                <div className="mt-2 text-xs text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300">
+                                                    {item.facility} · <bdi dir="ltr" className="whitespace-nowrap">{item.date}</bdi>
                                                 </div>
                                             )}
                                         </td>
                                         
-                                        <td className={`px-4 py-3 border-black ${isAr ? 'border-l text-right' : 'border-r text-start'} align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium`}>
+                                        <td className={`px-4 py-3 border-slate-200 ${isAr ? 'border-l text-right' : 'border-r text-start'} align-top text-sm text-slate-800 whitespace-pre-wrap`}>
                                             {item.solution}
                                         </td>
 
-                                        <td className={`px-4 py-3 border-black ${isAr ? 'border-l' : 'border-r'} align-top text-center`}>
+                                        <td className={`px-4 py-3 border-slate-200 ${isAr ? 'border-l' : 'border-r'} align-top text-center`}>
                                             {renderStatusCell(item.status, item.reportId, item.challengeId, 'status')}
                                         </td>
 

@@ -3059,7 +3059,7 @@ export async function getIMNCIProtocols(sourceOptions = {}) {
 // --- SUPERVISION ASSESSMENTS ---
 //
 // One document per facility assessment. The checklist itself is code
-// (SUPERVISION_CHECKLISTS in SupervisionView.jsx), not data: a checklist is a
+// (SUPERVISION_CHECKLISTS in supervision/checklists.js), not data: a checklist is a
 // published national form, and versioning it in the repo means an assessment
 // can always be read back against the form it was filled on.
 // ============================================================================

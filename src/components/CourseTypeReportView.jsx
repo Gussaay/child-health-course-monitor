@@ -10,6 +10,7 @@ import { Bar } from 'react-chartjs-2';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 } from 'chart.js';
+import { CHART_COLORS } from './chartSetup';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { RefreshCw } from 'lucide-react';
 
@@ -306,16 +307,16 @@ export default function CourseTypeReportView({
     const groupChart = {
         labels: groups,
         datasets: [
-            { label: t('reports_views.course_type.chart.total_cases', 'Total Cases'), data: groups.map((g) => groupPerformance[g].totalCases), backgroundColor: '#3b82f6' },
-            { label: t('reports_views.course_type.chart.total_correct_cases', 'Total Correct Cases'), data: groups.map((g) => groupPerformance[g].correctCases), backgroundColor: '#10b981' },
+            { label: t('reports_views.course_type.chart.total_cases', 'Total Cases'), data: groups.map((g) => groupPerformance[g].totalCases), backgroundColor: CHART_COLORS[0] },
+            { label: t('reports_views.course_type.chart.total_correct_cases', 'Total Correct Cases'), data: groups.map((g) => groupPerformance[g].correctCases), backgroundColor: CHART_COLORS[1] },
         ],
     };
     const dayTotal = (day, key) => groups.reduce((s, g) => s + (dailyPerformance[day]?.[g]?.[key] || 0), 0);
     const dailyChart = {
         labels: days,
         datasets: [
-            { label: t('reports_views.course_type.chart.total_cases', 'Total Cases'), data: days.map((d) => dayTotal(d, 'cases')), backgroundColor: '#3b82f6' },
-            { label: t('reports_views.course_type.chart.total_correct_cases', 'Total Correct Cases'), data: days.map((d) => dayTotal(d, 'correctCases')), backgroundColor: '#10b981' },
+            { label: t('reports_views.course_type.chart.total_cases', 'Total Cases'), data: days.map((d) => dayTotal(d, 'cases')), backgroundColor: CHART_COLORS[0] },
+            { label: t('reports_views.course_type.chart.total_correct_cases', 'Total Correct Cases'), data: days.map((d) => dayTotal(d, 'correctCases')), backgroundColor: CHART_COLORS[1] },
         ],
     };
     const activeBreakdown = breakdowns[breakdownKey] || [];
@@ -323,9 +324,9 @@ export default function CourseTypeReportView({
     const breakdownChart = {
         labels: activeBreakdown.map((r) => r.key),
         datasets: [
-            { label: t('reports_views.course_type.chart.avg_pre', 'Avg. Pre-Test %'), data: activeBreakdown.map((r) => r.avgPre ?? 0), backgroundColor: '#6366f1' },
-            { label: t('reports_views.course_type.chart.avg_post', 'Avg. Post-Test %'), data: activeBreakdown.map((r) => r.avgPost ?? 0), backgroundColor: '#10b981' },
-            { label: t('reports_views.course_type.chart.skill_correctness', 'Skill Correctness %'), data: activeBreakdown.map((r) => r.skillPct ?? 0), backgroundColor: '#f59e0b' },
+            { label: t('reports_views.course_type.chart.avg_pre', 'Avg. Pre-Test %'), data: activeBreakdown.map((r) => r.avgPre ?? 0), backgroundColor: CHART_COLORS[3] },
+            { label: t('reports_views.course_type.chart.avg_post', 'Avg. Post-Test %'), data: activeBreakdown.map((r) => r.avgPost ?? 0), backgroundColor: CHART_COLORS[1] },
+            { label: t('reports_views.course_type.chart.skill_correctness', 'Skill Correctness %'), data: activeBreakdown.map((r) => r.skillPct ?? 0), backgroundColor: CHART_COLORS[2] },
         ],
     };
 

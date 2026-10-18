@@ -3,10 +3,10 @@ import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
-import './chartSetup'; // registers the scales and elements these charts use
+import { CHART_COLORS } from './chartSetup'; // also registers the scales and elements these charts use
 import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Button, Card, EmptyState, FormGroup, Input, PageHeader, Select, Spinner, Table, Textarea, Modal, CardBody, CardHeader, PageTabs, PageActions, FormActions } from './CommonComponents';
+import { Button, Card, EmptyState, FormGroup, Input, PageHeader, Select, Spinner, Table, Textarea, Modal, CardBody, CardHeader, PageTabs, PageActions, FormActions, SkeletonTable, SkeletonCard } from './CommonComponents';
 import {
     listAllCourses,
     upsertFacilitator,
@@ -135,7 +135,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={t('facilitators_page.link_modal.title', 'Manage Public Submission Link')}>
-            {isLoading ? <Spinner /> : (
+            {isLoading ? <SkeletonTable /> : (
                 <>
                     <div>
                         <FormGroup label={t('facilitators_page.link_modal.public_url', 'Public URL')}>
@@ -980,7 +980,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                         )}
 
                         {activeTab === 'pending' && permissions.canApproveSubmissions && (
-                            isSubmissionsLoading ? <Spinner /> : (
+                            isSubmissionsLoading ? <SkeletonTable /> : (
                                 <Table cardsOnPhone headers={[t('facilitators_page.common.name', 'Name'), t('facilitators_page.common.phone', 'Phone'), t('facilitators_page.common.state', 'State'), t('facilitators_page.list.submitted_at', 'Submitted At'), t('facilitators_page.common.actions', 'Actions')]}>
                                     {displayPendingSubmissions.length > 0 ? (
                                         displayPendingSubmissions.map(sub => (
@@ -1303,7 +1303,7 @@ export function FacilitatorApplicationForm() {
         }
     };
 
-    if (isLoadingStatus) return <Card><Spinner /></Card>;
+    if (isLoadingStatus) return <SkeletonCard />;
     if (!isLinkActive) return <Card><PageHeader title={t('facilitators_page.application.title', 'Facilitator Application')} /><EmptyState message={t('facilitators_page.application.closed', 'Submissions for new facilitators are currently closed.')} /></Card>;
     
     if (submitted) {
@@ -1412,16 +1412,15 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack, isShare
         const finalCombinedChartData = {
             labels: Object.keys(summary),
             datasets: [
-                { label: t('facilitators_page.report.courses_instructed', 'Courses Instructed'), data: Object.values(summary).map(s => s.instructed), backgroundColor: 'rgba(54, 162, 235, 0.6)' },
-                { label: t('facilitators_page.report.courses_directed', 'Courses Directed'), data: Object.values(summary).map(s => s.directed), backgroundColor: 'rgba(255, 99, 132, 0.6)' },
+                { label: t('facilitators_page.report.courses_instructed', 'Courses Instructed'), data: Object.values(summary).map(s => s.instructed), backgroundColor: CHART_COLORS[0] },
+                { label: t('facilitators_page.report.courses_directed', 'Courses Directed'), data: Object.values(summary).map(s => s.directed), backgroundColor: CHART_COLORS[3] },
             ],
         };
         
         let finalImciSubcourseData = null;
         if (Object.keys(imciCounts).length > 0) {
             const backgroundColors = IMNCI_SUBCOURSE_TYPES.map((_, index) => {
-                const colors = ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)'];
-                return colors[index % colors.length];
+                return CHART_COLORS[index % CHART_COLORS.length];
             });
 
             finalImciSubcourseData = {

@@ -30,7 +30,7 @@ import {
     uploadFile 
 
 } from '../data';
-import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeader, EmptyState, FormGroup, CardBody, CardFooter, PdfIcon, PageTabs, FilterPanel, PageActions, FormActions } from './CommonComponents';
+import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeader, EmptyState, FormGroup, CardBody, CardFooter, PdfIcon, PageTabs, FilterPanel, PageActions, FormActions, SkeletonTable, SkeletonCard } from './CommonComponents';
 import { STATE_LOCALITIES } from './constants';
 import { auth, db } from '../firebase'; 
 import { onAuthStateChanged } from 'firebase/auth';
@@ -50,6 +50,7 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl, publicCurrentUrl } from '../utils/publicLink';
+import { useLeaveGuard } from '../utils/leaveGuard';
 import { useRememberedState } from '../utils/rememberedState';
 
 // Standard job titles for normalization
@@ -525,7 +526,7 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
     const headers = [t('program_teams.pending.name', 'Name'), t('program_teams.pending.email', 'Email'), t('program_teams.common.actions', 'Actions')];
     
     // We intentionally don't show the spinner if there's already data so optimistic updates don't flicker the screen
-    if (isLoading && (!submissions || submissions.length === 0)) return <Card><Spinner /></Card>;
+    if (isLoading && (!submissions || submissions.length === 0)) return <SkeletonCard />;
     
     return (
         <Card>
@@ -580,7 +581,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={t('program_teams.links.modal_title', 'Manage Team Member Submission Link')}>
-            {isLoading ? <Spinner /> : ( 
+            {isLoading ? <SkeletonTable /> : ( 
                 <div className="space-y-4"> 
                     <div className="space-y-4 mb-4">
                         <p className="text-sm text-gray-600">{t('program_teams.links.description', 'Share these links to direct users to a specific application form.')}</p>
@@ -2531,7 +2532,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                             </div>
                         )}
 
-                        {currentLevelData.loading ? <Spinner /> : (
+                        {currentLevelData.loading ? <SkeletonTable /> : (
                             <Table cardsOnPhone headers={tableHeaders[filters.level]}>
                                 {filteredMembers.length > 0 ? filteredMembers.map(c => {
                                     let locAr = c.locality;
@@ -2706,6 +2707,7 @@ export function TeamMemberApplicationForm() {
     const [feedbackModal, setFeedbackModal] = useState({ isOpen: false, type: 'success', message: '' });
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    useLeaveGuard(!submitted);
     const [isLinkActive, setIsLinkActive] = useState(false);
     const [isLoadingStatus, setIsLoadingStatus] = useState(true);
     const [isUpdate, setIsUpdate] = useState(false);
@@ -2934,7 +2936,7 @@ export function TeamMemberApplicationForm() {
         }
     };
 
-    if (isLoadingStatus) return <Card><CardBody><div className="flex justify-center p-8"><Spinner /></div></CardBody></Card>;
+    if (isLoadingStatus) return <SkeletonCard />;
     
     if (!isLinkActive) {
         return (

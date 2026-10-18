@@ -1,6 +1,6 @@
 // MentorshipDashboard.jsx
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { Spinner, Modal, IS_NATIVE, PageTabs } from '../CommonComponents'; 
+import { Spinner, IS_NATIVE, PageTabs, FilterPanel } from '../CommonComponents'; 
 import { 
     FilterSelect, 
     CopyImageButton, 
@@ -87,8 +87,6 @@ const MentorshipDashboard = ({
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     
-    // Controls the Mobile Filter Modal
-    const [isMobileFilterModalOpen, setIsMobileFilterModalOpen] = useState(false);
 
     const formatDateForInput = (dateValue) => {
         if (!dateValue) return '';
@@ -164,7 +162,7 @@ const MentorshipDashboard = ({
 
         if (canEditStatus) {
             return (
-                <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-xs font-bold border border-black rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${isResolvedOrDone ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
+                <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-xs font-bold border border-slate-200 rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${isResolvedOrDone ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
                     <option value="Pending">{t('mentorship_extra.dashboard.status.pending', 'Pending')}</option>
                     <option value="In Progress">{t('mentorship_extra.dashboard.status.in_progress', 'In Progress')}</option>
                     <option value="Resolved/Done">{t('mentorship_extra.dashboard.status.resolved_done', 'Resolved / Done')}</option>
@@ -172,7 +170,7 @@ const MentorshipDashboard = ({
             );
         } else {
             return (
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold tracking-wide shadow-sm border border-black ${isResolvedOrDone ? 'bg-emerald-50 text-emerald-700' : displayStatus === 'In Progress' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold tracking-wide shadow-sm border border-slate-200 ${isResolvedOrDone ? 'bg-emerald-50 text-emerald-700' : displayStatus === 'In Progress' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
                     {displayStatus === 'Resolved/Done' ? t('mentorship_extra.dashboard.status.resolved_done', 'Resolved / Done') : displayStatus === 'Pending' ? t('mentorship_extra.dashboard.status.pending', 'Pending') : displayStatus === 'In Progress' ? t('mentorship_extra.dashboard.status.in_progress', 'In Progress') : displayStatus}
                 </span>
             );
@@ -895,8 +893,8 @@ const MentorshipDashboard = ({
     ];
 
     const FilterControls = (
-        <div className="flex flex-row flex-wrap gap-4 w-full">
-            <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+        <div className="grid grid-cols-2 gap-3 md:flex md:flex-row md:flex-wrap md:gap-4 w-full">
+            <div className="min-w-0 md:flex-1 md:min-w-[150px]">
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 ">{t('Start Date') || 'Start Date'}</label>
                 <input 
                     type="date" 
@@ -905,7 +903,7 @@ const MentorshipDashboard = ({
                     className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customStartDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}
                 />
             </div>
-            <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+            <div className="min-w-0 md:flex-1 md:min-w-[150px]">
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 ">{t('End Date') || 'End Date'}</label>
                 <input 
                     type="date" 
@@ -915,7 +913,7 @@ const MentorshipDashboard = ({
                 />
             </div>
 
-            <div className="w-full sm:w-auto sm:flex-1 min-w-[150px]">
+            <div className="min-w-0 md:flex-1 md:min-w-[150px]">
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 ">{t('filter.date')}</label>
                 <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800'}`}>
                     <option value="">{t('filter.all.time')}</option>
@@ -935,9 +933,13 @@ const MentorshipDashboard = ({
             <FilterSelect label={t('filter.facility')} value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption={t('filter.all.facilities')} />
             <FilterSelect label={t('filter.project')} value={activeProject} onChange={(v) => { onProjectChange(v); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={projectOptions} defaultOption={t('filter.all.projects')} />
             <FilterSelect label={t('filter.job_title')} value={activeWorkerType || ""} onChange={(v) => { if(onWorkerTypeChange) onWorkerTypeChange(v); onWorkerNameChange(""); }} options={workerTypeOptions || []} defaultOption={t('filter.all.titles')} />
-            <FilterSelect label={t('filter.worker_name')} value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption={t('filter.all.workers')} />
+            <div className="col-span-2 md:contents"><FilterSelect label={t('filter.worker_name')} value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption={t('filter.all.workers')} /></div>
         </div>
     );
+
+    const clearAllFilters = () => {
+        onStateChange(""); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); if (onWorkerTypeChange) onWorkerTypeChange(""); setCustomStartDate(""); setCustomEndDate(""); onDateFilterChange("");
+    };
 
     const activeFilterCount = [
         activeState, 
@@ -995,30 +997,18 @@ const MentorshipDashboard = ({
                 <PageTabs className="md:hidden" tabs={dashboardTabs} active={activeTab} onChange={setActiveTabFunc} />
             )}
 
-            {/* 2. RESPONSIVE FILTERS */}
-            {/* Mobile Filter Button */}
-            <div className="flex md:hidden mb-3">
-                <button 
-                    onClick={() => setIsMobileFilterModalOpen(true)}
-                    className="w-full bg-white border border-slate-200 hover:border-sky-500 text-slate-700 py-2 px-3 text-sm rounded-xl shadow-sm flex items-center justify-between font-bold transition-all"
-                >
-                    <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-                        {t('Filters')}
-                    </div>
-                    {activeFilterCount > 0 && (
-                        <span className="bg-sky-600 text-white text-xs px-2.5 py-0.5 rounded-full">
-                            {activeFilterCount}
-                        </span>
-                    )}
-                </button>
-            </div>
-
-            {/* Desktop Inline Filters */}
-            <div className="hidden md:flex flex-row flex-wrap gap-4 mb-8 p-5 bg-white rounded-2xl shadow-sm border border-slate-200">
+            {/* 2. FILTERS: one "Filters (n)" row that opens the panel on phones, always open on wider screens */}
+            <FilterPanel activeCount={activeFilterCount} className="mb-3 md:mb-8">
                 {FilterControls}
-            </div>
-            
+                {activeFilterCount > 0 && (
+                    <div className="mt-3 flex justify-end">
+                        <button type="button" onClick={clearAllFilters} className="px-3 py-1.5 text-sm font-bold text-sky-700 hover:bg-sky-50 rounded-lg">
+                            {t('Clear All')}
+                        </button>
+                    </div>
+                )}
+            </FilterPanel>
+
             {/* 3. TABS (desktop copy; phones get theirs above the filters button) */}
             {dashboardTabs && (
                 <PageTabs className="hidden md:block md:!mb-8" tabs={dashboardTabs} active={activeTab} onChange={setActiveTabFunc} />
@@ -1095,35 +1085,6 @@ const MentorshipDashboard = ({
                 )}
             </div>
 
-            {/* Mobile Filter Modal */}
-            {isMobileFilterModalOpen && (
-                <Modal 
-                    isOpen={isMobileFilterModalOpen} 
-                    onClose={() => setIsMobileFilterModalOpen(false)} 
-                    title={t('Dashboard Filters')}
-                    size="md"
-                >
-                    <div className="p-4 bg-slate-50 min-h-[50vh] max-h-[75vh] overflow-y-auto">
-                        {FilterControls}
-                    </div>
-                    <div className="p-4 bg-white border-t border-slate-200 flex justify-end gap-3 sticky bottom-0">
-                         <button 
-                            onClick={() => {
-                                onStateChange(""); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); if(onWorkerTypeChange) onWorkerTypeChange(""); setCustomStartDate(""); setCustomEndDate(""); onDateFilterChange("");
-                            }}
-                            className="px-4 py-2 text-slate-600 font-bold text-sm"
-                        >
-                            {t('Clear All')}
-                        </button>
-                        <button 
-                            onClick={() => setIsMobileFilterModalOpen(false)}
-                            className="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-bold text-sm shadow-sm"
-                        >
-                            {t('Apply Filters')}
-                        </button>
-                    </div>
-                </Modal>
-            )}
         </div>
     );
 };

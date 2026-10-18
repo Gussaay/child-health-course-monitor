@@ -3,6 +3,7 @@ import React, { useRef, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KpiCard, VolumeLineChart, GeographicVolumeTable, MentorPerformanceTable } from './MentorshipDashboardShared';
 import { notify } from '../dialogs';
+import { EmptyState } from '../CommonComponents';
 
 /* ============================================================================
    HEALTH WORKER VISITS & INTERVALS
@@ -565,13 +566,22 @@ const HealthWorkerVisitsTable = ({
         URL.revokeObjectURL(url);
     };
 
-    if (!allRows.length) return null;
+    if (!allRows.length) {
+        return (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-10">
+                <div className="p-5 border-b border-slate-200 bg-slate-100">
+                    <h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4>
+                </div>
+                <EmptyState message={t('No data for the selected filters.')} />
+            </div>
+        );
+    }
 
-    const thBase = 'px-4 py-3 border-b border-black border-l border-black font-extrabold text-center whitespace-nowrap';
+    const thBase = 'px-4 py-3 border-b border-slate-200 border-e border-slate-200 font-extrabold text-center whitespace-nowrap';
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10">
-            <div className="p-5 border-b border-black bg-slate-100">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-10">
+            <div className="p-5 border-b border-slate-200 bg-slate-100">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div>
                         <h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4>
@@ -640,12 +650,12 @@ const HealthWorkerVisitsTable = ({
                 <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs text-slate-700 ">
                         <tr>
-                            <th className={thBase}>#</th>
-                            <th className={`px-4 py-3 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Health Worker')}</th>
-                            <th className={`px-4 py-3 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Job Title')}</th>
-                            <th className={`px-4 py-3 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Facility')}</th>
-                            <th className={`px-4 py-3 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Locality')}</th>
-                            <th className={`px-4 py-3 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Supervisor')}</th>
+                            <th className={`${thBase} hidden sm:table-cell`}>#</th>
+                            <th className="sticky-col bg-slate-200 px-3 sm:px-4 py-3 border-b border-e border-slate-200 font-extrabold text-start">{t('Health Worker')}</th>
+                            <th className={`px-4 py-3 border-b border-slate-200 border-e border-slate-200 font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Job Title')}</th>
+                            <th className={`px-4 py-3 border-b border-slate-200 border-e border-slate-200 font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Facility')}</th>
+                            <th className={`px-4 py-3 border-b border-slate-200 border-e border-slate-200 font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Locality')}</th>
+                            <th className={`px-4 py-3 border-b border-slate-200 border-e border-slate-200 font-extrabold ${isAr ? 'text-right' : 'text-start'}`}>{t('Supervisor')}</th>
                             <th className={`${thBase} bg-sky-50`}>{t('Number of Visits')}</th>
                             <th className={`${thBase}`}>{t('First Visit')}</th>
                             <th className={`${thBase}`}>{t('Last Visit')}</th>
@@ -662,19 +672,19 @@ const HealthWorkerVisitsTable = ({
                     <tbody>
                         {rows.length === 0 ? (
                             <tr>
-                                <td colSpan={11} className="px-5 py-8 text-center text-slate-500 font-semibold">
-                                    {t('No health workers match the selected filter.')}
+                                <td colSpan={11} className="p-0">
+                                    <EmptyState filtered message={t('No health workers match the selected filter.')} />
                                 </td>
                             </tr>
                         ) : rows.map((row, idx) => (
-                            <tr key={row.key} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                <td className="px-4 py-3 border-l border-black text-center text-slate-500" dir="ltr">{idx + 1}</td>
-                                <td className={`px-4 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-start'}`}>{row.staff}</td>
-                                <td className={`px-4 py-3 border-l border-black text-slate-600 ${isAr ? 'text-right' : 'text-start'}`}>{t(row.workerType)}</td>
-                                <td className={`px-4 py-3 border-l border-black text-slate-700 ${isAr ? 'text-right' : 'text-start'}`}>{row.facility}</td>
-                                <td className={`px-4 py-3 border-l border-black text-slate-600 ${isAr ? 'text-right' : 'text-start'}`}>{row.locality}</td>
-                                <td className={`px-4 py-3 border-l border-black text-slate-600 ${isAr ? 'text-right' : 'text-start'}`}>{row.mentors}</td>
-                                <td className="px-4 py-3 border-l border-black text-center bg-sky-50/50" dir="ltr">
+                            <tr key={row.key} className="hover:bg-sky-50 transition-colors border-b border-slate-200">
+                                <td className="hidden sm:table-cell px-4 py-3 border-e border-slate-200 text-center text-slate-500" dir="ltr">{idx + 1}</td>
+                                <td className="sticky-col bg-white px-3 sm:px-4 py-3 border-e border-slate-200 font-bold text-slate-800 text-start min-w-[120px]">{row.staff}</td>
+                                <td className={`px-4 py-3 border-e border-slate-200 text-slate-600 ${isAr ? 'text-right' : 'text-start'}`}>{t(row.workerType)}</td>
+                                <td className={`px-4 py-3 border-e border-slate-200 text-slate-700 ${isAr ? 'text-right' : 'text-start'}`}>{row.facility}</td>
+                                <td className={`px-4 py-3 border-e border-slate-200 text-slate-600 ${isAr ? 'text-right' : 'text-start'}`}>{row.locality}</td>
+                                <td className={`px-4 py-3 border-e border-slate-200 text-slate-600 ${isAr ? 'text-right' : 'text-start'}`}>{row.mentors}</td>
+                                <td className="px-4 py-3 border-e border-slate-200 text-center bg-sky-50/50" dir="ltr">
                                     <span className={`inline-flex items-center justify-center min-w-[28px] px-2 py-1 rounded-full font-extrabold text-xs ${row.visitCount >= 4 ? 'bg-emerald-100 text-emerald-800' : row.visitCount >= 2 ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'}`}>
                                         {row.visitCount}
                                     </span>
@@ -682,9 +692,9 @@ const HealthWorkerVisitsTable = ({
                                         <div className="text-xs text-slate-500 mt-1">#{row.visitNumbers.join(', ')}</div>
                                     )}
                                 </td>
-                                <td className="px-4 py-3 border-l border-black text-center text-slate-600 whitespace-nowrap" dir="ltr">{fmtDate(row.firstDate)}</td>
-                                <td className="px-4 py-3 border-l border-black text-center text-slate-600 whitespace-nowrap" dir="ltr">{fmtDate(row.lastDate)}</td>
-                                <td className="px-4 py-3 border-l border-black text-center font-bold bg-emerald-50/50" dir="ltr">
+                                <td className="px-4 py-3 border-e border-slate-200 text-center text-slate-600 whitespace-nowrap" dir="ltr">{fmtDate(row.firstDate)}</td>
+                                <td className="px-4 py-3 border-e border-slate-200 text-center text-slate-600 whitespace-nowrap" dir="ltr">{fmtDate(row.lastDate)}</td>
+                                <td className="px-4 py-3 border-e border-slate-200 text-center font-bold bg-emerald-50/50" dir="ltr">
                                     {row.spanV1V4 == null
                                         ? <span className="text-slate-400 font-normal">—</span>
                                         : <span className="text-emerald-800">{row.spanV1V4}</span>}
@@ -700,7 +710,7 @@ const HealthWorkerVisitsTable = ({
                 </table>
             </div>
 
-            <div className="px-5 py-3 bg-slate-50 border-t border-black text-xs text-slate-500">
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
                 {t('Showing')} <b>{rows.length}</b> {t('of')} <b>{allRows.length}</b> {t('health workers')}. {t('A visit is counted once per visit number; workers with fewer than 4 visits show “—” for the Visit 1 → Visit 4 duration.')}
             </div>
         </div>
@@ -776,12 +786,12 @@ const AdminDashboardTab = ({
                 <KpiCard 
                     title="Visit Reports" 
                     value={visitReportStats?.totalVisits || 0} 
-                    unit={overallKpis?.totalVisits > 0 ? `(${Math.round(((visitReportStats?.totalVisits || 0) / overallKpis.totalVisits) * 100)}% ${t('of Target:')} ${overallKpis.totalVisits})` : `(${t('Target:')} 0)`}
+                    unit={overallKpis?.totalVisits > 0 ? t('({{percent}}% of target: {{target}})', { percent: Math.round(((visitReportStats?.totalVisits || 0) / overallKpis.totalVisits) * 100), target: overallKpis.totalVisits }) : t('(target: {{target}})', { target: 0 })}
                 />
                 <KpiCard 
                     title="Mother Forms" 
                     value={motherKpis?.totalMothers || 0} 
-                    unit={overallKpis?.totalVisits > 0 ? `(${Math.round(((motherKpis?.totalMothers || 0) / (overallKpis.totalVisits * 3)) * 100)}% ${t('of Target:')} ${overallKpis.totalVisits * 3})` : `(${t('Target:')} 0)`}
+                    unit={overallKpis?.totalVisits > 0 ? t('({{percent}}% of target: {{target}})', { percent: Math.round(((motherKpis?.totalMothers || 0) / (overallKpis.totalVisits * 3)) * 100), target: overallKpis.totalVisits * 3 }) : t('(target: {{target}})', { target: 0 })}
                 />
             </div>
 
@@ -790,7 +800,7 @@ const AdminDashboardTab = ({
             </div>
             
             <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-                {t('Program Performance by')} {t(geographicLevelName)} {scopeTitle}
+                {t('Program Performance by')} {t(geographicLevelName)} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
             </h3>
             <GeographicVolumeTable 
                 title={t('mentorship_extra.admin_dashboard.volume_by', 'Volume & Coverage by {{level}}', { level: t(geographicLevelName) })} 
@@ -801,7 +811,7 @@ const AdminDashboardTab = ({
             {/* MENTOR PERFORMANCE TABLE WITH COPY FUNCTION */}
             <div className={`flex flex-col sm:flex-row sm:items-center justify-between mb-5 mt-10 gap-4 ${isAr ? 'text-right' : 'text-start'}`}>
                 <h3 className="text-xl font-extrabold text-slate-800 tracking-wide m-0">
-                    {t('Mentor Performance & Compliance')} {scopeTitle}
+                    {t('Mentor Performance & Compliance')} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
                 </h3>
                 <button 
                     onClick={handleCopyTable}
@@ -825,7 +835,7 @@ const AdminDashboardTab = ({
 
             {/* MENTORED HEALTH WORKERS: VISIT COUNTS & INTERVALS */}
             <h3 className={`text-xl font-extrabold text-slate-800 mb-5 mt-10 tracking-wide ${isAr ? 'text-right' : 'text-start'}`}>
-                {t('Mentored Health Workers - Visits & Intervals')} {scopeTitle}
+                {t('Mentored Health Workers - Visits & Intervals')} <span className="block mt-1 text-sm font-semibold text-slate-500 tracking-normal"><bdi>{scopeTitle}</bdi></span>
             </h3>
             <HealthWorkerVisitsTable 
                 submissions={filteredSubmissions}

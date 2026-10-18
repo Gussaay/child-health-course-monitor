@@ -703,7 +703,7 @@ export function PublicParticipantRegistrationView({ courseId }) {
             .finally(() => setLoading(false));
     }, [courseId]);
 
-    if (loading) return <div className="flex justify-center p-10"><Spinner /></div>;
+    if (loading) return <PageSkeleton />;
     if (error) return <EmptyState message={error} />;
     if (!course) return <EmptyState message={t('course_page.registration.course_unavailable', 'Course data unavailable')} />;
 

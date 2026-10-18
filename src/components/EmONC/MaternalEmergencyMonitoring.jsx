@@ -1,9 +1,10 @@
 // src/components/EmONC/MaternalEmergencyMonitoring.jsx
 import React, { useState, useEffect } from 'react';
-import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, Spinner } from "../CommonComponents";
+import { Card, PageHeader, Button, Select, FormGroup, Input, Modal, Table, SkeletonCard } from "../CommonComponents";
 import { listObservationsForParticipant, listCasesForParticipant, upsertCaseAndObservations, deleteCaseAndObservations } from '../../data.js';
 import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING, MATERNAL_CHECKLIST_GROUPS, groupChecklists, participantsForModule, calcPct, fmtPct, pctBgClass } from '../constants.js';
 import { notify, confirmDialog } from '../dialogs';
+import { useLeaveGuard } from '../../utils/leaveGuard';
 import { useTranslation } from 'react-i18next';
 
 const generateHash = (buffer) => Object.keys(buffer).sort().map(k => `${k}:${buffer[k]}`).join('|');
@@ -536,6 +537,7 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
     const [showSetupModal, setShowSetupModal] = useState(true);
     const [showGrid, setShowGrid] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    useLeaveGuard(showGrid && !showSuccessModal);
     const [expandedDomains, setExpandedDomains] = useState(new Set());
 
     useEffect(() => {
@@ -807,7 +809,7 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                 </Card>
             )}
 
-            {loading ? <Card><Spinner /></Card> : (
+            {loading ? <SkeletonCard /> : (
                 <SubmittedMaternalCases cases={cases} observations={observations} onEditCase={handleEditCase} onDeleteCase={handleDeleteCase} />
             )}
         </div>

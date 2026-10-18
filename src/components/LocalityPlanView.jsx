@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import jsPDF from "jspdf";
 import html2canvas from 'html2canvas';
 import { amiriFontBase64 } from './AmiriFont.js'; 
-import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner, PageTabs, FilterPanel } from './CommonComponents';
+import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner, PageTabs, FilterPanel, PageSkeleton } from './CommonComponents';
 import { useTranslation } from 'react-i18next';
 import { upsertMasterPlan, deleteMasterPlan } from '../data';
 import { useDataCache } from '../DataContext';
@@ -15,6 +15,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { notify, confirmDialog } from './dialogs';
 import { useRememberedState } from '../utils/rememberedState';
+import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 2 + i);
@@ -175,6 +176,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         notify('The dashboard PDF export is not available in this build.', 'error');
     };
     const [currentPlan, setCurrentPlan] = useState(null);
+    useLeaveGuard(Boolean(isEditing && currentPlan));
     const [expandedPlanId, setExpandedPlanId] = useState(null);
 
     useEffect(() => {
@@ -606,7 +608,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         setCurrentPlan({ ...currentPlan, interventions: updated });
     };
 
-    if (isLoading.masterPlans) return <Spinner />;
+    if (isLoading.masterPlans) return <PageSkeleton />;
 
     const inputClass = "w-full h-full min-h-[48px] px-2 py-2 outline-none text-right text-xs sm:text-sm bg-transparent focus:bg-white focus:ring-2 focus:ring-teal-500 rounded transition-all";
     const numInputClass = "w-full h-full min-h-[48px] px-1 py-2 outline-none text-center font-bold text-sm sm:text-base bg-transparent focus:bg-white focus:ring-2 focus:ring-teal-500 rounded transition-all";
@@ -627,7 +629,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                         </p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <Button variant="secondary" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 sm:flex-none justify-center h-12">
+                        <Button variant="secondary" onClick={() => leaveForm(() => setIsEditing(false))} disabled={isSaving} className="flex-1 sm:flex-none justify-center h-12">
                             <X size={18} className="ms-1"/> إغلاق
                         </Button>
                         <Button variant="primary" onClick={handleSaveMaster} disabled={isSaving} className="flex-1 sm:flex-none justify-center h-12">

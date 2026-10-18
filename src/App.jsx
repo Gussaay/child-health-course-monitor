@@ -19,6 +19,7 @@ import { computeCoverage, computeHomeStats, levelFromPermissions } from './utils
 import { OWN_KEYS, describePage, pagePath, pageFromLocation, settlePage, isNewEntry, isTransientPage } from './utils/pageAddress';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import { runInPageBack } from './utils/inPageBack';
+import { isFormGuarded, onGuardChange, setLeaveConfirmer } from './utils/leaveGuard';
 import { clearRememberedFilters } from './utils/rememberedState';
 import { usePushNotifications, usePushEvents } from './hooks/usePushNotifications';
 
@@ -297,7 +298,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                         <div className="flex space-x-2">
                             <Button variant="secondary" onClick={onClose}>{t('app_extra.buttons.cancel', 'Cancel')}</Button>
                             <Button onClick={handleSave} disabled={isSaving}>
-                                {isSaving ? <Spinner /> : t('app_extra.buttons.save_changes', 'Save Changes')}
+                                {isSaving ? <Spinner size="sm" /> : t('app_extra.buttons.save_changes', 'Save Changes')}
                             </Button>
                         </div>
                     </div>
@@ -1525,6 +1526,53 @@ export default function App() {
     // =========================================================================
     useEffect(() => {
         let isMounted = true;
+        // Set once the live listener below has applied a server-confirmed
+        // profile; nothing slower may then clear the role it set.
+        let lastAppliedProfile = null;
+
+        // A profile is only believable when it names a role. The FCM token
+        // save is a setDoc(users/{uid}, { fcmToken }, { merge: true }); when
+        // this device has no copy of the profile cached (a fresh sign-in, a
+        // cleared cache), that write leaves a local document holding nothing
+        // but the token. Reading it back while the server was out of reach
+        // defaulted the role to 'user', and a super user saw a standard view.
+        const hasRole = (data) => !!(data && (data.role || data.Role || (Array.isArray(data.roles) && data.roles.length > 0)));
+
+        // Applies a profile document to state and refreshes the local backup.
+        const applyProfile = (data, fromCache) => {
+            const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
+            const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+            const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
+
+            const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
+            // A profile created by the Cloud Function starts with an empty
+            // permissions map, so fall back to the role's defaults.
+            const storedPerms = data.permissions && Object.keys(data.permissions).length > 0
+                ? data.permissions
+                : (DEFAULT_ROLE_PERMISSIONS[newRole] || DEFAULT_ROLE_PERMISSIONS.user);
+            const newPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...storedPerms });
+
+            const newStates = data.assignedState ? [data.assignedState] : [];
+            const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
+
+            if (!fromCache) {
+                try {
+                    localStorage.setItem(`backup_role_${user.uid}`, newRole);
+                    localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
+                    localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
+                    localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
+                    localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
+                } catch (e) {
+                    console.warn('[backup] could not save profile locally:', e?.message);
+                }
+            }
+
+            setUserRole(newRole);
+            setUserRoles(newRoles);
+            setUserPermissions(newPermissionsData);
+            setUserStates(newStates);
+            setUserLocalities(newLocalities);
+        };
 
         const checkUserRoleAndPermissions = async () => {
             if (!user) {
@@ -1536,42 +1584,6 @@ export default function App() {
 
             setPermissionsLoading(true);
             setPermissionsError(false);
-
-            // Applies a profile document to state and refreshes the local backup.
-            const applyProfile = (data, fromCache) => {
-                const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
-                const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
-                const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
-
-                const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-                // A profile created by the Cloud Function starts with an empty
-                // permissions map, so fall back to the role's defaults.
-                const storedPerms = data.permissions && Object.keys(data.permissions).length > 0
-                    ? data.permissions
-                    : (DEFAULT_ROLE_PERMISSIONS[newRole] || DEFAULT_ROLE_PERMISSIONS.user);
-                const newPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...storedPerms });
-
-                const newStates = data.assignedState ? [data.assignedState] : [];
-                const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
-
-                if (!fromCache) {
-                    try {
-                        localStorage.setItem(`backup_role_${user.uid}`, newRole);
-                        localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
-                        localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
-                        localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
-                        localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
-                    } catch (e) {
-                        console.warn('[backup] could not save profile locally:', e?.message);
-                    }
-                }
-
-                setUserRole(newRole);
-                setUserRoles(newRoles);
-                setUserPermissions(newPermissionsData);
-                setUserStates(newStates);
-                setUserLocalities(newLocalities);
-            };
 
             // Polls for the profile the createUserProfile trigger is writing.
             // Returns its data, or null if it has not appeared in time.
@@ -1654,7 +1666,19 @@ export default function App() {
                 if (!isMounted) return;
 
                 if (userSnap && userSnap.exists()) {
-                    applyProfile(userSnap.data(), userSnap.metadata?.fromCache);
+                    const fromCache = !readFromServer || !!userSnap.metadata?.fromCache;
+                    if (!hasRole(userSnap.data())) {
+                        // Keep whatever is showing; the live listener below
+                        // applies the real profile as soon as the server answers.
+                        console.warn("Profile read has no role (partial local copy). Keeping the current role.");
+                        if (!backupRole && !lastAppliedProfile) setPermissionsError(true);
+                    } else if (fromCache && backupRole) {
+                        // The saved backup came from the server; the cached copy
+                        // is never newer than it, because every server snapshot
+                        // refreshes the backup. Don't let a cache read change it.
+                    } else {
+                        applyProfile(userSnap.data(), fromCache);
+                    }
                 } else if (userSnap && !userSnap.exists()) {
                     // --- GUARD AGAINST SILENT DEMOTION ---
                     // A "missing" profile is only believable if the server said so.
@@ -1682,7 +1706,7 @@ export default function App() {
 
                     if (profile) {
                         applyProfile(profile);
-                    } else {
+                    } else if (!lastAppliedProfile) {
                         console.warn("Profile has not appeared yet. Not assuming a role.");
                         setUserRole(null); setUserRoles([]); setUserPermissions({});
                         setUserStates([]); setUserLocalities([]);
@@ -1691,7 +1715,7 @@ export default function App() {
                 }
             } catch (error) {
                 console.warn("Role fetch completely failed after retries:", error);
-                if (isMounted && !backupRole) {
+                if (isMounted && !backupRole && !lastAppliedProfile) {
                     // Previously this granted the 'user' role, so a failed read
                     // looked identical to a real demotion and the person saw their
                     // level silently drop. A failed read is not evidence of a role.
@@ -1712,7 +1736,24 @@ export default function App() {
 
         checkUserRoleAndPermissions();
 
-        return () => { isMounted = false; };
+        // Live, server-confirmed profile. Repairs a role that could not be read
+        // at sign-in or after a reload (flaky network, slow start), and applies
+        // a role an administrator changes without needing a restart. Cache-only
+        // snapshots are ignored, so a stale or partial local copy never demotes.
+        const unsubscribeProfile = user ? onSnapshot(doc(db, "users", user.uid), (snap) => {
+            if (!isMounted || snap.metadata.fromCache || snap.metadata.hasPendingWrites) return;
+            if (!snap.exists()) return;
+            const data = snap.data();
+            if (!hasRole(data)) return;
+            const key = JSON.stringify([data.role, data.Role, data.roles, data.permissions, data.assignedState, data.assignedLocality]);
+            if (key === lastAppliedProfile) return;
+            lastAppliedProfile = key;
+            applyProfile(data, false);
+            setPermissionsError(false);
+            setPermissionsLoading(false);
+        }, (err) => console.warn('[profile] live listener stopped:', err?.message)) : null;
+
+        return () => { isMounted = false; if (unsubscribeProfile) unsubscribeProfile(); };
     }, [user]);
 
     useEffect(() => { if (!user) { initialViewIsSet.current = false; setPageRestored(false); hasWrittenPageRef.current = false; } }, [user]);
@@ -2029,8 +2070,9 @@ export default function App() {
     const formPageKeyRef = useRef(null);
     formPageKeyRef.current = formPageKey;
     useEffect(() => { formDirtyRef.current = false; }, [formPageKey]);
+    useEffect(() => onGuardChange(() => { formDirtyRef.current = false; }), []);
     useEffect(() => {
-        const mark = (e) => { if (formPageKeyRef.current && e.target?.closest?.('main')) formDirtyRef.current = true; };
+        const mark = (e) => { if ((formPageKeyRef.current || isFormGuarded()) && e.target?.closest?.('main')) formDirtyRef.current = true; };
         const warn = (e) => { if (formDirtyRef.current) { e.preventDefault(); e.returnValue = ''; } };
         document.addEventListener('input', mark, true);
         document.addEventListener('change', mark, true);
@@ -2054,6 +2096,7 @@ export default function App() {
         return leave;
     }, [t]);
     confirmLeaveRef.current = confirmLeave;
+    setLeaveConfirmer(confirmLeave);
     const guardedNavigate = useCallback((newView, state) => {
         if (!formDirtyRef.current) return navigate(newView, state);
         confirmLeave().then((leave) => { if (leave) navigate(newView, state); });
@@ -2372,7 +2415,7 @@ export default function App() {
 
         switch (viewToRender) {
             case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={homeStats} />;
-            case 'admin': return <AdminDashboard />;
+            case 'admin': return <AdminDashboard appRoles={userRoles} />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
                 return permissions.canViewCourse ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><IMNCIRecordingForm permissions={permissions} /></ImnciProvider></Suspense> ) : null;
@@ -3286,7 +3329,7 @@ case 'meetings':
                                         });
                                     }}
                                 >
-                                    {isSyncing ? <Spinner /> : t('app_extra.buttons.force_sync', 'Force Sync Now')}
+                                    {isSyncing ? <Spinner size="sm" /> : t('app_extra.buttons.force_sync', 'Force Sync Now')}
                                 </Button>
                             </div>
                         </div>

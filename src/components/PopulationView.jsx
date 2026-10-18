@@ -29,8 +29,7 @@ import {
 } from 'lucide-react';
 
 import {
-    Card, CardBody, Button, Table, EmptyState, Spinner, Modal, Input, Select,
-} from './CommonComponents';
+    Card, CardBody, Button, Table, EmptyState, Spinner, Modal, Input, Select, SkeletonTable, PageSkeleton } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
 import {
     STATE_LOCALITIES, canonicalState, canonicalLocality, TOTAL_ROW_PATTERN,
@@ -1197,7 +1196,7 @@ export default function PopulationManagementView({ permissions = {} }) {
 
             <Card>
                 <CardBody>
-                    {population.isLoading ? <Spinner /> : (
+                    {population.isLoading ? <SkeletonTable /> : (
                         <Table headers={headers}>
                             {visible.length === 0 ? (
                                 <EmptyState
@@ -1297,7 +1296,7 @@ export function PopulationDashboard() {
         [byState]
     );
 
-    if (population.isLoading) return <Spinner />;
+    if (population.isLoading) return <PageSkeleton />;
 
     if (!hasData) {
         return (

@@ -23,8 +23,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import {
-    Card, PageHeader, Button, FormGroup, Input, Select, EmptyState, Spinner, Modal,
-} from './CommonComponents';
+    Card, PageHeader, Button, FormGroup, Input, Select, EmptyState, Spinner, Modal, SkeletonCard } from './CommonComponents';
 import {
     getMentorshipSubType, getCourseMentorshipService,
     getScenariosForService, getServiceScenarioById, checkEtatScenario,
@@ -1364,7 +1363,7 @@ export function MentorshipMonitoringView({
                 Delete buttons — are left off and only the form is shown. The
                 records are still loaded, because the serial numbering needs them. */}
             {!isPublicView && (loading
-                ? <Card><Spinner /></Card>
+                ? <SkeletonCard />
                 : <SavedPracticeSessions
                     cases={cases}
                     observations={observations}

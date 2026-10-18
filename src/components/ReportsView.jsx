@@ -7,8 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import {
-    Card, PageHeader, Button, FormGroup, Select, Table, EmptyState, Spinner, PdfIcon
-} from "./CommonComponents";
+    Card, PageHeader, Button, FormGroup, Select, Table, EmptyState, Spinner, PdfIcon, PageSkeleton } from "./CommonComponents";
 import {
     SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAINS_BREATHING, EENC_DOMAINS_NOT_BREATHING,
     EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING,
@@ -193,7 +192,7 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
         fetchData();
     }, [course?.id, course?.course_type, propAllObs, propAllCases, propAllTests]);
 
-    if (loading) { return <Card><Spinner /></Card>; }
+    if (loading) { return <PageSkeleton />; }
 
     // A mentorship sub-course reports on its own skill set, not the course type's.
     const StandardReportComponent = hasMentorshipForm(course)

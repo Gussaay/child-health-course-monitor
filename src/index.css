@@ -215,3 +215,16 @@ html, body, #root {
     align-items: center;
   }
 }
+
+/* First column of a wide table that stays in view while the rest scrolls
+   sideways. The thin line on its inner edge replaces the cell border, which
+   scrolls away with the table. */
+.sticky-col {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  box-shadow: inset -1px 0 0 #e2e8f0;
+}
+[dir="rtl"] .sticky-col {
+  box-shadow: inset 1px 0 0 #e2e8f0;
+}

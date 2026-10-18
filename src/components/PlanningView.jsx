@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { amiriFontBase64 } from './AmiriFont.js'; 
-import { Card, CardBody, Button, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, Modal, PageTabs } from './CommonComponents';
+import { Card, CardBody, Button, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner, Modal, PageTabs, PageSkeleton } from './CommonComponents';
 import { useTranslation } from 'react-i18next';
 import { upsertMasterPlan, deleteMasterPlan, upsertOperationalPlan, deleteOperationalPlan } from '../data';
 import { useDataCache } from '../DataContext';
@@ -16,6 +16,7 @@ import {
 import { notify, confirmDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
+import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
 
 // Population targets are the denominators the plans are measured against, so
 // they are maintained here rather than in a screen of their own. Lazy because
@@ -502,6 +503,7 @@ export default function PlanningView({ permissions = {} }) {
 
     const [currentPlan, setCurrentPlan] = useState(null);
     const [currentOpPlan, setCurrentOpPlan] = useState(null);
+    useLeaveGuard(Boolean((isEditingMatrix && currentPlan) || ((isEditingOpPlan || isEditingTracking) && currentOpPlan)));
 
     useEffect(() => {
         fetchMasterPlans();
@@ -1417,7 +1419,7 @@ export default function PlanningView({ permissions = {} }) {
                                 <Share2 size={14} className="ms-1" /> مشاركة
                             </Button>
                         )}
-                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingMatrix(false)}><X size={16} className="ms-1"/> إغلاق</Button>
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => leaveForm(() => setIsEditingMatrix(false))}><X size={16} className="ms-1"/> إغلاق</Button>
                         <Button className="flex-1 sm:flex-none" onClick={handleSaveMasterPlan}><Save size={16} className="ms-1"/> حفظ المصفوفة</Button>
                     </div>
                 </div>
@@ -1721,7 +1723,7 @@ export default function PlanningView({ permissions = {} }) {
                             <Upload size={14} className="ms-1" /> رفع Excel
                             <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleOpPlanUpload} />
                         </label>
-                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingOpPlan(false)}><X size={16} className="ms-1"/> إغلاق</Button>
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => leaveForm(() => setIsEditingOpPlan(false))}><X size={16} className="ms-1"/> إغلاق</Button>
                         <Button className="flex-1 sm:flex-none" onClick={handleSaveOpPlan}><Save size={16} className="ms-1"/> حفظ الخطة</Button>
                     </div>
                 </div>
@@ -2002,7 +2004,7 @@ export default function PlanningView({ permissions = {} }) {
                         <p className="text-xs sm:text-sm text-gray-500 mt-1">{currentOpPlan.periodName} - عام {currentOpPlan.year} (خطة قومية)</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingTracking(false)}><X size={16} className="ms-1"/> إغلاق</Button>
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => leaveForm(() => setIsEditingTracking(false))}><X size={16} className="ms-1"/> إغلاق</Button>
                         <Button variant="success" className="flex-1 sm:flex-none" onClick={handleSaveTracking}><Save size={16} className="ms-1"/> حفظ الإنجازات</Button>
                     </div>
                 </div>
@@ -2054,7 +2056,7 @@ export default function PlanningView({ permissions = {} }) {
         );
     }
 
-    if (isLoading.masterPlans || isLoading.operationalPlans || isLoading.healthFacilities) return <Spinner />;
+    if (isLoading.masterPlans || isLoading.operationalPlans || isLoading.healthFacilities) return <PageSkeleton />;
 
     const evalData = getFullPlanEvaluation();
 
