@@ -76,6 +76,7 @@ const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMe
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
 const SupplyManagementView = lazy(() => import('./components/SupplyManagementView'));
 const SupervisionView = lazy(() => import('./components/SupervisionView'));
+const PublicSupervisionForm = lazy(() => import('./components/SupervisionView').then(module => ({ default: module.PublicSupervisionForm })));
 const OnlineCoursesView = lazy(() => import('./components/imnci').then(m => ({ default: m.OnlineCoursesView })));
 // The IMNCI screens share one load of the exercise definitions. Wrapping them
 // in the provider is what stops the course, the exercises and the patient form
@@ -1115,6 +1116,7 @@ export default function App() {
 
     const [publicServiceType, setPublicServiceType] = useState(null);
     const [publicMentorshipProps, setPublicMentorshipProps] = useState(null);
+    const [publicSupervisionFormId, setPublicSupervisionFormId] = useState(null);
     const [submissionType, setSubmissionType] = useState(null);
     const [sharedReportData, setSharedReportData] = useState(null);
     const [sharedViewError, setSharedViewError] = useState(null);
@@ -1274,6 +1276,8 @@ export default function App() {
 
             setIsPublicProjectsView(false);
 
+            setPublicSupervisionFormId(null);
+
             // Check if the current URL parameters match a generated shared Project Tracker link
             const searchParamsPath = new URLSearchParams(window.location.search);
             // Somebody adding this server as a connector in claude.ai is sent
@@ -1393,6 +1397,9 @@ export default function App() {
                 });
                 return;
             }
+
+            const publicSupervisionMatch = path.match(/^\/public\/supervision\/([a-zA-Z0-9_]+)\/?$/);
+            if (publicSupervisionMatch) { setPublicSupervisionFormId(publicSupervisionMatch[1]); return; }
 
             const publicMentorshipMatch = path.match(/^\/mentorship\/submit\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipMatch && publicMentorshipMatch[1]) { setPublicMentorshipProps({ serviceType: publicMentorshipMatch[1] }); return; }
@@ -2558,7 +2565,7 @@ case 'meetings':
     // window. Drawn with the full app chrome — header, navigation, bottom bar —
     // the consent card is pushed below the fold of a 600px popup and the window
     // looks empty, which is exactly how it was reported.
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!connectClaudeId;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!connectClaudeId;
 
     let mainContent;
 
@@ -2749,6 +2756,15 @@ case 'meetings':
         }
     }
 
+    else if (publicSupervisionFormId) {
+        if (authLoading) {
+            mainContent = <PageSkeleton />;
+        } else if (!user) {
+            mainContent = <SignInBox message={t('app_extra.signin.supervision', 'Sign in to fill this supervision form.')} />;
+        } else {
+            mainContent = <Suspense fallback={<PageSkeleton />}><PublicSupervisionForm checklistId={publicSupervisionFormId} /></Suspense>;
+        }
+    }
     else if (isMentorshipPublicView && !isPublicMentorshipDashboardView) {
         if (authLoading) {
             mainContent = <PageSkeleton />;

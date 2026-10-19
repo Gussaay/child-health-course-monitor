@@ -58,3 +58,20 @@ describe('supervision checklists', () => {
         expect(s.answered).toBe(0);
     });
 });
+
+describe('supervision progress', () => {
+    it('counts answers per section and ignores a blank optional row', async () => {
+        const { assessmentProgress, sectionProgress } = await import('../src/components/supervision/checklists');
+        const warmer = getChecklist('infant_warmer');
+        const service = warmer.sections.find((s) => s.id === 'service_data');
+        const empty = sectionProgress(service, {}, { periodStart: '2026-07' });
+        expect(empty.total).toBe(18); // six indicators × three months; D7 left out while blank
+        const withD7 = sectionProgress(service, { placed_estimated: { '2026-07': '3' } }, { periodStart: '2026-07' });
+        expect(withD7).toMatchObject({ answered: 1, total: 19 });
+        const findings = warmer.sections.find((s) => s.id === 'findings');
+        expect(sectionProgress(findings, { strengths: 'x', actions: [{ action: 'y' }] }).answered).toBe(2);
+        const all = assessmentProgress(warmer, { periodStart: '2026-07', responses: {} });
+        expect(all.percent).toBe(0);
+        expect(Object.keys(all.sections)).toHaveLength(warmer.sections.length);
+    });
+});

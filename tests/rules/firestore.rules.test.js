@@ -410,6 +410,20 @@ describe('supervisionAssessments — supervising managers write, staff read', ()
     it('does NOT let an anonymous visitor read them', async () => {
         await assertFails(getDocs(collection(anonymous(), 'supervisionAssessments')));
     });
+
+    it('lets any signed-in person submit through the public link, as themselves', async () => {
+        const viaLink = (uid) => ({ ...assessment, status: 'submitted', submittedVia: 'public_link', createdByUid: uid });
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'supervisionAssessments', 'p1'), viaLink('plainUser')));
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'supervisionAssessments', 'p2'), viaLink('facilitator')));
+        await assertFails(setDoc(doc(as('plainUser'), 'supervisionAssessments', 'p3'), viaLink('someoneElse')));
+        await assertFails(setDoc(doc(as('plainUser'), 'supervisionAssessments', 'p4'), { ...viaLink('plainUser'), status: 'draft' }));
+        await assertFails(setDoc(doc(anonymous(), 'supervisionAssessments', 'p5'), viaLink('anon')));
+    });
+
+    it('does NOT let a public-link submitter change an existing assessment', async () => {
+        await assertFails(setDoc(doc(as('plainUser'), 'supervisionAssessments', 'a1'),
+            { ...assessment, status: 'submitted', submittedVia: 'public_link', createdByUid: 'plainUser' }));
+    });
 });
 
 // =============================================================================

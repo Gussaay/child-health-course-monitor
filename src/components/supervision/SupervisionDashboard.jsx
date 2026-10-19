@@ -29,7 +29,8 @@ const mean = (values) => {
     return known.length ? known.reduce((a, b) => a + b, 0) / known.length : null;
 };
 
-const facilityKey = (a) => `${a.stateKey || ''}|${String(a.facilityName || '').trim().toLowerCase()}`;
+// The registry id when the facility was picked from the list; otherwise the typed name.
+const facilityKey = (a) => a.facilityId || `${a.stateKey || ''}|${String(a.facilityName || '').trim().toLowerCase()}`;
 
 function latestPerFacility(assessments) {
     const latest = new Map();

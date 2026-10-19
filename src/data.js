@@ -3073,8 +3073,12 @@ export async function upsertSupervisionAssessment(payload) {
     }
     const { id, ...dataToSave } = payload;
     const newRef = doc(collection(db, "supervisionAssessments"));
+    // Who created it: the rules let someone without supervision rights create
+    // an assessment through the public link only as themselves.
     const writePromise = fbSetDoc(newRef, {
         ...dataToSave,
+        createdByUid: firebaseAuth.currentUser?.uid || null,
+        createdByEmail: firebaseAuth.currentUser?.email || null,
         createdAt: serverTimestamp(),
         lastUpdatedAt: serverTimestamp(),
     });

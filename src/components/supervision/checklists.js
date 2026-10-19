@@ -56,6 +56,9 @@ const NICU_COE = {
     titleAr: 'تقييم مبدئي لمركز التميز للعناية المركزة لحديثي الولادة',
     short: 'NICU Centre of Excellence',
     shortAr: 'مركز التميز للعناية المركزة',
+    description: 'Staff, services, space, IPC and equipment of a neonatal intensive care unit against the national standard.',
+    descriptionAr: 'الكادر والخدمات والمساحات ومكافحة العدوى ومعدات وحدة العناية المركزة لحديثي الولادة مقارنة بالمعيار القومي.',
+    icon: 'hospital',
     scope: 'hospital',
     sections: [
         {
@@ -390,6 +393,9 @@ const INFANT_WARMER = {
     titleAr: 'قائمة الإشراف على الدفايات المحمولة لحديثي الولادة',
     short: 'Infant warmer',
     shortAr: 'الدفاية المحمولة',
+    description: 'Portable warmer devices, how they are used, other thermal care equipment, service data and reporting.',
+    descriptionAr: 'أجهزة التدفئة المحمولة وطريقة استخدامها ومعدات الرعاية الحرارية الأخرى وبيانات الخدمة والإبلاغ.',
+    icon: 'thermometer',
     scope: 'facility',
     // Section D asks for one quarter of service data and E1 for the year to
     // date, so the form records which quarter it covers.
@@ -437,10 +443,10 @@ const INFANT_WARMER = {
             type: 'grid',
             columns: [
                 { id: 'number', label: 'Number needing repair', ar: 'العدد', kind: 'number' },
-                { id: 'fault', label: 'Fault description', ar: 'وصف العطل', kind: 'text', wide: true },
                 { id: 'since', label: 'Date fault started', ar: 'تاريخ بدء العطل', kind: 'date' },
+                { id: 'fault', label: 'Fault description', ar: 'وصف العطل', kind: 'text', wide: true },
                 {
-                    id: 'reported_to', label: 'Reported to', ar: 'تم الإبلاغ إلى', kind: 'select',
+                    id: 'reported_to', label: 'Reported to', ar: 'تم الإبلاغ إلى', kind: 'select', wide: true,
                     options: [
                         { value: 'state', label: 'State', ar: 'الولاية' },
                         { value: 'embrace', label: 'Embrace', ar: 'Embrace' },
@@ -505,7 +511,7 @@ const INFANT_WARMER = {
                 { id: 'lbw', code: 'D4', label: 'Number of low birth weight babies (< 2.5 kg)', ar: 'عدد ناقصي الوزن (أقل من 2.5 كجم)' },
                 { id: 'neonatal_deaths', code: 'D5', label: 'Number of neonatal deaths', ar: 'عدد وفيات حديثي الولادة' },
                 { id: 'placed_documented', code: 'D6', label: 'Babies placed in portable warmer (documented)', ar: 'عدد الأطفال الذين وُضعوا في الدفاية (موثّق)' },
-                { id: 'placed_estimated', code: 'D7', label: 'Babies placed in portable warmer (staff estimate, when not documented)', ar: 'عدد الأطفال الذين وُضعوا في الدفاية (تقدير الكادر عند عدم التوثيق)' },
+                { id: 'placed_estimated', code: 'D7', optional: true, label: 'Babies placed in portable warmer (staff estimate, when not documented)', ar: 'عدد الأطفال الذين وُضعوا في الدفاية (تقدير الكادر عند عدم التوثيق)' },
             ],
         },
         {
@@ -727,3 +733,76 @@ export function warmerResults(responses = {}, periodStart) {
 }
 
 export const INFANT_WARMER_COMPONENTS = WARMER_COMPONENTS;
+
+// =============================================================================
+// Progress
+//
+// How much of each section has been answered, for the bar on every section
+// header and the total at the top of the form. A row of a table counts once
+// whichever of its cells are filled; month tables count cell by cell, because
+// each month is its own answer. Rows marked optional (D7) count only when
+// filled, so leaving them blank never holds a section below 100%.
+// =============================================================================
+
+const filled = (v) => v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '');
+
+export function sectionProgress(section, values = {}, form = {}) {
+    let answered = 0;
+    let total = 0;
+    const count = (isFilled, optional = false) => {
+        if (optional && !isFilled) return;
+        total += 1;
+        if (isFilled) answered += 1;
+    };
+
+    switch (section.type) {
+        case 'staff':
+            section.items.forEach((i) => count(filled(values[i.id]?.name) || filled(values[i.id]?.contact)));
+            break;
+        case 'yesno':
+            section.items.forEach((i) => count(typeof values[i.id]?.available === 'boolean'));
+            break;
+        case 'present_action':
+        case 'present_number':
+            section.items.forEach((i) => count(typeof values[i.id]?.present === 'boolean'));
+            break;
+        case 'available_need':
+        case 'standard_available_need':
+            section.items.forEach((i) => count(filled(values[i.id]?.available)));
+            break;
+        case 'grid':
+            section.items.forEach((i) => count(section.columns.some((c) => filled(values[i.id]?.[c.id])), i.optional));
+            break;
+        case 'monthly':
+            periodMonths(form.periodStart).forEach((m) => {
+                section.items.forEach((i) => count(filled(values[i.id]?.[m]), i.optional));
+            });
+            break;
+        case 'cascade':
+            cascadeMonths(form.periodStart).forEach((m) => {
+                section.columns.forEach((c) => count(filled(values[m]?.[c.id])));
+            });
+            break;
+        case 'findings':
+            count(filled(values.strengths));
+            count(filled(values.gaps));
+            count((values.actions || []).some((a) => filled(a?.action)));
+            break;
+        default:
+            break;
+    }
+    return { answered, total, percent: total ? (answered / total) * 100 : 0 };
+}
+
+export function assessmentProgress(checklist, form = {}) {
+    let answered = 0;
+    let total = 0;
+    const sections = {};
+    (checklist?.sections || []).forEach((section) => {
+        const p = sectionProgress(section, form.responses?.[section.id] || {}, form);
+        sections[section.id] = p;
+        answered += p.answered;
+        total += p.total;
+    });
+    return { sections, answered, total, percent: total ? (answered / total) * 100 : 0 };
+}
