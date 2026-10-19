@@ -46,21 +46,24 @@ const SupervisionDashboard = lazy(() => import('./supervision/SupervisionDashboa
 // =============================================================================
 
 const FIELD = 'w-full min-w-0 border border-slate-300 rounded-md px-2 py-2 text-sm bg-white disabled:bg-slate-50';
+// Inside a table cell: narrower padding and no number spinners, so four
+// number columns fit beside the question on a phone.
+const CELL_FIELD = 'w-full min-w-0 border border-slate-300 rounded px-1.5 py-1.5 text-sm bg-white disabled:bg-slate-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
 
-// Yes / No as two buttons: one tap on a phone, and tapping the chosen one
-// again clears it. Stored as true / false, cleared as null (Firestore rejects
-// undefined).
+// Yes / No as two small buttons: one tap on a phone, and tapping the chosen
+// one again clears it. Stored as true / false, cleared as null (Firestore
+// rejects undefined).
 function YesNo({ value, onChange, readOnly }) {
     const { t } = useTranslation();
     const opt = (v, label, on) => (
         <button type="button" disabled={readOnly} aria-pressed={value === v}
             onClick={() => onChange(value === v ? null : v)}
-            className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-default ${value === v ? on : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+            className={`flex-1 min-w-0 rounded border px-1 py-1.5 text-xs font-semibold transition-colors disabled:cursor-default ${value === v ? on : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
             {label}
         </button>
     );
     return (
-        <div className="flex gap-2">
+        <div className="flex gap-1">
             {opt(true, t('trackers.supervision.yes', 'Yes'), 'bg-emerald-600 text-white border-emerald-600')}
             {opt(false, t('trackers.supervision.no', 'No'), 'bg-red-600 text-white border-red-600')}
         </div>
@@ -71,14 +74,14 @@ function CellInput({ kind = 'number', value, onChange, readOnly, options = [], i
     if (kind === 'yesno') return <YesNo value={value} onChange={onChange} readOnly={readOnly} />;
     if (kind === 'select') {
         return (
-            <select disabled={readOnly} className={FIELD} value={value || ''} onChange={(e) => onChange(e.target.value)}>
+            <select disabled={readOnly} className={CELL_FIELD} value={value || ''} onChange={(e) => onChange(e.target.value)}>
                 <option value="">—</option>
                 {options.map((o) => <option key={o.value} value={o.value}>{pickLabel(o, isArabic)}</option>)}
             </select>
         );
     }
     return (
-        <input disabled={readOnly} className={FIELD}
+        <input disabled={readOnly} className={CELL_FIELD}
             type={kind === 'number' ? 'number' : kind === 'date' ? 'date' : 'text'}
             inputMode={kind === 'number' ? 'numeric' : undefined}
             min={kind === 'number' ? '0' : undefined}
@@ -88,36 +91,78 @@ function CellInput({ kind = 'number', value, onChange, readOnly, options = [], i
     );
 }
 
-// One labelled answer inside an item card.
-function Field({ label, wide, children }) {
-    return (
-        <label className={`flex min-w-0 flex-col gap-1 ${wide ? 'col-span-full' : ''}`}>
-            <span className="text-xs text-slate-500">{label}</span>
-            {/* Pushed to the bottom so answers line up when a label wraps. */}
-            <span className="mt-auto">{children}</span>
-        </label>
-    );
-}
-
-// An item: its question, then its answers. Stacked on phones; question on the
-// left and answers on the right from md up, so a long form stays compact.
-function ItemCard({ label, code, hint, children, cols = 2 }) {
-    const grid = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-2 sm:grid-cols-4' }[cols] || 'grid-cols-2';
-    return (
-        <div className="rounded-lg border border-slate-200 p-3 md:flex md:items-start md:gap-4">
-            <div className="mb-2 text-sm text-slate-800 md:mb-0 md:w-2/5 md:pt-1">
-                {code && <span className="me-1 font-semibold text-slate-500">{code}</span>}
-                {label}
-                {hint && <div className="mt-0.5 text-xs text-slate-500">{hint}</div>}
-            </div>
-            <div className={`grid gap-2 md:flex-1 ${grid}`}>{children}</div>
-        </div>
-    );
-}
-
 const fmt = (v) => (v == null ? '—' : Math.round(v).toLocaleString());
 
 const sectionNote = (section, isArabic) => (isArabic ? section.noteAr || section.note : section.note);
+
+// =============================================================================
+// The answer table
+//
+// Every section is a real table, sized to the screen (table-fixed, full
+// width), so nothing ever scrolls sideways. Short answers — numbers, yes/no —
+// sit in columns beside the question. Long ones — free text, dates, choices —
+// would squeeze the row on a phone, so there they drop to a line of their own
+// under the question; from md up they are ordinary columns again.
+//
+// columns: [{ id, label, below? }]  below: goes under the row on phones
+// rows:    [{ id, label, code?, hint?, groupTitle?, strong? }]
+// cell(row, column) renders the answer.
+// =============================================================================
+
+function AnswerTable({ itemLabel, columns, rows, cell, labelWidth = 'w-[38%] md:w-[34%]' }) {
+    const inline = columns.filter((c) => !c.below);
+    const below = columns.filter((c) => c.below);
+    const span = 1 + inline.length;
+    return (
+        <div className="rounded-lg border border-slate-200">
+            <table className="w-full table-fixed text-sm">
+                <thead className="bg-slate-100 text-xs font-semibold text-slate-700">
+                    <tr>
+                        <th className={`${labelWidth} px-2 py-2 text-start align-bottom`}>{itemLabel}</th>
+                        {columns.map((c) => (
+                            <th key={c.id} className={`px-1 py-2 text-start align-bottom break-words ${c.width || ''} ${c.below ? 'hidden md:table-cell' : ''}`}>{c.label}</th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((row) => (
+                        <React.Fragment key={row.id}>
+                            {row.groupTitle && (
+                                <tr className="border-t border-slate-200 bg-slate-50">
+                                    <td colSpan={1 + columns.length} className="px-2 py-1 text-xs font-semibold text-slate-600">{row.groupTitle}</td>
+                                </tr>
+                            )}
+                            <tr className={`border-t border-slate-200 align-middle ${row.strong ? 'bg-slate-50 font-semibold' : ''}`}>
+                                <td className="px-2 py-1.5 text-slate-800 break-words">
+                                    {row.code && <span className="me-1 font-semibold text-slate-500">{row.code}</span>}
+                                    {row.label}
+                                    {row.hint && <div className="text-xs font-normal text-slate-500">{row.hint}</div>}
+                                </td>
+                                {columns.map((c) => (
+                                    <td key={c.id} className={`px-1 py-1.5 ${c.below ? 'hidden md:table-cell' : ''}`}>{cell(row, c)}</td>
+                                ))}
+                            </tr>
+                            {below.length > 0 && (
+                                <tr className="md:hidden">
+                                    <td colSpan={span} className="px-2 pb-2">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {below.map((c) => (
+                                                <label key={c.id} className={`flex min-w-0 flex-col gap-0.5 ${c.full ? 'col-span-2' : ''}`}>
+                                                    <span className="text-xs text-slate-500">{c.label}</span>
+                                                    {cell(row, c)}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </React.Fragment>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
 
 // =============================================================================
 // Section bodies
@@ -132,6 +177,7 @@ function ClassicSection({ section, values, onChange, readOnly }) {
     const { t } = useTranslation();
     const set = (itemId, field, value) => onChange(itemId, { ...(values[itemId] || {}), [field]: value });
     const L = {
+        item: t('trackers.supervision.cols.item', 'Item'),
         name: t('trackers.supervision.cols.name', 'Name'),
         contact: t('trackers.supervision.cols.contact', 'Contact'),
         available: t('trackers.supervision.cols.available', 'Available'),
@@ -142,6 +188,26 @@ function ClassicSection({ section, values, onChange, readOnly }) {
         number: t('trackers.supervision.cols.number', 'Number registered'),
         standard: t('trackers.supervision.cols.standard', 'Standard'),
     };
+    const columns = {
+        staff: [{ id: 'name', label: L.name, kind: 'text' }, { id: 'contact', label: L.contact, kind: 'text' }],
+        yesno: [{ id: 'available', label: L.available, kind: 'yesno' }],
+        present_action: [{ id: 'present', label: L.present, kind: 'yesno' }, { id: 'action', label: L.action, kind: 'text', below: true, full: true }],
+        present_number: [{ id: 'present', label: L.present, kind: 'yesno' }, { id: 'number', label: L.number, kind: 'number' }],
+        available_need: [{ id: 'available', label: L.available, kind: 'number' }, { id: 'need', label: L.need, kind: 'number' }],
+        standard_available_need: [
+            { id: 'standard', label: L.standard, kind: 'fixed' },
+            { id: 'available', label: L.available, kind: 'number' },
+            { id: 'need', label: L.needed, kind: 'number' },
+        ],
+    }[section.type] || [];
+    const rows = section.items.map((item, i) => ({
+        id: item.id,
+        item,
+        label: t(`trackers.supervision.items.${itemKey(item)}`, item.label),
+        groupTitle: item.group && section.items[i - 1]?.group !== item.group
+            ? (GROUP_KEYS[item.group] ? t(`trackers.supervision.groups.${GROUP_KEYS[item.group]}`, item.group) : item.group)
+            : null,
+    }));
     const s = scoreSection(section, values);
 
     return (
@@ -158,48 +224,11 @@ function ClassicSection({ section, values, onChange, readOnly }) {
                     )}
                 </div>
             )}
-            {section.items.map((item, i) => {
-                const v = values[item.id] || {};
-                const startsGroup = item.group && section.items[i - 1]?.group !== item.group;
-                const label = t(`trackers.supervision.items.${itemKey(item)}`, item.label);
-                return (
-                    <React.Fragment key={item.id}>
-                        {startsGroup && (
-                            <div className="pt-2 text-xs font-semibold text-slate-600">
-                                {GROUP_KEYS[item.group] ? t(`trackers.supervision.groups.${GROUP_KEYS[item.group]}`, item.group) : item.group}
-                            </div>
-                        )}
-                        {section.type === 'staff' && (
-                            <ItemCard label={label}>
-                                <Field label={L.name}><CellInput kind="text" readOnly={readOnly} value={v.name} onChange={(x) => set(item.id, 'name', x)} /></Field>
-                                <Field label={L.contact}><CellInput kind="text" readOnly={readOnly} value={v.contact} onChange={(x) => set(item.id, 'contact', x)} /></Field>
-                            </ItemCard>
-                        )}
-                        {section.type === 'yesno' && (
-                            <ItemCard label={label} cols={1}>
-                                <YesNo readOnly={readOnly} value={v.available} onChange={(x) => set(item.id, 'available', x)} />
-                            </ItemCard>
-                        )}
-                        {(section.type === 'present_action' || section.type === 'present_number') && (
-                            <ItemCard label={label}>
-                                <Field label={L.present}><YesNo readOnly={readOnly} value={v.present} onChange={(x) => set(item.id, 'present', x)} /></Field>
-                                {section.type === 'present_number' ? (
-                                    <Field label={L.number}><CellInput readOnly={readOnly} value={v.number} onChange={(x) => set(item.id, 'number', x)} /></Field>
-                                ) : (
-                                    <Field label={L.action}><CellInput kind="text" readOnly={readOnly} value={v.action} onChange={(x) => set(item.id, 'action', x)} /></Field>
-                                )}
-                            </ItemCard>
-                        )}
-                        {(section.type === 'available_need' || section.type === 'standard_available_need') && (
-                            <ItemCard label={label}
-                                hint={section.type === 'standard_available_need' ? `${L.standard}: ${item.standard}` : undefined}>
-                                <Field label={L.available}><CellInput readOnly={readOnly} value={v.available} onChange={(x) => set(item.id, 'available', x)} /></Field>
-                                <Field label={section.type === 'standard_available_need' ? L.needed : L.need}><CellInput readOnly={readOnly} value={v.need} onChange={(x) => set(item.id, 'need', x)} /></Field>
-                            </ItemCard>
-                        )}
-                    </React.Fragment>
-                );
-            })}
+            <AnswerTable itemLabel={L.item} columns={columns} rows={rows}
+                labelWidth={section.type === 'yesno' ? 'w-[62%] md:w-[60%]' : undefined}
+                cell={(row, c) => (c.kind === 'fixed'
+                    ? <span className="block text-center tabular-nums text-slate-500">{row.item.standard}</span>
+                    : <CellInput kind={c.kind} readOnly={readOnly} value={values[row.id]?.[c.id]} onChange={(x) => set(row.id, c.id, x)} />)} />
         </div>
     );
 }
@@ -208,33 +237,24 @@ function GridSection({ section, values, onChange, readOnly }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const set = (rowId, colId, value) => onChange(rowId, { ...(values[rowId] || {}), [colId]: value });
-    const cols = section.columns.length >= 4 ? 4 : section.columns.length === 3 ? 3 : 2;
-
+    // Text, dates and choices drop under the row on phones; numbers and yes/no stay beside it.
+    const columns = section.columns.map((c) => ({
+        ...c, label: pickLabel(c, isArabic),
+        below: c.kind === 'text' || c.kind === 'date' || c.kind === 'select',
+        full: c.wide,
+    }));
+    const rows = section.items.map((item, i) => ({
+        id: item.id, item, label: pickLabel(item, isArabic),
+        groupTitle: item.group === 'location' && section.items[i - 1]?.group !== 'location'
+            ? t('trackers.supervision.warmer.location', 'Where they are') : null,
+    }));
     return (
-        <div className="space-y-2">
-            {section.items.map((item, i) => {
-                const startsLocation = item.group === 'location' && section.items[i - 1]?.group !== 'location';
-                return (
-                    <React.Fragment key={item.id}>
-                        {startsLocation && (
-                            <div className="pt-2 text-xs font-semibold text-slate-600">{t('trackers.supervision.warmer.location', 'Where they are')}</div>
-                        )}
-                        <ItemCard label={pickLabel(item, isArabic)} cols={cols}>
-                            {section.columns.map((c) => {
-                                const kind = c.id === 'answer' && item.answerKind ? item.answerKind : c.kind;
-                                const label = kind === c.kind ? pickLabel(c, isArabic) : t('trackers.supervision.warmer.number', 'Number');
-                                return (
-                                    <Field key={c.id} label={label} wide={c.wide || kind === 'yesno'}>
-                                        <CellInput kind={kind} options={c.options} isArabic={isArabic} readOnly={readOnly}
-                                            value={values[item.id]?.[c.id]} onChange={(v) => set(item.id, c.id, v)} />
-                                    </Field>
-                                );
-                            })}
-                        </ItemCard>
-                    </React.Fragment>
-                );
-            })}
-        </div>
+        <AnswerTable itemLabel={t('trackers.supervision.cols.item', 'Item')} columns={columns} rows={rows}
+            cell={(row, c) => (
+                <CellInput kind={c.id === 'answer' && row.item.answerKind ? row.item.answerKind : c.kind}
+                    options={c.options} isArabic={isArabic} readOnly={readOnly}
+                    value={values[row.id]?.[c.id]} onChange={(v) => set(row.id, c.id, v)} />
+            )} />
     );
 }
 
@@ -243,8 +263,8 @@ function NeedsPeriod() {
     return <p className="text-sm text-amber-700">{t('trackers.supervision.warmer.choose_period', 'Choose the reporting quarter above first.')}</p>;
 }
 
-// Section D: each indicator with its three months and total, then the coverage
-// calculation the paper form asks the supervisor to work out by hand.
+// Section D: indicators by month with a total, then the coverage calculation
+// the paper form asks the supervisor to work out by hand.
 function MonthlySection({ section, values, onChange, readOnly, periodStart, responses }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
@@ -257,50 +277,37 @@ function MonthlySection({ section, values, onChange, readOnly, periodStart, resp
     };
     if (!months.length) return <NeedsPeriod />;
 
-    const total = t('trackers.supervision.warmer.total', 'Total');
+    const totalId = '__total';
     const short = (m) => monthLabel(m, isArabic).split(' ')[0];
-    const calcRow = (label, valuesFor, totalValue, pct = false) => (
-        <div className="rounded-lg bg-sky-50 p-3">
-            <div className="mb-2 text-sm text-sky-900">{label}</div>
-            <div className="grid grid-cols-4 gap-2 text-center text-sm tabular-nums">
-                {calc.months.map((m) => (
-                    <div key={m.month}>
-                        <div className="text-xs text-slate-500">{short(m.month)}</div>
-                        {pct ? <span className={`inline-block px-1.5 py-0.5 rounded text-xs ${toneFor(valuesFor(m))}`}>{pctText(valuesFor(m))}</span> : fmt(valuesFor(m))}
-                    </div>
-                ))}
-                <div>
-                    <div className="text-xs text-slate-500">{total}</div>
-                    {pct ? <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${toneFor(totalValue)}`}>{pctText(totalValue)}</span> : <span className="font-semibold">{fmt(totalValue)}</span>}
-                </div>
-            </div>
-        </div>
-    );
+    const columns = [...months.map((m) => ({ id: m, label: short(m) })), { id: totalId, label: t('trackers.supervision.warmer.total', 'Total') }];
+    const byMonth = Object.fromEntries(calc.months.map((m) => [m.month, m]));
+    const calcRows = [
+        { id: 'need', label: t('trackers.supervision.warmer.est_need', 'Estimated babies needing warming'), get: (m) => m.need, total: calc.total.need },
+        { id: 'placed', label: t('trackers.supervision.warmer.placed', 'Babies placed in portable warmer (D6, or D7 when not documented)'), get: (m) => m.placed, total: calc.total.placed },
+        { id: 'coverage', label: t('trackers.supervision.warmer.coverage', 'Coverage of portable warming'), get: (m) => m.coverage, total: calc.total.coverage, pct: true },
+    ];
 
     return (
-        <div className="space-y-2">
-            {section.items.map((item) => (
-                <ItemCard key={item.id} code={item.code} label={pickLabel(item, isArabic)} cols={4}>
-                    {months.map((m) => (
-                        <Field key={m} label={short(m)}>
-                            <CellInput readOnly={readOnly} value={values[item.id]?.[m]} onChange={(v) => set(item.id, m, v)} />
-                        </Field>
-                    ))}
-                    <Field label={total}>
-                        <div className="py-2 text-sm font-semibold tabular-nums text-slate-700">{fmt(rowTotal(item.id))}</div>
-                    </Field>
-                </ItemCard>
-            ))}
-            <div className="pt-2 text-xs font-semibold text-slate-600">{t('trackers.supervision.warmer.calculation', 'Calculation (worked out from the table above)')}</div>
-            {calcRow(t('trackers.supervision.warmer.est_need', 'Estimated babies needing warming'), (m) => m.need, calc.total.need)}
-            {calcRow(t('trackers.supervision.warmer.placed', 'Babies placed in portable warmer (D6, or D7 when not documented)'), (m) => m.placed, calc.total.placed)}
-            {calcRow(t('trackers.supervision.warmer.coverage', 'Coverage of portable warming'), (m) => m.coverage, calc.total.coverage, true)}
+        <div className="space-y-3">
+            <AnswerTable itemLabel={t('trackers.supervision.warmer.indicator', 'Indicator')} columns={columns}
+                rows={section.items.map((item) => ({ id: item.id, code: item.code, label: pickLabel(item, isArabic) }))}
+                cell={(row, c) => (c.id === totalId
+                    ? <span className="block text-center font-semibold tabular-nums text-slate-700">{fmt(rowTotal(row.id))}</span>
+                    : <CellInput readOnly={readOnly} value={values[row.id]?.[c.id]} onChange={(v) => set(row.id, c.id, v)} />)} />
+            <AnswerTable itemLabel={t('trackers.supervision.warmer.calculation', 'Calculation (worked out from the table above)')} columns={columns}
+                rows={calcRows}
+                cell={(row, c) => {
+                    const v = c.id === totalId ? row.total : row.get(byMonth[c.id] || {});
+                    return row.pct
+                        ? <span className={`block rounded px-1 py-0.5 text-center text-xs ${c.id === totalId ? 'font-semibold' : ''} ${toneFor(v)}`}>{pctText(v)}</span>
+                        : <span className={`block text-center tabular-nums ${c.id === totalId ? 'font-semibold' : ''}`}>{fmt(v)}</span>;
+                }} />
         </div>
     );
 }
 
-// E1: January to the end of the quarter, one card per month. The need field
-// suggests the section D estimate for the months both tables cover.
+// E1: January to the end of the quarter. The need column suggests the section
+// D estimate for the months both tables cover.
 function CascadeSection({ section, values, onChange, readOnly, periodStart, responses }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
@@ -324,27 +331,21 @@ function CascadeSection({ section, values, onChange, readOnly, periodStart, resp
         { id: 'registration', label: t('trackers.supervision.warmer.registration', 'Registration completeness'), value: pct(totals.registered, totals.received) },
         { id: 'dhis2', label: t('trackers.supervision.warmer.dhis2', 'DHIS2 reporting completeness'), value: pct(totals.dhis2, totals.registered) },
     ];
+    const rows = [
+        ...months.map((m) => ({ id: m, label: monthLabel(m, isArabic).split(' ')[0] })),
+        { id: '__total', label: t('trackers.supervision.warmer.total', 'Total'), strong: true },
+    ];
 
     return (
         <div className="space-y-2">
-            {months.map((m) => (
-                <ItemCard key={m} label={monthLabel(m, isArabic)} cols={4}>
-                    {section.columns.map((c) => (
-                        <Field key={c.id} label={pickLabel(c, isArabic)}>
-                            <CellInput readOnly={readOnly} value={values[m]?.[c.id]}
-                                placeholder={c.id === 'need' ? suggestedNeed(m) : undefined}
-                                onChange={(v) => set(m, c.id, v)} />
-                        </Field>
-                    ))}
-                </ItemCard>
-            ))}
-            <ItemCard label={<span className="font-semibold">{t('trackers.supervision.warmer.total', 'Total')}</span>} cols={4}>
-                {section.columns.map((c) => (
-                    <Field key={c.id} label={pickLabel(c, isArabic)}>
-                        <div className="py-2 text-sm font-semibold tabular-nums">{fmt(totals[c.id])}</div>
-                    </Field>
-                ))}
-            </ItemCard>
+            <AnswerTable itemLabel={t('trackers.supervision.warmer.month', 'Month')} labelWidth="w-[18%] md:w-[20%]"
+                columns={section.columns.map((c) => ({ ...c, label: pickLabel(c, isArabic) }))}
+                rows={rows}
+                cell={(row, c) => (row.id === '__total'
+                    ? <span className="block text-center tabular-nums">{fmt(totals[c.id])}</span>
+                    : <CellInput readOnly={readOnly} value={values[row.id]?.[c.id]}
+                        placeholder={c.id === 'need' ? suggestedNeed(row.id) : undefined}
+                        onChange={(v) => set(row.id, c.id, v)} />)} />
             <div className="flex flex-wrap gap-2 pt-1 text-sm">
                 {results.map((r) => (
                     <span key={r.id} className={`px-2 py-1 rounded ${toneFor(r.value)}`}>{r.label}: {pctText(r.value)}</span>
@@ -360,6 +361,11 @@ function FindingsSection({ values, onSet, readOnly }) {
     const { t } = useTranslation();
     const actions = values.actions?.length ? values.actions : EMPTY_ACTIONS;
     const setAction = (index, field, value) => onSet('actions', actions.map((a, i) => (i === index ? { ...a, [field]: value } : a)));
+    const columns = [
+        { id: 'responsible', label: t('trackers.supervision.warmer.responsible', 'Responsible'), kind: 'text', below: true },
+        { id: 'deadline', label: t('trackers.supervision.warmer.deadline', 'Deadline'), kind: 'date', below: true },
+        ...(!readOnly ? [{ id: 'remove', label: '', width: 'w-9' }] : []),
+    ];
 
     return (
         <div className="space-y-3">
@@ -367,32 +373,23 @@ function FindingsSection({ values, onSet, readOnly }) {
                 value={values.strengths || ''} onChange={(e) => onSet('strengths', e.target.value)} />
             <Textarea label={t('trackers.supervision.warmer.gaps', 'Main gaps / challenges')} rows={3} disabled={readOnly}
                 value={values.gaps || ''} onChange={(e) => onSet('gaps', e.target.value)} />
-            <div className="text-sm font-medium text-gray-700">{t('trackers.supervision.dash.actions', 'Action points')}</div>
-            {actions.map((a, i) => (
-                <div key={i} className="rounded-lg border border-slate-200 p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-500">#{i + 1}</span>
-                        {!readOnly && (
-                            <button type="button" aria-label={t('trackers.supervision.warmer.remove_action', 'Remove action')}
-                                className="p-1 text-slate-400 hover:text-red-600"
-                                onClick={() => onSet('actions', actions.filter((_, j) => j !== i))}>
-                                <X size={16} />
-                            </button>
-                        )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                        <Field label={t('trackers.supervision.warmer.action', 'Action')} wide>
-                            <CellInput kind="text" readOnly={readOnly} value={a.action} onChange={(v) => setAction(i, 'action', v)} />
-                        </Field>
-                        <Field label={t('trackers.supervision.warmer.responsible', 'Responsible')}>
-                            <CellInput kind="text" readOnly={readOnly} value={a.responsible} onChange={(v) => setAction(i, 'responsible', v)} />
-                        </Field>
-                        <Field label={t('trackers.supervision.warmer.deadline', 'Deadline')}>
-                            <CellInput kind="date" readOnly={readOnly} value={a.deadline} onChange={(v) => setAction(i, 'deadline', v)} />
-                        </Field>
-                    </div>
-                </div>
-            ))}
+            <AnswerTable itemLabel={t('trackers.supervision.warmer.action', 'Action')} labelWidth="w-auto"
+                columns={columns.map((c) => (c.id === 'remove' ? { ...c, label: <span className="sr-only">{t('trackers.supervision.warmer.remove_action', 'Remove action')}</span> } : c))}
+                rows={actions.map((a, i) => ({ id: String(i), index: i, label: (
+                    <span className="flex items-center gap-1">
+                        <span className="w-5 shrink-0 text-xs text-slate-500">{i + 1}</span>
+                        <CellInput kind="text" readOnly={readOnly} value={a.action} onChange={(v) => setAction(i, 'action', v)} />
+                    </span>
+                ) }))}
+                cell={(row, c) => (c.id === 'remove' ? (
+                    <button type="button" aria-label={t('trackers.supervision.warmer.remove_action', 'Remove action')}
+                        className="p-1 text-slate-400 hover:text-red-600"
+                        onClick={() => onSet('actions', actions.filter((_, j) => j !== row.index))}>
+                        <X size={16} />
+                    </button>
+                ) : (
+                    <CellInput kind={c.kind} readOnly={readOnly} value={actions[row.index]?.[c.id]} onChange={(v) => setAction(row.index, c.id, v)} />
+                ))} />
             {!readOnly && (
                 <Button variant="secondary" onClick={() => onSet('actions', [...actions, {}])}>
                     <Plus size={16} /> {t('trackers.supervision.warmer.add_action', 'Add action')}
@@ -693,7 +690,9 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
             formSaved();
             if (!form.id && id) setForm((p) => ({ ...p, id }));
             onSaved?.(status);
-            if (status === 'submitted' && !publicMode) onBack();
+            // Save draft and Submit both return to the list; the public form
+            // shows its own thank-you instead.
+            if (!publicMode) onBack();
         } catch (error) {
             console.error('Failed to save assessment:', error);
             const raw = String(error?.message || error);
