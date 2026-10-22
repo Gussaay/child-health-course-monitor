@@ -1,30 +1,22 @@
-name: Deploy Firestore rules
+name: Apply Storage CORS
 
-# One-off: deploys firestore.rules after the rules tests pass. Runs only for
-# pushes to this branch, so it never touches the main deploy.
+# One-off: applies cors.json to the Storage bucket so the app can download
+# course pictures for "Save for offline". Runs only for pushes to this branch.
 on:
   push:
     branches:
       - claude/project-thread-fjukxi
 
 jobs:
-  rules:
+  cors:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-      - run: npm ci --ignore-scripts
-      - name: Firestore rules tests
-        run: npx --yes firebase-tools@13 emulators:exec --only firestore --project imnci-courses-monitor-test "npx vitest run --config vitest.rules.config.js"
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
-      - name: Deploy Firestore rules
-        run: npx --yes firebase-tools@13 deploy --only firestore:rules --project imnci-courses-monitor --non-interactive
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Apply CORS
+        run: |
+          gcloud storage buckets update gs://imnci-courses-monitor.firebasestorage.app --cors-file=cors.json
+          gcloud storage buckets describe gs://imnci-courses-monitor.firebasestorage.app --format="default(cors_config)"
