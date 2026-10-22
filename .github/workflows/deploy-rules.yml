@@ -18,5 +18,10 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - name: Apply CORS
         run: |
-          gcloud storage buckets update gs://imnci-courses-monitor.firebasestorage.app --cors-file=cors.json
-          gcloud storage buckets describe gs://imnci-courses-monitor.firebasestorage.app --format="default(cors_config)"
+          B=gs://imnci-courses-monitor.firebasestorage.app
+          gcloud auth list
+          for i in 1 2 3; do
+            gsutil cors set cors.json $B && break
+            echo "retry $i"; sleep 30
+          done
+          gsutil cors get $B
