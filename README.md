@@ -160,6 +160,58 @@ the account exists.
 
 ---
 
+## Online Courses offline
+
+Course text is always on the device (the course items are cached in
+IndexedDB). A learner can also **Save for offline** on a module, which
+downloads its figures and captured book pages into the device's Cache Storage
+(`src/components/imnci/onlineCourses/offline.js`). That download reads the
+files with `fetch`, so the Storage bucket must allow the app's addresses
+(CORS). `cors.json` lists them; apply it once with:
+
+    gsutil cors set cors.json gs://imnci-courses-monitor.firebasestorage.app
+
+Without it, Save for offline reports that the pictures could not be saved and
+the module still reads online as before.
+
+## AI in Online Courses
+
+Online Courses carry the course books and an AI helper. Nothing here changes
+a course: books are stored on their own and the AI only reads.
+
+- **Books and AI** tab (Online Courses): the books by service. Course authors
+  (Manage mode) add a book by picking its PDF; the browser reads its text and
+  bookmarks (which become chapters), and only the text is saved, in
+  `aiBooks/{id}` and `aiBooks/{id}/pages`. A book can be tied to a course and,
+  if a module's sections were converted from it, to that module. Scanned PDFs
+  need OCR first.
+- **Course page**: the course's books, and a question box across them.
+- **Book page**: a chapter or any page range as a Summary, Key points,
+  Teaching notes or Quiz questions, in English or Arabic, saved for everyone;
+  questions answered with page numbers.
+- **Section page**: the AI study helper (summary, key points, quiz, questions)
+  on that section. A section converted from a module book that is in the
+  library reads the book's pages and cites them; others read the Read tab.
+  Results are kept in `aiSectionNotes`, so later learners get them without a
+  new AI call.
+- **Convert a book**: the standard converter is unchanged. "Try the AI
+  conversion" rewrites each section's extracted text as clean reading text;
+  the author compares the two versions per section, picks one, and nothing is
+  written until Create sections.
+- **AI**: the `aiBooks` Cloud Function (`functions/aiBooks.js`). Groq
+  (GPT-OSS) answers when the text is short; Gemini Flash takes long chapters
+  and whole books, and is the backup. Both free tiers. Daily requests per
+  person: 20 for learners, 60 for staff, 300 for course authors.
+
+Before the first push that includes it, set both keys once (the functions
+deploy fails while either is missing):
+
+```
+firebase functions:secrets:set GROQ_API_KEY     # console.groq.com/keys
+firebase functions:secrets:set GEMINI_API_KEY   # aistudio.google.com/apikey
+npm run deploy:rules                            # the aiBooks rules
+```
+
 ## Security model
 
 Authorization is enforced in **Firestore rules** (`firestore.rules`) and in

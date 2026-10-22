@@ -2994,6 +2994,38 @@ export async function bulkUpsertOnlineCourseContent({ course, items }) {
     return { courseId: courseRef.id, modules: modules.length, sections: sections.length, orphaned };
 }
 
+/**
+ * Writes a converted book's sections in batches, then hides the sections they
+ * replace. Awaited to the end for the same reason as the import above: a book
+ * is dozens of documents, and "queued" after four seconds is not "saved".
+ *
+ * @param {object[]} sections  new section documents (no ids)
+ * @param {string[]} hideIds   sections to soft-delete once the new ones are in
+ * @returns {number} how many sections were written
+ */
+export async function addOnlineSections(sections, hideIds = []) {
+    if (!isOnline()) {
+        throw new Error('You appear to be offline. Connect to the internet and try again — nothing was saved.');
+    }
+    for (let i = 0; i < sections.length; i += 400) {
+        const batch = writeBatch(db);
+        sections.slice(i, i + 400).forEach((sec) => {
+            const ref = doc(collection(db, "onlineCourseItems"));
+            batch.set(ref, {
+                ...sec, id: ref.id, isDeleted: false,
+                createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
+            });
+        });
+        await batch.commit();
+    }
+    for (let i = 0; i < hideIds.length; i += 400) {
+        const batch = writeBatch(db);
+        hideIds.slice(i, i + 400).forEach((id) => batch.update(doc(db, "onlineCourseItems", id), deletionStamp()));
+        await batch.commit();
+    }
+    return sections.length;
+}
+
 // One document per learner, holding every section they have finished. A
 // document per section would be tidier but would cost a read per section to
 // render a progress bar.

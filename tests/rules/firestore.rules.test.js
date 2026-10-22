@@ -434,6 +434,47 @@ describe('supervisionAssessments — supervising managers write, staff read', ()
 // The operations here mirror exactly what src/data.js does: listPopulationTargets
 // runs a collection query (a LIST, not a get), and the import writes a batch.
 // =============================================================================
+describe('aiBooks — learners read, course authors add books, only the function writes summaries', () => {
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            await setDoc(doc(db, 'aiBooks', 'b1'), { title: 'IMNCI chart booklet', service: 'IMNCI', pageCount: 2 });
+            await setDoc(doc(db, 'aiBooks', 'b1', 'pages', '000'), { from: 1, to: 2, pages: ['a', 'b'] });
+            await setDoc(doc(db, 'aiBooks', 'b1', 'summaries', 's1'), { text: 'summary' });
+        });
+    });
+
+    it('any signed-in learner reads books, pages, summaries and section notes', async () => {
+        await assertSucceeds(getDocs(collection(as('plainUser'), 'aiBooks')));
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'aiBooks', 'b1', 'pages', '000')));
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'aiBooks', 'b1', 'summaries')));
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'aiSectionNotes', 'sec1__summary__en')));
+    });
+
+    it('anonymous callers read nothing', async () => {
+        await assertFails(getDocs(collection(anonymous(), 'aiBooks')));
+        await assertFails(getDoc(doc(anonymous(), 'aiSectionNotes', 'sec1__summary__en')));
+    });
+
+    it('federal managers and super users add books; others cannot', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'aiBooks', 'b2'), { title: 'ETAT', service: 'ETAT' }));
+        await assertSucceeds(setDoc(doc(as('superUser'), 'aiBooks', 'b2', 'pages', '000'), { from: 1, to: 1, pages: ['x'] }));
+        await assertFails(setDoc(doc(as('statesManager'), 'aiBooks', 'b3'), { title: 'EENC', service: 'EENC' }));
+        await assertFails(setDoc(doc(as('facilitator'), 'aiBooks', 'b1', 'pages', '001'), { from: 3, to: 3, pages: ['x'] }));
+    });
+
+    it('nobody writes summaries from the app; editors may delete them', async () => {
+        await assertFails(setDoc(doc(as('superUser'), 'aiBooks', 'b1', 'summaries', 's2'), { text: 'made up' }));
+        await assertFails(deleteDoc(doc(as('facilitator'), 'aiBooks', 'b1', 'summaries', 's1')));
+        await assertFails(setDoc(doc(as('superUser'), 'aiSectionNotes', 'sec1__summary__en'), { text: 'made up' }));
+        await assertSucceeds(deleteDoc(doc(as('federalManager'), 'aiBooks', 'b1', 'summaries', 's1')));
+    });
+
+    it('the daily AI counter is the function\'s alone', async () => {
+        await assertFails(setDoc(doc(as('facilitator'), 'aiUsage', 'facilitator'), { day: '2026-01-01', count: 0 }));
+    });
+});
+
 describe('populationTargets — federal writes, everyone signed in reads', () => {
     const target = {
         year: 2026, stateKey: 'Gezira', localityKey: 'Al Hasahisa',
