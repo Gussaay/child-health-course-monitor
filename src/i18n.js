@@ -8,6 +8,8 @@ const resources = {
     translation: {
       data_assistant: {
         ask: "Ask",
+        saved_answer: "Saved answer",
+        ask_again: "Ask again",
         button: "Ask the data",
         card_hint: "Ask anything about courses, facilities, mentorship and plans. Answers come only from the app.",
         close: "Close",
@@ -7338,6 +7340,8 @@ const resources = {
     translation: {
       data_assistant: {
         ask: "اسأل",
+        saved_answer: "إجابة محفوظة",
+        ask_again: "اسأل من جديد",
         button: "اسأل البيانات",
         card_hint: "اسأل عن أي شيء في الدورات والمرافق والإرشاد والخطط. الإجابات من بيانات التطبيق فقط.",
         close: "إغلاق",

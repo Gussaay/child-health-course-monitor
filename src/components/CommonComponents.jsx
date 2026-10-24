@@ -232,8 +232,10 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
     const visible = tabs.filter(Boolean);
     const navRef = useRef(null);
     usePinnedTabsHeight(navRef);
+    // Read by "Ask the data" (utils/pageSnapshot.js) to name the exact place an answer came from.
+    const activeLabel = visible.find((tab) => tab.id === active)?.label;
     return (
-        <div className={`mb-3 md:mb-4 md:static sticky z-30 top-[calc(var(--app-top,0px)+4px)] ${className}`}>
+        <div data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 md:static sticky z-30 top-[calc(var(--app-top,0px)+4px)] ${className}`}>
             <nav ref={navRef} className="md:hidden flex gap-0.5 rounded-xl bg-white p-1 border border-slate-200 shadow-sm">
                 {visible.map(tab => {
                     const on = active === tab.id;

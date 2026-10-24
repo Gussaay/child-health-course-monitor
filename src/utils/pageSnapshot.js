@@ -39,11 +39,24 @@ export function cleanPageText(text, max = MAX_TEXT) {
 }
 
 /**
+ * Where the person is, the way the app names it: "National Child Health
+ * Program – Dashboard – IMNCI". Repeats are dropped (the main menu's title is
+ * the app's name).
+ */
+export function placeOf(appName, title, tabs = []) {
+    const parts = [appName, title, ...tabs].map((p) => String(p || '').trim()).filter(Boolean);
+    return parts.filter((p, i) => parts.indexOf(p) === i).join(' – ');
+}
+
+/**
  * The open page, ready to send. Chart numbers are read from Chart.js only when
  * the page has charts, so pages without them never load it.
  */
-export async function snapshotPage(root, { view = '', title = '' } = {}) {
-    if (!root) return { view, title, text: '' };
+export async function snapshotPage(root, { view = '', title = '', appName = '' } = {}) {
+    if (!root) return { view, title, place: placeOf(appName, title), text: '' };
+    // The tab open on each row of page tabs (PageTabs marks it).
+    const tabs = [...root.querySelectorAll('[data-active-tab]')].map((el) => el.getAttribute('data-active-tab')).slice(0, 3);
+    const place = placeOf(appName, title, tabs);
     const canvases = [...root.querySelectorAll('canvas')];
     let charts = '';
     if (canvases.length) {
@@ -58,5 +71,5 @@ export async function snapshotPage(root, { view = '', title = '' } = {}) {
     }
     const text = cleanPageText(root.innerText, MAX_TEXT - Math.min(charts.length, 4000));
     // Charts first: the server cuts from the end when a provider takes less.
-    return { view, title, text: charts ? `CHART DATA\n${charts.slice(0, 4000)}\n\nTEXT ON SCREEN\n${text}` : text };
+    return { view, title, place, text: charts ? `CHART DATA\n${charts.slice(0, 4000)}\n\nTEXT ON SCREEN\n${text}` : text };
 }

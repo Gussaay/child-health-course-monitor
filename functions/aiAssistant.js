@@ -24,7 +24,7 @@ const { FieldPath, FieldValue } = require("firebase-admin/firestore");
 
 const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess");
 const {
-  TOOLS, systemFor, rowsWithin, describeFields, groupRows, cleanFilters,
+  TOOLS, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, pageOf,
 } = require("./aiDataText");
 
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
@@ -405,6 +405,8 @@ async function answerQuestion(request) {
   }
 
   const sources = [...new Set([...reads.values()].map((r) => r.args?.collection).filter(Boolean))];
+  // The same sources as the app's page names, for the line under the answer.
+  const sourcePages = [...new Set(sources.map(pageOf))];
   await audit(access, "assistant", {
     question: clip(question, 300),
     view: clip(page?.view, 60),
@@ -422,12 +424,12 @@ async function answerQuestion(request) {
       reply: lang === "ar"
         ? "احتاج هذا السؤال خطوات أكثر مما يُسمح لي به. جرّب أن تسأل عن شيء واحد في كل مرة."
         : "That question needed more steps than I am allowed. Try asking for one thing at a time.",
-      provider: answer.provider, model: answer.model, sources, seconds: Math.round((Date.now() - started) / 1000),
+      provider: answer.provider, model: answer.model, sources, sourcePages, seconds: Math.round((Date.now() - started) / 1000),
     };
   }
   const seconds = Math.round((Date.now() - started) / 1000);
   logger.info(`[aiAssistant] ${answer.provider} ${answer.model} answered in ${seconds}s with ${reads.size} reads`);
-  return { reply: answer.text, provider: answer.provider, model: answer.model, sources, usedPage: !!page?.text, seconds };
+  return { reply: answer.text, provider: answer.provider, model: answer.model, sources, usedPage: !!page?.text, sourcePages, place: clip(page?.place, 200), seconds };
 }
 
 // For the tests.

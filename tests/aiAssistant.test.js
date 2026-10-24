@@ -140,7 +140,7 @@ describe('what the model is told', () => {
 
     it('carries the open page, cut to the size the provider takes', () => {
         const page = { view: 'dashboard', title: 'Dashboard', text: 'a'.repeat(20000) };
-        expect(pageBlock(page)).toMatch(/^PAGE ON SCREEN — Dashboard \(view: dashboard\)/);
+        expect(pageBlock(page)).toMatch(/^PLACE IN THE APP: National Child Health Program – Dashboard\nPAGE ON SCREEN — Dashboard \(view: dashboard\)/);
         expect(systemFor({ page, pageChars: 3000 }).length).toBeLessThan(systemFor({ page }).length);
         expect(systemFor({ page, lang: 'ar' })).toMatch(/answer in Arabic/);
     });
@@ -178,5 +178,50 @@ describe('the page on screen', () => {
     it('folds blank lines and spaces, and cuts to size', () => {
         expect(cleanPageText('  A \n\n\n  B   C \n')).toBe('A\nB C');
         expect(cleanPageText('x'.repeat(50), 10)).toHaveLength(10);
+    });
+});
+
+describe('sources named as places in the app', () => {
+    it('names the page a collection is shown in', async () => {
+        const { pageOf } = await import('../functions/aiDataText.js');
+        expect(pageOf('healthFacilities')).toBe('National Child Health Program – Child Health Services');
+        expect(pageOf('participants')).toBe('National Child Health Program – Courses – Participants');
+    });
+
+    it('names the open page with its tab, without repeats', async () => {
+        const { placeOf } = await import('../src/utils/pageSnapshot.js');
+        expect(placeOf('National Child Health Program', 'Dashboard', ['IMNCI'])).toBe('National Child Health Program – Dashboard – IMNCI');
+        expect(placeOf('National Child Health Program', 'National Child Health Program', [])).toBe('National Child Health Program');
+    });
+
+    it('tells the model to cite the place, not collection names', () => {
+        const s = systemFor({ page: { title: 'Dashboard', place: 'National Child Health Program – Dashboard – IMNCI', text: 'x' } });
+        expect(s).toMatch(/PLACE IN THE APP: National Child Health Program – Dashboard – IMNCI/);
+        expect(s).toMatch(/Never give collection or field names in the Source line/);
+    });
+});
+
+describe('conversations per page', () => {
+    it('reuses a recent answer to the same question, ignoring case and the question mark', async () => {
+        const { savedAnswer, REUSE_MS } = await import('../src/utils/aiChats.js');
+        const now = 1_000_000_000;
+        const list = [
+            { role: 'user', content: 'How many courses?' },
+            { role: 'assistant', content: '83', at: now - 1000 },
+        ];
+        expect(savedAnswer(list, 'how many courses', now)?.content).toBe('83');
+        expect(savedAnswer(list, 'How many facilities?', now)).toBeNull();
+        expect(savedAnswer(list, 'How many courses?', now + REUSE_MS)).toBeNull();
+    });
+
+    it('keeps the newest pages and drops failed answers', async () => {
+        const { trimChats } = await import('../src/utils/aiChats.js');
+        const out = trimChats({
+            dashboard: [{ role: 'user', content: 'a' }, { role: 'assistant', content: 'x', failed: true }],
+            courses: [{ role: 'user', content: 'b' }, { role: 'assistant', content: 'y', at: 5 }],
+            empty: [],
+        });
+        expect(Object.keys(out)).toEqual(['courses', 'dashboard']);
+        expect(out.dashboard).toHaveLength(1);
     });
 });

@@ -5,18 +5,21 @@
 // Cloud Function reads as the signed-in person), and says so when the data
 // does not hold the answer. No AI key is in the app.
 //
-// This file is the panel: the conversation, kept while the person moves
-// between pages so a follow-up can be asked on the next page. It is loaded
-// the first time it is opened; the buttons that open it are in
-// DataAssistantLauncher.jsx, which every page loads.
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+// This file is the panel. Each page has its own conversation, saved on this
+// device (aiChats.js), so coming back to a page shows what was asked there,
+// and the same question asked again on that page within the hour is answered
+// from the saved answer instead of asking the AI again. It is loaded the first
+// time it is opened; the buttons that open it are in DataAssistantLauncher.jsx,
+// which every page loads.
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { Sparkles, Send, X, Loader2, Copy, RotateCcw, FileText, Database } from 'lucide-react';
+import { Sparkles, Send, X, Loader2, Copy, RotateCcw, FileText, Database, History } from 'lucide-react';
 
 import { AiText } from './AiLibraryView';
 import { notify } from './dialogs';
 import { snapshotPage } from '../utils/pageSnapshot';
+import { loadChats, saveChats, savedAnswer } from '../utils/aiChats';
 
 const askServer = (payload) => httpsCallable(getFunctions(), 'aiAssistant', { timeout: 130000 })(payload);
 
@@ -49,9 +52,13 @@ function examplesFor(view, t) {
     return [page, ...(byView[view] || byView.landing)];
 }
 
-export function DataAssistantPanel({ open, onClose, view, pageTitle }) {
+export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' }) {
     const { t, i18n } = useTranslation();
-    const [messages, setMessages] = useState([]);
+    // One conversation per page, keyed by the page's view.
+    const [chats, setChats] = useState(() => loadChats(uid));
+    const messages = useMemo(() => chats[view] || [], [chats, view]);
+    const setMessages = useCallback((list) => setChats((all) => ({ ...all, [view]: list })), [view]);
+    useEffect(() => { saveChats(uid, chats); }, [uid, chats]);
     const [question, setQuestion] = useState('');
     const [busy, setBusy] = useState(false);
     const [usePage, setUsePage] = useState(true);
@@ -68,16 +75,21 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle }) {
         return () => { clearTimeout(id); window.removeEventListener('keydown', onKey); };
     }, [open, onClose]);
 
-    const ask = useCallback(async (asked) => {
+    const ask = useCallback(async (asked, { fresh = false } = {}) => {
         const text = String(asked ?? question).trim();
         if (!text || busy) return;
         setQuestion('');
         const before = messages;
+        const saved = fresh ? null : savedAnswer(before, text);
+        if (saved) {
+            setMessages([...before, { role: 'user', content: text }, { ...saved, cached: true }]);
+            return;
+        }
         setMessages([...before, { role: 'user', content: text }]);
         setBusy(true);
         try {
             const page = usePage
-                ? await snapshotPage(document.querySelector('main'), { view, title: pageTitle })
+                ? await snapshotPage(document.querySelector('main'), { view, title: pageTitle, appName: t('app.title', 'National Child Health Program') })
                 : null;
             const { data } = await askServer({
                 question: text,
@@ -87,7 +99,8 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle }) {
             });
             setMessages([...before, { role: 'user', content: text }, {
                 role: 'assistant', content: data.reply, provider: data.provider, model: data.model,
-                sources: data.sources || [], usedPage: !!data.usedPage, seconds: data.seconds,
+                sources: data.sources || [], sourcePages: data.sourcePages || [], place: data.place || '',
+                usedPage: !!data.usedPage, seconds: data.seconds, at: Date.now(),
             }]);
         } catch (e) {
             setMessages([...before, { role: 'user', content: text }, {
@@ -97,7 +110,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle }) {
         } finally {
             setBusy(false);
         }
-    }, [question, busy, messages, usePage, view, pageTitle, lang, t]);
+    }, [question, busy, messages, setMessages, usePage, view, pageTitle, lang, t]);
 
     const copy = async (text) => {
         try { await navigator.clipboard.writeText(text); notify(t('data_assistant.copied', 'Copied'), 'success'); }
@@ -157,8 +170,16 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle }) {
                             {m.failed ? m.content : <AiText text={m.content} />}
                             {!m.failed && (
                                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-400">
-                                    {m.usedPage && <span className="inline-flex items-center gap-1"><FileText size={12} />{t('data_assistant.read_page', 'this page')}</span>}
-                                    {m.sources?.length > 0 && <span className="inline-flex items-center gap-1"><Database size={12} />{m.sources.join(', ')}</span>}
+                                    {m.usedPage && <span className="inline-flex items-center gap-1"><FileText size={12} />{m.place || t('data_assistant.read_page', 'this page')}</span>}
+                                    {(m.sourcePages?.length > 0 ? m.sourcePages : m.sources || []).length > 0 && (
+                                        <span className="inline-flex items-center gap-1"><Database size={12} />{(m.sourcePages?.length > 0 ? m.sourcePages : m.sources).join(' · ')}</span>
+                                    )}
+                                    {m.cached && (
+                                        <button onClick={() => ask(messages[i - 1]?.content, { fresh: true })} disabled={busy}
+                                            className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700">
+                                            <History size={12} />{t('data_assistant.saved_answer', 'Saved answer')} · {t('data_assistant.ask_again', 'Ask again')}
+                                        </button>
+                                    )}
                                     {m.model && <span>{m.provider === 'groq' ? 'Groq' : 'Gemini'}{m.seconds ? ` · ${m.seconds} s` : ''}</span>}
                                     <button onClick={() => copy(m.content)} className="ms-auto inline-flex items-center gap-1 hover:text-slate-600">
                                         <Copy size={12} />{t('data_assistant.copy', 'Copy')}

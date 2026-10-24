@@ -3401,7 +3401,7 @@ case 'meetings':
             )}
             {dataAssistant.loaded && (
                 <Suspense fallback={null}>
-                    <DataAssistantPanel open={dataAssistant.open} onClose={closeDataAssistant} view={view} pageTitle={pageTitle} />
+                    <DataAssistantPanel open={dataAssistant.open} onClose={closeDataAssistant} view={view} pageTitle={pageTitle} uid={user?.uid} />
                 </Suspense>
             )}
 
