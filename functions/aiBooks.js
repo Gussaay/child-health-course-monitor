@@ -52,17 +52,9 @@ const { pageRange, rankPages, bestPages } = require("./aiBooksText");
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
-// Each Groq model has its own daily allowance, so the smaller one takes over
-// when the big one runs out. Pin one with GROQ_MODEL=... in functions/.env
-const GROQ_MODELS = process.env.GROQ_MODEL
-  ? [process.env.GROQ_MODEL]
-  : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+// Models in order, and how long one request may take: see aiModels.js.
+const { GEMINI_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-// "-latest" follows Google's current Flash model, so a retired version never
-// breaks the app; the others are tried when one model's free quota is used up.
-const GEMINI_MODELS = process.env.GEMINI_MODEL
-  ? [process.env.GEMINI_MODEL]
-  : ["gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"];
 
 const GROQ_CHARS = 18000;     // book text Groq's 8K tokens a minute leaves room for
 const GEMINI_CHARS = 600000;  // ~150K tokens: a whole manual, well inside Flash's window
@@ -264,13 +256,19 @@ async function groq(key, messages, maxTokens) {
   for (const model of GROQ_MODELS) {
     for (let attempt = 0; ; attempt++) {
       const r = await fetch(GROQ_URL, {
+        signal: AbortSignal.timeout(REQUEST_MS),
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
         body: JSON.stringify({
           model, messages, temperature: 0.3, max_completion_tokens: maxTokens,
           reasoning_effort: "low", include_reasoning: false,
         }),
-      });
+      }).catch((e) => ({ failed: e }));
+      if (r.failed) {
+        last = `${model}: ${r.failed.name === "TimeoutError" ? "no reply in time" : clip(r.failed.message, 120)}`;
+        logger.warn(`[aiBooks] Groq ${last}`);
+        break;
+      }
       const j = await r.json().catch(() => ({}));
       if (r.ok) {
         const text = String(j?.choices?.[0]?.message?.content || "").trim();
@@ -301,6 +299,7 @@ async function gemini(key, system, user, maxTokens) {
     let thinking = true;
     for (let attempt = 0; ; attempt++) {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        signal: AbortSignal.timeout(REQUEST_MS * 3),
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({
@@ -311,7 +310,12 @@ async function gemini(key, system, user, maxTokens) {
             ...(thinking ? { thinkingConfig: thinkingFor(model) } : {}),
           },
         }),
-      });
+      }).catch((e) => ({ failed: e }));
+      if (r.failed) {
+        last = `${model}: ${r.failed.name === "TimeoutError" ? "no reply in time" : clip(r.failed.message, 120)}`;
+        logger.warn(`[aiBooks] Gemini ${last}`);
+        break;
+      }
       const j = await r.json().catch(() => ({}));
       if (r.status === 400 && thinking && /thinking/i.test(j?.error?.message || "")) { thinking = false; continue; }
       if (r.ok) {

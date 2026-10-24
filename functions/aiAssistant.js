@@ -30,12 +30,8 @@ const {
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
-const GEMINI_MODELS = process.env.GEMINI_MODEL
-  ? [process.env.GEMINI_MODEL]
-  : ["gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"];
-const GROQ_MODELS = process.env.GROQ_MODEL
-  ? [process.env.GROQ_MODEL]
-  : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+// Models in order, and how long one request may take: see aiModels.js.
+const { GEMINI_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const MAX_STEPS = 6;          // model calls per question
@@ -186,7 +182,7 @@ async function post(url, headers, body, label, deadline) {
     const t0 = Date.now();
     let r;
     try {
-      r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(left) });
+      r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(Math.min(left, REQUEST_MS)) });
     } catch (e) {
       throw new ProviderError(`${label}: ${e.name === "TimeoutError" ? "no reply in time" : clip(e.message, 120)}`);
     }
@@ -307,10 +303,15 @@ async function askGroq({ key, model, system, history, question, call, deadline }
 function engines() {
   const gemini = cleanKey(GEMINI_API_KEY);
   const groq = cleanKey(GROQ_API_KEY);
+  const g = gemini ? GEMINI_MODELS.map((model) => ({ provider: "gemini", model, key: gemini, run: askGemini })) : [];
+  const q = groq ? GROQ_MODELS.map((model) => ({ provider: "groq", model, key: groq, run: askGroq })) : [];
+  if (process.env.AI_ASSISTANT_GROQ_FIRST === "1") return [...q, ...g];
+  // Taken in turns, so one provider having a bad day costs one try, not four.
   const list = [];
-  if (gemini) GEMINI_MODELS.forEach((model) => list.push({ provider: "gemini", model, key: gemini, run: askGemini }));
-  if (groq) GROQ_MODELS.forEach((model) => list.push({ provider: "groq", model, key: groq, run: askGroq }));
-  if (process.env.AI_ASSISTANT_GROQ_FIRST === "1") list.sort((a, b) => (a.provider === "groq" ? -1 : 0) - (b.provider === "groq" ? -1 : 0));
+  for (let i = 0; i < Math.max(g.length, q.length); i++) {
+    if (g[i]) list.push(g[i]);
+    if (q[i]) list.push(q[i]);
+  }
   return list;
 }
 
