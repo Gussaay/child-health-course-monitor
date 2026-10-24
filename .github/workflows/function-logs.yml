@@ -1,0 +1,22 @@
+name: Read function logs
+
+# One-off, read-only: prints recent Cloud Functions logs for the assistant so a
+# failure can be seen without the Google Cloud console. Runs on this branch only.
+on:
+  push:
+    branches:
+      - claude/project-thread-je2fp1
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: aiAssistant logs (last 2 hours)
+        run: |
+          gcloud logging read 'resource.labels.service_name="aiassistant" OR resource.labels.function_name="aiAssistant"' \
+            --project imnci-courses-monitor --freshness=2h --limit=80 \
+            --format='table(timestamp, severity, httpRequest.status, httpRequest.latency, textPayload, jsonPayload.message)' || true
