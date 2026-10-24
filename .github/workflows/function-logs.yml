@@ -50,3 +50,31 @@ jobs:
               echo "Groq $m -> $code in $(( $(date +%s) - s ))s $(jq -r '.error.message? // empty' /tmp/q.json | head -c 160)"
             done
           fi
+      - name: Do tool calls work?
+        shell: bash
+        run: |
+          set +e
+          export G=$(gcloud secrets versions access latest --secret=GEMINI_API_KEY --project imnci-courses-monitor | tr -d ' \n"'"'"'')
+          export Q=$(gcloud secrets versions access latest --secret=GROQ_API_KEY --project imnci-courses-monitor | tr -d ' \n"'"'"'')
+          echo "::add-mask::$G"; echo "::add-mask::$Q"
+          cat > t.mjs <<'JS'
+          const tool = { name: "count_data", description: "Count records grouped by a field.", parameters: { type: "object", properties: { collection: { type: "string" }, groupBy: { type: "string" } }, required: ["collection"] } };
+          const q = "How many courses were run in each state this year? Use the tool on collection courses.";
+          for (const [model, thinking] of [["gemini-3.5-flash", { thinkingLevel: "minimal" }], ["gemini-3.1-flash-lite", { thinkingLevel: "minimal" }], ["gemini-flash-lite-latest", { thinkingLevel: "minimal" }]]) {
+            const t0 = Date.now();
+            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", signal: AbortSignal.timeout(30000), headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.G },
+              body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: q }] }], tools: [{ functionDeclarations: [tool] }], generationConfig: { temperature: 0.1, thinkingConfig: thinking } }) }).catch((e) => ({ status: e.name }));
+            const j = r.json ? await r.json() : {};
+            const call = j?.candidates?.[0]?.content?.parts?.find((p) => p.functionCall)?.functionCall;
+            console.log(model, r.status, `${Date.now() - t0} ms`, call ? `call ${call.name} ${JSON.stringify(call.args)}` : String(j?.error?.message || "").slice(0, 160));
+          }
+          for (const model of ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]) {
+            const t0 = Date.now();
+            const r = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", signal: AbortSignal.timeout(30000), headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.Q}` },
+              body: JSON.stringify({ model, messages: [{ role: "user", content: q }], tools: [{ type: "function", function: tool }], tool_choice: "auto", reasoning_effort: "low", include_reasoning: false, max_completion_tokens: 500 }) }).catch((e) => ({ status: e.name }));
+            const j = r.json ? await r.json() : {};
+            const call = j?.choices?.[0]?.message?.tool_calls?.[0]?.function;
+            console.log(model, r.status, `${Date.now() - t0} ms`, call ? `call ${call.name} ${call.arguments}` : String(j?.error?.message || "").slice(0, 160));
+          }
+          JS
+          node t.mjs
