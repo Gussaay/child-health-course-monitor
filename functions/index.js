@@ -349,3 +349,8 @@ exports.describeClaudeConnection = claudeOAuth.describeClaudeConnection;
 // GEMINI_API_KEY set with `firebase functions:secrets:set` BEFORE this line
 // reaches main: a declared secret that is missing fails the whole deploy.
 exports.aiBooks = require("./aiBooks").aiBooks;
+
+// The data assistant ("Ask the data", on every page): answers from the app's
+// own data only, read as the person asking. Same GROQ_API_KEY and
+// GEMINI_API_KEY secrets as aiBooks, so nothing new to set before deploying.
+exports.aiAssistant = require("./aiAssistant").aiAssistant;

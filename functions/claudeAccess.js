@@ -89,17 +89,16 @@ async function accessFor(auth) {
 // ============================================================================
 
 /**
- * Runs one read.
+ * A query on one collection, with the caller's scope on top.
  *
  * Filters are applied by Firestore where they can be, and the caller's own
  * state or locality is applied on top and cannot be widened by the request —
  * asking for another state returns that state's name filtered back to nothing
- * rather than that state's data.
+ * rather than that state's data. Shared by every read (here and in
+ * aiAssistant.js), so the scope is applied in one place.
  */
-async function runQuery(access, { collection, filters = [], limit = 100, orderBy = null }) {
+function scopedQuery(access, collection, filters = []) {
   const spec = assertReadable(collection, access);
-  const capped = Math.max(1, Math.min(Number(limit) || 100, MAX_ROWS));
-
   let q = access.db.collection(collection);
 
   const allowedOps = new Set(["==", "!=", "<", "<=", ">", ">=", "array-contains", "in"]);
@@ -118,6 +117,15 @@ async function runQuery(access, { collection, filters = [], limit = 100, orderBy
       q = q.where(spec.scope.locality, "==", access.manageLocation);
     }
   }
+  return { spec, q };
+}
+
+/** Runs one read. */
+async function runQuery(access, { collection, filters = [], limit = 100, orderBy = null }) {
+  const capped = Math.max(1, Math.min(Number(limit) || 100, MAX_ROWS));
+  const scoped = scopedQuery(access, collection, filters);
+  const { spec } = scoped;
+  let { q } = scoped;
 
   if (orderBy && typeof orderBy === "string") q = q.orderBy(orderBy, "desc");
 
@@ -188,6 +196,8 @@ async function audit(access, action, detail) {
 }
 
 module.exports = {
+  scopedQuery,
+  audit,
   COLLECTIONS,
   NEVER,
   accessFor,

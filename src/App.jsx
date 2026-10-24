@@ -94,6 +94,13 @@ const ClaudeChatPanel = lazy(() => import('./components/ClaudeAssistant').then(m
 // the team already has. Flip this and the claudeChat export together.
 const CLAUDE_CHAT_ENABLED = false;
 
+// "Ask the data" on every page: answers from the app's own data only, through
+// the aiAssistant Cloud Function (Gemini and Groq free tiers, no Anthropic key).
+// The panel loads the first time it is opened.
+const DataAssistantPanel = lazy(() => import('./components/DataAssistant').then(m => ({ default: m.DataAssistantPanel })));
+// Pages where the round button would sit on top of a form's own Save row.
+const NO_ASSISTANT_BUTTON = new Set(['courseForm', 'participantForm', 'facilitatorForm', 'observe', 'imciForm', 'enter-test-scores', 'participantMigration']);
+
 // Reporting a problem from wherever it happened.
 const ReportProblemButton = lazy(() => import('./components/ProblemReports').then(m => ({ default: m.ReportProblemButton })));
 const MeetingTrackerView = lazy(() => import('./components/MeetingTrackerView'));
@@ -147,6 +154,7 @@ import { notify, confirmDialog, DialogHost } from './components/dialogs';
 import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
 import SudanMiniMap from './components/SudanMiniMap';
+import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
 import { coverageColor } from './utils/statusColors';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
@@ -540,7 +548,7 @@ function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats, s
     );
 }
 
-function Landing({ navigate, permissions, user, roles = [], userStates = [], userLocalities = [], stats = null }) {
+function Landing({ navigate, permissions, user, roles = [], userStates = [], userLocalities = [], stats = null, onAskData }) {
     const { t, i18n } = useTranslation();
 
     const hour = new Date().getHours();
@@ -593,6 +601,8 @@ function Landing({ navigate, permissions, user, roles = [], userStates = [], use
                 </div>
                 <SudanMiniMap highlight={userStates} all={level === 'federal'} title={scope || levelLabel} className="hidden lg:block shrink-0 w-36 xl:w-44 text-white" />
             </section>
+
+            {onAskData && accessibleButtons.length > 0 && <DataAssistantCard onOpen={onAskData} />}
 
             {accessibleButtons.length > 0 ? (
                 <div className="space-y-5">
@@ -1129,6 +1139,9 @@ export default function App() {
     // Set when claude.ai sends somebody here to approve a connection.
     const [connectClaudeId, setConnectClaudeId] = useState(null);
     const [claudeChatOpen, setClaudeChatOpen] = useState(false);
+    const [dataAssistant, setDataAssistant] = useState({ loaded: false, open: false });
+    const openDataAssistant = useCallback(() => setDataAssistant({ loaded: true, open: true }), []);
+    const closeDataAssistant = useCallback(() => setDataAssistant((s) => ({ ...s, open: false })), []);
     const [publicViewData, setPublicViewData] = useState(null);
     const [publicViewType, setPublicViewType] = useState(null); 
     const [publicViewLoading, setPublicViewLoading] = useState(false);
@@ -2421,7 +2434,7 @@ export default function App() {
         const viewToRender = view;
 
         switch (viewToRender) {
-            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={homeStats} />;
+            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={homeStats} onAskData={openDataAssistant} />;
             case 'admin': return <AdminDashboard appRoles={userRoles} />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
@@ -3380,6 +3393,15 @@ case 'meetings':
             {claudeChatOpen && (
                 <Suspense fallback={null}>
                     <ClaudeChatPanel isOpen onClose={() => setClaudeChatOpen(false)} />
+                </Suspense>
+            )}
+
+            {user && !isMinimalUILayout && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && (
+                <DataAssistantButton onClick={openDataAssistant} />
+            )}
+            {dataAssistant.loaded && (
+                <Suspense fallback={null}>
+                    <DataAssistantPanel open={dataAssistant.open} onClose={closeDataAssistant} view={view} pageTitle={pageTitle} />
                 </Suspense>
             )}
 
