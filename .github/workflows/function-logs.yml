@@ -15,8 +15,13 @@ jobs:
         with:
           credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
       - uses: google-github-actions/setup-gcloud@v2
-      - name: aiAssistant logs (last 2 hours)
+      - name: AI function warnings and errors (last 6 hours)
         run: |
-          gcloud logging read 'resource.labels.service_name="aiassistant" OR resource.labels.function_name="aiAssistant"' \
-            --project imnci-courses-monitor --freshness=2h --limit=80 \
-            --format='table(timestamp, severity, httpRequest.status, httpRequest.latency, textPayload, jsonPayload.message)' || true
+          gcloud logging read '(resource.labels.service_name="aiassistant" OR resource.labels.service_name="aibooks") AND severity>=WARNING' \
+            --project imnci-courses-monitor --freshness=6h --limit=60 \
+            --format='table(timestamp, resource.labels.service_name, severity, httpRequest.status, httpRequest.latency, textPayload, jsonPayload.message)' || true
+      - name: aiAssistant info lines (last 6 hours)
+        run: |
+          gcloud logging read 'resource.labels.service_name="aiassistant" AND jsonPayload.message:"aiAssistant"' \
+            --project imnci-courses-monitor --freshness=6h --limit=40 \
+            --format='table(timestamp, severity, jsonPayload.message)' || true
