@@ -38,7 +38,11 @@ const GROQ_MODELS = process.env.GROQ_MODEL
   : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-const MAX_STEPS = 7;          // model calls per question
+const MAX_STEPS = 6;          // model calls per question
+// The whole answer must be back well inside the function's 120 s limit. When
+// little time is left the model is told to answer from what it has read.
+const ANSWER_WITHIN = 90000;
+const LAST_STEP_AT = 25000;   // time left at which the next step must answer
 const MAX_HISTORY = 10;       // earlier turns kept
 const COUNT_ROWS = 6000;      // records count_data reads at most
 const SAMPLE_ROWS = 30;       // records describe_fields looks at
@@ -53,7 +57,7 @@ const STAFF_ROLES = [
 // How much each provider is given: Groq's per-minute allowance counts the
 // whole conversation, so it sees less of the page and of each result.
 const SIZES = {
-  gemini: { result: 30000, page: 9000 },
+  gemini: { result: 12000, page: 9000 },
   groq: { result: 5000, page: 3000 },
 };
 
@@ -168,16 +172,40 @@ async function runTool(access, name, args, budget) {
 
 class ProviderError extends Error {}
 
-async function post(url, headers, body, label) {
+// How long Google or Groq asks us to wait before trying again, in seconds.
+const waitAsked = (r, j) => parseFloat(r.headers.get("retry-after"))
+  || parseFloat((j?.error?.details || []).find((d) => d.retryDelay)?.retryDelay) || 0;
+
+// A request that fails is retried once only when the wait is short; a used-up
+// quota moves straight on to the next model rather than keeping the person
+// waiting.
+async function post(url, headers, body, label, deadline) {
   for (let attempt = 0; ; attempt++) {
-    const r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+    const left = deadline - Date.now();
+    if (left < 3000) throw new ProviderError(`${label}: out of time`);
+    const t0 = Date.now();
+    let r;
+    try {
+      r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(left) });
+    } catch (e) {
+      throw new ProviderError(`${label}: ${e.name === "TimeoutError" ? "no reply in time" : clip(e.message, 120)}`);
+    }
+    logger.info(`[aiAssistant] ${label} replied ${r.status} in ${Date.now() - t0} ms`);
     const j = await r.json().catch(() => ({}));
     if (r.ok) return j;
-    const quick = [429, 500, 502, 503].includes(r.status);
-    if (attempt < 1 && quick) { await sleep(2000); continue; }
-    throw new ProviderError(`${label} ${r.status}: ${clip(j?.error?.message, 200)}`);
+    const wait = waitAsked(r, j);
+    const brief = [500, 502, 503].includes(r.status) || (r.status === 429 && wait > 0 && wait <= 3);
+    if (attempt < 1 && brief) { await sleep(Math.max(wait * 1000, 1000)); continue; }
+    const err = new ProviderError(`${label} ${r.status}: ${clip(j?.error?.message, 200)}`);
+    err.status = r.status;
+    err.detail = j?.error?.message || "";
+    throw err;
   }
 }
+
+// Thinking makes every step of the tool loop many seconds slower and these
+// questions are lookups, so it is kept to the minimum each model allows.
+const thinkingFor = (model) => (/2\.5/.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: "minimal" });
 
 function geminiTools() {
   return [{
@@ -189,22 +217,38 @@ function geminiTools() {
   }];
 }
 
-async function askGemini({ key, model, system, history, question, call }) {
+async function askGemini({ key, model, system, history, question, call, deadline }) {
   const contents = [
     ...history.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
     { role: "user", parts: [{ text: question }] },
   ];
+  let thinking = true;
   for (let step = 0; step < MAX_STEPS; step++) {
-    const j = await post(
+    const last = step === MAX_STEPS - 1 || deadline - Date.now() < LAST_STEP_AT;
+    const request = () => post(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       { "Content-Type": "application/json", "x-goog-api-key": key },
       {
         systemInstruction: { parts: [{ text: system }] },
         contents,
         tools: geminiTools(),
-        generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
+        // On the last step it may not read any more: it answers from what it has.
+        ...(last ? { toolConfig: { functionCallingConfig: { mode: "NONE" } } } : {}),
+        generationConfig: {
+          temperature: 0.1, maxOutputTokens: 2048,
+          ...(thinking ? { thinkingConfig: thinkingFor(model) } : {}),
+        },
       },
-      `Gemini ${model}`);
+      `Gemini ${model}`, deadline);
+    let j;
+    try {
+      j = await request();
+    } catch (e) {
+      // A model that does not take this thinking setting is asked again without it.
+      if (!(thinking && e.status === 400 && /think/i.test(e.detail))) throw e;
+      thinking = false;
+      j = await request();
+    }
     const content = j?.candidates?.[0]?.content;
     const parts = content?.parts || [];
     const calls = parts.filter((p) => p.functionCall);
@@ -216,17 +260,17 @@ async function askGemini({ key, model, system, history, question, call }) {
     // The model's turn goes back exactly as it came (Gemini checks its own
     // signatures on it), followed by the results.
     contents.push({ role: "model", parts });
-    const responses = [];
-    for (const p of calls) {
+    // Several reads asked for at once are made at once.
+    const responses = await Promise.all(calls.map(async (p) => {
       const out = await call(p.functionCall.name, p.functionCall.args || {}, SIZES.gemini.result);
-      responses.push({ functionResponse: { name: p.functionCall.name, ...(p.functionCall.id ? { id: p.functionCall.id } : {}), response: { result: out } } });
-    }
+      return { functionResponse: { name: p.functionCall.name, ...(p.functionCall.id ? { id: p.functionCall.id } : {}), response: { result: out } } };
+    }));
     contents.push({ role: "user", parts: responses });
   }
   return { text: "", tooManySteps: true, model };
 }
 
-async function askGroq({ key, model, system, history, question, call }) {
+async function askGroq({ key, model, system, history, question, call, deadline }) {
   const messages = [
     { role: "system", content: system },
     ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -234,10 +278,11 @@ async function askGroq({ key, model, system, history, question, call }) {
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: t }));
   for (let step = 0; step < MAX_STEPS; step++) {
+    const last = step === MAX_STEPS - 1 || deadline - Date.now() < LAST_STEP_AT;
     const j = await post(GROQ_URL, { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, {
-      model, messages, tools, tool_choice: "auto", temperature: 0.1,
+      model, messages, tools, tool_choice: last ? "none" : "auto", temperature: 0.1,
       max_completion_tokens: 1500, reasoning_effort: "low", include_reasoning: false,
-    }, `Groq ${model}`);
+    }, `Groq ${model}`, deadline);
     const msg = j?.choices?.[0]?.message || {};
     const calls = msg.tool_calls || [];
     if (!calls.length) {
@@ -246,12 +291,14 @@ async function askGroq({ key, model, system, history, question, call }) {
       return { text, model };
     }
     messages.push({ role: "assistant", content: msg.content || "", tool_calls: calls });
-    for (const c of calls) {
+    const outs = await Promise.all(calls.map((c) => {
       let args = {};
       try { args = JSON.parse(c.function?.arguments || "{}"); } catch { args = {}; }
-      const out = await call(c.function?.name, args, SIZES.groq.result);
-      messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out).slice(0, SIZES.groq.result + 500) });
-    }
+      return call(c.function?.name, args, SIZES.groq.result);
+    }));
+    calls.forEach((c, i) => {
+      messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(outs[i]).slice(0, SIZES.groq.result + 500) });
+    });
   }
   return { text: "", tooManySteps: true, model };
 }
@@ -292,78 +339,95 @@ async function countUse(db, uid, roles) {
 exports.aiAssistant = onCall(
   { secrets: [GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 120, memory: "512MiB" },
   async (request) => {
-    const access = await accessFor(request.auth).catch((e) => {
-      throw new HttpsError("unauthenticated", e.message);
-    });
-    const lang = request.data?.lang === "ar" ? "ar" : "en";
-
-    if (catalogueFor(access).length === 0) {
-      return {
-        reply: lang === "ar"
-          ? "حسابك لا يملك بعد صلاحية الاطلاع على أي من بيانات البرنامج، لذلك لا يوجد ما أقرأه. اطلب من المسؤول منحك الصلاحيات المطلوبة."
-          : "Your account does not have access to any programme data yet, so there is nothing I can read. Ask a super user for the permissions you need.",
-        sources: [],
-      };
+    try {
+      return await answerQuestion(request);
+    } catch (e) {
+      if (e instanceof HttpsError) throw e;
+      // Anything unexpected is named, so a screenshot of it says what broke.
+      logger.error("[aiAssistant] failed", e);
+      throw new HttpsError("internal", `The assistant failed: ${clip(e?.message || e, 200)}`);
     }
-
-    const question = clip(request.data?.question, 2000).trim();
-    if (!question) throw new HttpsError("invalid-argument", "Ask a question.");
-    const history = (Array.isArray(request.data?.messages) ? request.data.messages : [])
-      .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
-      .slice(-MAX_HISTORY)
-      .map((m) => ({ role: m.role, content: clip(m.content, 4000) }));
-    const page = request.data?.page && typeof request.data.page === "object" ? request.data.page : null;
-
-    const list = engines();
-    if (!list.length) throw new HttpsError("failed-precondition", "No AI key is set on the server (GEMINI_API_KEY or GROQ_API_KEY).");
-
-    await countUse(access.db, access.uid, access.roles);
-
-    // Each distinct read is made once, whichever provider asks for it.
-    const reads = new Map();
-    const call = async (name, args, budget) => {
-      const id = `${name}:${JSON.stringify(args)}:${budget}`;
-      if (!reads.has(id)) reads.set(id, { name, args, out: await runTool(access, name, args, budget) });
-      return reads.get(id).out;
-    };
-
-    let answer = null;
-    const failures = [];
-    for (const e of list) {
-      try {
-        const system = systemFor({ page, lang, pageChars: SIZES[e.provider].page });
-        answer = { ...(await e.run({ key: e.key, model: e.model, system, history, question, call })), provider: e.provider };
-        break;
-      } catch (err) {
-        failures.push(err.message);
-        logger.warn(`[aiAssistant] ${err.message}`);
-        if (!(err instanceof ProviderError)) break;
-      }
-    }
-
-    const sources = [...new Set([...reads.values()].map((r) => r.args?.collection).filter(Boolean))];
-    await audit(access, "assistant", {
-      question: clip(question, 300),
-      view: clip(page?.view, 60),
-      reads: [...reads.values()].map((r) => ({ tool: r.name, collection: r.args?.collection || null })).slice(0, 20),
-      provider: answer?.provider || null,
-      model: answer?.model || null,
-    });
-
-    if (!answer) {
-      throw new HttpsError("unavailable", "The assistant is busy or out of today's free quota. Try again in a minute.",
-        { failures: failures.slice(0, 4) });
-    }
-    if (answer.tooManySteps) {
-      return {
-        reply: lang === "ar"
-          ? "احتاج هذا السؤال خطوات أكثر مما يُسمح لي به. جرّب أن تسأل عن شيء واحد في كل مرة."
-          : "That question needed more steps than I am allowed. Try asking for one thing at a time.",
-        provider: answer.provider, model: answer.model, sources,
-      };
-    }
-    return { reply: answer.text, provider: answer.provider, model: answer.model, sources, usedPage: !!page?.text };
   });
+
+async function answerQuestion(request) {
+  const access = await accessFor(request.auth).catch((e) => {
+    throw new HttpsError("unauthenticated", e.message);
+  });
+  const lang = request.data?.lang === "ar" ? "ar" : "en";
+
+  const catalogue = catalogueFor(access);
+  if (catalogue.length === 0) {
+    return {
+      reply: lang === "ar"
+        ? "حسابك لا يملك بعد صلاحية الاطلاع على أي من بيانات البرنامج، لذلك لا يوجد ما أقرأه. اطلب من المسؤول منحك الصلاحيات المطلوبة."
+        : "Your account does not have access to any programme data yet, so there is nothing I can read. Ask a super user for the permissions you need.",
+      sources: [],
+    };
+  }
+
+  const question = clip(request.data?.question, 2000).trim();
+  if (!question) throw new HttpsError("invalid-argument", "Ask a question.");
+  const history = (Array.isArray(request.data?.messages) ? request.data.messages : [])
+    .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+    .slice(-MAX_HISTORY)
+    .map((m) => ({ role: m.role, content: clip(m.content, 4000) }));
+  const page = request.data?.page && typeof request.data.page === "object" ? request.data.page : null;
+
+  const list = engines();
+  if (!list.length) throw new HttpsError("failed-precondition", "No AI key is set on the server (GEMINI_API_KEY or GROQ_API_KEY).");
+
+  await countUse(access.db, access.uid, access.roles);
+
+  // Each distinct read is made once, whichever provider asks for it.
+  const reads = new Map();
+  const call = async (name, args, budget) => {
+    const id = `${name}:${JSON.stringify(args)}:${budget}`;
+    if (!reads.has(id)) reads.set(id, { name, args, out: await runTool(access, name, args, budget) });
+    return reads.get(id).out;
+  };
+
+  const started = Date.now();
+  const deadline = started + ANSWER_WITHIN;
+  let answer = null;
+  const failures = [];
+  for (const e of list) {
+    if (deadline - Date.now() < LAST_STEP_AT) break;
+    try {
+      const system = systemFor({ page, lang, pageChars: SIZES[e.provider].page, catalogue });
+      answer = { ...(await e.run({ key: e.key, model: e.model, system, history, question, call, deadline })), provider: e.provider };
+      break;
+    } catch (err) {
+      failures.push(err.message);
+      logger.warn(`[aiAssistant] ${err.message}`);
+      if (!(err instanceof ProviderError)) break;
+    }
+  }
+
+  const sources = [...new Set([...reads.values()].map((r) => r.args?.collection).filter(Boolean))];
+  await audit(access, "assistant", {
+    question: clip(question, 300),
+    view: clip(page?.view, 60),
+    reads: [...reads.values()].map((r) => ({ tool: r.name, collection: r.args?.collection || null })).slice(0, 20),
+    provider: answer?.provider || null,
+    model: answer?.model || null,
+  });
+
+  if (!answer) {
+    throw new HttpsError("unavailable", "The assistant is busy or out of today's free quota. Try again in a minute.",
+      { failures: failures.slice(0, 4) });
+  }
+  if (answer.tooManySteps) {
+    return {
+      reply: lang === "ar"
+        ? "احتاج هذا السؤال خطوات أكثر مما يُسمح لي به. جرّب أن تسأل عن شيء واحد في كل مرة."
+        : "That question needed more steps than I am allowed. Try asking for one thing at a time.",
+      provider: answer.provider, model: answer.model, sources, seconds: Math.round((Date.now() - started) / 1000),
+    };
+  }
+  const seconds = Math.round((Date.now() - started) / 1000);
+  logger.info(`[aiAssistant] ${answer.provider} ${answer.model} answered in ${seconds}s with ${reads.size} reads`);
+  return { reply: answer.text, provider: answer.provider, model: answer.model, sources, usedPage: !!page?.text, seconds };
+}
 
 // For the tests.
 exports._internal = { runTool, countData, queryData, describe, engines, askGemini, askGroq };

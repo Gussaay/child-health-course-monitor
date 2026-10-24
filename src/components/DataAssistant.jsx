@@ -87,7 +87,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle }) {
             });
             setMessages([...before, { role: 'user', content: text }, {
                 role: 'assistant', content: data.reply, provider: data.provider, model: data.model,
-                sources: data.sources || [], usedPage: !!data.usedPage,
+                sources: data.sources || [], usedPage: !!data.usedPage, seconds: data.seconds,
             }]);
         } catch (e) {
             setMessages([...before, { role: 'user', content: text }, {
@@ -159,7 +159,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle }) {
                                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-400">
                                     {m.usedPage && <span className="inline-flex items-center gap-1"><FileText size={12} />{t('data_assistant.read_page', 'this page')}</span>}
                                     {m.sources?.length > 0 && <span className="inline-flex items-center gap-1"><Database size={12} />{m.sources.join(', ')}</span>}
-                                    {m.model && <span>{m.provider === 'groq' ? 'Groq' : 'Gemini'}</span>}
+                                    {m.model && <span>{m.provider === 'groq' ? 'Groq' : 'Gemini'}{m.seconds ? ` · ${m.seconds} s` : ''}</span>}
                                     <button onClick={() => copy(m.content)} className="ms-auto inline-flex items-center gap-1 hover:text-slate-600">
                                         <Copy size={12} />{t('data_assistant.copy', 'Copy')}
                                     </button>
