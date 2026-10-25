@@ -14,7 +14,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { Sparkles, Send, X, Loader2, Copy, RotateCcw, FileText, Database, History } from 'lucide-react';
+import { Sparkles, Send, X, Loader2, Copy, RotateCcw, FileText, Database, History, CornerDownRight } from 'lucide-react';
 
 import { AiText } from './AiLibraryView';
 import { notify } from './dialogs';
@@ -25,6 +25,7 @@ const askServer = (payload) => httpsCallable(getFunctions(), 'aiAssistant', { ti
 
 function examplesFor(view, t) {
     const page = t('data_assistant.example_page', 'Summarise what this page shows.');
+    const plan = t('data_assistant.example_plan', 'What stands out on this page, and what actions do you suggest?');
     const byView = {
         landing: [
             t('data_assistant.example_courses_state', 'How many courses were run in each state this year?'),
@@ -41,6 +42,7 @@ function examplesFor(view, t) {
         childHealthServices: [
             t('data_assistant.example_imnci_facilities', 'How many facilities provide IMNCI in each state?'),
             t('data_assistant.example_functioning', 'How many facilities are not functioning?'),
+            t('data_assistant.example_coverage_plan', 'Which localities have the lowest IMNCI coverage, and what targets and activities would close the gap?'),
         ],
         skillsMentorship: [
             t('data_assistant.example_visits', 'How many mentorship visits were made per state this year?'),
@@ -49,7 +51,7 @@ function examplesFor(view, t) {
             t('data_assistant.example_facilitators', 'How many facilitators are there for each course?'),
         ],
     };
-    return [page, ...(byView[view] || byView.landing)];
+    return [page, plan, ...(byView[view] || byView.landing)];
 }
 
 export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' }) {
@@ -100,6 +102,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
             setMessages([...before, { role: 'user', content: text }, {
                 role: 'assistant', content: data.reply, provider: data.provider, model: data.model,
                 sources: data.sources || [], sourcePages: data.sourcePages || [], place: data.place || '',
+                followUps: Array.isArray(data.followUps) ? data.followUps : [],
                 usedPage: !!data.usedPage, seconds: data.seconds, at: Date.now(),
             }]);
         } catch (e) {
@@ -149,6 +152,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                         <div className="space-y-4">
                             <p className="text-sm text-slate-600">
                                 {t('data_assistant.intro', 'Ask about anything in the app: courses, participants, facilities, mentorship, plans and the dashboards. Answers come only from the app\'s data that your account can open. When the data does not hold the answer, it says so.')}
+                                {' '}{t('data_assistant.intro_more', 'It can also compare places, point out what stands out, and suggest actions, targets and plans here in the chat. It never changes anything in the app.')}
                             </p>
                             <div className="space-y-2">
                                 {examplesFor(view, t).map((example) => (
@@ -186,12 +190,23 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                                     </button>
                                 </div>
                             )}
+                            {/* Next questions, offered under the latest answer only. */}
+                            {!m.failed && i === messages.length - 1 && m.followUps?.length > 0 && (
+                                <div className="mt-2 flex flex-col gap-1.5">
+                                    {m.followUps.map((f) => (
+                                        <button key={f} onClick={() => ask(f)} disabled={busy} dir="auto"
+                                            className="inline-flex items-start gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-start text-xs text-sky-800 hover:border-sky-400 disabled:opacity-50">
+                                            <CornerDownRight size={13} className="mt-0.5 shrink-0 rtl:-scale-x-100" />{f}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )))}
 
                     {busy && (
                         <div className="flex items-center gap-2 text-sm text-slate-500">
-                            <Loader2 size={15} className="animate-spin" /> {t('data_assistant.reading', 'Reading the app\'s data…')}
+                            <Loader2 size={15} className="animate-spin" /> {t('data_assistant.reading', 'Reading and analysing the app\'s data…')}
                         </div>
                     )}
                     <div ref={endRef} />
