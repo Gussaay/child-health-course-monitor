@@ -9,11 +9,12 @@ import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { STATE_LOCALITIES } from './constants';
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle, Sparkles } from 'lucide-react';
 
 // Lazy: the reports carry screenshots, and nobody opening Manage User Roles
 // should pay to download a screen they are not looking at.
 const ProblemReportsTab = lazy(() => import('./ProblemReports').then(m => ({ default: m.ProblemReportsTab })));
+const AiActivityTab = lazy(() => import('./AiActivityTab'));
 import { listFederalCoordinators } from '../data';
 
 // --- NEW COMPONENT IMPORT ---
@@ -59,6 +60,7 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
 
     if (currentUserRoles.includes('super_user')) {
         tabs.push({ key: 'usage', label: 'Resource Usage', short: 'Usage', icon: Activity });
+        tabs.push({ key: 'ai', label: 'AI Activity', short: 'AI', icon: Sparkles });
         tabs.push({ key: 'updates', label: 'App Updates', short: 'Updates', icon: Smartphone });
     }
 
@@ -1342,6 +1344,9 @@ export function AdminDashboard({ appRoles = [] }) {
                 {activeTab === 'permissions' && renderRolePermissionsTab()}
                 {activeTab === 'usage' && currentUserRoles.includes('super_user') && renderUsageTab()}
                 {activeTab === 'updates' && currentUserRoles.includes('super_user') && renderUpdatesTab()}
+                {activeTab === 'ai' && currentUserRoles.includes('super_user') && (
+                    <Suspense fallback={<Spinner />}><AiActivityTab /></Suspense>
+                )}
                 {activeTab === 'notifications' && <AdminNotificationSender preselectedUserId={notificationTargetId} />}
                 {activeTab === 'problems' && (
                     <Suspense fallback={<Spinner />}><ProblemReportsTab /></Suspense>

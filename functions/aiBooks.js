@@ -54,6 +54,7 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 // Models in order, and how long one request may take: see aiModels.js.
 const { GEMINI_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
+const { withAiLog } = require("./aiLog");
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const GROQ_CHARS = 18000;     // book text Groq's 8K tokens a minute leaves room for
@@ -127,17 +128,23 @@ async function caller(db, auth) {
 
 // Counted before the call, so a failing request still counts: that is what
 // stops a loop of retries from draining the shared free quota.
+// The count and limit go on `who.use` for the AI activity log (aiLog.js).
 async function countUse(db, who) {
   const limit = who.editor ? DAILY_LIMIT.editor : who.staff ? DAILY_LIMIT.staff : DAILY_LIMIT.learner;
   const day = new Date().toISOString().slice(0, 10);
   const ref = db.collection("aiUsage").doc(who.uid);
+  const use = who.use || {};
+  use.limit = limit;
   await db.runTransaction(async (tx) => {
     const cur = (await tx.get(ref)).data() || {};
     const used = cur.day === day ? cur.count || 0 : 0;
+    use.used = used;
     if (used >= limit) {
+      use.limitHit = true;
       throw new HttpsError("resource-exhausted", `You have used today's ${limit} AI requests. Try again tomorrow.`);
     }
     tx.set(ref, { day, count: used + 1, lastAt: FieldValue.serverTimestamp() });
+    use.used = used + 1;
   });
 }
 
@@ -566,16 +573,36 @@ async function tidySection(db, data, who) {
   return { text: out.text, provider: out.provider, model: out.model, truncated: !!out.truncated };
 }
 
+/** One line on what was asked, for the AI activity log. */
+function whatAsked(data) {
+  if (data.task === "ask") return data.question;
+  if (data.task === "sectionSummary") return `${data.style || "summary"} of ${data.sectionTitle || "a course section"}`;
+  if (data.task === "tidySection") return `AI book import: ${`${data.number || ""} ${data.title || ""}`.trim()}`;
+  if (data.task === "summary") return `Summary of pages ${data.from || "?"}-${data.to || "?"}`;
+  return data.task;
+}
+
 exports.aiBooks = onCall(
   { secrets: [GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 300, memory: "1GiB", maxInstances: 3 },
   async (request) => {
     const db = getFirestore();
     const who = await caller(db, request.auth);
     const data = request.data || {};
-    if (data.task === "sectionSummary") return summariseSection(db, data, who);
-    if (data.task === "tidySection") return tidySection(db, data, who);
-    if (!["summary", "ask"].includes(data.task)) throw new HttpsError("invalid-argument", "Unknown task.");
-    await countUse(db, who);
-    return data.task === "summary" ? summarise(db, data, who) : answer(db, data);
+    const base = {
+      uid: who.uid,
+      email: request.auth.token?.email || who.profile.email,
+      name: who.profile.name || who.profile.displayName || request.auth.token?.name,
+      feature: `library:${clip(data.task, 20)}`,
+      what: whatAsked(data),
+      where: data.sectionId ? `section ${data.sectionId}` : data.bookId ? `book ${data.bookId}` : data.courseId ? `course ${data.courseId}` : data.service || "",
+    };
+    return withAiLog(db, base, async (use) => {
+      who.use = use;
+      if (data.task === "sectionSummary") return summariseSection(db, data, who);
+      if (data.task === "tidySection") return tidySection(db, data, who);
+      if (!["summary", "ask"].includes(data.task)) throw new HttpsError("invalid-argument", "Unknown task.");
+      await countUse(db, who);
+      return data.task === "summary" ? summarise(db, data, who) : answer(db, data);
+    });
   },
 );

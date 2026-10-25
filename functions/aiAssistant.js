@@ -20,7 +20,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
-const { FieldPath, FieldValue } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestore");
 
 const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess");
 const {
@@ -32,6 +32,7 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 // Models in order, and how long one request may take: see aiModels.js.
 const { GEMINI_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
+const { withAiLog } = require("./aiLog");
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const MAX_STEPS = 8;          // model calls per question
@@ -371,17 +372,22 @@ function engines() {
 // Who may ask
 // =============================================================================
 
-async function countUse(db, uid, roles) {
+// The count and limit go on `use` for the AI activity log (aiLog.js).
+async function countUse(db, uid, roles, use = {}) {
   const limit = roles.some((r) => STAFF_ROLES.includes(String(r).toLowerCase())) ? DAILY_LIMIT.staff : DAILY_LIMIT.other;
   const day = new Date().toISOString().slice(0, 10);
   const ref = db.collection("aiAssistantUsage").doc(uid);
+  use.limit = limit;
   await db.runTransaction(async (tx) => {
     const cur = (await tx.get(ref)).data() || {};
     const used = cur.day === day ? cur.count || 0 : 0;
+    use.used = used;
     if (used >= limit) {
+      use.limitHit = true;
       throw new HttpsError("resource-exhausted", `You have asked today's ${limit} questions. Try again tomorrow.`);
     }
     tx.set(ref, { day, count: used + 1, lastAt: FieldValue.serverTimestamp() });
+    use.used = used + 1;
   });
 }
 
@@ -393,7 +399,16 @@ exports.aiAssistant = onCall(
   { secrets: [GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 120, memory: "512MiB" },
   async (request) => {
     try {
-      return await answerQuestion(request);
+      const page = request.data?.page && typeof request.data.page === "object" ? request.data.page : {};
+      const base = {
+        uid: request.auth?.uid,
+        email: request.auth?.token?.email,
+        name: request.auth?.token?.name,
+        feature: "assistant",
+        what: request.data?.question,
+        where: page.place || page.view || "",
+      };
+      return await withAiLog(getFirestore(), base, (use) => answerQuestion(request, use));
     } catch (e) {
       if (e instanceof HttpsError) throw e;
       // Anything unexpected is named, so a screenshot of it says what broke.
@@ -402,7 +417,7 @@ exports.aiAssistant = onCall(
     }
   });
 
-async function answerQuestion(request) {
+async function answerQuestion(request, use = {}) {
   const access = await accessFor(request.auth).catch((e) => {
     throw new HttpsError("unauthenticated", e.message);
   });
@@ -429,7 +444,7 @@ async function answerQuestion(request) {
   const list = engines();
   if (!list.length) throw new HttpsError("failed-precondition", "No AI key is set on the server (GEMINI_API_KEY or GROQ_API_KEY).");
 
-  await countUse(access.db, access.uid, access.roles);
+  await countUse(access.db, access.uid, access.roles, use);
 
   // Each distinct read is made once, whichever provider asks for it.
   const reads = new Map();
