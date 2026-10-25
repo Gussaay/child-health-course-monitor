@@ -152,7 +152,7 @@ const resources = {
           service: "{{service}} coverage is {{n}}%"
         },
         short: { active: "Active", admin: "Admin", all_facilities: "Facilities", ams: "AMS", annual: "Annual", approvals: "Approvals", back: "Back", certificates: "Certs", completed: "Completed", current: "Current", dashboard: "Stats", deleted: "Deleted", entry: "Entry", evaluation: "Evaluation", exercises: "Exercises", facility: "Facility", federal: "Federal", hand_hygiene: "Hand Hygiene", ipc: "IPC", list: "List", locality_plans: "Plans", maternal: "Maternal", members: "Members", monitor: "Monitor", monthly: "Monthly", mothers: "Mothers", neonatal: "Neonatal", participants: "Participants", pending: "Pending", practice: "Practice", quantify: "Quantify", quarterly: "Quarterly", report: "Report", reports: "Reports", skills: "Skills", structure: "Structure", tests: "Tests", trash: "Trash", visits: "Visits", weekly: "Weekly", supply_drugs: "Drugs", supply_equipment: "Equipment", supply_consumables: "Consumables", supply_information: "Info", admin_roles: "Roles", admin_permissions: "Permissions", admin_notifications: "Notify", admin_problems: "Problems", admin_usage: "Usage", admin_updates: "Updates" },
-        dash_tabs: { combined: "All", neonatal: "Neonatal", eenc: "EENC", imnci: "IMNCI", critical: "Critical", population: "Population" }
+        dash_tabs: { combined: "All", neonatal: "Neonatal", eenc: "EENC", imnci: "IMNCI", critical: "Critical", population: "Population", indicators: "Indicators" }
       },
 
       // ===== ETAT mentorship checklists =====================================
@@ -1018,9 +1018,46 @@ const resources = {
       mothers: {
         total_interviews: "Total Mother Interviews", knowledge_treatment: "Mother Knowledge: Treatment", satisfaction: "Mother Satisfaction"
       },
+      child_indicators: {
+        sub_igme: "Interagency estimates (UN IGME)", sub_mics: "Sudan MICS",
+        s3m: {
+          source: "{{name}} ({{year}}), Simple Spatial Survey Method, Federal Ministry of Health. Data collected August–December 2018. Results by state and locality; percentages.",
+          group_illness: "Childhood illness and care", group_nutrition: "Nutrition", group_iycf: "Infant and young child feeding", group_epi: "Immunisation (under 12 months)", group_maternal: "Mothers and access",
+          diarrhoea: "Diarrhoea (period prevalence)", ari: "ARI (period prevalence)", fever: "Fever (period prevalence)", hf_diarrhoea: "Taken to a health facility for diarrhoea", hf_ari: "Taken to a health facility for ARI", treat_ari: "Treated for ARI", ors_any: "Diarrhoea treated with ORS", ors_zinc: "Diarrhoea treated with ORS and zinc", itn: "Slept under a bed net (ITN)",
+          stunting: "Stunting (HAZ < -2)", wasting: "Wasting (WHZ < -2)", sam: "Severe wasting (WHZ < -3)", underweight: "Underweight (WAZ < -2)", muac_gam: "Acute malnutrition by MUAC (< 125 mm)", child_anaemia: "Anaemia in children",
+          ebf: "Exclusive breastfeeding", cont_bf: "Continued breastfeeding", diet_div: "Minimum dietary diversity", meal_freq: "Minimum meal frequency",
+          bcg: "BCG", penta1: "Pentavalent 1", penta3: "Pentavalent 3", measles1: "Measles 1", full_epi: "Fully immunised (under 12 months)", vit_a: "Vitamin A supplementation",
+          anc4: "Four or more ANC visits", no_anc: "No ANC visit", pnc: "Postnatal care", tt2: "Tetanus vaccine (2 doses)", fefol3: "Iron-folic acid for 3+ months in pregnancy", carer_anaemia: "Anaemia in mothers", hf_1h: "Health facility within 1 hour",
+          by_locality: "By locality: {{state}}", all_by_locality: "All indicators by locality: {{state}}",
+          table_note: "Green: better than the comparison figure (national, or the state when a state is picked). Red: worse. For prevalence, malnutrition and anaemia lower is better; for care, feeding and immunisation higher is better. Pick a state to see its localities."
+        },
+        sub_s3m: "Sudan S3M 2018", better_than: "Better than {{place}}", worse_than: "Worse than {{place}}", ci95: "95% CI {{lower}}–{{upper}}", all_groups: "All",
+        nmr: "Neonatal mortality rate", imr: "Infant mortality rate", u5mr: "Under-five mortality rate",
+        per_1000: "per 1,000 live births", per_1000_short: "per 1,000", per_1000_births: "per 1,000 total births", per_100k: "per 100,000 live births",
+        range: "{{year}} estimate · 90% range {{lower}}–{{upper}}", down_since: "{{pct}}% lower than 1990", up_since: "{{pct}}% higher than 1990",
+        sdg_target: "SDG 2030 target: {{target}} or less", sdg_line: "SDG 2030 target", upper: "Upper bound (90%)", lower: "Lower bound (90%)",
+        axis_rate: "Deaths per 1,000 live births", stillbirth: "Stillbirth rate", mmr: "Maternal mortality ratio", estimate_year: "{{year}} estimate",
+        igme_source: "Interagency estimates for Sudan from the UN Inter-agency Group for Child Mortality Estimation (UN IGME), {{round}} round. Figures are modelled estimates, not facility reports.",
+        trend_title: "Under-five mortality: stillbirth, neonatal, infant and under-five", since_1990: "Since 1990", all_years: "All years", all_four: "All four",
+        early_adolescent: "Early adolescent (10–14)", late_adolescent: "Late adolescent (15–19)", per_1000_adolescents: "per 1,000", axis_adolescent: "Deaths per 1,000 adolescents", enap_line: "ENAP 2030 target",
+        adolescent_title: "Adolescent mortality: early and late adolescence",
+        adolescent_note: "UN IGME, 1990–2023. Probability of dying between ages 10–14 (early) and 15–19 (late), per 1,000 adolescents alive at the start of each age group. The 2003–05 and 2008 peaks are as published.",
+        sb_note: "Stillbirths are per 1,000 total births, 2000–2023, from the earlier estimates round; no uncertainty range is published with them.",
+        pick_one: "Pick one rate to see its 90% uncertainty band and the 2030 target.", band_note: "The shaded band is the 90% uncertainty range of the estimate.",
+        spikes: "The sharp peaks (1983–85, 1988, 1998, 2004–05 and 2023) are crisis deaths included in the published estimates.",
+        key_years: "Key years", indicator: "Indicator",
+        mics: {
+          diarrhoea: "Diarrhoea prevalence", diarrhoea_care: "Care-seeking for diarrhoea", diarrhoea_home: "Home treatment for diarrhoea (ORT + continued feeding)",
+          pneumonia: "Pneumonia (ARI symptoms) prevalence", pneumonia_care: "Care-seeking for pneumonia", pneumonia_antibiotic: "Antibiotics for pneumonia",
+          group_diarrhoea: "Diarrhoea", group_pneumonia: "Pneumonia", group_mortality: "Child mortality",
+          source: "{{name}} {{year}} (Multiple Indicator Cluster Survey). Household survey results; mortality rates refer to the years before the survey.",
+          by_state: "By state", sudan: "Sudan (national)", better: "Better than national", worse: "Worse than national", not_reported: "Not reported: {{states}}",
+          all_indicators: "All indicators by state", table_note: "Green: better than the national figure. Red: worse. For prevalence and mortality lower is better; for care-seeking and treatment higher is better."
+        }
+      },
       dashboard: {
         service_coverage_title: "Service Coverage Dashboard", equipment_summary: "Equipment Summary:", copy_image: "Copy Dashboard Image", refresh_data: "↻ Refresh Data Cache", syncing: "Syncing Dashboard Data...",
-        tabs: { combined: "Combined Coverage", neonatal: "Neonatal Care Coverage", eenc: "EENC Coverage", imnci: "IMNCI Coverage", critical: "Emergency & Critical Care" },
+        tabs: { combined: "Combined Coverage", neonatal: "Neonatal Care Coverage", eenc: "EENC Coverage", imnci: "IMNCI Coverage", critical: "Emergency & Critical Care", population: "Population", indicators: "Morbidity & Mortality Indicators" },
         filters: { state: "State", locality: "Locality", ownership: "Ownership", project: "Project", has_equipment: "Has Equipment", all_states: "All States", all_localities: "All Localities", all_ownerships: "All Ownerships", all_projects: "All Projects", any: "Any" },
         cards: { total_pediatrics_emonc: "Total Pediatrics & EmONC", functioning_scnu: "Functioning SCNU Facilities", facilities_with_cpap: "Facilities with CPAP", total_emonc: "Total EmONC Facilities", functional_emonc: "Functional EmONC Facilities", eenc_coverage_functional: "EENC Coverage in Functional EmONC", total_functioning_phc: "Total Functioning PHC Facilities", total_phc_imnci: "Total PHC Facilities with IMNCI", imnci_coverage_phc: "IMNCI Service Coverage in PHCs", phc_ort_corner: "Facilities with ORT Corner", target_hospitals_etat: "Target Hospitals (ETAT)", hospitals_etat: "Hospitals with ETAT", facilities_hdu: "Facilities with HDU", facilities_picu: "Facilities with PICU", out_of: "out of", localities_with_scnu: "Localities with Secondary Unit" },
         headers: { scnu_coverage: "SCNU Coverage by", neonatal_equipment: "Neonatal Unit Equipment Availability", functioning_neonatal_units: "Functioning Neonatal Units (SCNU) List", eenc_coverage: "EENC Coverage by", eenc_equipment: "EENC Equipment Availability by Unit", imnci_coverage: "IMNCI Coverage by", imnci_tools: "IMNCI Tools Availability by", critical_care_coverage: "Critical Care Coverage by", critical_care_capacity: "Critical Care Capacity & Equipment", geographic_map: "Geographical Map", geographic_coverage: "Geographic Coverage & Service Performance" },
@@ -7483,7 +7520,7 @@ const resources = {
           service: "تغطية {{service}} {{n}}%"
         },
         short: { active: "النشطة", admin: "الإدارة", all_facilities: "المنشآت", ams: "الإشراف الدوائي", annual: "السنوية", approvals: "الموافقات", back: "رجوع", certificates: "الشهادات", completed: "المكتملة", current: "الحاليون", dashboard: "اللوحة", deleted: "المحذوفات", entry: "الإدخال", evaluation: "التقييم", exercises: "التمارين", facility: "المنشأة", federal: "الإتحادية", hand_hygiene: "نظافة اليدين", ipc: "مكافحة العدوى", list: "القائمة", locality_plans: "الخطط", maternal: "الأمومة", members: "الأعضاء", monitor: "المتابعة", monthly: "الشهرية", mothers: "الأمهات", neonatal: "حديثي الولادة", participants: "المشاركون", pending: "المعلّقة", practice: "التطبيق", quantify: "التقدير", quarterly: "الربعية", report: "التقرير", reports: "التقارير", skills: "المهارات", structure: "الهيكل", tests: "الاختبارات", trash: "المهملات", visits: "الزيارات", weekly: "الأسبوعية", supply_drugs: "الأدوية", supply_equipment: "المعدات", supply_consumables: "المستهلكات", supply_information: "المعلوماتية", admin_roles: "الأدوار", admin_permissions: "الصلاحيات", admin_notifications: "الإشعارات", admin_problems: "البلاغات", admin_usage: "الاستخدام", admin_updates: "التحديثات" },
-        dash_tabs: { combined: "الكل", neonatal: "حديثي الولادة", eenc: "EENC", imnci: "IMNCI", critical: "الحرجة", population: "السكان" }
+        dash_tabs: { combined: "الكل", neonatal: "حديثي الولادة", eenc: "EENC", imnci: "IMNCI", critical: "الحرجة", population: "السكان", indicators: "المؤشرات" }
       },
 
       // ===== ETAT mentorship checklists =====================================
@@ -8343,9 +8380,46 @@ const resources = {
       mothers: {
         total_interviews: "إجمالي مقابلات الأمهات", knowledge_treatment: "معرفة الأم: العلاج", satisfaction: "رضا الأم"
       },
+      child_indicators: {
+        sub_igme: "التقديرات المشتركة بين الوكالات (UN IGME)", sub_mics: "مسح MICS السودان",
+        s3m: {
+          source: "{{name}} ({{year}})، طريقة المسح المكاني البسيط، وزارة الصحة الاتحادية. جُمعت البيانات أغسطس–ديسمبر 2018. النتائج حسب الولاية والمحلية؛ نسب مئوية.",
+          group_illness: "أمراض الطفولة والرعاية", group_nutrition: "التغذية", group_iycf: "تغذية الرضع وصغار الأطفال", group_epi: "التحصين (دون 12 شهراً)", group_maternal: "الأمهات والوصول للخدمة",
+          diarrhoea: "الإسهال (انتشار الفترة)", ari: "التهاب الجهاز التنفسي الحاد (انتشار الفترة)", fever: "الحمى (انتشار الفترة)", hf_diarrhoea: "أُخذ لمؤسسة صحية بسبب الإسهال", hf_ari: "أُخذ لمؤسسة صحية بسبب التهاب الجهاز التنفسي", treat_ari: "تلقى علاجاً لالتهاب الجهاز التنفسي", ors_any: "عولج الإسهال بمحلول الإرواء", ors_zinc: "عولج الإسهال بمحلول الإرواء والزنك", itn: "نام تحت ناموسية مشبعة",
+          stunting: "التقزم (HAZ < -2)", wasting: "الهزال (WHZ < -2)", sam: "الهزال الشديد (WHZ < -3)", underweight: "نقص الوزن (WAZ < -2)", muac_gam: "سوء التغذية الحاد بمحيط منتصف الذراع (< 125 مم)", child_anaemia: "فقر الدم لدى الأطفال",
+          ebf: "الرضاعة الطبيعية المطلقة", cont_bf: "الاستمرار في الرضاعة الطبيعية", diet_div: "الحد الأدنى للتنوع الغذائي", meal_freq: "الحد الأدنى لعدد الوجبات",
+          bcg: "البي سي جي (BCG)", penta1: "الخماسي الجرعة 1", penta3: "الخماسي الجرعة 3", measles1: "الحصبة الجرعة 1", full_epi: "التحصين الكامل (دون 12 شهراً)", vit_a: "إعطاء فيتامين أ",
+          anc4: "أربع زيارات أو أكثر لرعاية الحمل", no_anc: "لا زيارة لرعاية الحمل", pnc: "رعاية ما بعد الولادة", tt2: "لقاح التيتانوس (جرعتان)", fefol3: "الحديد وحمض الفوليك 3 أشهر أو أكثر أثناء الحمل", carer_anaemia: "فقر الدم لدى الأمهات", hf_1h: "مؤسسة صحية في حدود ساعة",
+          by_locality: "حسب المحلية: {{state}}", all_by_locality: "كل المؤشرات حسب المحلية: {{state}}",
+          table_note: "الأخضر: أفضل من رقم المقارنة (القومي، أو الولاية عند اختيارها). الأحمر: أسوأ. في الانتشار وسوء التغذية وفقر الدم الأقل أفضل؛ وفي الرعاية والتغذية والتحصين الأعلى أفضل. اختر ولاية لعرض محلياتها."
+        },
+        sub_s3m: "مسح S3M السودان 2018", better_than: "أفضل من {{place}}", worse_than: "أسوأ من {{place}}", ci95: "فترة الثقة 95%: {{lower}}–{{upper}}", all_groups: "الكل",
+        nmr: "معدل وفيات حديثي الولادة", imr: "معدل وفيات الرضع", u5mr: "معدل وفيات الأطفال دون الخامسة",
+        per_1000: "لكل 1,000 مولود حي", per_1000_short: "لكل 1,000", per_1000_births: "لكل 1,000 ولادة", per_100k: "لكل 100,000 مولود حي",
+        range: "تقدير {{year}} · مدى 90%: {{lower}}–{{upper}}", down_since: "أقل بنسبة {{pct}}% من 1990", up_since: "أعلى بنسبة {{pct}}% من 1990",
+        sdg_target: "هدف التنمية المستدامة 2030: {{target}} أو أقل", sdg_line: "هدف التنمية المستدامة 2030", upper: "الحد الأعلى (90%)", lower: "الحد الأدنى (90%)",
+        axis_rate: "وفيات لكل 1,000 مولود حي", stillbirth: "معدل الإملاص (المواليد الموتى)", mmr: "نسبة وفيات الأمهات", estimate_year: "تقدير {{year}}",
+        igme_source: "تقديرات مشتركة بين الوكالات للسودان من فريق الأمم المتحدة المشترك لتقدير وفيات الأطفال (UN IGME)، إصدار {{round}}. الأرقام تقديرات نموذجية وليست تقارير المؤسسات.",
+        trend_title: "وفيات دون الخامسة: الإملاص وحديثي الولادة والرضع ودون الخامسة", since_1990: "منذ 1990", all_years: "كل السنوات", all_four: "الأربعة معاً",
+        early_adolescent: "المراهقة المبكرة (10–14)", late_adolescent: "المراهقة المتأخرة (15–19)", per_1000_adolescents: "لكل 1,000", axis_adolescent: "وفيات لكل 1,000 مراهق", enap_line: "هدف خطة عمل كل مولود 2030",
+        adolescent_title: "وفيات المراهقين: المراهقة المبكرة والمتأخرة",
+        adolescent_note: "UN IGME، 1990–2023. احتمال الوفاة بين عمر 10–14 (مبكرة) و15–19 (متأخرة) لكل 1,000 مراهق في بداية الفئة العمرية. القمم في 2003–05 و2008 كما نُشرت.",
+        sb_note: "الإملاص لكل 1,000 ولادة كلية، 2000–2023، من إصدار التقديرات السابق؛ لا يُنشر معه مدى عدم يقين.",
+        pick_one: "اختر معدلاً واحداً لعرض مدى عدم اليقين 90% وهدف 2030.", band_note: "المنطقة المظللة هي مدى عدم اليقين 90% للتقدير.",
+        spikes: "القمم الحادة (1983–85، 1988، 1998، 2004–05 و2023) هي وفيات الأزمات المضمنة في التقديرات المنشورة.",
+        key_years: "سنوات رئيسية", indicator: "المؤشر",
+        mics: {
+          diarrhoea: "انتشار الإسهال", diarrhoea_care: "طلب الرعاية للإسهال", diarrhoea_home: "العلاج المنزلي للإسهال (الإرواء + الاستمرار في التغذية)",
+          pneumonia: "انتشار الالتهاب الرئوي (أعراض التهاب الجهاز التنفسي الحاد)", pneumonia_care: "طلب الرعاية للالتهاب الرئوي", pneumonia_antibiotic: "المضادات الحيوية للالتهاب الرئوي",
+          group_diarrhoea: "الإسهال", group_pneumonia: "الالتهاب الرئوي", group_mortality: "وفيات الأطفال",
+          source: "{{name}} {{year}} (المسح العنقودي متعدد المؤشرات). نتائج مسح أسري؛ معدلات الوفيات تخص السنوات السابقة للمسح.",
+          by_state: "حسب الولاية", sudan: "السودان (قومي)", better: "أفضل من المستوى القومي", worse: "أسوأ من المستوى القومي", not_reported: "غير متوفر: {{states}}",
+          all_indicators: "كل المؤشرات حسب الولاية", table_note: "الأخضر: أفضل من الرقم القومي. الأحمر: أسوأ. في الانتشار والوفيات الأقل أفضل؛ وفي طلب الرعاية والعلاج الأعلى أفضل."
+        }
+      },
       dashboard: {
         service_coverage_title: "لوحة تغطية الخدمات", equipment_summary: "ملخص الأجهزة:", copy_image: "نسخ صورة اللوحة", refresh_data: "تحديث البيانات", syncing: "جاري مزامنة بيانات اللوحة...",
-        tabs: { combined: "ملخص التغطية", neonatal: "تغطية الرعاية الخاصة لحديثي الولادة", eenc: "تغطية الرعاية الضرورية لحديثي الولادة (EENC)", imnci: "تغطية العلاج المتكامل لأمراض الطفولة (IMNCI)", critical: "الطوارئ والعناية الحرجة" },
+        tabs: { combined: "ملخص التغطية", neonatal: "تغطية الرعاية الخاصة لحديثي الولادة", eenc: "تغطية الرعاية الضرورية لحديثي الولادة (EENC)", imnci: "تغطية العلاج المتكامل لأمراض الطفولة (IMNCI)", critical: "الطوارئ والعناية الحرجة", population: "السكان", indicators: "مؤشرات المراضة والوفيات" },
         filters: { state: "الولاية", locality: "المحلية", ownership: "الملكية", project: "المشروع", has_equipment: "توفر الأجهزة", all_states: "كل الولايات", all_localities: "كل المحليات", all_ownerships: "كل الملكيات", all_projects: "كل المشاريع", any: "الكل" },
         cards: { total_pediatrics_emonc: "إجمالي مستشفيات الأطفال وطوارئ الولادة", functioning_scnu: "وحدات الرعاية الخاصة للاطفال حديثي الولادة العاملة", facilities_with_cpap: "مؤسسات تتوفر بها أجهزة التنفس الصناعي بالضغط الهوائي المستمر CPAP", total_emonc: "إجمالي مؤسسات طوارئ الولادة", functional_emonc: "مؤسسات طوارئ الولادة العاملة", eenc_coverage_functional: "تغطية الرعاية الضرورية المبكرة للاطفال حديثي الولادة في المؤسسات العاملة", total_functioning_phc: "إجمالي مراكز الرعاية الأساسية العاملة", total_phc_imnci: "مراكز الرعاية الأساسية المطبقة لـ العلاج المتكامل لامراض الطفولة", imnci_coverage_phc: "تغطية العلاج المتكامل لامراض الطفولة في الرعاية الأساسية", phc_ort_corner: "المؤسسات التي توجد بها ركن أرواء", target_hospitals_etat: "المستشفيات المستهدفة (الفرز والتقييم والمعالجة للاطفال في الطوارئ)", hospitals_etat: "مستشفيات تتوفر بها الفرز والتقييم والمعالجة للاطفال في الطوارئ", facilities_hdu: "مؤسسات تتوفر بها عناية وسيطة للاطفال", facilities_picu: "مؤسسات تتوفر بها العناية المكثفة PICU", out_of: "من أصل", localities_with_scnu: "المحليات التي يوجد بها وحدة وحديثي الولادة من المستوى الثاني (حضانة)" },
         headers: { scnu_coverage: "تغطية الرعاية الخاصة للاطفال حديثي الولادة (الحضانة) حسب", neonatal_equipment: "توفر معدات وحدات حديثي الولادة", functioning_neonatal_units: "قائمة وحدات الرعاية الخاصة للاطفال حديثي الولادة (SCNU) العاملة", eenc_coverage: "تغطية الرعاية الضرورية المبكرة للاطفال حديثي الولادة حسب", eenc_equipment: "توفر معدات الرعاية الضرورية المبكرة للاطفال حديثي الولادة بالوحدة", imnci_coverage: "تغطية العلاج المتكامل لامراض الطفولة حسب", imnci_tools: "توفر أدوات العلاج المتكامل لامراض الطفولة حسب", critical_care_coverage: "تغطية العناية الحرجة حسب", critical_care_capacity: "سعة ومعدات العناية الحرجة", geographic_map: "الخريطة الجغرافية", geographic_coverage: "التغطية الجغرافية وأداء الخدمات" },

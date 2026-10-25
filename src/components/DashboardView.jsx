@@ -14,6 +14,8 @@ import { RefreshCw } from 'lucide-react';
 
 // The denominators behind every coverage percentage on the other tabs.
 const PopulationDashboard = lazy(() => import('./PopulationView').then((m) => ({ default: m.PopulationDashboard })));
+// Published figures (UN IGME estimates, Sudan MICS), not the app's records.
+const MorbidityMortalityDashboard = lazy(() => import('./ChildHealthIndicatorsView'));
 
 const Button = ({ onClick, children, variant = 'primary', className = '', disabled = false }) => (
     <button onClick={onClick} disabled={disabled} className={`px-4 py-2 rounded-md font-semibold text-sm transition-all shadow-sm focus:outline-none focus:ring-2 flex items-center gap-2 justify-center ${variant === 'primary' ? 'bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 disabled:opacity-50'} ${className}`}>
@@ -55,7 +57,8 @@ function DashboardView({ userStates, userLocalities }) {
         { id: 'eencCoverage', short: 'eenc', label: t('dashboard.tabs.eenc', 'EENC Coverage') },
         { id: 'imnciCoverage', short: 'imnci', label: t('dashboard.tabs.imnci', 'IMNCI Coverage') },
         { id: 'criticalCoverage', short: 'critical', label: t('dashboard.tabs.critical', 'Emergency & Critical Care') },
-        { id: 'population', short: 'population', label: t('dashboard.tabs.population', 'Population') }
+        { id: 'population', short: 'population', label: t('dashboard.tabs.population', 'Population') },
+        { id: 'indicators', short: 'indicators', label: t('dashboard.tabs.indicators', 'Morbidity & Mortality Indicators') }
     ];
 
     // Phones: refresh sits at the end of the one-line "Filters" row.
@@ -112,7 +115,7 @@ function DashboardView({ userStates, userLocalities }) {
             </div>
 
             <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing} />
-            {/* Phones: short names, all six in one row, pinned under the top bar. */}
+            {/* Phones: short names, all seven in one row, pinned under the top bar. */}
             <PageTabs
                 className="md:hidden !mb-0"
                 tabs={tabs.map(tab => ({ id: tab.id, label: tab.label, short: t(`ui.dash_tabs.${tab.short}`, tab.label) }))}
@@ -138,6 +141,9 @@ function DashboardView({ userStates, userLocalities }) {
                     {viewType === 'criticalCoverage' && <CriticalCareCoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
                     {viewType === 'population' && (
                         <Suspense fallback={<PageSkeleton />}><PopulationDashboard /></Suspense>
+                    )}
+                    {viewType === 'indicators' && (
+                        <Suspense fallback={<PageSkeleton />}><MorbidityMortalityDashboard /></Suspense>
                     )}
                   </PageToolsContext.Provider>
                 </div>
