@@ -3,8 +3,8 @@ import { aiActivity, daysBefore, featureLabel } from '../src/utils/aiActivity';
 
 const lines = [
     { uid: 'u1', name: 'Amna', feature: 'assistant', what: 'How many courses?', status: 'ok', used: 1, limit: 20, pool: 212, day: '2026-10-25', at: { seconds: 100 } },
-    { uid: 'u1', name: 'Amna', feature: 'library:ask', what: 'Danger signs', status: 'ok', used: 1, limit: 60, pool: 212, day: '2026-10-25', at: { seconds: 200 } },
-    { uid: 'u1', name: 'Amna', feature: 'assistant', what: 'And by state?', status: 'ok', used: 2, limit: 20, pool: 212, day: '2026-10-24', at: { seconds: 50 } },
+    { uid: 'u1', name: 'Amna', feature: 'library:ask', what: 'Danger signs', status: 'ok', vote: 1, used: 1, limit: 60, pool: 212, day: '2026-10-25', at: { seconds: 200 } },
+    { uid: 'u1', name: 'Amna', feature: 'assistant', what: 'And by state?', status: 'ok', vote: -1, used: 2, limit: 20, pool: 212, day: '2026-10-24', at: { seconds: 50 } },
     { uid: 'u2', email: 'b@x.org', feature: 'library:sectionSummary', status: 'cached', limit: 0, pool: 212, day: '2026-10-25', at: { seconds: 300 } },
     { uid: 'u2', email: 'b@x.org', feature: 'assistant', status: 'limit', used: 20, limit: 20, pool: 212, day: '2026-10-25', at: { seconds: 400 } },
     { uid: 'u3', feature: 'assistant', status: 'error', error: 'busy', used: 1, limit: 60, pool: 212, day: '2026-10-25', at: { seconds: 10 } },
@@ -22,6 +22,8 @@ describe('AI activity', () => {
         expect(amna.ofLimit).toBe(3);
         expect(amna.ofPool).toBe(1.4);
         expect(amna.daysUsed).toBe(2);
+        expect(amna).toMatchObject({ up: 1, down: 1 });
+        expect(a).toMatchObject({ up: 1, down: 1 });
         const b = a.rows.find((r) => r.uid === 'u2');
         expect(b.requests).toBe(0);
         expect(b.limited).toBe(1);

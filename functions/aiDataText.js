@@ -384,7 +384,38 @@ function pageBlock(page, chars = PAGE_CHARS) {
   return `PLACE IN THE APP: ${place}\nPAGE ON SCREEN — ${title || "page"}${page.view ? ` (view: ${String(page.view).slice(0, 60)})` : ""}\n"""\n${text || "(no text on screen)"}\n"""`;
 }
 
-function systemFor({ page, lang, pageChars = PAGE_CHARS, catalogue = null } = {}) {
+/** "Totals already counted" for the prompt: { collection: number }. */
+function totalsBlock(totals) {
+  const rows = Object.entries(totals || {}).filter(([, n]) => Number.isFinite(n));
+  if (!rows.length) return "";
+  return `Totals already counted for this person (records they may read, deleted ones left out). Use them directly for "how many" questions instead of calling count_data; call count_data only to break a total down or filter it:\n${rows.map(([c, n]) => `- ${c} ("${pageOf(c)}"): ${n}`).join("\n")}`;
+}
+
+// A chart the app draws under the answer: one line, the marker then JSON.
+const CHART = "@@CHART";
+const CHART_RULE = `Charts: when the answer compares 3 or more places, periods or groups with numbers, add ONE chart line just before the ${FOLLOW_UPS} line, exactly in this form on a single line:
+${CHART} {"type":"bar","title":"Short title","labels":["A","B","C"],"values":[12,7,3],"unit":""}
+type is "bar" (comparisons), "line" (over time) or "pie" (parts of a whole, at most 6 parts). At most 20 labels; values are the numbers from your answer (the same ones, from the data); unit is "%" or "" . Leave the chart out when there is nothing to compare.`;
+
+/** Takes the chart line out of the answer: { text, chart|null }. */
+function splitChart(text) {
+  const s = String(text || "");
+  const m = s.match(/^[ \t*_>-]*@@\s*CHART\s*(\{.*\})\s*$/im);
+  if (!m) return { text: s, chart: null };
+  const rest = s.replace(m[0], "").replace(/\n{3,}/g, "\n\n");
+  try {
+    const j = JSON.parse(m[1]);
+    const labels = (Array.isArray(j.labels) ? j.labels : []).slice(0, 20).map((l) => String(l).slice(0, 60));
+    const values = (Array.isArray(j.values) ? j.values : []).slice(0, labels.length).map(Number);
+    if (labels.length < 2 || values.length !== labels.length || values.some((v) => !Number.isFinite(v))) return { text: rest, chart: null };
+    const type = ["bar", "line", "pie"].includes(j.type) ? j.type : "bar";
+    return { text: rest, chart: { type: type === "pie" && labels.length > 6 ? "bar" : type, title: String(j.title || "").slice(0, 100), labels, values, unit: j.unit === "%" ? "%" : "" } };
+  } catch {
+    return { text: rest, chart: null };
+  }
+}
+
+function systemFor({ page, lang, pageChars = PAGE_CHARS, catalogue = null, totals = null } = {}) {
   const block = pageBlock(page, pageChars);
   // The collections this person may read, given up front so the first step
   // can already be the read that answers the question.
@@ -394,8 +425,10 @@ function systemFor({ page, lang, pageChars = PAGE_CHARS, catalogue = null } = {}
   const today = new Date().toISOString().slice(0, 10);
   return [
     RULES,
+    CHART_RULE,
     DATA_NOTES,
     readable,
+    totalsBlock(totals),
     `Today is ${today}.`,
     lang === "ar" ? "The app is in Arabic: answer in Arabic unless the question is in English." : "",
     block || "No page text was sent; use the tools.",
@@ -419,7 +452,7 @@ function splitFollowUps(text) {
 }
 
 module.exports = {
-  FOLLOW_UPS, splitFollowUps, cleanBreakdown,
+  FOLLOW_UPS, splitFollowUps, cleanBreakdown, CHART, splitChart, totalsBlock,
   APP_NAME, COLLECTION_PAGES, pageOf,
   compactRow, rowsWithin, describeFields, groupRows, filterValue, cleanFilters,
   fieldOf, bucketOf, asDate, TOOLS, RULES, systemFor, pageBlock, PAGE_CHARS,

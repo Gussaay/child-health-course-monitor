@@ -354,3 +354,5 @@ exports.aiBooks = require("./aiBooks").aiBooks;
 // own data only, read as the person asking. Same GROQ_API_KEY and
 // GEMINI_API_KEY secrets as aiBooks, so nothing new to set before deploying.
 exports.aiAssistant = require("./aiAssistant").aiAssistant;
+// 👍 / 👎 on an AI answer, for the super users' AI Activity tab (aiLog.js).
+exports.aiVote = require("./aiLog").aiVote;
