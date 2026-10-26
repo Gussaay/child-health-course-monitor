@@ -345,7 +345,7 @@ exports.approveClaudeConnection = claudeOAuth.approveClaudeConnection;
 exports.describeClaudeConnection = claudeOAuth.describeClaudeConnection;
 
 // The AI Library: summaries of, and questions about, the programme's books
-// (Groq first, Gemini as backup, both on free tiers). Needs GROQ_API_KEY and
+// (Groq; Gemini only when AI_USE_GEMINI=1, see aiModels.js). Needs GROQ_API_KEY and
 // GEMINI_API_KEY set with `firebase functions:secrets:set` BEFORE this line
 // reaches main: a declared secret that is missing fails the whole deploy.
 exports.aiBooks = require("./aiBooks").aiBooks;

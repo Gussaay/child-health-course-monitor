@@ -15,7 +15,8 @@ const { GEMINI_MODELS, GROQ_MODELS } = require("./aiModels");
 
 // Free-tier requests a day per model. Groq gives GPT-OSS 1,000 requests but
 // 200K tokens a day, which at ~3K tokens a request is about 66; Gemini's free
-// tier gives as little as 20 a day per model. Change these if a key gets a
+// tier gives as little as 20 a day per model (Gemini counts only when it is
+// switched on, see aiModels.js). Change these if a key gets a
 // paid plan.
 const FREE_PER_DAY = { groq: 66, gemini: 20 };
 

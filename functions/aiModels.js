@@ -7,10 +7,19 @@
 // 3.x flash-lite models answer in 1-2 s; "gemini-flash-latest" was overloaded
 // (503 "high demand", or no reply in 60 s) and gemini-2.5-flash returns 404 for
 // this project. Pin one with GEMINI_MODEL=... or GROQ_MODEL=... in functions/.env.
+//
+// Gemini is OFF (2026-10-26): Google may use free-tier prompts to improve its
+// products, and the app sends programme data, so nothing goes to Google unless
+// AI_USE_GEMINI=1 is set in functions/.env (do that only with a billed key,
+// whose prompts Google does not use). Groq keeps no prompts by default.
 
-const GEMINI_MODELS = process.env.GEMINI_MODEL
-  ? [process.env.GEMINI_MODEL]
-  : ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest"];
+const USE_GEMINI = process.env.AI_USE_GEMINI === "1";
+
+const GEMINI_MODELS = !USE_GEMINI
+  ? []
+  : process.env.GEMINI_MODEL
+    ? [process.env.GEMINI_MODEL]
+    : ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest"];
 
 const GROQ_MODELS = process.env.GROQ_MODEL
   ? [process.env.GROQ_MODEL]

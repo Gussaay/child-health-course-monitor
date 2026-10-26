@@ -110,7 +110,7 @@ export default function AiActivityTab() {
             <Card className="p-4">
                 <div className="flex items-baseline justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-800">
-                        {t('admin_pages.ai_activity.pool', 'Free AI allowance (Groq + Gemini)')}
+                        {t('admin_pages.ai_activity.pool', 'Free AI allowance')}
                         {range > 1 ? ` · ${range} days` : ''}
                     </p>
                     <p className="text-sm font-semibold text-slate-700">

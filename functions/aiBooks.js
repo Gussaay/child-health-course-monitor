@@ -16,7 +16,9 @@
 //                   8,000 tokens a minute, prompt included, so ~18,000
 //                   characters of book is the most it can be given.
 //   Gemini Flash    for anything longer (it reads a whole manual at once) and
-//                   as the backup when Groq is out of quota.
+//                   as the backup when Groq is out of quota. OFF unless
+//                   AI_USE_GEMINI=1 (see aiModels.js): without it a part
+//                   longer than ~18,000 characters is refused.
 //
 // One-time setup:
 //   firebase functions:secrets:set GROQ_API_KEY     (console.groq.com/keys)
@@ -354,8 +356,8 @@ async function gemini(key, system, user, maxTokens) {
  */
 async function complete({ system, make, size, maxTokens = 3072, groqChars = GROQ_CHARS, groqTokens = 2048 }) {
   const groqKey = cleanKey(GROQ_API_KEY);
-  const geminiKey = cleanKey(GEMINI_API_KEY);
-  if (!groqKey && !geminiKey) throw new HttpsError("failed-precondition", "No AI key is set on the server (GROQ_API_KEY or GEMINI_API_KEY).");
+  const geminiKey = GEMINI_MODELS.length ? cleanKey(GEMINI_API_KEY) : ""; // off unless AI_USE_GEMINI=1
+  if (!groqKey && !geminiKey) throw new HttpsError("failed-precondition", "No AI key is set on the server (GROQ_API_KEY).");
 
   const tries = [
     groqKey && { name: "groq", limit: groqChars, run: (u) => groq(groqKey, [{ role: "system", content: system }, { role: "user", content: u }], Math.min(maxTokens, groqTokens)) },

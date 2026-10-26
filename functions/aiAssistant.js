@@ -11,8 +11,9 @@
 // writes to programme data; it writes only its usage counter and audit record.
 //
 // Providers, both on free tiers and both already used by the AI Library:
-//   Gemini Flash  first: a long context, so whole tool results and the page fit
-//   Groq GPT-OSS  backup, with smaller results (its free tier is 8K tokens a minute)
+//   Groq GPT-OSS  with smaller results (its free tier is 8K tokens a minute)
+//   Gemini Flash  only when AI_USE_GEMINI=1 (off by default, see aiModels.js):
+//                 a long context, so whole tool results and the page fit
 // When one fails part-way, the next starts again with the reads already made,
 // so nothing is read twice. Uses the GROQ_API_KEY and GEMINI_API_KEY secrets
 // that aiBooks already needs; nothing new to set.
@@ -354,7 +355,7 @@ async function answerFromReads({ provider, key, model, system, history, question
 
 /** The providers to try, in order, from the keys that are set. */
 function engines() {
-  const gemini = cleanKey(GEMINI_API_KEY);
+  const gemini = GEMINI_MODELS.length ? cleanKey(GEMINI_API_KEY) : "";
   const groq = cleanKey(GROQ_API_KEY);
   const g = gemini ? GEMINI_MODELS.map((model) => ({ provider: "gemini", model, key: gemini, run: askGemini })) : [];
   const q = groq ? GROQ_MODELS.map((model) => ({ provider: "groq", model, key: groq, run: askGroq })) : [];
@@ -442,7 +443,7 @@ async function answerQuestion(request, use = {}) {
   const page = request.data?.page && typeof request.data.page === "object" ? request.data.page : null;
 
   const list = engines();
-  if (!list.length) throw new HttpsError("failed-precondition", "No AI key is set on the server (GEMINI_API_KEY or GROQ_API_KEY).");
+  if (!list.length) throw new HttpsError("failed-precondition", "No AI key is set on the server (GROQ_API_KEY).");
 
   await countUse(access.db, access.uid, access.roles, use);
 
