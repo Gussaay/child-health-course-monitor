@@ -11,17 +11,19 @@
 // from the saved answer instead of asking the AI again. It is loaded the first
 // time it is opened; the buttons that open it are in DataAssistantLauncher.jsx,
 // which every page loads.
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Sparkles, Send, X, Loader2, Copy, RotateCcw, FileText, Database, History, CornerDownRight } from 'lucide-react';
 
 import { AiText } from './AiLibraryView';
+import AiVote from './AiVote';
 import { notify } from './dialogs';
 import { snapshotPage } from '../utils/pageSnapshot';
 import { loadChats, saveChats, savedAnswer } from '../utils/aiChats';
 
 const providerName = (p) => ({ groq: 'Groq', cerebras: 'Cerebras', gemini: 'Gemini' }[p] || p);
+const AiChart = lazy(() => import('./AiChart'));
 
 const askServer = (payload) => httpsCallable(getFunctions(), 'aiAssistant', { timeout: 130000 })(payload);
 
@@ -105,6 +107,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                 role: 'assistant', content: data.reply, provider: data.provider, model: data.model,
                 sources: data.sources || [], sourcePages: data.sourcePages || [], place: data.place || '',
                 followUps: Array.isArray(data.followUps) ? data.followUps : [],
+                chart: data.chart || null, logId: data.logId || '',
                 usedPage: !!data.usedPage, seconds: data.seconds, at: Date.now(),
             }]);
         } catch (e) {
@@ -174,6 +177,9 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                     ) : (
                         <div key={i} className={`rounded-xl border px-3 py-2.5 ${m.failed ? 'border-red-200 bg-red-50 text-sm text-red-800' : 'border-line bg-white'}`}>
                             {m.failed ? m.content : <AiText text={m.content} />}
+                            {!m.failed && m.chart && (
+                                <Suspense fallback={<div className="mt-2 h-56" />}><AiChart chart={m.chart} /></Suspense>
+                            )}
                             {!m.failed && (
                                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-400">
                                     {m.usedPage && <span className="inline-flex items-center gap-1"><FileText size={12} />{m.place || t('data_assistant.read_page', 'this page')}</span>}
@@ -187,7 +193,8 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                                         </button>
                                     )}
                                     {m.model && <span>{providerName(m.provider)}{m.seconds ? ` · ${m.seconds} s` : ''}</span>}
-                                    <button onClick={() => copy(m.content)} className="ms-auto inline-flex items-center gap-1 hover:text-slate-600">
+                                    <AiVote logId={m.logId} className="ms-auto" />
+                                    <button onClick={() => copy(m.content)} className={`${m.logId ? '' : 'ms-auto '}inline-flex items-center gap-1 hover:text-slate-600`}>
                                         <Copy size={12} />{t('data_assistant.copy', 'Copy')}
                                     </button>
                                 </div>

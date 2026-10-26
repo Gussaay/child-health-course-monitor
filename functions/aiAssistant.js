@@ -26,7 +26,7 @@ const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestor
 
 const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess");
 const {
-  TOOLS, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps,
+  TOOLS, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
 } = require("./aiDataText");
 
 const CEREBRAS_API_KEY = defineSecret("CEREBRAS_API_KEY");
@@ -386,6 +386,33 @@ function engines() {
 }
 
 // =============================================================================
+// Totals counted up front
+// =============================================================================
+
+// Most questions start with "how many". Each readable collection's total is
+// counted on the server (a count costs one read per 1,000 records) and given
+// to the model, so those questions take one AI step instead of two or three.
+// Kept per person for 10 minutes, since each person's scope differs.
+const TOTALS_MS = 10 * 60 * 1000;
+const totalsCache = new Map(); // uid -> { at, totals }
+
+async function quickTotals(access, catalogue) {
+  const hit = totalsCache.get(access.uid);
+  if (hit && Date.now() - hit.at < TOTALS_MS) return hit.totals;
+  const entries = await Promise.all(catalogue.slice(0, 40).map(async (c) => {
+    try {
+      const r = await countData(access, { collection: c.collection });
+      return Number.isFinite(r?.total) ? [c.collection, r.total] : null;
+    } catch {
+      return null;
+    }
+  }));
+  const totals = Object.fromEntries(entries.filter(Boolean));
+  totalsCache.set(access.uid, { at: Date.now(), totals });
+  return totals;
+}
+
+// =============================================================================
 // Who may ask
 // =============================================================================
 
@@ -462,6 +489,7 @@ async function answerQuestion(request, use = {}) {
   if (!list.length) throw new HttpsError("failed-precondition", "No AI key is set on the server (CEREBRAS_API_KEY or GROQ_API_KEY).");
 
   await countUse(access.db, access.uid, access.roles, use);
+  const totals = await quickTotals(access, catalogue).catch(() => null);
 
   // Each distinct read is made once, whichever provider asks for it.
   const reads = new Map();
@@ -477,7 +505,7 @@ async function answerQuestion(request, use = {}) {
   const failures = [];
   for (const e of list) {
     if (deadline - Date.now() < LAST_STEP_AT) break;
-    const system = systemFor({ page, lang, pageChars: SIZES[e.provider].page, catalogue });
+    const system = systemFor({ page, lang, pageChars: SIZES[e.provider].page, catalogue, totals });
     try {
       answer = { ...(await e.run({ key: e.key, model: e.model, system, history, question, call, deadline })), provider: e.provider };
       // Out of steps: the reads it made still answer, given to it as text.
@@ -518,9 +546,10 @@ async function answerQuestion(request, use = {}) {
   }
   const seconds = Math.round((Date.now() - started) / 1000);
   logger.info(`[aiAssistant] ${answer.provider} ${answer.model} answered in ${seconds}s with ${reads.size} reads`);
-  const { text: reply, followUps } = splitFollowUps(answer.text);
+  const { text: withChart, followUps } = splitFollowUps(answer.text);
+  const { text: reply, chart } = splitChart(withChart);
   return {
-    reply, followUps, provider: answer.provider, model: answer.model, sources, usedPage: !!page?.text, sourcePages,
+    reply, followUps, ...(chart ? { chart } : {}), provider: answer.provider, model: answer.model, sources, usedPage: !!page?.text, sourcePages,
     place: clip(page?.place, 200), seconds,
   };
 }

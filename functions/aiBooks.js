@@ -52,7 +52,8 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 // Choosing pages is kept apart from the plumbing so it can be tested without
 // the Cloud Functions runtime installed.
-const { pageRange, rankPages, bestPages } = require("./aiBooksText");
+const { pageRange, rankPages, hybridRankPages, bestPages } = require("./aiBooksText");
+const { meaningOf } = require("./aiBooksVectors");
 
 const CEREBRAS_API_KEY = defineSecret("CEREBRAS_API_KEY");
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
@@ -191,7 +192,7 @@ const pagesOf = (entry, a, b) => {
   const out = [];
   for (let p = a; p <= b; p++) {
     const text = entry.pages[p - 1];
-    if (text && text.trim()) out.push({ title: entry.book.title, page: p, text });
+    if (text && text.trim()) out.push({ bookId: entry.book.id, title: entry.book.title, page: p, text });
   }
   return out;
 };
@@ -466,6 +467,7 @@ async function answer(db, data) {
   const lang = data.lang === "ar" ? "ar" : "en";
 
   let pages = [];
+  const entries = [];
   let scope;
   let multi = false;
   if (data.sectionId) {
@@ -474,6 +476,7 @@ async function answer(db, data) {
     scope = `the course section "${src.title}"`;
   } else if (data.bookId) {
     const entry = await loadBook(db, data.bookId);
+    entries.push(entry);
     const [a, b] = pageRange(entry, data.from, data.to);
     pages = pagesOf(entry, a, b);
     scope = `${entry.book.title}, pages ${a}-${b}`;
@@ -483,6 +486,7 @@ async function answer(db, data) {
     if (!books.length) throw new HttpsError("failed-precondition", "This course has no books yet.");
     for (const d of books) {
       const entry = await loadBook(db, d.id);
+      entries.push(entry);
       pages.push(...pagesOf(entry, 1, entry.pages.length));
     }
     multi = books.length > 1;
@@ -495,6 +499,7 @@ async function answer(db, data) {
     if (!books.length) throw new HttpsError("failed-precondition", `There are no ${service} books in the library yet.`);
     for (const d of books) {
       const entry = await loadBook(db, d.id);
+      entries.push(entry);
       pages.push(...pagesOf(entry, 1, entry.pages.length));
     }
     multi = books.length > 1;
@@ -510,7 +515,21 @@ async function answer(db, data) {
   const query = [history.split("\n").filter((l) => l.startsWith("Question:")).slice(-1)[0] || "", question].join(" ");
   // The whole scope when it fits; otherwise the pages that best match.
   const total = sizeOf(pages);
-  const ranked = total <= ASK_CHARS ? null : rankPages(pages, query);
+  let ranked = null;
+  if (total > ASK_CHARS) {
+    // By meaning and keywords together when page vectors may be made (only
+    // with AI_USE_GEMINI=1); otherwise by keywords alone, as before.
+    try {
+      // Page vectors come from Google's embeddings, so they follow the Gemini switch (aiModels.js).
+      const similarity = GEMINI_MODELS.length
+        ? await meaningOf(db, entries, query, cleanKey(GEMINI_API_KEY), { log: (m) => logger.warn(`[aiBooks] ${m}`) })
+        : null;
+      if (similarity) ranked = hybridRankPages(pages, query, similarity);
+    } catch (e) {
+      logger.warn(`[aiBooks] meaning search: ${e.message}`);
+    }
+    if (!ranked) ranked = rankPages(pages, query);
+  }
   if (ranked && !ranked.length) {
     return { text: lang === "ar" ? "لم أجد ما يخص هذا السؤال في الكتب المختارة." : "I could not find anything about this in the chosen books.", provider: "", model: "", pagesUsed: [] };
   }

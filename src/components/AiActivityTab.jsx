@@ -6,7 +6,7 @@
 // the functions write (functions/aiLog.js); the sums are in utils/aiActivity.js.
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
-import { ChevronLeft, ChevronRight, RefreshCw, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../firebase';
 import { aiActivity, daysBefore, featureLabel } from '../utils/aiActivity';
@@ -121,6 +121,7 @@ export default function AiActivityTab() {
                 {a.pool > 0 && <Bar pct={a.poolPct} className="mt-2" />}
                 <p className="text-xs text-slate-500 mt-2">
                     {a.people} {a.people === 1 ? 'person' : 'people'} · {a.uses} uses
+                    {a.up + a.down > 0 && ` · rated 👍 ${a.up} 👎 ${a.down}`}
                     {Object.keys(a.features).length > 0 && ' · '}
                     {Object.entries(a.features).map(([f, n]) => `${featureLabel(f)} ${n}`).join(', ')}
                 </p>
@@ -176,6 +177,8 @@ export default function AiActivityTab() {
                                 <p className="text-xs text-slate-500 mt-1">
                                     {fmtPct(r.ofPool)} of the free allowance · {Object.entries(r.features).map(([f, n]) => `${featureLabel(f)} ${n}`).join(', ')}
                                     {r.cached > 0 && ` · ${r.cached} saved answers`}
+                                    {r.up > 0 && ` · 👍 ${r.up}`}
+                                    {r.down > 0 && <span className="text-red-600"> · 👎 {r.down}</span>}
                                     {r.limited > 0 && <span className="text-amber-700"> · hit the limit {r.limited}×</span>}
                                     {r.errors > 0 && <span className="text-red-600"> · {r.errors} failed</span>}
                                     {r.email && r.name ? ` · ${r.email}` : ''}
@@ -219,6 +222,8 @@ export default function AiActivityTab() {
                                     {l.limit ? `${l.used} of ${l.limit} today` : ''}
                                     {l.model ? ` · ${l.model}` : ''}
                                     {l.ms ? ` · ${(l.ms / 1000).toFixed(1)} s` : ''}
+                                    {Number(l.vote) === 1 && <ThumbsUp size={11} className="inline ml-1.5 -mt-0.5 text-emerald-600" aria-label="Rated good" />}
+                                    {Number(l.vote) === -1 && <ThumbsDown size={11} className="inline ml-1.5 -mt-0.5 text-red-500" aria-label="Rated poor" />}
                                     {STATUS_STYLE[l.status] && (
                                         <span className={`ml-1.5 rounded px-1.5 py-0.5 font-semibold ${STATUS_STYLE[l.status]}`}>
                                             {l.status === 'limit' ? 'over limit' : l.status === 'cached' ? 'saved answer' : `failed${l.error ? `: ${l.error}` : ''}`}

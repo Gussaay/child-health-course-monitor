@@ -4,7 +4,7 @@
 // and of the shared free-tier pool: the super users' AI activity tab
 // (components/AiActivityTab.jsx). The functions write one aiLog record per use
 // (functions/aiLog.js): { uid, email, name, feature, what, where, model,
-// status, used, limit, pool, day, at }.
+// status, used, limit, pool, day, at, vote? } (vote: 1 = 👍, -1 = 👎).
 //
 // A use counts against the limits when it reached the AI ("ok" or "error";
 // the function counts before it calls). A saved answer handed out again
@@ -37,7 +37,7 @@ export function daysBefore(day, n) {
 /**
  * The log of `dayCount` days ending `lastDay`, added up.
  * Returns { lines (newest first), rows (one per person, most use first), features,
- * pool, used, poolPct, days: [{ day, used, people }] }.
+ * pool, used, poolPct, days: [{ day, used, people }], up, down } (up/down: 👍/👎 votes).
  */
 export function aiActivity(lines, { lastDay, dayCount = 1 } = {}) {
     const list = (lines || []).map((l) => ({ ...l, atMs: ms(l.at) })).sort((a, b) => b.atMs - a.atMs);
@@ -54,7 +54,7 @@ export function aiActivity(lines, { lastDay, dayCount = 1 } = {}) {
         if (counts(l)) d.used++;
         perDay.set(l.day, d);
         if (!l.uid) continue;
-        const p = people.get(l.uid) || { uid: l.uid, name: '', email: '', uses: 0, requests: 0, errors: 0, limited: 0, cached: 0, features: {}, limits: {}, days: new Set(), last: 0 };
+        const p = people.get(l.uid) || { uid: l.uid, name: '', email: '', uses: 0, requests: 0, errors: 0, limited: 0, cached: 0, up: 0, down: 0, features: {}, limits: {}, days: new Set(), last: 0 };
         p.name = l.name || p.name;
         p.email = l.email || p.email;
         p.uses++;
@@ -63,6 +63,8 @@ export function aiActivity(lines, { lastDay, dayCount = 1 } = {}) {
         if (l.status === 'error') p.errors++;
         if (l.status === 'limit') p.limited++;
         if (l.status === 'cached') p.cached++;
+        if (Number(l.vote) === 1) p.up++;
+        if (Number(l.vote) === -1) p.down++;
         // The limit of each feature group on each day the person used it.
         if (Number(l.limit) > 0) p.limits[`${l.day}|${limitGroup(l.feature)}`] = Number(l.limit);
         p.days.add(l.day);
@@ -86,5 +88,7 @@ export function aiActivity(lines, { lastDay, dayCount = 1 } = {}) {
             days.push({ day, used: d?.used || 0, people: d?.people.size || 0, pct: pct(d?.used || 0, poolPerDay) });
         }
     }
-    return { lines: list, rows, features, pool, poolPerDay, used, poolPct: pct(used, pool), days, people: rows.length, uses: list.length };
+    const up = rows.reduce((s, r) => s + r.up, 0);
+    const down = rows.reduce((s, r) => s + r.down, 0);
+    return { lines: list, rows, features, pool, poolPerDay, used, poolPct: pct(used, pool), days, people: rows.length, uses: list.length, up, down };
 }
