@@ -7,7 +7,7 @@ import { createRequire } from 'module';
 // =============================================================================
 
 const require = createRequire(import.meta.url);
-const { _internal: { askChat } } = require('../functions/aiAssistant.js');
+const { askChat } = require('../functions/aiChat.js');
 
 const reply = (status, body, headers = {}) => ({
     ok: status < 300, status, headers: { get: (h) => headers[h.toLowerCase()] ?? null }, json: async () => body,
