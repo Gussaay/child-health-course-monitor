@@ -11,17 +11,18 @@
 // shared by everyone (poolEstimate). Written by the functions alone.
 
 const { FieldValue } = require("firebase-admin/firestore");
-const { GEMINI_MODELS, GROQ_MODELS } = require("./aiModels");
+const { GEMINI_MODELS, CEREBRAS_MODELS, GROQ_MODELS } = require("./aiModels");
 
 // Free-tier requests a day per model. Groq gives GPT-OSS 1,000 requests but
 // 200K tokens a day, which at ~3K tokens a request is about 66; Gemini's free
 // tier gives as little as 20 a day per model (Gemini counts only when it is
 // switched on, see aiModels.js). Change these if a key gets a
-// paid plan.
-const FREE_PER_DAY = { groq: 66, gemini: 20 };
+// paid plan. Cerebras gives 1M tokens a day per model: ~200 requests.
+const FREE_PER_DAY = { cerebras: 200, groq: 66, gemini: 20 };
 
-/** The day's shared capacity of every model the app tries, both providers together. */
-const poolEstimate = () => GROQ_MODELS.length * FREE_PER_DAY.groq + GEMINI_MODELS.length * FREE_PER_DAY.gemini;
+/** The day's shared capacity of every model the app tries, all providers together. */
+const poolEstimate = () => CEREBRAS_MODELS.length * FREE_PER_DAY.cerebras
+  + GROQ_MODELS.length * FREE_PER_DAY.groq + GEMINI_MODELS.length * FREE_PER_DAY.gemini;
 
 const clip = (s, n) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 

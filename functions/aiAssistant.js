@@ -10,13 +10,14 @@
 // their locality, and a collection their role cannot open is refused. It never
 // writes to programme data; it writes only its usage counter and audit record.
 //
-// Providers, both on free tiers and both already used by the AI Library:
-//   Groq GPT-OSS  with smaller results (its free tier is 8K tokens a minute)
+// Providers, all on free tiers and all also used by the AI Library:
+//   Cerebras GPT-OSS  first: room for several steps a minute
+//   Groq GPT-OSS      backup, with smaller results (its free tier is 8K tokens a minute)
 //   Gemini Flash  only when AI_USE_GEMINI=1 (off by default, see aiModels.js):
 //                 a long context, so whole tool results and the page fit
 // When one fails part-way, the next starts again with the reads already made,
-// so nothing is read twice. Uses the GROQ_API_KEY and GEMINI_API_KEY secrets
-// that aiBooks already needs; nothing new to set.
+// so nothing is read twice. Uses the CEREBRAS_API_KEY, GROQ_API_KEY and
+// GEMINI_API_KEY secrets that aiBooks also needs.
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
@@ -28,13 +29,18 @@ const {
   TOOLS, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps,
 } = require("./aiDataText");
 
+const CEREBRAS_API_KEY = defineSecret("CEREBRAS_API_KEY");
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 // Models in order, and how long one request may take: see aiModels.js.
-const { GEMINI_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
+const { GEMINI_MODELS, CEREBRAS_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
 const { withAiLog } = require("./aiLog");
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Both speak the OpenAI chat format; Groq alone takes include_reasoning.
+const CHAT = {
+  cerebras: { name: "Cerebras", url: "https://api.cerebras.ai/v1/chat/completions", extra: {} },
+  groq: { name: "Groq", url: "https://api.groq.com/openai/v1/chat/completions", extra: { include_reasoning: false } },
+};
 
 const MAX_STEPS = 8;          // model calls per question
 // The whole answer must be back well inside the function's 120 s limit. When
@@ -56,6 +62,7 @@ const STAFF_ROLES = [
 // whole conversation, so it sees less of the page and of each result.
 const SIZES = {
   gemini: { result: 12000, page: 9000 },
+  cerebras: { result: 8000, page: 6000 },
   groq: { result: 5000, page: 3000 },
 };
 
@@ -203,7 +210,9 @@ async function post(url, headers, body, label, deadline) {
     const j = await r.json().catch(() => ({}));
     if (r.ok) return j;
     const wait = waitAsked(r, j);
-    const brief = [500, 502, 503].includes(r.status) || (r.status === 429 && wait > 0 && wait <= 3);
+    // A per-minute limit (Cerebras allows 5 requests a minute) is waited out
+    // when there is time; a used-up day is not.
+    const brief = [500, 502, 503].includes(r.status) || (r.status === 429 && wait > 0 && wait <= (left > 45000 ? 10 : 3));
     if (attempt < 1 && brief) { await sleep(Math.max(wait * 1000, 1000)); continue; }
     const err = new ProviderError(`${label} ${r.status}: ${clip(j?.error?.message, 200)}`);
     err.status = r.status;
@@ -282,7 +291,8 @@ async function askGemini({ key, model, system, history, question, call, deadline
   return { text: "", tooManySteps: true, model };
 }
 
-async function askGroq({ key, model, system, history, question, call, deadline }) {
+async function askChat({ provider, key, model, system, history, question, call, deadline }) {
+  const { name, url, extra } = CHAT[provider];
   const messages = [
     { role: "system", content: system },
     ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -291,28 +301,28 @@ async function askGroq({ key, model, system, history, question, call, deadline }
   const tools = TOOLS.map((t) => ({ type: "function", function: t }));
   for (let step = 0; step < MAX_STEPS; step++) {
     const last = step === MAX_STEPS - 1 || deadline - Date.now() < LAST_STEP_AT;
-    const j = await post(GROQ_URL, { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, {
+    const j = await post(url, { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, {
       model, messages: last ? [...messages, { role: "user", content: ANSWER_NOW }] : messages,
       tools, tool_choice: last ? "none" : "auto", temperature: 0.2,
-      max_completion_tokens: 2500, reasoning_effort: "low", include_reasoning: false,
-    }, `Groq ${model}`, deadline);
+      max_completion_tokens: 2500, reasoning_effort: "low", ...extra,
+    }, `${name} ${model}`, deadline);
     const msg = j?.choices?.[0]?.message || {};
     const calls = msg.tool_calls || [];
-    if (calls.length) logger.info(`[aiAssistant] Groq step ${step + 1}: ${calls.map((c) => `${c.function?.name} ${clip(c.function?.arguments, 300)}`).join(" | ")}`);
+    if (calls.length) logger.info(`[aiAssistant] ${name} step ${step + 1}: ${calls.map((c) => `${c.function?.name} ${clip(c.function?.arguments, 300)}`).join(" | ")}`);
     if (calls.length && last) return { text: "", tooManySteps: true, model };
     if (!calls.length) {
       const text = String(msg.content || "").trim();
-      if (!text) throw new ProviderError(`Groq ${model}: empty reply`);
+      if (!text) throw new ProviderError(`${name} ${model}: empty reply`);
       return { text, model };
     }
     messages.push({ role: "assistant", content: msg.content || "", tool_calls: calls });
     const outs = await Promise.all(calls.map((c) => {
       let args = {};
       try { args = JSON.parse(c.function?.arguments || "{}"); } catch { args = {}; }
-      return call(c.function?.name, args, SIZES.groq.result);
+      return call(c.function?.name, args, SIZES[provider].result);
     }));
     calls.forEach((c, i) => {
-      messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(outs[i]).slice(0, SIZES.groq.result + 500) });
+      messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(outs[i]).slice(0, SIZES[provider].result + 500) });
     });
   }
   return { text: "", tooManySteps: true, model };
@@ -344,25 +354,31 @@ async function answerFromReads({ provider, key, model, system, history, question
     if (!text) throw new ProviderError(`Gemini ${model}: no answer from reads`);
     return { text, model: j.modelVersion || model };
   }
-  const j = await post(GROQ_URL, { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, {
-    model, temperature: 0.2, max_completion_tokens: 2500, reasoning_effort: "low", include_reasoning: false,
+  const { name, url, extra } = CHAT[provider];
+  const j = await post(url, { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, {
+    model, temperature: 0.2, max_completion_tokens: 2500, reasoning_effort: "low", ...extra,
     messages: [{ role: "system", content: system }, ...history, { role: "user", content: prompt }],
-  }, `Groq ${model} (from reads)`, deadline);
+  }, `${name} ${model} (from reads)`, deadline);
   const text = String(j?.choices?.[0]?.message?.content || "").trim();
-  if (!text) throw new ProviderError(`Groq ${model}: no answer from reads`);
+  if (!text) throw new ProviderError(`${name} ${model}: no answer from reads`);
   return { text, model };
 }
 
 /** The providers to try, in order, from the keys that are set. */
 function engines() {
   const gemini = GEMINI_MODELS.length ? cleanKey(GEMINI_API_KEY) : "";
+  const cerebras = cleanKey(CEREBRAS_API_KEY);
   const groq = cleanKey(GROQ_API_KEY);
+  const chat = (provider, key, models) => (key
+    ? models.map((model) => ({ provider, model, key, run: (a) => askChat({ ...a, provider }) }))
+    : []);
+  const c = chat("cerebras", cerebras, CEREBRAS_MODELS);
+  const q = chat("groq", groq, GROQ_MODELS);
   const g = gemini ? GEMINI_MODELS.map((model) => ({ provider: "gemini", model, key: gemini, run: askGemini })) : [];
-  const q = groq ? GROQ_MODELS.map((model) => ({ provider: "groq", model, key: groq, run: askGroq })) : [];
-  if (process.env.AI_ASSISTANT_GROQ_FIRST === "1") return [...q, ...g];
   // Taken in turns, so one provider having a bad day costs one try, not four.
   const list = [];
-  for (let i = 0; i < Math.max(g.length, q.length); i++) {
+  for (let i = 0; i < Math.max(c.length, q.length, g.length); i++) {
+    if (c[i]) list.push(c[i]);
     if (g[i]) list.push(g[i]);
     if (q[i]) list.push(q[i]);
   }
@@ -397,7 +413,7 @@ async function countUse(db, uid, roles, use = {}) {
 // =============================================================================
 
 exports.aiAssistant = onCall(
-  { secrets: [GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 120, memory: "512MiB" },
+  { secrets: [CEREBRAS_API_KEY, GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 120, memory: "512MiB" },
   async (request) => {
     try {
       const page = request.data?.page && typeof request.data.page === "object" ? request.data.page : {};
@@ -443,7 +459,7 @@ async function answerQuestion(request, use = {}) {
   const page = request.data?.page && typeof request.data.page === "object" ? request.data.page : null;
 
   const list = engines();
-  if (!list.length) throw new HttpsError("failed-precondition", "No AI key is set on the server (GROQ_API_KEY).");
+  if (!list.length) throw new HttpsError("failed-precondition", "No AI key is set on the server (CEREBRAS_API_KEY or GROQ_API_KEY).");
 
   await countUse(access.db, access.uid, access.roles, use);
 
@@ -510,4 +526,4 @@ async function answerQuestion(request, use = {}) {
 }
 
 // For the tests.
-exports._internal = { runTool, countData, queryData, describe, engines, askGemini, askGroq, answerFromReads };
+exports._internal = { runTool, countData, queryData, describe, engines, askGemini, askChat, answerFromReads };

@@ -6,7 +6,9 @@
 // Checked on 2026-10-24 against the app's own keys: gemini-3.5-flash and the
 // 3.x flash-lite models answer in 1-2 s; "gemini-flash-latest" was overloaded
 // (503 "high demand", or no reply in 60 s) and gemini-2.5-flash returns 404 for
-// this project. Pin one with GEMINI_MODEL=... or GROQ_MODEL=... in functions/.env.
+// this project. 2026-10-27: flash-latest overloaded again, 3.5-flash-lite
+// answers in ~1 s and took its place. Pin one with GEMINI_MODEL=...,
+// CEREBRAS_MODEL=... or GROQ_MODEL=... in functions/.env.
 //
 // Gemini is OFF (2026-10-26): Google may use free-tier prompts to improve its
 // products, and the app sends programme data, so nothing goes to Google unless
@@ -19,7 +21,16 @@ const GEMINI_MODELS = !USE_GEMINI
   ? []
   : process.env.GEMINI_MODEL
     ? [process.env.GEMINI_MODEL]
-    : ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest"];
+    : ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest"];
+
+// Cerebras runs the same GPT-OSS as Groq on a free tier with room for the
+// assistant's longer conversations (about 30,000 input tokens a minute and
+// 1M tokens a day per model, against Groq's 8,000 a minute, which one
+// assistant step of ~7,000 tokens nearly fills: seen in the logs 2026-10-27).
+// Tried first; Groq is its backup.
+const CEREBRAS_MODELS = process.env.CEREBRAS_MODEL
+  ? [process.env.CEREBRAS_MODEL]
+  : ["gpt-oss-120b"];
 
 const GROQ_MODELS = process.env.GROQ_MODEL
   ? [process.env.GROQ_MODEL]
@@ -29,4 +40,4 @@ const GROQ_MODELS = process.env.GROQ_MODEL
 // use up the whole answer: the next model gets its turn instead.
 const REQUEST_MS = 30000;
 
-module.exports = { GEMINI_MODELS, GROQ_MODELS, REQUEST_MS };
+module.exports = { GEMINI_MODELS, CEREBRAS_MODELS, GROQ_MODELS, REQUEST_MS };

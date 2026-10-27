@@ -32,6 +32,8 @@ import {
     listSummaries, deleteSummary, summarise, ask, summariseSection,
 } from './aiLibrary/aiLibraryData';
 
+const providerName = (p) => ({ groq: 'Groq', cerebras: 'Cerebras', gemini: 'Gemini' }[p] || p);
+
 const STYLE_KEYS = ['summary', 'key_points', 'teaching', 'quiz'];
 const STYLE_FALLBACK = { summary: 'Summary', key_points: 'Key points', teaching: 'Teaching notes', quiz: 'Quiz questions' };
 
@@ -65,7 +67,7 @@ function ModelLine({ provider, model, pages }) {
     if (!model) return null;
     return (
         <p className="mt-2 text-xs text-slate-400">
-            {provider === 'groq' ? 'Groq' : 'Gemini'} · {model}
+            {providerName(provider)} · {model}
             {pages ? ` · ${t('ai_library.pages_range', 'pages {{from}}-{{to}}', pages)}` : ''}
         </p>
     );
@@ -136,7 +138,7 @@ export function AskPanel({ scope, title, hint }) {
                                 {m.failed ? m.content : <AiText text={m.content} />}
                                 {!m.failed && (
                                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-                                        {m.model && <span>{m.provider === 'groq' ? 'Groq' : 'Gemini'} · {m.model}</span>}
+                                        {m.model && <span>{providerName(m.provider)} · {m.model}</span>}
                                         {m.pagesUsed?.length > 0 && <span>{t('ai_library.read_pages', 'Read {{count}} pages', { count: m.pagesUsed.length })}</span>}
                                         <button type="button" onClick={() => copyText(m.content, t)} className="flex items-center gap-1 hover:text-sky-700"><Copy size={12} /> {t('ai_library.copy', 'Copy')}</button>
                                     </div>
@@ -646,7 +648,7 @@ export function SectionAiPanel({ section, canRefresh = false }) {
                             <AiText text={result.text} />
                             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                                 <p className="text-xs text-slate-400">
-                                    {result.cached ? `${t('ai_library.shared_copy', 'Saved copy')} · ` : ''}{result.provider === 'groq' ? 'Groq' : 'Gemini'} · {result.model}
+                                    {result.cached ? `${t('ai_library.shared_copy', 'Saved copy')} · ` : ''}{providerName(result.provider)} · {result.model}
                                     {result.fromBook ? ` · ${t('ai_library.from_book', 'from the module book')}` : ''}
                                 </p>
                                 <div className="flex gap-2">

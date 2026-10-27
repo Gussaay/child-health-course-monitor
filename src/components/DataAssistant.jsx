@@ -21,6 +21,8 @@ import { notify } from './dialogs';
 import { snapshotPage } from '../utils/pageSnapshot';
 import { loadChats, saveChats, savedAnswer } from '../utils/aiChats';
 
+const providerName = (p) => ({ groq: 'Groq', cerebras: 'Cerebras', gemini: 'Gemini' }[p] || p);
+
 const askServer = (payload) => httpsCallable(getFunctions(), 'aiAssistant', { timeout: 130000 })(payload);
 
 function examplesFor(view, t) {
@@ -184,7 +186,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                                             <History size={12} />{t('data_assistant.saved_answer', 'Saved answer')} · {t('data_assistant.ask_again', 'Ask again')}
                                         </button>
                                     )}
-                                    {m.model && <span>{m.provider === 'groq' ? 'Groq' : 'Gemini'}{m.seconds ? ` · ${m.seconds} s` : ''}</span>}
+                                    {m.model && <span>{providerName(m.provider)}{m.seconds ? ` · ${m.seconds} s` : ''}</span>}
                                     <button onClick={() => copy(m.content)} className="ms-auto inline-flex items-center gap-1 hover:text-slate-600">
                                         <Copy size={12} />{t('data_assistant.copy', 'Copy')}
                                     </button>

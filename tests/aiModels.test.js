@@ -25,3 +25,13 @@ describe('Gemini is off by default', () => {
         expect(m.GEMINI_MODELS.length).toBeGreaterThan(0);
     });
 });
+
+describe('Cerebras comes first, Groq is its backup', () => {
+    afterEach(() => { vi.unstubAllEnvs(); });
+
+    it('lists the Cerebras GPT-OSS model by default and takes a pinned one', async () => {
+        expect((await load()).CEREBRAS_MODELS).toEqual(['gpt-oss-120b']);
+        vi.stubEnv('CEREBRAS_MODEL', 'qwen-3.8-27b');
+        expect((await load()).CEREBRAS_MODELS).toEqual(['qwen-3.8-27b']);
+    });
+});
