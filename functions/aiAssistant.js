@@ -11,13 +11,14 @@
 // writes to programme data; it writes only its usage counter and audit record.
 //
 // Providers, all on free tiers and all also used by the AI Library:
-//   Cerebras GPT-OSS  first: room for several steps a minute
-//   Groq GPT-OSS      backup, with smaller results (its free tier is 8K tokens a minute)
+//   Cerebras GPT-OSS  first when switched on (AI_USE_CEREBRAS=1): room for several steps a minute
+//   Groq GPT-OSS/Qwen with smaller results; each step goes to a model with room
+//                     that minute (its free tier is 8K tokens a minute per model)
 //   Gemini Flash  only when AI_USE_GEMINI=1 (off by default, see aiModels.js):
 //                 a long context, so whole tool results and the page fit
 // When one fails part-way, the next starts again with the reads already made,
-// so nothing is read twice. Uses the CEREBRAS_API_KEY, GROQ_API_KEY and
-// GEMINI_API_KEY secrets that aiBooks also needs.
+// so nothing is read twice. Uses the GROQ_API_KEY and GEMINI_API_KEY secrets
+// (and CEREBRAS_API_KEY when Cerebras is on) that aiBooks also needs.
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
@@ -195,7 +196,7 @@ const waitAsked = (r, j) => parseFloat(r.headers.get("retry-after"))
 // A request that fails is retried once only when the wait is short; a used-up
 // quota moves straight on to the next model rather than keeping the person
 // waiting.
-async function post(url, headers, body, label, deadline) {
+async function post(url, headers, body, label, deadline, { waitLimits = true } = {}) {
   for (let attempt = 0; ; attempt++) {
     const left = deadline - Date.now();
     if (left < 3000) throw new ProviderError(`${label}: out of time`);
@@ -212,11 +213,13 @@ async function post(url, headers, body, label, deadline) {
     const wait = waitAsked(r, j);
     // A per-minute limit (Cerebras allows 5 requests a minute) is waited out
     // when there is time; a used-up day is not.
-    const brief = [500, 502, 503].includes(r.status) || (r.status === 429 && wait > 0 && wait <= (left > 45000 ? 10 : 3));
+    const brief = [500, 502, 503].includes(r.status)
+      || (waitLimits && r.status === 429 && wait > 0 && wait <= (left > 45000 ? 10 : 3));
     if (attempt < 1 && brief) { await sleep(Math.max(wait * 1000, 1000)); continue; }
     const err = new ProviderError(`${label} ${r.status}: ${clip(j?.error?.message, 200)}`);
     err.status = r.status;
     err.detail = j?.error?.message || "";
+    err.wait = wait;
     throw err;
   }
 }
@@ -291,8 +294,42 @@ async function askGemini({ key, model, system, history, question, call, deadline
   return { text: "", tooManySteps: true, model };
 }
 
-async function askChat({ provider, key, model, system, history, question, call, deadline }) {
+/**
+ * One conversation, its steps spread over `models`. Each model has its own
+ * per-minute token allowance (Groq's free tier: 8,000, and one step of this
+ * conversation is ~7,000), so a step a model has no room for goes to the next
+ * model, which carries on the same conversation. Only when every model is
+ * full is the shortest asked wait waited out, if there is time.
+ */
+async function askChat({ provider, key, models, system, history, question, call, deadline }) {
   const { name, url, extra } = CHAT[provider];
+  let at = 0;
+  const step1 = async (body) => {
+    let waited = false;
+    for (;;) {
+      const waits = [];
+      for (let i = 0; i < models.length; i++) {
+        const model = models[(at + i) % models.length];
+        try {
+          const j = await post(url, { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+            { model, ...body, reasoning_effort: "low", ...extra }, `${name} ${model}`, deadline, { waitLimits: models.length === 1 });
+          at = (at + i) % models.length;
+          return { j, model };
+        } catch (e) {
+          // Full this minute, or the request is too big for it: the next model.
+          if (!(e instanceof ProviderError) || ![413, 429].includes(e.status)) throw e;
+          logger.warn(`[aiAssistant] ${e.message}`);
+          waits.push(e.wait || 0);
+          if (i === models.length - 1 && (waited || models.length === 1)) throw e;
+        }
+      }
+      const wait = Math.min(...waits.filter((w) => w > 0), 20);
+      if (deadline - Date.now() - wait * 1000 < LAST_STEP_AT) throw new ProviderError(`${name}: every model is at its limit`);
+      logger.info(`[aiAssistant] ${name}: every model full, waiting ${wait} s`);
+      await sleep(wait * 1000);
+      waited = true;
+    }
+  };
   const messages = [
     { role: "system", content: system },
     ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -301,11 +338,10 @@ async function askChat({ provider, key, model, system, history, question, call, 
   const tools = TOOLS.map((t) => ({ type: "function", function: t }));
   for (let step = 0; step < MAX_STEPS; step++) {
     const last = step === MAX_STEPS - 1 || deadline - Date.now() < LAST_STEP_AT;
-    const j = await post(url, { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, {
-      model, messages: last ? [...messages, { role: "user", content: ANSWER_NOW }] : messages,
-      tools, tool_choice: last ? "none" : "auto", temperature: 0.2,
-      max_completion_tokens: 2500, reasoning_effort: "low", ...extra,
-    }, `${name} ${model}`, deadline);
+    const { j, model } = await step1({
+      messages: last ? [...messages, { role: "user", content: ANSWER_NOW }] : messages,
+      tools, tool_choice: last ? "none" : "auto", temperature: 0.2, max_completion_tokens: 2500,
+    });
     const msg = j?.choices?.[0]?.message || {};
     const calls = msg.tool_calls || [];
     if (calls.length) logger.info(`[aiAssistant] ${name} step ${step + 1}: ${calls.map((c) => `${c.function?.name} ${clip(c.function?.arguments, 300)}`).join(" | ")}`);
@@ -325,7 +361,7 @@ async function askChat({ provider, key, model, system, history, question, call, 
       messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(outs[i]).slice(0, SIZES[provider].result + 500) });
     });
   }
-  return { text: "", tooManySteps: true, model };
+  return { text: "", tooManySteps: true, model: models[at] };
 }
 
 /**
@@ -367,10 +403,11 @@ async function answerFromReads({ provider, key, model, system, history, question
 /** The providers to try, in order, from the keys that are set. */
 function engines() {
   const gemini = GEMINI_MODELS.length ? cleanKey(GEMINI_API_KEY) : "";
-  const cerebras = cleanKey(CEREBRAS_API_KEY);
+  const cerebras = CEREBRAS_MODELS.length ? cleanKey(CEREBRAS_API_KEY) : "";
   const groq = cleanKey(GROQ_API_KEY);
-  const chat = (provider, key, models) => (key
-    ? models.map((model) => ({ provider, model, key, run: (a) => askChat({ ...a, provider }) }))
+  // One entry per provider: its models share the conversation (askChat).
+  const chat = (provider, key, models) => (key && models.length
+    ? [{ provider, model: models[0], key, run: (a) => askChat({ ...a, provider, models }) }]
     : []);
   const c = chat("cerebras", cerebras, CEREBRAS_MODELS);
   const q = chat("groq", groq, GROQ_MODELS);
@@ -413,7 +450,7 @@ async function countUse(db, uid, roles, use = {}) {
 // =============================================================================
 
 exports.aiAssistant = onCall(
-  { secrets: [CEREBRAS_API_KEY, GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 120, memory: "512MiB" },
+  { secrets: [...(CEREBRAS_MODELS.length ? [CEREBRAS_API_KEY] : []), GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 120, memory: "512MiB" },
   async (request) => {
     try {
       const page = request.data?.page && typeof request.data.page === "object" ? request.data.page : {};

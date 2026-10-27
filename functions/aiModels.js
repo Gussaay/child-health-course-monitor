@@ -27,14 +27,21 @@ const GEMINI_MODELS = !USE_GEMINI
 // assistant's longer conversations (about 30,000 input tokens a minute and
 // 1M tokens a day per model, against Groq's 8,000 a minute, which one
 // assistant step of ~7,000 tokens nearly fills: seen in the logs 2026-10-27).
-// Tried first; Groq is its backup.
-const CEREBRAS_MODELS = process.env.CEREBRAS_MODEL
-  ? [process.env.CEREBRAS_MODEL]
-  : ["gpt-oss-120b"];
+// Tried first; Groq is its backup. Its API needs a card on file, so it is
+// OFF until AI_USE_CEREBRAS=1 is set in functions/.env AND the
+// CEREBRAS_API_KEY secret exists (a declared secret that is missing fails
+// the deploy, so the secret is only declared when this is on).
+const CEREBRAS_MODELS = process.env.AI_USE_CEREBRAS !== "1"
+  ? []
+  : process.env.CEREBRAS_MODEL
+    ? [process.env.CEREBRAS_MODEL]
+    : ["gpt-oss-120b"];
 
 const GROQ_MODELS = process.env.GROQ_MODEL
   ? [process.env.GROQ_MODEL]
-  : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+  : ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
+// Each Groq model has its own 8,000 tokens a minute (checked 2026-10-27), so
+// the assistant moves a step that does not fit to the next model.
 
 // The longest one request to a model may take. A model that hangs must not
 // use up the whole answer: the next model gets its turn instead.

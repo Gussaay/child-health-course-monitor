@@ -12,7 +12,7 @@
 // which page it came from.
 //
 // Free tiers only, as in Easy Pedia:
-//   Cerebras (GPT-OSS)  first: about 30,000 input tokens a minute, so ~45,000
+//   Cerebras (GPT-OSS)  first when AI_USE_CEREBRAS=1: about 30,000 input tokens a minute, so ~45,000
 //                   characters of book at once, and longer parts in pieces.
 //   Groq (GPT-OSS)  next when the text is short. Its free tier takes about
 //                   8,000 tokens a minute, prompt included, so ~18,000
@@ -23,7 +23,7 @@
 //                   longer than ~18,000 characters is refused.
 //
 // One-time setup:
-//   firebase functions:secrets:set CEREBRAS_API_KEY (cloud.cerebras.ai)
+//   firebase functions:secrets:set CEREBRAS_API_KEY (cloud.cerebras.ai; only with AI_USE_CEREBRAS=1)
 //   firebase functions:secrets:set GROQ_API_KEY     (console.groq.com/keys)
 //   firebase functions:secrets:set GEMINI_API_KEY   (aistudio.google.com/apikey)
 // All must be set before this is exported from index.js: a declared secret
@@ -368,7 +368,7 @@ async function gemini(key, system, user, maxTokens) {
 async function complete({
   system, make, size, maxTokens = 3072, groqChars = GROQ_CHARS, groqTokens = 2048, cerebrasChars = CEREBRAS_CHARS,
 }) {
-  const cerebrasKey = cleanKey(CEREBRAS_API_KEY);
+  const cerebrasKey = CEREBRAS_MODELS.length ? cleanKey(CEREBRAS_API_KEY) : "";
   const groqKey = cleanKey(GROQ_API_KEY);
   const geminiKey = GEMINI_MODELS.length ? cleanKey(GEMINI_API_KEY) : ""; // off unless AI_USE_GEMINI=1
   if (!cerebrasKey && !groqKey && !geminiKey) {
@@ -420,7 +420,7 @@ async function summarise(db, data, who) {
   const size = sizeOf(pages);
   // The most book text one request can take with the keys that are set.
   const big = GEMINI_MODELS.length && cleanKey(GEMINI_API_KEY) ? GEMINI_CHARS
-    : cleanKey(CEREBRAS_API_KEY) ? CEREBRAS_CHARS : GROQ_CHARS;
+    : CEREBRAS_MODELS.length && cleanKey(CEREBRAS_API_KEY) ? CEREBRAS_CHARS : GROQ_CHARS;
   if (size <= big) {
     out = await complete({ system: SYSTEM, size, maxTokens: 4096, make: (limit) => (size <= limit ? ask(render(pages)) : null) });
   } else {
@@ -606,7 +606,7 @@ function whatAsked(data) {
 }
 
 exports.aiBooks = onCall(
-  { secrets: [CEREBRAS_API_KEY, GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 300, memory: "1GiB", maxInstances: 3 },
+  { secrets: [...(CEREBRAS_MODELS.length ? [CEREBRAS_API_KEY] : []), GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 300, memory: "1GiB", maxInstances: 3 },
   async (request) => {
     const db = getFirestore();
     const who = await caller(db, request.auth);

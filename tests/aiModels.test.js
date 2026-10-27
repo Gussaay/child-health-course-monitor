@@ -26,12 +26,26 @@ describe('Gemini is off by default', () => {
     });
 });
 
-describe('Cerebras comes first, Groq is its backup', () => {
+describe('Cerebras only when switched on', () => {
     afterEach(() => { vi.unstubAllEnvs(); });
 
-    it('lists the Cerebras GPT-OSS model by default and takes a pinned one', async () => {
+    it('lists no Cerebras model unless AI_USE_CEREBRAS=1', async () => {
+        vi.stubEnv('AI_USE_CEREBRAS', '');
+        expect((await load()).CEREBRAS_MODELS).toEqual([]);
+    });
+
+    it('lists the Cerebras GPT-OSS model when on, and takes a pinned one', async () => {
+        vi.stubEnv('AI_USE_CEREBRAS', '1');
         expect((await load()).CEREBRAS_MODELS).toEqual(['gpt-oss-120b']);
         vi.stubEnv('CEREBRAS_MODEL', 'qwen-3.8-27b');
         expect((await load()).CEREBRAS_MODELS).toEqual(['qwen-3.8-27b']);
+    });
+});
+
+describe('Groq has several models to spread a conversation over', () => {
+    it('lists the two GPT-OSS models and Qwen', async () => {
+        vi.stubEnv('GROQ_MODEL', '');
+        expect((await load()).GROQ_MODELS).toEqual(['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b']);
+        vi.unstubAllEnvs();
     });
 });
