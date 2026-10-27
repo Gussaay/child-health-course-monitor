@@ -107,3 +107,35 @@ jobs:
           grep -i "x-ratelimit" /tmp/h.txt
           curl -s -o /dev/null -D /tmp/h2.txt https://api.groq.com/openai/v1/chat/completions -H "Authorization: Bearer $Q" -H 'Content-Type: application/json' -d '{"model":"openai/gpt-oss-20b","messages":[{"role":"user","content":"OK"}],"max_completion_tokens":5}'
           echo "--- gpt-oss-20b"; grep -i "x-ratelimit" /tmp/h2.txt
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/project-thread-jfo8r7
+          path: app
+      - name: A 4-step question on Groq alone, with the real key
+        shell: bash
+        run: |
+          set +e
+          export Q=$(gcloud secrets versions access latest --secret=GROQ_API_KEY --project imnci-courses-monitor | tr -d ' \n"'"'"'')
+          echo "::add-mask::$Q"
+          cd app/functions && npm ci --ignore-scripts --no-audit --no-fund >/dev/null 2>&1
+          cat > /tmp/run.cjs <<'JS'
+          const { _internal: { askChat } } = require(process.cwd() + "/aiAssistant.js");
+          const { systemFor } = require(process.cwd() + "/aiDataText.js");
+          const { GROQ_MODELS } = require(process.cwd() + "/aiModels.js");
+          const catalogue = ["courses", "participants", "healthFacilities", "facilitators"].map((c) => ({ collection: c, label: c, fields: [] }));
+          let system;
+          try { system = systemFor({ page: { text: "الولاية المحلية ".repeat(150), view: "dashboard" }, lang: "ar", pageChars: 3000, catalogue }); } catch (e) { system = "You answer from the app data only. " + "rules ".repeat(2500); }
+          let n = 0;
+          const row = (i) => ({ state: "ولاية " + i, locality: "محلية " + i, facilities: i * 3, imnci: i, doctors: i * 2 });
+          const call = async (name, args) => { n++; return { tool: name, args, groups: Array.from({ length: 60 }, (_, i) => row(i)) }; };
+          (async () => {
+            const t0 = Date.now();
+            try {
+              const out = await askChat({ provider: "groq", key: process.env.Q, models: GROQ_MODELS, system, history: [],
+                question: "عدد المؤسسات الصحية والأطباء في كل ولاية، ثم في كل محلية، ثم عدد الكورسات في كل ولاية، ثم المشاركين حسب المسمى الوظيفي. استخدم أداة منفصلة لكل جزء.",
+                call, deadline: Date.now() + 90000 });
+              console.log("ANSWERED by", out.model, "in", Math.round((Date.now() - t0) / 1000), "s with", n, "reads; tooManySteps:", !!out.tooManySteps, "|", String(out.text).slice(0, 200));
+            } catch (e) { console.log("FAILED after", Math.round((Date.now() - t0) / 1000), "s with", n, "reads:", e.message); }
+          })();
+          JS
+          node /tmp/run.cjs 2>&1 | grep -E "replied|step|waiting|ANSWERED|FAILED|429" | sed -E 's/\{"severity":"[A-Z]+","message":"//; s/"\}$//' | head -60
