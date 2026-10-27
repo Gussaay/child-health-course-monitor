@@ -38,9 +38,11 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const { GEMINI_MODELS, CEREBRAS_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
 const { withAiLog } = require("./aiLog");
 // Both speak the OpenAI chat format; Groq alone takes include_reasoning.
+// Groq counts max_completion_tokens in each request's 8,000 tokens a minute,
+// so it is given a smaller reply allowance.
 const CHAT = {
-  cerebras: { name: "Cerebras", url: "https://api.cerebras.ai/v1/chat/completions", extra: {} },
-  groq: { name: "Groq", url: "https://api.groq.com/openai/v1/chat/completions", extra: { include_reasoning: false } },
+  cerebras: { name: "Cerebras", url: "https://api.cerebras.ai/v1/chat/completions", extra: { max_completion_tokens: 2500 } },
+  groq: { name: "Groq", url: "https://api.groq.com/openai/v1/chat/completions", extra: { include_reasoning: false, max_completion_tokens: 1800 } },
 };
 
 const MAX_STEPS = 8;          // model calls per question
@@ -63,8 +65,11 @@ const STAFF_ROLES = [
 // whole conversation, so it sees less of the page and of each result.
 const SIZES = {
   gemini: { result: 12000, page: 9000 },
-  cerebras: { result: 8000, page: 6000 },
-  groq: { result: 5000, page: 3000 },
+  cerebras: { result: 8000, page: 6000, reads: 30000 },
+  // `reads`: all results in one Groq request together. A request over 8,000
+  // tokens is refused outright (413), and Arabic results run ~2.2 characters
+  // a token, so earlier results are shortened to keep within it.
+  groq: { result: 4000, page: 3000, reads: 8000 },
 };
 
 const clip = (s, n) => String(s ?? "").slice(0, n);
@@ -188,6 +193,7 @@ async function runTool(access, name, args, budget) {
 // takes over part-way reuses what was already read.
 
 class ProviderError extends Error {}
+class TooBig extends Error {}
 
 // How long Google or Groq asks us to wait before trying again, in seconds.
 const waitAsked = (r, j) => parseFloat(r.headers.get("retry-after"))
@@ -294,6 +300,21 @@ async function askGemini({ key, model, system, history, question, call, deadline
   return { text: "", tooManySteps: true, model };
 }
 
+/** Earlier read results cut short, oldest first, until all of them fit in `budget` characters. */
+function keepReadsWithin(messages, budget) {
+  const tools = messages.filter((m) => m.role === "tool");
+  let total = tools.reduce((n, m) => n + m.content.length, 0);
+  for (const m of tools.slice(0, -1)) {
+    if (total <= budget) break;
+    const keep = Math.max(600, m.content.length - (total - budget));
+    if (keep < m.content.length) {
+      total -= m.content.length - keep;
+      m.content = `${m.content.slice(0, keep)} …(cut to save space; read again if needed)`;
+    }
+  }
+  return messages;
+}
+
 /**
  * One conversation, its steps spread over `models`. Each model has its own
  * per-minute token allowance (Groq's free tier: 8,000, and one step of this
@@ -308,6 +329,7 @@ async function askChat({ provider, key, models, system, history, question, call,
     let waited = false;
     for (;;) {
       const waits = [];
+      let tooBig = 0;
       for (let i = 0; i < models.length; i++) {
         const model = models[(at + i) % models.length];
         try {
@@ -320,9 +342,12 @@ async function askChat({ provider, key, models, system, history, question, call,
           if (!(e instanceof ProviderError) || ![413, 429].includes(e.status)) throw e;
           logger.warn(`[aiAssistant] ${e.message}`);
           waits.push(e.wait || 0);
+          if (e.status === 413) tooBig++;
           if (i === models.length - 1 && (waited || models.length === 1)) throw e;
         }
       }
+      // Too big for every model, now or after a wait: answer from what was read.
+      if (waits.length === models.length && tooBig === models.length) throw new TooBig();
       const wait = Math.min(...waits.filter((w) => w > 0), 20);
       if (deadline - Date.now() - wait * 1000 < LAST_STEP_AT) throw new ProviderError(`${name}: every model is at its limit`);
       logger.info(`[aiAssistant] ${name}: every model full, waiting ${wait} s`);
@@ -338,10 +363,18 @@ async function askChat({ provider, key, models, system, history, question, call,
   const tools = TOOLS.map((t) => ({ type: "function", function: t }));
   for (let step = 0; step < MAX_STEPS; step++) {
     const last = step === MAX_STEPS - 1 || deadline - Date.now() < LAST_STEP_AT;
-    const { j, model } = await step1({
-      messages: last ? [...messages, { role: "user", content: ANSWER_NOW }] : messages,
-      tools, tool_choice: last ? "none" : "auto", temperature: 0.2, max_completion_tokens: 2500,
-    });
+    keepReadsWithin(messages, SIZES[provider].reads);
+    let got;
+    try {
+      got = await step1({
+        messages: last ? [...messages, { role: "user", content: ANSWER_NOW }] : messages,
+        tools, tool_choice: last ? "none" : "auto", temperature: 0.2,
+      });
+    } catch (e) {
+      if (e instanceof TooBig && step > 0) return { text: "", tooManySteps: true, model: models[at] };
+      throw e instanceof TooBig ? new ProviderError(`${name}: the question is too long for its models`) : e;
+    }
+    const { j, model } = got;
     const msg = j?.choices?.[0]?.message || {};
     const calls = msg.tool_calls || [];
     if (calls.length) logger.info(`[aiAssistant] ${name} step ${step + 1}: ${calls.map((c) => `${c.function?.name} ${clip(c.function?.arguments, 300)}`).join(" | ")}`);
