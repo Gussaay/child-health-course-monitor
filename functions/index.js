@@ -353,3 +353,5 @@ exports.aiBooks = require("./aiBooks").aiBooks;
 // The data assistant ("Ask the data", on every page): answers from the app's
 // own data only, read as the person asking. Same secrets as aiBooks.
 exports.aiAssistant = require("./aiAssistant").aiAssistant;
+// 👍 / 👎 on an AI answer, for the super users' AI Activity tab (aiLog.js).
+exports.aiVote = require("./aiLog").aiVote;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    compactRow, rowsWithin, describeFields, groupRows, cleanFilters, systemFor, pageBlock, TOOLS,
+    compactRow, rowsWithin, describeFields, groupRows, cleanFilters, systemFor, pageBlock, TOOLS, splitChart, totalsBlock,
 } from '../functions/aiDataText.js';
 import { chartToText, cleanPageText } from '../src/utils/pageSnapshot.js';
 
@@ -266,5 +266,31 @@ describe('analysis, plans and follow-ups', () => {
     it('offers breakdown on count_data in a shape both providers accept', () => {
         const count = TOOLS.find((t) => t.name === 'count_data');
         expect(count.parameters.properties.breakdown).toMatchObject({ type: 'array', items: { type: 'string' } });
+    });
+});
+
+describe('charts and ready totals', () => {
+    it('takes a valid chart line out of the answer', () => {
+        const text = 'Courses by state:\n- A 12\n- B 7\n- C 3\n@@CHART {"type":"bar","title":"Courses","labels":["A","B","C"],"values":[12,7,3],"unit":""}\nEnd.';
+        const { text: rest, chart } = splitChart(text);
+        expect(rest).not.toContain('@@CHART');
+        expect(rest).toContain('End.');
+        expect(chart).toEqual({ type: 'bar', title: 'Courses', labels: ['A', 'B', 'C'], values: [12, 7, 3], unit: '' });
+    });
+    it('drops a broken chart and turns a crowded pie into bars', () => {
+        expect(splitChart('Hi\n@@CHART {"type":"bar","labels":["A","B"],"values":[1,"x"]}').chart).toBe(null);
+        expect(splitChart('Hi\n@@CHART {not json}').text.trim()).toBe('Hi');
+        const labels = 'ABCDEFG'.split('');
+        expect(splitChart(`@@CHART ${JSON.stringify({ type: 'pie', labels, values: labels.map(() => 1), unit: '%' })}`).chart).toMatchObject({ type: 'bar', unit: '%' });
+        expect(splitChart('No chart here').chart).toBe(null);
+    });
+    it('lists ready totals for the model and adds them to the instructions', () => {
+        const block = totalsBlock({ courses: 41, participants: 900, broken: NaN });
+        expect(block).toContain('- courses');
+        expect(block).toContain(': 41');
+        expect(block).not.toContain('broken');
+        expect(totalsBlock({})).toBe('');
+        expect(systemFor({ lang: 'en', totals: { courses: 41 } })).toContain(': 41');
+        expect(systemFor({ lang: 'en' })).toContain('@@CHART');
     });
 });
