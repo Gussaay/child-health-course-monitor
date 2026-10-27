@@ -78,3 +78,16 @@ jobs:
           }
           JS
           node t.mjs
+      - name: Does the Cerebras key exist and answer?
+        shell: bash
+        run: |
+          set +e
+          C=$(gcloud secrets versions access latest --secret=CEREBRAS_API_KEY --project imnci-courses-monitor 2>/tmp/c.err | tr -d ' \n"'"'"'')
+          [ -n "$C" ] && echo "::add-mask::$C"
+          echo "Cerebras key read: $([ -n "$C" ] && echo yes || echo no) $(head -c 200 /tmp/c.err)"
+          [ -z "$C" ] && exit 0
+          curl -s https://api.cerebras.ai/v1/models -H "Authorization: Bearer $C" | jq -r '.data[]?.id' | tr '\n' ' '; echo
+          code=$(curl -s -o /tmp/c.json -w '%{http_code}' --max-time 30 https://api.cerebras.ai/v1/chat/completions \
+            -H "Authorization: Bearer $C" -H 'Content-Type: application/json' \
+            -d '{"model":"gpt-oss-120b","messages":[{"role":"user","content":"How many courses per state? Use the tool."}],"tools":[{"type":"function","function":{"name":"count_data","description":"Count records grouped by a field.","parameters":{"type":"object","properties":{"collection":{"type":"string"},"groupBy":{"type":"string"}},"required":["collection"]}}}],"tool_choice":"auto","reasoning_effort":"low","max_completion_tokens":300}')
+          echo "Cerebras gpt-oss-120b -> $code $(jq -c '.choices[0].message.tool_calls[0].function // .error // .message' /tmp/c.json | head -c 300)"
