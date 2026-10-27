@@ -110,6 +110,9 @@ async function bookVectors(db, entry, key, { make = true } = {}) {
  * vectors yet; any failure leaves the keyword search to do the work.
  */
 async function meaningOf(db, entries, query, key, { newBooks = 2, log = () => {} } = {}) {
+  // Embedding sends book text to Google, so it follows the app's Gemini
+  // switch (off unless AI_USE_GEMINI=1, see aiModels.js): keywords alone then.
+  if (process.env.AI_USE_GEMINI !== "1") return null;
   if (!key || !entries.length) return null;
   let budget = newBooks;
   const byBook = new Map();
