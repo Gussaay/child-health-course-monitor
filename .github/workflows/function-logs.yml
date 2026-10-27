@@ -18,9 +18,9 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - name: AI function log lines (last 6 hours)
         run: |
-          gcloud logging read '(resource.labels.service_name="aiassistant" OR resource.labels.service_name="aibooks") AND (severity>=WARNING OR textPayload:"ai" OR jsonPayload.message:"ai")' \
-            --project imnci-courses-monitor --freshness=6h --limit=120 \
-            --format='table(timestamp, resource.labels.service_name, severity, httpRequest.status, httpRequest.latency, jsonPayload.message)' || true
+          gcloud logging read '(resource.labels.service_name="aiassistant" OR resource.labels.service_name="aibooks") AND (textPayload:"aiAssistant" OR jsonPayload.message:"aiAssistant")' \
+            --project imnci-courses-monitor --freshness=6h --limit=150 --format=json \
+            | jq -r '.[] | "\(.timestamp) \(.severity) \((.textPayload // .jsonPayload.message // "") | .[0:400])"' || true
       - name: Do the keys answer?
         shell: bash
         run: |
