@@ -55,7 +55,9 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { pageRange, rankPages, hybridRankPages, bestPages } = require("./aiBooksText");
 const { meaningOf } = require("./aiBooksVectors");
 
-const CEREBRAS_API_KEY = defineSecret("CEREBRAS_API_KEY");
+// Declared only when Cerebras is on: the deploy asks for every declared
+// secret, even one no function lists.
+const CEREBRAS_API_KEY = process.env.AI_USE_CEREBRAS === "1" ? defineSecret("CEREBRAS_API_KEY") : null;
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 

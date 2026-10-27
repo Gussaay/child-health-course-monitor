@@ -30,7 +30,9 @@ const {
   TOOLS, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
 } = require("./aiDataText");
 
-const CEREBRAS_API_KEY = defineSecret("CEREBRAS_API_KEY");
+// Declared only when Cerebras is on: the deploy asks for every declared
+// secret, even one no function lists.
+const CEREBRAS_API_KEY = process.env.AI_USE_CEREBRAS === "1" ? defineSecret("CEREBRAS_API_KEY") : null;
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
