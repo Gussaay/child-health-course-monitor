@@ -126,8 +126,7 @@ jobs:
           let system;
           try { system = systemFor({ page: { text: "الولاية المحلية ".repeat(150), view: "dashboard" }, lang: "ar", pageChars: 3000, catalogue }); } catch (e) { system = "You answer from the app data only. " + "rules ".repeat(2500); }
           let n = 0;
-          const row = (i) => ({ state: "ولاية " + i, locality: "محلية " + i, facilities: i * 3, imnci: i, doctors: i * 2 });
-          const call = async (name, args) => { n++; return { tool: name, args, groups: Array.from({ length: 60 }, (_, i) => row(i)) }; };
+          const call = async (name, args) => { n++; const g = args.groupBy || "الولاية"; return { collection: args.collection, groupBy: g, total: 1800, groups: Array.from({ length: 60 }, (_, i) => ({ [g]: g + " " + (i + 1), count: 10 + i * 3, ...(args.valueField ? { sum: i * 7 } : {}) })) }; };
           (async () => {
             const t0 = Date.now();
             try {
