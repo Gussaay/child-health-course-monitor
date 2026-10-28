@@ -19,7 +19,7 @@ jobs:
       - name: AI function log lines (last 6 hours)
         run: |
           gcloud logging read '(resource.labels.service_name="aiassistant" OR resource.labels.service_name="aibooks") AND (textPayload:"aiAssistant" OR jsonPayload.message:"aiAssistant")' \
-            --project imnci-courses-monitor --freshness=6h --limit=150 --format=json \
+            --project imnci-courses-monitor --freshness=3h --limit=200 --format=json \
             | jq -r '.[] | "\(.timestamp) \(.severity) \((.textPayload // .jsonPayload.message // "") | .[0:400])"' || true
       - name: Do the keys answer?
         shell: bash
