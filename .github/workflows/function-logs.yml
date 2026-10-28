@@ -21,92 +21,6 @@ jobs:
           gcloud logging read '(resource.labels.service_name="aiassistant" OR resource.labels.service_name="aibooks") AND (textPayload:"aiAssistant" OR jsonPayload.message:"aiAssistant")' \
             --project imnci-courses-monitor --freshness=3h --limit=200 --format=json \
             | jq -r '.[] | "\(.timestamp) \(.severity) \((.textPayload // .jsonPayload.message // "") | .[0:400])"' || true
-      - name: Do the keys answer?
-        shell: bash
-        run: |
-          set +e
-          G=$(gcloud secrets versions access latest --secret=GEMINI_API_KEY --project imnci-courses-monitor 2>/dev/null | tr -d ' \n"'"'"'' || true)
-          Q=$(gcloud secrets versions access latest --secret=GROQ_API_KEY --project imnci-courses-monitor 2>/dev/null | tr -d ' \n"'"'"'' || true)
-          [ -n "$G" ] && echo "::add-mask::$G"; [ -n "$Q" ] && echo "::add-mask::$Q"
-          echo "Gemini key read: $([ -n "$G" ] && echo yes || echo no); Groq key read: $([ -n "$Q" ] && echo yes || echo no)"
-          if [ -n "$G" ]; then
-            echo "--- Gemini flash models this key can use"
-            curl -s "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200" -H "x-goog-api-key: $G" \
-              | jq -r '.models[]? | select(.supportedGenerationMethods|index("generateContent")) | .name' | grep -i flash || true
-            for m in gemini-3.8-flash gemini-3.5-flash gemini-3.1-flash-lite gemini-3.5-flash-lite gemini-flash-lite-latest gemini-flash-latest; do
-              s=$(date +%s); code=$(curl -s -o /tmp/g.json -w '%{http_code}' --max-time 30 \
-                "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent" -H "x-goog-api-key: $G" -H 'Content-Type: application/json' \
-                -d '{"contents":[{"role":"user","parts":[{"text":"Say OK"}]}],"generationConfig":{"maxOutputTokens":20}}' || echo timeout)
-              echo "Gemini $m -> $code in $(( $(date +%s) - s ))s $(jq -r '.error.message? // empty' /tmp/g.json | head -c 160)"
-            done
-          fi
-          if [ -n "$Q" ]; then
-            echo "--- Groq models this key can use"
-            curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $Q" | jq -r '.data[]?.id' | sort | tr '\n' ' '; echo
-            for m in openai/gpt-oss-120b openai/gpt-oss-20b; do
-              s=$(date +%s); code=$(curl -s -o /tmp/q.json -w '%{http_code}' --max-time 30 https://api.groq.com/openai/v1/chat/completions \
-                -H "Authorization: Bearer $Q" -H 'Content-Type: application/json' \
-                -d "{\"model\":\"$m\",\"messages\":[{\"role\":\"user\",\"content\":\"Say OK\"}],\"max_completion_tokens\":20}" || echo timeout)
-              echo "Groq $m -> $code in $(( $(date +%s) - s ))s $(jq -r '.error.message? // empty' /tmp/q.json | head -c 160)"
-            done
-          fi
-      - name: Do tool calls work?
-        shell: bash
-        run: |
-          set +e
-          export G=$(gcloud secrets versions access latest --secret=GEMINI_API_KEY --project imnci-courses-monitor | tr -d ' \n"'"'"'')
-          export Q=$(gcloud secrets versions access latest --secret=GROQ_API_KEY --project imnci-courses-monitor | tr -d ' \n"'"'"'')
-          echo "::add-mask::$G"; echo "::add-mask::$Q"
-          cat > t.mjs <<'JS'
-          const tool = { name: "count_data", description: "Count records grouped by a field.", parameters: { type: "object", properties: { collection: { type: "string" }, groupBy: { type: "string" } }, required: ["collection"] } };
-          const q = "How many courses were run in each state this year? Use the tool on collection courses.";
-          for (const [model, thinking] of [["gemini-3.5-flash", { thinkingLevel: "minimal" }], ["gemini-3.1-flash-lite", { thinkingLevel: "minimal" }], ["gemini-flash-lite-latest", { thinkingLevel: "minimal" }]]) {
-            const t0 = Date.now();
-            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", signal: AbortSignal.timeout(30000), headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.G },
-              body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: q }] }], tools: [{ functionDeclarations: [tool] }], generationConfig: { temperature: 0.1, thinkingConfig: thinking } }) }).catch((e) => ({ status: e.name }));
-            const j = r.json ? await r.json() : {};
-            const call = j?.candidates?.[0]?.content?.parts?.find((p) => p.functionCall)?.functionCall;
-            console.log(model, r.status, `${Date.now() - t0} ms`, call ? `call ${call.name} ${JSON.stringify(call.args)}` : String(j?.error?.message || "").slice(0, 160));
-          }
-          for (const model of ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]) {
-            const t0 = Date.now();
-            const r = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", signal: AbortSignal.timeout(30000), headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.Q}` },
-              body: JSON.stringify({ model, messages: [{ role: "user", content: q }], tools: [{ type: "function", function: tool }], tool_choice: "auto", reasoning_effort: "low", include_reasoning: false, max_completion_tokens: 500 }) }).catch((e) => ({ status: e.name }));
-            const j = r.json ? await r.json() : {};
-            const call = j?.choices?.[0]?.message?.tool_calls?.[0]?.function;
-            console.log(model, r.status, `${Date.now() - t0} ms`, call ? `call ${call.name} ${call.arguments}` : String(j?.error?.message || "").slice(0, 160));
-          }
-          JS
-          node t.mjs
-      - name: Does the Cerebras key exist and answer?
-        shell: bash
-        run: |
-          set +e
-          C=$(gcloud secrets versions access latest --secret=CEREBRAS_API_KEY --project imnci-courses-monitor 2>/tmp/c.err | tr -d ' \n"'"'"'')
-          [ -n "$C" ] && echo "::add-mask::$C"
-          echo "Cerebras key read: $([ -n "$C" ] && echo yes || echo no) $(head -c 200 /tmp/c.err)"
-          [ -z "$C" ] && exit 0
-          curl -s https://api.cerebras.ai/v1/models -H "Authorization: Bearer $C" | jq -r '.data[]?.id' | tr '\n' ' '; echo
-          code=$(curl -s -o /tmp/c.json -w '%{http_code}' --max-time 30 https://api.cerebras.ai/v1/chat/completions \
-            -H "Authorization: Bearer $C" -H 'Content-Type: application/json' \
-            -d '{"model":"gpt-oss-120b","messages":[{"role":"user","content":"How many courses per state? Use the tool."}],"tools":[{"type":"function","function":{"name":"count_data","description":"Count records grouped by a field.","parameters":{"type":"object","properties":{"collection":{"type":"string"},"groupBy":{"type":"string"}},"required":["collection"]}}}],"tool_choice":"auto","reasoning_effort":"low","max_completion_tokens":300}')
-          echo "Cerebras gpt-oss-120b -> $code $(jq -c '.choices[0].message.tool_calls[0].function // .error // .message' /tmp/c.json | head -c 300)"
-      - name: Which settings does Groq's qwen take?
-        shell: bash
-        run: |
-          set +e
-          Q=$(gcloud secrets versions access latest --secret=GROQ_API_KEY --project imnci-courses-monitor | tr -d ' \n"'"'"'')
-          echo "::add-mask::$Q"
-          T='"tools":[{"type":"function","function":{"name":"count_data","description":"Count records grouped by a field.","parameters":{"type":"object","properties":{"collection":{"type":"string"},"groupBy":{"type":"string"}},"required":["collection"]}}}],"tool_choice":"auto","max_completion_tokens":400'
-          for extra in '"reasoning_effort":"low","include_reasoning":false' '"reasoning_effort":"none"' '"reasoning_effort":"default","reasoning_format":"hidden"' '"include_reasoning":false'; do
-            code=$(curl -s -o /tmp/q.json -w '%{http_code}' --max-time 30 https://api.groq.com/openai/v1/chat/completions -H "Authorization: Bearer $Q" -H 'Content-Type: application/json' \
-              -d "{\"model\":\"qwen/qwen3.8-27b\",\"messages\":[{\"role\":\"user\",\"content\":\"How many courses per state? Use the tool on collection courses.\"}],$T,$extra}")
-            echo "qwen [$extra] -> $code $(jq -c '.choices[0].message.tool_calls[0].function // .error.message' /tmp/q.json | head -c 250)"
-            curl -s -o /dev/null -D /tmp/h.txt https://api.groq.com/openai/v1/chat/completions -H "Authorization: Bearer $Q" -H 'Content-Type: application/json' -d '{"model":"qwen/qwen3.8-27b","messages":[{"role":"user","content":"OK"}],"max_completion_tokens":5}'
-          done
-          grep -i "x-ratelimit" /tmp/h.txt
-          curl -s -o /dev/null -D /tmp/h2.txt https://api.groq.com/openai/v1/chat/completions -H "Authorization: Bearer $Q" -H 'Content-Type: application/json' -d '{"model":"openai/gpt-oss-20b","messages":[{"role":"user","content":"OK"}],"max_completion_tokens":5}'
-          echo "--- gpt-oss-20b"; grep -i "x-ratelimit" /tmp/h2.txt
       - uses: actions/checkout@v4
         with:
           ref: claude/project-thread-jfo8r7
@@ -119,7 +33,7 @@ jobs:
           echo "::add-mask::$Q"
           cd app/functions && npm ci --ignore-scripts --no-audit --no-fund >/dev/null 2>&1
           cat > /tmp/run.cjs <<'JS'
-          const { _internal: { askChat } } = require(process.cwd() + "/aiAssistant.js");
+          const { askChat } = require(process.cwd() + "/aiChat.js");
           const { systemFor } = require(process.cwd() + "/aiDataText.js");
           const { GROQ_MODELS } = require(process.cwd() + "/aiModels.js");
           const catalogue = ["courses", "participants", "healthFacilities", "facilitators"].map((c) => ({ collection: c, label: c, fields: [] }));
