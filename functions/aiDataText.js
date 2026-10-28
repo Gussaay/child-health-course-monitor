@@ -238,6 +238,46 @@ function cleanFilters(filters) {
     });
 }
 
+// Lists kept inside a record that count_data and query_data can open, one row
+// per entry: a facility's named staff.
+const LIST_FIELDS = ["imnci_staff", "eenc_staff", "neonatal_staff", "critical_staff"];
+
+/**
+ * One row per entry of the list field `each` (a facility's staff), the
+ * entry's own fields beside its record's, so they are grouped and filtered
+ * like any field. An entry's field wins over the record's of the same name.
+ */
+function eachRows(rows, each) {
+  return rows.flatMap((row) => {
+    const list = row[each];
+    if (!Array.isArray(list)) return [];
+    const { [each]: _list, ...record } = row;
+    return list.filter((e) => e && typeof e === "object").map((e) => ({ ...record, ...e }));
+  });
+}
+
+/** Whether a row passes filters (cleanFilters' shape), compared in memory; text ignores case. */
+function passes(row, filters) {
+  const same = (a, b) => String(a ?? "").trim().toLowerCase() === String(b ?? "").trim().toLowerCase();
+  return filters.every(({ field, op, value }) => {
+    const v = fieldOf(row, field);
+    switch (op) {
+      case "==": return same(v, value);
+      case "!=": return !same(v, value);
+      case "in": return value.some((x) => same(v, x));
+      case "array-contains": return Array.isArray(v) && v.some((x) => same(x, value));
+      default: {
+        const a = toNumber(v) ?? String(v ?? "");
+        const b = toNumber(value) ?? String(value ?? "");
+        if (op === "<") return a < b;
+        if (op === "<=") return a <= b;
+        if (op === ">") return a > b;
+        return a >= b;
+      }
+    }
+  });
+}
+
 // =============================================================================
 // What the model is told
 // =============================================================================
@@ -302,6 +342,8 @@ const TOOLS = [
           description: "Other fields whose values are counted inside each group (up to 10). For example groupBy the locality field with breakdown of several service fields gives, per locality, how many records say Yes, No or are not set for each service: coverage in one read.",
         },
         filters: FILTERS,
+        each: { type: "string", enum: LIST_FIELDS, description: "Count or list the entries of a list inside each record instead of the records: a facility's named staff (imnci_staff, eenc_staff, neonatal_staff, critical_staff; each entry has name, job_title, is_trained Yes/No, training_date, phone). The record's fields (state, locality, facility name) stay usable beside the entry's." },
+        eachFilters: { ...FILTERS, description: "Filters on the entries' fields when 'each' is used, e.g. [{field:'job_title', op:'==', value:'طبيب'}]." },
       },
       required: ["collection"],
     },
@@ -317,6 +359,8 @@ const TOOLS = [
         fields: { type: "array", items: { type: "string" }, description: "Fields to return. Leave out for all." },
         orderBy: { type: "string", description: "Field to sort by, newest or largest first." },
         limit: { type: "number", description: "Records to return, at most 50." },
+        each: { type: "string", enum: LIST_FIELDS, description: "Count or list the entries of a list inside each record instead of the records: a facility's named staff (imnci_staff, eenc_staff, neonatal_staff, critical_staff; each entry has name, job_title, is_trained Yes/No, training_date, phone). The record's fields (state, locality, facility name) stay usable beside the entry's." },
+        eachFilters: { ...FILTERS, description: "Filters on the entries' fields when 'each' is used, e.g. [{field:'job_title', op:'==', value:'طبيب'}]." },
       },
       required: ["collection"],
     },
@@ -389,7 +433,7 @@ const pageOf = (collection) => `${APP_NAME} – ${COLLECTION_PAGES[collection] |
 const DATA_NOTES = `Notes on the app's data (check with describe_fields when unsure):
 - courses: course_type (IMNCI, ETAT, EENC, ICCM, EmONC, Small & Sick Newborn, ...), start_date as "YYYY-MM-DD", course_duration (days), participants_count, funded_by, implemented_by, course_project. A "state" value like "Gezira, Kassala" is one course run across those states: report it as such, never as a separate state.
 - participants: courseId, course_type, state, locality, job_title, center_name, pre_test_score, post_test_score (percent), group.
-- healthFacilities: field names are Arabic. الولاية = state, المحلية = locality, اسم_المؤسسة = facility name, نوع_المؤسسةالصحية = facility type, هل_المؤسسة_تعمل = functioning ("Yes"/"No"), وجود_العلاج_المتكامل_لامراض_الطفولة = IMNCI service ("Yes"/"No"/"Unknown"), facility_ownership, nutrition_center_exists, immunization_office_exists, growth_monitoring_service_exists. Service coverage in a place = facilities with the service "Yes" out of functioning facilities there: count grouped by المحلية with a filter on الولاية and breakdown [هل_المؤسسة_تعمل, وجود_العلاج_المتكامل_لامراض_الطفولة, nutrition_center_exists, immunization_office_exists, growth_monitoring_service_exists] answers it in one read. State values may be Arabic (for example القضارف for Gedaref).
+- healthFacilities: field names are Arabic. الولاية = state, المحلية = locality, اسم_المؤسسة = facility name, نوع_المؤسسةالصحية = facility type, هل_المؤسسة_تعمل = functioning ("Yes"/"No"), وجود_العلاج_المتكامل_لامراض_الطفولة = IMNCI service ("Yes"/"No"/"Unknown"), facility_ownership, nutrition_center_exists, immunization_office_exists, growth_monitoring_service_exists. Service coverage in a place = facilities with the service "Yes" out of functioning facilities there: count grouped by المحلية with a filter on الولاية and breakdown [هل_المؤسسة_تعمل, وجود_العلاج_المتكامل_لامراض_الطفولة, nutrition_center_exists, immunization_office_exists, growth_monitoring_service_exists] answers it in one read. State values may be Arabic (for example القضارف for Gedaref). Staff: imnci_doctors_total, imnci_doctors_trained, imnci_medical_assistants_total, imnci_medical_assistants_trained are numbers (valueField sums them); each facility's named staff are in the lists imnci_staff, eenc_staff, neonatal_staff, critical_staff (use "each": for example count_data each imnci_staff, groupBy job_title, breakdown [is_trained], or query_data each imnci_staff to list names). Job titles are Arabic (طبيب = doctor, مساعد طبي = medical assistant, ممرض = nurse).
 - facilitators: courses (list of course types), currentState, currentLocality, backgroundQualification, isClinicalInstructor, directorCourse.
 - Dates are text "YYYY-MM-DD", so a period is a filter like start_date >= "2026-01-01".`;
 
@@ -480,5 +524,5 @@ module.exports = {
   FOLLOW_UPS, splitFollowUps, cleanBreakdown, CHART, splitChart, totalsBlock,
   APP_NAME, COLLECTION_PAGES, pageOf,
   compactRow, rowsWithin, describeFields, groupRows, filterValue, cleanFilters,
-  fieldOf, bucketOf, asDate, TOOLS, RULES, systemFor, pageBlock, PAGE_CHARS,
+  fieldOf, bucketOf, asDate, LIST_FIELDS, eachRows, passes, TOOLS, RULES, systemFor, pageBlock, PAGE_CHARS,
 };

@@ -28,7 +28,7 @@ const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestor
 const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess");
 const { readReference } = require("./aiReference");
 const {
-  TOOLS, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
+  TOOLS, LIST_FIELDS, eachRows, passes, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
 } = require("./aiDataText");
 
 // Declared only when Cerebras is on: the deploy asks for every declared
@@ -88,10 +88,12 @@ async function countData(access, args) {
   const valueField = clip(args.valueField, 120).trim();
   const bucket = ["year", "month"].includes(args.bucket) ? args.bucket : "";
   const breakdown = cleanBreakdown(args.breakdown);
+  const each = LIST_FIELDS.includes(args.each) ? args.each : "";
+  const eachFilters = each ? cleanFilters(args.eachFilters) : [];
   const { q } = scopedQuery(access, args.collection, filters);
 
   // One overall count needs no records: Firestore counts on the server.
-  if (!groupBy && !valueField && !breakdown.length) {
+  if (!groupBy && !valueField && !breakdown.length && !each) {
     try {
       const [all, deleted] = await Promise.all([
         q.count().get(),
@@ -103,9 +105,11 @@ async function countData(access, args) {
     }
   }
 
-  const wanted = [...new Set([groupBy, valueField, ...breakdown, "isDeleted"].filter(Boolean))];
+  const wanted = [...new Set([groupBy, valueField, ...breakdown, "isDeleted", each].filter(Boolean))];
   const snap = await q.select(...wanted.map(fieldPath)).limit(COUNT_ROWS).get();
-  const rows = snap.docs.map((d) => d.data()).filter(notDeleted);
+  const records = snap.docs.map((d) => d.data()).filter(notDeleted);
+  // With `each`, every entry of the list (a facility's staff member) is a row.
+  const rows = each ? eachRows(records, each).filter((r) => passes(r, eachFilters)) : records;
   const groups = groupRows(rows, { groupBy, bucket, valueField, breakdown });
   // A breakdown makes each group bigger, so fewer are sent.
   const shown = breakdown.length ? 50 : 80;
@@ -116,6 +120,7 @@ async function countData(access, args) {
     ...(bucket ? { bucket } : {}),
     ...(valueField ? { valueField } : {}),
     ...(breakdown.length ? { breakdown } : {}),
+    ...(each ? { each, eachFilters, records: records.length } : {}),
     counted: rows.length,
     truncated: snap.size >= COUNT_ROWS,
     groups: groups.slice(0, shown),
@@ -129,18 +134,24 @@ async function queryData(access, args, budget) {
   const { spec, q: base } = scopedQuery(access, args.collection, filters);
   let q = base;
   if (args.orderBy && typeof args.orderBy === "string") q = q.orderBy(fieldPath(args.orderBy), "desc");
-  // Deleted records are dropped after reading, so a few extra are read.
-  const snap = await q.limit(limit + 10).get();
-  const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter(notDeleted).slice(0, limit);
+  const each = LIST_FIELDS.includes(args.each) ? args.each : "";
   const pick = Array.isArray(args.fields) ? args.fields.map(String).slice(0, 30) : null;
-  const shown = rowsWithin(rows, budget, pick);
+  // Deleted records are dropped after reading, so a few extra are read. With
+  // `each` the rows are list entries (a facility's staff), so records are read
+  // until there are enough of them, with only their name and place beside.
+  const listed = each ? q.select(...[each, "isDeleted", "اسم_المؤسسة", ...Object.values(spec.scope || {}), ...(pick || [])].map(fieldPath)) : q;
+  const snap = await listed.limit(each ? COUNT_ROWS : limit + 10).get();
+  const records = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter(notDeleted);
+  const rows = (each ? eachRows(records, each).filter((r) => passes(r, cleanFilters(args.eachFilters))) : records).slice(0, limit);
+  const shown = rowsWithin(rows, budget, each ? null : pick);
   return {
     collection: args.collection,
     filters,
     returned: shown.rows.length,
     ...(shown.notShown ? { notShownForSize: shown.notShown } : {}),
-    mayHaveMore: snap.size >= limit + 10,
-    containsPersonalData: !!spec.personal,
+    ...(each ? { each } : {}),
+    mayHaveMore: each ? rows.length >= limit : snap.size >= limit + 10,
+    containsPersonalData: !!spec.personal || !!each,
     rows: shown.rows,
   };
 }

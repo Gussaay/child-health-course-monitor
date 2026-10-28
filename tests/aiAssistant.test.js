@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    compactRow, rowsWithin, describeFields, groupRows, cleanFilters, systemFor, pageBlock, TOOLS, splitChart, totalsBlock,
+    compactRow, rowsWithin, describeFields, groupRows, cleanFilters, systemFor, pageBlock, TOOLS, splitChart, totalsBlock, eachRows, passes,
 } from '../functions/aiDataText.js';
 import { chartToText, cleanPageText } from '../src/utils/pageSnapshot.js';
 
@@ -292,5 +292,30 @@ describe('charts and ready totals', () => {
         expect(totalsBlock({})).toBe('');
         expect(systemFor({ lang: 'en', totals: { courses: 41 } })).toContain(': 41');
         expect(systemFor({ lang: 'en' })).toContain('@@CHART');
+    });
+});
+
+describe('the entries of a list inside a record (a facility\'s staff)', () => {
+    const facilities = [
+        { 'اسم_المؤسسة': 'A', 'الولاية': 'Kassala', imnci_staff: [{ name: 'x', job_title: 'طبيب', is_trained: 'Yes' }, { name: 'y', job_title: 'مساعد طبي', is_trained: 'No' }] },
+        { 'اسم_المؤسسة': 'B', 'الولاية': 'Gedaref', imnci_staff: [{ name: 'z', job_title: 'طبيب', is_trained: 'No' }] },
+        { 'اسم_المؤسسة': 'C', 'الولاية': 'Gedaref' },
+    ];
+
+    it('gives one row per staff member, with the facility beside it', () => {
+        const rows = eachRows(facilities, 'imnci_staff');
+        expect(rows).toHaveLength(3);
+        expect(rows[2]).toMatchObject({ name: 'z', 'اسم_المؤسسة': 'B', 'الولاية': 'Gedaref' });
+        expect(rows[0].imnci_staff).toBeUndefined();
+    });
+
+    it('counts staff by job and training', () => {
+        const groups = groupRows(eachRows(facilities, 'imnci_staff'), { groupBy: 'job_title', breakdown: ['is_trained'] });
+        expect(groups[0]).toMatchObject({ value: 'طبيب', count: 2 });
+    });
+
+    it('filters entries in memory', () => {
+        const rows = eachRows(facilities, 'imnci_staff').filter((r) => passes(r, cleanFilters([{ field: 'job_title', op: '==', value: 'طبيب' }, { field: 'is_trained', op: '==', value: 'yes' }])));
+        expect(rows.map((r) => r.name)).toEqual(['x']);
     });
 });
