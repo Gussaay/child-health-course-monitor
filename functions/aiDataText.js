@@ -327,6 +327,19 @@ const TOOLS = [
     },
   },
   {
+    name: "online_progress",
+    description: "Online (self-paced) course progress of the people this manager manages: per course how many started, finished and the average share done; per state (and per locality when a state is given); with people=true, the people themselves with their status. Only managers can read it.",
+    parameters: {
+      type: "object",
+      properties: {
+        course: { type: "string", description: "A course title or part of it. Leave out for all courses." },
+        state: { type: "string", description: "A state, as the users' assigned state is written." },
+        people: { type: "boolean", description: "true to list the people too." },
+        status: { type: "string", enum: ["not_started", "started", "completed"], description: "With people: only these." },
+      },
+    },
+  },
+  {
     name: "list_data",
     description: "List the app's data collections this person may read, with what each holds. Call this first unless you already know which collection answers the question.",
     parameters: { type: "object", properties: {} },
@@ -437,6 +450,7 @@ const COLLECTION_PAGES = {
   projects: "Project Tracker",
   imnciPatientRecords: "IMNCI Protocol – Patient records",
   reference: "Dashboard – Morbidity & Mortality Indicators",
+  onlineProgress: "Online Courses – Progress",
   exerciseAttempts: "Courses – Exercises",
   exerciseDefinitions: "Courses – Exercises",
   course_sub_types: "Courses – Course types",

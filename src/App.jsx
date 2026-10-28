@@ -2493,7 +2493,7 @@ export default function App() {
     return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
 
            case 'onlineCourses':
-    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} /></ImnciProvider></Suspense> ) : null;
+    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} /></ImnciProvider></Suspense> ) : null;
 
 
            case 'projects':

@@ -6744,6 +6744,15 @@ const resources = {
         },
       },
       imnci_ui: {
+        progress: {
+          tab: "Progress", failed: "The progress could not be loaded.", retry: "Try again", refresh: "Refresh",
+          course: "Course", all_courses: "All courses", state: "State", all_states: "All states", no_state: "No state set",
+          scope: "Showing the people of {{place}}", people: "People", started_kpi: "Started", completed_kpi: "Finished",
+          average: "Average done", of_sections: "of {{n}} sections", by_course: "By course", by_state: "By state",
+          learners: "Learners", everyone: "Everyone", not_started: "Not started", started: "In progress", completed: "Finished",
+          search: "Search a name", name: "Name", place: "Place", progress: "Progress", status: "Status", last_active: "Last active",
+          nobody: "Nobody here yet.", more: "{{n}} more; search or filter to find them.",
+        },
         courses: {
           bin: {
             before_recorded: "before this was recorded",
@@ -14116,6 +14125,15 @@ const resources = {
         },
       },
       imnci_ui: {
+        progress: {
+          tab: "التقدّم", failed: "تعذّر تحميل التقدّم.", retry: "حاول مجدداً", refresh: "تحديث",
+          course: "الدورة", all_courses: "كل الدورات", state: "الولاية", all_states: "كل الولايات", no_state: "بدون ولاية",
+          scope: "يظهر هنا أفراد {{place}}", people: "الأفراد", started_kpi: "بدأوا", completed_kpi: "أكملوا",
+          average: "متوسط الإنجاز", of_sections: "من {{n}} قسماً", by_course: "حسب الدورة", by_state: "حسب الولاية",
+          learners: "المتعلمون", everyone: "الجميع", not_started: "لم يبدأ", started: "قيد التقدّم", completed: "أكمل",
+          search: "ابحث عن اسم", name: "الاسم", place: "المكان", progress: "التقدّم", status: "الحالة", last_active: "آخر نشاط",
+          nobody: "لا أحد هنا بعد.", more: "{{n}} آخرون؛ ابحث أو صفِّ للعثور عليهم.",
+        },
         courses: {
           bin: {
             before_recorded: "قبل بدء التسجيل",

@@ -51,7 +51,11 @@ export { LEGACY_DB, mapLegacyCourse, mapLegacyModule, buildMigration } from './o
 // Main screen
 // =============================================================================
 
-export default function OnlineCoursesView({ permissions = {} }) {
+// Roles that manage people, and so see the learners' progress (the server
+// checks the same in functions/onlineProgressReport.js).
+const MANAGER_ROLES = ['super_user', 'federal_manager', 'states_manager', 'locality_manager'];
+
+export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const tabName = (x) => (isArabic && x.labelAr ? x.labelAr : x.label);
@@ -62,6 +66,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
     const canManage = !!permissions.canManageOnlineCourses;
     const [mode, setMode] = useState('learn');
     const isAdmin = canManage && mode === 'manage';
+    const canSeeProgress = (userRoles || []).some((r) => MANAGER_ROLES.includes(String(r).toLowerCase()));
 
     // Reading size, remembered per device. The books are dense and are read on
     // whatever phone the health worker happens to have.
@@ -340,7 +345,7 @@ export default function OnlineCoursesView({ permissions = {} }) {
     // One open thing at each level, deepest first: a section, the sections of
     // a module, the modules of a course, or the list of courses.
     const screen = {
-        aiBooks, allCourses, allItems, allModules, back, bookDialog, bookForm, builder, canManage,
+        aiBooks, allCourses, allItems, allModules, back, bookDialog, bookForm, builder, canManage, canSeeProgress,
         checkedEmpty, compare, convertOpen, courseModal, courseSections, courses, deletedCount,
         doneCount, duration, editing, editingTab, fetchOnlineCourseItems, fetchOnlineCourses,
         fontScale, go, handleBinChanged, importOpen, inOrder, isAdmin, isArabic, isLoading,

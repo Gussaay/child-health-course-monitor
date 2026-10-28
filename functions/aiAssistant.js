@@ -27,6 +27,8 @@ const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestor
 
 const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess");
 const { readReference } = require("./aiReference");
+const { loadProgressReport } = require("./onlineProgress");
+const { progressForModel } = require("./onlineProgressReport");
 const {
   TOOLS, cleanEach, eachRows, passes, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
 } = require("./aiDataText");
@@ -171,6 +173,10 @@ async function runTool(access, name, args, budget) {
     switch (name) {
       case "list_data": return { collections: catalogueFor(access) };
       case "read_reference": return readReference(args);
+      case "online_progress": {
+        const report = await loadProgressReport(access.db, access.uid);
+        return report ? progressForModel(report, args, budget) : { error: "Online course progress is for managers only." };
+      }
       case "describe_fields": return await describe(access, args);
       case "count_data": return await countData(access, args);
       case "query_data": return await queryData(access, args, budget);
@@ -454,7 +460,7 @@ async function answerQuestion(request, use = {}) {
     }
   }
 
-  const sources = [...new Set([...reads.values()].map((r) => (r.name === "read_reference" ? "reference" : r.args?.collection)).filter(Boolean))];
+  const sources = [...new Set([...reads.values()].map((r) => ({ read_reference: "reference", online_progress: "onlineProgress" }[r.name] || r.args?.collection)).filter(Boolean))];
   // The same sources as the app's page names, for the line under the answer.
   const sourcePages = [...new Set(sources.map(pageOf))];
   await audit(access, "assistant", {

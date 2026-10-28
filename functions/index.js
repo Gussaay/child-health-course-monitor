@@ -355,3 +355,6 @@ exports.aiBooks = require("./aiBooks").aiBooks;
 exports.aiAssistant = require("./aiAssistant").aiAssistant;
 // 👍 / 👎 on an AI answer, for the super users' AI Activity tab (aiLog.js).
 exports.aiVote = require("./aiLog").aiVote;
+
+// Managers' online course progress (dashboard tab and the data assistant).
+exports.onlineProgressReport = require("./onlineProgress").onlineProgressReport;

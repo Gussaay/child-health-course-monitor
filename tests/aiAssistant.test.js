@@ -146,7 +146,7 @@ describe('what the model is told', () => {
     });
 
     it('offers only reading tools', () => {
-        expect(TOOLS.map((t) => t.name)).toEqual(['read_reference', 'list_data', 'describe_fields', 'count_data', 'query_data']);
+        expect(TOOLS.map((t) => t.name)).toEqual(['read_reference', 'online_progress', 'list_data', 'describe_fields', 'count_data', 'query_data']);
     });
 
     it('describes tools in a shape Gemini accepts (no untyped values)', () => {
