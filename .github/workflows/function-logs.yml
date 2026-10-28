@@ -25,7 +25,7 @@ jobs:
         with:
           ref: claude/project-thread-jfo8r7
           path: app
-      - name: Whole-app questions from the Courses page on Groq, with the real key
+      - name: Facility staff question on Groq (made-up facilities), with the real key
         shell: bash
         run: |
           set +e
@@ -34,27 +34,34 @@ jobs:
           cd app/functions && npm ci --ignore-scripts --no-audit --no-fund >/dev/null 2>&1
           cat > /tmp/run.cjs <<'JS'
           const { askChat, SIZES } = require(process.cwd() + "/aiChat.js");
-          const { systemFor } = require(process.cwd() + "/aiDataText.js");
-          const { readReference } = require(process.cwd() + "/aiReference.js");
+          const T = require(process.cwd() + "/aiDataText.js");
           const { GROQ_MODELS } = require(process.cwd() + "/aiModels.js");
-          const catalogue = ["courses", "participants", "healthFacilities", "facilitators", "skillMentorship"].map((c) => ({ collection: c, label: c, fields: [] }));
-          const page = { title: "Courses", place: "National Child Health Program – Courses", view: "courses", text: "Courses list IMNCI ETAT EENC ".repeat(40) };
-          const system = systemFor({ page, lang: "ar", pageChars: SIZES.groq.page, catalogue });
+          // Made-up facilities shaped like the app's (no real records are read).
+          const states = ["Kassala", "Gedaref", "Sennar", "Khartoum"];
+          const jobs = ["طبيب", "مساعد طبي", "ممرض"];
+          const recs = Array.from({ length: 120 }, (_, i) => ({ "اسم_المؤسسة": "مركز " + i, "الولاية": states[i % 4], "المحلية": "محلية " + (i % 9),
+            imnci_staff: Array.from({ length: 1 + (i % 3) }, (_, k) => ({ name: "كادر " + i + "-" + k, job_title: jobs[(i + k) % 3], is_trained: (i + k) % 2 ? "Yes" : "No", training_date: "2026-02-16" })) }));
+          const catalogue = ["courses", "participants", "healthFacilities", "facilitators"].map((c) => ({ collection: c, description: c, scopedTo: [] }));
+          const system = T.systemFor({ page: { title: "Child Health Services", text: "Child Health Services facilities list" }, lang: "ar", pageChars: SIZES.groq.page, catalogue });
           const reads = [];
-          const call = async (name, args) => { reads.push(name + " " + JSON.stringify(args)); return name === "read_reference" ? readReference(args) : { note: "no data in this test" }; };
-          const run = async (q) => {
-            const t0 = Date.now(); reads.length = 0;
-            try {
-              const out = await askChat({ provider: "groq", key: process.env.Q, models: GROQ_MODELS, system, history: [], question: q, call, deadline: Date.now() + 90000 });
-              console.log("ANSWERED by", out.model, "in", Math.round((Date.now() - t0) / 1000), "s | reads:", reads.join(" ; "), "|", String(out.text).replace(/\n/g, " ").slice(0, 700));
-            } catch (e) { console.log("FAILED after", Math.round((Date.now() - t0) / 1000), "s:", e.message, reads.join(" ; ")); }
+          const call = async (name, args, budget) => {
+            reads.push(name + " " + JSON.stringify(args));
+            if (args.collection !== "healthFacilities") return { note: "test: only healthFacilities is loaded" };
+            let rows = recs.filter((r) => T.passes(r, T.cleanFilters(args.filters)));
+            if (args.each) rows = T.eachRows(rows, args.each).filter((r) => T.passes(r, T.cleanFilters(args.eachFilters)));
+            if (name === "count_data") return { counted: rows.length, groups: T.groupRows(rows, { groupBy: args.groupBy, valueField: args.valueField, breakdown: T.cleanBreakdown(args.breakdown) }).slice(0, 50) };
+            if (name === "query_data") return { rows: T.rowsWithin(rows.slice(0, 20), budget).rows };
+            return { note: "describe_fields is not loaded in this test" };
           };
           (async () => {
-            await run("قارن انتشار الإسهال والالتهاب الرئوي بين MICS 2014 و S3M 2018 على المستوى الوطني وفي ولاية القضارف");
-            await run("Which localities of Gedaref have the lowest Penta3 coverage in S3M, and how has under-five mortality changed since 2015?");
+            const t0 = Date.now();
+            try {
+              const out = await askChat({ provider: "groq", key: process.env.Q, models: GROQ_MODELS, system, history: [], question: "كم عدد الأطباء المدربين وغير المدربين على العلاج المتكامل في كل ولاية حسب قائمة الكادر في المرافق؟", call, deadline: Date.now() + 90000 });
+              console.log("ANSWERED in", Math.round((Date.now() - t0) / 1000), "s | reads:", reads.join(" ; "), "|", String(out.text).replace(/\n/g, " ").slice(0, 900));
+            } catch (e) { console.log("FAILED", e.message, reads.join(" ; ")); }
           })();
           JS
-          node /tmp/run.cjs 2>&1 | grep -E "replied|step|waiting|ANSWERED|FAILED|429|413|without|empty|system chars" | sed -E 's/\{"severity":"[A-Z]+","message":"//; s/"\}$//' | head -60
+          node /tmp/run.cjs 2>&1 | grep -E "step|ANSWERED|FAILED" | sed -E 's/\{"severity":"[A-Z]+","message":"//; s/"\}$//' | head -60
 # rerun 1793136075
 # rerun 1793172764
 # rerun 1793173394
