@@ -1,0 +1,67 @@
+name: Read function logs
+
+# One-off, read-only diagnosis of the AI functions: recent log lines, and
+# whether the Gemini and Groq keys answer (status codes and model names only;
+# the keys are masked and never printed). Runs on this branch only.
+on:
+  push:
+    branches:
+      - claude/project-thread-je2fp1
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: AI function log lines (last 6 hours)
+        run: |
+          gcloud logging read '(resource.labels.service_name="aiassistant" OR resource.labels.service_name="aibooks") AND (textPayload:"aiAssistant" OR jsonPayload.message:"aiAssistant")' \
+            --project imnci-courses-monitor --freshness=3h --limit=200 --format=json \
+            | jq -r '.[] | "\(.timestamp) \(.severity) \((.textPayload // .jsonPayload.message // "") | .[0:400])"' || true
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/project-thread-jfo8r7
+          path: app
+      - name: Facility staff question on Groq (made-up facilities), with the real key
+        shell: bash
+        run: |
+          set +e
+          export Q=$(gcloud secrets versions access latest --secret=GROQ_API_KEY --project imnci-courses-monitor | tr -d ' \n"'"'"'')
+          echo "::add-mask::$Q"
+          cd app/functions && npm ci --ignore-scripts --no-audit --no-fund >/dev/null 2>&1
+          cat > /tmp/run.cjs <<'JS'
+          const { askChat, SIZES } = require(process.cwd() + "/aiChat.js");
+          const T = require(process.cwd() + "/aiDataText.js");
+          const { GROQ_MODELS } = require(process.cwd() + "/aiModels.js");
+          // Made-up facilities shaped like the app's (no real records are read).
+          const states = ["Kassala", "Gedaref", "Sennar", "Khartoum"];
+          const jobs = ["طبيب", "مساعد طبي", "ممرض"];
+          const recs = Array.from({ length: 120 }, (_, i) => ({ "اسم_المؤسسة": "مركز " + i, "الولاية": states[i % 4], "المحلية": "محلية " + (i % 9),
+            imnci_staff: Array.from({ length: 1 + (i % 3) }, (_, k) => ({ name: "كادر " + i + "-" + k, job_title: jobs[(i + k) % 3], is_trained: (i + k) % 2 ? "Yes" : "No", training_date: "2026-02-16" })) }));
+          const catalogue = ["courses", "participants", "healthFacilities", "facilitators"].map((c) => ({ collection: c, description: c, scopedTo: [] }));
+          const system = T.systemFor({ page: { title: "Child Health Services", text: "Child Health Services facilities list" }, lang: "ar", pageChars: SIZES.groq.page, catalogue });
+          const reads = [];
+          const call = async (name, args, budget) => {
+            reads.push(name + " " + JSON.stringify(args));
+            if (args.collection !== "healthFacilities") return { note: "test: only healthFacilities is loaded" };
+            let rows = recs.filter((r) => T.passes(r, T.cleanFilters(args.filters)));
+            if (args.each) rows = T.eachRows(rows, args.each).filter((r) => T.passes(r, T.cleanFilters(args.eachFilters)));
+            if (name === "count_data") return { counted: rows.length, groups: T.groupRows(rows, { groupBy: args.groupBy, valueField: args.valueField, breakdown: T.cleanBreakdown(args.breakdown) }).slice(0, 50) };
+            if (name === "query_data") return { rows: T.rowsWithin(rows.slice(0, 20), budget).rows };
+            return { note: "describe_fields is not loaded in this test" };
+          };
+          (async () => {
+            const t0 = Date.now();
+            try {
+              const out = await askChat({ provider: "groq", key: process.env.Q, models: GROQ_MODELS, system, history: [], question: "كم عدد الأطباء المدربين وغير المدربين على العلاج المتكامل في كل ولاية حسب قائمة الكادر في المرافق؟", call, deadline: Date.now() + 90000 });
+              console.log("ANSWERED in", Math.round((Date.now() - t0) / 1000), "s | reads:", reads.join(" ; "), "|", String(out.text).replace(/\n/g, " ").slice(0, 900));
+            } catch (e) { console.log("FAILED", e.message, reads.join(" ; ")); }
+          })();
+          JS
+          node /tmp/run.cjs 2>&1 | grep -E "step|ANSWERED|FAILED" | sed -E 's/\{"severity":"[A-Z]+","message":"//; s/"\}$//' | head -60
+# rerun 1793136075
+# rerun 1793172764
+# rerun 1793173394
