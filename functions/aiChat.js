@@ -31,15 +31,22 @@ const CHAT = {
   groq: { name: "Groq", url: "https://api.groq.com/openai/v1/chat/completions", extra: { include_reasoning: false, max_completion_tokens: 1800 } },
 };
 
+// Models with a smaller allowance than their provider's: Groq's qwen may
+// write only 1,000 tokens a minute, and refuses a request that asks for more.
+const MODEL_EXTRA = {
+  "qwen/qwen3.8-27b": { max_completion_tokens: 900 },
+};
+
 // How much each provider is given: Groq's per-minute allowance counts the
 // whole conversation, so it sees less of the page and of each result.
 const SIZES = {
-  gemini: { result: 12000, page: 9000 },
-  cerebras: { result: 8000, page: 6000, reads: 30000 },
+  // `history`: the earlier turns of the chat together, newest kept whole.
+  gemini: { result: 12000, page: 9000, history: 24000 },
+  cerebras: { result: 8000, page: 6000, reads: 30000, history: 12000 },
   // `reads`: all results in one Groq request together. A request over 8,000
   // tokens is refused outright (413), and Arabic results run ~2.2 characters
   // a token, so earlier results are shortened to keep within it.
-  groq: { result: 4000, page: 3000, reads: 8000 },
+  groq: { result: 4000, page: 3000, reads: 8000, history: 3000 },
 };
 
 class ProviderError extends Error {}
@@ -96,6 +103,24 @@ function keepReadsWithin(messages, budget) {
 }
 
 /**
+ * The earlier turns of the chat within `budget` characters: the newest are
+ * kept, longer ones cut short, and the oldest dropped once nothing is left.
+ */
+function keepHistoryWithin(history, budget) {
+  const kept = [];
+  let left = budget;
+  for (const m of [...history].reverse()) {
+    if (left < 200) break;
+    const content = m.content.length > left ? `${m.content.slice(0, left)} …(cut)` : m.content;
+    kept.unshift({ role: m.role, content });
+    left -= content.length;
+  }
+  // A chat starts with a question, so a cut that leaves an answer first drops it.
+  while (kept.length && kept[0].role !== "user") kept.shift();
+  return kept;
+}
+
+/**
  * One conversation, its steps spread over `models`. Each model has its own
  * per-minute token allowance (Groq's free tier: 8,000, and one step of this
  * conversation is ~7,000), so a step a model has no room for goes to the next
@@ -114,7 +139,7 @@ async function askChat({ provider, key, models, system, history, question, call,
         const model = models[(at + i) % models.length];
         try {
           const j = await post(url, { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-            { model, ...body, reasoning_effort: "low", ...extra }, `${name} ${model}`, deadline, { waitLimits: models.length === 1 });
+            { model, ...body, reasoning_effort: "low", ...extra, ...MODEL_EXTRA[model] }, `${name} ${model}`, deadline, { waitLimits: models.length === 1 });
           at = (at + i) % models.length;
           return { j, model };
         } catch (e) {
@@ -141,6 +166,8 @@ async function askChat({ provider, key, models, system, history, question, call,
     { role: "user", content: question },
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: t }));
+  let earlier = history.length;  // earlier turns still in `messages`
+  let empty = 0;                 // empty replies so far
   for (let step = 0; step < MAX_STEPS; step++) {
     const last = step === MAX_STEPS - 1 || deadline - Date.now() < LAST_STEP_AT;
     keepReadsWithin(messages, SIZES[provider].reads);
@@ -151,6 +178,15 @@ async function askChat({ provider, key, models, system, history, question, call,
         tools, tool_choice: last ? "none" : "auto", temperature: 0.2,
       });
     } catch (e) {
+      // Too big, or no model has room, with the earlier turns of the chat:
+      // ask again without them.
+      if (step === 0 && earlier && (e instanceof TooBig || [413, 429].includes(e.status))) {
+        logger.warn(`[aiAssistant] ${name}: too big with ${earlier} earlier messages; asking without them`);
+        messages.splice(1, earlier);
+        earlier = 0;
+        step--;
+        continue;
+      }
       if (e instanceof TooBig && step > 0) return { text: "", tooManySteps: true, model: models[at] };
       throw e instanceof TooBig ? new ProviderError(`${name}: the question is too long for its models`) : e;
     }
@@ -161,7 +197,14 @@ async function askChat({ provider, key, models, system, history, question, call,
     if (calls.length && last) return { text: "", tooManySteps: true, model };
     if (!calls.length) {
       const text = String(msg.content || "").trim();
-      if (!text) throw new ProviderError(`${name} ${model}: empty reply`);
+      if (!text) {
+        logger.warn(`[aiAssistant] ${name} ${model}: empty reply`);
+        // Another model takes the same step.
+        if (++empty >= models.length) throw new ProviderError(`${name} ${model}: empty reply`);
+        at = (at + 1) % models.length;
+        step--;
+        continue;
+      }
       return { text, model };
     }
     messages.push({ role: "assistant", content: msg.content || "", tool_calls: calls });
@@ -178,5 +221,5 @@ async function askChat({ provider, key, models, system, history, question, call,
 }
 
 module.exports = {
-  CHAT, SIZES, MAX_STEPS, LAST_STEP_AT, ANSWER_NOW, ProviderError, TooBig, post, keepReadsWithin, askChat,
+  CHAT, MODEL_EXTRA, SIZES, MAX_STEPS, LAST_STEP_AT, ANSWER_NOW, ProviderError, TooBig, post, keepReadsWithin, keepHistoryWithin, askChat,
 };

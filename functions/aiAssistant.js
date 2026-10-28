@@ -40,7 +40,7 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const { GEMINI_MODELS, CEREBRAS_MODELS, GROQ_MODELS } = require("./aiModels");
 const { withAiLog } = require("./aiLog");
 const {
-  CHAT, SIZES, MAX_STEPS, LAST_STEP_AT, ANSWER_NOW, ProviderError, post, askChat,
+  CHAT, SIZES, MAX_STEPS, LAST_STEP_AT, ANSWER_NOW, ProviderError, post, askChat, keepHistoryWithin,
 } = require("./aiChat");
 // The whole answer must be back well inside the function's 120 s limit. When
 // little time is left the model is told to answer from what it has read.
@@ -423,12 +423,13 @@ async function answerQuestion(request, use = {}) {
   for (const e of list) {
     if (deadline - Date.now() < LAST_STEP_AT) break;
     const system = systemFor({ page, lang, pageChars: SIZES[e.provider].page, catalogue, totals });
+    const earlier = keepHistoryWithin(history, SIZES[e.provider].history);
     try {
-      answer = { ...(await e.run({ key: e.key, model: e.model, system, history, question, call, deadline })), provider: e.provider };
+      answer = { ...(await e.run({ key: e.key, model: e.model, system, history: earlier, question, call, deadline })), provider: e.provider };
       // Out of steps: the reads it made still answer, given to it as text.
       if (answer.tooManySteps && reads.size && deadline - Date.now() > 8000) {
         logger.warn(`[aiAssistant] ${e.model} used all ${MAX_STEPS} steps; answering from ${reads.size} reads`);
-        answer = { ...(await answerFromReads({ ...e, system, history, question, reads: [...reads.values()], deadline })), provider: e.provider };
+        answer = { ...(await answerFromReads({ ...e, system, history: earlier, question, reads: [...reads.values()], deadline })), provider: e.provider };
       }
       break;
     } catch (err) {

@@ -373,15 +373,19 @@ const DATA_NOTES = `Notes on the app's data (check with describe_fields when uns
 - Dates are text "YYYY-MM-DD", so a period is a filter like start_date >= "2026-01-01".`;
 
 const PAGE_CHARS = 9000;
+const REFERENCE_CHARS = 3000;
 
 /** The open page, as the model sees it: its name and the text on screen, cut to size. */
 function pageBlock(page, chars = PAGE_CHARS) {
   if (!page || typeof page !== "object") return "";
   const title = String(page.title || page.view || "").slice(0, 120);
   const text = String(page.text || "").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, chars);
+  // Figures of the page's other sub-tabs (one click away), so a question can
+  // compare them with the sub-tab that is open.
+  const reference = String(page.reference || "").replace(/[ \t]+/g, " ").trim().slice(0, REFERENCE_CHARS);
   if (!title && !text) return "";
   const place = String(page.place || "").slice(0, 200) || `${APP_NAME} – ${title}`;
-  return `PLACE IN THE APP: ${place}\nPAGE ON SCREEN — ${title || "page"}${page.view ? ` (view: ${String(page.view).slice(0, 60)})` : ""}\n"""\n${text || "(no text on screen)"}\n"""`;
+  return `PLACE IN THE APP: ${place}\nPAGE ON SCREEN — ${title || "page"}${page.view ? ` (view: ${String(page.view).slice(0, 60)})` : ""}\n"""\n${text || "(no text on screen)"}${reference ? `\n\nOTHER SUB-TABS OF THIS PAGE (not open now, same page)\n${reference}` : ""}\n"""`;
 }
 
 /** "Totals already counted" for the prompt: { collection: number }. */
