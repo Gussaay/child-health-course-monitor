@@ -29,6 +29,13 @@ describe('read_reference', () => {
         expect(out.columns).toEqual(['place', 'diarrhoea']);
     });
 
+    it('finds the same measure under the other survey\'s name', () => {
+        const out = readReference({ survey: 's3m', indicators: ['diarrhoea', 'pneumonia'] });
+        expect(out.columns).toEqual(['place', 'diarrhoea', 'ari']);
+        expect(out.notInThisSurvey).toBeUndefined();
+        expect(readReference({ survey: 'mics', indicators: ['diarrhoea', 'stunting'] }).notInThisSurvey).toEqual(['stunting']);
+    });
+
     it('gives estimate series from a year', () => {
         const out = readReference({ survey: 'igme', indicators: ['u5mr'], fromYear: 2023 });
         expect(out.series.u5mr.rows.map((r) => r[0])).toEqual([2023, 2024]);

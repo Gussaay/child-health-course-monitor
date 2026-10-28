@@ -10,17 +10,32 @@ const DATA = require("./referenceData.json");
 const SURVEYS = ["igme", "mics", "s3m"];
 const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, "");
 
+// The same measure under each survey's name: MICS counts pneumonia as ARI
+// symptoms, which S3M calls ARI.
+const SAME = {
+  pneumonia: "ari", ari: "pneumonia",
+  pneumonia_care: "hf_ari", hf_ari: "pneumonia_care",
+  diarrhoea_care: "hf_diarrhoea", hf_diarrhoea: "diarrhoea_care",
+};
+
 /** The indicators asked for, by id or by a word of their label; all when none match. */
 function pick(indicators, asked) {
-  const wanted = (Array.isArray(asked) ? asked : asked ? [asked] : []).map(norm).filter(Boolean);
-  if (!wanted.length) return indicators.map((ind, i) => ({ ...ind, i }));
   const all = indicators.map((ind, i) => ({ ...ind, i }));
-  // An exact id wins; otherwise every indicator whose label holds the word.
+  const wanted = (Array.isArray(asked) ? asked : asked ? [asked] : []).map(norm).filter(Boolean);
+  if (!wanted.length) return { inds: all, missing: [] };
+  const missing = [];
+  // An exact id wins, then the other survey's name for it, then every
+  // indicator whose label holds the word.
   const found = new Set(wanted.flatMap((w) => {
-    const byId = all.filter((ind) => norm(ind.id) === w);
-    return byId.length ? byId : all.filter((ind) => norm(ind.label).includes(w));
+    for (const id of [w, SAME[w]]) {
+      const byId = all.filter((ind) => norm(ind.id) === id);
+      if (byId.length) return byId;
+    }
+    const byLabel = all.filter((ind) => norm(ind.label).includes(w));
+    if (!byLabel.length) missing.push(w);
+    return byLabel;
   }));
-  return found.size ? all.filter((ind) => found.has(ind)) : all;
+  return found.size ? { inds: all.filter((ind) => found.has(ind)), missing } : { inds: all, missing };
 }
 
 /** A state key from any spelling the model gives ("gedaref", "Gedaref State"). */
@@ -33,7 +48,7 @@ function stateKey(states, asked) {
 
 function readIgme(args) {
   const from = Number(args.fromYear) || 2000;
-  const ids = pick(Object.entries(DATA.igme.series).map(([id, s]) => ({ id, label: s.label })), args.indicators).map((s) => s.id);
+  const ids = pick(Object.entries(DATA.igme.series).map(([id, s]) => ({ id, label: s.label })), args.indicators).inds.map((s) => s.id);
   const series = Object.fromEntries(ids.map((id) => {
     const { rows, ...rest } = DATA.igme.series[id];
     return [id, { ...rest, rows: rows.filter((r) => r[0] >= from) }];
@@ -43,13 +58,14 @@ function readIgme(args) {
 
 function readSurvey(id, args) {
   const survey = DATA[id];
-  const inds = pick(survey.indicators, args.indicators);
+  const { inds, missing } = pick(survey.indicators, args.indicators);
   const cut = (values) => inds.map((ind) => values?.[ind.i] ?? null);
   const head = {
     source: survey.source,
     indicators: inds.map(({ id: key, label, unit, better }) => ({ id: key, label, unit, better })),
     columns: ["place", ...inds.map((ind) => ind.id)],
     national: cut(survey.national),
+    ...(missing.length ? { notInThisSurvey: missing } : {}),
   };
   if (!args.state) {
     return { ...head, level: "states", rows: Object.entries(survey.states).map(([state, s]) => [state, ...cut(s.values)]) };
