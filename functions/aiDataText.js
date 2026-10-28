@@ -103,6 +103,13 @@ function describeFields(rows, { personal = false } = {}) {
       const type = Array.isArray(v) ? "list" : typeof v === "object" ? "object" : typeof v;
       if (!f.type) f.type = type;
       else if (f.type !== type && !f.type.includes(type)) f.type += `|${type}`;
+      // What is inside a list of records or an object, so "each" and dotted
+      // paths (scores.total) can reach it.
+      const inner = Array.isArray(v) ? v.find((e) => e && typeof e === "object" && !Array.isArray(e)) : v && typeof v === "object" ? v : null;
+      if (inner) {
+        const key = Array.isArray(v) ? "entryFields" : "subFields";
+        f[key] = [...new Set([...(f[key] || []), ...Object.keys(inner)])].slice(0, 30);
+      }
       if (personal && PERSONAL_FIELD.test(k)) return;
       const ex = typeof v === "object" ? JSON.stringify(v).slice(0, 120) : String(v).slice(0, 80);
       if (f.examples.length < 3 && !f.examples.includes(ex)) f.examples.push(ex);
@@ -239,8 +246,11 @@ function cleanFilters(filters) {
 }
 
 // Lists kept inside a record that count_data and query_data can open, one row
-// per entry: a facility's named staff.
+// per entry. Any list can be opened; these, a facility's named staff, are
+// named in the notes.
 const LIST_FIELDS = ["imnci_staff", "eenc_staff", "neonatal_staff", "critical_staff"];
+/** A field the model may open with `each`: any list field, dotted for a nested one. */
+const cleanEach = (each) => (typeof each === "string" && /^[^/]{1,120}$/.test(each.trim()) ? each.trim() : "");
 
 /**
  * One row per entry of the list field `each` (a facility's staff), the
@@ -248,11 +258,14 @@ const LIST_FIELDS = ["imnci_staff", "eenc_staff", "neonatal_staff", "critical_st
  * like any field. An entry's field wins over the record's of the same name.
  */
 function eachRows(rows, each) {
+  const top = String(each).split(".")[0];
   return rows.flatMap((row) => {
-    const list = row[each];
+    const list = fieldOf(row, each);
     if (!Array.isArray(list)) return [];
-    const { [each]: _list, ...record } = row;
-    return list.filter((e) => e && typeof e === "object").map((e) => ({ ...record, ...e }));
+    const { [top]: _list, ...record } = row;
+    // A list of plain values (["IMNCI", "ETAT"]) gives rows with a "value".
+    return list.filter((e) => e !== null && e !== undefined && e !== "")
+      .map((e) => ({ ...record, ...(typeof e === "object" && !Array.isArray(e) ? e : { value: e }) }));
   });
 }
 
@@ -342,7 +355,7 @@ const TOOLS = [
           description: "Other fields whose values are counted inside each group (up to 10). For example groupBy the locality field with breakdown of several service fields gives, per locality, how many records say Yes, No or are not set for each service: coverage in one read.",
         },
         filters: FILTERS,
-        each: { type: "string", enum: LIST_FIELDS, description: "Count or list the entries of a list inside each record instead of the records: a facility's named staff (imnci_staff, eenc_staff, neonatal_staff, critical_staff; each entry has name, job_title, is_trained Yes/No, training_date, phone). The record's fields (state, locality, facility name) stay usable beside the entry's." },
+        each: { type: "string", description: "Count or list the entries of a list field inside each record instead of the records (describe_fields shows list fields with their entryFields): for example a facility's named staff imnci_staff (name, job_title, is_trained Yes/No, training_date), a plan's activities, a meeting's attendance. The record's fields (state, locality, name) stay usable beside the entry's." },
         eachFilters: { ...FILTERS, description: "Filters on the entries' fields when 'each' is used, e.g. [{field:'job_title', op:'==', value:'طبيب'}]." },
       },
       required: ["collection"],
@@ -359,7 +372,7 @@ const TOOLS = [
         fields: { type: "array", items: { type: "string" }, description: "Fields to return. Leave out for all." },
         orderBy: { type: "string", description: "Field to sort by, newest or largest first." },
         limit: { type: "number", description: "Records to return, at most 50." },
-        each: { type: "string", enum: LIST_FIELDS, description: "Count or list the entries of a list inside each record instead of the records: a facility's named staff (imnci_staff, eenc_staff, neonatal_staff, critical_staff; each entry has name, job_title, is_trained Yes/No, training_date, phone). The record's fields (state, locality, facility name) stay usable beside the entry's." },
+        each: { type: "string", description: "Count or list the entries of a list field inside each record instead of the records (describe_fields shows list fields with their entryFields): for example a facility's named staff imnci_staff (name, job_title, is_trained Yes/No, training_date), a plan's activities, a meeting's attendance. The record's fields (state, locality, name) stay usable beside the entry's." },
         eachFilters: { ...FILTERS, description: "Filters on the entries' fields when 'each' is used, e.g. [{field:'job_title', op:'==', value:'طبيب'}]." },
       },
       required: ["collection"],
@@ -424,6 +437,20 @@ const COLLECTION_PAGES = {
   projects: "Project Tracker",
   imnciPatientRecords: "IMNCI Protocol – Patient records",
   reference: "Dashboard – Morbidity & Mortality Indicators",
+  exerciseAttempts: "Courses – Exercises",
+  exerciseDefinitions: "Courses – Exercises",
+  course_sub_types: "Courses – Course types",
+  participantReaddRequests: "Courses – Participants",
+  onlineCourses: "Online Courses",
+  onlineCourseItems: "Online Courses",
+  imnciProtocols: "IMNCI Protocol",
+  aiBooks: "Online Courses – Books and AI",
+  facilitySubmissions: "Child Health Services – Submissions",
+  facilitatorSubmissions: "Human Resources – Submissions",
+  coordinatorSubmissions: "Human Resources – Submissions",
+  federalCoordinatorSubmissions: "Human Resources – Submissions",
+  localityCoordinatorSubmissions: "Human Resources – Submissions",
+  problemReports: "Admin – Problem reports",
 };
 /** "National Child Health Program – Courses" for a collection. */
 const pageOf = (collection) => `${APP_NAME} – ${COLLECTION_PAGES[collection] || collection}`;
@@ -524,5 +551,5 @@ module.exports = {
   FOLLOW_UPS, splitFollowUps, cleanBreakdown, CHART, splitChart, totalsBlock,
   APP_NAME, COLLECTION_PAGES, pageOf,
   compactRow, rowsWithin, describeFields, groupRows, filterValue, cleanFilters,
-  fieldOf, bucketOf, asDate, LIST_FIELDS, eachRows, passes, TOOLS, RULES, systemFor, pageBlock, PAGE_CHARS,
+  fieldOf, bucketOf, asDate, LIST_FIELDS, cleanEach, eachRows, passes, TOOLS, RULES, systemFor, pageBlock, PAGE_CHARS,
 };

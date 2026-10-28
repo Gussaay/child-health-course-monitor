@@ -28,7 +28,7 @@ const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestor
 const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess");
 const { readReference } = require("./aiReference");
 const {
-  TOOLS, LIST_FIELDS, eachRows, passes, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
+  TOOLS, cleanEach, eachRows, passes, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
 } = require("./aiDataText");
 
 // Declared only when Cerebras is on: the deploy asks for every declared
@@ -50,6 +50,8 @@ const MAX_HISTORY = 10;       // earlier turns kept
 const COUNT_ROWS = 6000;      // records count_data reads at most
 const SAMPLE_ROWS = 30;       // records describe_fields looks at
 const QUERY_ROWS = 50;
+// What names a record, kept beside each list entry query_data returns.
+const NAME_FIELDS = ["اسم_المؤسسة", "name", "title", "facilityName", "course_type", "date", "start_date"];
 // Questions per person per day, so one account cannot use up the free quota.
 const DAILY_LIMIT = { staff: 60, other: 20 };
 const STAFF_ROLES = [
@@ -88,7 +90,7 @@ async function countData(access, args) {
   const valueField = clip(args.valueField, 120).trim();
   const bucket = ["year", "month"].includes(args.bucket) ? args.bucket : "";
   const breakdown = cleanBreakdown(args.breakdown);
-  const each = LIST_FIELDS.includes(args.each) ? args.each : "";
+  const each = cleanEach(args.each);
   const eachFilters = each ? cleanFilters(args.eachFilters) : [];
   const { q } = scopedQuery(access, args.collection, filters);
 
@@ -134,12 +136,12 @@ async function queryData(access, args, budget) {
   const { spec, q: base } = scopedQuery(access, args.collection, filters);
   let q = base;
   if (args.orderBy && typeof args.orderBy === "string") q = q.orderBy(fieldPath(args.orderBy), "desc");
-  const each = LIST_FIELDS.includes(args.each) ? args.each : "";
+  const each = cleanEach(args.each);
   const pick = Array.isArray(args.fields) ? args.fields.map(String).slice(0, 30) : null;
   // Deleted records are dropped after reading, so a few extra are read. With
   // `each` the rows are list entries (a facility's staff), so records are read
   // until there are enough of them, with only their name and place beside.
-  const listed = each ? q.select(...[each, "isDeleted", "اسم_المؤسسة", ...Object.values(spec.scope || {}), ...(pick || [])].map(fieldPath)) : q;
+  const listed = each ? q.select(...[each, "isDeleted", ...NAME_FIELDS, ...Object.values(spec.scope || {}), ...(pick || [])].map(fieldPath)) : q;
   const snap = await listed.limit(each ? COUNT_ROWS : limit + 10).get();
   const records = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter(notDeleted);
   const rows = (each ? eachRows(records, each).filter((r) => passes(r, cleanFilters(args.eachFilters))) : records).slice(0, limit);

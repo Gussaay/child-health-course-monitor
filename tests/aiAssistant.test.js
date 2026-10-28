@@ -319,3 +319,17 @@ describe('the entries of a list inside a record (a facility\'s staff)', () => {
         expect(rows.map((r) => r.name)).toEqual(['x']);
     });
 });
+
+describe('any list inside a record', () => {
+    it('opens a nested list and a list of plain values', () => {
+        const plans = [{ state: 'Kassala', plan: { activities: [{ name: 'Train', status: 'done' }, { name: 'Visit', status: 'late' }] }, courses: ['IMNCI', 'ETAT'] }];
+        expect(eachRows(plans, 'plan.activities').map((r) => [r.state, r.status])).toEqual([['Kassala', 'done'], ['Kassala', 'late']]);
+        expect(eachRows(plans, 'courses').map((r) => r.value)).toEqual(['IMNCI', 'ETAT']);
+    });
+
+    it('shows what is inside list and object fields', () => {
+        const out = describeFields([{ staff: [{ name: 'a', job_title: 'طبيب' }], scores: { total: 3 } }]);
+        expect(out.fields.find((f) => f.field === 'staff').entryFields).toEqual(['name', 'job_title']);
+        expect(out.fields.find((f) => f.field === 'scores').subFields).toEqual(['total']);
+    });
+});
