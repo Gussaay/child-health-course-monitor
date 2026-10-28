@@ -9,7 +9,8 @@ import { CHART_COLORS } from './chartSetup'; // also registers the scales and el
 
 const KINDS = { bar: Bar, line: Line, pie: Pie };
 
-export default function AiChart({ chart }) {
+// pixelRatio: drawn sharper when the chart is shared as a picture.
+export default function AiChart({ chart, pixelRatio }) {
     const Kind = KINDS[chart?.type];
     if (!Kind || !chart.labels?.length) return null;
     const pie = chart.type === 'pie';
@@ -29,6 +30,7 @@ export default function AiChart({ chart }) {
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
+        ...(pixelRatio ? { devicePixelRatio: pixelRatio } : {}),
         plugins: {
             legend: { display: pie, position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
             title: { display: !!chart.title, text: chart.title, font: { size: 12 } },
