@@ -103,15 +103,18 @@ function keepReadsWithin(messages, budget) {
 }
 
 /**
- * The earlier turns of the chat within `budget` characters: the newest are
- * kept, longer ones cut short, and the oldest dropped once nothing is left.
+ * The earlier turns of the chat within `budget` characters, newest first: the
+ * questions are kept (they say what a follow-up such as "try again" means),
+ * the answers cut short, and the oldest turns dropped once nothing is left.
  */
 function keepHistoryWithin(history, budget) {
   const kept = [];
   let left = budget;
   for (const m of [...history].reverse()) {
     if (left < 200) break;
-    const content = m.content.length > left ? `${m.content.slice(0, left)} …(cut)` : m.content;
+    // An answer leaves room for the question before it.
+    const cap = m.role === "user" ? Math.min(600, left) : Math.max(200, left - 600);
+    const content = m.content.length > cap ? `${m.content.slice(0, cap)} …(cut)` : m.content;
     kept.unshift({ role: m.role, content });
     left -= content.length;
   }

@@ -82,10 +82,17 @@ describe('a follow-up question stays within Groq limits', () => {
     ];
 
     it('keeps the newest turns and cuts or drops older ones to the budget', () => {
-        const kept = keepHistoryWithin([...history, { role: 'user', content: 'Try' }, { role: 'assistant', content: 'x'.repeat(500) }], 1000);
-        expect(kept.reduce((n, m) => n + m.content.length, 0)).toBeLessThan(1100);
+        const kept = keepHistoryWithin([...history, { role: 'user', content: 'Try' }, { role: 'assistant', content: 'x'.repeat(500) }], 1200);
+        expect(kept.reduce((n, m) => n + m.content.length, 0)).toBeLessThan(1300);
         expect(kept[0].role).toBe('user');
         expect(kept.at(-1).content).toBe('x'.repeat(500));
+    });
+
+    it('keeps the question a short follow-up refers to, even after a long answer', () => {
+        const kept = keepHistoryWithin([...history, { role: 'user', content: 'Then compare' }, { role: 'assistant', content: 'y'.repeat(4000) }], 3000);
+        expect(kept.map((m) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
+        expect(kept[0].content).toBe('Compare MICS and S3M');
+        expect(kept.reduce((n, m) => n + m.content.length, 0)).toBeLessThan(3100);
     });
 
     it('asks again without the earlier turns when they make it too big', async () => {
