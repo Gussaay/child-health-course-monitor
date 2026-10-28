@@ -85,15 +85,15 @@ export const SDG_TARGETS = { nmr: 12, u5mr: 25 };
 export const MICS_SOURCE = { name: 'Sudan MICS', year: 2014 };
 
 export const MICS_INDICATORS = [
-    { id: 'diarrhoea', group: 'diarrhoea', unit: '%', better: 'lower' },
-    { id: 'diarrhoea_care', group: 'diarrhoea', unit: '%', better: 'higher' },
-    { id: 'diarrhoea_home', group: 'diarrhoea', unit: '%', better: 'higher' },
-    { id: 'pneumonia', group: 'pneumonia', unit: '%', better: 'lower' },
-    { id: 'pneumonia_care', group: 'pneumonia', unit: '%', better: 'higher' },
-    { id: 'pneumonia_antibiotic', group: 'pneumonia', unit: '%', better: 'higher' },
-    { id: 'nmr', group: 'mortality', unit: 'rate', better: 'lower' },
-    { id: 'imr', group: 'mortality', unit: 'rate', better: 'lower' },
-    { id: 'u5mr', group: 'mortality', unit: 'rate', better: 'lower' },
+    { id: 'diarrhoea', group: 'diarrhoea', unit: '%', better: 'lower', label: 'Diarrhoea prevalence' },
+    { id: 'diarrhoea_care', group: 'diarrhoea', unit: '%', better: 'higher', label: 'Care-seeking for diarrhoea' },
+    { id: 'diarrhoea_home', group: 'diarrhoea', unit: '%', better: 'higher', label: 'Home treatment for diarrhoea (ORT + continued feeding)' },
+    { id: 'pneumonia', group: 'pneumonia', unit: '%', better: 'lower', label: 'Pneumonia (ARI symptoms) prevalence' },
+    { id: 'pneumonia_care', group: 'pneumonia', unit: '%', better: 'higher', label: 'Care-seeking for pneumonia' },
+    { id: 'pneumonia_antibiotic', group: 'pneumonia', unit: '%', better: 'higher', label: 'Antibiotics for pneumonia' },
+    { id: 'nmr', group: 'mortality', unit: 'rate', better: 'lower', label: 'Neonatal mortality rate' },
+    { id: 'imr', group: 'mortality', unit: 'rate', better: 'lower', label: 'Infant mortality rate' },
+    { id: 'u5mr', group: 'mortality', unit: 'rate', better: 'lower', label: 'Under-five mortality rate' },
 ];
 
 // Values in MICS_INDICATORS order. State keys match STATE_LOCALITIES.

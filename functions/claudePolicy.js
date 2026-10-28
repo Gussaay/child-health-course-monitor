@@ -62,6 +62,29 @@ const COLLECTIONS = {
     personal: true,
     description: "Locality, state and federal coordinators.",
   },
+  federalCoordinators: {
+    permission: "canViewHumanResource",
+    personal: true,
+    description: "Federal program team members: name, role, contact.",
+  },
+  stateCoordinators: {
+    permission: "canViewHumanResource",
+    personal: true,
+    description: "State program team members: name, state, role, contact.",
+  },
+  localityCoordinators: {
+    permission: "canViewHumanResource",
+    personal: true,
+    description: "Locality program team members: name, state, locality, role, contact.",
+  },
+  funders: {
+    permission: "canViewHumanResource",
+    description: "Partners and funders of the program.",
+  },
+  unitMeetings: {
+    permission: "canUseFederalManagerAdvancedFeatures",
+    description: "Program unit meetings: date, type, agenda, decisions, attendance.",
+  },
   healthFacilities: {
     permission: "canViewFacilities",
     scope: { state: "الولاية", locality: "المحلية" },
@@ -86,7 +109,7 @@ const COLLECTIONS = {
     scope: { state: "state", locality: "locality" },
     description: "Population denominators per state and locality per year.",
   },
-  skillMentorshipSubmissions: {
+  skillMentorship: {
     permission: "canViewSkillsMentorship",
     scope: { state: "state", locality: "locality" },
     description: "Mentorship visits: skills assessed, scores, health worker, facility.",

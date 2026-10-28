@@ -260,6 +260,20 @@ const FILTERS = {
 // Written once, in the shape both Groq (OpenAI style) and Gemini accept.
 const TOOLS = [
   {
+    name: "read_reference",
+    description: "Read the published child health figures shown on Dashboard – Morbidity & Mortality Indicators, whichever page is open: UN IGME estimates (survey \"igme\": nmr, imr, u5mr, stillbirth, maternal, adolescent, by year), Sudan MICS 2014 (\"mics\": diarrhoea, diarrhoea_care, diarrhoea_home, pneumonia, pneumonia_care, pneumonia_antibiotic, nmr, imr, u5mr; national and by state) and Sudan S3M II 2018 (\"s3m\": diarrhoea, ari, fever, hf_diarrhoea, hf_ari, treat_ari, ors_any, ors_zinc, itn, stunting, wasting, sam, underweight, muac_gam, child_anaemia, ebf, cont_bf, diet_div, meal_freq, bcg, penta1, penta3, measles1, full_epi, vit_a, anc4, no_anc, pnc, tt2, fefol3, carer_anaemia, hf_1h; national, by state, and by locality when a state is given). Ask for several surveys in one step to compare them.",
+    parameters: {
+      type: "object",
+      properties: {
+        survey: { type: "string", enum: ["igme", "mics", "s3m"] },
+        indicators: { type: "array", items: { type: "string" }, description: "Indicator ids from the list. Leave out for all." },
+        state: { type: "string", description: "A state in English (for example Gedaref): its localities (S3M) or its figures. Leave out for all states." },
+        fromYear: { type: "number", description: "igme only: first year, default 2000." },
+      },
+      required: ["survey"],
+    },
+  },
+  {
     name: "list_data",
     description: "List the app's data collections this person may read, with what each holds. Call this first unless you already know which collection answers the question.",
     parameters: { type: "object", properties: {} },
@@ -316,7 +330,8 @@ const FOLLOW_UPS = "@@FOLLOWUPS";
 const RULES = `You are the data assistant inside the National Child Health Programme app (Sudan): an analyst who works with the programme team in this chat.
 Facts come ONLY from the app's own data:
 - the page the person has open, given below as PAGE ON SCREEN, and
-- what your tools read from the app's database.
+- what your tools read from the app's database, and the published survey and estimate figures the app shows (read_reference).
+These cover the whole app, not only the open page: when the question needs data from another page or sub-tab, read it.
 On those facts you may think and write like a programme analyst: compare places and periods, rank them, work out percentages and gaps, point out what stands out, and, when asked (or when it clearly helps), suggest actions, set targets, and draft plans, activities and interventions.
 
 Rules you never break:
@@ -347,18 +362,24 @@ const COLLECTION_PAGES = {
   finalReports: "Courses – Final report",
   facilitators: "Human Resources – Facilitators",
   coordinators: "Human Resources – Program teams",
+  federalCoordinators: "Human Resources – Program teams",
+  stateCoordinators: "Human Resources – Program teams",
+  localityCoordinators: "Human Resources – Program teams",
+  funders: "Human Resources – Partners",
+  unitMeetings: "Meeting Tracker",
   healthFacilities: "Child Health Services",
   facilitySnapshots: "Child Health Services – Facility history",
   masterPlans: "Master Plan",
   operationalPlans: "Master Plan – Operational plans",
   populationTargets: "Bottom-up Planning – Population",
-  skillMentorshipSubmissions: "Skills Mentorship",
+  skillMentorship: "Skills Mentorship",
   imnciVisitReports: "Skills Mentorship – Visit reports",
   eencVisitReports: "Skills Mentorship – Visit reports",
   supervisionAssessments: "Supervision",
   supplyItems: "Supply Management",
   projects: "Project Tracker",
   imnciPatientRecords: "IMNCI Protocol – Patient records",
+  reference: "Dashboard – Morbidity & Mortality Indicators",
 };
 /** "National Child Health Program – Courses" for a collection. */
 const pageOf = (collection) => `${APP_NAME} – ${COLLECTION_PAGES[collection] || collection}`;
