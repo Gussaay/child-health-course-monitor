@@ -25,7 +25,7 @@ jobs:
         with:
           ref: claude/project-thread-jfo8r7
           path: app
-      - name: A 4-step question on Groq alone, with the real key
+      - name: This morning's follow-up on Groq alone, with the real key
         shell: bash
         run: |
           set +e
@@ -33,23 +33,35 @@ jobs:
           echo "::add-mask::$Q"
           cd app/functions && npm ci --ignore-scripts --no-audit --no-fund >/dev/null 2>&1
           cat > /tmp/run.cjs <<'JS'
-          const { askChat } = require(process.cwd() + "/aiChat.js");
+          const { askChat, keepHistoryWithin, SIZES } = require(process.cwd() + "/aiChat.js");
           const { systemFor } = require(process.cwd() + "/aiDataText.js");
           const { GROQ_MODELS } = require(process.cwd() + "/aiModels.js");
           const catalogue = ["courses", "participants", "healthFacilities", "facilitators"].map((c) => ({ collection: c, label: c, fields: [] }));
-          let system;
-          try { system = systemFor({ page: { text: "الولاية المحلية ".repeat(150), view: "dashboard" }, lang: "ar", pageChars: 3000, catalogue }); } catch (e) { system = "You answer from the app data only. " + "rules ".repeat(2500); }
-          let n = 0;
-          const call = async (name, args) => { n++; const g = args.groupBy || "الولاية"; return { collection: args.collection, groupBy: g, total: 1800, groups: Array.from({ length: 60 }, (_, i) => ({ [g]: g + " " + (i + 1), count: 10 + i * 3, ...(args.valueField ? { sum: i * 7 } : {}) })) }; };
-          (async () => {
+          const states = ["Northern", "River Nile", "Red Sea", "Kassala", "Gedaref", "Khartoum", "Gezira", "White Nile", "Sennar", "Blue Nile", "North Kordofan", "South Kordofan", "West Kordofan", "North Darfur", "West Darfur", "South Darfur", "Central Darfur", "East Darfur"];
+          const text = "CHART DATA\nChart \"Diarrhoea prevalence by state\"\n- " + states.map((s, i) => s + " " + (10 + i * 1.7).toFixed(1)).join(", ") + "\n\nTEXT ON SCREEN\nSudan MICS 2014 مؤشرات المراضة والوفيات\n" + states.map((s, i) => s + " الإسهال " + (10 + i) + " الالتهاب الرئوي " + (5 + i) + " طلب الرعاية " + (40 + i)).join("\n");
+          const reference = "Sudan S3M II 2018, national (Sudan):\n- Diarrhoea (period prevalence): 21.3%\n- ARI (period prevalence): 23.8%\n- Fever: 24.2%\n- Taken to a health facility for diarrhoea: 63.5%\n- Taken to a health facility for ARI: 66.7%\n- Treated for ARI: 71.1%\n- Diarrhoea treated with ORS: 57.7%\n- ORS and zinc: 44.8%\n" + "- other indicator: 50.0%\n".repeat(24) + "\nUN IGME 2024 estimates (Sudan):\n- Neonatal mortality rate 2024: 23.7 per 1,000 live births\n- Under-five mortality rate 2024: 61.6\n(Figures by state and locality show when that sub-tab is open.)";
+          const page = { title: "Morbidity & Mortality Indicators", place: "National Child Health Program – Dashboard – Morbidity & Mortality Indicators – Sudan MICS", view: "dashboard", text, reference };
+          const system = systemFor({ page, lang: "ar", pageChars: SIZES.groq.page, catalogue });
+          const long = "### مقارنة الإسهال والالتهاب الرئوي\n" + "في المسح الوطني MICS 2014 بلغ انتشار الإسهال 29٪ والالتهاب الرئوي 17.8٪ على المستوى الوطني، وتختلف الولايات اختلافاً كبيراً. ".repeat(30);
+          const history = [
+            { role: "user", content: "قارن بين MICS و S3M في الإسهال والالتهاب الرئوي" },
+            { role: "assistant", content: long.slice(0, 4000) },
+            { role: "user", content: "استخرج اي واحد على كدة ثم قارن" },
+            { role: "assistant", content: long.slice(0, 4000) },
+          ];
+          const call = async () => ({ note: "no reads needed" });
+          const run = async (label, h) => {
             const t0 = Date.now();
             try {
-              const out = await askChat({ provider: "groq", key: process.env.Q, models: GROQ_MODELS, system, history: [],
-                question: "عدد المؤسسات الصحية والأطباء في كل ولاية، ثم في كل محلية، ثم عدد الكورسات في كل ولاية، ثم المشاركين حسب المسمى الوظيفي. استخدم أداة منفصلة لكل جزء.",
-                call, deadline: Date.now() + 90000 });
-              console.log("ANSWERED by", out.model, "in", Math.round((Date.now() - t0) / 1000), "s with", n, "reads; tooManySteps:", !!out.tooManySteps, "|", String(out.text).slice(0, 200));
-            } catch (e) { console.log("FAILED after", Math.round((Date.now() - t0) / 1000), "s with", n, "reads:", e.message); }
+              const out = await askChat({ provider: "groq", key: process.env.Q, models: GROQ_MODELS, system, history: h, question: "حاول", call, deadline: Date.now() + 90000 });
+              console.log(label, "ANSWERED by", out.model, "in", Math.round((Date.now() - t0) / 1000), "s |", String(out.text).replace(/\n/g, " ").slice(0, 600));
+            } catch (e) { console.log(label, "FAILED after", Math.round((Date.now() - t0) / 1000), "s:", e.message); }
+          };
+          (async () => {
+            console.log("system chars", system.length);
+            await run("[A trimmed history]", keepHistoryWithin(history, SIZES.groq.history));
+            await run("[B full history]", history);
           })();
           JS
-          node /tmp/run.cjs 2>&1 | grep -E "replied|step|waiting|ANSWERED|FAILED|429" | sed -E 's/\{"severity":"[A-Z]+","message":"//; s/"\}$//' | head -60
+          node /tmp/run.cjs 2>&1 | grep -E "replied|step|waiting|ANSWERED|FAILED|429|413|without|empty|system chars" | sed -E 's/\{"severity":"[A-Z]+","message":"//; s/"\}$//' | head -60
 # rerun 1793136075
