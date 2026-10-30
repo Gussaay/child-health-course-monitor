@@ -157,6 +157,7 @@ import { publicBaseUrl } from './utils/publicLink';
 import SudanMiniMap from './components/SudanMiniMap';
 import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
 import { coverageColor } from './utils/statusColors';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
@@ -785,8 +786,8 @@ function SplashScreen() {
         <div className="fixed inset-0 bg-surface flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-20 w-20 object-contain" /></div>
             <div>
-                <h1 className="text-3xl font-bold text-slate-800">{t('app.title', 'National Child Health Program')}</h1>
-                <p className="text-lg text-slate-500 mt-1">{t('app.subtitle', 'Program & Course Monitoring System')}</p>
+                <h1 className="text-3xl font-bold text-slate-800">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
+                <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
             </div>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mt-4"></div>
             <p className="text-slate-600 mt-4">{t('app.loading_system', 'Loading application, please wait...')}</p>
@@ -1089,8 +1090,10 @@ export default function App() {
         }
     };
 
-    const [view, setView] = useState("landing");
-    const [activeCourseType, setActiveCourseType] = useState(null);
+    const [view, setView] = useState(IS_EMONC_SITE ? 'courses' : 'landing');
+    const [chosenCourseType, setActiveCourseType] = useState(null);
+    // The EmONC site shows only the EmONC course list, so its type never changes.
+    const activeCourseType = IS_EMONC_SITE ? 'EmONC' : chosenCourseType;
     const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [selectedParticipantId, setSelectedParticipantId] = useState(null);
     const [selectedFacilitatorId, setSelectedFacilitatorId] = useState(null);
@@ -1896,7 +1899,7 @@ export default function App() {
 
     const canSeeAllData = useMemo(() => permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures, [permissions]);
 
-    const filteredCourses = useMemo(() => {
+    const locationCourses = useMemo(() => {
         if (!allCourses) return [];
         const locPerm = permissions.manageLocation;
 
@@ -1916,6 +1919,9 @@ export default function App() {
         }
         return allCourses;
     }, [allCourses, userStates, userLocalities, permissions.manageLocation]);
+    const filteredCourses = useMemo(() => (
+        IS_EMONC_SITE ? locationCourses.filter(c => EMONC_COURSE_TYPES.includes(c.course_type)) : locationCourses
+    ), [locationCourses]);
 
     const filteredFacilitators = useMemo(() => {
         if (!allFacilitators) return [];
@@ -1949,7 +1955,7 @@ export default function App() {
 
     useEffect(() => { if (view === 'humanResources' && activeHRTab === 'facilitators' && permissions.canApproveSubmissions) fetchPendingSubmissions(); }, [view, activeHRTab, permissions.canApproveSubmissions, fetchPendingSubmissions]);
 
-    const selectedCourse = useMemo(() => (allCourses || []).find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
+    const selectedCourse = useMemo(() => (IS_EMONC_SITE ? filteredCourses : (allCourses || [])).find(c => c.id === selectedCourseId) || null, [allCourses, filteredCourses, selectedCourseId]);
     // The main menu's numbers. The last ones worked out are kept on the
     // device, so the menu shows them at once and refreshes them as data loads.
     const homeStatsKey = user?.uid ? `home_stats_${user.uid}` : null;
@@ -2005,7 +2011,8 @@ export default function App() {
     const selectedFacilitator = useMemo(() => (allFacilitators || []).find(f => f.id === selectedFacilitatorId) || null, [allFacilitators, selectedFacilitatorId]);
 
 
-    const navigate = useCallback((newView, state = {}) => {
+    const navigate = useCallback((requestedView, state = {}) => {
+        const newView = IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(requestedView) ? 'courses' : requestedView;
         const viewPermissions = {
             'landing': true, 'dashboard': true, 'admin': permissions.canViewAdmin, 'imciForm': permissions.canViewCourse, 'humanResources': permissions.canViewHumanResource,
             'courses': permissions.canViewCourse, 'courseDetails': permissions.canViewCourse, 'participants': permissions.canViewCourse, 'reports': permissions.canViewCourse,
@@ -2061,6 +2068,12 @@ export default function App() {
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
     navigateRef.current = navigate;
     viewRef.current = view;
+
+    // A few places still set the view directly (sign-in, a denied page). On the
+    // EmONC site those land on the course list instead of a hidden module.
+    useEffect(() => {
+        if (IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(view)) { setActiveCoursesTab('courses'); setView('courses'); }
+    }, [view]);
 
     // Opens a page described by an address or history entry.
     const applyPage = useCallback((page) => {
@@ -2858,7 +2871,7 @@ case 'meetings':
     const PAGE_TITLES = pageTitles(t);
     const closeSideMenu = () => setSideMenuOpen(false);
     const showSlimBar = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
-    const pageTitle = PAGE_TITLES[view] || t('app.title', 'National Child Health Program');
+    const pageTitle = PAGE_TITLES[view] || (IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program'));
     const pageSubtitle = (() => {
         if (view === 'facilitatorReport' || view === 'facilitatorForm') return selectedFacilitator?.name || '';
         const course = view === 'finalReport' ? (finalReportCourse || selectedCourse) : selectedCourse;
@@ -3014,9 +3027,9 @@ case 'meetings':
                                 <img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-9 w-9 sm:h-12 sm:w-12 object-contain" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">{t('app.title', 'National Child Health Program')}</h1>
+                                <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
-                                    <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
+                                    <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span
                                         onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
                                         className="bg-slate-700 text-sky-300 text-xs px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
@@ -3135,7 +3148,7 @@ case 'meetings':
                     user={user}
                     roleLabel={userRoles?.[0] ? String(userRoles[0]).replace(/_/g, ' ') : ''}
                     levelLabel={{ federal: t('landing.level_federal', 'Federal level'), state: t('landing.level_state', 'State level'), locality: t('landing.level_locality', 'Locality level') }[levelFromPermissions(permissions)]}
-                    modules={buildModules(t, permissions).filter(m => m.permission)}
+                    modules={buildModules(t, permissions).filter(m => m.permission && !(IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(m.view)))}
                     currentView={view}
                     onNavigate={guardedNavigate}
                     onProfile={() => setIsUserProfileModalOpen(true)}
@@ -3149,7 +3162,7 @@ case 'meetings':
                 />
             )}
 
-            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} /> }
+            { user && !isMinimalUILayout && !IS_EMONC_SITE && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} /> }
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
@@ -3399,7 +3412,7 @@ case 'meetings':
                 </Suspense>
             )}
 
-            {user && !isMinimalUILayout && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && (
+            {user && !isMinimalUILayout && !IS_EMONC_SITE && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && (
                 <DataAssistantButton onClick={openDataAssistant} />
             )}
             {dataAssistant.loaded && (

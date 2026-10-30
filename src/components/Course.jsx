@@ -65,6 +65,7 @@ import { canonicalOptions } from '../utils/nameRegistry';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
 import { countsForCoverage } from '../utils/coverageEligibility';
+import { IS_EMONC_SITE } from '../siteMode';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
@@ -2216,7 +2217,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                             </Button>
                                         )}
                                         <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="md:ms-auto"><ClipboardList size={14} className="me-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
-                                        <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>
+                                        {!IS_EMONC_SITE && <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>}
                                 </PageActions>
                                 
                                 <FilterPanel className="mb-4" activeCount={[filterState, filterLocality, filterSubCourse, filterProject].filter(v => v && v !== 'All').length}>

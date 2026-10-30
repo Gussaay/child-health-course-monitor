@@ -224,6 +224,9 @@ jobs:
           name: dist
           path: dist
 
+      # No `target`, so this publishes every site listed in firebase.json from
+      # the same dist/: imnci-courses-monitor, ch-sudan and emonc-sudan. The
+      # EmONC site picks its Courses-only mode from its address (src/siteMode.js).
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -247,6 +250,18 @@ jobs:
           done
           echo "::error::update.json did not show the new version. Check the Cache-Control headers in firebase.json."
           exit 1
+
+      # The two extra sites only need to answer. A warning, not a failure: the
+      # main site is already live at this point and must not be held back.
+      - name: Check the extra sites
+        run: |
+          for SITE in ch-sudan emonc-sudan; do
+            if curl -fsSL "https://${SITE}.web.app/latest/update.json?t=$(date +%s)" | grep -q "${{ needs.build.outputs.build_version }}"; then
+              echo "${SITE} is live."
+            else
+              echo "::warning::${SITE}.web.app did not show the new version."
+            fi
+          done
 
   # ---------------------------------------------------------------------------
   # Cloud Functions. Independent of the web app on purpose: the two have failed

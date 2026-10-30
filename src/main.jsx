@@ -11,9 +11,12 @@ import { DataProvider } from './DataContext';
 import { AuthProvider } from './hooks/useAuth';
 import { offerWebUpdate } from './hooks/useAppUpdate';
 import { isOnline } from './firebase';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
 import './index.css';
 
 window.Buffer = Buffer;
+
+if (IS_EMONC_SITE) document.title = EMONC_SITE_TITLE;
 
 const IS_NATIVE = Capacitor.isNativePlatform();
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.2';
