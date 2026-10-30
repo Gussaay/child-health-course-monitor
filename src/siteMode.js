@@ -13,9 +13,9 @@ export const IS_EMONC_SITE = import.meta.env.VITE_SITE === 'emonc' || EMONC_HOST
 
 export const EMONC_SITE_TITLE = 'Emergency Obstetrics and Newborn Care (EmONC)';
 
-// The course type the EmONC site is locked to. The EmONC course list already
-// includes EENC courses (see coursesForActiveType in Course.jsx).
-export const EMONC_COURSE_TYPES = ['EmONC', 'EENC'];
+// The only course type the EmONC site shows. The main app's EmONC list also
+// includes EENC courses (coursesForActiveType in Course.jsx); this site does not.
+export const EMONC_COURSE_TYPES = ['EmONC'];
 
 // Top-level modules the EmONC site does not offer. Anything not listed here is
 // part of the Courses module (course pages, participants, monitoring, reports).
