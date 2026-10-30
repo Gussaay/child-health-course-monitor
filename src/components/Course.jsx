@@ -2153,12 +2153,14 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         ...(!isGlobalView && selectedCourse ? (selectedCourse.course_type === 'EmONC' ? [
             { id: 'monitoring-maternal', label: t('course_page.tabs.maternal_monitor', 'Maternal Monitor'), short: t('ui.short.maternal', 'Maternal'), disabled: !currentParticipant, go: () => { setEmoncModule('maternal'); setActiveCoursesTab('monitoring'); } },
             { id: 'monitoring-neonatal', label: t('course_page.tabs.neonatal_monitor', 'Neonatal Monitor'), short: t('ui.short.neonatal', 'Neonatal'), disabled: !currentParticipant, go: () => { setEmoncModule('neonatal'); setActiveCoursesTab('monitoring'); } },
+        ] : showOsce ? [
+            // The midwives course has no observation grid; its skills are checked with the OSCE checklists.
+            { id: 'osce', label: t('course_page.tabs.osce', 'OSCE Checklists'), short: t('ui.short.osce', 'OSCE'), go: () => setActiveCoursesTab('osce') },
         ] : [
             { id: 'monitoring', label: isMentorship ? t('course_page.tabs.mentorship_practice', 'Mentorship Practice') : t('course_page.tabs.monitoring', 'Monitoring'), short: isMentorship ? t('ui.short.practice', 'Practice') : t('ui.short.monitor', 'Monitor'), disabled: !currentParticipant, go: () => setActiveCoursesTab('monitoring') },
         ]) : []),
         !isGlobalView && selectedCourse && { id: 'reports', label: t('course_page.tabs.individual_report', 'Individual Participant Report'), short: t('ui.short.report', 'Report'), go: () => setActiveCoursesTab('reports') },
         showTestScores && { id: 'enter-test-scores', label: t('course_page.tabs.test_scores', 'Test Scores'), short: t('ui.short.tests', 'Tests'), go: () => setActiveCoursesTab('enter-test-scores') },
-        showOsce && { id: 'osce', label: t('course_page.tabs.osce', 'OSCE Checklists'), short: t('ui.short.osce', 'OSCE'), go: () => setActiveCoursesTab('osce') },
         showExercises && { id: 'exercises', label: t('course_page.tabs.exercises', 'Exercises'), short: t('ui.short.exercises', 'Exercises'), go: () => setActiveCoursesTab('exercises') },
         !isGlobalView && selectedCourse && canManageCourseCertificates && { id: 'course-certificates', label: <>{t('course_page.tabs.certificates', 'Certificates')}{selectedCourse.isCertificateApproved && <span className="ms-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>}</>, short: t('ui.short.certificates', 'Certificates'), go: openTab('course-certificates') },
     ];
@@ -2166,6 +2168,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         ['courses', 'add-course', 'edit-course'].includes(activeCoursesTab) ? 'courses'
         : ['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) ? 'participants'
         : activeCoursesTab === 'monitoring' && selectedCourse?.course_type === 'EmONC' ? `monitoring-${emoncModule}`
+        : activeCoursesTab === 'monitoring' && showOsce ? 'osce'
         : activeCoursesTab;
 
     return (
@@ -2373,7 +2376,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message={t('course_page.select_course_participants', "Please select a course from the 'Courses' tab to view participants.")} />}
 
 {/* --- SPLIT SCREEN MONITORS VIEW OR STANDALONE --- */}
-{activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && (
+{activeCoursesTab === 'monitoring' && !showOsce && selectedCourse && currentParticipant && (
     <Suspense fallback={<PageSkeleton />}>
         {selectedCourse.course_type === 'EmONC' ? (
             emoncModule === 'maternal' ? (
@@ -2433,7 +2436,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
             />
         )}
 
-        {activeCoursesTab === 'osce' && selectedCourse && (
+        {(activeCoursesTab === 'osce' || (activeCoursesTab === 'monitoring' && showOsce)) && selectedCourse && (
             <Suspense fallback={<PageSkeleton />}>
                 <CpcmOsceView
                     participants={participants}

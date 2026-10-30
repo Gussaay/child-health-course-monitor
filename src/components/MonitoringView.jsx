@@ -1,5 +1,7 @@
 // MonitoringView.jsx
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import CpcmOsceView from './cpcm/CpcmOsceView';
+import { CPCM_COURSE_TYPE } from './cpcm/osceChecklists.js';
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, Table, EmptyState, Modal, SkeletonCard } from "./CommonComponents";
 import {
@@ -89,7 +91,17 @@ function ActionToggle({ options, currentValue, onClick }) {
     );
 }
 
-export function ObservationView({ course, participant, participants, onChangeParticipant, initialCaseToEdit, isPublicView = false }) {
+// The community midwives course has no observation grid: its clinical skills
+// are checked with the OSCE checklists, so monitoring (tab, page or public
+// link) opens those instead.
+export function ObservationView(props) {
+    if (props.course?.course_type === CPCM_COURSE_TYPE) {
+        return <CpcmOsceView participants={props.participants || []} selectedParticipantId={props.participant?.id} canEdit />;
+    }
+    return <ClinicalObservationView {...props} />;
+}
+
+function ClinicalObservationView({ course, participant, participants, onChangeParticipant, initialCaseToEdit, isPublicView = false }) {
     const { t } = useTranslation();
     const [observations, setObservations] = useState([]);
     const [cases, setCases] = useState([]);

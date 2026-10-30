@@ -31,7 +31,7 @@ function OsceOverview({ participants, results, onOpen }) {
                     const done = participants.filter(p => results[p.id]?.[c.id]);
                     const passed = done.filter(p => results[p.id][c.id].passed).length;
                     return (
-                        <button key={c.id} type="button" onClick={() => onOpen(c.id, participants[0]?.id)} dir="rtl"
+                        <button key={c.id} type="button" onClick={() => onOpen(c.id)} dir="rtl"
                             className="text-start rounded-lg border border-slate-200 bg-white p-3 hover:border-sky-400 hover:bg-sky-50">
                             <div className="text-xs font-bold text-sky-700">{c.short}</div>
                             <div className="text-sm font-semibold text-slate-800 leading-snug mt-1">{c.title}</div>
