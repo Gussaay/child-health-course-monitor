@@ -37,7 +37,6 @@ import {
   getConnectivity,
   subscribeConnectivity,
   useConnectivity,
-  checkConnectionNow,
   reportRequestFailure,
 } from '../firebase';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
@@ -398,24 +397,22 @@ export function useAppUpdate() {
       return;
     }
 
+    // Offline: a short note that goes away by itself, not a popup to dismiss.
+    const quiet = (message) => {
+      setManualModal({ isOpen: true, status: 'quiet', message });
+      setTimeout(() => setManualModal((m) => (m.status === 'quiet' ? { isOpen: false, status: 'idle', message: '' } : m)), 3000);
+    };
     const current = getConnectivity();
     if (current.status === 'offline') {
-      setManualModal({
-        isOpen: true,
-        status: 'error',
-        message: t('admin_pages.app_update.manual_offline', 'No network connection. Turn off airplane mode, or turn on mobile data or Wi-Fi.'),
-      });
+      quiet(t('admin_pages.app_update.manual_offline', 'No network connection. Turn off airplane mode, or turn on mobile data or Wi-Fi.'));
       return;
     }
     if (current.status === 'no-internet') {
-      setManualModal({
-        isOpen: true,
-        status: 'error',
-        message:
+      quiet(
           current.type === 'wifi'
             ? t('admin_pages.app_update.wifi_no_internet', 'Connected to Wi-Fi, but it has no internet.')
             : t('admin_pages.app_update.no_internet_signal', 'There is no internet. Check your signal or data balance.'),
-      });
+      );
       return;
     }
 
@@ -573,55 +570,20 @@ export function useAppUpdate() {
     setNativeUpdatePrompt(null);
   }, []);
 
-  // --- ALL MODALS + THE CONNECTION BANNER ---
+  // --- ALL MODALS ---
   const AppUpdateModals = useCallback(() => {
     const closeManual = () => setManualModal({ isOpen: false, status: 'idle', message: '' });
     const otaVisible = ota.available && !ota.dismissed && !nativeUpdatePrompt;
     const onDataEntryPage = DATA_ENTRY_PATH.test(window.location.pathname);
 
-    const banner =
-      net.status === 'offline'
-        ? {
-            tone: 'bg-gray-800 text-white',
-            text: t('admin_pages.app_update.banner.offline', 'No network. Turn off airplane mode or turn on mobile data / Wi-Fi. You are seeing saved data; your changes will upload later.'),
-          }
-        : net.status === 'no-internet'
-        ? {
-            tone: 'bg-amber-100 text-amber-900',
-            text:
-              (net.type === 'wifi'
-                ? t('admin_pages.app_update.wifi_no_internet', 'Connected to Wi-Fi, but it has no internet.')
-                : net.type === 'cellular'
-                ? t('admin_pages.app_update.banner.cellular_no_internet', 'Mobile data is on, but there is no internet. Check signal or data balance.')
-                : t('admin_pages.app_update.why.no_internet', 'Connected to a network, but there is no internet.')) +
-              ' ' + t('admin_pages.app_update.banner.saved_data', 'Showing saved data; changes will upload later.'),
-          }
-        : null; // A slow connection still works, so nothing is shown for it.
+    // Offline is shown by the small pill (components/OfflinePill.jsx), not a
+    // banner, and update popups wait until the internet is back: nothing
+    // should interrupt someone working offline.
+    const offlineNow = net.status === 'offline' || net.status === 'no-internet';
 
     return (
       <>
-        {banner && (
-          <div
-            role="status"
-            aria-live="polite"
-            className={`fixed inset-x-0 top-0 z-40 flex items-center gap-3 px-4 py-2 text-sm ${banner.tone}`}
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}
-          >
-            <span className="flex-1">{banner.text}</span>
-            {net.status !== 'online' && (
-              <button
-                type="button"
-                onClick={() => checkConnectionNow('user-retry')}
-                disabled={net.checking}
-                className="shrink-0 rounded-md border border-current px-3 py-1 font-medium disabled:opacity-50"
-              >
-                {net.checking ? t('admin_pages.app_update.checking', 'Checking…') : t('admin_pages.app_update.retry', 'Retry')}
-              </button>
-            )}
-          </div>
-        )}
-
-        {nativeUpdatePrompt && (
+        {nativeUpdatePrompt && (!offlineNow || apkDownloading) && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
             style={{
@@ -676,7 +638,7 @@ export function useAppUpdate() {
           </div>
         )}
 
-        {otaVisible && (
+        {otaVisible && !offlineNow && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
             role="dialog"
@@ -736,7 +698,13 @@ export function useAppUpdate() {
           </div>
         )}
 
-        {manualModal.isOpen && (
+        {manualModal.isOpen && manualModal.status === 'quiet' && (
+          <div role="status" className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
+            <p className="max-w-sm rounded-full bg-slate-800/90 px-4 py-2 text-center text-xs text-white shadow-lg">{manualModal.message}</p>
+          </div>
+        )}
+
+        {manualModal.isOpen && manualModal.status !== 'quiet' && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
               <div className="flex items-start gap-3">

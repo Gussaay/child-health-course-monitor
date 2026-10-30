@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -141,7 +141,8 @@ import {
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton } from './components/CommonComponents';
-import { auth, db, isOnline } from './firebase';
+import { auth, db, isOnline, getConnectivity } from './firebase';
+import OfflinePill from './components/OfflinePill';
 
 import { doc, getDoc, getDocFromServer, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
 
@@ -1191,6 +1192,12 @@ export default function App() {
     const replaceNextPageRef = useRef(false);
 
     const handleFileDownloadAndOpen = (url, customFileName = null) => {
+        // Offline: one quiet line instead of a download bar that then fails
+        // with a native error.
+        if (['offline', 'no-internet'].includes(getConnectivity().status)) {
+            setToast({ show: true, message: t('app.download_offline', 'No internet right now, so this file cannot be downloaded. Try again when you are back online.'), type: 'info' });
+            return;
+        }
         downloadAndOpenFile(url, customFileName, {
             onStart: () => { setIsFileDownloading(true); setFileDownloadProgress(0); },
             onSuccess: () => setToast({ show: true, message: t('app_extra.toast.download_opening', 'Download complete. Opening...'), type: 'success' }),
@@ -2951,15 +2958,11 @@ case 'meetings':
                 code and it pulls in jsPDF and html2canvas. */}
             <Suspense fallback={null}><CertificateDownloadBanner /></Suspense>
 
+            {/* Offline is a small floating pill, not a bar: it takes no space
+                and blocks no taps, so open forms and quizzes carry on. */}
+            <OfflinePill />
+
             <div className="fixed top-0 start-0 w-full z-[100005] flex flex-col">
-                {isOffline && (
-                    <div className="bg-amber-500 text-white py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md overflow-hidden">
-                        <WifiOff className="w-5 h-5 shrink-0" /> 
-                        <span className="truncate">
-                            {t('app.offline', 'App offline. Saved data will sync when online.')}
-                        </span>
-                    </div>
-                )}
                 {(isFileDownloading || isDownloadingAppUpdate) && (
                     <div className="bg-sky-700 text-white py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md relative overflow-hidden">
                         <div 
@@ -2975,7 +2978,7 @@ case 'meetings':
             </div>
 
             {showSlimBar ? (
-            <header ref={headerRef} className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header ref={headerRef} className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-14 px-1 sm:px-4">
                     <button
                         onClick={goBack}
@@ -2992,7 +2995,7 @@ case 'meetings':
                 </div>
             </header>
             ) : (<>
-            <header ref={headerRef} className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header ref={headerRef} className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0">

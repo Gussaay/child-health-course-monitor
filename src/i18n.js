@@ -7373,7 +7373,8 @@ const resources = {
       },
       menu: { title: "Menu", profile: "My profile", sync: "Data sync status", offline: "Offline – sync status", updates: "Check for updates", close: "Close menu", version: "App version" },
       app: {
-        back: "Back", leave_form: "You have unsaved changes. Leave this page without saving?", unsaved_title: "Unsaved changes", leave: "Leave", stay: "Stay", title: "National Child Health Program", subtitle: "Program & Course Monitoring System", loading_system: "Loading application, please wait...", offline: "You are offline. Changes are saved locally and will sync when reconnected.", syncing: "Syncing offline data to the cloud...", welcome: "Welcome", logout: "Logout"
+        back: "Back", leave_form: "You have unsaved changes. Leave this page without saving?", unsaved_title: "Unsaved changes", leave: "Leave", stay: "Stay", title: "National Child Health Program", subtitle: "Program & Course Monitoring System", loading_system: "Loading application, please wait...", offline: "You are offline. Changes are saved locally and will sync when reconnected.", syncing: "Syncing offline data to the cloud...", welcome: "Welcome", logout: "Logout",
+        offline_pill: "Offline", no_internet_pill: "No internet", offline_pill_label: "Offline. Showing saved data; changes sync later.", download_offline: "No internet right now, so this file cannot be downloaded. Try again when you are back online."
       },
       imci: {
         form_title: "IMNCI Recording Form",
@@ -14769,7 +14770,8 @@ const resources = {
       },
       menu: { title: "القائمة", profile: "ملفي الشخصي", sync: "حالة مزامنة البيانات", offline: "غير متصل – حالة المزامنة", updates: "التحقق من التحديثات", close: "إغلاق القائمة", version: "إصدار التطبيق" },
       app: {
-        back: "رجوع", leave_form: "لديك تغييرات غير محفوظة. هل تريد مغادرة الصفحة دون حفظ؟", unsaved_title: "تغييرات غير محفوظة", leave: "مغادرة", stay: "البقاء", title: "البرنامج القومي لصحة الطفل", subtitle: "نظام متابعة البرامج والدورات", loading_system: "جاري تحميل النظام، يرجى الانتظار...", offline: "أنت غير متصل بالإنترنت. يتم حفظ التغييرات محلياً وستتم مزامنتها عند الاتصال.", syncing: "جاري مزامنة البيانات غير المتصلة مع السحابة...", welcome: "مرحباً", logout: "تسجيل الخروج"
+        back: "رجوع", leave_form: "لديك تغييرات غير محفوظة. هل تريد مغادرة الصفحة دون حفظ؟", unsaved_title: "تغييرات غير محفوظة", leave: "مغادرة", stay: "البقاء", title: "البرنامج القومي لصحة الطفل", subtitle: "نظام متابعة البرامج والدورات", loading_system: "جاري تحميل النظام، يرجى الانتظار...", offline: "أنت غير متصل بالإنترنت. يتم حفظ التغييرات محلياً وستتم مزامنتها عند الاتصال.", syncing: "جاري مزامنة البيانات غير المتصلة مع السحابة...", welcome: "مرحباً", logout: "تسجيل الخروج",
+        offline_pill: "غير متصل", no_internet_pill: "لا يوجد إنترنت", offline_pill_label: "غير متصل. تُعرض البيانات المحفوظة وستُزامن التغييرات لاحقاً.", download_offline: "لا يوجد إنترنت الآن، لذا لا يمكن تنزيل هذا الملف. حاول مجدداً عند عودة الاتصال."
       },
       imci: {
         form_title: "استمارة تقييم الرعاية المتكاملة (IMNCI)",
