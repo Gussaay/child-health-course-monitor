@@ -96,7 +96,7 @@ function ActionToggle({ options, currentValue, onClick }) {
 // link) opens those instead.
 export function ObservationView(props) {
     if (props.course?.course_type === CPCM_COURSE_TYPE) {
-        return <CpcmOsceView participants={props.participants || []} selectedParticipantId={props.participant?.id} canEdit />;
+        return <CpcmOsceView participants={props.participants || []} selectedParticipantId={props.participant?.id} canEdit lockParticipant />;
     }
     return <ClinicalObservationView {...props} />;
 }

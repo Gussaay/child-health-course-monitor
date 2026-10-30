@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { Button, Card, CardBody, EmptyState, Select, Spinner, Textarea } from '../CommonComponents';
+import { Button, EmptyState, Select, Spinner, Textarea } from '../CommonComponents';
 import { confirmDialog } from '../dialogs';
 import { saveParticipantOsceResult } from '../../data.js';
 import { OSCE_CHECKLISTS, getOsceChecklist, scoreOsce, buildOsceRecord } from './osceChecklists.js';
@@ -74,36 +74,49 @@ function OsceOverview({ participants, results, onOpen }) {
     );
 }
 
-function StepRow({ step, value, onChange, readOnly }) {
-    const { t } = useTranslation();
-    const btn = (val, label, on) => (
-        <button type="button" disabled={readOnly} onClick={() => onChange(value === val ? undefined : val)}
-            className={`px-3 py-1.5 text-xs font-semibold border first:rounded-s-md last:rounded-e-md disabled:cursor-default ${value === val ? on : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
-            {label}
-        </button>
-    );
+// Same segmented control as the other monitoring checklists (EENC, ICCM).
+function StepToggle({ value, onChange, readOnly }) {
+    const options = [['نفذ', 'done', 'bg-green-600 border-green-600'], ['لم ينفذ', 'not_done', 'bg-red-600 border-red-600']];
     return (
-        <div className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-            <div className="flex-1 min-w-[12rem]">
-                <div className="text-sm text-slate-800">
-                    {step.text}
-                    {step.critical && <span className="text-red-600 font-bold ms-1" title={t('cpcm_osce.critical', 'Must be done to pass')}>*</span>}
-                </div>
-                {step.hint && <div className="text-xs text-slate-500 mt-0.5">{step.hint}</div>}
-            </div>
-            <div className="flex shrink-0" dir="rtl">
-                {btn('done', 'نفذ', 'bg-green-600 text-white border-green-600')}
-                {btn('not_done', 'لم ينفذ', 'bg-red-600 text-white border-red-600')}
-            </div>
+        <div className="relative z-0 flex w-full sm:inline-flex sm:w-auto shadow-sm rounded-md sm:flex-shrink-0">
+            {options.map(([label, val, activeClass], idx) => (
+                <button
+                    key={val}
+                    type="button"
+                    disabled={readOnly}
+                    onClick={() => onChange(val)}
+                    className={`relative inline-flex flex-1 sm:flex-none items-center justify-center px-3 py-2.5 sm:py-1 min-h-[44px] sm:min-h-0 text-sm font-medium leading-tight whitespace-nowrap touch-manipulation focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 transition border border-gray-300 disabled:cursor-default ${idx === 0 ? 'rounded-s-md' : '-ms-px rounded-e-md'} ${value === val ? `${activeClass} text-white` : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                >
+                    {label}
+                </button>
+            ))}
         </div>
     );
 }
 
-function OsceForm({ checklist, participant, participants, previous, canEdit, assessorName, onChangeParticipant, onChangeChecklist, onBack, onSaved }) {
+function StepRow({ step, value, onChange, readOnly }) {
+    const { t } = useTranslation();
+    return (
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
+            <div className="min-w-0 flex-1">
+                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">
+                    {step.text}
+                    {step.critical && <span className="text-red-600 font-bold ms-1" title={t('cpcm_osce.critical', 'Must be done to pass')}>*</span>}
+                </span>
+                {step.hint && <div className="text-xs text-slate-500 mt-0.5">{step.hint}</div>}
+            </div>
+            <StepToggle value={value} onChange={onChange} readOnly={readOnly} />
+        </div>
+    );
+}
+
+function OsceForm({ checklist, participant, participants, previous, canEdit, assessorName, onChangeParticipant, onChangeChecklist, onBack, onSaved, lockedParticipant = false }) {
     const { t } = useTranslation();
     const [answers, setAnswers] = useState(previous?.answers || {});
     const [notes, setNotes] = useState(previous?.notes || '');
     const [showGuide, setShowGuide] = useState(!previous);
+    const [expanded, setExpanded] = useState(() => new Set([0, 1]));
+    const toggleSection = (i) => setExpanded(prev => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next; });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -138,19 +151,21 @@ function OsceForm({ checklist, participant, participants, previous, canEdit, ass
 
     return (
         <div className="space-y-4 pb-28">
-            <div className="flex flex-wrap items-end gap-3">
-                <Button variant="secondary" onClick={onBack}>{t('cpcm_osce.back', '← All results')}</Button>
-                <div className="flex-1 min-w-[12rem]">
-                    <Select label={t('cpcm_osce.participant', 'Participant')} value={participant.id} onChange={e => onChangeParticipant(e.target.value)}>
-                        {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </Select>
+            {!lockedParticipant && (
+                <div className="flex flex-wrap items-end gap-3">
+                    <Button variant="secondary" onClick={onBack}>{t('cpcm_osce.back', '← All results')}</Button>
+                    <div className="flex-1 min-w-[12rem]">
+                        <Select label={t('cpcm_osce.participant', 'Participant')} value={participant.id} onChange={e => onChangeParticipant(e.target.value)}>
+                            {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </Select>
+                    </div>
+                    <div className="flex-1 min-w-[12rem]">
+                        <Select label={t('cpcm_osce.checklist', 'Checklist')} value={checklist.id} onChange={e => onChangeChecklist(e.target.value)}>
+                            {OSCE_CHECKLISTS.map(c => <option key={c.id} value={c.id}>{c.short} – {c.title}</option>)}
+                        </Select>
+                    </div>
                 </div>
-                <div className="flex-1 min-w-[12rem]">
-                    <Select label={t('cpcm_osce.checklist', 'Checklist')} value={checklist.id} onChange={e => onChangeChecklist(e.target.value)}>
-                        {OSCE_CHECKLISTS.map(c => <option key={c.id} value={c.id}>{c.short} – {c.title}</option>)}
-                    </Select>
-                </div>
-            </div>
+            )}
 
             <div dir="rtl" className="space-y-4">
                 <h3 className="text-lg font-bold text-slate-800">{checklist.title}</h3>
@@ -175,21 +190,45 @@ function OsceForm({ checklist, participant, participants, previous, canEdit, ass
                     )}
                 </div>
 
-                {checklist.sections.map((section, si) => (
-                    <Card key={si}>
-                        <CardBody className="!py-2">
-                            {section.title && <h4 className="font-bold text-slate-800 pt-2 pb-1">{section.title}</h4>}
-                            <div className="divide-y divide-slate-100">
-                                {section.entries.map((entry, ei) => entry.id ? (
-                                    <StepRow key={entry.id} step={entry} value={answers[entry.id]} readOnly={readOnly}
-                                        onChange={v => setAnswers(a => { const next = { ...a }; if (v) next[entry.id] = v; else delete next[entry.id]; return next; })} />
-                                ) : (
-                                    <p key={`p${ei}`} className="py-2 text-sm font-semibold text-red-700">توجيه: {entry.prompt}</p>
-                                ))}
+                <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
+                    <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">انقر على عنوان المجال لتوسيعه/طيّه</span>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpanded(new Set(checklist.sections.map((_, i) => i)))}>توسيع الكل</Button>
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setExpanded(new Set())}>طي الكل</Button>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    {checklist.sections.map((section, si) => {
+                        const isExpanded = expanded.has(si);
+                        const steps = section.entries.filter(e => e.id);
+                        const marked = steps.filter(e => answers[e.id]).length;
+                        const title = section.title || steps.map(e => e.text).join('، ');
+                        return (
+                            <div key={si} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleSection(si)}
+                                    className={`w-full flex items-center justify-between gap-3 p-4 text-start transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                                >
+                                    <h4 className="min-w-0 flex-1 text-sm sm:text-base font-bold text-slate-800 text-start break-words">{title}</h4>
+                                    <span className={`text-xs font-semibold tabular-nums ${marked === steps.length ? 'text-green-700' : 'text-slate-500'}`}>{marked}/{steps.length}</span>
+                                    <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                                {isExpanded && (
+                                    <div className="divide-y divide-slate-100 bg-white">
+                                        {section.entries.map((entry, ei) => entry.id ? (
+                                            <StepRow key={entry.id} step={entry} value={answers[entry.id]} readOnly={readOnly}
+                                                onChange={v => setAnswers(a => ({ ...a, [entry.id]: v }))} />
+                                        ) : (
+                                            <p key={`p${ei}`} className="p-3 sm:px-5 text-sm font-semibold text-red-700">توجيه: {entry.prompt}</p>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        </CardBody>
-                    </Card>
-                ))}
+                        );
+                    })}
+                </div>
 
                 <div className="text-sm text-slate-600 space-y-1">
                     <p className="font-semibold">{checklist.passNote}</p>
@@ -231,12 +270,16 @@ function OsceForm({ checklist, participant, participants, previous, canEdit, ass
     );
 }
 
-export default function CpcmOsceView({ participants = [], selectedParticipantId, canEdit, assessorName, onSaved }) {
+// lockParticipant: the page around this view already picks the participant
+// (the monitoring page and link), so only the checklist is chosen here, the
+// way the other monitoring checklists pick their scenario.
+export default function CpcmOsceView({ participants = [], selectedParticipantId, canEdit, assessorName, onSaved, lockParticipant = false }) {
     const { t } = useTranslation();
     const active = useMemo(() => participants.filter(p => !p.isDeleted), [participants]);
     // Saved results show at once, before the participant list reloads.
     const [overrides, setOverrides] = useState({});
     const [open, setOpen] = useState(null); // { checklistId, participantId }
+    const [lockedChecklistId, setLockedChecklistId] = useState(OSCE_CHECKLISTS[0].id);
 
     useEffect(() => { setOverrides({}); }, [participants]);
 
@@ -254,12 +297,41 @@ export default function CpcmOsceView({ participants = [], selectedParticipantId,
 
     const handleSaved = (participantId, checklistId, record) => {
         setOverrides(o => ({ ...o, [participantId]: { ...(o[participantId] || {}), [checklistId]: record || undefined } }));
-        setOpen(null);
+        if (!lockParticipant) setOpen(null);
         if (onSaved) onSaved();
     };
 
     const participant = open && active.find(p => p.id === open.participantId);
     const checklist = open && getOsceChecklist(open.checklistId);
+
+    if (lockParticipant) {
+        const lockedParticipantRow = active.find(p => p.id === selectedParticipantId);
+        const lockedChecklist = getOsceChecklist(lockedChecklistId);
+        if (!lockedParticipantRow) return <EmptyState message={t('cpcm_osce.no_participants', 'Add participants to this course first.')} />;
+        const done = results[lockedParticipantRow.id] || {};
+        return (
+            <div className="p-1 md:p-2 space-y-4">
+                <Select label={t('cpcm_osce.checklist', 'Checklist')} value={lockedChecklistId} onChange={e => setLockedChecklistId(e.target.value)} dir="rtl">
+                    {OSCE_CHECKLISTS.map(c => (
+                        <option key={c.id} value={c.id}>
+                            {c.title}{done[c.id] ? ` (${done[c.id].score}/${done[c.id].total} ${done[c.id].passed ? '✓' : '✗'})` : ''}
+                        </option>
+                    ))}
+                </Select>
+                <OsceForm
+                    key={`${lockedParticipantRow.id}_${lockedChecklist.id}`}
+                    checklist={lockedChecklist}
+                    participant={lockedParticipantRow}
+                    participants={active}
+                    previous={done[lockedChecklist.id] || null}
+                    canEdit={canEdit}
+                    assessorName={assessorName}
+                    onSaved={handleSaved}
+                    lockedParticipant
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="p-1 md:p-2">
