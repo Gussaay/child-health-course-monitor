@@ -1444,6 +1444,19 @@ export async function upsertParticipant(payload) {
     }
 }
 
+// OSCE / skill checklists (community midwives course) live on the participant
+// under osce_results.<checklistId>, so they load with the participant list.
+// A null record removes that checklist's result.
+export async function saveParticipantOsceResult(participantId, checklistId, record) {
+    if (!participantId || !checklistId) throw new Error("Participant ID and checklist are required.");
+    const participantRef = doc(db, "participants", participantId);
+    const writePromise = updateDoc(participantRef, {
+        [`osce_results.${checklistId}`]: record ? record : deleteField(),
+        lastUpdatedAt: serverTimestamp()
+    });
+    await executeOfflineSafeWrite(writePromise, `OSCE ${checklistId}`);
+}
+
 export async function updateParticipantSharingSettings(participantId, settings) {
     if (!participantId) throw new Error("Participant ID is required.");
     const participantRef = doc(db, "participants", participantId);

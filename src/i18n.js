@@ -6,6 +6,20 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 const resources = {
   en: {
     translation: {
+      cpcm_osce: {
+        title: "OSCE & skill checklists",
+        subtitle: "ECEB OSCE A and B, HBB OSCE stations A and B, and the bag-and-mask skill check.",
+        passed_of_assessed: "{{passed}} passed of {{done}} assessed",
+        no_participants: "Add participants to this course first.",
+        participant: "Participant",
+        checklist: "Checklist",
+        overview_hint: "Green passed, red not yet passed. Tap a cell to open or fill that checklist.",
+        critical: "Must be done to pass",
+        confirm_clear: "Remove this result for {{name}}?",
+        back: "← All results",
+        clear: "Remove",
+        save: "Save",
+      },
       data_assistant: {
         ask: "Ask",
         saved_answer: "Saved answer",
@@ -161,7 +175,7 @@ const resources = {
           facilitators: "{{n}} facilitators on the team", overall: "Overall service coverage is {{n}}%",
           service: "{{service}} coverage is {{n}}%"
         },
-        short: { active: "Active", admin: "Admin", all_facilities: "Facilities", ams: "AMS", annual: "Annual", approvals: "Approvals", back: "Back", certificates: "Certs", completed: "Completed", current: "Current", dashboard: "Stats", deleted: "Deleted", entry: "Entry", evaluation: "Evaluation", exercises: "Exercises", facility: "Facility", federal: "Federal", hand_hygiene: "Hand Hygiene", ipc: "IPC", list: "List", locality_plans: "Plans", maternal: "Maternal", members: "Members", monitor: "Monitor", monthly: "Monthly", mothers: "Mothers", neonatal: "Neonatal", participants: "Participants", pending: "Pending", practice: "Practice", quantify: "Quantify", quarterly: "Quarterly", report: "Report", reports: "Reports", skills: "Skills", structure: "Structure", tests: "Tests", trash: "Trash", visits: "Visits", weekly: "Weekly", supply_drugs: "Drugs", supply_equipment: "Equipment", supply_consumables: "Consumables", supply_information: "Info", admin_roles: "Roles", admin_permissions: "Permissions", admin_notifications: "Notify", admin_problems: "Problems", admin_usage: "Usage", admin_updates: "Updates" },
+        short: { osce: "OSCE", active: "Active", admin: "Admin", all_facilities: "Facilities", ams: "AMS", annual: "Annual", approvals: "Approvals", back: "Back", certificates: "Certs", completed: "Completed", current: "Current", dashboard: "Stats", deleted: "Deleted", entry: "Entry", evaluation: "Evaluation", exercises: "Exercises", facility: "Facility", federal: "Federal", hand_hygiene: "Hand Hygiene", ipc: "IPC", list: "List", locality_plans: "Plans", maternal: "Maternal", members: "Members", monitor: "Monitor", monthly: "Monthly", mothers: "Mothers", neonatal: "Neonatal", participants: "Participants", pending: "Pending", practice: "Practice", quantify: "Quantify", quarterly: "Quarterly", report: "Report", reports: "Reports", skills: "Skills", structure: "Structure", tests: "Tests", trash: "Trash", visits: "Visits", weekly: "Weekly", supply_drugs: "Drugs", supply_equipment: "Equipment", supply_consumables: "Consumables", supply_information: "Info", admin_roles: "Roles", admin_permissions: "Permissions", admin_notifications: "Notify", admin_problems: "Problems", admin_usage: "Usage", admin_updates: "Updates" },
         dash_tabs: { combined: "All", neonatal: "Neonatal", eenc: "EENC", imnci: "IMNCI", critical: "Critical", population: "Population", indicators: "Indicators" }
       },
 
@@ -1624,6 +1638,7 @@ const resources = {
           neonatal_monitor: "Neonatal Monitor",
           participants: "Participants",
           test_scores: "Test Scores",
+          osce: "OSCE Checklists",
           type_dashboard: "{{type}} Dashboard",
         },
         toast: {
@@ -7397,6 +7412,20 @@ const resources = {
   },
   ar: {
     translation: {
+      cpcm_osce: {
+        title: "قوائم الأوسكي وتقييم المهارات",
+        subtitle: "أوسكي الرعاية الضرورية للوليد (أ و ب)، أوسكي مساعدة الأطفال على التنفس (محطة أ و ب)، وتقييم مهارة الكيس والقناع.",
+        passed_of_assessed: "نجح {{passed}} من {{done}} تم تقييمهم",
+        no_participants: "أضف المشاركين لهذه الدورة أولاً.",
+        participant: "المشارك",
+        checklist: "القائمة",
+        overview_hint: "الأخضر ناجح، والأحمر لم ينجح بعد. اضغط على الخانة لفتح القائمة أو تعبئتها.",
+        critical: "يجب تنفيذها للنجاح",
+        confirm_clear: "حذف هذه النتيجة لـ {{name}}؟",
+        back: "→ كل النتائج",
+        clear: "حذف",
+        save: "حفظ",
+      },
       data_assistant: {
         ask: "اسأل",
         saved_answer: "إجابة محفوظة",
@@ -7548,7 +7577,7 @@ const resources = {
           facilitators: "{{n}} ميسراً في الفريق", overall: "التغطية الكلية للخدمات {{n}}%",
           service: "تغطية {{service}} {{n}}%"
         },
-        short: { active: "النشطة", admin: "الإدارة", all_facilities: "المنشآت", ams: "الإشراف الدوائي", annual: "السنوية", approvals: "الموافقات", back: "رجوع", certificates: "الشهادات", completed: "المكتملة", current: "الحاليون", dashboard: "اللوحة", deleted: "المحذوفات", entry: "الإدخال", evaluation: "التقييم", exercises: "التمارين", facility: "المنشأة", federal: "الإتحادية", hand_hygiene: "نظافة اليدين", ipc: "مكافحة العدوى", list: "القائمة", locality_plans: "الخطط", maternal: "الأمومة", members: "الأعضاء", monitor: "المتابعة", monthly: "الشهرية", mothers: "الأمهات", neonatal: "حديثي الولادة", participants: "المشاركون", pending: "المعلّقة", practice: "التطبيق", quantify: "التقدير", quarterly: "الربعية", report: "التقرير", reports: "التقارير", skills: "المهارات", structure: "الهيكل", tests: "الاختبارات", trash: "المهملات", visits: "الزيارات", weekly: "الأسبوعية", supply_drugs: "الأدوية", supply_equipment: "المعدات", supply_consumables: "المستهلكات", supply_information: "المعلوماتية", admin_roles: "الأدوار", admin_permissions: "الصلاحيات", admin_notifications: "الإشعارات", admin_problems: "البلاغات", admin_usage: "الاستخدام", admin_updates: "التحديثات" },
+        short: { osce: "أوسكي", active: "النشطة", admin: "الإدارة", all_facilities: "المنشآت", ams: "الإشراف الدوائي", annual: "السنوية", approvals: "الموافقات", back: "رجوع", certificates: "الشهادات", completed: "المكتملة", current: "الحاليون", dashboard: "اللوحة", deleted: "المحذوفات", entry: "الإدخال", evaluation: "التقييم", exercises: "التمارين", facility: "المنشأة", federal: "الإتحادية", hand_hygiene: "نظافة اليدين", ipc: "مكافحة العدوى", list: "القائمة", locality_plans: "الخطط", maternal: "الأمومة", members: "الأعضاء", monitor: "المتابعة", monthly: "الشهرية", mothers: "الأمهات", neonatal: "حديثي الولادة", participants: "المشاركون", pending: "المعلّقة", practice: "التطبيق", quantify: "التقدير", quarterly: "الربعية", report: "التقرير", reports: "التقارير", skills: "المهارات", structure: "الهيكل", tests: "الاختبارات", trash: "المهملات", visits: "الزيارات", weekly: "الأسبوعية", supply_drugs: "الأدوية", supply_equipment: "المعدات", supply_consumables: "المستهلكات", supply_information: "المعلوماتية", admin_roles: "الأدوار", admin_permissions: "الصلاحيات", admin_notifications: "الإشعارات", admin_problems: "البلاغات", admin_usage: "الاستخدام", admin_updates: "التحديثات" },
         dash_tabs: { combined: "الكل", neonatal: "حديثي الولادة", eenc: "EENC", imnci: "IMNCI", critical: "الحرجة", population: "السكان", indicators: "المؤشرات" }
       },
 
@@ -9005,6 +9034,7 @@ const resources = {
           neonatal_monitor: "متابعة حديثي الولادة",
           participants: "المشاركون",
           test_scores: "درجات الاختبارات",
+          osce: "قوائم الأوسكي",
           type_dashboard: "لوحة متابعة {{type}}",
         },
         toast: {

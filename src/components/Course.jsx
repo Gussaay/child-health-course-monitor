@@ -29,7 +29,8 @@ import {
 
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
-import { CourseExercisesView } from './imnci'; 
+import { CourseExercisesView } from './imnci';
+const CpcmOsceView = React.lazy(() => import('./cpcm/CpcmOsceView')); 
 // Lazy: the popup brings the PDF signing code with it.
 const FinalReportQuickModal = React.lazy(() => import('./FinalReportManager').then(m => ({ default: m.FinalReportQuickModal })));
 const FinalReportsDashboard = React.lazy(() => import('./FinalReportManager').then(m => ({ default: m.FinalReportsDashboard })));
@@ -2138,6 +2139,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         selectedCourse.clinical_instructor_imci_sub_type === 'online IMCI course' ||
         selectedCourse.facilitatorAssignments?.some(a => a.imci_sub_type === 'online IMCI course')
     );
+    const showOsce = !isGlobalView && selectedCourse && selectedCourse.course_type === 'Comprehensive Package For Community Midwives';
     const isMentorship = !isGlobalView && selectedCourse && hasMentorshipForm(selectedCourse, currentParticipant);
     const courseTabs = [
         // Inside a course this tab reads "Back to Courses"; the Android app's top-bar arrow does that.
@@ -2156,6 +2158,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         ]) : []),
         !isGlobalView && selectedCourse && { id: 'reports', label: t('course_page.tabs.individual_report', 'Individual Participant Report'), short: t('ui.short.report', 'Report'), go: () => setActiveCoursesTab('reports') },
         showTestScores && { id: 'enter-test-scores', label: t('course_page.tabs.test_scores', 'Test Scores'), short: t('ui.short.tests', 'Tests'), go: () => setActiveCoursesTab('enter-test-scores') },
+        showOsce && { id: 'osce', label: t('course_page.tabs.osce', 'OSCE Checklists'), short: t('ui.short.osce', 'OSCE'), go: () => setActiveCoursesTab('osce') },
         showExercises && { id: 'exercises', label: t('course_page.tabs.exercises', 'Exercises'), short: t('ui.short.exercises', 'Exercises'), go: () => setActiveCoursesTab('exercises') },
         !isGlobalView && selectedCourse && canManageCourseCertificates && { id: 'course-certificates', label: <>{t('course_page.tabs.certificates', 'Certificates')}{selectedCourse.isCertificateApproved && <span className="ms-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>}</>, short: t('ui.short.certificates', 'Certificates'), go: openTab('course-certificates') },
     ];
@@ -2428,6 +2431,18 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     return savedParticipant;
                 }}
             />
+        )}
+
+        {activeCoursesTab === 'osce' && selectedCourse && (
+            <Suspense fallback={<PageSkeleton />}>
+                <CpcmOsceView
+                    participants={participants}
+                    selectedParticipantId={selectedParticipantId}
+                    canEdit={canManageCourse || canUseFederalManagerAdvancedFeatures}
+                    assessorName={currentUserIdentifier}
+                    onSaved={onBatchUpdate}
+                />
+            </Suspense>
         )}
 
         {activeCoursesTab === 'exercises' && selectedCourse && (
