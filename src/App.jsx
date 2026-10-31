@@ -444,10 +444,9 @@ const COVERAGE_ITEMS = [
     { key: 'scnu', label: 'SCNU' },
 ];
 
-// Greeting card, the same on the phone app and the web: the greeting, then
-// highlights from this year's numbers. The phone shows one, picked at random
-// each time the main menu opens; wider screens show three side by side.
-// Tapping a highlight shows the next ones.
+// Greeting card, the same on the phone app and the web: two lines. The
+// greeting, then one highlight from this year's numbers, picked at random
+// each time the main menu opens; tapping it shows another.
 function homeFacts(t, stats, level) {
     if (!stats) return [];
     const n = (v) => Number(v).toLocaleString();
@@ -474,36 +473,32 @@ function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, st
     const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
     const facts = homeFacts(t, stats, level);
     const loading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
-    const shown = [0, 1, 2].slice(0, Math.min(3, facts.length)).map(i => facts[(pick + i) % facts.length]);
+    const fact = facts.length ? facts[pick % facts.length] : null;
+    const FactIcon = fact?.icon;
     return (
-        <section className={`relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3 md:ps-6 md:pe-32 md:py-5 lg:pe-40`}>
-            <SudanMiniMap highlight={states} all={level === 'federal'} title={scope || levelLabel} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 md:h-24 md:w-24 lg:h-28 lg:w-28 md:end-6 text-white" />
+        <section className={`relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3`}>
+            <SudanMiniMap highlight={states} all={level === 'federal'} title={scope || levelLabel} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 text-white" />
             <div className="relative flex items-center gap-2 min-w-0">
-                <h2 className="text-base md:text-xl font-bold leading-tight truncate">
+                <h2 className="text-base font-bold leading-tight truncate">
                     {greeting}{firstName ? `, ${firstName}` : ''}
                 </h2>
                 <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-xs font-semibold">{scope || levelLabel}</span>
             </div>
-            {shown.length ? (
+            {fact ? (
                 <button
                     type="button"
-                    onClick={() => setPick(p => p + (facts.length > 3 ? 3 : 1))}
+                    onClick={() => setPick(p => p + 1)}
                     title={t('ui.next_fact', 'Show another highlight')}
-                    className="relative mt-1 md:mt-3 flex w-full items-center gap-4 md:flex-wrap md:gap-x-6 md:gap-y-1 text-start text-sm md:text-base text-white/90 min-w-0"
+                    className="relative mt-1 flex w-full items-center gap-1.5 text-start text-sm text-white/90 min-w-0"
                 >
-                    {shown.map(({ icon: FactIcon, text }, i) => (
-                        <span key={i} className={`items-center gap-1.5 min-w-0 ${i === 0 ? 'flex' : 'hidden md:flex'} ${i === 2 ? 'md:hidden lg:flex' : ''}`}>
-                            <FactIcon size={14} className="shrink-0" />
-                            <span className="truncate md:whitespace-normal">{text}</span>
-                        </span>
-                    ))}
+                    <FactIcon size={14} className="shrink-0" />
+                    <span className="truncate">{fact.text}</span>
                 </button>
             ) : loading ? (
-                <Skeleton className="shimmer-light relative mt-1.5 md:mt-3 h-4 w-2/3" />
+                <Skeleton className="shimmer-light relative mt-1.5 h-4 w-2/3" />
             ) : (
-                <p className="relative mt-1 md:mt-3 text-sm md:text-base text-white/80 truncate">{levelLabel}</p>
+                <p className="relative mt-1 text-sm text-white/80 truncate">{levelLabel}</p>
             )}
-            {stats && <p className="relative hidden md:block mt-2 text-xs text-white/70">{t('landing.stats_year', 'This year')} ({new Date().getFullYear()})</p>}
         </section>
     );
 }
@@ -527,14 +522,9 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
 
     return (
         <div className="flex flex-col min-h-full space-y-4">
-            {onAskData && accessibleButtons.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-                    <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
-                    <DataAssistantCard onOpen={onAskData} />
-                </div>
-            ) : (
-                <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
-            )}
+            <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
+
+            {onAskData && accessibleButtons.length > 0 && <DataAssistantCard onOpen={onAskData} />}
 
             {accessibleButtons.length > 0 ? (
                 <div className="space-y-5">
