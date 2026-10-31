@@ -45,6 +45,24 @@
       ],
       "headers": [
         {
+          "source": "**/!(*.*)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
           "source": "/index.html",
           "headers": [
             {
@@ -196,6 +214,24 @@
       ],
       "headers": [
         {
+          "source": "**/!(*.*)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
           "source": "/index.html",
           "headers": [
             {
@@ -318,6 +354,24 @@
         "**/node_modules/**"
       ],
       "headers": [
+        {
+          "source": "**/!(*.*)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
         {
           "source": "/index.html",
           "headers": [

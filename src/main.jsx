@@ -9,7 +9,8 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { DataProvider } from './DataContext';
 import { AuthProvider } from './hooks/useAuth';
-import { offerWebUpdate } from './hooks/useAppUpdate';
+import { DATA_ENTRY_PATH } from './hooks/useAppUpdate';
+import { applyWebUpdateQuietly } from './utils/quietWebUpdate';
 import { isOnline } from './firebase';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
 import './index.css';
@@ -111,31 +112,46 @@ if (IS_NATIVE) {
   }
 } else {
   // Web only. vite.config MUST use VitePWA({ registerType: 'prompt' }) —
-  // with 'autoUpdate' the plugin reloads by itself and the popup never shows.
+  // with 'autoUpdate' the plugin reloads by itself.
   //
-  // The service worker now takes over as soon as a new release has
-  // downloaded (skipWaiting), so there is usually no "waiting" worker for
-  // onNeedRefresh to report. The same popup is offered when the new worker
-  // takes control instead; the page keeps running until the user restarts.
+  // UPDATES ARE SILENT, like an ordinary website. A new release downloads in
+  // the background and its service worker takes over (skipWaiting), but the
+  // page that is open keeps running until it is next opened — no popup, no
+  // reload in the middle of work. utils/quietWebUpdate.js also switches over
+  // a minute after the app goes into the background. The files of the release the
+  // page is running stay on the server for two weeks (deploy.yml), so screens
+  // opened after a release still load.
+  //
+  // This used to show a "Restart and install" popup, and the PWA plugin's own
+  // 'controlling' handler reloaded the page whenever a release found during a
+  // session took control — the sudden refresh users saw after each deploy.
+  // onNeedReload below replaces that reload.
+  const busy = () => DATA_ENTRY_PATH.test(window.location.pathname);
   const hadController = !!navigator.serviceWorker?.controller;
   navigator.serviceWorker?.addEventListener('controllerchange', () => {
     if (!hadController) return; // first install, not an update
-    console.log('⬇️ New web version installed.');
-    offerWebUpdate(() => window.location.reload());
+    console.log('⬇️ New web version installed; it starts the next time the app opens.');
+    applyWebUpdateQuietly(() => window.location.reload(), { busy });
   });
 
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
+      // Only when a release is waiting (skipWaiting normally makes this rare).
       console.log('⬇️ New web version downloaded.');
-      offerWebUpdate(updateSW); // shows the same "Restart and install / Later" popup
+      applyWebUpdateQuietly(() => updateSW(), { busy });
+    },
+    onNeedReload() {
+      // The new release took control. Not reloading here on purpose: the
+      // controllerchange listener above schedules a quiet switch instead.
     },
     onRegisteredSW(_swUrl, registration) {
-      // Users who keep the PWA open for days still get updates.
+      // Users who keep the PWA open for days still get updates: every 12
+      // hours, on top of the check the browser makes at every page load.
       if (registration) {
         setInterval(() => {
           if (isOnline()) registration.update().catch(() => {});
-        }, 60 * 60 * 1000);
+        }, 12 * 60 * 60 * 1000);
       }
     },
     onRegisterError(e) {

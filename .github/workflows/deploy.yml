@@ -224,6 +224,35 @@ jobs:
           name: dist
           path: dist
 
+      # KEEP THE PREVIOUS RELEASES' FILES ON THE SITE.
+      # Every release renames the code files. A phone that still has the app
+      # open is running the previous release, and the next screen it opens asks
+      # for a file name that the deploy has just removed — that failure is what
+      # made the app hang and then reload itself after each update. The files of
+      # the last two weeks of releases are now published alongside the new ones,
+      # so an open app carries on and simply starts on the new release the next
+      # time it is opened. Only the web site gets them: the APK and the
+      # over-the-air zip were made from dist/ before this step.
+      - name: Restore earlier releases' files
+        uses: actions/cache/restore@v4
+        with:
+          path: previous-assets
+          key: web-assets-${{ github.run_id }}
+          restore-keys: web-assets-
+
+      - name: Add earlier releases' files to this deploy
+        run: |
+          mkdir -p previous-assets
+          # Older than 14 days: no open app can still need them.
+          find previous-assets -type f -mtime +14 -delete
+          KEPT=$(find previous-assets -type f | wc -l)
+          # -n: never replace a file of this release.
+          cp -rp --update=none previous-assets/. dist/assets/
+          echo "Kept ${KEPT} file(s) from earlier releases."
+          # What the next deploy keeps: everything served now, with dates kept.
+          rm -rf previous-assets
+          cp -rp dist/assets previous-assets
+
       # No `target`, so this publishes every site listed in firebase.json from
       # the same dist/: imnci-courses-monitor, ch-sudan and emonc-sudan. The
       # EmONC site picks its Courses-only mode from its address (src/siteMode.js).
@@ -233,6 +262,13 @@ jobs:
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}"
           channelId: live
           projectId: "imnci-courses-monitor"
+
+      # Saved only after a successful deploy, for the next release to keep.
+      - name: Save this release's files for the next deploy
+        uses: actions/cache/save@v4
+        with:
+          path: previous-assets
+          key: web-assets-${{ github.run_id }}
 
       # Confirms the update file is really live before anything tells devices
       # about it.

@@ -8,9 +8,11 @@
 //   - Never waits for the network: it only runs when the internet is CONFIRMED
 //     working (see firebase.js), so "Wi-Fi with no internet" or "no data
 //     balance" is not mistaken for online.
-//   - Downloads silently, queues the bundle with next(), then shows a popup:
-//     "Restart and install" or "Later". "Later" is safe — the bundle installs
-//     by itself the next time the app is opened.
+//   - Downloads silently and queues the bundle with next(), so it installs by
+//     itself the next time the app is opened. No popup interrupts the user:
+//     the header update button turns red, and tapping it offers
+//     "Restart and install" for anyone who wants it now. Only a release marked
+//     mandatory opens the popup by itself.
 //
 // Public API is unchanged:
 //   const { appVersion, isDownloadingAppUpdate, appUpdateProgress,
@@ -51,16 +53,24 @@ const UPDATE_MANIFEST_URL = 'https://imnci-courses-monitor.web.app/latest/update
 // true = only download OTA bundles on Wi-Fi (Android can tell; iOS always allows)
 const WIFI_ONLY_DOWNLOADS = false;
 
+// What the screens show. Not the build number: that changes on every small
+// over-the-air update, which users should not notice (see vite.config.js).
+const SHOWN_VERSION = import.meta.env.VITE_RELEASE_VERSION || import.meta.env.VITE_APP_VERSION || '1.0.2';
+
 const STARTUP_DELAY_MS = 2000;
 const MANIFEST_TIMEOUT_MS = 12_000;
 const MANIFEST_TIMEOUT_SLOW_MS = 25_000;
 const DOWNLOAD_TIMEOUT_MS = 15 * 60_000;
 const MIN_GAP_BETWEEN_CHECKS_MS = 60_000;
-const RESUME_RECHECK_MS = 30 * 60_000;
+// Besides the check at every start: once every 12 hours, whether the app is
+// left open or brought back from the background. A check is one small file;
+// the download itself only happens when there is something new.
+const RESUME_RECHECK_MS = 12 * 60 * 60_000;
+const OPEN_RECHECK_MS = 12 * 60 * 60_000;
 const SKIPPED_BUILD_KEY = 'skipped_native_build';
 
 // Pages where the user may have unsaved data
-const DATA_ENTRY_PATH =
+export const DATA_ENTRY_PATH =
   /(form|submit|observe|test|record|edit|new|update|manager|finalreport|attendance)/i;
 
 // =========================================================================
@@ -234,7 +244,8 @@ async function runOtaCheck(reason, { force = false } = {}) {
       version: latest.version,
       mandatory: !!latest.mandatory,
       notes: latest.notes || null,
-      dismissed: false,
+      // Silent: the popup only opens by itself for a required update.
+      dismissed: !latest.mandatory,
       downloading: false,
       progress: 100,
       lastError: null,
@@ -318,6 +329,14 @@ function startEngine() {
   CapacitorApp.addListener('appStateChange', ({ isActive }) => {
     if (isActive && Date.now() - lastCheckAt > RESUME_RECHECK_MS) runOtaCheck('resume');
   });
+
+  // Kept open for a long time: still pick up new releases.
+  setInterval(() => runOtaCheck('while-open'), OPEN_RECHECK_MS);
+
+  // A downloaded update is queued with next(). Capgo switches to it by itself
+  // when the app goes into the background (installNext on appMovedToBackground),
+  // so the next time the user looks at the app it is already updated, without
+  // a restart on screen.
 
   // NOTE: the old code called set() when the app was MINIMISED. That reloads
   // the WebView in the background; if Android then kills the app before
@@ -427,12 +446,14 @@ export function useAppUpdate() {
     const result = await runOtaCheck('manual', { force: true });
 
     if (result.status === 'ready') {
-      setManualModal({ isOpen: false, status: 'idle', message: '' }); // popup takes over
+      // Downloads arrive silently; asking is what opens the restart popup.
+      setManualModal({ isOpen: false, status: 'idle', message: '' });
+      setOta({ dismissed: false });
     } else if (result.status === 'up-to-date') {
       setManualModal({
         isOpen: true,
         status: 'success',
-        message: t('admin_pages.app_update.up_to_date_version', 'The app is up to date (version {{version}}).', { version: result.version }),
+        message: t('admin_pages.app_update.up_to_date_version', 'The app is up to date (version {{version}}).', { version: SHOWN_VERSION }),
       });
       setTimeout(() => setManualModal({ isOpen: false, status: 'idle', message: '' }), 3000);
     } else if (result.status === 'blocked' || result.status === 'error') {
@@ -495,10 +516,16 @@ export function useAppUpdate() {
         icon: <RefreshCw size={18} className="animate-spin" />,
         label: t('admin_pages.app_update.btn.checking', 'Checking for updates…'),
       },
-      'update-available': {
+      // Calm unless the update is required: an ordinary update installs by
+      // itself the next time the app opens, so there is nothing to nag about.
+      'update-available': ota.mandatory || nativeUpdatePrompt ? {
         style: 'text-white bg-red-600 border-red-400 hover:bg-red-500',
         icon: <ArrowUp size={18} />,
         label: t('admin_pages.app_update.btn.available', 'An update is ready. Tap to install.'),
+      } : {
+        style: 'text-sky-400 bg-slate-600 border-slate-500 hover:bg-slate-500',
+        icon: <ArrowUp size={18} />,
+        label: t('admin_pages.app_update.btn.available_quiet', 'An update is ready and installs by itself the next time you open the app. Tap to install it now.'),
       },
       'up-to-date': {
         style: 'text-white bg-green-700 border-green-500 hover:bg-green-600',
@@ -532,14 +559,14 @@ export function useAppUpdate() {
         title={look.label}
         aria-label={look.label}
         className={`p-1 sm:p-1.5 border rounded transition-colors flex items-center justify-center gap-1 min-w-[32px] sm:min-w-[36px] ${look.style} ${
-          updateStatus === 'update-available' ? 'animate-pulse' : ''
+          updateStatus === 'update-available' && (ota.mandatory || nativeUpdatePrompt) ? 'animate-pulse' : ''
         } ${className}`}
       >
         {look.icon}
-        {showVersion && <span className="font-mono text-xs">v{ota.currentVersion}</span>}
+        {showVersion && <span className="font-mono text-xs">v{SHOWN_VERSION}</span>}
       </button>
     );
-  }, [updateStatus, handleUpdateButton, ota.currentVersion, ota.progress, apkDownloading, apkProgress, t]);
+  }, [updateStatus, handleUpdateButton, ota.progress, ota.mandatory, nativeUpdatePrompt, apkDownloading, apkProgress, t]);
 
   const downloadApk = useCallback((config) => {
     if (!config?.apkUrl) return;
@@ -655,7 +682,7 @@ export function useAppUpdate() {
           >
             <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl my-auto max-h-full overflow-y-auto">
               <h2 id="ota-title" className="text-lg font-semibold text-gray-900">
-                {ota.version ? t('admin_pages.app_update.update_ready_version', 'Update ready ({{version}})', { version: ota.version }) : t('admin_pages.app_update.update_ready', 'Update ready')}
+                {t('admin_pages.app_update.update_ready', 'Update ready')}
               </h2>
               <p className="mt-2 text-sm text-gray-600">
                 {ota.mandatory
@@ -727,7 +754,7 @@ export function useAppUpdate() {
                   </button>
                 )}
               </div>
-              <p className="mt-3 text-xs text-gray-400">{t('admin_pages.app_update.current_version', 'Current version: {{version}}', { version: ota.currentVersion })}</p>
+              <p className="mt-3 text-xs text-gray-400">{t('admin_pages.app_update.current_version', 'Current version: {{version}}', { version: SHOWN_VERSION })}</p>
             </div>
           </div>
         )}
@@ -736,7 +763,7 @@ export function useAppUpdate() {
   }, [ota, net, nativeUpdatePrompt, apkDownloading, apkProgress, manualModal, downloadApk, skipNativeBuild, t]);
 
   return {
-    appVersion: ota.currentVersion,
+    appVersion: SHOWN_VERSION,
     isDownloadingAppUpdate: ota.downloading || apkDownloading,
     appUpdateProgress: apkDownloading ? apkProgress : ota.progress,
     handleManualUpdateCheck,
