@@ -12,6 +12,12 @@ import { useDataCache } from '../../DataContext';
 import { notify } from '../dialogs';
 import { saveIMNCIPatientRecord } from '../../data';
 
+// Back arrow that points the way the page reads: right in Arabic, left in English.
+const BackArrow = (props) => {
+    const { i18n } = useTranslation();
+    return i18n.dir() === 'rtl' ? <ArrowRight {...props} /> : <ArrowLeft {...props} />;
+};
+
 // The protocol behind every classification on this screen is edited here too,
 // so the two live in one module rather than in separate places that have to be
 // kept in step by whoever remembers.
@@ -115,17 +121,18 @@ const evaluateProtocol = (computedAssessments, currentProtocol, defaultCategorie
 // RECORD DETAILS MODAL
 // ============================================================================
 const RecordDetailsModal = ({ record, onClose }) => {
+    const { t, i18n } = useTranslation();
     if (!record) return null;
 
     const pd = record.patientData || {};
     const cls = record.classifications || {};
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-fade-in" dir="rtl">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-fade-in" dir={i18n.dir()}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                 <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50 rounded-t-2xl">
                     <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <FileText className="text-sky-600" /> تفاصيل حالة الطفل: {pd.childName || 'غير متوفر'}
+                        <FileText className="text-sky-600" /> {t('imci.ui.details_title', 'Child case details')}: {pd.childName || t('imci.ui.not_available', 'Not available')}
                     </h2>
                     <button onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors p-1 bg-white rounded-full shadow-sm border border-slate-200">
                         <X size={20} />
@@ -134,20 +141,20 @@ const RecordDetailsModal = ({ record, onClose }) => {
                 
                 <div className="p-6 overflow-y-auto space-y-6 flex-1">
                     <div className="bg-sky-50 border border-sky-100 p-4 rounded-xl">
-                        <h3 className="font-bold text-sky-800 mb-3 border-b border-sky-200 pb-2">البيانات الأساسية</h3>
+                        <h3 className="font-bold text-sky-800 mb-3 border-b border-sky-200 pb-2">{t('imci.ui.basic_data', 'Basic data')}</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div><span className="text-slate-500 block">التاريخ:</span> <span className="font-bold">{pd.date}</span></div>
-                            <div><span className="text-slate-500 block">العمر:</span> <span className="font-bold">{pd.ageDaysWeeks || pd.ageMonths} {record.formType === 'infant' ? 'يوم/أسبوع' : 'شهر'}</span></div>
-                            {pd.sex && <div><span className="text-slate-500 block">الجنس:</span> <span className="font-bold">{pd.sex === 'male' ? 'ذكر' : 'أنثى'}</span></div>}
-                            <div><span className="text-slate-500 block">الوزن:</span> <span className="font-bold">{pd.weightKg || '-'} كجم</span></div>
-                            {pd.lengthCm && <div><span className="text-slate-500 block">الطول:</span> <span className="font-bold">{pd.lengthCm} سم</span></div>}
-                            <div><span className="text-slate-500 block">الحرارة:</span> <span className="font-bold">{pd.tempC || '-'} °C</span></div>
-                            <div><span className="text-slate-500 block">نوع الزيارة:</span> <span className="font-bold">{pd.visitType === 'initial' ? 'زيارة أولى' : 'متابعة'}</span></div>
+                            <div><span className="text-slate-500 block">{t('imci.ui.date', 'Date')}:</span> <span className="font-bold">{pd.date}</span></div>
+                            <div><span className="text-slate-500 block">{t('imci.ui.age', 'Age')}:</span> <span className="font-bold">{pd.ageDaysWeeks || pd.ageMonths} {record.formType === 'infant' ? t('imci.ui.age_unit_infant', 'days/weeks') : t('imci.ui.age_unit_child', 'months')}</span></div>
+                            {pd.sex && <div><span className="text-slate-500 block">{t('imci.ui.sex', 'Sex')}:</span> <span className="font-bold">{pd.sex === 'male' ? t('imci.ui.male', 'Male') : t('imci.ui.female', 'Female')}</span></div>}
+                            <div><span className="text-slate-500 block">{t('imci.ui.weight', 'Weight')}:</span> <span className="font-bold">{pd.weightKg || '-'} {t('imci.ui.kg', 'kg')}</span></div>
+                            {pd.lengthCm && <div><span className="text-slate-500 block">{t('imci.ui.length', 'Length')}:</span> <span className="font-bold">{pd.lengthCm} {t('imci.ui.cm', 'cm')}</span></div>}
+                            <div><span className="text-slate-500 block">{t('imci.ui.temp', 'Temperature')}:</span> <span className="font-bold">{pd.tempC || '-'} °C</span></div>
+                            <div><span className="text-slate-500 block">{t('imci.ui.col_visit', 'Visit type')}:</span> <span className="font-bold">{pd.visitType === 'initial' ? t('imci.ui.visit_initial', 'First visit') : t('imci.ui.visit_followup', 'Follow-up')}</span></div>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <h3 className="font-bold text-slate-800 text-lg border-b border-slate-200 pb-2">التصنيفات والعلاج</h3>
+                        <h3 className="font-bold text-slate-800 text-lg border-b border-slate-200 pb-2">{t('imci.ui.classifications_treatment', 'Classifications and treatment')}</h3>
                         {Object.entries(cls).map(([catKey, catData]) => {
                             if (!catData?.c || catData.c.length === 0) return null;
                             if (catData.c.every(c => c.color === 'bg-green-500') && catData.t.length === 0 && catKey !== 'vaccine') return null;
@@ -182,7 +189,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
                                                     })}
                                                 </ul>
                                             ) : (
-                                                <span className="text-sm text-slate-400 italic">لا توجد علاجات إضافية.</span>
+                                                <span className="text-sm text-slate-400 italic">{t('imci.ui.no_extra_treatments', 'No additional treatments.')}</span>
                                             )}
                                         </div>
                                     </div>
@@ -200,25 +207,26 @@ const RecordDetailsModal = ({ record, onClose }) => {
 // SAVE STATUS POPUP
 // ============================================================================
 const SaveStatusPopup = ({ status, onClose, onBack }) => {
+    const { t, i18n } = useTranslation();
     if (!status) return null;
     const isSuccess = status.type === 'success';
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-fade-in" dir="rtl">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-fade-in" dir={i18n.dir()}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center transform scale-100 transition-transform">
                 <div className={`mb-4 flex justify-center ${isSuccess ? 'text-green-500' : 'text-red-500'}`}>
                     {isSuccess ? <CheckCircle className="w-16 h-16" /> : <XCircle className="w-16 h-16" />}
                 </div>
-                <h3 className="text-xl font-extrabold mb-2 text-gray-800">{isSuccess ? 'تم الحفظ بنجاح' : 'فشل الحفظ'}</h3>
+                <h3 className="text-xl font-extrabold mb-2 text-gray-800">{isSuccess ? t('imci.ui.saved', 'Saved') : t('imci.ui.save_failed', 'Save failed')}</h3>
                 <p className="text-gray-600 mb-6 text-sm font-medium">{status.message}</p>
                 <div className="flex flex-col gap-3">
                     {isSuccess ? (
                         <>
-                            <Button onClick={onClose} className="w-full font-bold py-3 rounded-xl">إدخال حالة جديدة (نفس المنشأة)</Button>
-                            <Button onClick={onBack} variant="secondary" className="w-full font-bold py-3 rounded-xl">العودة للقائمة الرئيسية</Button>
+                            <Button onClick={onClose} className="w-full font-bold py-3 rounded-xl">{t('imci.ui.new_case', 'Enter a new case (same facility)')}</Button>
+                            <Button onClick={onBack} variant="secondary" className="w-full font-bold py-3 rounded-xl">{t('imci.ui.back_main', 'Back to main menu')}</Button>
                         </>
                     ) : (
-                        <Button onClick={onClose} variant="secondary" className="w-full font-bold py-3 rounded-xl">حسناً (إغلاق)</Button>
+                        <Button onClick={onClose} variant="secondary" className="w-full font-bold py-3 rounded-xl">{t('imci.ui.ok_close', 'OK (close)')}</Button>
                     )}
                 </div>
             </div>
@@ -230,7 +238,7 @@ const SaveStatusPopup = ({ status, onClose, onBack }) => {
 // DASHBOARD & REPORT COMPONENT 
 // ============================================================================
 const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [dashboardTab, setDashboardTab] = useState('report'); 
@@ -324,41 +332,41 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
     const pct = (val, total) => total > 0 ? Math.round((val / total) * 100) : 0;
 
     return (
-        <div className="space-y-6 animate-fade-in" dir="rtl">
+        <div className="space-y-6 animate-fade-in" dir={i18n.dir()}>
             <RecordDetailsModal record={selectedRecordDetails} onClose={() => setSelectedRecordDetails(null)} />
 
             {!IS_NATIVE && (
             <div className="flex justify-start">
                 <Button variant="secondary" onClick={() => onNavigate('nav')} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200">
-                    <ArrowRight size={18} /> العودة إلى القائمة الرئيسية
+                    <BackArrow size={18} /> {t('imci.ui.back_main', 'Back to main menu')}
                 </Button>
             </div>
             )}
 
             <div className="grid grid-cols-2 gap-3 md:gap-6">
-                <button onClick={() => onNavigate('infant')} className="text-right cursor-pointer focus:outline-none w-full h-full block">
+                <button onClick={() => onNavigate('infant')} className="text-start cursor-pointer focus:outline-none w-full h-full block">
                     <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-sky-500 group h-full">
-                        <div className="p-4 md:p-6 flex flex-col md:flex-row items-center text-center md:text-right gap-3 md:gap-6">
+                        <div className="p-4 md:p-6 flex flex-col md:flex-row items-center text-center md:text-start gap-3 md:gap-6">
                             <div className="p-3 md:p-4 bg-sky-100 text-sky-600 rounded-2xl group-hover:scale-110 transition-transform">
                                 <Baby size={32} className="w-7 h-7 md:w-8 md:h-8" />
                             </div>
                             <div>
-                                <h3 className="text-base md:text-xl font-bold text-sky-900">تسجيل طفل أقل من شهرين</h3>
-                                <p className="text-sky-600 text-xs md:text-sm mt-1">إدخال بيانات التقييم والعلاج للرضع (Young Infant Form)</p>
+                                <h3 className="text-base md:text-xl font-bold text-sky-900">{t('imci.ui.record_infant', 'Record a child under 2 months')}</h3>
+                                <p className="text-sky-600 text-xs md:text-sm mt-1">{t('imci.ui.record_infant_sub', 'Assessment and treatment for young infants')}</p>
                             </div>
                         </div>
                     </Card>
                 </button>
 
-                <button onClick={() => onNavigate('child')} className="text-right cursor-pointer focus:outline-none w-full h-full block">
+                <button onClick={() => onNavigate('child')} className="text-start cursor-pointer focus:outline-none w-full h-full block">
                     <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-indigo-500 group h-full">
-                        <div className="p-4 md:p-6 flex flex-col md:flex-row items-center text-center md:text-right gap-3 md:gap-6">
+                        <div className="p-4 md:p-6 flex flex-col md:flex-row items-center text-center md:text-start gap-3 md:gap-6">
                             <div className="p-3 md:p-4 bg-indigo-100 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
                                 <User size={32} className="w-7 h-7 md:w-8 md:h-8" />
                             </div>
                             <div>
-                                <h3 className="text-base md:text-xl font-bold text-indigo-900">تسجيل طفل من شهرين إلى 5 سنوات</h3>
-                                <p className="text-indigo-600 text-xs md:text-sm mt-1">إدخال بيانات التقييم والعلاج للأطفال (Sick Child Form)</p>
+                                <h3 className="text-base md:text-xl font-bold text-indigo-900">{t('imci.ui.record_child', 'Record a child from 2 months to 5 years')}</h3>
+                                <p className="text-indigo-600 text-xs md:text-sm mt-1">{t('imci.ui.record_child_sub', 'Assessment and treatment for sick children')}</p>
                             </div>
                         </div>
                     </Card>
@@ -368,11 +376,11 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
             <Card>
                 <div className="bg-emerald-700 p-4 rounded-t-md flex flex-col md:flex-row justify-between items-center text-white">
                     <h2 className="font-bold text-lg flex items-center gap-2">
-                        <LayoutDashboard size={20} /> لوحة بيانات وتقارير IMNCI
+                        <LayoutDashboard size={20} /> {t('imci.ui.dashboard_title', 'IMNCI data and reports')}
                     </h2>
                     <div className="flex gap-3 mt-3 md:mt-0 text-slate-800">
                         <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="p-1.5 rounded text-sm font-bold bg-white outline-none">
-                            {Array.from({length: 12}, (_, i) => i + 1).map(m => <option key={m} value={m}>شهر {m}</option>)}
+                            {Array.from({length: 12}, (_, i) => i + 1).map(m => <option key={m} value={m}>{t('imci.ui.month_n', 'Month {{m}}', { m })}</option>)}
                         </select>
                         <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="p-1.5 rounded text-sm font-bold bg-white outline-none">
                             {[2023, 2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
@@ -382,43 +390,43 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
 
                 <div className="p-6 bg-slate-50 space-y-6">
                     <div className="flex gap-4 border-b border-slate-200 pb-2">
-                        <button className={`pb-2 font-bold px-4 text-sm sm:text-base transition-colors ${dashboardTab === 'report' ? 'border-b-4 border-emerald-600 text-emerald-800' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => setDashboardTab('report')}>تقرير الإحصائيات (Report)</button>
-                        <button className={`pb-2 font-bold px-4 text-sm sm:text-base transition-colors ${dashboardTab === 'records' ? 'border-b-4 border-emerald-600 text-emerald-800' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => setDashboardTab('records')}>سجل الحالات الفردية (Individual Records)</button>
+                        <button className={`pb-2 font-bold px-4 text-sm sm:text-base transition-colors ${dashboardTab === 'report' ? 'border-b-4 border-emerald-600 text-emerald-800' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => setDashboardTab('report')}>{t('imci.ui.tab_report', 'Statistics report')}</button>
+                        <button className={`pb-2 font-bold px-4 text-sm sm:text-base transition-colors ${dashboardTab === 'records' ? 'border-b-4 border-emerald-600 text-emerald-800' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => setDashboardTab('records')}>{t('imci.ui.tab_records', 'Individual records')}</button>
                     </div>
 
                     {isLoading ? (
-                        <div className="text-center py-10 text-slate-500">جاري تحميل البيانات...</div>
+                        <div className="text-center py-10 text-slate-500">{t('imci.ui.loading_data', 'Loading data...')}</div>
                     ) : dashboardTab === 'report' ? (
                         <div className="space-y-8 animate-fade-in">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
-                                    <span className="text-slate-500 text-sm font-bold mb-1">إجمالي الحالات المسجلة</span>
+                                    <span className="text-slate-500 text-sm font-bold mb-1">{t('imci.ui.total_cases', 'Total recorded cases')}</span>
                                     <span className="text-3xl font-black text-slate-800">{stats.totalVisits}</span>
                                 </div>
                                 <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm flex flex-col items-center justify-center">
-                                    <span className="text-red-500 text-sm font-bold mb-1 flex items-center gap-1"><AlertCircle size={14}/> حالات خطرة (محولة)</span>
+                                    <span className="text-red-500 text-sm font-bold mb-1 flex items-center gap-1"><AlertCircle size={14}/> {t('imci.ui.severe_referred', 'Severe cases (referred)')}</span>
                                     <div className="flex items-end gap-2">
                                         <span className="text-3xl font-black text-red-600">{stats.referred}</span>
                                         <span className="text-sm font-bold text-red-400 mb-1">({pct(stats.referred, stats.totalVisits)}%)</span>
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm flex flex-col items-center justify-center">
-                                    <span className="text-green-600 text-sm font-bold mb-1 flex items-center gap-1"><Syringe size={14}/> مكتملي التطعيم</span>
+                                    <span className="text-green-600 text-sm font-bold mb-1 flex items-center gap-1"><Syringe size={14}/> {t('imci.ui.vaccinated', 'Up to date with vaccines')}</span>
                                     <div className="flex items-end gap-2">
                                         <span className="text-3xl font-black text-green-600">{stats.vaccineUpToDate}</span>
                                         <span className="text-sm font-bold text-green-400 mb-1">({pct(stats.vaccineUpToDate, stats.totalVisits)}%)</span>
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 rounded-xl border border-sky-100 shadow-sm flex flex-col items-center justify-center">
-                                    <span className="text-sky-600 text-sm font-bold mb-1 flex items-center gap-1"><Activity size={14}/> أمراض الجهاز التنفسي</span>
+                                    <span className="text-sky-600 text-sm font-bold mb-1 flex items-center gap-1"><Activity size={14}/> {t('imci.ui.respiratory', 'Respiratory illness')}</span>
                                     <div className="flex items-end gap-2">
                                         <span className="text-3xl font-black text-sky-600">{stats.child.pneumonia + stats.child.severePneumonia}</span>
-                                        <span className="text-sm font-bold text-sky-400 mb-1">حالة</span>
+                                        <span className="text-sm font-bold text-sky-400 mb-1">{t('imci.ui.cases', 'cases')}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white border-2 border-slate-800 rounded shadow-md overflow-hidden">
+                            <div className="bg-white border-2 border-slate-800 rounded shadow-md overflow-hidden" dir="rtl">
                                 <div className="bg-slate-100 p-4 text-center border-b-2 border-slate-800">
                                     <h3 className="font-black text-xl text-slate-900">البرنامج القومي لصحة الطفل - تقرير شهري من مؤسسة الرعاية الصحية الأساسية</h3>
                                 </div>
@@ -509,33 +517,33 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
                         </div>
                     ) : (
                         <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl shadow-sm animate-fade-in">
-                            <table className="min-w-full border-collapse text-sm text-right">
+                            <table className="min-w-full border-collapse text-sm text-start">
                                 <thead className="bg-slate-100 border-b border-slate-300">
                                     <tr>
-                                        <th className="p-4 font-bold text-slate-700">تاريخ الزيارة</th>
-                                        <th className="p-4 font-bold text-slate-700">اسم الطفل</th>
-                                        <th className="p-4 font-bold text-slate-700">الفئة العمرية</th>
-                                        <th className="p-4 font-bold text-slate-700">نوع الزيارة</th>
-                                        <th className="p-4 font-bold text-slate-700 text-center">الإجراءات</th>
+                                        <th className="p-4 font-bold text-slate-700">{t('imci.ui.col_date', 'Visit date')}</th>
+                                        <th className="p-4 font-bold text-slate-700">{t('imci.ui.col_name', 'Child name')}</th>
+                                        <th className="p-4 font-bold text-slate-700">{t('imci.ui.col_age', 'Age group')}</th>
+                                        <th className="p-4 font-bold text-slate-700">{t('imci.ui.col_visit', 'Visit type')}</th>
+                                        <th className="p-4 font-bold text-slate-700 text-center">{t('imci.ui.col_actions', 'Actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredRecords.length === 0 ? (
-                                        <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-medium">لا توجد سجلات مسجلة في هذا الشهر.</td></tr>
+                                        <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-medium">{t('imci.ui.no_records_month', 'No records this month.')}</td></tr>
                                     ) : (
                                         filteredRecords.map(r => (
                                             <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                                 <td className="p-4 text-slate-600">{r.patientData?.date || 'N/A'}</td>
-                                                <td className="p-4 font-bold text-slate-800">{r.patientData?.childName || 'غير متوفر'}</td>
+                                                <td className="p-4 font-bold text-slate-800">{r.patientData?.childName || t('imci.ui.not_available', 'Not available')}</td>
                                                 <td className="p-4">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${r.formType === 'infant' ? 'bg-sky-100 text-sky-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                                                        {r.formType === 'infant' ? 'أقل من شهرين' : 'شهرين إلى 5 سنوات'}
+                                                        {r.formType === 'infant' ? t('imci.ui.infant_tile', 'Under 2 months') : t('imci.ui.child_tile', '2 months to 5 years')}
                                                     </span>
                                                 </td>
-                                                <td className="p-4 text-slate-600">{r.patientData?.visitType === 'initial' ? 'زيارة أولى' : 'متابعة'}</td>
+                                                <td className="p-4 text-slate-600">{r.patientData?.visitType === 'initial' ? t('imci.ui.visit_initial', 'First visit') : t('imci.ui.visit_followup', 'Follow-up')}</td>
                                                 <td className="p-4 text-center">
                                                     <Button size="sm" variant="secondary" onClick={() => setSelectedRecordDetails(r)}>
-                                                        عرض التفاصيل
+                                                        {t('imci.ui.view_details', 'View details')}
                                                     </Button>
                                                 </td>
                                             </tr>
@@ -767,17 +775,17 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
             await saveIMNCIPatientRecord(payload);
             setInfantData({ ...initialInfantData }); setAssessments({ ...initialAssessments }); setSelectedTreatments({});
             if (onSaveSuccess) onSaveSuccess();
-            setStatusModal({ type: 'success', message: 'تم حفظ بيانات المريض بنجاح.' });
+            setStatusModal({ type: 'success', message: t('imci.ui.saved_msg', 'The patient record was saved.') });
         } catch (error) {
             console.error("Error saving form: ", error);
-            setStatusModal({ type: 'error', message: 'حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.' });
+            setStatusModal({ type: 'error', message: t('imci.ui.save_error_msg', 'Could not save the data. Please try again.') });
         } finally { setIsSaving(false); }
     };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300 relative">
             <SaveStatusPopup status={statusModal} onClose={() => setStatusModal(null)} onBack={onBack} />
-            {!IS_NATIVE && <div className="flex justify-start"><Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200"><ArrowRight size={18} /> العودة إلى القائمة الرئيسية</Button></div>}
+            {!IS_NATIVE && <div className="flex justify-start"><Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200"><BackArrow size={18} /> {t('imci.ui.back_main', 'Back to main menu')}</Button></div>}
             
             <Card>
                 <div className="bg-sky-700 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide flex items-center justify-center gap-2"><Baby /> {t('imci.infant_title')}</div>
@@ -1022,17 +1030,17 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
             await saveIMNCIPatientRecord(payload);
             setChildData({ ...initialChildData }); setAssessments({ ...initialAssessments }); setSelectedTreatments({});
             if (onSaveSuccess) onSaveSuccess();
-            setStatusModal({ type: 'success', message: 'تم حفظ بيانات المريض بنجاح.' });
+            setStatusModal({ type: 'success', message: t('imci.ui.saved_msg', 'The patient record was saved.') });
         } catch (error) {
             console.error("Error saving form: ", error);
-            setStatusModal({ type: 'error', message: 'حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.' });
+            setStatusModal({ type: 'error', message: t('imci.ui.save_error_msg', 'Could not save the data. Please try again.') });
         } finally { setIsSaving(false); }
     };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300 relative">
             <SaveStatusPopup status={statusModal} onClose={() => setStatusModal(null)} onBack={onBack} />
-            {!IS_NATIVE && <div className="flex justify-start"><Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200"><ArrowRight size={18} /> العودة إلى القائمة الرئيسية</Button></div>}
+            {!IS_NATIVE && <div className="flex justify-start"><Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200"><BackArrow size={18} /> {t('imci.ui.back_main', 'Back to main menu')}</Button></div>}
             
             <Card>
                 <div className="bg-indigo-700 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide flex items-center justify-center gap-2"><User /> {t('imci.child_title')}</div>
@@ -1163,7 +1171,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     </div>
                     
                     <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-slate-200">
-                        <span className="font-bold text-sm w-full text-slate-700">تحقق من فقر الدم:</span>
+                        <span className="font-bold text-sm w-full text-slate-700">{t('imci.ui.check_anemia', 'Check for anaemia')}:</span>
                         <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="radio" name="pallor" value="severePallor" checked={assessments.pallor==='severePallor'} onChange={handleRadioChange} className="text-sky-600 w-4 h-4" /><span>{t('imci.child.severe_pallor')}</span></label>
                         <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="radio" name="pallor" value="somePallor" checked={assessments.pallor==='somePallor'} onChange={handleRadioChange} className="text-sky-600 w-4 h-4" /><span>{t('imci.child.some_pallor')}</span></label>
                         <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="radio" name="pallor" value="noPallor" checked={assessments.pallor==='noPallor'} onChange={handleRadioChange} className="text-sky-600 w-4 h-4" /><span>{t('imci.child.no_pallor')}</span></label>
@@ -1200,7 +1208,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
 // One tile in a hub. Kept as a component because there are now two hubs — the
 // top level and the patient level — and they were drifting apart as copies.
 const HubTile = ({ icon: Icon, title, subtitle, tone, onClick }) => (
-    <button onClick={onClick} className="text-right cursor-pointer focus:outline-none w-full h-full block group">
+    <button onClick={onClick} className="text-start cursor-pointer focus:outline-none w-full h-full block group">
         <Card className={`hover:shadow-lg transition-shadow border-t-4 ${tone.border} h-full`}>
             <div className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-4">
                 <div className={`p-3 md:p-4 rounded-full group-hover:scale-110 transition-transform ${tone.bg} ${tone.text}`}>
@@ -1223,7 +1231,9 @@ const TONES = {
 };
 
 export default function IMNCIRecordingForm({ permissions = {} }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const dir = i18n.dir();
+    const isAr = dir === 'rtl';
     // 'hub' is the three-way entry: protocol, reports, patients. 'patients' is
     // the age split that used to be the entry point.
     const [activeView, setActiveView] = useState('hub');
@@ -1236,12 +1246,20 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
     const [selectedLocality, setSelectedLocality] = useState('');
     const [selectedFacility, setSelectedFacility] = useState('');
 
-    const { healthFacilities, fetchHealthFacilities, imnciPatientRecords, fetchIMNCIPatientRecords, isLoading } = useDataCache();
+    const { healthFacilities, fetchHealthFacilities, imnciPatientRecords, fetchIMNCIPatientRecords, protocols, fetchProtocols, isLoading } = useDataCache();
 
     useEffect(() => {
         if (!healthFacilities) fetchHealthFacilities({}, false);
         if (!imnciPatientRecords) fetchIMNCIPatientRecords(false);
     }, [healthFacilities, imnciPatientRecords, fetchHealthFacilities, fetchIMNCIPatientRecords]);
+
+    // The infant and child forms classify with the SAVED protocol
+    // (protocols.child, protocols.dosages_infant ...). Nothing loaded it, so they
+    // quietly fell back to the built-in rules. Load it once here.
+    useEffect(() => {
+        if (!protocols) fetchProtocols(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     
     const activeFacilities = useMemo(() => healthFacilities?.filter(f => f.isDeleted !== true && f.isDeleted !== "true") || [], [healthFacilities]);
 
@@ -1259,7 +1277,7 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
 
     const handleNavigation = (view) => {
         if ((view === 'infant' || view === 'child') && !selectedFacility) {
-            notify("الرجاء اختيار المؤسسة الصحية أولاً للبدء في التسجيل.", 'error');
+            notify(t('imci.ui.pick_facility_first', 'Please choose the health facility first to start recording.'), 'error');
             return;
         }
         setActiveView(view);
@@ -1267,46 +1285,46 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-12">
-            {activeView === 'hub' && <PageHeader title="بروتوكول الرعاية المتكاملة لصحة الطفل" subtitle="إدارة البروتوكول، التقارير، وسجلات المرضى" />}
-            {activeView === 'patients' && <PageHeader title="إدارة المرضى" subtitle="اختر الفئة العمرية لبدء التسجيل" />}
-            {activeView === 'reports' && <PageHeader title="إدارة التقارير" subtitle="استعراض إحصائيات وتقارير الرعاية المتكاملة" />}
-            {(activeView === 'infant' || activeView === 'child') && <PageHeader title={t('imci.form_title')} subtitle={activeFacilities.find(f => f.id === selectedFacility)?.['اسم_المؤسسة'] || "إدخال البيانات"} />}
+            {activeView === 'hub' && <PageHeader title={t('imci.ui.hub_title', 'IMNCI Protocol')} subtitle={t('imci.ui.hub_subtitle', 'Protocol, reports and patient records')} />}
+            {activeView === 'patients' && <PageHeader title={t('imci.ui.patients_title', 'Patient management')} subtitle={t('imci.ui.patients_subtitle', 'Choose the age group to start recording')} />}
+            {activeView === 'reports' && <PageHeader title={t('imci.ui.reports_title', 'Reports management')} subtitle={t('imci.ui.reports_subtitle', 'IMNCI statistics and reports')} />}
+            {(activeView === 'infant' || activeView === 'child') && <PageHeader title={t('imci.form_title')} subtitle={activeFacilities.find(f => f.id === selectedFacility)?.['اسم_المؤسسة'] || t('imci.ui.data_entry', 'Data entry')} />}
 
             {activeView !== 'hub' && activeView !== 'protocol' && selectedFacility && !facilityPickerOpen && (
                 <button
                     type="button"
-                    dir="rtl"
+                    dir={dir}
                     onClick={() => setFacilityPickerOpen(true)}
                     className="md:hidden w-full flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm text-start"
                 >
                     <Building size={16} className="text-sky-600 shrink-0" />
                     <span className="font-semibold text-slate-700 truncate">{activeFacilities.find(f => f.id === selectedFacility)?.['اسم_المؤسسة'] || selectedFacility}</span>
-                    <span className="ms-auto shrink-0 text-xs font-bold text-sky-700">تغيير</span>
+                    <span className="ms-auto shrink-0 text-xs font-bold text-sky-700">{t('imci.ui.change', 'Change')}</span>
                 </button>
             )}
             {activeView !== 'hub' && activeView !== 'protocol' && (
             <Card className={selectedFacility && !facilityPickerOpen ? 'hidden md:block' : ''}>
-                <div className="p-3 md:p-5 space-y-4 bg-slate-50 rounded-lg shadow-sm border border-slate-200" dir="rtl">
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2"><Building size={18} /> اختر المؤسسة الصحية للبدء بالإدخال أو لتصفية التقرير:</h3>
+                <div className="p-3 md:p-5 space-y-4 bg-slate-50 rounded-lg shadow-sm border border-slate-200" dir={dir}>
+                    <h3 className="font-bold text-slate-700 flex items-center gap-2"><Building size={18} /> {t('imci.ui.pick_facility_heading', 'Choose a health facility to start recording or to filter the report:')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase">الولاية</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase">{t('imci.ui.state', 'State')}</label>
                             <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setSelectedLocality(''); setSelectedFacility(''); }} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white">
-                                <option value="">-- اختر الولاية --</option>
-                                {states.map(sKey => <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey]?.ar || sKey}</option>)}
+                                <option value="">-- {t('imci.ui.choose_state', 'Choose state')} --</option>
+                                {states.map(sKey => <option key={sKey} value={sKey}>{(isAr ? STATE_LOCALITIES[sKey]?.ar : STATE_LOCALITIES[sKey]?.en) || sKey}</option>)}
                             </select>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase">المحلية</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase">{t('imci.ui.locality', 'Locality')}</label>
                             <select value={selectedLocality} onChange={e => { setSelectedLocality(e.target.value); setSelectedFacility(''); }} disabled={!selectedState} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white disabled:bg-slate-100 disabled:cursor-not-allowed">
-                                <option value="">-- اختر المحلية --</option>
-                                {selectedState && STATE_LOCALITIES[selectedState]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                <option value="">-- {t('imci.ui.choose_locality', 'Choose locality')} --</option>
+                                {selectedState && STATE_LOCALITIES[selectedState]?.localities.map(l => <option key={l.en} value={l.en}>{isAr ? l.ar : l.en}</option>)}
                             </select>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase">اسم المؤسسة الصحية</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase">{t('imci.ui.facility_name', 'Health facility')}</label>
                             <select value={selectedFacility} onChange={e => { setSelectedFacility(e.target.value); setFacilityPickerOpen(false); }} disabled={!selectedLocality || isLoading?.healthFacilities} className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white disabled:bg-slate-100 disabled:cursor-not-allowed">
-                                <option value="">-- {isLoading?.healthFacilities ? 'جاري التحميل...' : 'اختر المؤسسة الصحية'} --</option>
+                                <option value="">-- {isLoading?.healthFacilities ? t('imci.ui.loading', 'Loading...') : t('imci.ui.choose_facility', 'Choose health facility')} --</option>
                                 {facilities.map(f => <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>)}
                             </select>
                         </div>
@@ -1316,52 +1334,52 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
             )}
 
             {activeView === 'hub' && (
-                <div className="grid grid-cols-2 gap-3 md:gap-6 md:grid-cols-3 mt-6 animate-fade-in" dir="rtl">
+                <div className="grid grid-cols-2 gap-3 md:gap-6 md:grid-cols-3 mt-6 animate-fade-in" dir={dir}>
                     {/* Editing the protocol changes the guidance every clinician
                         sees, so the tile only appears for the roles allowed to. */}
                     {permissions.canManageProtocols && (
                         <HubTile
                             icon={Stethoscope} tone={TONES.amber}
-                            title="إدارة البروتوكول"
-                            subtitle="تعديل قواعد التصنيف والعلاجات وجداول الجرعات"
+                            title={t('imci.ui.protocol_title', 'Protocol management')}
+                            subtitle={t('imci.ui.protocol_subtitle', 'Edit classification rules, treatments and dose tables')}
                             onClick={() => setActiveView('protocol')}
                         />
                     )}
                     <HubTile
                         icon={LayoutDashboard} tone={TONES.emerald}
-                        title="إدارة التقارير"
-                        subtitle="استعراض إحصائيات وتقارير IMNCI"
+                        title={t('imci.ui.reports_title', 'Reports management')}
+                        subtitle={t('imci.ui.reports_tile_subtitle', 'View IMNCI statistics and reports')}
                         onClick={() => setActiveView('reports')}
                     />
                     <HubTile
                         icon={Users} tone={TONES.indigo}
-                        title="إدارة المرضى"
-                        subtitle="تسجيل واستعراض بيانات الأطفال"
+                        title={t('imci.ui.patients_title', 'Patient management')}
+                        subtitle={t('imci.ui.patients_tile_subtitle', 'Record and review children\'s data')}
                         onClick={() => setActiveView('patients')}
                     />
                 </div>
             )}
 
             {!IS_NATIVE && activeView !== 'hub' && (
-                <div dir="rtl">
+                <div dir={dir}>
                     <Button variant="secondary" onClick={() => setActiveView(
                         activeView === 'infant' || activeView === 'child' ? 'patients' : 'hub'
                     )}>
-                        <ArrowLeft size={16} className="inline ms-1" /> رجوع
+                        <BackArrow size={16} className="inline me-1" /> {t('imci.ui.back', 'Back')}
                     </Button>
                 </div>
             )}
 
             {activeView === 'protocol' && (
-                <Suspense fallback={<div className="p-8 text-center text-slate-500">جاري التحميل...</div>}>
+                <Suspense fallback={<div className="p-8 text-center text-slate-500">{t('imci.ui.loading', 'Loading...')}</div>}>
                     <ProtocolEditor />
                 </Suspense>
             )}
 
             {activeView === 'patients' && (
-                <div className="grid grid-cols-2 gap-3 md:gap-6 mt-6 animate-fade-in" dir="rtl">
-                    <button onClick={() => handleNavigation('infant')} className="text-right cursor-pointer focus:outline-none w-full h-full block group"><Card className="hover:shadow-lg transition-shadow border-t-4 border-t-sky-500 h-full"><div className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-4"><div className="p-3 md:p-4 bg-sky-100 text-sky-600 rounded-full group-hover:scale-110 transition-transform"><Baby size={40} className="w-7 h-7 md:w-10 md:h-10" /></div><div><h3 className="text-base md:text-xl font-bold text-sky-900">أقل من شهرين</h3><p className="text-sky-600 text-xs md:text-sm mt-1 md:mt-2">تسجيل بيانات الرضع (Young Infant)</p></div></div></Card></button>
-                    <button onClick={() => handleNavigation('child')} className="text-right cursor-pointer focus:outline-none w-full h-full block group"><Card className="hover:shadow-lg transition-shadow border-t-4 border-t-indigo-500 h-full"><div className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-4"><div className="p-3 md:p-4 bg-indigo-100 text-indigo-600 rounded-full group-hover:scale-110 transition-transform"><User size={40} className="w-7 h-7 md:w-10 md:h-10" /></div><div><h3 className="text-base md:text-xl font-bold text-indigo-900">شهرين إلى 5 سنوات</h3><p className="text-indigo-600 text-xs md:text-sm mt-1 md:mt-2">تسجيل بيانات الأطفال (Sick Child)</p></div></div></Card></button>
+                <div className="grid grid-cols-2 gap-3 md:gap-6 mt-6 animate-fade-in" dir={dir}>
+                    <button onClick={() => handleNavigation('infant')} className="text-start cursor-pointer focus:outline-none w-full h-full block group"><Card className="hover:shadow-lg transition-shadow border-t-4 border-t-sky-500 h-full"><div className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-4"><div className="p-3 md:p-4 bg-sky-100 text-sky-600 rounded-full group-hover:scale-110 transition-transform"><Baby size={40} className="w-7 h-7 md:w-10 md:h-10" /></div><div><h3 className="text-base md:text-xl font-bold text-sky-900">{t('imci.ui.infant_tile', 'Under 2 months')}</h3><p className="text-sky-600 text-xs md:text-sm mt-1 md:mt-2">{t('imci.ui.infant_tile_sub', 'Record a young infant')}</p></div></div></Card></button>
+                    <button onClick={() => handleNavigation('child')} className="text-start cursor-pointer focus:outline-none w-full h-full block group"><Card className="hover:shadow-lg transition-shadow border-t-4 border-t-indigo-500 h-full"><div className="p-4 md:p-6 flex flex-col items-center text-center gap-2 md:gap-4"><div className="p-3 md:p-4 bg-indigo-100 text-indigo-600 rounded-full group-hover:scale-110 transition-transform"><User size={40} className="w-7 h-7 md:w-10 md:h-10" /></div><div><h3 className="text-base md:text-xl font-bold text-indigo-900">{t('imci.ui.child_tile', '2 months to 5 years')}</h3><p className="text-indigo-600 text-xs md:text-sm mt-1 md:mt-2">{t('imci.ui.child_tile_sub', 'Record a sick child')}</p></div></div></Card></button>
                 </div>
             )}
 

@@ -278,6 +278,25 @@ export default function ProtocolEditor() {
     const [isSaving, setIsSaving] = useState(false);
     const [search, setSearch] = useState('');
     const [issues, setIssues] = useState(null);
+    // 'offline' | 'failed' | null. Set when the protocols could not be read, so
+    // the page says so instead of spinning forever.
+    const [loadError, setLoadError] = useState(null);
+
+    // Nothing else on the page asked for the protocols, so the editor waited on
+    // a load that never started. It now starts the load itself. The cache hands
+    // back a keyed object on success and an empty array when the read failed or
+    // the device is offline with nothing saved.
+    const loadProtocols = async (force = false) => {
+        setLoadError(null);
+        const result = await fetchProtocols(force);
+        if (!result || Array.isArray(result)) {
+            setLoadError(navigator.onLine ? 'failed' : 'offline');
+        }
+    };
+    useEffect(() => {
+        loadProtocols(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // A snapshot of what was loaded, so "has this been edited" is a fact rather
     // than a flag someone has to remember to set in every handler.
@@ -312,7 +331,9 @@ export default function ProtocolEditor() {
             const fresh = JSON.parse(JSON.stringify(protocols[activeTab]));
             baselineRef.current = JSON.stringify(fresh);
             setEditorData(fresh);
-        } else if (!isLoading.imnciProtocols) {
+        } else if (protocols && !Array.isArray(protocols)) {
+            // Only once the protocols really loaded. Starting from a blank
+            // protocol after a FAILED load would let a save wipe the live rules.
             const defaultStructure = activeTab.startsWith('dosages')
                 ? { formType: activeTab, version: "1.0", drugs: [] }
                 : { formType: activeTab, version: "1.0", categories: {} };
@@ -549,6 +570,24 @@ export default function ProtocolEditor() {
         newData.drugs[drugIndex].rules[rangeIndex][field] = value;
         setEditorData(newData);
     };
+
+    if (loadError && !editorData) {
+        return (
+            <Card>
+                <div className="p-8 flex flex-col items-center text-center gap-3">
+                    <p className="font-bold text-slate-800">
+                        {loadError === 'offline'
+                            ? t('clinical_ui.protocol.load.offline', 'You are offline and the protocol has not been saved on this device yet.')
+                            : t('clinical_ui.protocol.load.failed', 'The protocol could not be loaded.')}
+                    </p>
+                    <p className="text-sm text-slate-500">{t('clinical_ui.protocol.load.hint', 'Check your connection and try again.')}</p>
+                    <Button onClick={() => loadProtocols(true)} disabled={isLoading.imnciProtocols}>
+                        {isLoading.imnciProtocols ? t('clinical_ui.protocol.load.retrying', 'Trying again...') : t('clinical_ui.protocol.load.retry', 'Try again')}
+                    </Button>
+                </div>
+            </Card>
+        );
+    }
 
     if (isLoading.imnciProtocols || !editorData) {
         return <div className="flex justify-center p-12"><Spinner /></div>;
