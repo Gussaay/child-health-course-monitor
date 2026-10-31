@@ -2775,6 +2775,13 @@ export function CertificateDesigner({
     const data = useMemo(() => mergeCertificateConfigs(inherited, ownData), [inherited, ownData]);
     const [language, setLanguage] = useState('en');
     const [selectedId, setSelectedId] = useState('title');
+    // Phones only: which pane shows under the certificate.
+    const [mobilePane, setMobilePane] = useState('props');
+    // Phones only: the tool row (language, zoom, grid, template, preview) folds away.
+    const [showTools, setShowTools] = useState(false);
+    // The small editor that sits on the certificate next to the selected box.
+    const [quickClosed, setQuickClosed] = useState(false);
+    const quickInputRef = useRef(null);
     const [isSaving, setIsSaving] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [zoom, setZoom] = useState('fit');
@@ -3113,6 +3120,7 @@ export function CertificateDesigner({
         e.preventDefault();
         e.stopPropagation();
         setSelectedId(el.id);
+        setQuickClosed(false);
         dragRef.current = el.axes
             ? {
                 axes: el.axes,
@@ -3367,6 +3375,46 @@ export function CertificateDesigner({
     // What a blank box falls back to: the inherited template value, else the default.
     const inh = (key, def) => readNum(inherited, key, def);
 
+    // Where an element's box sits on the canvas (shared by the boxes and the quick editor).
+    const geomOf = (el) => {
+        let topMm, leftPct, boxW, boxH;
+
+        if (el.imageOf) {
+            // Reconstruct where the <img> lands: it is anchored to the
+            // BOTTOM of its block's text, which is the name line plus the
+            // role line, then lifted by `...ImageBottom` millimetres.
+            const b = el.imageOf;
+            const px = (k, sharedK) => readNum(data, `${b}${k}`, readNum(data, sharedK, CERT_DEFAULTS[sharedK]));
+            const imgW = px('SignatureImageWidth', 'signatureImageWidth');
+            const imgH = px('SignatureImageHeight', 'signatureImageHeight');
+            const imgBottom = px('SignatureImageBottom', 'signatureImageBottom');
+            const imgOffsetX = px('SignatureImageOffsetX', 'signatureImageOffsetX');
+
+            // Text sizes and the row height are read per block, since each
+            // signature can now carry its own.
+            const nameFs = readNum(data, `${b}SignatureNameFontSize`, readNum(data, 'signatureNameFontSize', CERT_DEFAULTS.signatureNameFontSize));
+            const roleFs = readNum(data, `${b}SignatureRoleFontSize`, readNum(data, 'signatureRoleFontSize', CERT_DEFAULTS.signatureRoleFontSize));
+            const textMm = ((nameFs + roleFs) * 1.25) / MM_TO_PX + 1;
+
+            const blockTop = readNum(data, `${b}SignatureTop`, readNum(data, 'signatureTop', CERT_DEFAULTS.signatureTop));
+            const blockLeft = readNum(data, el.blockLeftKey, el.blockLeftDef);
+
+            topMm = blockTop + textMm - imgBottom - imgH;
+            leftPct = blockLeft + (imgOffsetX / 297) * 100;
+            boxW = imgW * MM_TO_PX * scale;
+            boxH = imgH * MM_TO_PX * scale;
+        } else {
+            topMm = readNum(data, el.topKey, el.topDef);
+            leftPct = el.leftKey ? readNum(data, el.leftKey, el.leftDef) : 50;
+            boxW = el.box.widthMm
+                ? el.box.widthMm * MM_TO_PX * scale
+                : (el.box.widthPct / 100) * PAGE_W_PX * scale;
+            const hMm = el.boxHeightKey ? readNum(data, el.boxHeightKey, el.boxHeightDef) : el.box.heightMm;
+            if (el.boxHeightKey) boxW = Math.max(hMm * 1.2, 12) * MM_TO_PX * scale;
+            boxH = Math.max(16, hMm * MM_TO_PX * scale);
+        }
+        return { topMm, leftPct, boxW, boxH };
+    };
     const resetSelected = () => {
         if (!selected) return;
         const keys = [
@@ -3386,11 +3434,11 @@ export function CertificateDesigner({
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col">
+        <div className="fixed inset-0 z-[65] bg-gray-100 flex flex-col">
             <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
 
             {/* ---- Site brand bar ---- */}
-            <div className="bg-sky-800 text-white shrink-0">
+            <div className="bg-sky-800 text-white shrink-0 max-lg:landscape:hidden">
                 <div className="flex items-center gap-3 px-4 py-2">
                     {branding?.logoSrc && (
                         <img
@@ -3412,20 +3460,22 @@ export function CertificateDesigner({
             </div>
 
             {/* ---- Page toolbar ---- */}
-            <header className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-200 shadow-sm shrink-0">
+            {/* Phones: row 1 = Back, title, Save (always visible); row 2 = the tools, wrapping.
+                Large screens: everything on one row, as before. */}
+            <header className="flex flex-wrap lg:flex-nowrap items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-2.5 bg-white border-b border-gray-200 shadow-sm shrink-0">
                 <button
                     type="button"
                     onClick={handleBack}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold text-gray-700 hover:bg-gray-100 border border-gray-300"
+                    className="order-1 shrink-0 flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded text-sm font-semibold text-gray-700 hover:bg-gray-100 border border-gray-300"
                 >
-                    <ArrowLeft className="h-4 w-4" /> {t('certificates.designer.back', 'Back')}
+                    <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">{t('certificates.designer.back', 'Back')}</span>
                 </button>
 
-                <div className="h-6 w-px bg-gray-200" />
+                <div className="hidden lg:block order-1 h-6 w-px bg-gray-200" />
 
-                <nav className="min-w-0 text-xs text-gray-500 flex items-center gap-1.5 truncate">
-                    <span className="hover:text-gray-700 cursor-pointer" onClick={handleBack}>{t('certificates.approvals.title', 'Certificate Approvals')}</span>
-                    <span className="text-gray-300">/</span>
+                <nav className="order-1 hidden sm:flex flex-1 lg:flex-initial min-w-0 text-xs text-gray-500 items-center gap-1.5 truncate">
+                    <span className="hidden sm:inline hover:text-gray-700 cursor-pointer" onClick={handleBack}>{t('certificates.approvals.title', 'Certificate Approvals')}</span>
+                    <span className="hidden sm:inline text-gray-300">/</span>
                     <span className="font-semibold text-gray-800 truncate">
                         {scopeKind === 'general' ? t('certificates.templates.general_template', 'General template') : scopeKind === 'courseType' ? t('certificates.designer.type_template', '{{type}} template', { type: scope.courseType }) : (course?.course_type || t('certificates.designer.course', 'Course'))}
                     </span>
@@ -3437,9 +3487,23 @@ export function CertificateDesigner({
                     )}
                 </nav>
 
-                <div className="ml-auto flex items-center gap-2">
-                    {dirty && <span className="text-[11px] font-semibold text-amber-600">{t('certificates.designer.unsaved', 'Unsaved changes')}</span>}
+                <div className="order-2 lg:order-3 shrink-0 ms-auto sm:ms-0 flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setShowTools(v => !v)}
+                        aria-expanded={showTools}
+                        className={`lg:hidden h-9 px-2.5 rounded border text-sm font-semibold flex items-center gap-1 ${showTools ? 'border-sky-600 bg-sky-50 text-sky-800' : 'border-gray-300 text-gray-700'}`}
+                        title={t('certificates.designer.tools', 'Tools')}
+                    >
+                        <Settings className="h-4 w-4" /><span className="hidden sm:inline">{t('certificates.designer.tools', 'Tools')}</span>
+                    </button>
+                    {dirty && <span className="text-[11px] leading-tight font-semibold text-amber-600 max-w-[5.5rem] lg:max-w-none">{t('certificates.designer.unsaved', 'Unsaved changes')}</span>}
+                    <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingAsset} className="px-3 lg:px-4 whitespace-nowrap">
+                        {isSaving ? <Spinner size="sm" /> : t('certificates.common.save_template', 'Save Template')}
+                    </Button>
+                </div>
 
+                <div className={`${showTools ? 'flex' : 'hidden'} lg:flex order-3 lg:order-2 w-full lg:w-auto lg:ms-auto flex-wrap lg:flex-nowrap items-center gap-2`}>
                     <div className="flex rounded overflow-hidden border border-gray-300">
                         <button type="button" onClick={() => setLanguage('en')} className={`px-2.5 py-1 text-xs font-semibold ${!isArabic ? 'bg-sky-600 text-white' : 'bg-white text-gray-700'}`}>EN</button>
                         <button type="button" onClick={() => setLanguage('ar')} className={`px-2.5 py-1 text-xs font-semibold ${isArabic ? 'bg-sky-600 text-white' : 'bg-white text-gray-700'}`}>عربي</button>
@@ -3456,7 +3520,7 @@ export function CertificateDesigner({
                         <option value="1">100%</option>
                     </select>
 
-                    <div className="flex items-center gap-1.5 border border-gray-300 rounded px-2 py-0.5 bg-white">
+                    <div className="flex flex-wrap lg:flex-nowrap items-center gap-x-1.5 gap-y-1 border border-gray-300 rounded px-2 py-0.5 bg-white whitespace-nowrap">
                         <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title={t('certificates.designer.grid_title', 'Show the grid, rulers and centre lines')}>
                             <input type="checkbox" checked={showGuides} onChange={e => setShowGuides(e.target.checked)} />
                             {t('certificates.designer.grid', 'Grid')}
@@ -3506,16 +3570,13 @@ export function CertificateDesigner({
                         type="button"
                         onClick={() => setShowRealPreview(true)}
                         disabled={!!uploadingAsset}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold border border-sky-600 text-sky-700 bg-white hover:bg-sky-50 disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold border border-sky-600 text-sky-700 bg-white hover:bg-sky-50 disabled:opacity-50 whitespace-nowrap"
                         title={t('certificates.designer.preview_title', 'Render the actual certificate, exactly as the PDF will be')}
                     >
                         <Eye className="h-4 w-4" /> {t('certificates.designer.preview_certificate', 'Preview certificate')}
                     </button>
 
-                    <Button variant="secondary" onClick={handleBack} disabled={isSaving}>{t('certificates.common.cancel', 'Cancel')}</Button>
-                    <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingAsset}>
-                        {isSaving ? <Spinner size="sm" /> : t('certificates.common.save_template', 'Save Template')}
-                    </Button>
+                    <Button variant="secondary" onClick={handleBack} disabled={isSaving} className="hidden lg:flex">{t('certificates.common.cancel', 'Cancel')}</Button>
                 </div>
             </header>
 
@@ -3532,9 +3593,27 @@ export function CertificateDesigner({
                 />
             )}
 
-            <div className="flex-1 flex min-h-0">
+            {/* Phones: certificate on top, then Elements / Settings tabs below it.
+                Large screens: three columns. */}
+            <div className="flex-1 flex flex-col max-lg:landscape:flex-row lg:flex-row min-h-0">
+                {/* Phones: tabs + the two panels share this column. Large screens: lg:contents lets
+                    the two panels sit either side of the canvas again. */}
+                <div className="order-2 flex-1 min-h-0 min-w-0 flex flex-col max-lg:landscape:flex-none max-lg:landscape:w-[44%] max-lg:landscape:border-s max-lg:landscape:border-gray-200 lg:contents">
+                <div className="lg:hidden shrink-0 flex bg-white border-y border-gray-200">
+                    {[['elements', t('certificates.designer.elements', 'Elements')], ['props', selected?.label || t('certificates.designer.settings', 'Settings')]].map(([key, label]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => setMobilePane(key)}
+                            className={`flex-1 min-w-0 truncate px-3 py-2.5 text-sm font-semibold border-b-2 ${mobilePane === key ? 'border-sky-600 text-sky-800 bg-sky-50' : 'border-transparent text-gray-600'}`}
+                        >
+                            {key === 'props' && <Settings className="inline h-4 w-4 me-1 -mt-0.5" />}{label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* ---- Element list ---- */}
-                <aside className="w-52 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+                <aside className={`${mobilePane === 'elements' ? 'flex-1' : 'hidden'} lg:order-1 lg:block lg:flex-none min-h-0 lg:w-52 shrink-0 bg-white lg:border-r border-gray-200 overflow-y-auto`}>
                     <div className="px-3 py-2 border-b flex items-center justify-between">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t('certificates.designer.elements', 'Elements')}</span>
                         <button
@@ -3555,8 +3634,8 @@ export function CertificateDesigner({
                         <button
                             key={el.id}
                             type="button"
-                            onClick={() => setSelectedId(el.id)}
-                            className={`w-full text-left px-3 py-2 text-sm border-b border-gray-100 flex items-center gap-2 ${selectedId === el.id ? 'bg-sky-50 text-sky-800 font-semibold border-l-4 border-l-sky-600' : el.inactive ? 'text-gray-400 hover:bg-gray-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                            onClick={() => { setSelectedId(el.id); setQuickClosed(false); setMobilePane('props'); }}
+                            className={`w-full text-left px-3 py-2.5 lg:py-2 text-sm border-b border-gray-100 flex items-center gap-2 ${selectedId === el.id ? 'bg-sky-50 text-sky-800 font-semibold border-l-4 border-l-sky-600' : el.inactive ? 'text-gray-400 hover:bg-gray-50' : 'text-gray-700 hover:bg-gray-50'}`}
                         >
                             <span className="truncate">{el.label}</span>
                             {el.inactive && <span className="ml-auto text-[10px] border border-gray-300 rounded px-1 text-gray-500">{t('certificates.designer.add_badge', 'add')}</span>}
@@ -3565,141 +3644,9 @@ export function CertificateDesigner({
                     ))}
                 </aside>
 
-                {/* ---- Canvas ---- */}
-                <main className="flex-1 min-w-0 overflow-auto p-6 bg-gray-200">
-                    <div
-                        ref={canvasRef}
-                        className="mx-auto bg-white shadow-lg"
-                        style={{ width: zoom === 'fit' ? '100%' : PAGE_W_PX * scale, maxWidth: '100%', position: 'relative', height: PAGE_H_PX * scale, touchAction: 'none' }}
-                    >
-                        <div
-                            style={{
-                                width: PAGE_W_PX, height: PAGE_H_PX,
-                                transform: `scale(${scale})`, transformOrigin: 'top left',
-                                position: 'absolute', top: 0, left: 0, pointerEvents: 'none'
-                            }}
-                        >
-                            <CertificateTemplate
-                                course={previewCourse}
-                                participant={{ name: isArabic ? 'اسم المشارك' : 'Participant Name', id: 'preview' }}
-                                federalProgramManagerName={liveCourse.approvedByManagerName || ''}
-                                participantSubCourse={autoSubCourse || null}
-                                language={language}
-                                programManagerSignatureUrl={liveCourse.approvedByManagerSignatureUrl || null}
-                                directorName={liveCourse.approvedDirectorName || liveCourse.director || ''}
-                                directorSignatureUrl={liveCourse.approvedDirectorSignatureUrl || null}
-                                programStampUrl={liveCourse.approvedProgramStampUrl || null}
-                                thirdPartySignatureUrl={liveCourse.approvedThirdPartySignatureUrl || null}
-                                fourthPartySignatureUrl={liveCourse.approvedFourthPartySignatureUrl || null}
-                                showPlaceholders
-                            />
-                        </div>
-
-                        {(showGuides || activeGuides) && (
-                            <GridOverlay
-                                gridSize={showGuides ? Number(gridPrefs.gridSize) || 0 : 0}
-                                showRulers={showGuides && gridPrefs.showRulers}
-                                guides={activeGuides}
-                            />
-                        )}
-
-                        {elements.filter(el => !el.inactive).map(el => {
-                            const isSel = selectedId === el.id;
-
-                            let topMm, leftPct, boxW, boxH;
-
-                            if (el.imageOf) {
-                                // Reconstruct where the <img> lands: it is anchored to the
-                                // BOTTOM of its block's text, which is the name line plus the
-                                // role line, then lifted by `...ImageBottom` millimetres.
-                                const b = el.imageOf;
-                                const px = (k, sharedK) => readNum(data, `${b}${k}`, readNum(data, sharedK, CERT_DEFAULTS[sharedK]));
-                                const imgW = px('SignatureImageWidth', 'signatureImageWidth');
-                                const imgH = px('SignatureImageHeight', 'signatureImageHeight');
-                                const imgBottom = px('SignatureImageBottom', 'signatureImageBottom');
-                                const imgOffsetX = px('SignatureImageOffsetX', 'signatureImageOffsetX');
-
-                                // Text sizes and the row height are read per block, since each
-                                // signature can now carry its own.
-                                const nameFs = readNum(data, `${b}SignatureNameFontSize`, readNum(data, 'signatureNameFontSize', CERT_DEFAULTS.signatureNameFontSize));
-                                const roleFs = readNum(data, `${b}SignatureRoleFontSize`, readNum(data, 'signatureRoleFontSize', CERT_DEFAULTS.signatureRoleFontSize));
-                                const textMm = ((nameFs + roleFs) * 1.25) / MM_TO_PX + 1;
-
-                                const blockTop = readNum(data, `${b}SignatureTop`, readNum(data, 'signatureTop', CERT_DEFAULTS.signatureTop));
-                                const blockLeft = readNum(data, el.blockLeftKey, el.blockLeftDef);
-
-                                topMm = blockTop + textMm - imgBottom - imgH;
-                                leftPct = blockLeft + (imgOffsetX / 297) * 100;
-                                boxW = imgW * MM_TO_PX * scale;
-                                boxH = imgH * MM_TO_PX * scale;
-                            } else {
-                                topMm = readNum(data, el.topKey, el.topDef);
-                                leftPct = el.leftKey ? readNum(data, el.leftKey, el.leftDef) : 50;
-                                boxW = el.box.widthMm
-                                    ? el.box.widthMm * MM_TO_PX * scale
-                                    : (el.box.widthPct / 100) * PAGE_W_PX * scale;
-                                const hMm = el.boxHeightKey ? readNum(data, el.boxHeightKey, el.boxHeightDef) : el.box.heightMm;
-                                if (el.boxHeightKey) boxW = Math.max(hMm * 1.2, 12) * MM_TO_PX * scale;
-                                boxH = Math.max(16, hMm * MM_TO_PX * scale);
-                            }
-
-                            return (
-                                <div
-                                    key={el.id}
-                                    onPointerDown={(e) => startDrag(e, el)}
-                                    title={t('certificates.designer.drag_to_move', '{{label}} — drag to move', { label: el.label })}
-                                    style={{
-                                        position: 'absolute',
-                                        top: topMm * MM_TO_PX * scale,
-                                        left: `calc(${leftPct}% - ${boxW / 2}px)`,
-                                        width: boxW,
-                                        height: Math.max(12, boxH),
-                                        cursor: 'move',
-                                        zIndex: isSel ? 45 : (el.imageOf ? 35 : 30),
-                                        border: `1px ${isSel ? 'solid' : 'dashed'} ${isSel ? '#0284c7' : overlappingIds.has(el.id) ? '#dc2626' : el.imageOf ? 'rgba(217,119,6,0.65)' : 'rgba(2,132,199,0.4)'}`,
-                                        background: isSel ? 'rgba(2,132,199,0.16)' : overlappingIds.has(el.id) ? 'rgba(220,38,38,0.12)' : (el.imageOf ? 'rgba(217,119,6,0.10)' : 'rgba(2,132,199,0.04)'),
-                                        borderRadius: 3
-                                    }}
-                                >
-                                    {isSel && (
-                                        <span style={{
-                                            position: 'absolute', top: -16, left: -1,
-                                            fontSize: 9, lineHeight: '15px', padding: '0 5px',
-                                            background: '#0284c7', color: 'white',
-                                            borderRadius: '3px 3px 0 0', whiteSpace: 'nowrap'
-                                        }}>
-                                            {el.imageOf
-                                                ? t('certificates.designer.image_pos', '{{label}} · {{up}}mm up · {{across}}mm across', { label: el.label, up: readNum(data, el.axes.yKey, el.axes.yDef), across: readNum(data, el.axes.xKey, el.axes.xDef) })
-                                                : `${el.label} · ${Math.round(topMm)}mm${el.leftKey ? ` · ${Math.round(leftPct)}%` : ''}`}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {overlaps.length > 0 && (
-                        <div className="max-w-3xl mx-auto mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-                            <span className="font-bold">{t('certificates.designer.overlapping', 'Overlapping on the certificate:')} </span>
-                            {overlaps.map(([a, b], i) => (
-                                <span key={`${a.id}-${b.id}`}>
-                                    {i > 0 && ' · '}
-                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(a.id)}>{a.label}</button>
-                                    {` ${t('certificates.designer.and', 'and')} `}
-                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(b.id)}>{b.label}</button>
-                                </span>
-                            ))}
-                            <span className="text-red-600"> — {t('certificates.designer.overlap_fix', 'move one of them, or hide the line you don’t need.')}</span>
-                        </div>
-                    )}
-
-                    <p className="text-center text-xs text-gray-500 mt-3">
-                        {t('certificates.designer.canvas_help', 'Drag any box to move it — pink lines show when it lines up with something (hold Alt to move freely). Arrow keys nudge by 1mm, Shift+Arrow by one grid step.')}
-                    </p>
-                </main>
 
                 {/* ---- Properties panel ---- */}
-                <aside className="w-80 shrink-0 bg-white border-l border-gray-200 overflow-y-auto p-4">
+                <aside className={`${mobilePane === 'props' ? 'flex-1' : 'hidden'} lg:order-3 lg:block lg:flex-none min-h-0 lg:w-80 shrink-0 bg-white lg:border-l border-gray-200 overflow-y-auto p-4 pb-8`}>
                     {selected && (
                         <>
                             <div className="flex items-center justify-between mb-3">
@@ -4012,6 +3959,175 @@ export function CertificateDesigner({
                         </>
                     )}
                 </aside>
+                </div>
+
+                {/* ---- Canvas ---- */}
+                <main className="order-1 lg:order-2 shrink-0 lg:shrink lg:flex-1 min-w-0 max-h-[46vh] max-lg:landscape:max-h-none max-lg:landscape:flex-1 max-lg:landscape:shrink lg:max-h-none overflow-auto p-3 lg:p-6 bg-gray-200">
+                    <div
+                        ref={canvasRef}
+                        className="mx-auto bg-white shadow-lg"
+                        style={{ width: zoom === 'fit' ? '100%' : PAGE_W_PX * scale, maxWidth: '100%', position: 'relative', height: PAGE_H_PX * scale, touchAction: 'none' }}
+                    >
+                        <div
+                            style={{
+                                width: PAGE_W_PX, height: PAGE_H_PX,
+                                transform: `scale(${scale})`, transformOrigin: 'top left',
+                                position: 'absolute', top: 0, left: 0, pointerEvents: 'none'
+                            }}
+                        >
+                            <CertificateTemplate
+                                course={previewCourse}
+                                participant={{ name: isArabic ? 'اسم المشارك' : 'Participant Name', id: 'preview' }}
+                                federalProgramManagerName={liveCourse.approvedByManagerName || ''}
+                                participantSubCourse={autoSubCourse || null}
+                                language={language}
+                                programManagerSignatureUrl={liveCourse.approvedByManagerSignatureUrl || null}
+                                directorName={liveCourse.approvedDirectorName || liveCourse.director || ''}
+                                directorSignatureUrl={liveCourse.approvedDirectorSignatureUrl || null}
+                                programStampUrl={liveCourse.approvedProgramStampUrl || null}
+                                thirdPartySignatureUrl={liveCourse.approvedThirdPartySignatureUrl || null}
+                                fourthPartySignatureUrl={liveCourse.approvedFourthPartySignatureUrl || null}
+                                showPlaceholders
+                            />
+                        </div>
+
+                        {(showGuides || activeGuides) && (
+                            <GridOverlay
+                                gridSize={showGuides ? Number(gridPrefs.gridSize) || 0 : 0}
+                                showRulers={showGuides && gridPrefs.showRulers}
+                                guides={activeGuides}
+                            />
+                        )}
+
+                        {elements.filter(el => !el.inactive).map(el => {
+                            const isSel = selectedId === el.id;
+
+                            const { topMm, leftPct, boxW, boxH } = geomOf(el);
+
+                            return (
+                                <div
+                                    key={el.id}
+                                    onPointerDown={(e) => startDrag(e, el)}
+                                    onDoubleClick={() => quickInputRef.current?.focus()}
+                                    title={t('certificates.designer.drag_to_move', '{{label}} — drag to move', { label: el.label })}
+                                    style={{
+                                        position: 'absolute',
+                                        top: topMm * MM_TO_PX * scale,
+                                        left: `calc(${leftPct}% - ${boxW / 2}px)`,
+                                        width: boxW,
+                                        height: Math.max(12, boxH),
+                                        cursor: 'move',
+                                        zIndex: isSel ? 45 : (el.imageOf ? 35 : 30),
+                                        border: `1px ${isSel ? 'solid' : 'dashed'} ${isSel ? '#0284c7' : overlappingIds.has(el.id) ? '#dc2626' : el.imageOf ? 'rgba(217,119,6,0.65)' : 'rgba(2,132,199,0.4)'}`,
+                                        background: isSel ? 'rgba(2,132,199,0.16)' : overlappingIds.has(el.id) ? 'rgba(220,38,38,0.12)' : (el.imageOf ? 'rgba(217,119,6,0.10)' : 'rgba(2,132,199,0.04)'),
+                                        borderRadius: 3
+                                    }}
+                                >
+                                    {isSel && (
+                                        <span style={{
+                                            position: 'absolute', top: -16, left: -1,
+                                            fontSize: 9, lineHeight: '15px', padding: '0 5px',
+                                            background: '#0284c7', color: 'white',
+                                            borderRadius: '3px 3px 0 0', whiteSpace: 'nowrap'
+                                        }}>
+                                            {el.imageOf
+                                                ? t('certificates.designer.image_pos', '{{label}} · {{up}}mm up · {{across}}mm across', { label: el.label, up: readNum(data, el.axes.yKey, el.axes.yDef), across: readNum(data, el.axes.xKey, el.axes.xDef) })
+                                                : `${el.label} · ${Math.round(topMm)}mm${el.leftKey ? ` · ${Math.round(leftPct)}%` : ''}`}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {/* ---- Quick editor on the certificate: type the text, change the size or the image right here ---- */}
+                        {selected && !selected.inactive && !quickClosed && (() => {
+                            const g = geomOf(selected);
+                            const canvasW = PAGE_W_PX * scale;
+                            const w = Math.max(200, Math.min(320, canvasW - 8));
+                            const boxTop = g.topMm * MM_TO_PX * scale;
+                            const below = g.topMm < 120;
+                            const allTexts = (selected.texts || []).filter(x => !excludedKeys.includes(x.key));
+                            const langTexts = allTexts.filter(x => !!x.rtl === isArabic);
+                            const quickTexts = (langTexts.length ? langTexts : allTexts).slice(0, 2);
+                            // Text grows by font size; a logo grows by its height in mm.
+                            const size = selected.fontKey
+                                ? { key: selected.fontKey, def: selected.fontDef, min: 6, max: 140, unit: 'px' }
+                                : selected.boxHeightKey ? { key: selected.boxHeightKey, def: selected.boxHeightDef, min: 5, max: 80, unit: 'mm' } : null;
+                            const sizeNow = size ? readNum(data, size.key, size.def) : null;
+                            const stepSize = (d) => set(size.key, String(Math.min(size.max, Math.max(size.min, Math.round(sizeNow + d)))));
+                            if (!quickTexts.length && !size && !selected.logoKey) return null;
+                            const iconBtn = 'h-8 min-w-8 px-2 rounded border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1';
+                            return (
+                                <div
+                                    onPointerDown={e => e.stopPropagation()}
+                                    className="rounded-lg border border-sky-300 bg-white/95 shadow-lg p-1.5 flex flex-col gap-1.5"
+                                    style={{
+                                        position: 'absolute', zIndex: 60, width: w,
+                                        left: `clamp(4px, calc(${g.leftPct}% - ${w / 2}px), ${canvasW - w - 4}px)`,
+                                        top: below ? boxTop + Math.max(12, g.boxH) + 6 : boxTop - 20,
+                                        transform: below ? 'none' : 'translateY(-100%)'
+                                    }}
+                                >
+                                    {quickTexts.map((x, i) => {
+                                        const common = {
+                                            ref: i === 0 ? quickInputRef : undefined,
+                                            dir: x.rtl ? 'rtl' : 'ltr',
+                                            value: ownData[x.key] || '',
+                                            placeholder: inherited[x.key] || x.placeholder || x.label,
+                                            'aria-label': x.label,
+                                            onChange: e => set(x.key, e.target.value),
+                                            className: 'w-full border border-gray-300 rounded px-2 py-1 text-base lg:text-sm'
+                                        };
+                                        return x.multiline ? <textarea key={x.key} {...common} rows={3} /> : <input key={x.key} {...common} />;
+                                    })}
+                                    <div className="flex items-center gap-1">
+                                        {size && (
+                                            <>
+                                                <button type="button" className={iconBtn} onClick={() => stepSize(-1)} title={t('certificates.designer.smaller', 'Smaller')}>{size.unit === 'px' ? 'A−' : '−'}</button>
+                                                <span className="text-xs text-gray-500 tabular-nums w-11 text-center">{Math.round(sizeNow)}{size.unit}</span>
+                                                <button type="button" className={iconBtn} onClick={() => stepSize(1)} title={t('certificates.designer.larger', 'Larger')}>{size.unit === 'px' ? 'A+' : '+'}</button>
+                                            </>
+                                        )}
+                                        {selected.logoKey && (
+                                            <button type="button" className={iconBtn} onClick={() => triggerUpload(selected.logoKey)} disabled={!!uploadingAsset}>
+                                                {uploadingAsset === selected.logoKey ? <Spinner size="sm" /> : <><Upload className="h-4 w-4" />{data[selected.logoKey] ? t('certificates.designer.replace', 'Replace') : t('certificates.designer.upload', 'Upload')}</>}
+                                            </button>
+                                        )}
+                                        <span className="flex-1" />
+                                        <button type="button" className={`${iconBtn} lg:hidden`} onClick={() => setMobilePane('props')} title={t('certificates.designer.more_settings', 'More settings')}>
+                                            <Settings className="h-4 w-4" />
+                                        </button>
+                                        <button type="button" className={iconBtn} onClick={() => setQuickClosed(true)} title={t('certificates.common.close', 'Close')}>
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
+
+                    {overlaps.length > 0 && (
+                        <div className="max-w-3xl mx-auto mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                            <span className="font-bold">{t('certificates.designer.overlapping', 'Overlapping on the certificate:')} </span>
+                            {overlaps.map(([a, b], i) => (
+                                <span key={`${a.id}-${b.id}`}>
+                                    {i > 0 && ' · '}
+                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(a.id)}>{a.label}</button>
+                                    {` ${t('certificates.designer.and', 'and')} `}
+                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(b.id)}>{b.label}</button>
+                                </span>
+                            ))}
+                            <span className="text-red-600"> — {t('certificates.designer.overlap_fix', 'move one of them, or hide the line you don’t need.')}</span>
+                        </div>
+                    )}
+
+                    <p className="lg:hidden text-center text-xs text-gray-600 mt-2">
+                        {t('certificates.designer.canvas_help_touch', 'Tap a box to pick it, drag to move it, and type in the small editor to change its text.')}
+                    </p>
+                    <p className="hidden lg:block text-center text-xs text-gray-500 mt-3">
+                        {t('certificates.designer.canvas_help', 'Drag any box to move it — pink lines show when it lines up with something (hold Alt to move freely). Arrow keys nudge by 1mm, Shift+Arrow by one grid step.')}
+                    </p>
+                </main>
             </div>
         </div>
     );
