@@ -11,6 +11,8 @@ import { serverTimestamp } from 'firebase/firestore';
 import { useDataCache } from '../../DataContext';
 import { notify } from '../dialogs';
 import { saveIMNCIPatientRecord } from '../../data';
+// The rules engine lives in engine.js so it can be tested against the booklet.
+import { evaluateProtocol, mergeCategories, computeChildFindings, computeInfantFindings, infantAgeInMonths } from './engine';
 
 // Back arrow that points the way the page reads: right in Arabic, left in English.
 const BackArrow = (props) => {
@@ -22,100 +24,6 @@ const BackArrow = (props) => {
 // so the two live in one module rather than in separate places that have to be
 // kept in step by whoever remembers.
 const ProtocolEditor = lazy(() => import('./protocol'));
-
-// ============================================================================
-// DYNAMIC DOSE CALCULATOR ENGINE (Reads from Database)
-// ============================================================================
-const resolveDoseTag = (drugKey, weight, ageInMonths, dosagesProtocol) => {
-    if (!dosagesProtocol || !dosagesProtocol.drugs) return "Loading dose...";
-    
-    const drug = dosagesProtocol.drugs.find(d => d.id === drugKey);
-    if (!drug) return "Dose: Unknown";
-
-    const w = parseFloat(weight) || 0;
-    const a = parseFloat(ageInMonths) || 0;
-
-    if (w === 0 && a === 0) return drug.fallback || "Check manual chart";
-
-    for (const rule of drug.rules || []) {
-        const minW = parseFloat(rule.minWeight) || 0;
-        const maxW = rule.maxWeight === '' || rule.maxWeight === undefined ? 999 : parseFloat(rule.maxWeight);
-        
-        const minA = parseFloat(rule.minAge) || 0;
-        const maxA = rule.maxAge === '' || rule.maxAge === undefined ? 999 : parseFloat(rule.maxAge);
-
-        const isPureAgeRule = minW === 0 && maxW >= 99;
-        const isPureWeightRule = minA === 0 && maxA >= 99;
-
-        let match = false;
-
-        if (isPureAgeRule) {
-            if (a >= minA && a <= maxA) match = true;
-        } else if (isPureWeightRule) {
-            if (w >= minW && w <= maxW) match = true;
-        } else {
-            // Mixed rule: PREFER WEIGHT over AGE
-            if (w > 0) {
-                if (w >= minW && w <= maxW) match = true;
-            } else if (a > 0) {
-                if (a >= minA && a <= maxA) match = true;
-            }
-        }
-
-        if (match) {
-            const parts = [];
-            if (rule.doseQty) parts.push(rule.doseQty);
-            if (rule.doseFreq) parts.push(`(${rule.doseFreq})`);
-            if (rule.doseDuration) parts.push(`— ${rule.doseDuration}`);
-            return parts.join(' ');
-        }
-    }
-    
-    return drug.fallback || "Check manual chart (Out of range)";
-};
-
-// ============================================================================
-// DYNAMIC RULE EVALUATOR ENGINE
-// ============================================================================
-const evaluateProtocol = (computedAssessments, currentProtocol, defaultCategories, weight, ageInMonths, dosagesProtocol) => {
-    const evaluatedCategories = { ...defaultCategories };
-
-    if (!currentProtocol || !currentProtocol.categories) {
-        return evaluatedCategories; 
-    }
-
-    Object.entries(currentProtocol.categories).forEach(([catKey, categoryData]) => {
-        if (!evaluatedCategories[catKey]) evaluatedCategories[catKey] = { c: [], t: [] };
-        
-        for (const rule of categoryData.rules || []) {
-            let isMatch = false;
-
-            if (rule.type === 'ANY') {
-                isMatch = rule.conditions.some(cond => computedAssessments[cond] === true);
-            } else if (rule.type === 'ALL') {
-                isMatch = rule.conditions.every(cond => computedAssessments[cond] === true);
-            } else if (rule.type === 'COUNT_GTE') {
-                const trueCount = rule.conditions.filter(cond => computedAssessments[cond] === true).length;
-                isMatch = trueCount >= (rule.threshold || 2);
-            }
-
-            if (isMatch) {
-                evaluatedCategories[catKey].c.push(rule.classification);
-                
-                const processedTreatments = rule.treatments.map(tStr => {
-                    return tStr.replace(/{{dose:(.*?)}}/g, (match, drugKey) => {
-                        return `|||${resolveDoseTag(drugKey, weight, ageInMonths, dosagesProtocol)}|||`;
-                    });
-                });
-                
-                evaluatedCategories[catKey].t.push(...processedTreatments);
-                break; 
-            }
-        }
-    });
-
-    return evaluatedCategories;
-};
 
 // ============================================================================
 // RECORD DETAILS MODAL
@@ -694,43 +602,15 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
     const toggleTreatment = (tItem) => setSelectedTreatments(prev => ({ ...prev, [tItem]: !prev[tItem] }));
 
     const results = useMemo(() => {
-        const computedAssessments = {
-            ...assessments,
-            fastBreathing60: assessments.fastBreathing,
-            fever37_5: assessments.fever38 || (parseFloat(infantData.tempC) >= 37.5),
-            noBacterialSigns: !(assessments.convulsions || assessments.notFeedingWell || assessments.movementOnlyStimulatedNoMovement || assessments.fastBreathing || assessments.severeChestIndrawing || assessments.fever38 || assessments.lowTemp35_5 || assessments.umbilicusRedDraining || assessments.pusFromEyes || assessments.skinPustules),
-            jaundiceAfter24h: assessments.hasJaundice && !assessments.jaundiceFirst24h && !assessments.jaundiceSolesPalms && !assessments.jaundiceLowWeight,
-            feedsLessThan8Times: parseInt(assessments.breastfeedTimes || 8) < 8,
-            receivesOtherFoods: assessments.otherFoods === 'yes',
-            lowWeightForAge: assessments.weightForAgeLow,
-            notWellAttached: assessments.goodAttachment === 'notWell',
-            notSucklingEffectively: assessments.suckingEffectively === 'notEffective',
-            feedingWellNormalWeight: assessments.diffFeeding !== 'yes' && parseInt(assessments.breastfeedTimes || 8) >= 8 && assessments.otherFoods !== 'yes' && !assessments.weightForAgeLow && !assessments.thrush
-        };
-
+        const findings = computeInfantFindings(assessments, infantData.tempC);
         const defaultCategories = {
             bacterial_infection: { c: [], t: [] }, jaundice: { c: [], t: [] }, diarrhea: { c: [], t: [] },
+            persistent_diarrhea: { c: [], t: [] }, dysentery: { c: [], t: [] },
             feeding_problem: { c: [], t: [] }, vaccine: { c: [], t: [] }, other: { c: [], t: [] }
         };
-
         const weight = parseFloat(infantData.weightKg) || 0;
-        
-        let ageInMonths = 1;
-        const ageStr = String(infantData.ageDaysWeeks || '').toLowerCase().trim();
-        if (ageStr) {
-            if (ageStr.includes('d') || ageStr.includes('ي')) {
-                ageInMonths = (parseFloat(ageStr) || 0) / 30.44;
-            } else if (ageStr.includes('w') || ageStr.includes('ا') || ageStr.includes('س')) {
-                ageInMonths = (parseFloat(ageStr) || 0) / 4.345;
-            } else {
-                const val = parseFloat(ageStr) || 0;
-                ageInMonths = val > 8 ? val / 30.44 : val / 4.345; 
-            }
-        } else {
-            ageInMonths = 0;
-        }
-
-        return evaluateProtocol(computedAssessments, protocols?.infant, defaultCategories, weight, ageInMonths, protocols?.dosages_infant);
+        const ageInMonths = infantAgeInMonths(infantData.ageDaysWeeks);
+        return evaluateProtocol(findings, protocols?.infant, defaultCategories, weight, ageInMonths, protocols?.dosages_infant);
     }, [assessments, infantData, protocols]);
 
     const handleSave = async () => {
@@ -848,9 +728,32 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
                     </div>
                 </AssessmentRow>
 
+                {/* Young-infant diarrhoea: the booklet's dehydration, persistent
+                    diarrhoea and blood-in-stool tables, shown together. */}
+                <AssessmentRow title={t('imci.infant.check_diarrhea')} isConditional yesNoValue={assessments.hasDiarrhea} onYesNoChange={(val) => setAssessments(p => ({...p, hasDiarrhea: val}))} classifyData={mergeCategories(results, ['diarrhea', 'persistent_diarrhea', 'dysentery']).c} treatmentData={mergeCategories(results, ['diarrhea', 'persistent_diarrhea', 'dysentery']).t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2"><span className="text-sm font-medium">{t('imci.common.duration')}</span><input type="number" inputMode="decimal" name="diarrheaDays" value={assessments.diarrheaDays} onChange={(e) => setAssessments(p => ({...p, diarrheaDays: e.target.value}))} className="w-16 rounded border-slate-300 sm:text-sm p-1" /><span className="text-sm font-medium">{t('imci.common.days')}</span></div>
+                            <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="bloodInStool" checked={assessments.bloodInStool} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.blood_in_stool')}</span></label>
+                        </div>
+                        <div className="space-y-3 text-sm">
+                            <span className="font-medium block">{t('imci.infant.general_condition')}</span>
+                            <label className="flex items-center space-x-1 cursor-pointer"><input type="checkbox" name="diarrheaMovement" checked={assessments.diarrheaMovement} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.diarrhea_movement')}</span></label>
+                            <label className="flex items-center space-x-1 cursor-pointer"><input type="checkbox" name="diarrheaRestless" checked={assessments.diarrheaRestless} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.diarrhea_restless')}</span></label>
+                            <label className="flex items-center space-x-1 cursor-pointer"><input type="checkbox" name="diarrheaSunkenEyes" checked={assessments.diarrheaSunkenEyes} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.sunken_eyes')}</span></label>
+                            <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 pt-2">
+                                <span className="font-medium">{t('imci.infant.skin_pinch')}</span>
+                                <label className="flex items-center space-x-1 cursor-pointer"><input type="checkbox" name="pinchVerySlow" checked={assessments.pinchVerySlow} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.very_slowly')}</span></label>
+                                <label className="flex items-center space-x-1 cursor-pointer"><input type="checkbox" name="pinchSlow" checked={assessments.pinchSlow} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.slowly')}</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </AssessmentRow>
+
                 <AssessmentRow title={t('imci.infant.check_feeding')} active={true} classifyData={results.feeding_problem?.c} treatmentData={results.feeding_problem?.t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <div className="space-y-3 bg-slate-50 p-3 rounded border border-slate-200">
+                            <div className="flex justify-between items-center text-sm border-b pb-2"><span>{t('imci.infant.any_diff_feeding')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="diffFeeding" value="yes" checked={assessments.diffFeeding==='yes'} onChange={handleRadioChange}/> {t('imci.common.yes')}</label><label className="cursor-pointer"><input type="radio" name="diffFeeding" value="no" checked={assessments.diffFeeding==='no'} onChange={handleRadioChange}/> {t('imci.common.no')}</label></div></div>
                             <div className="flex justify-between items-center text-sm border-b pb-2"><span>{t('imci.infant.is_breastfed')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="breastfed" value="yes" checked={assessments.breastfed==='yes'} onChange={handleRadioChange}/> {t('imci.common.yes')}</label><label className="cursor-pointer"><input type="radio" name="breastfed" value="no" checked={assessments.breastfed==='no'} onChange={handleRadioChange}/> {t('imci.common.no')}</label></div></div>
                             {assessments.breastfed === 'yes' && (<div className="flex items-center gap-2 text-sm ms-4"><span>{t('imci.infant.times_24h')}</span><input type="number" inputMode="decimal" name="breastfeedTimes" value={assessments.breastfeedTimes} onChange={(e) => setAssessments(p=>({...p, breastfeedTimes: e.target.value}))} className="w-16 rounded border-slate-300 p-1"/><span>{t('imci.infant.times')}</span></div>)}
                             <div className="flex justify-between items-center text-sm border-b pb-2"><span>{t('imci.infant.other_foods')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="otherFoods" value="yes" checked={assessments.otherFoods==='yes'} onChange={handleRadioChange}/> {t('imci.common.yes')}</label><label className="cursor-pointer"><input type="radio" name="otherFoods" value="no" checked={assessments.otherFoods==='no'} onChange={handleRadioChange}/> {t('imci.common.no')}</label></div></div>
@@ -861,6 +764,17 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="thrush" checked={assessments.thrush} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.infant.thrush')}</span></label>
                         </div>
                     </div>
+                    {/* Assess breastfeeding, as the booklet asks, when the infant is
+                        breastfed. Poor positioning, attachment or suckling is a
+                        feeding problem in its own right. */}
+                    {assessments.breastfed === 'yes' && (
+                        <div className="mt-3 space-y-2 bg-slate-50 p-3 rounded border border-slate-200 text-sm">
+                            <span className="font-bold block">{t('imci.infant.assess_breastfeeding')}</span>
+                            <div className="flex flex-wrap justify-between items-center gap-2 border-b pb-2"><span>{t('imci.infant.well_positioned')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="wellPositioned" value="yes" checked={assessments.wellPositioned==='yes'} onChange={handleRadioChange}/> {t('imci.infant.pos_well')}</label><label className="cursor-pointer"><input type="radio" name="wellPositioned" value="no" checked={assessments.wellPositioned==='no'} onChange={handleRadioChange}/> {t('imci.infant.pos_not_well')}</label></div></div>
+                            <div className="flex flex-wrap justify-between items-center gap-2 border-b pb-2"><span>{t('imci.infant.able_to_attach')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="goodAttachment" value="good" checked={assessments.goodAttachment==='good'} onChange={handleRadioChange}/> {t('imci.infant.att_good')}</label><label className="cursor-pointer"><input type="radio" name="goodAttachment" value="notWell" checked={assessments.goodAttachment==='notWell'} onChange={handleRadioChange}/> {t('imci.infant.att_not_well')}</label></div></div>
+                            <div className="flex flex-wrap justify-between items-center gap-2"><span>{t('imci.infant.sucking_effectively')}</span><div className="flex gap-3"><label className="cursor-pointer"><input type="radio" name="suckingEffectively" value="effective" checked={assessments.suckingEffectively==='effective'} onChange={handleRadioChange}/> {t('imci.infant.suck_effective')}</label><label className="cursor-pointer"><input type="radio" name="suckingEffectively" value="notEffective" checked={assessments.suckingEffectively==='notEffective'} onChange={handleRadioChange}/> {t('imci.infant.suck_not_effective')}</label></div></div>
+                        </div>
+                    )}
                 </AssessmentRow>
 
                 <AssessmentRow title={t('imci.infant.any_other_problems')} isConditional={true} yesNoValue={assessments.hasOtherProblems} onYesNoChange={(val) => setAssessments(p => ({...p, hasOtherProblems: val}))} classifyData={results.other?.c} treatmentData={results.other?.t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
@@ -960,34 +874,19 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
     }, [childData]);
 
     const results = useMemo(() => {
-        const computedAssessments = {
-            ...assessments,
-            hasDangerSign: assessments.notAbleToDrink || assessments.vomitsEverything || assessments.historyOfConvulsions || assessments.lethargicUnconscious || assessments.convulsingNow,
-            diarrhea14Days: parseInt(assessments.diarrheaDays || 0) >= 14,
-            hasDehydration: (assessments.lethargic || assessments.restlessIrritable || assessments.sunkenEyes || assessments.drinkPoorly || assessments.drinkEagerly || assessments.pinchVerySlow || assessments.pinchSlow), 
-            malariaTestPositive: assessments.malariaTest === 'positive',
-            measlesNow: assessments.measlesRash,
-            earDischargeAcute: assessments.earDischarge && parseInt(assessments.earDischargeDays || 0) < 14,
-            earDischargeChronic: (assessments.earDischarge || assessments.pusFromEar) && parseInt(assessments.earDischargeDays || 0) >= 14,
-            samWithComplications: (assessments.edema || zScoreResult.status === 'Less than -3Z' || (parseFloat(assessments.muacCm) > 0 && parseFloat(assessments.muacCm) < 11.5)) && (assessments.medicalComplication || assessments.appetiteTest === 'failed'),
-            samWithoutComplications: (assessments.edema || zScoreResult.status === 'Less than -3Z' || (parseFloat(assessments.muacCm) > 0 && parseFloat(assessments.muacCm) < 11.5)) && !(assessments.medicalComplication || assessments.appetiteTest === 'failed'),
-            moderateAcuteMalnutrition: zScoreResult.status === 'Between -3 and -2 Z' || (parseFloat(assessments.muacCm) >= 11.5 && parseFloat(assessments.muacCm) < 12.5),
-            noMalnutrition: zScoreResult.status === '-2 Z or more' && (parseFloat(assessments.muacCm) >= 12.5 || !assessments.muacCm) && !assessments.edema,
-            severePalmarPallor: assessments.pallor === 'severePallor',
-            somePalmarPallor: assessments.pallor === 'somePallor',
-            noPalmarPallor: assessments.pallor === 'noPallor'
-        };
-
+        const findings = computeChildFindings(assessments, zScoreResult.status);
+        // One entry per booklet table. Dehydration, persistent diarrhoea and
+        // dysentery are separate tables, so a child can have all three.
         const defaultCategories = {
-            danger: { c: [], t: [] }, cough: { c: [], t: [] }, diarrhea: { c: [], t: [] }, 
-            fever: { c: [], t: [] }, ear: { c: [], t: [] }, malnutrition: { c: [], t: [] },
+            danger: { c: [], t: [] }, cough: { c: [], t: [] }, diarrhea: { c: [], t: [] },
+            persistent_diarrhea: { c: [], t: [] }, dysentery: { c: [], t: [] },
+            fever: { c: [], t: [] }, measles: { c: [], t: [] }, ear: { c: [], t: [] },
+            malnutrition: { c: [], t: [] }, anemia: { c: [], t: [] },
             vaccine: { c: [], t: [] }, other: { c: [], t: [] }, feeding: { c: [], t: [] }
         };
-
         const weight = parseFloat(childData.weightKg) || 0;
         const age = parseFloat(childData.ageMonths) || 0;
-
-        return evaluateProtocol(computedAssessments, protocols?.child, defaultCategories, weight, age, protocols?.dosages_child);
+        return evaluateProtocol(findings, protocols?.child, defaultCategories, weight, age, protocols?.dosages_child);
     }, [assessments, protocols, zScoreResult, childData]);
 
     const handleSave = async () => {
@@ -1089,7 +988,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     </div>
                 </AssessmentRow>
 
-                <AssessmentRow title={t('imci.child.diarrhea_title')} isConditional={true} yesNoValue={assessments.hasDiarrhea} onYesNoChange={(val) => setAssessments(p => ({...p, hasDiarrhea: val}))} classifyData={results.diarrhea?.c} treatmentData={results.diarrhea?.t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
+                <AssessmentRow title={t('imci.child.diarrhea_title')} isConditional={true} yesNoValue={assessments.hasDiarrhea} onYesNoChange={(val) => setAssessments(p => ({...p, hasDiarrhea: val}))} classifyData={mergeCategories(results, ['diarrhea', 'persistent_diarrhea', 'dysentery']).c} treatmentData={mergeCategories(results, ['diarrhea', 'persistent_diarrhea', 'dysentery']).t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded">
                         <div className="space-y-3">
                             <div className="flex items-center gap-2"><span className="text-sm font-medium">{t('imci.common.duration')}</span><input type="number" inputMode="decimal" name="diarrheaDays" value={assessments.diarrheaDays} onChange={(e) => setAssessments(p => ({...p, diarrheaDays: e.target.value}))} className="w-16 rounded border-slate-300 sm:text-sm p-1" /><span className="text-sm font-medium">{t('imci.common.days')}</span></div>
@@ -1116,7 +1015,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     </div>
                 </AssessmentRow>
 
-                <AssessmentRow title={<span>{t('imci.child.fever_title')}</span>} isConditional={true} yesNoValue={assessments.hasFever} onYesNoChange={(val) => setAssessments(p => ({...p, hasFever: val}))} classifyData={results.fever?.c} treatmentData={results.fever?.t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
+                <AssessmentRow title={<span>{t('imci.child.fever_title')}</span>} isConditional={true} yesNoValue={assessments.hasFever} onYesNoChange={(val) => setAssessments(p => ({...p, hasFever: val}))} classifyData={mergeCategories(results, ['fever', 'measles']).c} treatmentData={mergeCategories(results, ['fever', 'measles']).t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 mb-4 bg-slate-50 p-3 rounded">
                         <div className="space-y-3">
                             <label className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" name="dailyFever7Days" checked={assessments.dailyFever7Days} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.daily_fever_7')}</span></label>
@@ -1151,7 +1050,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                     </div>
                 </AssessmentRow>
 
-                <AssessmentRow title={t('imci.child.malnutrition_title')} isConditional={false} classifyData={results.malnutrition?.c} treatmentData={results.malnutrition?.t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
+                <AssessmentRow title={t('imci.child.malnutrition_title')} isConditional={false} classifyData={mergeCategories(results, ['malnutrition', 'anemia']).c} treatmentData={mergeCategories(results, ['malnutrition', 'anemia']).t} selectedTreatments={selectedTreatments} onToggleTreatment={toggleTreatment}>
                     <div className="space-y-4 mt-2">
                         <label className="flex items-center space-x-2 text-sm font-semibold text-slate-800 cursor-pointer"><input type="checkbox" name="edema" checked={assessments.edema} onChange={handleCheckboxChange} className="rounded text-sky-600 w-4 h-4" /><span>{t('imci.child.edema')}</span></label>
                         <div className="text-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-slate-50 p-2 rounded">

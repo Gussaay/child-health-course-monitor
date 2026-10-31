@@ -5200,6 +5200,7 @@ const resources = {
             add: "Add",
           },
           dlg: {
+            national_msg: "This replaces all four tabs (sick child, young infant and both Doses tabs) with the Sudan national IMNCI protocol and saves them now. Every clinician sees it straight away. Any changes made here before are replaced.", national_title: "Load national protocol", national_confirm: "Load and save",
             discard_msg: "You have unsaved changes to this protocol. Switching tabs will discard them. Continue?",
             discard_title: "Discard changes",
             discard: "Discard",
@@ -5221,6 +5222,7 @@ const resources = {
             del_cat_title2: "Delete Category",
           },
           toast: {
+            national_saved: "The national protocol is saved in all four tabs and is now live for every clinician.",
             saved: "Protocol saved. It is now live for every clinician.",
             save_failed: "Could not save the protocol.",
             cat_exists: "A category with this key already exists.",
@@ -5238,6 +5240,7 @@ const resources = {
             rule: "Find a category, classification, condition or treatment…",
           },
           btn: {
+            load_national: "Load national protocol",
             load_defaults: "Load Defaults",
             add_category: "Add Category",
             add_drug: "Add Drug",
@@ -5259,6 +5262,7 @@ const resources = {
           hidden_cats: "{{count}} category(ies) hidden by the search.",
           unnamed_drug: "Unnamed Drug",
           drug: {
+            age_and_weight: "Age and weight must both match (for doses that change with age at the same weight, such as young-infant gentamicin)",
             display_label: "Display Label",
             label_ph: "e.g. Amoxicillin (Oral)",
             fallback: "Fallback Text (If Out of Range)",
@@ -5282,8 +5286,21 @@ const resources = {
             no_treatments: "No treatments added.",
             no_rules: "No rules defined.",
           },
+          view: { booklet: "Booklet view", edit: "Edit rules" },
+          booklet: {
+            if_yes: "IF YES", ask: "ASK:", look: "LOOK, LISTEN, FEEL:",
+            signs: "Signs", classify: "Classify as", treat: "Identify treatment",
+            child_heading: "Assess and classify the sick child, age 2 months up to 5 years",
+            infant_heading: "Assess, classify and treat the sick young infant, age up to 2 months",
+            use_all: "Use all boxes that match the symptoms and problems to classify the illness.",
+            empty: "This protocol has no classification tables yet.", no_drugs: "No doses saved yet.",
+            age: "Age", weight: "Weight", dose: "Dose", freq: "How often", duration: "For how long",
+            months: "months", range_from: "{{lo}} {{unit}} or more", age_weight_badge: "Age and weight",
+          },
           unnamed_rule: "Unnamed Rule",
           rule: {
+            requires: "Only when (all must be true)", add_require: "+ Only when",
+            signs: "Signs as printed in the booklet", signs_hint: "One line each. Shown in the booklet view only.",
             logic: "Logic",
             need: "Need",
             label: "Label",
@@ -12681,6 +12698,7 @@ const resources = {
             add: "إضافة",
           },
           dlg: {
+            national_msg: "سيستبدل هذا التبويبات الأربعة (الطفل المريض، والرضيع الصغير، وتبويبي الجرعات) بالبروتوكول القومي للرعاية المتكاملة في السودان ويحفظها الآن. سيظهر لكل الكوادر الصحية فوراً، وستُستبدل أي تعديلات سابقة هنا.", national_title: "تحميل البروتوكول القومي", national_confirm: "تحميل وحفظ",
             discard_msg: "لديك تغييرات غير محفوظة على هذا البروتوكول. سيؤدي تبديل التبويب إلى تجاهلها. هل تريد المتابعة؟",
             discard_title: "تجاهل التغييرات",
             discard: "تجاهل",
@@ -12702,6 +12720,7 @@ const resources = {
             del_cat_title2: "حذف الفئة",
           },
           toast: {
+            national_saved: "تم حفظ البروتوكول القومي في التبويبات الأربعة وأصبح متاحاً لكل الكوادر الصحية.",
             saved: "تم حفظ البروتوكول. أصبح الآن مفعّلاً لجميع الكوادر السريرية.",
             save_failed: "تعذّر حفظ البروتوكول.",
             cat_exists: "توجد فئة بهذا المفتاح بالفعل.",
@@ -12719,6 +12738,7 @@ const resources = {
             rule: "ابحث عن فئة أو تصنيف أو حالة أو علاج…",
           },
           btn: {
+            load_national: "تحميل البروتوكول القومي",
             load_defaults: "تحميل الإعدادات الافتراضية",
             add_category: "إضافة فئة",
             add_drug: "إضافة دواء",
@@ -12740,6 +12760,7 @@ const resources = {
           hidden_cats: "{{count}} فئة مخفية بسبب البحث.",
           unnamed_drug: "دواء بدون اسم",
           drug: {
+            age_and_weight: "يجب أن يطابق العمر والوزن معاً (للجرعات التي تتغير بالعمر عند نفس الوزن، مثل الجنتاميسين للرضيع الصغير)",
             display_label: "الاسم المعروض",
             label_ph: "مثال: Amoxicillin (Oral)",
             fallback: "النص البديل (إذا كان خارج النطاق)",
@@ -12763,8 +12784,21 @@ const resources = {
             no_treatments: "لم تتم إضافة علاجات.",
             no_rules: "لم يتم تعريف قواعد.",
           },
+          view: { booklet: "عرض الكتيب", edit: "تعديل القواعد" },
+          booklet: {
+            if_yes: "إذا كانت الإجابة نعم", ask: "اسأل:", look: "انظر، استمع، تحسس:",
+            signs: "العلامات", classify: "التصنيف", treat: "حدد العلاج",
+            child_heading: "قيّم وصنّف الطفل المريض من عمر شهرين حتى 5 سنوات",
+            infant_heading: "قيّم وصنّف وعالج الرضيع الصغير المريض حتى عمر شهرين",
+            use_all: "استخدم كل الخانات التي تطابق أعراض الطفل ومشاكله لتصنيف المرض.",
+            empty: "لا توجد جداول تصنيف في هذا البروتوكول بعد.", no_drugs: "لم تُحفظ جرعات بعد.",
+            age: "العمر", weight: "الوزن", dose: "الجرعة", freq: "كم مرة", duration: "لمدة",
+            months: "شهر", range_from: "{{lo}} {{unit}} أو أكثر", age_weight_badge: "العمر والوزن",
+          },
           unnamed_rule: "قاعدة بدون اسم",
           rule: {
+            requires: "فقط عندما (يجب أن تتحقق كلها)", add_require: "+ فقط عندما",
+            signs: "العلامات كما في الكتيب", signs_hint: "سطر لكل علامة. تظهر في عرض الكتيب فقط.",
             logic: "المنطق",
             need: "العدد المطلوب",
             label: "التسمية",
