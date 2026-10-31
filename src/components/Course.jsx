@@ -765,7 +765,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
         { key: 'IPC', title: t('course_page.packages.ipc', 'Infection Prevention & Control (Neonatal Unit)'), enabled: true },
         { key: 'Small & Sick Newborn', title: t('course_page.packages.ssnc', 'Small & Sick Newborn Case Management'), enabled: true },
         { key: 'Program Management', title: t('course_page.packages.program_management', 'Program Management'), enabled: true },
-    ];
+    ].filter(it => !IS_EMONC_SITE || it.key === 'EmONC');
   
     return (
         <Card className="p-4 md:p-6">
@@ -2217,7 +2217,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                             </Button>
                                         )}
                                         <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="md:ms-auto"><ClipboardList size={14} className="me-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
-                                        {!IS_EMONC_SITE && <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>}
+                                        <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>
                                 </PageActions>
                                 
                                 <FilterPanel className="mb-4" activeCount={[filterState, filterLocality, filterSubCourse, filterProject].filter(v => v && v !== 'All').length}>

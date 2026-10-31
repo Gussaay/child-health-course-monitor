@@ -411,6 +411,11 @@ function pageTitles(t) {
 }
 
 function buildModules(t, permissions) {
+    const modules = allModules(t, permissions);
+    return IS_EMONC_SITE ? modules.filter(m => !EMONC_SITE_HIDDEN_VIEWS.has(m.view)) : modules;
+}
+
+function allModules(t, permissions) {
     const tile = (key, fallback) => t(`landing.taglines.${key}`, fallback);
     return [
         { label: t('landing.modules.dashboard', 'Dashboard'), tagline: tile('dashboard', 'Key indicators at a glance'), view: 'dashboard', group: 'services', icon: Home, permission: true },
@@ -1090,10 +1095,8 @@ export default function App() {
         }
     };
 
-    const [view, setView] = useState(IS_EMONC_SITE ? 'courses' : 'landing');
-    const [chosenCourseType, setActiveCourseType] = useState(null);
-    // The EmONC site shows only the EmONC course list, so its type never changes.
-    const activeCourseType = IS_EMONC_SITE ? 'EmONC' : chosenCourseType;
+    const [view, setView] = useState("landing");
+    const [activeCourseType, setActiveCourseType] = useState(null);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [selectedParticipantId, setSelectedParticipantId] = useState(null);
     const [selectedFacilitatorId, setSelectedFacilitatorId] = useState(null);
@@ -2012,7 +2015,7 @@ export default function App() {
 
 
     const navigate = useCallback((requestedView, state = {}) => {
-        const newView = IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(requestedView) ? 'courses' : requestedView;
+        const newView = IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(requestedView) ? 'landing' : requestedView;
         const viewPermissions = {
             'landing': true, 'dashboard': true, 'admin': permissions.canViewAdmin, 'imciForm': permissions.canViewCourse, 'humanResources': permissions.canViewHumanResource,
             'courses': permissions.canViewCourse, 'courseDetails': permissions.canViewCourse, 'participants': permissions.canViewCourse, 'reports': permissions.canViewCourse,
@@ -2070,9 +2073,9 @@ export default function App() {
     viewRef.current = view;
 
     // A few places still set the view directly (sign-in, a denied page). On the
-    // EmONC site those land on the course list instead of a hidden module.
+    // EmONC site those land on the home page instead of a hidden module.
     useEffect(() => {
-        if (IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(view)) { setActiveCoursesTab('courses'); setView('courses'); }
+        if (IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(view)) setView('landing');
     }, [view]);
 
     // Opens a page described by an address or history entry.
@@ -2454,7 +2457,7 @@ export default function App() {
         const viewToRender = view;
 
         switch (viewToRender) {
-            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={homeStats} onAskData={openDataAssistant} />;
+            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={IS_EMONC_SITE ? null : homeStats} onAskData={IS_EMONC_SITE ? null : openDataAssistant} />;
             case 'admin': return <AdminDashboard appRoles={userRoles} />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
@@ -2582,7 +2585,7 @@ case 'meetings':
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship }
     ], [view, permissions, t]);
 
-    const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
+    const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled && !(IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(item.view))), [navItems]);
 
     const isApplicationPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView;
     const isMentorshipPublicView = !!publicMentorshipProps || isPublicMentorshipDashboardView; 
@@ -3148,7 +3151,7 @@ case 'meetings':
                     user={user}
                     roleLabel={userRoles?.[0] ? String(userRoles[0]).replace(/_/g, ' ') : ''}
                     levelLabel={{ federal: t('landing.level_federal', 'Federal level'), state: t('landing.level_state', 'State level'), locality: t('landing.level_locality', 'Locality level') }[levelFromPermissions(permissions)]}
-                    modules={buildModules(t, permissions).filter(m => m.permission && !(IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(m.view)))}
+                    modules={buildModules(t, permissions).filter(m => m.permission)}
                     currentView={view}
                     onNavigate={guardedNavigate}
                     onProfile={() => setIsUserProfileModalOpen(true)}
@@ -3162,7 +3165,7 @@ case 'meetings':
                 />
             )}
 
-            { user && !isMinimalUILayout && !IS_EMONC_SITE && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} /> }
+            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} /> }
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
