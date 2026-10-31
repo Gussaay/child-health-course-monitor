@@ -1,0 +1,50 @@
+# Makes Arabic narration audio for the tutorial videos with Microsoft's
+# free neural voices (edge-tts). Runs only on this side branch; it never
+# builds or deploys the app. Output is committed to tts/out/.
+name: Tutorial narration
+on:
+  push:
+    branches:
+      - claude/project-thread-g0kwlr
+    paths:
+      - 'tts/*.json'
+      - '.github/workflows/tutorial-voice.yml'
+permissions:
+  contents: write
+jobs:
+  narrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install edge-tts==7.0.2
+      - name: Generate audio
+        run: |
+          python - <<'PY'
+          import asyncio, json, glob, os, edge_tts
+          VOICES = ['ar-SA-HamedNeural', 'ar-SA-ZariyahNeural', 'ar-EG-ShakirNeural', 'ar-EG-SalmaNeural']
+          async def main():
+              for f in sorted(glob.glob('tts/*.json')):
+                  name = os.path.basename(f)[:-5]
+                  lines = json.load(open(f, encoding='utf-8'))
+                  for v in VOICES:
+                      out = f'tts/out/{name}/{v}'
+                      os.makedirs(out, exist_ok=True)
+                      for i, text in enumerate(lines):
+                          for attempt in range(4):
+                              try:
+                                  await edge_tts.Communicate(text, v, rate='-5%').save(f'{out}/{i:02d}.mp3')
+                                  break
+                              except Exception as e:
+                                  print('retry', v, i, e); await asyncio.sleep(3)
+          asyncio.run(main())
+          PY
+      - name: Commit audio
+        run: |
+          git config user.name "Monitoring System - Gussaay"
+          git config user.email "gussaay@gmial.com"
+          git add tts/out
+          git commit -m "Tutorial narration audio" || echo "nothing to commit"
+          git push
