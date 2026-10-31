@@ -471,6 +471,17 @@ export const CERT_DEFAULTS = {
     thirdSignatureWidth: 80
 };
 
+// Fixed wording printed when a text box is left blank. The designer shows it
+// in the box so it can be edited instead of typed again from scratch.
+export const TEXT_DEFAULTS = {
+    headerAr: "جمهورية السودان\nوزارة الصحة الاتحادية\nالإدارة العامة للرعاية الصحية الاساسية\nإدارة صحة الأم والطفل\nالبرنامج القومي لصحة الطفل",
+    headerEn: "Republic of Sudan\nFederal Ministry of Health\nDirectorate General of PHC\nMaternal and Child Health Directorate\nNational Child Health Program",
+    titleAr: 'شهادة',
+    titleEn: 'CERTIFICATE',
+    completionTextAr: 'أكمل/ت بنجاح الدورة التدريبية على : ',
+    completionTextEn: 'Has successfully completed:'
+};
+
 // -----------------------------------------------------------------------------
 // LOGO SLOTS
 // The certificate carries four logos. Each is positioned independently; a blank
@@ -495,12 +506,37 @@ const cfgNum = (raw, fallback) => {
 /** Vertical position a logo uses when it has no value of its own. */
 export const defaultLogoTop = (cfg = {}) => cfgNum(cfg.logoTop, CERT_DEFAULTS.logoTop);
 
+// Arabic certificates mirror the English logo order: FMOH is first on the LEFT
+// in English and first on the RIGHT in Arabic. Each language keeps its own
+// horizontal keys (logo1Left / logo1LeftAr, logoGroup1Left / logoGroup1LeftAr);
+// a blank Arabic value is the mirror image (100 − x) of the English one.
+const clampPct = (v) => Math.min(100, Math.max(0, v));
+
+/** The key that stores a logo's horizontal centre for this language. */
+export const logoLeftKey = (slot, isArabic = false) => `logo${slot.n}Left${isArabic ? 'Ar' : ''}`;
+
+/** A logo pair's centre for this language (Arabic mirrors English unless set). */
+export const logoGroupLeft = (cfg = {}, groupKey, isArabic = false) => {
+    const en = cfgNum(cfg[groupKey], CERT_DEFAULTS[groupKey]);
+    return isArabic ? cfgNum(cfg[`${groupKey}Ar`], 100 - en) : en;
+};
+
 /** Horizontal centre (% of page width) a logo uses when it has none of its own. */
 export const defaultLogoLeft = (cfg = {}, slot, isArabic = false) => {
-    const groupFallback = isArabic ? 100 - CERT_DEFAULTS[slot.groupKey] : CERT_DEFAULTS[slot.groupKey];
-    const groupLeft = cfgNum(cfg[slot.groupKey], groupFallback);
     const spread = cfgNum(cfg.logoSpread, CERT_DEFAULTS.logoSpread);
-    return Math.min(100, Math.max(0, groupLeft + slot.side * spread));
+    if (!isArabic) return clampPct(logoGroupLeft(cfg, slot.groupKey) + slot.side * spread);
+    // A logo moved in English lands in the mirrored spot in Arabic.
+    const enOwn = cfgNum(cfg[`logo${slot.n}Left`], null);
+    if (enOwn !== null) return clampPct(100 - enOwn);
+    // Inside a pair the order flips too, so the first logo is on the right.
+    return clampPct(logoGroupLeft(cfg, slot.groupKey, true) - slot.side * spread);
+};
+
+/** Extra logos: the key for this language, and the Arabic mirror default. */
+export const xlogoLeftKey = (id, isArabic = false) => `xlogo_${id}_Left${isArabic ? 'Ar' : ''}`;
+export const defaultXlogoLeft = (cfg = {}, id, isArabic = false) => {
+    const en = cfgNum(cfg[`xlogo_${id}_Left`], 50);
+    return isArabic ? clampPct(100 - en) : en;
 };
 
 // -----------------------------------------------------------------------------
@@ -509,7 +545,7 @@ export const defaultLogoLeft = (cfg = {}, slot, isArabic = false) => {
 // slots. They are stored as flat keys so the designer's element table can drive
 // them exactly like every other element:
 //   extraLogoIds: ['k3x9aa', ...]
-//   xlogo_<id>_Src / _Top / _Left / _Height / _Label / _Hidden
+//   xlogo_<id>_Src / _Top / _Left / _LeftAr / _Height / _Label / _Hidden
 // A logo with no image yet is a PLACEHOLDER: it shows as a dashed box in the
 // designer so it can be positioned first, and prints nothing.
 // -----------------------------------------------------------------------------
@@ -597,7 +633,7 @@ export const cleanCertificateConfig = (cfg = {}, scopeKind = 'course') => {
     if (scopeKind !== 'course') {
         const live = new Set(out.extraLogoIds || []);
         Object.keys(out).forEach(k => {
-            const m = k.match(/^xlogo_(.+)_(Src|Top|Left|Height|Label|Hidden)$/);
+            const m = k.match(/^xlogo_(.+)_(Src|Top|Left|LeftAr|Height|Label|Hidden)$/);
             if (m && !live.has(m[1])) delete out[k];
         });
     }
@@ -921,10 +957,10 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const logoTopLeft2 = customConfig.logoTopLeft2 || "/certificate/unicef-logo.png";
 
     // Text overrides
-    const headerAr = customConfig.headerAr || "جمهورية السودان\nوزارة الصحة الاتحادية\nالإدارة العامة للرعاية الصحية الاساسية\nإدارة صحة الأم والطفل\nالبرنامج القومي لصحة الطفل";
-    const headerEn = customConfig.headerEn || "Republic of Sudan\nFederal Ministry of Health\nDirectorate General of PHC\nMaternal and Child Health Directorate\nNational Child Health Program";
-    const titleCert = isArabic ? (customConfig.titleAr || 'شهادة') : (customConfig.titleEn || 'CERTIFICATE');
-    const completionText = isArabic ? (customConfig.completionTextAr || 'أكمل/ت بنجاح الدورة التدريبية على : ') : (customConfig.completionTextEn || 'Has successfully completed:');
+    const headerAr = customConfig.headerAr || TEXT_DEFAULTS.headerAr;
+    const headerEn = customConfig.headerEn || TEXT_DEFAULTS.headerEn;
+    const titleCert = isArabic ? (customConfig.titleAr || TEXT_DEFAULTS.titleAr) : (customConfig.titleEn || TEXT_DEFAULTS.titleEn);
+    const completionText = isArabic ? (customConfig.completionTextAr || TEXT_DEFAULTS.completionTextAr) : (customConfig.completionTextEn || TEXT_DEFAULTS.completionTextEn);
 
     // Course Titles
     let baseCourseTitle = getCertificateCourseTitle(courseType, language, participantSubCourse);
@@ -1174,7 +1210,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             slot,
             src: logoSources[slot.imageKey],
             top: numOr(customConfig[`logo${slot.n}Top`], logoTop),
-            left: numOr(customConfig[`logo${slot.n}Left`], defaultLogoLeft(customConfig, slot, isArabic)),
+            left: numOr(customConfig[logoLeftKey(slot, isArabic)], defaultLogoLeft(customConfig, slot, isArabic)),
             height: numOr(customConfig[slot.heightKey], CERT_DEFAULTS[slot.heightKey])
         }));
 
@@ -1187,7 +1223,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             src: customConfig[xlogoKey(id, 'Src')] || '',
             label: customConfig[xlogoKey(id, 'Label')] || `Logo ${LOGO_SLOTS.length + i + 1}`,
             top: numOr(customConfig[xlogoKey(id, 'Top')], logoTop),
-            left: numOr(customConfig[xlogoKey(id, 'Left')], 50),
+            left: numOr(customConfig[xlogoLeftKey(id, isArabic)], defaultXlogoLeft(customConfig, id, isArabic)),
             height: numOr(customConfig[xlogoKey(id, 'Height')], EXTRA_LOGO_DEFAULT_HEIGHT)
         }));
 
@@ -2069,7 +2105,7 @@ const buildEditorElements = (ctx) => {
         isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
         subCourseMode = 'auto', autoSubCourse = '',
         hideManager, hideDirector, showSealNotice, signatureImages = [],
-        logoTopDef, logoLeftFor, hiddenLogos = {}, extraLogos = [], sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef,
+        logoTopDef, logoLeftFor, logoGroupDef = (g) => CERT_DEFAULTS[g], xlogoLeftDef = () => 50, hiddenLogos = {}, extraLogos = [], sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef,
         t
     } = ctx;
 
@@ -2086,8 +2122,8 @@ const buildEditorElements = (ctx) => {
             topKey: 'logoTop', topDef: CERT_DEFAULTS.logoTop,
             box: { widthPct: 96, heightMm: 8 },
             numbers: [
-                { key: 'logoGroup1Left', label: t('certificates.elements.left_pair_centre', 'Left pair centre (%)'), def: isArabic ? 100 - CERT_DEFAULTS.logoGroup1Left : CERT_DEFAULTS.logoGroup1Left, min: 0, max: 100 },
-                { key: 'logoGroup2Left', label: t('certificates.elements.right_pair_centre', 'Right pair centre (%)'), def: isArabic ? 100 - CERT_DEFAULTS.logoGroup2Left : CERT_DEFAULTS.logoGroup2Left, min: 0, max: 100 },
+                { key: `logoGroup1Left${isArabic ? 'Ar' : ''}`, label: isArabic ? t('certificates.elements.right_pair_centre', 'Right pair centre (%)') : t('certificates.elements.left_pair_centre', 'Left pair centre (%)'), def: logoGroupDef('logoGroup1Left'), min: 0, max: 100 },
+                { key: `logoGroup2Left${isArabic ? 'Ar' : ''}`, label: isArabic ? t('certificates.elements.left_pair_centre', 'Left pair centre (%)') : t('certificates.elements.right_pair_centre', 'Right pair centre (%)'), def: logoGroupDef('logoGroup2Left'), min: 0, max: 100 },
                 { key: 'logoSpread', label: t('certificates.elements.gap_pair_centre', 'Gap from pair centre (%)'), def: CERT_DEFAULTS.logoSpread, min: 0, max: 25, step: 0.5 }
             ],
             note: t('certificates.elements.logo_row_note', 'The baseline every logo follows until it is given a position of its own. A logo that has been moved individually ignores this.')
@@ -2098,7 +2134,7 @@ const buildEditorElements = (ctx) => {
             label: t('certificates.elements.logo_slot', 'Logo {{n}} (default: {{name}})', { n: slot.n, name: slot.defaultName }),
             logoKey: slot.imageKey,
             topKey: `logo${slot.n}Top`, topDef: logoTopDef,
-            leftKey: `logo${slot.n}Left`, leftDef: logoLeftFor(slot),
+            leftKey: logoLeftKey(slot, isArabic), leftDef: logoLeftFor(slot),
             box: { widthPct: 11, heightMm: 34 },
             boxHeightKey: slot.heightKey, boxHeightDef: CERT_DEFAULTS[slot.heightKey],
             numbers: [
@@ -2117,7 +2153,7 @@ const buildEditorElements = (ctx) => {
             extraLogoId: x.id,
             extraInherited: x.inherited,
             topKey: xlogoKey(x.id, 'Top'), topDef: logoTopDef,
-            leftKey: xlogoKey(x.id, 'Left'), leftDef: 50,
+            leftKey: xlogoLeftKey(x.id, isArabic), leftDef: xlogoLeftDef(x.id),
             box: { widthPct: 11, heightMm: 34 },
             boxHeightKey: xlogoKey(x.id, 'Height'), boxHeightDef: EXTRA_LOGO_DEFAULT_HEIGHT,
             numbers: [
@@ -2931,6 +2967,36 @@ export function CertificateDesigner({
     const thirdWidthDef = readNum(data, 'thirdSignatureWidth', defaultSideWidth);
     const logoTopDef = defaultLogoTop(data);
     const logoLeftFor = useCallback((slot) => defaultLogoLeft(data, slot, isArabic), [data, isArabic]);
+    const logoGroupDef = useCallback((g) => (isArabic ? 100 - logoGroupLeft(data, g) : CERT_DEFAULTS[g]), [data, isArabic]);
+    const xlogoLeftDef = useCallback((id) => defaultXlogoLeft(data, id, isArabic), [data, isArabic]);
+
+    // Text boxes show the wording that currently prints, so it can be edited in
+    // place. Nothing is stored until the box is actually changed.
+    const [editedTexts, setEditedTexts] = useState(() => new Set());
+    const currentText = (key) => {
+        if (firstFilled(inherited[key])) return inherited[key];
+        if (TEXT_DEFAULTS[key]) return TEXT_DEFAULTS[key];
+        if (typeof CERT_DEFAULTS[key] === 'string') return CERT_DEFAULTS[key];
+        const lang = key.endsWith('Ar') ? 'ar' : 'en';
+        const base = key.replace(/(En|Ar)$/, '');
+        if (base === 'courseTitle') return liveCourse.course_type ? getCertificateCourseTitle(liveCourse.course_type, lang, autoSubCourse) : '';
+        if (base === 'managerTitle') return stripHonorific(firstFilled(liveCourse.approvedByManagerName, federalProgramManagerName));
+        if (base === 'directorTitle') return stripHonorific(firstFilled(liveCourse.approvedDirectorName, liveCourse.director));
+        if (base === 'place') {
+            if (isTemplateScope) return '';
+            const st = lang === 'ar'
+                ? (Array.isArray(liveCourse.states) ? liveCourse.states.map(x => STATE_LOCALITIES[x]?.ar || x).join('، ') : (STATE_LOCALITIES[liveCourse.state]?.ar || liveCourse.state || ''))
+                : (Array.isArray(liveCourse.states) ? liveCourse.states.join(', ') : (liveCourse.state || ''));
+            const hall = (lang === 'en' && liveCourse.hall_english) ? liveCourse.hall_english : (liveCourse.hall || '');
+            return hall ? `${st} - ${hall}` : st;
+        }
+        return '';
+    };
+    const textValue = (key) => (editedTexts.has(key) ? (ownData[key] || '') : (ownData[key] || currentText(key)));
+    const setText = (key, value) => {
+        setEditedTexts(prev => (prev.has(key) ? prev : new Set(prev).add(key)));
+        set(key, value);
+    };
 
     const hiddenLogos = useMemo(
         () => Object.fromEntries(LOGO_SLOTS.map(s => [s.n, !!data[`hideLogo${s.n}`]])),
@@ -2976,13 +3042,13 @@ export function CertificateDesigner({
             subCourseMode, autoSubCourse,
             hideManager: !!data.hideManager, hideDirector: !!data.hideDirector,
             showSealNotice: !!data.showSealNotice, signatureImages,
-            logoTopDef, logoLeftFor, hiddenLogos, extraLogos,
+            logoTopDef, logoLeftFor, logoGroupDef, xlogoLeftDef, hiddenLogos, extraLogos,
             sharedSigTop, sharedNameFs, sharedRoleFs,
             sideWidthDef: defaultSideWidth, thirdWidthDef, t
         }),
         [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, subCourseMode, autoSubCourse,
          data.hideManager, data.hideDirector, data.showSealNotice, signatureImages,
-         logoTopDef, logoLeftFor, hiddenLogos, extraLogos, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef, t]
+         logoTopDef, logoLeftFor, logoGroupDef, xlogoLeftDef, hiddenLogos, extraLogos, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef, t]
     );
 
     const selected = elements.find(e => e.id === selectedId) || elements[0];
@@ -3430,6 +3496,11 @@ export function CertificateDesigner({
             keys.forEach(k => { next[k] = ''; });
             return next;
         });
+        setEditedTexts(prev => {
+            const next = new Set(prev);
+            (selected.texts || []).forEach(x => next.delete(x.key));
+            return next;
+        });
         setDirty(true);
     };
 
@@ -3817,17 +3888,17 @@ export function CertificateDesigner({
                                     {t.multiline ? (
                                         <textarea
                                             dir={t.rtl ? 'rtl' : 'ltr'}
-                                            value={ownData[t.key] || ''}
+                                            value={textValue(t.key)}
                                             placeholder={inherited[t.key] || t.placeholder}
-                                            onChange={e => set(t.key, e.target.value)}
+                                            onChange={e => setText(t.key, e.target.value)}
                                             className="w-full border rounded p-2 text-sm h-24"
                                         />
                                     ) : (
                                         <input
                                             dir={t.rtl ? 'rtl' : 'ltr'}
-                                            value={ownData[t.key] || ''}
+                                            value={textValue(t.key)}
                                             placeholder={inherited[t.key] || t.placeholder}
-                                            onChange={e => set(t.key, e.target.value)}
+                                            onChange={e => setText(t.key, e.target.value)}
                                             className="w-full border rounded px-2 py-1 text-sm"
                                         />
                                     )}
@@ -4072,10 +4143,10 @@ export function CertificateDesigner({
                                         const common = {
                                             ref: i === 0 ? quickInputRef : undefined,
                                             dir: x.rtl ? 'rtl' : 'ltr',
-                                            value: ownData[x.key] || '',
+                                            value: textValue(x.key),
                                             placeholder: inherited[x.key] || x.placeholder || x.label,
                                             'aria-label': x.label,
-                                            onChange: e => set(x.key, e.target.value),
+                                            onChange: e => setText(x.key, e.target.value),
                                             className: 'w-full border border-gray-300 rounded px-2 py-1 text-base lg:text-sm'
                                         };
                                         return x.multiline ? <textarea key={x.key} {...common} rows={3} /> : <input key={x.key} {...common} />;
@@ -4308,8 +4379,8 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                     <FormGroup label={t('certificates.customizer.left_pct', 'Left %')}>
                                         <Input
                                             type="number" inputMode="decimal"
-                                            value={data[`logo${slot.n}Left`] ?? ''}
-                                            onChange={e => handleInputChange(`logo${slot.n}Left`, e.target.value)}
+                                            value={data[logoLeftKey(slot, previewLang === 'ar')] ?? ''}
+                                            onChange={e => handleInputChange(logoLeftKey(slot, previewLang === 'ar'), e.target.value)}
                                             placeholder={String(Math.round(defaultLogoLeft(data, slot, previewLang === 'ar')))}
                                         />
                                     </FormGroup>
@@ -4572,6 +4643,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                     // per-logo and per-signature overrides go back to following the row
                                     'logo1Top','logo2Top','logo3Top','logo4Top',
                                     'logo1Left','logo2Left','logo3Left','logo4Left',
+                                    'logo1LeftAr','logo2LeftAr','logo3LeftAr','logo4LeftAr',
                                     'managerSignatureTop','directorSignatureTop','thirdSignatureTop','fourthSignatureTop'
                                 ].forEach(k => { next[k] = ''; });
                                 return next;
