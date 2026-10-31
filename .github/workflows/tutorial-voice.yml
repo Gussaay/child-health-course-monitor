@@ -20,11 +20,20 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install edge-tts==7.0.2
-      - name: Generate audio
+      - name: Write generator
         run: |
-          python - <<'PY'
-          import asyncio, json, glob, os, edge_tts
+          cat > /tmp/gen.py <<'PY'
+          import asyncio, json, glob, os, sys, edge_tts
           VOICES = ['ar-SA-HamedNeural', 'ar-SA-ZariyahNeural', 'ar-EG-ShakirNeural', 'ar-EG-SalmaNeural']
+          only_first = sys.argv[1] == 'samples'
+          async def one(text, v, path):
+              for attempt in range(4):
+                  try:
+                      await asyncio.wait_for(edge_tts.Communicate(text, v, rate='-5%').save(path), 60)
+                      return
+                  except Exception as e:
+                      print('retry', v, path, repr(e), flush=True); await asyncio.sleep(3)
+              print('FAILED', path, flush=True)
           async def main():
               for f in sorted(glob.glob('tts/*.json')):
                   name = os.path.basename(f)[:-5]
@@ -32,19 +41,19 @@ jobs:
                   for v in VOICES:
                       out = f'tts/out/{name}/{v}'
                       os.makedirs(out, exist_ok=True)
-                      for i, text in enumerate(lines):
-                          for attempt in range(4):
-                              try:
-                                  await edge_tts.Communicate(text, v, rate='-5%').save(f'{out}/{i:02d}.mp3')
-                                  break
-                              except Exception as e:
-                                  print('retry', v, i, e); await asyncio.sleep(3)
+                      for i, text in enumerate(lines[:1] if only_first else lines):
+                          await one(text, v, f'{out}/{i:02d}.mp3'); print('ok', v, i, flush=True)
           asyncio.run(main())
           PY
-      - name: Commit audio
-        run: |
           git config user.name "Monitoring System - Gussaay"
           git config user.email "gussaay@gmial.com"
-          git add tts/out
-          git commit -m "Tutorial narration audio" || echo "nothing to commit"
-          git push
+      - name: Voice samples
+        timeout-minutes: 10
+        run: |
+          python /tmp/gen.py samples
+          git add tts/out && (git commit -m "Tutorial narration samples" && git push) || echo "nothing to commit"
+      - name: Full narration
+        timeout-minutes: 40
+        run: |
+          python /tmp/gen.py all
+          git add tts/out && (git commit -m "Tutorial narration audio" && git push) || echo "nothing to commit"
