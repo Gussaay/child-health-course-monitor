@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install edge-tts==7.0.2
+      - run: pip install edge-tts==7.3.1
       - name: Write generator
         run: |
           cat > /tmp/gen.py <<'PY'
@@ -32,7 +32,7 @@ jobs:
                       await asyncio.wait_for(edge_tts.Communicate(text, v, rate='-5%').save(path), 60)
                       return
                   except Exception as e:
-                      print('retry', v, path, repr(e), flush=True); await asyncio.sleep(3)
+                      print('retry', v, path, repr(e), flush=True); open('tts/out/errors.txt','a').write(f'{v} {path} {e!r}\n'); await asyncio.sleep(3)
               print('FAILED', path, flush=True)
           async def main():
               for f in sorted(glob.glob('tts/*.json')):
@@ -50,10 +50,13 @@ jobs:
       - name: Voice samples
         timeout-minutes: 10
         run: |
+          mkdir -p tts/out
           python /tmp/gen.py samples
+          if [ -s tts/out/errors.txt ] && ! find tts/out -name '*.mp3' -size +1k | grep -q .; then git add tts/out; git commit -m "Tutorial narration errors"; git push; exit 1; fi
           git add tts/out && (git commit -m "Tutorial narration samples" && git push) || echo "nothing to commit"
       - name: Full narration
         timeout-minutes: 40
         run: |
+          rm -f tts/out/errors.txt
           python /tmp/gen.py all
           git add tts/out && (git commit -m "Tutorial narration audio" && git push) || echo "nothing to commit"
