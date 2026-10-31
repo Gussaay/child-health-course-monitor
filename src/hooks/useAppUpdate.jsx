@@ -336,7 +336,8 @@ function startEngine() {
   // A downloaded update is queued with next(). Capgo switches to it by itself
   // when the app goes into the background (installNext on appMovedToBackground),
   // so the next time the user looks at the app it is already updated, without
-  // a restart on screen.
+  // a restart on screen. While a form or a popup is open that switch is held
+  // back (utils/updateHold.js), because it reloads the page and would lose it.
 
   // NOTE: the old code called set() when the app was MINIMISED. That reloads
   // the WebView in the background; if Android then kills the app before

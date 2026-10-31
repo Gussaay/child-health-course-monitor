@@ -29,6 +29,7 @@
       "autoDeleteFailed": true,
       "autoDeletePrevious": true,
       "resetWhenUpdate": true,
+      "keepUrlPathAfterReload": true,
       "directUpdate": false
     },
     "PushNotifications": {

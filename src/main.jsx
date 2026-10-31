@@ -11,6 +11,7 @@ import { DataProvider } from './DataContext';
 import { AuthProvider } from './hooks/useAuth';
 import { DATA_ENTRY_PATH } from './hooks/useAppUpdate';
 import { applyWebUpdateQuietly } from './utils/quietWebUpdate';
+import { startUpdateHold } from './utils/updateHold';
 import { isOnline } from './firebase';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
 import './index.css';
@@ -91,6 +92,12 @@ if ('caches' in window) caches.delete('app-chunks').catch(() => {});
 // PLATFORM SETUP
 // =========================================================================
 if (IS_NATIVE) {
+  // A downloaded update is applied by Capgo the moment the app goes into the
+  // background, which reloads the page. Hold it while a form, a test or any
+  // popup is open, so switching to another app and back keeps the work on
+  // screen (utils/updateHold.js).
+  startUpdateHold(() => DATA_ENTRY_PATH.test(window.location.pathname));
+
   // A service worker must NOT run inside the native app: it keeps serving the
   // index.html and JS it saved from the OLD bundle after Capgo installs a new
   // one, which looks like "the app went back to the previous version".
