@@ -156,7 +156,6 @@ import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
 import SudanMiniMap from './components/SudanMiniMap';
 import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
-import { coverageColor } from './utils/statusColors';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
@@ -437,23 +436,7 @@ function allModules(t, permissions) {
     ];
 }
 
-function StatBox({ value, label, busy, icon: Icon, format = (v) => v.toLocaleString() }) {
-    const loading = value === null && busy;
-    return (
-        <div className="rounded-2xl bg-white/15 backdrop-blur-sm px-3 py-2.5 min-w-0 ring-1 ring-white/10">
-            <div className="flex items-center gap-1.5 text-white/80">
-                {Icon && <Icon size={13} className="shrink-0" />}
-                <p className="text-xs leading-tight truncate">{label}</p>
-            </div>
-            {loading
-                ? <Skeleton className="shimmer-light h-6 w-12 mt-1" />
-                : <p className="text-xl font-bold leading-tight mt-0.5">{value === null ? '—' : format(value)}</p>}
-        </div>
-    );
-}
-
-// Coverage on the greeting card: overall first, then the four services,
-// all on one row (it scrolls sideways on narrow phones).
+// The four services whose coverage can appear as a highlight.
 const COVERAGE_ITEMS = [
     { key: 'imnci', label: 'IMNCI' },
     { key: 'etat', label: 'ETAT' },
@@ -461,44 +444,10 @@ const COVERAGE_ITEMS = [
     { key: 'scnu', label: 'SCNU' },
 ];
 
-function CoverageChip({ label, value, loading, strong = false }) {
-    return (
-        <div className={`shrink-0 min-w-[5.5rem] flex-1 rounded-2xl px-3 py-2 ring-1 ${strong ? 'bg-white text-slate-800 ring-white' : 'bg-white/15 ring-white/10'}`}>
-            <p className={`text-xs leading-tight truncate ${strong ? 'font-semibold text-slate-500' : 'text-white/80'}`}>{label}</p>
-            {loading
-                ? <Skeleton className={`${strong ? '' : 'shimmer-light'} h-5 w-10 mt-1`} />
-                : (
-                    <>
-                        <p className="text-lg font-bold leading-tight mt-0.5">{value === null || value === undefined ? '—' : `${value}%`}</p>
-                        <div className={`mt-1 h-1 rounded-full overflow-hidden ${strong ? 'bg-slate-200' : 'bg-white/20'}`}>
-                            <div className={`h-full rounded-full ${strong ? '' : 'bg-white'}`} style={{ width: `${Math.min(100, value || 0)}%`, backgroundColor: strong ? coverageColor(value) : undefined }} />
-                        </div>
-                    </>
-                )}
-        </div>
-    );
-}
-
-function CoverageRow({ coverage, busy, onOpen }) {
-    const { t } = useTranslation();
-    const loading = !coverage && busy;
-    if (!coverage && !busy) return null;
-    const row = (
-        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <CoverageChip strong label={t('landing.coverage.overall', 'Overall coverage')} value={coverage?.overall} loading={loading} />
-            {COVERAGE_ITEMS.map(({ key, label }) => (
-                <CoverageChip key={key} label={t(`landing.coverage.${key}`, label)} value={coverage?.services?.[key]?.perc} loading={loading} />
-            ))}
-        </div>
-    );
-    return onOpen
-        ? <button type="button" onClick={onOpen} className="mt-2 block w-full text-start">{row}</button>
-        : <div className="mt-2">{row}</div>;
-}
-
-// Phone greeting: two lines. The greeting, then one highlight from this
-// year's numbers, picked at random each time the main menu opens; tapping
-// it shows another.
+// Greeting card, the same on the phone app and the web: the greeting, then
+// highlights from this year's numbers. The phone shows one, picked at random
+// each time the main menu opens; wider screens show three side by side.
+// Tapping a highlight shows the next ones.
 function homeFacts(t, stats, level) {
     if (!stats) return [];
     const n = (v) => Number(v).toLocaleString();
@@ -520,48 +469,51 @@ function homeFacts(t, stats, level) {
     return facts;
 }
 
-function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
+function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
     const { t } = useTranslation();
     const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
     const facts = homeFacts(t, stats, level);
     const loading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
-    const fact = facts.length ? facts[pick % facts.length] : null;
-    const FactIcon = fact?.icon;
+    const shown = [0, 1, 2].slice(0, Math.min(3, facts.length)).map(i => facts[(pick + i) % facts.length]);
     return (
-        <section className={`md:hidden relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3`}>
-            <SudanMiniMap highlight={states} all={level === 'federal'} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 text-white" />
+        <section className={`relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3 md:ps-6 md:pe-32 md:py-5 lg:pe-40`}>
+            <SudanMiniMap highlight={states} all={level === 'federal'} title={scope || levelLabel} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 md:h-24 md:w-24 lg:h-28 lg:w-28 md:end-6 text-white" />
             <div className="relative flex items-center gap-2 min-w-0">
-                <h2 className="text-base font-bold leading-tight truncate">
+                <h2 className="text-base md:text-xl font-bold leading-tight truncate">
                     {greeting}{firstName ? `, ${firstName}` : ''}
                 </h2>
                 <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-xs font-semibold">{scope || levelLabel}</span>
             </div>
-            {fact ? (
+            {shown.length ? (
                 <button
                     type="button"
-                    onClick={() => setPick(p => p + 1)}
+                    onClick={() => setPick(p => p + (facts.length > 3 ? 3 : 1))}
                     title={t('ui.next_fact', 'Show another highlight')}
-                    className="relative mt-1 flex w-full items-center gap-1.5 text-start text-sm text-white/90 min-w-0"
+                    className="relative mt-1 md:mt-3 flex w-full items-center gap-4 md:flex-wrap md:gap-x-6 md:gap-y-1 text-start text-sm md:text-base text-white/90 min-w-0"
                 >
-                    <FactIcon size={14} className="shrink-0" />
-                    <span className="truncate">{fact.text}</span>
+                    {shown.map(({ icon: FactIcon, text }, i) => (
+                        <span key={i} className={`items-center gap-1.5 min-w-0 ${i === 0 ? 'flex' : 'hidden md:flex'} ${i === 2 ? 'md:hidden lg:flex' : ''}`}>
+                            <FactIcon size={14} className="shrink-0" />
+                            <span className="truncate md:whitespace-normal">{text}</span>
+                        </span>
+                    ))}
                 </button>
             ) : loading ? (
-                <Skeleton className="shimmer-light relative mt-1.5 h-4 w-2/3" />
+                <Skeleton className="shimmer-light relative mt-1.5 md:mt-3 h-4 w-2/3" />
             ) : (
-                <p className="relative mt-1 text-sm text-white/80 truncate">{levelLabel}</p>
+                <p className="relative mt-1 md:mt-3 text-sm md:text-base text-white/80 truncate">{levelLabel}</p>
             )}
+            {stats && <p className="relative hidden md:block mt-2 text-xs text-white/70">{t('landing.stats_year', 'This year')} ({new Date().getFullYear()})</p>}
         </section>
     );
 }
 
-function Landing({ navigate, permissions, user, roles = [], userStates = [], userLocalities = [], stats = null, onAskData }) {
+function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData }) {
     const { t, i18n } = useTranslation();
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
     const firstName = String(user?.displayName || '').trim().split(/\s+/)[0];
-    const role = roles[0] ? String(roles[0]).replace(/_/g, ' ') : '';
     const level = levelFromPermissions(permissions);
     const levelLabel = {
         federal: t('landing.level_federal', 'Federal level'),
@@ -572,44 +524,17 @@ function Landing({ navigate, permissions, user, roles = [], userStates = [], use
     const scope = places.filter(Boolean).join(i18n.language?.startsWith('ar') ? '، ' : ', ');
 
     const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
-    const chip = 'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold';
 
     return (
         <div className="flex flex-col min-h-full space-y-4">
-            <PhoneGreeting greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
-            <section className={`hidden md:flex items-start gap-5 rounded-3xl ${LEVEL_CARDS[level]} text-white p-4 sm:p-5`}>
-                <div className="relative flex-1 min-w-0">
-                    <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        <h2 className="shrink-0 text-lg sm:text-xl font-bold leading-tight">
-                            {greeting}{firstName ? `, ${firstName}` : ''}
-                        </h2>
-                        <span className={`${chip} bg-white text-slate-800`}>{levelLabel}</span>
-                        {scope && <span className={`${chip} bg-white/20`}>{scope}</span>}
-                        {role && <span className={`${chip} bg-white/20 capitalize`}>{role}</span>}
-                        {stats?.focus && <span className={`${chip} bg-white/20`}>{t(`landing.unit_${stats.focus.toLowerCase()}`, `${stats.focus} unit`)}</span>}
-                    </div>
-                    {stats && (
-                        <div className={`mt-3 grid grid-cols-2 sm:grid-cols-3 ${level === 'locality' ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-2`}>
-                            <StatBox icon={Book} busy={stats.busy.courses} value={stats.courses} label={t('landing.stats.courses', 'Courses')} />
-                            <StatBox icon={Users} busy={stats.busy.courses || stats.busy.participants} value={stats.participants} label={t('landing.stats.participants', 'Participants trained')} />
-                            <StatBox icon={Hospital} busy={stats.busy.visits} value={stats.facilitiesReached} label={t('landing.stats.facilities_reached', 'Facilities reached')} />
-                            <StatBox icon={ClipboardCheck} busy={stats.busy.visits} value={stats.visits} label={t('landing.stats.visits', 'Mentorship visits')} />
-                            {level !== 'locality' && <StatBox icon={User} busy={stats.busy.facilitators} value={stats.facilitators} label={t('landing.stats.facilitators', 'Facilitators')} />}
-                        </div>
-                    )}
-                    {stats && (
-                        <CoverageRow
-                            coverage={stats.coverage}
-                            busy={stats.busy.facilities}
-                            onOpen={permissions.canViewFacilities ? () => navigate('childHealthServices') : undefined}
-                        />
-                    )}
-                    {stats && <p className="mt-2 text-xs text-white/70">{t('landing.stats_year', 'This year')} ({new Date().getFullYear()})</p>}
+            {onAskData && accessibleButtons.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                    <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
+                    <DataAssistantCard onOpen={onAskData} />
                 </div>
-                <SudanMiniMap highlight={userStates} all={level === 'federal'} title={scope || levelLabel} className="hidden lg:block shrink-0 w-36 xl:w-44 text-white" />
-            </section>
-
-            {onAskData && accessibleButtons.length > 0 && <DataAssistantCard onOpen={onAskData} />}
+            ) : (
+                <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
+            )}
 
             {accessibleButtons.length > 0 ? (
                 <div className="space-y-5">
