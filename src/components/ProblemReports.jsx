@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AlertTriangle, Bug, Camera, Check, ChevronDown, ChevronRight, Loader2,
-    MessageSquareWarning, Send, Trash2, X,
+    MessageSquareWarning, Send, ShieldAlert, Sparkles, Trash2, X,
 } from 'lucide-react';
 
 import { Button, Card, CardBody, Input, Modal, Textarea, SkeletonTable } from './CommonComponents';
@@ -24,6 +24,7 @@ import {
     submitProblemReport, listProblemReports, setProblemReportStatus, deleteProblemReport,
 } from '../data';
 import { useTranslation } from 'react-i18next';
+import { askDataAssistant } from '../utils/askDataAssistant';
 
 const STATUSES = {
     new: { label: 'New', chip: 'bg-amber-100 text-amber-800 border-amber-300' },
@@ -192,6 +193,27 @@ export function ReportProblemButton({ user, currentView, className = '' }) {
 // Reading them
 // =============================================================================
 
+// The questions the "Analyse with AI" and "Ask AI" buttons put to Ask the
+// data. It reads the problem reports itself (Admin – Problem reports), so the
+// question only has to say what to look at and what kind of report to write.
+function analyseQuestion(t, filter) {
+    const scope = {
+        crashes: t('admin_pages.problem_reports.ai_scope_crashes', 'the crash reports (kind "crash")'),
+        permissions: t('admin_pages.problem_reports.ai_scope_permissions', 'the permission errors (kind "permission")'),
+        open: t('admin_pages.problem_reports.ai_scope_open', 'the problem reports that are not resolved'),
+        all: t('admin_pages.problem_reports.ai_scope_all', 'all the problem reports'),
+    }[filter] || t('admin_pages.problem_reports.ai_scope_all', 'all the problem reports');
+    return t('admin_pages.problem_reports.ai_analyse',
+        'Analyse {{scope}} in Admin – Problem reports. Group them by cause (same error message or same screen), and for each group give: how many, which screens and accounts, first and last date, the likely cause, and the steps to fix it and to stop it happening again. Put the groups that affect most people first, and end with a short action list I can use as a report.',
+        { scope });
+}
+
+function reportQuestion(t, r) {
+    return t('admin_pages.problem_reports.ai_one',
+        'Explain problem report {{id}} in Admin – Problem reports ("{{what}}"): what went wrong, on which screen and for which account and role, whether other reports show the same problem, the likely cause, and the steps to fix it.',
+        { id: r.id, what: String(r.what || '').slice(0, 120) });
+}
+
 export function ProblemReportsTab() {
     const { t } = useTranslation();
     const [reports, setReports] = useState(null);
@@ -215,6 +237,7 @@ export function ProblemReportsTab() {
         const all = reports || [];
         if (filter === 'all') return all;
         if (filter === 'crashes') return all.filter((r) => r.kind === 'crash');
+        if (filter === 'permissions') return all.filter((r) => r.kind === 'permission');
         return all.filter((r) => r.status !== 'resolved');
     }, [reports, filter]);
 
@@ -247,6 +270,7 @@ export function ProblemReportsTab() {
     const counts = {
         open: (reports || []).filter((r) => r.status !== 'resolved').length,
         crashes: (reports || []).filter((r) => r.kind === 'crash').length,
+        permissions: (reports || []).filter((r) => r.kind === 'permission').length,
         all: (reports || []).length,
     };
 
@@ -256,6 +280,7 @@ export function ProblemReportsTab() {
                 {[
                     ['open', t('admin_pages.problem_reports.filter_open', 'Open ({{count}})', { count: counts.open })],
                     ['crashes', t('admin_pages.problem_reports.filter_crashes', 'Crashes ({{count}})', { count: counts.crashes })],
+                    ['permissions', t('admin_pages.problem_reports.filter_permissions', 'Permission errors ({{count}})', { count: counts.permissions })],
                     ['all', t('admin_pages.problem_reports.filter_all', 'All ({{count}})', { count: counts.all })],
                 ].map(([key, label]) => (
                     <button key={key} onClick={() => setFilter(key)}
@@ -265,6 +290,11 @@ export function ProblemReportsTab() {
                         {label}
                     </button>
                 ))}
+                <button type="button" onClick={() => askDataAssistant(analyseQuestion(t, filter))}
+                    className="ms-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold border border-sky-600 text-sky-700 bg-white hover:bg-sky-50">
+                    <Sparkles size={15} />
+                    {t('admin_pages.problem_reports.analyse_ai', 'Analyse with AI')}
+                </button>
             </div>
 
             {shown.length === 0 ? (
@@ -283,7 +313,9 @@ export function ProblemReportsTab() {
                                     onClick={() => setOpenId(expanded ? null : r.id)}>
                                     {r.kind === 'crash'
                                         ? <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
-                                        : <MessageSquareWarning size={18} className="text-sky-600 shrink-0 mt-0.5" />}
+                                        : r.kind === 'permission'
+                                            ? <ShieldAlert size={18} className="text-orange-500 shrink-0 mt-0.5" />
+                                            : <MessageSquareWarning size={18} className="text-sky-600 shrink-0 mt-0.5" />}
 
                                     <div className="flex-1 min-w-0">
                                         <div className="font-medium text-slate-800 truncate">
@@ -321,6 +353,27 @@ export function ProblemReportsTab() {
                                             </div>
                                         )}
 
+                                        {r.kind === 'permission' && (
+                                            <div className="text-sm space-y-0.5">
+                                                <div>
+                                                    <span className="font-semibold text-slate-600">{t('admin_pages.problem_reports.role', 'Role:')} </span>
+                                                    {(Array.isArray(r.roles) && r.roles.length ? r.roles.join(', ') : r.role) || t('admin_pages.problem_reports.no_role', 'no role saved on this account')}
+                                                </div>
+                                                {r.context && (
+                                                    <div>
+                                                        <span className="font-semibold text-slate-600">{t('admin_pages.problem_reports.doing', 'What the app was doing:')} </span>
+                                                        <span dir="ltr">{r.context}</span>
+                                                    </div>
+                                                )}
+                                                {r.path && (
+                                                    <div>
+                                                        <span className="font-semibold text-slate-600">{t('admin_pages.problem_reports.address', 'Address:')} </span>
+                                                        <span dir="ltr" className="break-all">{r.path}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {r.stack && (
                                             <pre className="text-xs bg-slate-900 text-slate-100 p-3 rounded overflow-x-auto max-h-56">
                                                 {r.stack}
@@ -348,6 +401,10 @@ export function ProblemReportsTab() {
                                                     {t(`admin_pages.problem_reports.status.${key}`, s.label)}
                                                 </Button>
                                             ))}
+                                            <Button size="sm" variant="secondary"
+                                                onClick={() => askDataAssistant(reportQuestion(t, r))}>
+                                                <Sparkles size={14} /> {t('admin_pages.problem_reports.ask_ai', 'Ask AI')}
+                                            </Button>
                                             <Button size="sm" variant="danger" disabled={busy === r.id}
                                                 onClick={() => remove(r)}>
                                                 <Trash2 size={14} />

@@ -162,9 +162,26 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    // The mentorship submission link (/mentorship/submit/...) asks for a
+    // sign-in only, so a mentor there may hold a plain 'user' account. Such an
+    // account may add a visit stamped with its own uid in createdByUid, and may
+    // edit (or soft-delete) only the visits it created. Staff as before.
+    function createsAsSelf() {
+      return request.auth != null
+          && request.resource.data.get('createdByUid', null) == request.auth.uid;
+    }
+
+    function updatesOwnKeepingAuthor() {
+      return request.auth != null
+          && resource.data.get('createdByUid', null) == request.auth.uid
+          && request.resource.data.get('createdByUid', null) == request.auth.uid;
+    }
+
     match /skillMentorship/{mentorshipId} {
       allow read: if request.auth != null;
       allow write: if isStaff();
+      allow create: if createsAsSelf();
+      allow update: if updatesOwnKeepingAuthor();
     }
 
     // =========================================================================
@@ -367,7 +384,7 @@ service cloud.firestore {
       function isOwner() {
         return request.auth.token.email == resource.data.mentorEmail;
       }
-      allow create: if isStaff();
+      allow create: if isStaff() || createsAsSelf();
       allow read: if isStaff();
       allow update, delete: if request.auth != null && (isOwner() || isManager());
     }
@@ -376,7 +393,7 @@ service cloud.firestore {
       function isOwner() {
         return request.auth.token.email == resource.data.mentorEmail;
       }
-      allow create: if isStaff();
+      allow create: if isStaff() || createsAsSelf();
       allow read: if isStaff();
       allow update, delete: if request.auth != null && (isOwner() || isManager());
     }
@@ -494,7 +511,7 @@ service cloud.firestore {
 
       allow create: if request.auth != null && isSubCourseEditor()
         && request.resource.data.keys().hasOnly(
-             ['course_type', 'name', 'createdBy', 'createdByRole', 'createdAt'])
+             ['course_type', 'name', 'createdByUid', 'createdByRole', 'createdAt'])
         && request.resource.data.course_type is string
         && request.resource.data.course_type.size() > 0
         && request.resource.data.course_type.size() <= 100
@@ -546,13 +563,50 @@ service cloud.firestore {
       allow update, delete: if isFederalApprover();
     }
 
+    // Cases and observations from the shared course monitoring link
+    // (/monitor/course/{id}). That page asks for a sign-in but not for a staff
+    // role, so the observer filling in cases is often a plain 'user' account.
+    // Such an account may add cases to a course that exists and is not deleted,
+    // stamped with its own uid in createdByUid, and may edit or remove only the
+    // records it created (editing a case replaces its observations). Staff keep
+    // full write access as before.
+    function isLiveCourse(courseId) {
+      let path = /databases/$(database)/documents/courses/$(courseId);
+      return exists(path) && get(path).data.get('isDeleted', false) != true;
+    }
+
+    function observerCreates() {
+      return request.auth != null
+          && request.resource.data.get('createdByUid', null) == request.auth.uid
+          && request.resource.data.get('courseId', null) is string
+          && isLiveCourse(request.resource.data.courseId);
+    }
+
+    function observerUpdatesOwn() {
+      return request.auth != null
+          && resource.data.get('createdByUid', null) == request.auth.uid
+          && request.resource.data.get('createdByUid', null) == request.auth.uid
+          && request.resource.data.get('courseId', null) == resource.data.get('courseId', null);
+    }
+
+    function observerDeletesOwn() {
+      return request.auth != null
+          && resource.data.get('createdByUid', null) == request.auth.uid;
+    }
+
     match /observations/{observationId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
       allow write: if isStaff();
+      allow create: if observerCreates();
+      allow update: if observerUpdatesOwn();
+      allow delete: if observerDeletesOwn();
     }
     match /cases/{caseId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
       allow write: if isStaff();
+      allow create: if observerCreates();
+      allow update: if observerUpdatesOwn();
+      allow delete: if observerDeletesOwn();
     }
     match /finalReports/{reportId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;

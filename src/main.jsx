@@ -14,6 +14,8 @@ import { applyWebUpdateQuietly } from './utils/quietWebUpdate';
 import { startUpdateHold } from './utils/updateHold';
 import { isOnline } from './firebase';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
+import { isChunkLoadError, recoverFromStaleBuild } from './utils/staleBuild';
+import { installErrorCapture } from './utils/errorCapture';
 import './index.css';
 
 window.Buffer = Buffer;
@@ -23,6 +25,8 @@ if (IS_EMONC_SITE) document.title = EMONC_SITE_TITLE;
 const IS_NATIVE = Capacitor.isNativePlatform();
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.2';
 window.APP_VERSION = APP_VERSION;
+// The version people see (package.json releaseVersion), stamped on problem reports.
+window.__APP_VERSION__ = import.meta.env.VITE_RELEASE_VERSION || APP_VERSION;
 
 // -------------------------------------------------------------------------
 // VERSION LOG — the old "cache buster" is gone.
@@ -39,50 +43,25 @@ if (previousVersion !== APP_VERSION) {
 }
 
 // =========================================================================
-// RECOVERY FROM A STALE BUILD
-// -------------------------------------------------------------------------
-// Each release renames the code files. A page still running the previous
-// release asks for the old names, which no longer exist, and the screen it
-// was opening fails to load. Worse, until this fix the service worker stored
-// the reply (Hosting's index.html) under the script's name, so every later
-// start loaded HTML as code and showed a white screen.
+// RECOVERY FROM A STALE BUILD (utils/staleBuild.js)
 //
-// When a script fails to load, drop the saved scripts and start again on the
-// current release. Once per two minutes at most, so a page that is genuinely
-// broken, or offline, does not reload forever.
+// The preload error is NOT cancelled with preventDefault() any more. Cancelling
+// it makes Vite resolve the import with `undefined` instead of failing, so the
+// screen then crashed with "can't access property 'CourseReportView', t is
+// undefined" (or "reading 'default'") — about 40 of the crash reports in
+// Admin → Problems were exactly that. Left alone, the import fails with the
+// real loading error, the error boundary sees it, reloads onto the current
+// release and shows "Loading the latest version" instead of a crash.
 // =========================================================================
-const CHUNK_CACHES = ['app-chunks', 'app-chunks-v2'];
-const RECOVERY_KEY = 'stale_build_recovery_at';
-
-const isChunkLoadError = (reason) => {
-  const text = String(reason?.message || reason || '');
-  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Expected a JavaScript-or-Wasm module script/i.test(text);
-};
-
-async function recoverFromStaleBuild(reason) {
-  try {
-    const last = Number(sessionStorage.getItem(RECOVERY_KEY) || 0);
-    if (Date.now() - last < 2 * 60 * 1000) return;
-    if (navigator.onLine === false) return;
-    sessionStorage.setItem(RECOVERY_KEY, String(Date.now()));
-  } catch { /* storage unavailable: still try once */ }
-  console.warn('♻️ A script from an older release could not be loaded; reloading on the current one.', reason);
-  try {
-    if ('caches' in window) await Promise.allSettled(CHUNK_CACHES.map((name) => caches.delete(name)));
-    const reg = await navigator.serviceWorker?.getRegistration?.();
-    await reg?.update?.().catch(() => {});
-  } catch { /* reload regardless */ }
-  window.location.reload();
-}
-
-// Vite raises this when a lazily loaded screen's file cannot be fetched.
 window.addEventListener('vite:preloadError', (event) => {
-  event.preventDefault();
   recoverFromStaleBuild(event.payload);
 });
 window.addEventListener('unhandledrejection', (event) => {
   if (isChunkLoadError(event.reason)) recoverFromStaleBuild(event.reason);
 });
+
+// Permission refusals and other handled errors go to Admin → Problems.
+installErrorCapture();
 
 // The cache before the fix may hold HTML saved under script names; it is no
 // longer read, so free the space.

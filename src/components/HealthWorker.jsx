@@ -222,7 +222,7 @@ export function HealthWorkerView({ permissions, userStates }) {
             const lowerQ = searchQuery.toLowerCase();
             result = result.filter(w => 
                 (w.name && w.name.toLowerCase().includes(lowerQ)) || 
-                (w.phone && w.phone.includes(lowerQ)) ||
+                (w.phone && String(w.phone).includes(lowerQ)) ||
                 (w.facility && w.facility.toLowerCase().includes(lowerQ))
             );
         }

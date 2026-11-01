@@ -4,7 +4,7 @@ import {
     assertFails,
     assertSucceeds,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
 import fs from 'node:fs';
 
 // Run with:  npm run test:rules   (starts the Firestore emulator around them)
@@ -793,4 +793,105 @@ describe('Deleted Items: federal managers can delete every soft-deleted type', (
             await assertSucceeds(deleteDoc(doc(as('superUser'), name, 'gone2')));
         });
     }
+});
+
+// The shared course monitoring link (/monitor/course/{id}) needs a sign-in but
+// not a staff role, so observers are often plain 'user' accounts. They used to
+// get "Missing or insufficient permissions" on Submit Case.
+describe('cases/observations — observers on the shared monitoring link', () => {
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            await setDoc(doc(db, 'courses', 'deletedCourse'), { isDeleted: true, course_type: 'IMNCI' });
+            await setDoc(doc(db, 'cases', 'mine'), { courseId: 'privateCourse', createdByUid: 'plainUser' });
+            await setDoc(doc(db, 'observations', 'mineObs'), { courseId: 'privateCourse', caseId: 'mine', createdByUid: 'plainUser' });
+            await setDoc(doc(db, 'cases', 'theirs'), { courseId: 'privateCourse', createdByUid: 'facilitator' });
+            await setDoc(doc(db, 'observations', 'theirsObs'), { courseId: 'privateCourse', caseId: 'theirs' });
+        });
+    });
+
+    it('lets a signed-in user add a case and its observations, stamped with their uid', async () => {
+        const db = as('plainUser');
+        await assertSucceeds(setDoc(doc(db, 'cases', 'c1'), { courseId: 'privateCourse', createdByUid: 'plainUser' }, { merge: true }));
+        await assertSucceeds(setDoc(doc(db, 'observations', 'n1'), { courseId: 'privateCourse', caseId: 'c1', createdByUid: 'plainUser' }));
+    });
+
+    it('lets them save a case with many observations in one batch, as Submit Case does', async () => {
+        const db = as('plainUser');
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'cases', 'b1'), { courseId: 'privateCourse', createdByUid: 'plainUser' }, { merge: true });
+        for (let i = 0; i < 25; i++) {
+            batch.set(doc(db, 'observations', `b1-${i}`), { courseId: 'privateCourse', caseId: 'b1', createdByUid: 'plainUser' });
+        }
+        await assertSucceeds(batch.commit());
+    });
+
+    it('does NOT let anyone add a case without their own uid, or as someone else', async () => {
+        await assertFails(setDoc(doc(as('plainUser'), 'cases', 'c2'), { courseId: 'privateCourse' }));
+        await assertFails(setDoc(doc(as('plainUser'), 'cases', 'c3'), { courseId: 'privateCourse', createdByUid: 'facilitator' }));
+        await assertFails(setDoc(doc(anonymous(), 'cases', 'c4'), { courseId: 'privateCourse', createdByUid: null }));
+    });
+
+    it('does NOT let a non-staff user add cases to a deleted or missing course', async () => {
+        await assertFails(setDoc(doc(as('plainUser'), 'cases', 'c5'), { courseId: 'deletedCourse', createdByUid: 'plainUser' }));
+        await assertFails(setDoc(doc(as('plainUser'), 'cases', 'c6'), { courseId: 'noSuchCourse', createdByUid: 'plainUser' }));
+    });
+
+    it('lets them edit, soft-delete and replace observations of their own case', async () => {
+        const db = as('plainUser');
+        await assertSucceeds(setDoc(doc(db, 'cases', 'mine'), { courseId: 'privateCourse', allCorrect: true }, { merge: true }));
+        await assertSucceeds(updateDoc(doc(db, 'cases', 'mine'), { isDeleted: true }));
+        await assertSucceeds(deleteDoc(doc(db, 'observations', 'mineObs')));
+    });
+
+    it('does NOT let them touch other people\'s cases or move their own to another course', async () => {
+        const db = as('plainUser');
+        await assertFails(updateDoc(doc(db, 'cases', 'theirs'), { isDeleted: true }));
+        await assertFails(deleteDoc(doc(db, 'observations', 'theirsObs')));
+        await assertFails(updateDoc(doc(db, 'cases', 'mine'), { createdByUid: 'facilitator' }));
+        await assertFails(updateDoc(doc(db, 'cases', 'mine'), { courseId: 'publicCourse' }));
+    });
+
+    it('still lets staff edit any case', async () => {
+        await assertSucceeds(updateDoc(doc(as('facilitator'), 'cases', 'mine'), { allCorrect: false }));
+        await assertSucceeds(deleteDoc(doc(as('facilitator'), 'observations', 'theirsObs')));
+    });
+});
+
+// The mentorship submission link also asks only for a sign-in.
+describe('mentorship visits — mentors on the public submission link', () => {
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            await setDoc(doc(db, 'skillMentorship', 'mine'), { status: 'draft', createdByUid: 'plainUser' });
+            await setDoc(doc(db, 'skillMentorship', 'theirs'), { status: 'complete', createdByUid: 'facilitator' });
+        });
+    });
+
+    it('lets a signed-in user add a mentorship visit and IMNCI/EENC visit reports as themselves', async () => {
+        const db = as('plainUser');
+        await assertSucceeds(setDoc(doc(db, 'skillMentorship', 'm1'), { status: 'complete', createdByUid: 'plainUser' }));
+        await assertSucceeds(setDoc(doc(db, 'imnciVisitReports', 'v1'), { state: 'Khartoum', createdByUid: 'plainUser' }));
+        await assertSucceeds(setDoc(doc(db, 'eencVisitReports', 'v2'), { state: 'Khartoum', createdByUid: 'plainUser' }));
+    });
+
+    it('does NOT let them add visits without their uid or as someone else', async () => {
+        await assertFails(setDoc(doc(as('plainUser'), 'skillMentorship', 'm2'), { status: 'complete' }));
+        await assertFails(setDoc(doc(as('plainUser'), 'skillMentorship', 'm3'), { createdByUid: 'facilitator' }));
+        await assertFails(setDoc(doc(as('plainUser'), 'imnciVisitReports', 'v3'), { state: 'Khartoum' }));
+        await assertFails(setDoc(doc(anonymous(), 'eencVisitReports', 'v4'), { createdByUid: null }));
+    });
+
+    it('lets them finish or soft-delete their own visit, not anyone else\'s', async () => {
+        const db = as('plainUser');
+        await assertSucceeds(setDoc(doc(db, 'skillMentorship', 'mine'), { status: 'complete' }, { merge: true }));
+        await assertSucceeds(updateDoc(doc(db, 'skillMentorship', 'mine'), { isDeleted: true }));
+        await assertFails(updateDoc(doc(db, 'skillMentorship', 'mine'), { createdByUid: 'facilitator' }));
+        await assertFails(updateDoc(doc(db, 'skillMentorship', 'theirs'), { isDeleted: true }));
+        await assertFails(deleteDoc(doc(db, 'skillMentorship', 'mine')));
+    });
+
+    it('still keeps visit reports readable by staff only', async () => {
+        await assertFails(getDocs(collection(as('plainUser'), 'imnciVisitReports')));
+    });
 });
