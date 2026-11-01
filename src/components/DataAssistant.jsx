@@ -11,15 +11,21 @@
 // from the saved answer instead of asking the AI again. It is loaded the first
 // time it is opened; the buttons that open it are in DataAssistantLauncher.jsx,
 // which every page loads.
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { Sparkles, Send, X, Loader2, Copy, RotateCcw, FileText, Database, History, CornerDownRight } from 'lucide-react';
+import { Sparkles, Send, X, Loader2, Copy, RotateCcw, FileText, Database, History, CornerDownRight, Share2, AlignLeft } from 'lucide-react';
 
 import { AiText } from './AiLibraryView';
+import AiVote from './AiVote';
 import { notify } from './dialogs';
 import { snapshotPage } from '../utils/pageSnapshot';
 import { loadChats, saveChats, savedAnswer } from '../utils/aiChats';
+import ChatExportSheet, { pairsOf } from './ChatExportSheet';
+
+const providerName = (p) => ({ groq: 'Groq', cerebras: 'Cerebras', gemini: 'Gemini' }[p] || p);
+const AiChart = lazy(() => import('./AiChart'));
 
 const askServer = (payload) => httpsCallable(getFunctions(), 'aiAssistant', { timeout: 130000 })(payload);
 
@@ -54,7 +60,7 @@ function examplesFor(view, t) {
     return [page, plan, ...(byView[view] || byView.landing)];
 }
 
-export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' }) {
+export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '', initialQuestion = null }) {
     const { t, i18n } = useTranslation();
     // One conversation per page, keyed by the page's view.
     const [chats, setChats] = useState(() => loadChats(uid));
@@ -103,6 +109,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                 role: 'assistant', content: data.reply, provider: data.provider, model: data.model,
                 sources: data.sources || [], sourcePages: data.sourcePages || [], place: data.place || '',
                 followUps: Array.isArray(data.followUps) ? data.followUps : [],
+                chart: data.chart || null, logId: data.logId || '',
                 usedPage: !!data.usedPage, seconds: data.seconds, at: Date.now(),
             }]);
         } catch (e) {
@@ -114,6 +121,58 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
             setBusy(false);
         }
     }, [question, busy, messages, setMessages, usePage, view, pageTitle, lang, t]);
+
+    // A question handed over by a button elsewhere ("Analyse with AI" in
+    // Admin → Problems): asked once, fresh, as soon as the panel is open.
+    const askedNonce = useRef(null);
+    useEffect(() => {
+        if (!open || !initialQuestion?.text || busy) return;
+        if (askedNonce.current === initialQuestion.nonce) return;
+        askedNonce.current = initialQuestion.nonce;
+        ask(initialQuestion.text, { fresh: true });
+    }, [open, initialQuestion, busy, ask]);
+
+    // Sharing: the conversation is drawn off screen (ChatExportSheet) and the
+    // picture or PDF taken from it; the export code loads only when used.
+    const sheetRef = useRef(null);
+    const [sheet, setSheet] = useState(null);
+    const [sharing, setSharing] = useState('');
+    const [shareMenu, setShareMenu] = useState(false);
+    const place = [...messages].reverse().find((m) => m.place)?.place || pageTitle || '';
+    const share = async (key, work) => {
+        if (sharing) return;
+        setSharing(key);
+        setShareMenu(false);
+        try {
+            const result = await work(await import('../utils/chatExport'));
+            if (result === 'downloaded') notify(t('data_assistant.share_saved', 'Saved as a file on this device'), 'success');
+            if (result === 'copied') notify(t('data_assistant.copied', 'Copied'), 'success');
+        } catch {
+            notify(t('data_assistant.share_failed', 'Could not share on this device'), 'error');
+        } finally {
+            flushSync(() => setSheet(null));
+            setSharing('');
+        }
+    };
+    // Draws the sheet, waits for its fonts and charts, and hands it over.
+    const drawSheet = async (next) => {
+        flushSync(() => setSheet(next));
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        await new Promise((r) => setTimeout(r, 150));
+        return sheetRef.current;
+    };
+    const title = t('data_assistant.title', 'Ask the data');
+    const shareAnswer = (i) => share(`answer-${i}`, async (ex) => {
+        const node = await drawSheet({ kind: 'image', width: 560, pairs: pairsOf(messages).filter((p) => p.index === i) });
+        return ex.shareImage(node.querySelector('[data-export-image]'), ex.exportName('Ask_the_data', 'png'), { title });
+    });
+    const shareChatPdf = () => share('pdf', async (ex) => {
+        const node = await drawSheet({ kind: 'pdf', width: 720, pairs: pairsOf(messages) });
+        return ex.sharePdf(node, ex.exportName('Ask_the_data', 'pdf'), { title });
+    });
+    const shareChatText = () => share('text', (ex) => ex.shareText(
+        ex.conversationText(messages, { heading: `${t('app.title', 'National Child Health Program')} · ${title}`, title: place }), { title },
+    ));
 
     const copy = async (text) => {
         try { await navigator.clipboard.writeText(text); notify(t('data_assistant.copied', 'Copied'), 'success'); }
@@ -128,7 +187,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                 role="dialog"
                 aria-label={t('data_assistant.title', 'Ask the data')}
                 className="w-full sm:max-w-md bg-white h-full flex flex-col shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); setShareMenu(false); }}
             >
                 <div className="flex items-start gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-slate-800 text-white shrink-0">
                     <div className="mt-0.5 rounded-lg bg-sky-500/20 p-1.5 text-sky-300"><Sparkles size={18} /></div>
@@ -136,6 +195,26 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                         <h2 className="font-bold leading-tight">{t('data_assistant.title', 'Ask the data')}</h2>
                         <p className="text-xs text-slate-300">{t('data_assistant.subtitle', 'Answers only from this app\'s data')}</p>
                     </div>
+                    {pairsOf(messages).length > 0 && (
+                        <div className="relative">
+                            <button onClick={(e) => { e.stopPropagation(); setShareMenu((v) => !v); }} disabled={!!sharing} className="p-1.5 rounded hover:bg-white/15 disabled:opacity-50"
+                                title={t('data_assistant.share_chat', 'Share the conversation')} aria-label={t('data_assistant.share_chat', 'Share the conversation')}
+                                aria-expanded={shareMenu}>
+                                {sharing === 'pdf' || sharing === 'text' ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+                            </button>
+                            {shareMenu && (
+                                <div className="absolute end-0 top-9 z-10 w-48 rounded-lg border border-line bg-white py-1 text-sm text-slate-700 shadow-lg">
+                                    <p className="px-3 py-1 text-xs text-slate-400">{t('data_assistant.share_chat', 'Share the conversation')}</p>
+                                    <button onClick={shareChatText} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50">
+                                        <AlignLeft size={15} />{t('data_assistant.share_text', 'As text')}
+                                    </button>
+                                    <button onClick={shareChatPdf} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50">
+                                        <FileText size={15} />{t('data_assistant.share_pdf', 'As PDF')}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {messages.length > 0 && (
                         <button onClick={() => setMessages([])} disabled={busy} className="p-1.5 rounded hover:bg-white/15 disabled:opacity-50"
                             title={t('data_assistant.new_chat', 'New conversation')} aria-label={t('data_assistant.new_chat', 'New conversation')}>
@@ -172,6 +251,9 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                     ) : (
                         <div key={i} className={`rounded-xl border px-3 py-2.5 ${m.failed ? 'border-red-200 bg-red-50 text-sm text-red-800' : 'border-line bg-white'}`}>
                             {m.failed ? m.content : <AiText text={m.content} />}
+                            {!m.failed && m.chart && (
+                                <Suspense fallback={<div className="mt-2 h-56" />}><AiChart chart={m.chart} /></Suspense>
+                            )}
                             {!m.failed && (
                                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-400">
                                     {m.usedPage && <span className="inline-flex items-center gap-1"><FileText size={12} />{m.place || t('data_assistant.read_page', 'this page')}</span>}
@@ -184,9 +266,14 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                                             <History size={12} />{t('data_assistant.saved_answer', 'Saved answer')} · {t('data_assistant.ask_again', 'Ask again')}
                                         </button>
                                     )}
-                                    {m.model && <span>{m.provider === 'groq' ? 'Groq' : 'Gemini'}{m.seconds ? ` · ${m.seconds} s` : ''}</span>}
-                                    <button onClick={() => copy(m.content)} className="ms-auto inline-flex items-center gap-1 hover:text-slate-600">
+                                    {m.model && <span>{providerName(m.provider)}{m.seconds ? ` · ${m.seconds} s` : ''}</span>}
+                                    <AiVote logId={m.logId} className="ms-auto" />
+                                    <button onClick={() => copy(m.content)} className={`${m.logId ? '' : 'ms-auto '}inline-flex items-center gap-1 hover:text-slate-600`}>
                                         <Copy size={12} />{t('data_assistant.copy', 'Copy')}
+                                    </button>
+                                    <button onClick={() => shareAnswer(i)} disabled={!!sharing} title={t('data_assistant.share_answer', 'Share this answer as a picture')}
+                                        className="inline-flex items-center gap-1 hover:text-slate-600 disabled:opacity-50">
+                                        {sharing === `answer-${i}` ? <Loader2 size={12} className="animate-spin" /> : <Share2 size={12} />}{t('data_assistant.share', 'Share')}
                                     </button>
                                 </div>
                             )}
@@ -236,6 +323,7 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
                     </div>
                 </div>
             </div>
+            <ChatExportSheet ref={sheetRef} sheet={sheet} place={place} lang={lang} />
         </div>
     );
 }

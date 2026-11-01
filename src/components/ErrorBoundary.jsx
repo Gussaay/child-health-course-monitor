@@ -1,6 +1,7 @@
 import React from 'react';
 import i18n from 'i18next';
 import { explainError, devLoadFailureReason } from '../utils/explainError';
+import { isChunkLoadError, recoverFromStaleBuild } from '../utils/staleBuild';
 
 /**
  * Catches render errors so one broken screen does not blank the whole app.
@@ -27,6 +28,7 @@ export class ErrorBoundary extends React.Component {
             noteState: 'idle', // idle | sending | sent | failed
             copied: false,
             at: null,
+            updating: false,  // a screen from an older release; reloading onto the current one
         };
     }
 
@@ -37,6 +39,16 @@ export class ErrorBoundary extends React.Component {
     async componentDidCatch(error, info) {
         console.error('[ErrorBoundary]', error, info?.componentStack);
         this.componentStack = info?.componentStack || '';
+
+        // The screen's code file belongs to an older release (or did not
+        // download). Not a bug in the app: reload onto the current release and
+        // say so, without filing a crash. When the reload was already tried in
+        // the last two minutes, or the device is offline, fall through and
+        // report it like any other failure, so a real problem still shows.
+        if (!import.meta.env.DEV && isChunkLoadError(error) && recoverFromStaleBuild(error)) {
+            this.setState({ updating: true });
+            return;
+        }
 
         // In development a failed module load hides the real cause; the dev
         // server still has it, so ask before explaining or reporting.
@@ -137,6 +149,14 @@ export class ErrorBoundary extends React.Component {
     render() {
         if (!this.state.error) return this.props.children;
         const t = (key, fallback, opts) => i18n.t(`admin_pages.error_boundary.${key}`, fallback, opts);
+        if (this.state.updating) {
+            return (
+                <div role="status" className="flex min-h-[40vh] flex-col items-center justify-center gap-3 p-6 text-center">
+                    <span className="h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-600" aria-hidden="true" />
+                    <p className="text-sm font-semibold text-slate-700">{t('updating', 'Loading the latest version of the app…')}</p>
+                </div>
+            );
+        }
         const { explained, report, reportError, reportId, note, noteState, copied } = this.state;
         // Developer explanations (missing package, broken file) and the raw
         // error only show while developing. People using the app get plain

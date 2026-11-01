@@ -9,15 +9,24 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { DataProvider } from './DataContext';
 import { AuthProvider } from './hooks/useAuth';
-import { offerWebUpdate } from './hooks/useAppUpdate';
+import { DATA_ENTRY_PATH } from './hooks/useAppUpdate';
+import { applyWebUpdateQuietly } from './utils/quietWebUpdate';
+import { startUpdateHold } from './utils/updateHold';
 import { isOnline } from './firebase';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
+import { isChunkLoadError, recoverFromStaleBuild } from './utils/staleBuild';
+import { installErrorCapture } from './utils/errorCapture';
 import './index.css';
 
 window.Buffer = Buffer;
 
+if (IS_EMONC_SITE) document.title = EMONC_SITE_TITLE;
+
 const IS_NATIVE = Capacitor.isNativePlatform();
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.2';
 window.APP_VERSION = APP_VERSION;
+// The version people see (package.json releaseVersion), stamped on problem reports.
+window.__APP_VERSION__ = import.meta.env.VITE_RELEASE_VERSION || APP_VERSION;
 
 // -------------------------------------------------------------------------
 // VERSION LOG — the old "cache buster" is gone.
@@ -34,50 +43,25 @@ if (previousVersion !== APP_VERSION) {
 }
 
 // =========================================================================
-// RECOVERY FROM A STALE BUILD
-// -------------------------------------------------------------------------
-// Each release renames the code files. A page still running the previous
-// release asks for the old names, which no longer exist, and the screen it
-// was opening fails to load. Worse, until this fix the service worker stored
-// the reply (Hosting's index.html) under the script's name, so every later
-// start loaded HTML as code and showed a white screen.
+// RECOVERY FROM A STALE BUILD (utils/staleBuild.js)
 //
-// When a script fails to load, drop the saved scripts and start again on the
-// current release. Once per two minutes at most, so a page that is genuinely
-// broken, or offline, does not reload forever.
+// The preload error is NOT cancelled with preventDefault() any more. Cancelling
+// it makes Vite resolve the import with `undefined` instead of failing, so the
+// screen then crashed with "can't access property 'CourseReportView', t is
+// undefined" (or "reading 'default'") — about 40 of the crash reports in
+// Admin → Problems were exactly that. Left alone, the import fails with the
+// real loading error, the error boundary sees it, reloads onto the current
+// release and shows "Loading the latest version" instead of a crash.
 // =========================================================================
-const CHUNK_CACHES = ['app-chunks', 'app-chunks-v2'];
-const RECOVERY_KEY = 'stale_build_recovery_at';
-
-const isChunkLoadError = (reason) => {
-  const text = String(reason?.message || reason || '');
-  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Expected a JavaScript-or-Wasm module script/i.test(text);
-};
-
-async function recoverFromStaleBuild(reason) {
-  try {
-    const last = Number(sessionStorage.getItem(RECOVERY_KEY) || 0);
-    if (Date.now() - last < 2 * 60 * 1000) return;
-    if (navigator.onLine === false) return;
-    sessionStorage.setItem(RECOVERY_KEY, String(Date.now()));
-  } catch { /* storage unavailable: still try once */ }
-  console.warn('♻️ A script from an older release could not be loaded; reloading on the current one.', reason);
-  try {
-    if ('caches' in window) await Promise.allSettled(CHUNK_CACHES.map((name) => caches.delete(name)));
-    const reg = await navigator.serviceWorker?.getRegistration?.();
-    await reg?.update?.().catch(() => {});
-  } catch { /* reload regardless */ }
-  window.location.reload();
-}
-
-// Vite raises this when a lazily loaded screen's file cannot be fetched.
 window.addEventListener('vite:preloadError', (event) => {
-  event.preventDefault();
   recoverFromStaleBuild(event.payload);
 });
 window.addEventListener('unhandledrejection', (event) => {
   if (isChunkLoadError(event.reason)) recoverFromStaleBuild(event.reason);
 });
+
+// Permission refusals and other handled errors go to Admin → Problems.
+installErrorCapture();
 
 // The cache before the fix may hold HTML saved under script names; it is no
 // longer read, so free the space.
@@ -87,6 +71,12 @@ if ('caches' in window) caches.delete('app-chunks').catch(() => {});
 // PLATFORM SETUP
 // =========================================================================
 if (IS_NATIVE) {
+  // A downloaded update is applied by Capgo the moment the app goes into the
+  // background, which reloads the page. Hold it while a form, a test or any
+  // popup is open, so switching to another app and back keeps the work on
+  // screen (utils/updateHold.js).
+  startUpdateHold(() => DATA_ENTRY_PATH.test(window.location.pathname));
+
   // A service worker must NOT run inside the native app: it keeps serving the
   // index.html and JS it saved from the OLD bundle after Capgo installs a new
   // one, which looks like "the app went back to the previous version".
@@ -108,31 +98,46 @@ if (IS_NATIVE) {
   }
 } else {
   // Web only. vite.config MUST use VitePWA({ registerType: 'prompt' }) —
-  // with 'autoUpdate' the plugin reloads by itself and the popup never shows.
+  // with 'autoUpdate' the plugin reloads by itself.
   //
-  // The service worker now takes over as soon as a new release has
-  // downloaded (skipWaiting), so there is usually no "waiting" worker for
-  // onNeedRefresh to report. The same popup is offered when the new worker
-  // takes control instead; the page keeps running until the user restarts.
+  // UPDATES ARE SILENT, like an ordinary website. A new release downloads in
+  // the background and its service worker takes over (skipWaiting), but the
+  // page that is open keeps running until it is next opened — no popup, no
+  // reload in the middle of work. utils/quietWebUpdate.js also switches over
+  // a minute after the app goes into the background. The files of the release the
+  // page is running stay on the server for two weeks (deploy.yml), so screens
+  // opened after a release still load.
+  //
+  // This used to show a "Restart and install" popup, and the PWA plugin's own
+  // 'controlling' handler reloaded the page whenever a release found during a
+  // session took control — the sudden refresh users saw after each deploy.
+  // onNeedReload below replaces that reload.
+  const busy = () => DATA_ENTRY_PATH.test(window.location.pathname);
   const hadController = !!navigator.serviceWorker?.controller;
   navigator.serviceWorker?.addEventListener('controllerchange', () => {
     if (!hadController) return; // first install, not an update
-    console.log('⬇️ New web version installed.');
-    offerWebUpdate(() => window.location.reload());
+    console.log('⬇️ New web version installed; it starts the next time the app opens.');
+    applyWebUpdateQuietly(() => window.location.reload(), { busy });
   });
 
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
+      // Only when a release is waiting (skipWaiting normally makes this rare).
       console.log('⬇️ New web version downloaded.');
-      offerWebUpdate(updateSW); // shows the same "Restart and install / Later" popup
+      applyWebUpdateQuietly(() => updateSW(), { busy });
+    },
+    onNeedReload() {
+      // The new release took control. Not reloading here on purpose: the
+      // controllerchange listener above schedules a quiet switch instead.
     },
     onRegisteredSW(_swUrl, registration) {
-      // Users who keep the PWA open for days still get updates.
+      // Users who keep the PWA open for days still get updates: every 12
+      // hours, on top of the check the browser makes at every page load.
       if (registration) {
         setInterval(() => {
           if (isOnline()) registration.update().catch(() => {});
-        }, 60 * 60 * 1000);
+        }, 12 * 60 * 60 * 1000);
       }
     },
     onRegisterError(e) {

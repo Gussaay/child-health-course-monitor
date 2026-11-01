@@ -5,27 +5,27 @@
 import React, { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    BookOpen, Plus, Pencil, Trash2, DownloadCloud, GraduationCap, Layers, RefreshCw, Library, Stethoscope, Syringe, X,
+    BookOpen, Plus, Pencil, Trash2, DownloadCloud, GraduationCap, Layers, RefreshCw, Library, Stethoscope, Syringe, X, BarChart3,
 } from 'lucide-react';
 import { Card, CardBody, PageHeader, Button, Spinner, PageTabs } from '../../CommonComponents';
 import { ImportModal } from './ImportModal';
 import { CourseModal } from './ItemModals';
 import { DeletedItems } from './DeletedItems';
-import { AiLibraryView, ExerciseManagerView, ProtocolEditor } from './lazyParts';
+import { AiLibraryView, ExerciseManagerView, ProgressDashboard, ProtocolEditor } from './lazyParts';
 import { useCourseScreen } from './screen';
 
 export function CourseList() {
     const { t } = useTranslation();
     const {
         allCourses, allItems, allModules, builder, canManage, courseModal, courses, deletedCount,
-        go, handleBinChanged, importOpen, isAdmin, items, mode, permissions,
+        canSeeProgress, go, handleBinChanged, importOpen, isAdmin, items, mode, permissions,
         progress, refreshExercises, reload, removeCourse, resync, setBuilder, setCourseModal,
         setImportOpen, setMode, setTopTab, syncing, topTab,
     } = useCourseScreen();
 
     // --- course list --------------------------------------------------------
     // Leaving Manage mode leaves the Deleted tab too.
-    const shownTab = topTab === 'deleted' && !isAdmin ? 'courses' : topTab;
+    const shownTab = (topTab === 'deleted' && !isAdmin) || (topTab === 'progress' && !canSeeProgress) ? 'courses' : topTab;
     return (
         <div className="space-y-4">
             <PageHeader
@@ -115,10 +115,13 @@ export function CourseList() {
             <PageTabs active={shownTab} onChange={setTopTab} tabs={[
                 { id: 'courses', label: t('imnci_ui.courses.main.tab_courses', 'Courses'), icon: GraduationCap },
                 { id: 'books', label: t('ai_library.tab_books', 'Books and AI'), short: t('ai_library.tab_books_short', 'Books'), icon: Library },
+                canSeeProgress && { id: 'progress', label: t('imnci_ui.progress.tab', 'Progress'), icon: BarChart3 },
                 isAdmin && { id: 'deleted', label: t('imnci_ui.courses.main.deleted_bin', 'Deleted') + (deletedCount ? ` (${deletedCount})` : ''), icon: Trash2 },
             ]} />
 
-            {shownTab === 'deleted' ? (
+            {shownTab === 'progress' ? (
+                <Suspense fallback={<Spinner />}><ProgressDashboard /></Suspense>
+            ) : shownTab === 'deleted' ? (
                 <DeletedItems courses={allCourses} items={allItems} onChanged={handleBinChanged} />
             ) : shownTab === 'books' ? (
                 <Suspense fallback={<Spinner />}>

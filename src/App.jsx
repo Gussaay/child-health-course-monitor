@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -141,7 +141,8 @@ import {
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton } from './components/CommonComponents';
-import { auth, db, isOnline } from './firebase';
+import { auth, db, isOnline, getConnectivity } from './firebase';
+import OfflinePill from './components/OfflinePill';
 
 import { doc, getDoc, getDocFromServer, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
 
@@ -155,7 +156,8 @@ import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
 import SudanMiniMap from './components/SudanMiniMap';
 import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
-import { coverageColor } from './utils/statusColors';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
+import { ASK_DATA_EVENT } from './utils/askDataAssistant';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
@@ -409,6 +411,11 @@ function pageTitles(t) {
 }
 
 function buildModules(t, permissions) {
+    const modules = allModules(t, permissions);
+    return IS_EMONC_SITE ? modules.filter(m => !EMONC_SITE_HIDDEN_VIEWS.has(m.view)) : modules;
+}
+
+function allModules(t, permissions) {
     const tile = (key, fallback) => t(`landing.taglines.${key}`, fallback);
     return [
         { label: t('landing.modules.dashboard', 'Dashboard'), tagline: tile('dashboard', 'Key indicators at a glance'), view: 'dashboard', group: 'services', icon: Home, permission: true },
@@ -430,23 +437,7 @@ function buildModules(t, permissions) {
     ];
 }
 
-function StatBox({ value, label, busy, icon: Icon, format = (v) => v.toLocaleString() }) {
-    const loading = value === null && busy;
-    return (
-        <div className="rounded-2xl bg-white/15 backdrop-blur-sm px-3 py-2.5 min-w-0 ring-1 ring-white/10">
-            <div className="flex items-center gap-1.5 text-white/80">
-                {Icon && <Icon size={13} className="shrink-0" />}
-                <p className="text-xs leading-tight truncate">{label}</p>
-            </div>
-            {loading
-                ? <Skeleton className="shimmer-light h-6 w-12 mt-1" />
-                : <p className="text-xl font-bold leading-tight mt-0.5">{value === null ? '—' : format(value)}</p>}
-        </div>
-    );
-}
-
-// Coverage on the greeting card: overall first, then the four services,
-// all on one row (it scrolls sideways on narrow phones).
+// The four services whose coverage can appear as a highlight.
 const COVERAGE_ITEMS = [
     { key: 'imnci', label: 'IMNCI' },
     { key: 'etat', label: 'ETAT' },
@@ -454,44 +445,9 @@ const COVERAGE_ITEMS = [
     { key: 'scnu', label: 'SCNU' },
 ];
 
-function CoverageChip({ label, value, loading, strong = false }) {
-    return (
-        <div className={`shrink-0 min-w-[5.5rem] flex-1 rounded-2xl px-3 py-2 ring-1 ${strong ? 'bg-white text-slate-800 ring-white' : 'bg-white/15 ring-white/10'}`}>
-            <p className={`text-xs leading-tight truncate ${strong ? 'font-semibold text-slate-500' : 'text-white/80'}`}>{label}</p>
-            {loading
-                ? <Skeleton className={`${strong ? '' : 'shimmer-light'} h-5 w-10 mt-1`} />
-                : (
-                    <>
-                        <p className="text-lg font-bold leading-tight mt-0.5">{value === null || value === undefined ? '—' : `${value}%`}</p>
-                        <div className={`mt-1 h-1 rounded-full overflow-hidden ${strong ? 'bg-slate-200' : 'bg-white/20'}`}>
-                            <div className={`h-full rounded-full ${strong ? '' : 'bg-white'}`} style={{ width: `${Math.min(100, value || 0)}%`, backgroundColor: strong ? coverageColor(value) : undefined }} />
-                        </div>
-                    </>
-                )}
-        </div>
-    );
-}
-
-function CoverageRow({ coverage, busy, onOpen }) {
-    const { t } = useTranslation();
-    const loading = !coverage && busy;
-    if (!coverage && !busy) return null;
-    const row = (
-        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <CoverageChip strong label={t('landing.coverage.overall', 'Overall coverage')} value={coverage?.overall} loading={loading} />
-            {COVERAGE_ITEMS.map(({ key, label }) => (
-                <CoverageChip key={key} label={t(`landing.coverage.${key}`, label)} value={coverage?.services?.[key]?.perc} loading={loading} />
-            ))}
-        </div>
-    );
-    return onOpen
-        ? <button type="button" onClick={onOpen} className="mt-2 block w-full text-start">{row}</button>
-        : <div className="mt-2">{row}</div>;
-}
-
-// Phone greeting: two lines. The greeting, then one highlight from this
-// year's numbers, picked at random each time the main menu opens; tapping
-// it shows another.
+// Greeting card, the same on the phone app and the web: two lines. The
+// greeting, then one highlight from this year's numbers, picked at random
+// each time the main menu opens; tapping it shows another.
 function homeFacts(t, stats, level) {
     if (!stats) return [];
     const n = (v) => Number(v).toLocaleString();
@@ -513,7 +469,7 @@ function homeFacts(t, stats, level) {
     return facts;
 }
 
-function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
+function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
     const { t } = useTranslation();
     const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
     const facts = homeFacts(t, stats, level);
@@ -521,8 +477,8 @@ function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats, s
     const fact = facts.length ? facts[pick % facts.length] : null;
     const FactIcon = fact?.icon;
     return (
-        <section className={`md:hidden relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3`}>
-            <SudanMiniMap highlight={states} all={level === 'federal'} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 text-white" />
+        <section className={`relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3`}>
+            <SudanMiniMap highlight={states} all={level === 'federal'} title={scope || levelLabel} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 text-white" />
             <div className="relative flex items-center gap-2 min-w-0">
                 <h2 className="text-base font-bold leading-tight truncate">
                     {greeting}{firstName ? `, ${firstName}` : ''}
@@ -548,13 +504,12 @@ function PhoneGreeting({ greeting, firstName, level, levelLabel, scope, stats, s
     );
 }
 
-function Landing({ navigate, permissions, user, roles = [], userStates = [], userLocalities = [], stats = null, onAskData }) {
+function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData }) {
     const { t, i18n } = useTranslation();
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
     const firstName = String(user?.displayName || '').trim().split(/\s+/)[0];
-    const role = roles[0] ? String(roles[0]).replace(/_/g, ' ') : '';
     const level = levelFromPermissions(permissions);
     const levelLabel = {
         federal: t('landing.level_federal', 'Federal level'),
@@ -565,42 +520,10 @@ function Landing({ navigate, permissions, user, roles = [], userStates = [], use
     const scope = places.filter(Boolean).join(i18n.language?.startsWith('ar') ? '، ' : ', ');
 
     const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
-    const chip = 'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold';
 
     return (
         <div className="flex flex-col min-h-full space-y-4">
-            <PhoneGreeting greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
-            <section className={`hidden md:flex items-start gap-5 rounded-3xl ${LEVEL_CARDS[level]} text-white p-4 sm:p-5`}>
-                <div className="relative flex-1 min-w-0">
-                    <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        <h2 className="shrink-0 text-lg sm:text-xl font-bold leading-tight">
-                            {greeting}{firstName ? `, ${firstName}` : ''}
-                        </h2>
-                        <span className={`${chip} bg-white text-slate-800`}>{levelLabel}</span>
-                        {scope && <span className={`${chip} bg-white/20`}>{scope}</span>}
-                        {role && <span className={`${chip} bg-white/20 capitalize`}>{role}</span>}
-                        {stats?.focus && <span className={`${chip} bg-white/20`}>{t(`landing.unit_${stats.focus.toLowerCase()}`, `${stats.focus} unit`)}</span>}
-                    </div>
-                    {stats && (
-                        <div className={`mt-3 grid grid-cols-2 sm:grid-cols-3 ${level === 'locality' ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-2`}>
-                            <StatBox icon={Book} busy={stats.busy.courses} value={stats.courses} label={t('landing.stats.courses', 'Courses')} />
-                            <StatBox icon={Users} busy={stats.busy.courses || stats.busy.participants} value={stats.participants} label={t('landing.stats.participants', 'Participants trained')} />
-                            <StatBox icon={Hospital} busy={stats.busy.visits} value={stats.facilitiesReached} label={t('landing.stats.facilities_reached', 'Facilities reached')} />
-                            <StatBox icon={ClipboardCheck} busy={stats.busy.visits} value={stats.visits} label={t('landing.stats.visits', 'Mentorship visits')} />
-                            {level !== 'locality' && <StatBox icon={User} busy={stats.busy.facilitators} value={stats.facilitators} label={t('landing.stats.facilitators', 'Facilitators')} />}
-                        </div>
-                    )}
-                    {stats && (
-                        <CoverageRow
-                            coverage={stats.coverage}
-                            busy={stats.busy.facilities}
-                            onOpen={permissions.canViewFacilities ? () => navigate('childHealthServices') : undefined}
-                        />
-                    )}
-                    {stats && <p className="mt-2 text-xs text-white/70">{t('landing.stats_year', 'This year')} ({new Date().getFullYear()})</p>}
-                </div>
-                <SudanMiniMap highlight={userStates} all={level === 'federal'} title={scope || levelLabel} className="hidden lg:block shrink-0 w-36 xl:w-44 text-white" />
-            </section>
+            <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
 
             {onAskData && accessibleButtons.length > 0 && <DataAssistantCard onOpen={onAskData} />}
 
@@ -784,8 +707,8 @@ function SplashScreen() {
         <div className="fixed inset-0 bg-surface flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-20 w-20 object-contain" /></div>
             <div>
-                <h1 className="text-3xl font-bold text-slate-800">{t('app.title', 'National Child Health Program')}</h1>
-                <p className="text-lg text-slate-500 mt-1">{t('app.subtitle', 'Program & Course Monitoring System')}</p>
+                <h1 className="text-3xl font-bold text-slate-800">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
+                <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
             </div>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mt-4"></div>
             <p className="text-slate-600 mt-4">{t('app.loading_system', 'Loading application, please wait...')}</p>
@@ -1142,6 +1065,19 @@ export default function App() {
     const [dataAssistant, setDataAssistant] = useState({ loaded: false, open: false });
     const openDataAssistant = useCallback(() => setDataAssistant({ loaded: true, open: true }), []);
     const closeDataAssistant = useCallback(() => setDataAssistant((s) => ({ ...s, open: false })), []);
+    // The open screen, for error reports sent from outside React (utils/errorCapture.js).
+    useEffect(() => { window.__CURRENT_VIEW__ = view; }, [view]);
+    // "Analyse with AI" (Admin → Problems) and similar buttons open the panel
+    // with a question already asked (utils/askDataAssistant.js).
+    useEffect(() => {
+        const onAsk = (e) => {
+            const text = e?.detail?.question;
+            if (!text) return;
+            setDataAssistant({ loaded: true, open: true, question: { text, nonce: Date.now() } });
+        };
+        window.addEventListener(ASK_DATA_EVENT, onAsk);
+        return () => window.removeEventListener(ASK_DATA_EVENT, onAsk);
+    }, []);
     const [publicViewData, setPublicViewData] = useState(null);
     const [publicViewType, setPublicViewType] = useState(null); 
     const [publicViewLoading, setPublicViewLoading] = useState(false);
@@ -1191,6 +1127,12 @@ export default function App() {
     const replaceNextPageRef = useRef(false);
 
     const handleFileDownloadAndOpen = (url, customFileName = null) => {
+        // Offline: one quiet line instead of a download bar that then fails
+        // with a native error.
+        if (['offline', 'no-internet'].includes(getConnectivity().status)) {
+            setToast({ show: true, message: t('app.download_offline', 'No internet right now, so this file cannot be downloaded. Try again when you are back online.'), type: 'info' });
+            return;
+        }
         downloadAndOpenFile(url, customFileName, {
             onStart: () => { setIsFileDownloading(true); setFileDownloadProgress(0); },
             onSuccess: () => setToast({ show: true, message: t('app_extra.toast.download_opening', 'Download complete. Opening...'), type: 'success' }),
@@ -1889,7 +1831,7 @@ export default function App() {
 
     const canSeeAllData = useMemo(() => permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures, [permissions]);
 
-    const filteredCourses = useMemo(() => {
+    const locationCourses = useMemo(() => {
         if (!allCourses) return [];
         const locPerm = permissions.manageLocation;
 
@@ -1909,6 +1851,9 @@ export default function App() {
         }
         return allCourses;
     }, [allCourses, userStates, userLocalities, permissions.manageLocation]);
+    const filteredCourses = useMemo(() => (
+        IS_EMONC_SITE ? locationCourses.filter(c => EMONC_COURSE_TYPES.includes(c.course_type)) : locationCourses
+    ), [locationCourses]);
 
     const filteredFacilitators = useMemo(() => {
         if (!allFacilitators) return [];
@@ -1942,7 +1887,7 @@ export default function App() {
 
     useEffect(() => { if (view === 'humanResources' && activeHRTab === 'facilitators' && permissions.canApproveSubmissions) fetchPendingSubmissions(); }, [view, activeHRTab, permissions.canApproveSubmissions, fetchPendingSubmissions]);
 
-    const selectedCourse = useMemo(() => (allCourses || []).find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
+    const selectedCourse = useMemo(() => (IS_EMONC_SITE ? filteredCourses : (allCourses || [])).find(c => c.id === selectedCourseId) || null, [allCourses, filteredCourses, selectedCourseId]);
     // The main menu's numbers. The last ones worked out are kept on the
     // device, so the menu shows them at once and refreshes them as data loads.
     const homeStatsKey = user?.uid ? `home_stats_${user.uid}` : null;
@@ -1998,7 +1943,8 @@ export default function App() {
     const selectedFacilitator = useMemo(() => (allFacilitators || []).find(f => f.id === selectedFacilitatorId) || null, [allFacilitators, selectedFacilitatorId]);
 
 
-    const navigate = useCallback((newView, state = {}) => {
+    const navigate = useCallback((requestedView, state = {}) => {
+        const newView = IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(requestedView) ? 'landing' : requestedView;
         const viewPermissions = {
             'landing': true, 'dashboard': true, 'admin': permissions.canViewAdmin, 'imciForm': permissions.canViewCourse, 'humanResources': permissions.canViewHumanResource,
             'courses': permissions.canViewCourse, 'courseDetails': permissions.canViewCourse, 'participants': permissions.canViewCourse, 'reports': permissions.canViewCourse,
@@ -2054,6 +2000,12 @@ export default function App() {
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
     navigateRef.current = navigate;
     viewRef.current = view;
+
+    // A few places still set the view directly (sign-in, a denied page). On the
+    // EmONC site those land on the home page instead of a hidden module.
+    useEffect(() => {
+        if (IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(view)) setView('landing');
+    }, [view]);
 
     // Opens a page described by an address or history entry.
     const applyPage = useCallback((page) => {
@@ -2434,7 +2386,7 @@ export default function App() {
         const viewToRender = view;
 
         switch (viewToRender) {
-            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={homeStats} onAskData={openDataAssistant} />;
+            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={IS_EMONC_SITE ? null : homeStats} onAskData={IS_EMONC_SITE ? null : openDataAssistant} />;
             case 'admin': return <AdminDashboard appRoles={userRoles} />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
@@ -2493,7 +2445,7 @@ export default function App() {
     return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
 
            case 'onlineCourses':
-    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} /></ImnciProvider></Suspense> ) : null;
+    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} /></ImnciProvider></Suspense> ) : null;
 
 
            case 'projects':
@@ -2562,7 +2514,7 @@ case 'meetings':
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship }
     ], [view, permissions, t]);
 
-    const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
+    const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled && !(IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(item.view))), [navItems]);
 
     const isApplicationPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView;
     const isMentorshipPublicView = !!publicMentorshipProps || isPublicMentorshipDashboardView; 
@@ -2851,7 +2803,7 @@ case 'meetings':
     const PAGE_TITLES = pageTitles(t);
     const closeSideMenu = () => setSideMenuOpen(false);
     const showSlimBar = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
-    const pageTitle = PAGE_TITLES[view] || t('app.title', 'National Child Health Program');
+    const pageTitle = PAGE_TITLES[view] || (IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program'));
     const pageSubtitle = (() => {
         if (view === 'facilitatorReport' || view === 'facilitatorForm') return selectedFacilitator?.name || '';
         const course = view === 'finalReport' ? (finalReportCourse || selectedCourse) : selectedCourse;
@@ -2951,15 +2903,11 @@ case 'meetings':
                 code and it pulls in jsPDF and html2canvas. */}
             <Suspense fallback={null}><CertificateDownloadBanner /></Suspense>
 
+            {/* Offline is a small floating pill, not a bar: it takes no space
+                and blocks no taps, so open forms and quizzes carry on. */}
+            <OfflinePill />
+
             <div className="fixed top-0 start-0 w-full z-[100005] flex flex-col">
-                {isOffline && (
-                    <div className="bg-amber-500 text-white py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md overflow-hidden">
-                        <WifiOff className="w-5 h-5 shrink-0" /> 
-                        <span className="truncate">
-                            {t('app.offline', 'App offline. Saved data will sync when online.')}
-                        </span>
-                    </div>
-                )}
                 {(isFileDownloading || isDownloadingAppUpdate) && (
                     <div className="bg-sky-700 text-white py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md relative overflow-hidden">
                         <div 
@@ -2975,7 +2923,7 @@ case 'meetings':
             </div>
 
             {showSlimBar ? (
-            <header ref={headerRef} className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header ref={headerRef} className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-14 px-1 sm:px-4">
                     <button
                         onClick={goBack}
@@ -2992,7 +2940,7 @@ case 'meetings':
                 </div>
             </header>
             ) : (<>
-            <header ref={headerRef} className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header ref={headerRef} className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
@@ -3011,9 +2959,9 @@ case 'meetings':
                                 <img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-9 w-9 sm:h-12 sm:w-12 object-contain" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">{t('app.title', 'National Child Health Program')}</h1>
+                                <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
-                                    <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
+                                    <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span
                                         onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
                                         className="bg-slate-700 text-sky-300 text-xs px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
@@ -3396,12 +3344,12 @@ case 'meetings':
                 </Suspense>
             )}
 
-            {user && !isMinimalUILayout && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && (
+            {user && !isMinimalUILayout && !IS_EMONC_SITE && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && (
                 <DataAssistantButton onClick={openDataAssistant} />
             )}
             {dataAssistant.loaded && (
                 <Suspense fallback={null}>
-                    <DataAssistantPanel open={dataAssistant.open} onClose={closeDataAssistant} view={view} pageTitle={pageTitle} uid={user?.uid} />
+                    <DataAssistantPanel open={dataAssistant.open} onClose={closeDataAssistant} view={view} pageTitle={pageTitle} uid={user?.uid} initialQuestion={dataAssistant.question} />
                 </Suspense>
             )}
 

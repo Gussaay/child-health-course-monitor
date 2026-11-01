@@ -12,16 +12,21 @@
 // which page it came from.
 //
 // Free tiers only, as in Easy Pedia:
-//   Groq (GPT-OSS)  first when the text is short. Its free tier takes about
+//   Cerebras (GPT-OSS)  first when AI_USE_CEREBRAS=1: about 30,000 input tokens a minute, so ~45,000
+//                   characters of book at once, and longer parts in pieces.
+//   Groq (GPT-OSS)  next when the text is short. Its free tier takes about
 //                   8,000 tokens a minute, prompt included, so ~18,000
 //                   characters of book is the most it can be given.
 //   Gemini Flash    for anything longer (it reads a whole manual at once) and
-//                   as the backup when Groq is out of quota.
+//                   as the backup when Groq is out of quota. OFF unless
+//                   AI_USE_GEMINI=1 (see aiModels.js): without it a part
+//                   longer than ~18,000 characters is refused.
 //
 // One-time setup:
+//   firebase functions:secrets:set CEREBRAS_API_KEY (cloud.cerebras.ai; only with AI_USE_CEREBRAS=1)
 //   firebase functions:secrets:set GROQ_API_KEY     (console.groq.com/keys)
 //   firebase functions:secrets:set GEMINI_API_KEY   (aistudio.google.com/apikey)
-// Both must be set before this is exported from index.js: a declared secret
+// All must be set before this is exported from index.js: a declared secret
 // that is missing fails the whole functions deploy.
 //
 // Tasks (`task` plus its fields):
@@ -47,17 +52,26 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 // Choosing pages is kept apart from the plumbing so it can be tested without
 // the Cloud Functions runtime installed.
-const { pageRange, rankPages, bestPages } = require("./aiBooksText");
+const { pageRange, rankPages, hybridRankPages, bestPages } = require("./aiBooksText");
+const { meaningOf } = require("./aiBooksVectors");
 
+// Declared only when Cerebras is on: the deploy asks for every declared
+// secret, even one no function lists.
+const CEREBRAS_API_KEY = process.env.AI_USE_CEREBRAS === "1" ? defineSecret("CEREBRAS_API_KEY") : null;
 const GROQ_API_KEY = defineSecret("GROQ_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 // Models in order, and how long one request may take: see aiModels.js.
-const { GEMINI_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
+const { GEMINI_MODELS, CEREBRAS_MODELS, GROQ_MODELS, REQUEST_MS } = require("./aiModels");
 const { withAiLog } = require("./aiLog");
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Both speak the OpenAI chat format; Groq alone takes include_reasoning.
+const CHAT = {
+  cerebras: { name: "Cerebras", url: "https://api.cerebras.ai/v1/chat/completions", models: CEREBRAS_MODELS, extra: {} },
+  groq: { name: "Groq", url: "https://api.groq.com/openai/v1/chat/completions", models: GROQ_MODELS, extra: { include_reasoning: false } },
+};
 
 const GROQ_CHARS = 18000;     // book text Groq's 8K tokens a minute leaves room for
+const CEREBRAS_CHARS = 45000; // and Cerebras' 30K
 const GEMINI_CHARS = 600000;  // ~150K tokens: a whole manual, well inside Flash's window
 const ASK_CHARS = 80000;      // a question is answered from the best pages, not the whole service
 // Requests per person per day, so one account cannot use up the free quota.
@@ -180,7 +194,7 @@ const pagesOf = (entry, a, b) => {
   const out = [];
   for (let p = a; p <= b; p++) {
     const text = entry.pages[p - 1];
-    if (text && text.trim()) out.push({ title: entry.book.title, page: p, text });
+    if (text && text.trim()) out.push({ bookId: entry.book.id, title: entry.book.title, page: p, text });
   }
   return out;
 };
@@ -258,38 +272,40 @@ const sizeOf = (pages) => pages.reduce((n, p) => n + p.text.length + 12, 0);
 const cleanKey = (secret) => String(secret.value() || "").replace(/[\s"']/g, "");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function groq(key, messages, maxTokens) {
+async function chat(provider, key, messages, maxTokens) {
+  const { name, url, models, extra } = CHAT[provider];
   let last = "";
-  for (const model of GROQ_MODELS) {
+  for (const model of models) {
     for (let attempt = 0; ; attempt++) {
-      const r = await fetch(GROQ_URL, {
+      const r = await fetch(url, {
         signal: AbortSignal.timeout(REQUEST_MS),
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
         body: JSON.stringify({
           model, messages, temperature: 0.3, max_completion_tokens: maxTokens,
-          reasoning_effort: "low", include_reasoning: false,
+          reasoning_effort: "low", ...extra,
         }),
       }).catch((e) => ({ failed: e }));
       if (r.failed) {
         last = `${model}: ${r.failed.name === "TimeoutError" ? "no reply in time" : clip(r.failed.message, 120)}`;
-        logger.warn(`[aiBooks] Groq ${last}`);
+        logger.warn(`[aiBooks] ${name} ${last}`);
         break;
       }
       const j = await r.json().catch(() => ({}));
       if (r.ok) {
         const text = String(j?.choices?.[0]?.message?.content || "").trim();
-        if (text) return { text, model, provider: "groq", truncated: j?.choices?.[0]?.finish_reason === "length" };
+        if (text) return { text, model, provider, truncated: j?.choices?.[0]?.finish_reason === "length" };
         last = `${model} returned an empty reply`;
         break;
       }
       const wait = parseFloat(r.headers.get("retry-after")) || 0;
-      if (attempt < 1 && ((r.status === 429 && wait <= 10) || [500, 502, 503].includes(r.status))) {
-        await sleep(Math.min(Math.max(wait * 1000, 1500), 10000));
+      // Cerebras' per-minute limits ask for waits of up to a minute.
+      if (attempt < 1 && ((r.status === 429 && wait <= 20) || [500, 502, 503].includes(r.status))) {
+        await sleep(Math.min(Math.max(wait * 1000, 1500), 20000));
         continue;
       }
       last = `${model} ${r.status}: ${clip(j?.error?.message, 200)}`;
-      logger.warn(`[aiBooks] Groq ${last}`);
+      logger.warn(`[aiBooks] ${name} ${last}`);
       if (r.status === 401 || r.status === 403) return { error: last };
       break;
     }
@@ -347,21 +363,28 @@ async function gemini(key, system, user, maxTokens) {
 }
 
 /**
- * Tries Groq when the text fits it, Gemini otherwise, and the other one as
- * the backup. `make(limit)` builds the user message from at most `limit`
+ * Tries Cerebras, then Groq when the text fits it, then Gemini (when it is
+ * switched on); a provider the text is too long for goes last. `make(limit)` builds the user message from at most `limit`
  * characters of book text, or returns null when the task cannot be done
  * honestly in that space (a summary of half a chapter is not a summary).
  */
-async function complete({ system, make, size, maxTokens = 3072, groqChars = GROQ_CHARS, groqTokens = 2048 }) {
+async function complete({
+  system, make, size, maxTokens = 3072, groqChars = GROQ_CHARS, groqTokens = 2048, cerebrasChars = CEREBRAS_CHARS,
+}) {
+  const cerebrasKey = CEREBRAS_MODELS.length ? cleanKey(CEREBRAS_API_KEY) : "";
   const groqKey = cleanKey(GROQ_API_KEY);
-  const geminiKey = cleanKey(GEMINI_API_KEY);
-  if (!groqKey && !geminiKey) throw new HttpsError("failed-precondition", "No AI key is set on the server (GROQ_API_KEY or GEMINI_API_KEY).");
+  const geminiKey = GEMINI_MODELS.length ? cleanKey(GEMINI_API_KEY) : ""; // off unless AI_USE_GEMINI=1
+  if (!cerebrasKey && !groqKey && !geminiKey) {
+    throw new HttpsError("failed-precondition", "No AI key is set on the server (CEREBRAS_API_KEY or GROQ_API_KEY).");
+  }
+  const messages = (u) => [{ role: "system", content: system }, { role: "user", content: u }];
 
   const tries = [
-    groqKey && { name: "groq", limit: groqChars, run: (u) => groq(groqKey, [{ role: "system", content: system }, { role: "user", content: u }], Math.min(maxTokens, groqTokens)) },
+    cerebrasKey && { name: "cerebras", limit: cerebrasChars, run: (u) => chat("cerebras", cerebrasKey, messages(u), maxTokens) },
+    groqKey && { name: "groq", limit: groqChars, run: (u) => chat("groq", groqKey, messages(u), Math.min(maxTokens, groqTokens)) },
     geminiKey && { name: "gemini", limit: GEMINI_CHARS, run: (u) => gemini(geminiKey, system, u, maxTokens) },
   ].filter(Boolean);
-  if (size > groqChars) tries.reverse(); // Gemini first when Groq cannot take it all
+  tries.sort((a, b) => (size > a.limit) - (size > b.limit)); // the ones it fits first, in order
 
   const errors = [];
   for (const t of tries) {
@@ -398,16 +421,19 @@ async function summarise(db, data, who) {
 
   let out;
   const size = sizeOf(pages);
-  if (size <= GEMINI_CHARS) {
+  // The most book text one request can take with the keys that are set.
+  const big = GEMINI_MODELS.length && cleanKey(GEMINI_API_KEY) ? GEMINI_CHARS
+    : CEREBRAS_MODELS.length && cleanKey(CEREBRAS_API_KEY) ? CEREBRAS_CHARS : GROQ_CHARS;
+  if (size <= big) {
     out = await complete({ system: SYSTEM, size, maxTokens: 4096, make: (limit) => (size <= limit ? ask(render(pages)) : null) });
   } else {
-    // Longer than even Gemini takes at once: notes on each piece, then the
+    // Longer than one request takes: notes on each piece, then the
     // asked-for result from the notes.
     const pieces = [];
     let cur = [];
     let curSize = 0;
     for (const p of pages) {
-      if (curSize + p.text.length > GEMINI_CHARS * 0.8 && cur.length) { pieces.push(cur); cur = []; curSize = 0; }
+      if (curSize + p.text.length > big * 0.8 && cur.length) { pieces.push(cur); cur = []; curSize = 0; }
       cur.push(p); curSize += p.text.length + 12;
     }
     if (cur.length) pieces.push(cur);
@@ -415,14 +441,14 @@ async function summarise(db, data, who) {
     const notes = [];
     for (const piece of pieces) {
       const n = await complete({
-        system: SYSTEM, size: GEMINI_CHARS, maxTokens: 6000,
-        make: (limit) => (limit >= GEMINI_CHARS ? `Make detailed notes of this text, keeping every page citation, dose and threshold.\n\n--- BOOK TEXT ---\n${render(piece)}` : null),
+        system: SYSTEM, size: big, maxTokens: 6000,
+        make: (limit) => (limit >= big ? `Make detailed notes of this text, keeping every page citation, dose and threshold.\n\n--- BOOK TEXT ---\n${render(piece)}` : null),
       });
       notes.push(n.text);
     }
     out = await complete({
-      system: SYSTEM, size: GEMINI_CHARS, maxTokens: 4096,
-      make: (limit) => (limit >= GEMINI_CHARS ? ask(`(Notes made from the book, with their page citations)\n\n${notes.join("\n\n")}`) : null),
+      system: SYSTEM, size: big, maxTokens: 4096,
+      make: (limit) => (limit >= big ? ask(`(Notes made from the book, with their page citations)\n\n${notes.join("\n\n")}`) : null),
     });
   }
 
@@ -443,6 +469,7 @@ async function answer(db, data) {
   const lang = data.lang === "ar" ? "ar" : "en";
 
   let pages = [];
+  const entries = [];
   let scope;
   let multi = false;
   if (data.sectionId) {
@@ -451,6 +478,7 @@ async function answer(db, data) {
     scope = `the course section "${src.title}"`;
   } else if (data.bookId) {
     const entry = await loadBook(db, data.bookId);
+    entries.push(entry);
     const [a, b] = pageRange(entry, data.from, data.to);
     pages = pagesOf(entry, a, b);
     scope = `${entry.book.title}, pages ${a}-${b}`;
@@ -460,6 +488,7 @@ async function answer(db, data) {
     if (!books.length) throw new HttpsError("failed-precondition", "This course has no books yet.");
     for (const d of books) {
       const entry = await loadBook(db, d.id);
+      entries.push(entry);
       pages.push(...pagesOf(entry, 1, entry.pages.length));
     }
     multi = books.length > 1;
@@ -472,6 +501,7 @@ async function answer(db, data) {
     if (!books.length) throw new HttpsError("failed-precondition", `There are no ${service} books in the library yet.`);
     for (const d of books) {
       const entry = await loadBook(db, d.id);
+      entries.push(entry);
       pages.push(...pagesOf(entry, 1, entry.pages.length));
     }
     multi = books.length > 1;
@@ -487,7 +517,21 @@ async function answer(db, data) {
   const query = [history.split("\n").filter((l) => l.startsWith("Question:")).slice(-1)[0] || "", question].join(" ");
   // The whole scope when it fits; otherwise the pages that best match.
   const total = sizeOf(pages);
-  const ranked = total <= ASK_CHARS ? null : rankPages(pages, query);
+  let ranked = null;
+  if (total > ASK_CHARS) {
+    // By meaning and keywords together when page vectors may be made (only
+    // with AI_USE_GEMINI=1); otherwise by keywords alone, as before.
+    try {
+      // Page vectors come from Google's embeddings, so they follow the Gemini switch (aiModels.js).
+      const similarity = GEMINI_MODELS.length
+        ? await meaningOf(db, entries, query, cleanKey(GEMINI_API_KEY), { log: (m) => logger.warn(`[aiBooks] ${m}`) })
+        : null;
+      if (similarity) ranked = hybridRankPages(pages, query, similarity);
+    } catch (e) {
+      logger.warn(`[aiBooks] meaning search: ${e.message}`);
+    }
+    if (!ranked) ranked = rankPages(pages, query);
+  }
   if (ranked && !ranked.length) {
     return { text: lang === "ar" ? "لم أجد ما يخص هذا السؤال في الكتب المختارة." : "I could not find anything about this in the chosen books.", provider: "", model: "", pagesUsed: [] };
   }
@@ -563,7 +607,7 @@ async function tidySection(db, data, who) {
   const out = await complete({
     // The reply is as long as the text, and Groq's 8K tokens a minute count
     // both, so Groq takes only short sections.
-    system: TIDY, size, maxTokens: 8192, groqChars: 9000, groqTokens: 3600,
+    system: TIDY, size, maxTokens: 8192, groqChars: 9000, groqTokens: 3600, cerebrasChars: 20000,
     make: (limit) => (size <= limit
       ? `Section: ${title}\nThe pages below may begin with the end of the previous section and end with the ` +
         `start of the next one. Keep only the text of this section: from its heading to the next numbered heading.\n\n` +
@@ -583,7 +627,7 @@ function whatAsked(data) {
 }
 
 exports.aiBooks = onCall(
-  { secrets: [GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 300, memory: "1GiB", maxInstances: 3 },
+  { secrets: [...(CEREBRAS_MODELS.length ? [CEREBRAS_API_KEY] : []), GROQ_API_KEY, GEMINI_API_KEY], timeoutSeconds: 300, memory: "1GiB", maxInstances: 3 },
   async (request) => {
     const db = getFirestore();
     const who = await caller(db, request.auth);

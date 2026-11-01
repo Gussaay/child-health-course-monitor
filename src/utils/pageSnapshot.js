@@ -6,6 +6,7 @@
 
 const MAX_TEXT = 9000;
 const MAX_POINTS = 40;
+const MAX_REFERENCE = 3000;
 
 const num = (v) => {
     if (v && typeof v === 'object') return num(v.y ?? v.value ?? v.r ?? '');
@@ -70,6 +71,10 @@ export async function snapshotPage(root, { view = '', title = '', appName = '' }
         } catch { /* a page whose charts cannot be read still sends its text */ }
     }
     const text = cleanPageText(root.innerText, MAX_TEXT - Math.min(charts.length, 4000));
+    // Figures a page keeps for the assistant that are not on screen, such as
+    // its other sub-tabs (data-assistant-reference on a hidden element).
+    const reference = [...root.querySelectorAll('[data-assistant-reference]')]
+        .map((el) => el.getAttribute('data-assistant-reference')).filter(Boolean).join('\n\n').slice(0, MAX_REFERENCE);
     // Charts first: the server cuts from the end when a provider takes less.
-    return { view, title, place, text: charts ? `CHART DATA\n${charts.slice(0, 4000)}\n\nTEXT ON SCREEN\n${text}` : text };
+    return { view, title, place, ...(reference ? { reference } : {}), text: charts ? `CHART DATA\n${charts.slice(0, 4000)}\n\nTEXT ON SCREEN\n${text}` : text };
 }

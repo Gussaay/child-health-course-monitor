@@ -8,8 +8,10 @@ import { notify, confirmDialog, promptDialog } from '../dialogs';
 // once in constants.js so the protocol, the books and the exercises cannot
 // drift into three different spellings of "yellow".
 import { IMNCI_SEVERITIES } from '../constants';
+import { NATIONAL_PROTOCOLS, NATIONAL_SAVE_ORDER } from './nationalProtocol';
+import { BookletProtocolView, BookletDoseView } from './bookletView';
 import { useTranslation } from 'react-i18next';
-import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X } from 'lucide-react';
+import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, BookOpen, Pencil } from 'lucide-react';
 
 // --- Predefined Conditions Mapping for Dropdowns ---
 const CHILD_CONDITIONS = [
@@ -20,7 +22,9 @@ const CHILD_CONDITIONS = [
     'hasEarProblem', 'earPain', 'earDischargeAcute', 'earDischargeChronic', 'tenderSwelling', 'pusFromEar',
     'severePalmarPallor', 'somePalmarPallor', 'noPalmarPallor',
     'edema', 'samWithComplications', 'samWithoutComplications', 'moderateAcuteMalnutrition', 'noMalnutrition',
-    'hasOtherProblems', 'hasDangerSign', 'hasDehydration'
+    'hasOtherProblems', 'hasDangerSign', 'hasDehydration',
+    // Worked out by the engine from the ticks above (engine.js).
+    'dehydLethargic', 'dehydNotDrinking', 'severeDehydration', 'someDehydration', 'dehydrationPresent', 'measlesNowOrRecent'
 ];
 
 const INFANT_CONDITIONS = [
@@ -29,11 +33,14 @@ const INFANT_CONDITIONS = [
     'hasJaundice', 'jaundiceFirst24h', 'jaundiceLowWeight', 'jaundiceSolesPalms', 'jaundiceAfter24h',
     'hasDiarrhea', 'bloodInStool', 'diarrheaMovement', 'diarrheaRestless', 'diarrheaSunkenEyes', 'pinchVerySlow', 'pinchSlow',
     'diffFeeding', 'feedsLessThan8Times', 'receivesOtherFoods', 'lowWeightForAge', 'thrush', 'notWellAttached', 'notSucklingEffectively', 'feedingWellNormalWeight',
-    'noBacterialSigns', 'hasOtherProblems'
+    'noBacterialSigns', 'hasOtherProblems',
+    // Worked out by the engine from the ticks above (engine.js).
+    'possibleSevereDisease', 'localBacterialInfection', 'jaundiceSevere', 'noJaundice', 'diarrhea14Days',
+    'severeDehydration', 'someDehydration', 'dehydrationPresent', 'notBreastfeeding', 'notWellPositioned', 'feedingProblem'
 ];
 
 // --- Predefined Treatments Mapping for Dropdowns ---
-const CHILD_TREATMENTS = [
+const BASE_CHILD_TREATMENTS = [
     "Give first dose of appropriate IM antibiotic: {{dose:ampicillin_gentamycin}}",
     "Give first dose of IM Ampicillin: {{dose:ampicillin}}",
     "Give first dose of IM Gentamycin: {{dose:gentamycin}}",
@@ -79,7 +86,7 @@ const CHILD_TREATMENTS = [
     "No additional treatment needed"
 ];
 
-const INFANT_TREATMENTS = [
+const BASE_INFANT_TREATMENTS = [
     "Give first dose of IM Ampicillin: {{dose:ampicillin_im_infant}}",
     "Give first dose of IM Gentamicin (Age < 7 Days): {{dose:gentamicin_im_infant_lt7}}",
     "Give first dose of IM Gentamicin (Age >= 7 Days): {{dose:gentamicin_im_infant_gte7}}",
@@ -97,6 +104,12 @@ const INFANT_TREATMENTS = [
     "Follow-up in 1 day",
     "Follow-up in 2 days"
 ];
+
+// Every line of the national protocol is offered too, so a box can be rebuilt
+// from the booklet's own wording.
+const treatmentsOf = (protocol) => Object.values(protocol.categories).flatMap((c) => c.rules.flatMap((r) => r.treatments));
+const CHILD_TREATMENTS = [...new Set([...treatmentsOf(NATIONAL_PROTOCOLS.child), ...BASE_CHILD_TREATMENTS])];
+const INFANT_TREATMENTS = [...new Set([...treatmentsOf(NATIONAL_PROTOCOLS.infant), ...BASE_INFANT_TREATMENTS])];
 
 // ============================================================================
 // VALIDATION
@@ -176,6 +189,16 @@ export function validateProtocol(formType, data, dosageList = []) {
 
     // Clinical rule tabs.
     const knownDoseIds = new Set((dosageList || []).map((d) => d.id));
+    // With no Doses tab saved at all, every dose looks missing. Say that once
+    // instead of once per treatment line (it used to be 41 lines).
+    const anyDoseTag = Object.values(data.categories || {}).some((cat) => (cat.rules || [])
+        .some((r) => (r.treatments || []).some((t) => extractDoseTags(t).length > 0)));
+    if (knownDoseIds.size === 0 && anyDoseTag) {
+        errors.push({
+            message: 'The matching Doses tab has not been saved yet, so no dose in these rules can be shown. '
+                + 'Open the Doses tab and save it first, or use "Load national protocol", which saves all four tabs in the right order.',
+        });
+    }
     const categories = data.categories || {};
     const ruleIds = new Map();
 
@@ -221,7 +244,7 @@ export function validateProtocol(formType, data, dosageList = []) {
 
             (rule.treatments || []).forEach((t, ti) => {
                 extractDoseTags(t).forEach((id) => {
-                    if (!knownDoseIds.has(id)) {
+                    if (knownDoseIds.size > 0 && !knownDoseIds.has(id)) {
                         errors.push({
                             message: `${where}, treatment ${ti + 1} refers to the dose "${id}", `
                                 + 'which does not exist in the matching Doses tab. The worker would '
@@ -278,6 +301,28 @@ export default function ProtocolEditor() {
     const [isSaving, setIsSaving] = useState(false);
     const [search, setSearch] = useState('');
     const [issues, setIssues] = useState(null);
+    // 'booklet' shows the protocol as the national chart booklet prints it;
+    // 'edit' is the rule builder.
+    const [viewMode, setViewMode] = useState('booklet');
+    // 'offline' | 'failed' | null. Set when the protocols could not be read, so
+    // the page says so instead of spinning forever.
+    const [loadError, setLoadError] = useState(null);
+
+    // Nothing else on the page asked for the protocols, so the editor waited on
+    // a load that never started. It now starts the load itself. The cache hands
+    // back a keyed object on success and an empty array when the read failed or
+    // the device is offline with nothing saved.
+    const loadProtocols = async (force = false) => {
+        setLoadError(null);
+        const result = await fetchProtocols(force);
+        if (!result || Array.isArray(result)) {
+            setLoadError(navigator.onLine ? 'failed' : 'offline');
+        }
+    };
+    useEffect(() => {
+        loadProtocols(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // A snapshot of what was loaded, so "has this been edited" is a fact rather
     // than a flag someone has to remember to set in every handler.
@@ -312,7 +357,9 @@ export default function ProtocolEditor() {
             const fresh = JSON.parse(JSON.stringify(protocols[activeTab]));
             baselineRef.current = JSON.stringify(fresh);
             setEditorData(fresh);
-        } else if (!isLoading.imnciProtocols) {
+        } else if (protocols && !Array.isArray(protocols)) {
+            // Only once the protocols really loaded. Starting from a blank
+            // protocol after a FAILED load would let a save wipe the live rules.
             const defaultStructure = activeTab.startsWith('dosages')
                 ? { formType: activeTab, version: "1.0", drugs: [] }
                 : { formType: activeTab, version: "1.0", categories: {} };
@@ -382,10 +429,45 @@ export default function ProtocolEditor() {
             { title: t('clinical_ui.protocol.dlg.load_title', 'Load defaults'), confirmLabel: t('clinical_ui.protocol.dlg.load', 'Load'), danger: true }
         )) {
             setIssues(null);
-            if (activeTab === 'child') setEditorData(DEFAULT_CHILD_PROTOCOL);
-            else if (activeTab === 'infant') setEditorData(DEFAULT_INFANT_PROTOCOL);
-            else if (activeTab === 'dosages_child') setEditorData(DEFAULT_CHILD_DOSAGES_PROTOCOL);
-            else if (activeTab === 'dosages_infant') setEditorData(DEFAULT_INFANT_DOSAGES_PROTOCOL);
+            // A copy: editing used to change the built-in protocol itself.
+            setEditorData(JSON.parse(JSON.stringify(NATIONAL_PROTOCOLS[activeTab])));
+        }
+    };
+
+    // All four tabs at once, Doses first. Saving the rules before their Doses
+    // tab is what produced one "dose does not exist" error per treatment line.
+    const handleLoadNational = async () => {
+        if (!await confirmDialog(
+            t('clinical_ui.protocol.dlg.national_msg', 'This replaces all four tabs (sick child, young infant and both Doses tabs) with the Sudan national IMNCI protocol and saves them now. Every clinician sees it straight away. Any changes made here before are replaced.'),
+            { title: t('clinical_ui.protocol.dlg.national_title', 'Load national protocol'), confirmLabel: t('clinical_ui.protocol.dlg.national_confirm', 'Load and save'), danger: true }
+        )) return;
+
+        const problems = NATIONAL_SAVE_ORDER.flatMap((formType) => {
+            const doses = formType === 'child' ? NATIONAL_PROTOCOLS.dosages_child.drugs
+                : formType === 'infant' ? NATIONAL_PROTOCOLS.dosages_infant.drugs : [];
+            return validateProtocol(formType, NATIONAL_PROTOCOLS[formType], doses).errors;
+        });
+        if (problems.length) {
+            setIssues({ errors: problems, warnings: [] });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            for (const formType of NATIONAL_SAVE_ORDER) {
+                await saveIMNCIProtocol(formType, JSON.parse(JSON.stringify(NATIONAL_PROTOCOLS[formType])));
+            }
+            const fresh = JSON.parse(JSON.stringify(NATIONAL_PROTOCOLS[activeTab]));
+            baselineRef.current = JSON.stringify(fresh);
+            setEditorData(fresh);
+            setIssues(null);
+            notify(t('clinical_ui.protocol.toast.national_saved', 'The national protocol is saved in all four tabs and is now live for every clinician.'), 'success');
+            await fetchProtocols(true);
+        } catch (error) {
+            console.error('National protocol save failed:', error);
+            notify(`${t('clinical_ui.protocol.toast.save_failed', 'Could not save the protocol.')} ${error?.message || ''}`.trim(), 'error');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -479,6 +561,17 @@ export default function ProtocolEditor() {
         setEditorData(newData);
     };
 
+    // "Only when": conditions that must all be true before the rule is looked
+    // at, such as "the child has cough" for the cough table.
+    const toggleRequire = (catKey, ruleIndex, condition) => {
+        const newData = { ...editorData };
+        const target = newData.categories[catKey].rules[ruleIndex];
+        const current = target.requires || [];
+        target.requires = current.includes(condition) ? current.filter((c) => c !== condition) : [...current, condition];
+        if (!target.requires.length) delete target.requires;
+        setEditorData(newData);
+    };
+
     const addNewRule = (catKey, e) => {
         e.stopPropagation();
         const newData = { ...editorData };
@@ -550,6 +643,24 @@ export default function ProtocolEditor() {
         setEditorData(newData);
     };
 
+    if (loadError && !editorData) {
+        return (
+            <Card>
+                <div className="p-8 flex flex-col items-center text-center gap-3">
+                    <p className="font-bold text-slate-800">
+                        {loadError === 'offline'
+                            ? t('clinical_ui.protocol.load.offline', 'You are offline and the protocol has not been saved on this device yet.')
+                            : t('clinical_ui.protocol.load.failed', 'The protocol could not be loaded.')}
+                    </p>
+                    <p className="text-sm text-slate-500">{t('clinical_ui.protocol.load.hint', 'Check your connection and try again.')}</p>
+                    <Button onClick={() => loadProtocols(true)} disabled={isLoading.imnciProtocols}>
+                        {isLoading.imnciProtocols ? t('clinical_ui.protocol.load.retrying', 'Trying again...') : t('clinical_ui.protocol.load.retry', 'Try again')}
+                    </Button>
+                </div>
+            </Card>
+        );
+    }
+
     if (isLoading.imnciProtocols || !editorData) {
         return <div className="flex justify-center p-12"><Spinner /></div>;
     }
@@ -598,20 +709,25 @@ export default function ProtocolEditor() {
                     <Button onClick={() => switchTab('infant')} variant={activeTab === 'infant' ? 'primary' : 'secondary'} className="rounded-none border-r-0 text-sm px-4">{t('clinical_ui.protocol.tabs.infant', 'Infant (< 2m)')}</Button>
                     <Button onClick={() => switchTab('dosages_child')} variant={activeTab === 'dosages_child' ? 'primary' : 'secondary'} className="rounded-none border-r-0 text-sm px-4 flex items-center gap-2"><Syringe size={16}/> {t('clinical_ui.protocol.tabs.child_doses', 'Child Doses')}</Button>
                     <Button onClick={() => switchTab('dosages_infant')} variant={activeTab === 'dosages_infant' ? 'primary' : 'secondary'} className="rounded-l-none text-sm px-4 flex items-center gap-2"><Syringe size={16}/> {t('clinical_ui.protocol.tabs.infant_doses', 'Infant Doses')}</Button>
+                    <div className="flex ms-0 md:ms-3">
+                        <Button onClick={() => setViewMode('booklet')} variant={viewMode === 'booklet' ? 'primary' : 'secondary'} className="rounded-r-none border-r-0 text-sm px-3 flex items-center gap-1.5"><BookOpen size={16}/> {t('clinical_ui.protocol.view.booklet', 'Booklet view')}</Button>
+                        <Button onClick={() => setViewMode('edit')} variant={viewMode === 'edit' ? 'primary' : 'secondary'} className="rounded-l-none text-sm px-3 flex items-center gap-1.5"><Pencil size={16}/> {t('clinical_ui.protocol.view.edit', 'Edit rules')}</Button>
+                    </div>
                 </div>
                 <div className="flex gap-2 shrink-0 items-center">
-                    <input
+                    {viewMode === 'edit' && <input
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder={isDosagesTab ? t('clinical_ui.protocol.search.drug', 'Find a drug…') : t('clinical_ui.protocol.search.rule', 'Find a category, classification, condition or treatment…')}
                         className="w-64 p-2 border border-slate-300 rounded text-sm focus:ring-sky-500"
-                    />
+                    />}
+                    <Button onClick={handleLoadNational} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"><DownloadCloud size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.load_national', 'Load national protocol')}</Button>
                     <Button onClick={handleLoadDefaults} className="bg-amber-500 hover:bg-amber-600 text-white border-0"><DownloadCloud size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.load_defaults', 'Load Defaults')}</Button>
-                    {!isDosagesTab && (
+                    {viewMode === 'edit' && !isDosagesTab && (
                         <Button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><FolderPlus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_category', 'Add Category')}</Button>
                     )}
-                    {isDosagesTab && (
+                    {viewMode === 'edit' && isDosagesTab && (
                         <Button onClick={addNewDrug} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><Plus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}</Button>
                     )}
                 </div>
@@ -667,7 +783,7 @@ export default function ProtocolEditor() {
                         </div>
                     )}
 
-                    {hiddenCount > 0 && (
+                    {viewMode === 'edit' && hiddenCount > 0 && (
                         <div className="text-xs text-slate-600 bg-white border border-slate-200 rounded px-3 py-2">
                             {isDosagesTab ? t('clinical_ui.protocol.hidden_drugs', '{{count}} drug(s) hidden by the search.', { count: hiddenCount }) : t('clinical_ui.protocol.hidden_cats', '{{count}} category(ies) hidden by the search.', { count: hiddenCount })}
                             <button onClick={() => setSearch('')} className="ms-2 text-sky-700 font-bold hover:underline">{t('clinical_ui.protocol.btn.clear', 'Clear')}</button>
@@ -675,9 +791,16 @@ export default function ProtocolEditor() {
                     )}
 
                     {/* ============================================================ */}
+                    {/* BOOKLET VIEW */}
+                    {/* ============================================================ */}
+                    {viewMode === 'booklet' && (isDosagesTab
+                        ? <BookletDoseView protocol={editorData} />
+                        : <BookletProtocolView formType={activeTab} protocol={editorData} doses={dynamicDosageList} />)}
+
+                    {/* ============================================================ */}
                     {/* DOSAGES TAB UI */}
                     {/* ============================================================ */}
-                    {isDosagesTab && (
+                    {viewMode === 'edit' && isDosagesTab && (
                         <div className="space-y-3">
                             {visibleDrugs.map(({ drug, drugIndex }) => {
                                 // drugIndex is the index in editorData.drugs, not in the
@@ -707,6 +830,10 @@ export default function ProtocolEditor() {
                                                     <input type="text" value={drug.fallback} onChange={(e) => handleDrugChange(drugIndex, 'fallback', e.target.value)} className="w-full p-1.5 border border-slate-300 rounded focus:ring-sky-500 text-sm" placeholder={t('clinical_ui.protocol.drug.fallback_ph', 'e.g. Check manual chart')}/>
                                                 </div>
                                             </div>
+                                            <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                                                <input type="checkbox" checked={!!drug.ageAndWeight} onChange={(e) => handleDrugChange(drugIndex, 'ageAndWeight', e.target.checked)} className="rounded text-sky-600 w-4 h-4" />
+                                                {t('clinical_ui.protocol.drug.age_and_weight', 'Age and weight must both match (for doses that change with age at the same weight, such as young-infant gentamicin)')}
+                                            </label>
 
                                             <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
                                                 <div className="bg-slate-200 p-1.5 grid grid-cols-12 gap-1 text-xs font-bold text-slate-700 uppercase text-center border-b border-slate-300">
@@ -749,7 +876,7 @@ export default function ProtocolEditor() {
                     {/* ============================================================ */}
                     {/* CHILD & INFANT TAB UI */}
                     {/* ============================================================ */}
-                    {!isDosagesTab && (
+                    {viewMode === 'edit' && !isDosagesTab && (
                         Object.keys(editorData.categories || {}).length === 0 ? (
                             <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg">
                                 <p className="text-slate-500 mb-4">{t('clinical_ui.protocol.empty.no_cats', 'No categories found in this protocol.')}</p>
@@ -831,6 +958,17 @@ export default function ProtocolEditor() {
                                                             </select>
                                                         </div>
                                                         <div>
+                                                            <label className="text-xs font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.signs', 'Signs as printed in the booklet')}</label>
+                                                            <textarea
+                                                                rows={3}
+                                                                value={(rule.signs || []).join('\n')}
+                                                                onChange={(e) => handleRuleChange(catKey, ruleIndex, 'signs', e.target.value.split('\n'))}
+                                                                placeholder={t('clinical_ui.protocol.rule.signs_hint', 'One line each. Shown in the booklet view only.')}
+                                                                className="w-full text-xs p-1.5 border border-slate-300 rounded"
+                                                                dir="auto"
+                                                            />
+                                                        </div>
+                                                        <div>
                                                             <label className="text-xs font-bold text-slate-400 uppercase">{t('clinical_ui.protocol.rule.id', 'Rule ID')}</label>
                                                             <div className="text-xs font-mono text-slate-400 bg-slate-100 p-1.5 rounded border border-slate-200 flex items-center gap-1 cursor-not-allowed">
                                                                 <Lock size={10} /> {rule.id}
@@ -840,6 +978,24 @@ export default function ProtocolEditor() {
 
                                                     {/* CENTER COLUMN: Conditions */}
                                                     <div className="lg:col-span-4 bg-slate-50 p-3 rounded border border-slate-200 flex flex-col">
+                                                        <label className="text-xs font-bold text-slate-700 uppercase mb-2 border-b border-slate-200 pb-1">{t('clinical_ui.protocol.rule.requires', 'Only when (all must be true)')}</label>
+                                                        <div className="flex flex-wrap gap-1.5 mb-2">
+                                                            {(rule.requires || []).map(cond => (
+                                                                <span key={cond} className="px-2 py-1 text-xs font-mono rounded border bg-slate-700 text-white border-slate-800 flex items-center gap-1">
+                                                                    {cond}
+                                                                    <button onClick={() => toggleRequire(catKey, ruleIndex, cond)} className="hover:text-red-200 ms-1"><X size={10}/></button>
+                                                                </span>
+                                                            ))}
+                                                            <select
+                                                                className="text-xs p-1 border border-slate-300 rounded focus:ring-sky-500"
+                                                                onChange={(e) => { if (e.target.value) { toggleRequire(catKey, ruleIndex, e.target.value); e.target.value = ''; } }}
+                                                            >
+                                                                <option value="">{t('clinical_ui.protocol.rule.add_require', '+ Only when')}</option>
+                                                                {currentAvailableConditions.filter(c => !(rule.requires || []).includes(c)).map(c => (
+                                                                    <option key={c} value={c}>{c}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
                                                         <label className="text-xs font-bold text-slate-700 uppercase mb-2 border-b border-slate-200 pb-1">{t('clinical_ui.protocol.rule.conditions', 'Conditions')}</label>
                                                         <div className="flex flex-wrap gap-1.5 mb-3">
                                                             {(rule.conditions || []).map(cond => (
@@ -928,694 +1084,3 @@ export default function ProtocolEditor() {
         </div>
     );
 }
-
-// ============================================================================
-// DEFAULT JSON TEMPLATES (Matched perfectly to Sudanese Tables & split 3 cols)
-// ============================================================================
-
-const DEFAULT_CHILD_DOSAGES_PROTOCOL = {
-  formType: "dosages_child",
-  version: "1.0",
-  drugs: [
-    {
-      id: "amoxicillin",
-      label: "Amoxicillin (Oral)",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 2, maxAge: 11.9, minWeight: 4, maxWeight: 9.9, doseQty: "5 ml OR 1/4 tab (250mg)", doseFreq: "Twice daily", doseDuration: "For 5 days" },
-        { minAge: 12, maxAge: 35.9, minWeight: 10, maxWeight: 13.9, doseQty: "10 ml OR 2 tabs", doseFreq: "Twice daily", doseDuration: "For 5 days" },
-        { minAge: 36, maxAge: 60, minWeight: 14, maxWeight: 19, doseQty: "15 ml OR 3 tabs", doseFreq: "Twice daily", doseDuration: "For 5 days" }
-      ]
-    },
-    {
-      id: "ampicillin",
-      label: "Ampicillin (IM)",
-      fallback: "Check manual chart",
-      rules: [
-        { minAge: 2, maxAge: 3.9, minWeight: 4, maxWeight: 5.9, doseQty: "1.0 ml (50mg/kg)", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 4, maxAge: 11.9, minWeight: 6, maxWeight: 9.9, doseQty: "2.0 ml", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 12, maxAge: 35.9, minWeight: 10, maxWeight: 13.9, doseQty: "3.0 ml", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 36, maxAge: 60, minWeight: 14, maxWeight: 19, doseQty: "5.0 ml", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" }
-      ]
-    },
-    {
-      id: "gentamycin",
-      label: "Gentamycin (IM)",
-      fallback: "Check manual chart",
-      rules: [
-        { minAge: 2, maxAge: 3.9, minWeight: 4, maxWeight: 5.9, doseQty: "0.75 - 1.0 ml", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 4, maxAge: 11.9, minWeight: 6, maxWeight: 9.9, doseQty: "1.1 - 1.8 ml", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 12, maxAge: 35.9, minWeight: 10, maxWeight: 13.9, doseQty: "1.9 - 2.7 ml", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 36, maxAge: 60, minWeight: 14, maxWeight: 19, doseQty: "2.8 - 3.5 ml", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" }
-      ]
-    },
-    {
-      id: "ciprofloxacin",
-      label: "Ciprofloxacin (Oral)",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 2, maxAge: 3.9, minWeight: 4, maxWeight: 5.9, doseQty: "1/4 tab (250mg)", doseFreq: "Twice daily", doseDuration: "For 3 days" },
-        { minAge: 4, maxAge: 11.9, minWeight: 6, maxWeight: 9.9, doseQty: "1/2 tab", doseFreq: "Twice daily", doseDuration: "For 3 days" },
-        { minAge: 12, maxAge: 60, minWeight: 10, maxWeight: 19, doseQty: "1 tab", doseFreq: "Twice daily", doseDuration: "For 3 days" }
-      ]
-    },
-    {
-      id: "zinc",
-      label: "Zinc (Oral)",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 2, maxAge: 5.9, minWeight: 0, maxWeight: 99, doseQty: "1/2 tab (20mg) OR 5 ml syrup", doseFreq: "Once daily", doseDuration: "For 14 days" },
-        { minAge: 6, maxAge: 60, minWeight: 0, maxWeight: 99, doseQty: "1 tab (20mg) OR 10 ml syrup", doseFreq: "Once daily", doseDuration: "For 14 days" }
-      ]
-    },
-    {
-      id: "coartem",
-      label: "Artemether + Lumefantrine (Coartem)",
-      fallback: "Seek consultant advice if < 5kg",
-      rules: [
-        { minAge: 0, maxAge: 60, minWeight: 5, maxWeight: 14, doseQty: "1 tab", doseFreq: "Initially, then at 8h, then bid", doseDuration: "For 3 days total" },
-        { minAge: 0, maxAge: 60, minWeight: 14.1, maxWeight: 24, doseQty: "2 tabs", doseFreq: "Initially, then at 8h, then bid", doseDuration: "For 3 days total" }
-      ]
-    },
-    {
-      id: "paracetamol",
-      label: "Paracetamol",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 2, maxAge: 35.9, minWeight: 4, maxWeight: 13.9, doseQty: "1/4 tab (500mg) OR 5 ml syrup", doseFreq: "Every 6 hours", doseDuration: "Until fever/pain subsides" },
-        { minAge: 36, maxAge: 60, minWeight: 14, maxWeight: 19, doseQty: "1/2 tab (500mg) OR 10 ml syrup", doseFreq: "Every 6 hours", doseDuration: "Until fever/pain subsides" }
-      ]
-    },
-    {
-      id: "iron",
-      label: "Iron",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 2, maxAge: 3.9, minWeight: 4, maxWeight: 5.9, doseQty: "2 ml Polymaltose OR 1 ml Fumarate", doseFreq: "Once daily", doseDuration: "For 14 days" },
-        { minAge: 4, maxAge: 11.9, minWeight: 6, maxWeight: 9.9, doseQty: "3.5 ml Polymaltose OR 1.75 ml Fumarate", doseFreq: "Once daily", doseDuration: "For 14 days" },
-        { minAge: 12, maxAge: 35.9, minWeight: 10, maxWeight: 13.9, doseQty: "1/2 tab OR 5 ml Polymaltose OR 2.5 ml Fumarate", doseFreq: "Once daily", doseDuration: "For 14 days" },
-        { minAge: 36, maxAge: 60, minWeight: 14, maxWeight: 19, doseQty: "1/2 tab OR 6.5 ml Polymaltose OR 3.25 ml Fumarate", doseFreq: "Once daily", doseDuration: "For 14 days" }
-      ]
-    },
-    {
-      id: "mebendazole",
-      label: "Mebendazole",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 12, maxAge: 60, minWeight: 10, maxWeight: 19, doseQty: "5 ml (100mg)", doseFreq: "Twice daily", doseDuration: "For 3 days (Repeat in 2 weeks)" }
-      ]
-    },
-    {
-      id: "salbutamol_oral",
-      label: "Salbutamol (Oral)",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 2, maxAge: 11.9, minWeight: 0, maxWeight: 9.9, doseQty: "Syrup 2 1/2 ml OR Tablet 1/4", doseFreq: "3 times daily", doseDuration: "For 5 days" },
-        { minAge: 12, maxAge: 60, minWeight: 10, maxWeight: 19, doseQty: "Syrup 5 ml OR Tablet 1/2", doseFreq: "3 times daily", doseDuration: "For 5 days" }
-      ]
-    },
-    {
-      id: "vitamin_a",
-      label: "Vitamin A",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 0, maxAge: 5.9, minWeight: 0, maxWeight: 99, doseQty: "50,000 IU", doseFreq: "Once", doseDuration: "Single dose" },
-        { minAge: 6, maxAge: 11.9, minWeight: 0, maxWeight: 99, doseQty: "100,000 IU", doseFreq: "Once", doseDuration: "Single dose" },
-        { minAge: 12, maxAge: 60, minWeight: 0, maxWeight: 99, doseQty: "200,000 IU", doseFreq: "Once", doseDuration: "Single dose" }
-      ]
-    },
-    {
-      id: "plan_a_ors",
-      label: "Plan A ORS",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 0, maxAge: 23.9, minWeight: 0, maxWeight: 99, doseQty: "50 to 100 ml", doseFreq: "After each loose stool", doseDuration: "Until diarrhea stops" },
-        { minAge: 24, maxAge: 60, minWeight: 0, maxWeight: 99, doseQty: "100 to 200 ml", doseFreq: "After each loose stool", doseDuration: "Until diarrhea stops" }
-      ]
-    },
-    {
-      id: "plan_b_ors",
-      label: "Plan B ORS",
-      fallback: "Weight × 75 ml",
-      rules: [
-        { minAge: 0, maxAge: 3.9, minWeight: 0, maxWeight: 5.9, doseQty: "200 - 400 ml", doseFreq: "Continuous sipping", doseDuration: "Over first 4 hours" },
-        { minAge: 4, maxAge: 11.9, minWeight: 6, maxWeight: 9.9, doseQty: "400 - 700 ml", doseFreq: "Continuous sipping", doseDuration: "Over first 4 hours" },
-        { minAge: 12, maxAge: 23.9, minWeight: 10, maxWeight: 11.9, doseQty: "700 - 900 ml", doseFreq: "Continuous sipping", doseDuration: "Over first 4 hours" },
-        { minAge: 24, maxAge: 60, minWeight: 12, maxWeight: 19, doseQty: "900 - 1400 ml", doseFreq: "Continuous sipping", doseDuration: "Over first 4 hours" }
-      ]
-    },
-    {
-      id: "plan_c_iv",
-      label: "Plan C IV Fluids (Ringer's Lactate)",
-      fallback: "100ml/kg",
-      rules: [
-        { minAge: 0, maxAge: 11.9, minWeight: 0, maxWeight: 99, doseQty: "30ml/kg then 70ml/kg", doseFreq: "IV Drip", doseDuration: "1 hr then 5 hrs (Total 6 hrs)" },
-        { minAge: 12, maxAge: 60, minWeight: 0, maxWeight: 99, doseQty: "30ml/kg then 70ml/kg", doseFreq: "IV Drip", doseDuration: "30 mins then 2.5 hrs (Total 3 hrs)" }
-      ]
-    },
-    {
-      id: "erythromycin",
-      label: "Erythromycin (Cholera)",
-      fallback: "Check manual chart",
-      rules: [
-        { minAge: 24, maxAge: 60, minWeight: 10, maxWeight: 19, doseQty: "1 tab (250mg)", doseFreq: "4 times daily", doseDuration: "For 3 days" }
-      ]
-    },
-    {
-      id: "rutf",
-      label: "RUTF / Plumpy Nut",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 6, maxAge: 60, minWeight: 4, maxWeight: 4.9, doseQty: "2 sachets", doseFreq: "Daily", doseDuration: "Until follow-up (14/week)" },
-        { minAge: 6, maxAge: 60, minWeight: 5, maxWeight: 6.9, doseQty: "2 1/2 sachets", doseFreq: "Daily", doseDuration: "Until follow-up (18/week)" },
-        { minAge: 6, maxAge: 60, minWeight: 7, maxWeight: 8.4, doseQty: "3 sachets", doseFreq: "Daily", doseDuration: "Until follow-up (21/week)" },
-        { minAge: 6, maxAge: 60, minWeight: 8.5, maxWeight: 9.4, doseQty: "3 1/2 sachets", doseFreq: "Daily", doseDuration: "Until follow-up (25/week)" },
-        { minAge: 6, maxAge: 60, minWeight: 9.5, maxWeight: 10.4, doseQty: "4 sachets", doseFreq: "Daily", doseDuration: "Until follow-up (28/week)" },
-        { minAge: 6, maxAge: 60, minWeight: 10.5, maxWeight: 11.9, doseQty: "4 1/2 sachets", doseFreq: "Daily", doseDuration: "Until follow-up (32/week)" },
-        { minAge: 6, maxAge: 60, minWeight: 12, maxWeight: 99, doseQty: "5 sachets", doseFreq: "Daily", doseDuration: "Until follow-up (35/week)" }
-      ]
-    },
-    {
-      id: "quinine",
-      label: "Quinine (IM)",
-      fallback: "Check manual chart",
-      rules: [
-        { minAge: 0, maxAge: 60, minWeight: 4, maxWeight: 5.9, doseQty: "1.0 ml", doseFreq: "Every 8 hours (if delayed)", doseDuration: "First dose (or up to 7 days if delayed)" },
-        { minAge: 0, maxAge: 60, minWeight: 6, maxWeight: 9.9, doseQty: "1.5 ml", doseFreq: "Every 8 hours (if delayed)", doseDuration: "First dose (or up to 7 days if delayed)" },
-        { minAge: 0, maxAge: 60, minWeight: 10, maxWeight: 11.9, doseQty: "2.0 ml", doseFreq: "Every 8 hours (if delayed)", doseDuration: "First dose (or up to 7 days if delayed)" },
-        { minAge: 0, maxAge: 60, minWeight: 12, maxWeight: 13.9, doseQty: "2.5 ml", doseFreq: "Every 8 hours (if delayed)", doseDuration: "First dose (or up to 7 days if delayed)" },
-        { minAge: 0, maxAge: 60, minWeight: 14, maxWeight: 19, doseQty: "3.0 ml", doseFreq: "Every 8 hours (if delayed)", doseDuration: "First dose (or up to 7 days if delayed)" }
-      ]
-    },
-    {
-      id: "diazepam",
-      label: "Diazepam (Rectal)",
-      fallback: "Check manual chart",
-      rules: [
-        { minAge: 2, maxAge: 5.9, minWeight: 5, maxWeight: 6.9, doseQty: "0.5 ml", doseFreq: "Once (repeat in 10m if needed)", doseDuration: "Stat" },
-        { minAge: 6, maxAge: 11.9, minWeight: 7, maxWeight: 9.9, doseQty: "1.0 ml", doseFreq: "Once (repeat in 10m if needed)", doseDuration: "Stat" },
-        { minAge: 12, maxAge: 35.9, minWeight: 10, maxWeight: 13.9, doseQty: "1.5 ml", doseFreq: "Once (repeat in 10m if needed)", doseDuration: "Stat" },
-        { minAge: 36, maxAge: 60, minWeight: 14, maxWeight: 19, doseQty: "2.0 ml", doseFreq: "Once (repeat in 10m if needed)", doseDuration: "Stat" }
-      ]
-    }
-  ]
-};
-
-const DEFAULT_INFANT_DOSAGES_PROTOCOL = {
-  formType: "dosages_infant",
-  version: "1.0",
-  drugs: [
-    {
-      id: "amoxicillin_infant",
-      label: "Amoxicillin (Oral)",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 0, maxAge: 1, minWeight: 0, maxWeight: 3.9, doseQty: "2.5 ml syrup OR 1/4 tab (250mg)", doseFreq: "Twice daily", doseDuration: "For 5 days" },
-        { minAge: 1, maxAge: 2, minWeight: 4, maxWeight: 5.9, doseQty: "5.0 ml syrup OR 1/2 tab", doseFreq: "Twice daily", doseDuration: "For 5 days" }
-      ]
-    },
-    {
-      id: "ampicillin_im_infant",
-      label: "Ampicillin (IM)",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 0, maxAge: 2, minWeight: 0.5, maxWeight: 1.4, doseQty: "0.5 ml (250mg/2.5ml)", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0, maxAge: 2, minWeight: 1.5, maxWeight: 2.4, doseQty: "1.0 ml", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0, maxAge: 2, minWeight: 2.5, maxWeight: 3.4, doseQty: "1.5 ml", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0, maxAge: 2, minWeight: 3.5, maxWeight: 4.4, doseQty: "2.0 ml", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0, maxAge: 2, minWeight: 4.5, maxWeight: 5.9, doseQty: "2.5 ml", doseFreq: "Every 6 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" }
-      ]
-    },
-    {
-      id: "gentamicin_im_infant_lt7",
-      label: "Gentamicin (IM) < 7 Days Old",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 0, maxAge: 0.23, minWeight: 0.5, maxWeight: 1.4, doseQty: "0.5 ml (10mg/ml)", doseFreq: "Every 12 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0, maxAge: 0.23, minWeight: 1.5, maxWeight: 2.4, doseQty: "1.0 ml", doseFreq: "Every 12 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0, maxAge: 0.23, minWeight: 2.5, maxWeight: 3.4, doseQty: "1.5 ml", doseFreq: "Every 12 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0, maxAge: 0.23, minWeight: 3.5, maxWeight: 4.4, doseQty: "2.0 ml", doseFreq: "Every 12 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0, maxAge: 0.23, minWeight: 4.5, maxWeight: 5.9, doseQty: "2.5 ml", doseFreq: "Every 12 hours (if delayed)", doseDuration: "First dose (or 5 days if delayed)" }
-      ]
-    },
-    {
-      id: "gentamicin_im_infant_gte7",
-      label: "Gentamicin (IM) >= 7 Days Old",
-      fallback: "Check chart",
-      rules: [
-        { minAge: 0.24, maxAge: 2, minWeight: 0.5, maxWeight: 1.4, doseQty: "0.8 ml (10mg/ml)", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0.24, maxAge: 2, minWeight: 1.5, maxWeight: 2.4, doseQty: "1.5 ml", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0.24, maxAge: 2, minWeight: 2.5, maxWeight: 3.4, doseQty: "2.25 ml", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0.24, maxAge: 2, minWeight: 3.5, maxWeight: 4.4, doseQty: "3.0 ml", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" },
-        { minAge: 0.24, maxAge: 2, minWeight: 4.5, maxWeight: 5.9, doseQty: "3.75 ml", doseFreq: "Once daily (if delayed)", doseDuration: "First dose (or 5 days if delayed)" }
-      ]
-    }
-  ]
-};
-
-const DEFAULT_CHILD_PROTOCOL = {
-  "formType": "child",
-  "version": "1.0",
-  "categories": {
-    "danger": {
-      "title": "Danger Signs",
-      "rules": [
-        {
-          "id": "danger_signs",
-          "type": "ANY",
-          "conditions": ["notAbleToDrink", "vomitsEverything", "historyOfConvulsions", "lethargicUnconscious", "convulsingNow", "hasDangerSign"],
-          "classification": { "label": "Very Severe Disease", "color": "bg-red-500" },
-          "treatments": [
-            "Give first dose of IM Ampicillin: {{dose:ampicillin}}",
-            "Give first dose of IM Gentamycin: {{dose:gentamycin}}",
-            "Give Diazepam rectally if convulsing now: {{dose:diazepam}}",
-            "Prevent low blood sugar",
-            "Refer URGENTLY to hospital"
-          ]
-        }
-      ]
-    },
-    "cough": {
-      "title": "Cough & Breathing",
-      "rules": [
-        {
-          "id": "severe_pneumonia",
-          "type": "ANY",
-          "conditions": ["hasDangerSign", "chestIndrawing", "stridor"],
-          "classification": { "label": "Severe Pneumonia or Very Severe Disease", "color": "bg-red-500" },
-          "treatments": [
-            "Give first dose of IM Ampicillin: {{dose:ampicillin}}",
-            "Give first dose of IM Gentamycin: {{dose:gentamycin}}",
-            "Treat wheezing if present: {{dose:salbutamol_oral}}",
-            "Prevent low blood sugar",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "pneumonia",
-          "type": "ALL",
-          "conditions": ["fastBreathing"],
-          "classification": { "label": "Pneumonia", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give oral Amoxicillin for 5 days: {{dose:amoxicillin}}",
-            "If wheezing, give inhaled bronchodilator: {{dose:salbutamol_oral}}",
-            "Soothe the throat and relieve the cough",
-            "Advise mother when to return immediately",
-            "Follow-up in 3 days"
-          ]
-        },
-        {
-          "id": "cough_cold",
-          "type": "ANY",
-          "conditions": ["hasCough"],
-          "classification": { "label": "Cough or Cold", "color": "bg-green-500" },
-          "treatments": [
-            "Soothe the throat and relieve the cough",
-            "If cough for more than 14 days, refer to hospital",
-            "Advise mother when to return immediately",
-            "Follow-up in 5 days if not improving"
-          ]
-        }
-      ]
-    },
-    "diarrhea": {
-      "title": "Diarrhea",
-      "rules": [
-        {
-          "id": "severe_dehydration",
-          "type": "COUNT_GTE",
-          "threshold": 2,
-          "conditions": ["lethargicUnconscious", "sunkenEyes", "notAbleToDrink", "drinkPoorly", "pinchVerySlow"],
-          "classification": { "label": "Severe Dehydration", "color": "bg-red-500" },
-          "treatments": [
-            "Give fluid for severe dehydration (Plan C): {{dose:plan_c_iv}}",
-            "Give Zinc supplement: {{dose:zinc}}",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "some_dehydration",
-          "type": "COUNT_GTE",
-          "threshold": 2,
-          "conditions": ["restlessIrritable", "sunkenEyes", "drinkEagerly", "pinchSlow"],
-          "classification": { "label": "Some Dehydration", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give fluid and food for some dehydration (Plan B): {{dose:plan_b_ors}}",
-            "Give Zinc supplement: {{dose:zinc}}",
-            "Advise mother when to return immediately",
-            "Follow-up in 5 days if not improving"
-          ]
-        },
-        {
-          "id": "no_dehydration",
-          "type": "ANY",
-          "conditions": ["hasDiarrhea"],
-          "classification": { "label": "No Dehydration", "color": "bg-green-500" },
-          "treatments": [
-            "Give fluid and food to treat diarrhea at home (Plan A): {{dose:plan_a_ors}}",
-            "Give Zinc supplement: {{dose:zinc}}",
-            "Advise mother when to return immediately"
-          ]
-        },
-        {
-          "id": "severe_persistent_diarrhea",
-          "type": "ALL",
-          "conditions": ["diarrhea14Days", "hasDehydration"],
-          "classification": { "label": "Severe Persistent Diarrhea", "color": "bg-red-500" },
-          "treatments": [
-            "Treat dehydration before referral",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "persistent_diarrhea",
-          "type": "ALL",
-          "conditions": ["diarrhea14Days"],
-          "classification": { "label": "Persistent Diarrhea", "color": "bg-yellow-400" },
-          "treatments": [
-            "Advise mother on feeding a child with persistent diarrhea",
-            "Give Vitamin A: {{dose:vitamin_a}}",
-            "Give Zinc supplement: {{dose:zinc}}",
-            "Follow-up in 5 days"
-          ]
-        },
-        {
-          "id": "dysentery",
-          "type": "ALL",
-          "conditions": ["bloodInStool"],
-          "classification": { "label": "Dysentery", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give oral Ciprofloxacin: {{dose:ciprofloxacin}}",
-            "Give Zinc supplement: {{dose:zinc}}",
-            "Follow-up in 3 days"
-          ]
-        }
-      ]
-    },
-    "fever": {
-      "title": "Fever, Malaria & Measles",
-      "rules": [
-        {
-          "id": "very_severe_febrile",
-          "type": "ANY",
-          "conditions": ["hasDangerSign", "neckStiffness"],
-          "classification": { "label": "Very Severe Febrile Disease", "color": "bg-red-500" },
-          "treatments": [
-            "Give first dose of IM Quinine: {{dose:quinine}}",
-            "Give first dose of IM Ampicillin: {{dose:ampicillin}}",
-            "Give first dose of IM Gentamycin: {{dose:gentamycin}}",
-            "Prevent low blood sugar",
-            "Give Paracetamol for high fever: {{dose:paracetamol}}",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "malaria",
-          "type": "ANY",
-          "conditions": ["malariaTestPositive"],
-          "classification": { "label": "Malaria", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give oral antimalarial (Coartem): {{dose:coartem}}",
-            "Give Paracetamol for high fever: {{dose:paracetamol}}",
-            "Advise mother when to return immediately",
-            "Follow-up in 3 days"
-          ]
-        },
-        {
-          "id": "fever_no_malaria",
-          "type": "ALL",
-          "conditions": ["hasFever"],
-          "classification": { "label": "Fever - No Malaria", "color": "bg-green-500" },
-          "treatments": [
-            "Give Paracetamol for high fever: {{dose:paracetamol}}",
-            "Treat any other apparent cause of fever",
-            "Advise mother when to return immediately",
-            "Follow-up in 3 days"
-          ]
-        },
-        {
-          "id": "severe_complicated_measles",
-          "type": "ANY",
-          "conditions": ["hasDangerSign", "corneaClouding", "deepExtensiveUlcers"],
-          "classification": { "label": "Severe Complicated Measles", "color": "bg-red-500" },
-          "treatments": [
-            "Give Vitamin A: {{dose:vitamin_a}}",
-            "Give first dose of IM Ampicillin: {{dose:ampicillin}}",
-            "Give first dose of IM Gentamycin: {{dose:gentamycin}}",
-            "If clouding of cornea or pus draining from eye, apply Tetracycline eye ointment",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "measles_complications",
-          "type": "ANY",
-          "conditions": ["pusFromEye", "mouthUlcers"],
-          "classification": { "label": "Measles with Eye or Mouth Complications", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give Vitamin A: {{dose:vitamin_a}}",
-            "If pus draining from eye, treat with Tetracycline eye ointment",
-            "If mouth ulcers, treat with Gentian Violet",
-            "Follow-up in 3 days"
-          ]
-        },
-        {
-          "id": "measles",
-          "type": "ANY",
-          "conditions": ["measlesNow", "measles3Months", "measlesRash"],
-          "classification": { "label": "Measles", "color": "bg-green-500" },
-          "treatments": [
-            "Give Vitamin A: {{dose:vitamin_a}}",
-            "Counsel mother on feeding"
-          ]
-        }
-      ]
-    },
-    "ear": {
-      "title": "Ear Problems",
-      "rules": [
-        {
-          "id": "mastoiditis",
-          "type": "ALL",
-          "conditions": ["tenderSwelling"],
-          "classification": { "label": "Mastoiditis", "color": "bg-red-500" },
-          "treatments": [
-            "Give first dose of IM Ampicillin: {{dose:ampicillin}}",
-            "Give first dose of IM Gentamycin: {{dose:gentamycin}}",
-            "Give first dose of Paracetamol for pain: {{dose:paracetamol}}",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "acute_ear_infection",
-          "type": "ANY",
-          "conditions": ["earPain", "earDischargeAcute"],
-          "classification": { "label": "Acute Ear Infection", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give oral Amoxicillin for 5 days: {{dose:amoxicillin}}",
-            "Give first dose of Paracetamol for pain: {{dose:paracetamol}}",
-            "Dry the ear by wicking",
-            "Follow-up in 5 days if not improving"
-          ]
-        },
-        {
-          "id": "chronic_ear_infection",
-          "type": "ALL",
-          "conditions": ["earDischargeChronic"],
-          "classification": { "label": "Chronic Ear Infection", "color": "bg-yellow-400" },
-          "treatments": [
-            "Dry the ear by wicking",
-            "Treat with topical Quinolone ear drops for 14 days",
-            "Follow-up in 5 days if not improving"
-          ]
-        },
-        {
-          "id": "no_ear_infection",
-          "type": "ALL",
-          "conditions": ["hasEarProblem"],
-          "classification": { "label": "No Ear Infection", "color": "bg-green-500" },
-          "treatments": [
-            "No additional treatment needed"
-          ]
-        }
-      ]
-    },
-    "malnutrition": {
-      "title": "Malnutrition & Anemia",
-      "rules": [
-        {
-          "id": "complicated_sam",
-          "type": "ANY",
-          "conditions": ["edema", "samWithComplications"],
-          "classification": { "label": "Severe Acute Malnutrition (With Complications)", "color": "bg-red-500" },
-          "treatments": [
-            "Give first dose of IM Ampicillin: {{dose:ampicillin}}",
-            "Give first dose of IM Gentamycin: {{dose:gentamycin}}",
-            "Prevent low blood sugar",
-            "Keep the child warm",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "uncomplicated_sam",
-          "type": "ALL",
-          "conditions": ["samWithoutComplications"],
-          "classification": { "label": "Severe Acute Malnutrition (No Complications)", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give oral Amoxicillin for 5 days: {{dose:amoxicillin}}",
-            "Give RUTF (Plumpy'Nut): {{dose:rutf}}",
-            "Follow-up in 14 days"
-          ]
-        },
-        {
-          "id": "mam",
-          "type": "ALL",
-          "conditions": ["moderateAcuteMalnutrition"],
-          "classification": { "label": "Moderate Acute Malnutrition", "color": "bg-yellow-400" },
-          "treatments": [
-            "Refer to supplementary feeding program if available",
-            "Assess the child's feeding and counsel the mother",
-            "Follow-up in 30 days"
-          ]
-        },
-        {
-          "id": "no_malnutrition",
-          "type": "ALL",
-          "conditions": ["noMalnutrition"],
-          "classification": { "label": "No Acute Malnutrition", "color": "bg-green-500" },
-          "treatments": [
-            "If child is less than 2 years old, assess feeding and counsel the mother"
-          ]
-        },
-        {
-          "id": "severe_anemia",
-          "type": "ALL",
-          "conditions": ["severePalmarPallor"],
-          "classification": { "label": "Severe Anemia", "color": "bg-red-500" },
-          "treatments": [
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "anemia",
-          "type": "ALL",
-          "conditions": ["somePalmarPallor"],
-          "classification": { "label": "Anemia", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give Iron supplement: {{dose:iron}}",
-            "Give oral Mebendazole: {{dose:mebendazole}}",
-            "Follow-up in 14 days"
-          ]
-        },
-        {
-          "id": "no_anemia",
-          "type": "ALL",
-          "conditions": ["noPalmarPallor"],
-          "classification": { "label": "No Anemia", "color": "bg-green-500" },
-          "treatments": [
-            "If child is less than 2 years old, assess feeding and counsel the mother"
-          ]
-        }
-      ]
-    }
-  }
-};
-
-const DEFAULT_INFANT_PROTOCOL = {
-  "formType": "infant",
-  "version": "1.0",
-  "categories": {
-    "bacterial_infection": {
-      "title": "Bacterial Infection",
-      "rules": [
-        {
-          "id": "possible_severe_bacterial",
-          "type": "ANY",
-          "conditions": ["convulsions", "notFeedingWell", "movementOnlyStimulatedNoMovement", "fastBreathing60", "severeChestIndrawing", "fever38", "lowTemp35_5"],
-          "classification": { "label": "Possible Severe Bacterial Infection", "color": "bg-red-500" },
-          "treatments": [
-            "Give first dose of IM Ampicillin: {{dose:ampicillin_im_infant}}",
-            "Give first dose of IM Gentamicin (Age < 7 Days): {{dose:gentamicin_im_infant_lt7}}",
-            "Give first dose of IM Gentamicin (Age >= 7 Days): {{dose:gentamicin_im_infant_gte7}}",
-            "Treat to prevent low blood sugar",
-            "Advise mother how to keep the infant warm on the way to the hospital",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "local_bacterial",
-          "type": "ANY",
-          "conditions": ["umbilicusRedDraining", "pusFromEyes", "skinPustules"],
-          "classification": { "label": "Local Bacterial Infection", "color": "bg-yellow-400" },
-          "treatments": [
-            "Give oral Amoxicillin for 5 days: {{dose:amoxicillin_infant}}",
-            "Teach mother to treat local infections at home",
-            "Advise mother to give home care for the young infant",
-            "Follow-up in 2 days"
-          ]
-        },
-        {
-          "id": "no_bacterial",
-          "type": "ALL",
-          "conditions": ["noBacterialSigns"],
-          "classification": { "label": "No Bacterial Infection", "color": "bg-green-500" },
-          "treatments": [
-            "Advise mother to give home care for the young infant"
-          ]
-        }
-      ]
-    },
-    "jaundice": {
-      "title": "Jaundice",
-      "rules": [
-        {
-          "id": "severe_jaundice",
-          "type": "ANY",
-          "conditions": ["jaundiceFirst24h", "jaundiceSolesPalms", "jaundiceLowWeight"],
-          "classification": { "label": "Severe Jaundice", "color": "bg-red-500" },
-          "treatments": [
-            "Treat to prevent low blood sugar",
-            "Advise mother how to keep the infant warm on the way to the hospital",
-            "Refer URGENTLY to hospital"
-          ]
-        },
-        {
-          "id": "jaundice",
-          "type": "ALL",
-          "conditions": ["jaundiceAfter24h"],
-          "classification": { "label": "Jaundice", "color": "bg-yellow-400" },
-          "treatments": [
-            "Advise mother to give home care for the young infant",
-            "Advise mother to return immediately if jaundice extends to palms and soles",
-            "Follow-up in 1 day"
-          ]
-        }
-      ]
-    },
-    "feeding_problem": {
-      "title": "Feeding Problems",
-      "rules": [
-        {
-          "id": "feeding_problem_low_weight",
-          "type": "ANY",
-          "conditions": ["diffFeeding", "feedsLessThan8Times", "receivesOtherFoods", "weightForAgeLow", "thrush", "notWellAttached", "notSucklingEffectively"],
-          "classification": { "label": "Feeding Problem or Low Weight", "color": "bg-yellow-400" },
-          "treatments": [
-            "Advise mother to breastfeed as often and for as long as the infant wants",
-            "If feeding less than 8 times in 24 hours, advise to increase frequency",
-            "If thrush, teach mother to treat with Gentian Violet at home",
-            "Follow-up in 2 days"
-          ]
-        },
-        {
-          "id": "no_feeding_problem",
-          "type": "ALL",
-          "conditions": ["feedingWellNormalWeight"],
-          "classification": { "label": "No Feeding Problem", "color": "bg-green-500" },
-          "treatments": [
-            "Praise the mother for feeding the infant well"
-          ]
-        }
-      ]
-    }
-  }
-};

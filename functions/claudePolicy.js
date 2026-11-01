@@ -62,6 +62,90 @@ const COLLECTIONS = {
     personal: true,
     description: "Locality, state and federal coordinators.",
   },
+  federalCoordinators: {
+    permission: "canViewHumanResource",
+    personal: true,
+    description: "Federal program team members: name, role, contact.",
+  },
+  stateCoordinators: {
+    permission: "canViewHumanResource",
+    personal: true,
+    description: "State program team members: name, state, role, contact.",
+  },
+  localityCoordinators: {
+    permission: "canViewHumanResource",
+    personal: true,
+    description: "Locality program team members: name, state, locality, role, contact.",
+  },
+  funders: {
+    permission: "canViewHumanResource",
+    description: "Partners and funders of the program.",
+  },
+  unitMeetings: {
+    permission: "canUseFederalManagerAdvancedFeatures",
+    description: "Program unit meetings: date, type, agenda, decisions, attendance.",
+  },
+  exerciseAttempts: {
+    permission: "canViewCourse",
+    personal: true,
+    description: "Participants' attempts at course exercises: course, exercise, score, answers.",
+  },
+  exerciseDefinitions: {
+    permission: "canViewCourse",
+    description: "The exercises set in courses.",
+  },
+  course_sub_types: {
+    permission: "canViewCourse",
+    description: "Course types and their sub-courses.",
+  },
+  participantReaddRequests: {
+    permission: "canManageCourse",
+    description: "Requests to re-add removed participants, with their status.",
+  },
+  onlineCourses: {
+    permission: "canViewOnlineCourses",
+    description: "Self-paced online courses: title, sections, status.",
+  },
+  onlineCourseItems: {
+    permission: "canViewOnlineCourses",
+    description: "Lessons, videos and quizzes inside the online courses.",
+  },
+  imnciProtocols: {
+    permission: "canViewCourse",
+    description: "IMNCI protocol forms (assessment and classification charts).",
+  },
+  aiBooks: {
+    permission: "canViewOnlineCourses",
+    description: "Course books in the AI library: title, course, sections.",
+  },
+  facilitySubmissions: {
+    permission: "canApproveSubmissions",
+    description: "Facility updates sent for approval: facility, changes, status.",
+  },
+  facilitatorSubmissions: {
+    permission: "canApproveSubmissions",
+    personal: true,
+    description: "Facilitator registrations sent for approval.",
+  },
+  coordinatorSubmissions: {
+    permission: "canApproveSubmissions",
+    personal: true,
+    description: "Coordinator registrations sent for approval.",
+  },
+  federalCoordinatorSubmissions: {
+    permission: "canApproveSubmissions",
+    personal: true,
+    description: "Federal team registrations sent for approval.",
+  },
+  localityCoordinatorSubmissions: {
+    permission: "canApproveSubmissions",
+    personal: true,
+    description: "Locality team registrations sent for approval.",
+  },
+  problemReports: {
+    permission: "canViewAdmin",
+    description: "Problems reported by users from inside the app: page, message, status.",
+  },
   healthFacilities: {
     permission: "canViewFacilities",
     scope: { state: "الولاية", locality: "المحلية" },
@@ -86,7 +170,7 @@ const COLLECTIONS = {
     scope: { state: "state", locality: "locality" },
     description: "Population denominators per state and locality per year.",
   },
-  skillMentorshipSubmissions: {
+  skillMentorship: {
     permission: "canViewSkillsMentorship",
     scope: { state: "state", locality: "locality" },
     description: "Mentorship visits: skills assessed, scores, health worker, facility.",
@@ -132,7 +216,7 @@ const COLLECTIONS = {
 // Never reachable, whatever the caller's role. Credentials, delivery queues and
 // the permission blueprint itself: reading these through an assistant has no
 // analytical purpose and each one is a way to escalate.
-const NEVER = new Set(["users", "meta", "mail", "onlineProgress", "exerciseAttempts"]);
+const NEVER = new Set(["users", "meta", "mail", "onlineProgress"]);
 
 const MAX_ROWS = 500;
 

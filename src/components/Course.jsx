@@ -29,7 +29,8 @@ import {
 
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
-import { CourseExercisesView } from './imnci'; 
+import { CourseExercisesView } from './imnci';
+const CpcmOsceView = React.lazy(() => import('./cpcm/CpcmOsceView')); 
 // Lazy: the popup brings the PDF signing code with it.
 const FinalReportQuickModal = React.lazy(() => import('./FinalReportManager').then(m => ({ default: m.FinalReportQuickModal })));
 const FinalReportsDashboard = React.lazy(() => import('./FinalReportManager').then(m => ({ default: m.FinalReportsDashboard })));
@@ -64,6 +65,7 @@ import { canonicalOptions } from '../utils/nameRegistry';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
 import { countsForCoverage } from '../utils/coverageEligibility';
+import { IS_EMONC_SITE } from '../siteMode';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
@@ -763,7 +765,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
         { key: 'IPC', title: t('course_page.packages.ipc', 'Infection Prevention & Control (Neonatal Unit)'), enabled: true },
         { key: 'Small & Sick Newborn', title: t('course_page.packages.ssnc', 'Small & Sick Newborn Case Management'), enabled: true },
         { key: 'Program Management', title: t('course_page.packages.program_management', 'Program Management'), enabled: true },
-    ];
+    ].filter(it => !IS_EMONC_SITE || it.key === 'EmONC');
   
     return (
         <Card className="p-4 md:p-6">
@@ -2138,6 +2140,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         selectedCourse.clinical_instructor_imci_sub_type === 'online IMCI course' ||
         selectedCourse.facilitatorAssignments?.some(a => a.imci_sub_type === 'online IMCI course')
     );
+    const showOsce = !isGlobalView && selectedCourse && selectedCourse.course_type === 'Comprehensive Package For Community Midwives';
     const isMentorship = !isGlobalView && selectedCourse && hasMentorshipForm(selectedCourse, currentParticipant);
     const courseTabs = [
         // Inside a course this tab reads "Back to Courses"; the Android app's top-bar arrow does that.
@@ -2151,6 +2154,9 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         ...(!isGlobalView && selectedCourse ? (selectedCourse.course_type === 'EmONC' ? [
             { id: 'monitoring-maternal', label: t('course_page.tabs.maternal_monitor', 'Maternal Monitor'), short: t('ui.short.maternal', 'Maternal'), disabled: !currentParticipant, go: () => { setEmoncModule('maternal'); setActiveCoursesTab('monitoring'); } },
             { id: 'monitoring-neonatal', label: t('course_page.tabs.neonatal_monitor', 'Neonatal Monitor'), short: t('ui.short.neonatal', 'Neonatal'), disabled: !currentParticipant, go: () => { setEmoncModule('neonatal'); setActiveCoursesTab('monitoring'); } },
+        ] : showOsce ? [
+            // The midwives course has no observation grid; its skills are checked with the OSCE checklists.
+            { id: 'osce', label: t('course_page.tabs.osce', 'OSCE Checklists'), short: t('ui.short.osce', 'OSCE'), go: () => setActiveCoursesTab('osce') },
         ] : [
             { id: 'monitoring', label: isMentorship ? t('course_page.tabs.mentorship_practice', 'Mentorship Practice') : t('course_page.tabs.monitoring', 'Monitoring'), short: isMentorship ? t('ui.short.practice', 'Practice') : t('ui.short.monitor', 'Monitor'), disabled: !currentParticipant, go: () => setActiveCoursesTab('monitoring') },
         ]) : []),
@@ -2163,6 +2169,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         ['courses', 'add-course', 'edit-course'].includes(activeCoursesTab) ? 'courses'
         : ['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) ? 'participants'
         : activeCoursesTab === 'monitoring' && selectedCourse?.course_type === 'EmONC' ? `monitoring-${emoncModule}`
+        : activeCoursesTab === 'monitoring' && showOsce ? 'osce'
         : activeCoursesTab;
 
     return (
@@ -2370,7 +2377,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message={t('course_page.select_course_participants', "Please select a course from the 'Courses' tab to view participants.")} />}
 
 {/* --- SPLIT SCREEN MONITORS VIEW OR STANDALONE --- */}
-{activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && (
+{activeCoursesTab === 'monitoring' && !showOsce && selectedCourse && currentParticipant && (
     <Suspense fallback={<PageSkeleton />}>
         {selectedCourse.course_type === 'EmONC' ? (
             emoncModule === 'maternal' ? (
@@ -2428,6 +2435,18 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     return savedParticipant;
                 }}
             />
+        )}
+
+        {(activeCoursesTab === 'osce' || (activeCoursesTab === 'monitoring' && showOsce)) && selectedCourse && (
+            <Suspense fallback={<PageSkeleton />}>
+                <CpcmOsceView
+                    participants={participants}
+                    selectedParticipantId={selectedParticipantId}
+                    canEdit={canManageCourse || canUseFederalManagerAdvancedFeatures}
+                    assessorName={currentUserIdentifier}
+                    onSaved={onBatchUpdate}
+                />
+            </Suspense>
         )}
 
         {activeCoursesTab === 'exercises' && selectedCourse && (

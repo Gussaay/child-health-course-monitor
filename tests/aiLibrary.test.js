@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { pageText, sectionsFromOutline, packPages, cleanSections, parseAiText, titleFromFile, aiTextToBlocks } from '../src/components/aiLibrary/bookText.js';
 
 const require = createRequire(import.meta.url);
-const { rankPages, bestPages, pageRange } = require('../functions/aiBooksText.js');
+const { rankPages, hybridRankPages, bestPages, pageRange } = require('../functions/aiBooksText.js');
 
 describe('reading a book', () => {
     it('joins pdf.js text items into lines and mends hyphenated words', () => {
@@ -93,5 +93,23 @@ describe('the AI book import', () => {
 
     it('escapes text that goes into rich blocks', () => {
         expect(aiTextToBlocks('**Note**: a < b')).toEqual([{ type: 'rich', text: '<p><strong>Note</strong>: a &lt; b</p>' }]);
+    });
+});
+
+describe('finding pages by meaning and words together', () => {
+    const pages = [
+        { bookId: 'b', title: 'Book', page: 1, text: 'Danger signs: not able to drink, vomits everything, convulsions.' },
+        { bookId: 'b', title: 'Book', page: 2, text: 'A sick young infant who cannot feed or has fits is seriously ill.' },
+        { bookId: 'b', title: 'Book', page: 3, text: 'Give amoxicillin twice daily for five days.' },
+    ];
+    const sims = { 1: 0.5, 2: 0.9, 3: 0.1 };
+    it('keeps a page that matches only by meaning and ranks it with the keyword pages', () => {
+        const ranked = hybridRankPages(pages, 'danger signs', (p) => sims[p.page]);
+        expect(ranked.map((p) => p.page)).toContain(2);
+        expect(ranked[0].page).toBe(1);
+        expect(rankPages(pages, 'danger signs').map((p) => p.page)).toEqual([1]);
+    });
+    it('falls back to keywords when no page has a vector', () => {
+        expect(hybridRankPages(pages, 'amoxicillin', () => null).map((p) => p.page)).toEqual([3]);
     });
 });

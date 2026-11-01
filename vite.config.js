@@ -30,22 +30,13 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/index.html',
-        // `/oauth/`, `/mcp` and `/.well-known/` are Cloud Functions behind
-        // Hosting rewrites, not pages of this app. Without them here the
-        // service worker answers those navigations with the cached index.html,
-        // so the OAuth endpoints appear to return the app instead of doing
-        // their job.
-        //
-        // `connect_claude` is the redirect the authorisation step lands on. It
-        // has to come from the network: the whole point of that page is that it
-        // is the version just deployed, and serving a precached shell is what
-        // made three rounds of fixes look as though they had never shipped.
-        navigateFallbackDenylist: [
-          /\.apk$/, /\.json$/, /^\/__\//,
-          /^\/oauth\//, /^\/mcp$/, /^\/\.well-known\//,
-          /[?&]connect_claude=/,
-        ],
+        // PAGES COME FROM THE SERVER FIRST, like an ordinary website.
+        // navigateFallback used to answer every page load with the index.html
+        // saved at install time, so opening a link after a release showed the
+        // previous version, and only a second refresh showed the new one. Now
+        // the page is fetched from the network; the saved copy is used only
+        // offline or when the network takes longer than a few seconds.
+        navigateFallback: null,
 
         // Deletes caches left by older Workbox versions. Without this, old
         // precache entries stay on the device forever and can be served
@@ -88,6 +79,33 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
 
         runtimeCaching: [
+          {
+            // Page loads (see navigateFallback above).
+            //
+            // `/oauth/`, `/mcp` and `/.well-known/` are Cloud Functions behind
+            // Hosting rewrites, not pages of this app, and `connect_claude` is
+            // the redirect the authorisation step lands on: those always go
+            // straight to the network, never to a saved copy of the app.
+            urlPattern: ({ request, url }) =>
+              request.mode === 'navigate' &&
+              ![/\.apk$/, /\.json$/, /^\/__\//, /^\/oauth\//, /^\/mcp$/, /^\/\.well-known\//]
+                .some((re) => re.test(url.pathname)) &&
+              !/[?&]connect_claude=/.test(url.search),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 40 },
+              cacheableResponse: { statuses: [200] },
+              plugins: [
+                {
+                  // Offline and never opened before: the app shell saved at install.
+                  handlerDidError: async () =>
+                    (await caches.match('/index.html', { ignoreSearch: true })) || Response.error(),
+                },
+              ],
+            },
+          },
           {
             // Route chunks and shared vendor chunks: serve from cache, refresh
             // in the background. This is what makes the app work offline
@@ -149,6 +167,11 @@ export default defineConfig({
     // place. Before, VITE_APP_VERSION was never set and the code fell back to a
     // hard-coded '1.0.2' that did not match package.json's 1.0.0.
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
+    // The version number users SEE. CI gives every build its own version
+    // (above), which the update system needs; showing that number made it
+    // change after every small over-the-air update. This one changes only when
+    // "releaseVersion" in package.json is raised by hand for a big release.
+    'import.meta.env.VITE_RELEASE_VERSION': JSON.stringify(pkg.releaseVersion || pkg.version),
 
     FIREBASE_WEBAPP_CONFIG: process.env.FIREBASE_WEBAPP_CONFIG
       ? JSON.stringify(JSON.parse(process.env.FIREBASE_WEBAPP_CONFIG))

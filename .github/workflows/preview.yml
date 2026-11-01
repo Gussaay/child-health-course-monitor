@@ -85,4 +85,6 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}"
           projectId: "imnci-courses-monitor"
+          # Previews only for the main site, not the ch-sudan and EmONC copies.
+          target: main
           expires: 7d

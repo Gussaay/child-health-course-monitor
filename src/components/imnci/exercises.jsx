@@ -17,6 +17,7 @@
 //
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isOnline } from '../../firebase';
 import {
     Button, Card, CardBody, EmptyState, FormGroup, Modal, Select, Spinner, Toast,
 } from '../CommonComponents';
@@ -940,7 +941,7 @@ export function ExerciseListView({
             .filter(a => a.exerciseId === exercise.id)
             .reduce((max, a) => Math.max(max, Number(a.attemptNo) || 0), 0);
         const n = Math.max(attemptNo ?? 0, priorMax + 1);
-        await upsertExerciseAttempt({
+        const saved = await upsertExerciseAttempt({
             courseId: course.id,
             participantId: participant.id,
             participantName: participant.name,
@@ -959,6 +960,13 @@ export function ExerciseListView({
             source,
         });
         setToast({ show: true, message: t('imnci_ui.exercises.list.result_saved', 'Your result has been saved.'), type: 'success' });
+        // Offline the attempt is queued on this device; add it to the list here
+        // rather than re-reading from a server that cannot be reached.
+        if (!isOnline()) {
+            const row = { ...saved, responses: { submitted }, results: { result } };
+            setAttempts((list) => [...list.filter((a) => a.id !== row.id), row]);
+            return;
+        }
         await loadAttempts();
     };
 

@@ -616,9 +616,9 @@ export function SudanMicsDashboard() {
 // Sudan S3M II (2018)
 // ---------------------------------------------------------------------------
 
-export function SudanS3mDashboard() {
+function useS3mLabels() {
     const { t } = useTranslation();
-    const labels = {
+    return {
         diarrhoea: t('child_indicators.s3m.diarrhoea', 'Diarrhoea (period prevalence)'),
         ari: t('child_indicators.s3m.ari', 'ARI (period prevalence)'),
         fever: t('child_indicators.s3m.fever', 'Fever (period prevalence)'),
@@ -652,6 +652,11 @@ export function SudanS3mDashboard() {
         carer_anaemia: t('child_indicators.s3m.carer_anaemia', 'Anaemia in mothers'),
         hf_1h: t('child_indicators.s3m.hf_1h', 'Health facility within 1 hour'),
     };
+}
+
+export function SudanS3mDashboard() {
+    const { t } = useTranslation();
+    const labels = useS3mLabels();
     return (
         <SurveyDashboard
             id="s3m"
@@ -679,11 +684,47 @@ export function SudanS3mDashboard() {
 // The dashboard tab: the three views as sub-tabs
 // ---------------------------------------------------------------------------
 
+// The national figures of the sub-tabs that are not open, as text for the data
+// assistant: it reads only what is on screen, and a question often compares
+// one survey with another. Hidden, so the page looks the same.
+function useOtherSubTabs(view) {
+    const { t } = useTranslation();
+    const micsLabels = useMicsLabels();
+    const s3mLabels = useS3mLabels();
+    const survey = (name, year, indicators, labels, national) => `${name} ${year}, national (Sudan):\n${indicators
+        .map((ind, i) => `- ${labels[ind.id] || ind.id}: ${fmt(national[i])}${ind.unit === 'rate' ? ' per 1,000 live births' : '%'}`)
+        .join('\n')}`;
+    const latest = (rows) => rows[rows.length - 1];
+    const igme = () => {
+        const rates = MORTALITY.map(({ id }) => {
+            const [year, value, lower, upper] = latest(IGME_SERIES[id]);
+            return `- ${t(`child_indicators.${id}`, id)} ${year}: ${fmt(value)} per 1,000 live births (90% range ${fmt(lower)}–${fmt(upper)}; SDG 2030 target ${SDG_TARGETS[id] ?? '—'})`;
+        });
+        const [sbYear, sb] = latest(STILLBIRTH_SERIES);
+        const [mmYear, mm] = latest(MATERNAL_SERIES);
+        const [adYear, early, late] = latest(ADOLESCENT_SERIES);
+        return [`${IGME_SOURCE.name} ${IGME_SOURCE.round} estimates (Sudan):`, ...rates,
+            `- ${t('child_indicators.stillbirth', 'Stillbirth rate')} ${sbYear}: ${fmt(sb)} per 1,000 total births`,
+            `- ${t('child_indicators.mmr', 'Maternal mortality ratio')} ${mmYear}: ${fmt(mm, 0)} per 100,000 live births`,
+            `- ${t('child_indicators.early_adolescent', 'Early adolescent (10–14)')} ${adYear}: ${fmt(early)}; ${t('child_indicators.late_adolescent', 'Late adolescent (15–19)')}: ${fmt(late)} per 1,000`,
+        ].join('\n');
+    };
+    const parts = {
+        igme,
+        mics: () => survey(MICS_SOURCE.name, MICS_SOURCE.year, MICS_INDICATORS, micsLabels, MICS_NATIONAL),
+        s3m: () => survey(S3M_SOURCE.name, S3M_SOURCE.year, S3M_INDICATORS, s3mLabels, S3M_NATIONAL),
+    };
+    return Object.entries(parts).filter(([id]) => id !== view).map(([, make]) => make()).join('\n\n')
+        + '\n(Figures by state and locality show when that sub-tab is open.)';
+}
+
 export default function MorbidityMortalityDashboard() {
     const { t } = useTranslation();
     const [view, setView] = useState('igme');
+    const otherSubTabs = useOtherSubTabs(view);
     return (
         <div className="space-y-4">
+            <div hidden data-assistant-reference={otherSubTabs} />
             <div className="px-3 md:px-0">
                 <Chips
                     value={view}

@@ -1,5 +1,20 @@
 {
   "projects": {
     "default": "imnci-courses-monitor"
+  },
+  "targets": {
+    "imnci-courses-monitor": {
+      "hosting": {
+        "main": [
+          "imnci-courses-monitor"
+        ],
+        "ch": [
+          "ch-sudan"
+        ],
+        "emonc": [
+          "emonc-sudan"
+        ]
+      }
+    }
   }
 }

@@ -471,6 +471,17 @@ export const CERT_DEFAULTS = {
     thirdSignatureWidth: 80
 };
 
+// Fixed wording printed when a text box is left blank. The designer shows it
+// in the box so it can be edited instead of typed again from scratch.
+export const TEXT_DEFAULTS = {
+    headerAr: "جمهورية السودان\nوزارة الصحة الاتحادية\nالإدارة العامة للرعاية الصحية الاساسية\nإدارة صحة الأم والطفل\nالبرنامج القومي لصحة الطفل",
+    headerEn: "Republic of Sudan\nFederal Ministry of Health\nDirectorate General of PHC\nMaternal and Child Health Directorate\nNational Child Health Program",
+    titleAr: 'شهادة',
+    titleEn: 'CERTIFICATE',
+    completionTextAr: 'أكمل/ت بنجاح الدورة التدريبية على : ',
+    completionTextEn: 'Has successfully completed:'
+};
+
 // -----------------------------------------------------------------------------
 // LOGO SLOTS
 // The certificate carries four logos. Each is positioned independently; a blank
@@ -495,12 +506,37 @@ const cfgNum = (raw, fallback) => {
 /** Vertical position a logo uses when it has no value of its own. */
 export const defaultLogoTop = (cfg = {}) => cfgNum(cfg.logoTop, CERT_DEFAULTS.logoTop);
 
+// Arabic certificates mirror the English logo order: FMOH is first on the LEFT
+// in English and first on the RIGHT in Arabic. Each language keeps its own
+// horizontal keys (logo1Left / logo1LeftAr, logoGroup1Left / logoGroup1LeftAr);
+// a blank Arabic value is the mirror image (100 − x) of the English one.
+const clampPct = (v) => Math.min(100, Math.max(0, v));
+
+/** The key that stores a logo's horizontal centre for this language. */
+export const logoLeftKey = (slot, isArabic = false) => `logo${slot.n}Left${isArabic ? 'Ar' : ''}`;
+
+/** A logo pair's centre for this language (Arabic mirrors English unless set). */
+export const logoGroupLeft = (cfg = {}, groupKey, isArabic = false) => {
+    const en = cfgNum(cfg[groupKey], CERT_DEFAULTS[groupKey]);
+    return isArabic ? cfgNum(cfg[`${groupKey}Ar`], 100 - en) : en;
+};
+
 /** Horizontal centre (% of page width) a logo uses when it has none of its own. */
 export const defaultLogoLeft = (cfg = {}, slot, isArabic = false) => {
-    const groupFallback = isArabic ? 100 - CERT_DEFAULTS[slot.groupKey] : CERT_DEFAULTS[slot.groupKey];
-    const groupLeft = cfgNum(cfg[slot.groupKey], groupFallback);
     const spread = cfgNum(cfg.logoSpread, CERT_DEFAULTS.logoSpread);
-    return Math.min(100, Math.max(0, groupLeft + slot.side * spread));
+    if (!isArabic) return clampPct(logoGroupLeft(cfg, slot.groupKey) + slot.side * spread);
+    // A logo moved in English lands in the mirrored spot in Arabic.
+    const enOwn = cfgNum(cfg[`logo${slot.n}Left`], null);
+    if (enOwn !== null) return clampPct(100 - enOwn);
+    // Inside a pair the order flips too, so the first logo is on the right.
+    return clampPct(logoGroupLeft(cfg, slot.groupKey, true) - slot.side * spread);
+};
+
+/** Extra logos: the key for this language, and the Arabic mirror default. */
+export const xlogoLeftKey = (id, isArabic = false) => `xlogo_${id}_Left${isArabic ? 'Ar' : ''}`;
+export const defaultXlogoLeft = (cfg = {}, id, isArabic = false) => {
+    const en = cfgNum(cfg[`xlogo_${id}_Left`], 50);
+    return isArabic ? clampPct(100 - en) : en;
 };
 
 // -----------------------------------------------------------------------------
@@ -509,7 +545,7 @@ export const defaultLogoLeft = (cfg = {}, slot, isArabic = false) => {
 // slots. They are stored as flat keys so the designer's element table can drive
 // them exactly like every other element:
 //   extraLogoIds: ['k3x9aa', ...]
-//   xlogo_<id>_Src / _Top / _Left / _Height / _Label / _Hidden
+//   xlogo_<id>_Src / _Top / _Left / _LeftAr / _Height / _Label / _Hidden
 // A logo with no image yet is a PLACEHOLDER: it shows as a dashed box in the
 // designer so it can be positioned first, and prints nothing.
 // -----------------------------------------------------------------------------
@@ -597,7 +633,7 @@ export const cleanCertificateConfig = (cfg = {}, scopeKind = 'course') => {
     if (scopeKind !== 'course') {
         const live = new Set(out.extraLogoIds || []);
         Object.keys(out).forEach(k => {
-            const m = k.match(/^xlogo_(.+)_(Src|Top|Left|Height|Label|Hidden)$/);
+            const m = k.match(/^xlogo_(.+)_(Src|Top|Left|LeftAr|Height|Label|Hidden)$/);
             if (m && !live.has(m[1])) delete out[k];
         });
     }
@@ -921,10 +957,10 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const logoTopLeft2 = customConfig.logoTopLeft2 || "/certificate/unicef-logo.png";
 
     // Text overrides
-    const headerAr = customConfig.headerAr || "جمهورية السودان\nوزارة الصحة الاتحادية\nالإدارة العامة للرعاية الصحية الاساسية\nإدارة صحة الأم والطفل\nالبرنامج القومي لصحة الطفل";
-    const headerEn = customConfig.headerEn || "Republic of Sudan\nFederal Ministry of Health\nDirectorate General of PHC\nMaternal and Child Health Directorate\nNational Child Health Program";
-    const titleCert = isArabic ? (customConfig.titleAr || 'شهادة') : (customConfig.titleEn || 'CERTIFICATE');
-    const completionText = isArabic ? (customConfig.completionTextAr || 'أكمل/ت بنجاح الدورة التدريبية على : ') : (customConfig.completionTextEn || 'Has successfully completed:');
+    const headerAr = customConfig.headerAr || TEXT_DEFAULTS.headerAr;
+    const headerEn = customConfig.headerEn || TEXT_DEFAULTS.headerEn;
+    const titleCert = isArabic ? (customConfig.titleAr || TEXT_DEFAULTS.titleAr) : (customConfig.titleEn || TEXT_DEFAULTS.titleEn);
+    const completionText = isArabic ? (customConfig.completionTextAr || TEXT_DEFAULTS.completionTextAr) : (customConfig.completionTextEn || TEXT_DEFAULTS.completionTextEn);
 
     // Course Titles
     let baseCourseTitle = getCertificateCourseTitle(courseType, language, participantSubCourse);
@@ -1174,7 +1210,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             slot,
             src: logoSources[slot.imageKey],
             top: numOr(customConfig[`logo${slot.n}Top`], logoTop),
-            left: numOr(customConfig[`logo${slot.n}Left`], defaultLogoLeft(customConfig, slot, isArabic)),
+            left: numOr(customConfig[logoLeftKey(slot, isArabic)], defaultLogoLeft(customConfig, slot, isArabic)),
             height: numOr(customConfig[slot.heightKey], CERT_DEFAULTS[slot.heightKey])
         }));
 
@@ -1187,7 +1223,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             src: customConfig[xlogoKey(id, 'Src')] || '',
             label: customConfig[xlogoKey(id, 'Label')] || `Logo ${LOGO_SLOTS.length + i + 1}`,
             top: numOr(customConfig[xlogoKey(id, 'Top')], logoTop),
-            left: numOr(customConfig[xlogoKey(id, 'Left')], 50),
+            left: numOr(customConfig[xlogoLeftKey(id, isArabic)], defaultXlogoLeft(customConfig, id, isArabic)),
             height: numOr(customConfig[xlogoKey(id, 'Height')], EXTRA_LOGO_DEFAULT_HEIGHT)
         }));
 
@@ -2069,7 +2105,7 @@ const buildEditorElements = (ctx) => {
         isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount,
         subCourseMode = 'auto', autoSubCourse = '',
         hideManager, hideDirector, showSealNotice, signatureImages = [],
-        logoTopDef, logoLeftFor, hiddenLogos = {}, extraLogos = [], sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef,
+        logoTopDef, logoLeftFor, logoGroupDef = (g) => CERT_DEFAULTS[g], xlogoLeftDef = () => 50, hiddenLogos = {}, extraLogos = [], sharedSigTop, sharedNameFs, sharedRoleFs, sideWidthDef, thirdWidthDef,
         t
     } = ctx;
 
@@ -2086,8 +2122,8 @@ const buildEditorElements = (ctx) => {
             topKey: 'logoTop', topDef: CERT_DEFAULTS.logoTop,
             box: { widthPct: 96, heightMm: 8 },
             numbers: [
-                { key: 'logoGroup1Left', label: t('certificates.elements.left_pair_centre', 'Left pair centre (%)'), def: isArabic ? 100 - CERT_DEFAULTS.logoGroup1Left : CERT_DEFAULTS.logoGroup1Left, min: 0, max: 100 },
-                { key: 'logoGroup2Left', label: t('certificates.elements.right_pair_centre', 'Right pair centre (%)'), def: isArabic ? 100 - CERT_DEFAULTS.logoGroup2Left : CERT_DEFAULTS.logoGroup2Left, min: 0, max: 100 },
+                { key: `logoGroup1Left${isArabic ? 'Ar' : ''}`, label: isArabic ? t('certificates.elements.right_pair_centre', 'Right pair centre (%)') : t('certificates.elements.left_pair_centre', 'Left pair centre (%)'), def: logoGroupDef('logoGroup1Left'), min: 0, max: 100 },
+                { key: `logoGroup2Left${isArabic ? 'Ar' : ''}`, label: isArabic ? t('certificates.elements.left_pair_centre', 'Left pair centre (%)') : t('certificates.elements.right_pair_centre', 'Right pair centre (%)'), def: logoGroupDef('logoGroup2Left'), min: 0, max: 100 },
                 { key: 'logoSpread', label: t('certificates.elements.gap_pair_centre', 'Gap from pair centre (%)'), def: CERT_DEFAULTS.logoSpread, min: 0, max: 25, step: 0.5 }
             ],
             note: t('certificates.elements.logo_row_note', 'The baseline every logo follows until it is given a position of its own. A logo that has been moved individually ignores this.')
@@ -2098,7 +2134,7 @@ const buildEditorElements = (ctx) => {
             label: t('certificates.elements.logo_slot', 'Logo {{n}} (default: {{name}})', { n: slot.n, name: slot.defaultName }),
             logoKey: slot.imageKey,
             topKey: `logo${slot.n}Top`, topDef: logoTopDef,
-            leftKey: `logo${slot.n}Left`, leftDef: logoLeftFor(slot),
+            leftKey: logoLeftKey(slot, isArabic), leftDef: logoLeftFor(slot),
             box: { widthPct: 11, heightMm: 34 },
             boxHeightKey: slot.heightKey, boxHeightDef: CERT_DEFAULTS[slot.heightKey],
             numbers: [
@@ -2117,7 +2153,7 @@ const buildEditorElements = (ctx) => {
             extraLogoId: x.id,
             extraInherited: x.inherited,
             topKey: xlogoKey(x.id, 'Top'), topDef: logoTopDef,
-            leftKey: xlogoKey(x.id, 'Left'), leftDef: 50,
+            leftKey: xlogoLeftKey(x.id, isArabic), leftDef: xlogoLeftDef(x.id),
             box: { widthPct: 11, heightMm: 34 },
             boxHeightKey: xlogoKey(x.id, 'Height'), boxHeightDef: EXTRA_LOGO_DEFAULT_HEIGHT,
             numbers: [
@@ -2775,6 +2811,13 @@ export function CertificateDesigner({
     const data = useMemo(() => mergeCertificateConfigs(inherited, ownData), [inherited, ownData]);
     const [language, setLanguage] = useState('en');
     const [selectedId, setSelectedId] = useState('title');
+    // Phones only: which pane shows under the certificate.
+    const [mobilePane, setMobilePane] = useState('props');
+    // Phones only: the tool row (language, zoom, grid, template, preview) folds away.
+    const [showTools, setShowTools] = useState(false);
+    // The small editor that sits on the certificate next to the selected box.
+    const [quickClosed, setQuickClosed] = useState(false);
+    const quickInputRef = useRef(null);
     const [isSaving, setIsSaving] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [zoom, setZoom] = useState('fit');
@@ -2924,6 +2967,36 @@ export function CertificateDesigner({
     const thirdWidthDef = readNum(data, 'thirdSignatureWidth', defaultSideWidth);
     const logoTopDef = defaultLogoTop(data);
     const logoLeftFor = useCallback((slot) => defaultLogoLeft(data, slot, isArabic), [data, isArabic]);
+    const logoGroupDef = useCallback((g) => (isArabic ? 100 - logoGroupLeft(data, g) : CERT_DEFAULTS[g]), [data, isArabic]);
+    const xlogoLeftDef = useCallback((id) => defaultXlogoLeft(data, id, isArabic), [data, isArabic]);
+
+    // Text boxes show the wording that currently prints, so it can be edited in
+    // place. Nothing is stored until the box is actually changed.
+    const [editedTexts, setEditedTexts] = useState(() => new Set());
+    const currentText = (key) => {
+        if (firstFilled(inherited[key])) return inherited[key];
+        if (TEXT_DEFAULTS[key]) return TEXT_DEFAULTS[key];
+        if (typeof CERT_DEFAULTS[key] === 'string') return CERT_DEFAULTS[key];
+        const lang = key.endsWith('Ar') ? 'ar' : 'en';
+        const base = key.replace(/(En|Ar)$/, '');
+        if (base === 'courseTitle') return liveCourse.course_type ? getCertificateCourseTitle(liveCourse.course_type, lang, autoSubCourse) : '';
+        if (base === 'managerTitle') return stripHonorific(firstFilled(liveCourse.approvedByManagerName, federalProgramManagerName));
+        if (base === 'directorTitle') return stripHonorific(firstFilled(liveCourse.approvedDirectorName, liveCourse.director));
+        if (base === 'place') {
+            if (isTemplateScope) return '';
+            const st = lang === 'ar'
+                ? (Array.isArray(liveCourse.states) ? liveCourse.states.map(x => STATE_LOCALITIES[x]?.ar || x).join('، ') : (STATE_LOCALITIES[liveCourse.state]?.ar || liveCourse.state || ''))
+                : (Array.isArray(liveCourse.states) ? liveCourse.states.join(', ') : (liveCourse.state || ''));
+            const hall = (lang === 'en' && liveCourse.hall_english) ? liveCourse.hall_english : (liveCourse.hall || '');
+            return hall ? `${st} - ${hall}` : st;
+        }
+        return '';
+    };
+    const textValue = (key) => (editedTexts.has(key) ? (ownData[key] || '') : (ownData[key] || currentText(key)));
+    const setText = (key, value) => {
+        setEditedTexts(prev => (prev.has(key) ? prev : new Set(prev).add(key)));
+        set(key, value);
+    };
 
     const hiddenLogos = useMemo(
         () => Object.fromEntries(LOGO_SLOTS.map(s => [s.n, !!data[`hideLogo${s.n}`]])),
@@ -2969,13 +3042,13 @@ export function CertificateDesigner({
             subCourseMode, autoSubCourse,
             hideManager: !!data.hideManager, hideDirector: !!data.hideDirector,
             showSealNotice: !!data.showSealNotice, signatureImages,
-            logoTopDef, logoLeftFor, hiddenLogos, extraLogos,
+            logoTopDef, logoLeftFor, logoGroupDef, xlogoLeftDef, hiddenLogos, extraLogos,
             sharedSigTop, sharedNameFs, sharedRoleFs,
             sideWidthDef: defaultSideWidth, thirdWidthDef, t
         }),
         [isArabic, hasStamp, hasThirdParty, hasFourthParty, hasSubCourse, slotFor, sigCount, subCourseMode, autoSubCourse,
          data.hideManager, data.hideDirector, data.showSealNotice, signatureImages,
-         logoTopDef, logoLeftFor, hiddenLogos, extraLogos, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef, t]
+         logoTopDef, logoLeftFor, logoGroupDef, xlogoLeftDef, hiddenLogos, extraLogos, sharedSigTop, sharedNameFs, sharedRoleFs, defaultSideWidth, thirdWidthDef, t]
     );
 
     const selected = elements.find(e => e.id === selectedId) || elements[0];
@@ -3113,6 +3186,7 @@ export function CertificateDesigner({
         e.preventDefault();
         e.stopPropagation();
         setSelectedId(el.id);
+        setQuickClosed(false);
         dragRef.current = el.axes
             ? {
                 axes: el.axes,
@@ -3367,6 +3441,46 @@ export function CertificateDesigner({
     // What a blank box falls back to: the inherited template value, else the default.
     const inh = (key, def) => readNum(inherited, key, def);
 
+    // Where an element's box sits on the canvas (shared by the boxes and the quick editor).
+    const geomOf = (el) => {
+        let topMm, leftPct, boxW, boxH;
+
+        if (el.imageOf) {
+            // Reconstruct where the <img> lands: it is anchored to the
+            // BOTTOM of its block's text, which is the name line plus the
+            // role line, then lifted by `...ImageBottom` millimetres.
+            const b = el.imageOf;
+            const px = (k, sharedK) => readNum(data, `${b}${k}`, readNum(data, sharedK, CERT_DEFAULTS[sharedK]));
+            const imgW = px('SignatureImageWidth', 'signatureImageWidth');
+            const imgH = px('SignatureImageHeight', 'signatureImageHeight');
+            const imgBottom = px('SignatureImageBottom', 'signatureImageBottom');
+            const imgOffsetX = px('SignatureImageOffsetX', 'signatureImageOffsetX');
+
+            // Text sizes and the row height are read per block, since each
+            // signature can now carry its own.
+            const nameFs = readNum(data, `${b}SignatureNameFontSize`, readNum(data, 'signatureNameFontSize', CERT_DEFAULTS.signatureNameFontSize));
+            const roleFs = readNum(data, `${b}SignatureRoleFontSize`, readNum(data, 'signatureRoleFontSize', CERT_DEFAULTS.signatureRoleFontSize));
+            const textMm = ((nameFs + roleFs) * 1.25) / MM_TO_PX + 1;
+
+            const blockTop = readNum(data, `${b}SignatureTop`, readNum(data, 'signatureTop', CERT_DEFAULTS.signatureTop));
+            const blockLeft = readNum(data, el.blockLeftKey, el.blockLeftDef);
+
+            topMm = blockTop + textMm - imgBottom - imgH;
+            leftPct = blockLeft + (imgOffsetX / 297) * 100;
+            boxW = imgW * MM_TO_PX * scale;
+            boxH = imgH * MM_TO_PX * scale;
+        } else {
+            topMm = readNum(data, el.topKey, el.topDef);
+            leftPct = el.leftKey ? readNum(data, el.leftKey, el.leftDef) : 50;
+            boxW = el.box.widthMm
+                ? el.box.widthMm * MM_TO_PX * scale
+                : (el.box.widthPct / 100) * PAGE_W_PX * scale;
+            const hMm = el.boxHeightKey ? readNum(data, el.boxHeightKey, el.boxHeightDef) : el.box.heightMm;
+            if (el.boxHeightKey) boxW = Math.max(hMm * 1.2, 12) * MM_TO_PX * scale;
+            boxH = Math.max(16, hMm * MM_TO_PX * scale);
+        }
+        return { topMm, leftPct, boxW, boxH };
+    };
     const resetSelected = () => {
         if (!selected) return;
         const keys = [
@@ -3382,15 +3496,20 @@ export function CertificateDesigner({
             keys.forEach(k => { next[k] = ''; });
             return next;
         });
+        setEditedTexts(prev => {
+            const next = new Set(prev);
+            (selected.texts || []).forEach(x => next.delete(x.key));
+            return next;
+        });
         setDirty(true);
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col">
+        <div className="fixed inset-0 z-[65] bg-gray-100 flex flex-col">
             <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
 
             {/* ---- Site brand bar ---- */}
-            <div className="bg-sky-800 text-white shrink-0">
+            <div className="bg-sky-800 text-white shrink-0 max-lg:landscape:hidden">
                 <div className="flex items-center gap-3 px-4 py-2">
                     {branding?.logoSrc && (
                         <img
@@ -3412,20 +3531,22 @@ export function CertificateDesigner({
             </div>
 
             {/* ---- Page toolbar ---- */}
-            <header className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-200 shadow-sm shrink-0">
+            {/* Phones: row 1 = Back, title, Save (always visible); row 2 = the tools, wrapping.
+                Large screens: everything on one row, as before. */}
+            <header className="flex flex-wrap lg:flex-nowrap items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-2.5 bg-white border-b border-gray-200 shadow-sm shrink-0">
                 <button
                     type="button"
                     onClick={handleBack}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold text-gray-700 hover:bg-gray-100 border border-gray-300"
+                    className="order-1 shrink-0 flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded text-sm font-semibold text-gray-700 hover:bg-gray-100 border border-gray-300"
                 >
-                    <ArrowLeft className="h-4 w-4" /> {t('certificates.designer.back', 'Back')}
+                    <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">{t('certificates.designer.back', 'Back')}</span>
                 </button>
 
-                <div className="h-6 w-px bg-gray-200" />
+                <div className="hidden lg:block order-1 h-6 w-px bg-gray-200" />
 
-                <nav className="min-w-0 text-xs text-gray-500 flex items-center gap-1.5 truncate">
-                    <span className="hover:text-gray-700 cursor-pointer" onClick={handleBack}>{t('certificates.approvals.title', 'Certificate Approvals')}</span>
-                    <span className="text-gray-300">/</span>
+                <nav className="order-1 hidden sm:flex flex-1 lg:flex-initial min-w-0 text-xs text-gray-500 items-center gap-1.5 truncate">
+                    <span className="hidden sm:inline hover:text-gray-700 cursor-pointer" onClick={handleBack}>{t('certificates.approvals.title', 'Certificate Approvals')}</span>
+                    <span className="hidden sm:inline text-gray-300">/</span>
                     <span className="font-semibold text-gray-800 truncate">
                         {scopeKind === 'general' ? t('certificates.templates.general_template', 'General template') : scopeKind === 'courseType' ? t('certificates.designer.type_template', '{{type}} template', { type: scope.courseType }) : (course?.course_type || t('certificates.designer.course', 'Course'))}
                     </span>
@@ -3437,9 +3558,23 @@ export function CertificateDesigner({
                     )}
                 </nav>
 
-                <div className="ml-auto flex items-center gap-2">
-                    {dirty && <span className="text-[11px] font-semibold text-amber-600">{t('certificates.designer.unsaved', 'Unsaved changes')}</span>}
+                <div className="order-2 lg:order-3 shrink-0 ms-auto sm:ms-0 flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setShowTools(v => !v)}
+                        aria-expanded={showTools}
+                        className={`lg:hidden h-9 px-2.5 rounded border text-sm font-semibold flex items-center gap-1 ${showTools ? 'border-sky-600 bg-sky-50 text-sky-800' : 'border-gray-300 text-gray-700'}`}
+                        title={t('certificates.designer.tools', 'Tools')}
+                    >
+                        <Settings className="h-4 w-4" /><span className="hidden sm:inline">{t('certificates.designer.tools', 'Tools')}</span>
+                    </button>
+                    {dirty && <span className="text-[11px] leading-tight font-semibold text-amber-600 max-w-[5.5rem] lg:max-w-none">{t('certificates.designer.unsaved', 'Unsaved changes')}</span>}
+                    <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingAsset} className="px-3 lg:px-4 whitespace-nowrap">
+                        {isSaving ? <Spinner size="sm" /> : t('certificates.common.save_template', 'Save Template')}
+                    </Button>
+                </div>
 
+                <div className={`${showTools ? 'flex' : 'hidden'} lg:flex order-3 lg:order-2 w-full lg:w-auto lg:ms-auto flex-wrap lg:flex-nowrap items-center gap-2`}>
                     <div className="flex rounded overflow-hidden border border-gray-300">
                         <button type="button" onClick={() => setLanguage('en')} className={`px-2.5 py-1 text-xs font-semibold ${!isArabic ? 'bg-sky-600 text-white' : 'bg-white text-gray-700'}`}>EN</button>
                         <button type="button" onClick={() => setLanguage('ar')} className={`px-2.5 py-1 text-xs font-semibold ${isArabic ? 'bg-sky-600 text-white' : 'bg-white text-gray-700'}`}>عربي</button>
@@ -3456,7 +3591,7 @@ export function CertificateDesigner({
                         <option value="1">100%</option>
                     </select>
 
-                    <div className="flex items-center gap-1.5 border border-gray-300 rounded px-2 py-0.5 bg-white">
+                    <div className="flex flex-wrap lg:flex-nowrap items-center gap-x-1.5 gap-y-1 border border-gray-300 rounded px-2 py-0.5 bg-white whitespace-nowrap">
                         <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title={t('certificates.designer.grid_title', 'Show the grid, rulers and centre lines')}>
                             <input type="checkbox" checked={showGuides} onChange={e => setShowGuides(e.target.checked)} />
                             {t('certificates.designer.grid', 'Grid')}
@@ -3506,16 +3641,13 @@ export function CertificateDesigner({
                         type="button"
                         onClick={() => setShowRealPreview(true)}
                         disabled={!!uploadingAsset}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold border border-sky-600 text-sky-700 bg-white hover:bg-sky-50 disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold border border-sky-600 text-sky-700 bg-white hover:bg-sky-50 disabled:opacity-50 whitespace-nowrap"
                         title={t('certificates.designer.preview_title', 'Render the actual certificate, exactly as the PDF will be')}
                     >
                         <Eye className="h-4 w-4" /> {t('certificates.designer.preview_certificate', 'Preview certificate')}
                     </button>
 
-                    <Button variant="secondary" onClick={handleBack} disabled={isSaving}>{t('certificates.common.cancel', 'Cancel')}</Button>
-                    <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingAsset}>
-                        {isSaving ? <Spinner size="sm" /> : t('certificates.common.save_template', 'Save Template')}
-                    </Button>
+                    <Button variant="secondary" onClick={handleBack} disabled={isSaving} className="hidden lg:flex">{t('certificates.common.cancel', 'Cancel')}</Button>
                 </div>
             </header>
 
@@ -3532,9 +3664,27 @@ export function CertificateDesigner({
                 />
             )}
 
-            <div className="flex-1 flex min-h-0">
+            {/* Phones: certificate on top, then Elements / Settings tabs below it.
+                Large screens: three columns. */}
+            <div className="flex-1 flex flex-col max-lg:landscape:flex-row lg:flex-row min-h-0">
+                {/* Phones: tabs + the two panels share this column. Large screens: lg:contents lets
+                    the two panels sit either side of the canvas again. */}
+                <div className="order-2 flex-1 min-h-0 min-w-0 flex flex-col max-lg:landscape:flex-none max-lg:landscape:w-[44%] max-lg:landscape:border-s max-lg:landscape:border-gray-200 lg:contents">
+                <div className="lg:hidden shrink-0 flex bg-white border-y border-gray-200">
+                    {[['elements', t('certificates.designer.elements', 'Elements')], ['props', selected?.label || t('certificates.designer.settings', 'Settings')]].map(([key, label]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => setMobilePane(key)}
+                            className={`flex-1 min-w-0 truncate px-3 py-2.5 text-sm font-semibold border-b-2 ${mobilePane === key ? 'border-sky-600 text-sky-800 bg-sky-50' : 'border-transparent text-gray-600'}`}
+                        >
+                            {key === 'props' && <Settings className="inline h-4 w-4 me-1 -mt-0.5" />}{label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* ---- Element list ---- */}
-                <aside className="w-52 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+                <aside className={`${mobilePane === 'elements' ? 'flex-1' : 'hidden'} lg:order-1 lg:block lg:flex-none min-h-0 lg:w-52 shrink-0 bg-white lg:border-r border-gray-200 overflow-y-auto`}>
                     <div className="px-3 py-2 border-b flex items-center justify-between">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t('certificates.designer.elements', 'Elements')}</span>
                         <button
@@ -3555,8 +3705,8 @@ export function CertificateDesigner({
                         <button
                             key={el.id}
                             type="button"
-                            onClick={() => setSelectedId(el.id)}
-                            className={`w-full text-left px-3 py-2 text-sm border-b border-gray-100 flex items-center gap-2 ${selectedId === el.id ? 'bg-sky-50 text-sky-800 font-semibold border-l-4 border-l-sky-600' : el.inactive ? 'text-gray-400 hover:bg-gray-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                            onClick={() => { setSelectedId(el.id); setQuickClosed(false); setMobilePane('props'); }}
+                            className={`w-full text-left px-3 py-2.5 lg:py-2 text-sm border-b border-gray-100 flex items-center gap-2 ${selectedId === el.id ? 'bg-sky-50 text-sky-800 font-semibold border-l-4 border-l-sky-600' : el.inactive ? 'text-gray-400 hover:bg-gray-50' : 'text-gray-700 hover:bg-gray-50'}`}
                         >
                             <span className="truncate">{el.label}</span>
                             {el.inactive && <span className="ml-auto text-[10px] border border-gray-300 rounded px-1 text-gray-500">{t('certificates.designer.add_badge', 'add')}</span>}
@@ -3565,141 +3715,9 @@ export function CertificateDesigner({
                     ))}
                 </aside>
 
-                {/* ---- Canvas ---- */}
-                <main className="flex-1 min-w-0 overflow-auto p-6 bg-gray-200">
-                    <div
-                        ref={canvasRef}
-                        className="mx-auto bg-white shadow-lg"
-                        style={{ width: zoom === 'fit' ? '100%' : PAGE_W_PX * scale, maxWidth: '100%', position: 'relative', height: PAGE_H_PX * scale, touchAction: 'none' }}
-                    >
-                        <div
-                            style={{
-                                width: PAGE_W_PX, height: PAGE_H_PX,
-                                transform: `scale(${scale})`, transformOrigin: 'top left',
-                                position: 'absolute', top: 0, left: 0, pointerEvents: 'none'
-                            }}
-                        >
-                            <CertificateTemplate
-                                course={previewCourse}
-                                participant={{ name: isArabic ? 'اسم المشارك' : 'Participant Name', id: 'preview' }}
-                                federalProgramManagerName={liveCourse.approvedByManagerName || ''}
-                                participantSubCourse={autoSubCourse || null}
-                                language={language}
-                                programManagerSignatureUrl={liveCourse.approvedByManagerSignatureUrl || null}
-                                directorName={liveCourse.approvedDirectorName || liveCourse.director || ''}
-                                directorSignatureUrl={liveCourse.approvedDirectorSignatureUrl || null}
-                                programStampUrl={liveCourse.approvedProgramStampUrl || null}
-                                thirdPartySignatureUrl={liveCourse.approvedThirdPartySignatureUrl || null}
-                                fourthPartySignatureUrl={liveCourse.approvedFourthPartySignatureUrl || null}
-                                showPlaceholders
-                            />
-                        </div>
-
-                        {(showGuides || activeGuides) && (
-                            <GridOverlay
-                                gridSize={showGuides ? Number(gridPrefs.gridSize) || 0 : 0}
-                                showRulers={showGuides && gridPrefs.showRulers}
-                                guides={activeGuides}
-                            />
-                        )}
-
-                        {elements.filter(el => !el.inactive).map(el => {
-                            const isSel = selectedId === el.id;
-
-                            let topMm, leftPct, boxW, boxH;
-
-                            if (el.imageOf) {
-                                // Reconstruct where the <img> lands: it is anchored to the
-                                // BOTTOM of its block's text, which is the name line plus the
-                                // role line, then lifted by `...ImageBottom` millimetres.
-                                const b = el.imageOf;
-                                const px = (k, sharedK) => readNum(data, `${b}${k}`, readNum(data, sharedK, CERT_DEFAULTS[sharedK]));
-                                const imgW = px('SignatureImageWidth', 'signatureImageWidth');
-                                const imgH = px('SignatureImageHeight', 'signatureImageHeight');
-                                const imgBottom = px('SignatureImageBottom', 'signatureImageBottom');
-                                const imgOffsetX = px('SignatureImageOffsetX', 'signatureImageOffsetX');
-
-                                // Text sizes and the row height are read per block, since each
-                                // signature can now carry its own.
-                                const nameFs = readNum(data, `${b}SignatureNameFontSize`, readNum(data, 'signatureNameFontSize', CERT_DEFAULTS.signatureNameFontSize));
-                                const roleFs = readNum(data, `${b}SignatureRoleFontSize`, readNum(data, 'signatureRoleFontSize', CERT_DEFAULTS.signatureRoleFontSize));
-                                const textMm = ((nameFs + roleFs) * 1.25) / MM_TO_PX + 1;
-
-                                const blockTop = readNum(data, `${b}SignatureTop`, readNum(data, 'signatureTop', CERT_DEFAULTS.signatureTop));
-                                const blockLeft = readNum(data, el.blockLeftKey, el.blockLeftDef);
-
-                                topMm = blockTop + textMm - imgBottom - imgH;
-                                leftPct = blockLeft + (imgOffsetX / 297) * 100;
-                                boxW = imgW * MM_TO_PX * scale;
-                                boxH = imgH * MM_TO_PX * scale;
-                            } else {
-                                topMm = readNum(data, el.topKey, el.topDef);
-                                leftPct = el.leftKey ? readNum(data, el.leftKey, el.leftDef) : 50;
-                                boxW = el.box.widthMm
-                                    ? el.box.widthMm * MM_TO_PX * scale
-                                    : (el.box.widthPct / 100) * PAGE_W_PX * scale;
-                                const hMm = el.boxHeightKey ? readNum(data, el.boxHeightKey, el.boxHeightDef) : el.box.heightMm;
-                                if (el.boxHeightKey) boxW = Math.max(hMm * 1.2, 12) * MM_TO_PX * scale;
-                                boxH = Math.max(16, hMm * MM_TO_PX * scale);
-                            }
-
-                            return (
-                                <div
-                                    key={el.id}
-                                    onPointerDown={(e) => startDrag(e, el)}
-                                    title={t('certificates.designer.drag_to_move', '{{label}} — drag to move', { label: el.label })}
-                                    style={{
-                                        position: 'absolute',
-                                        top: topMm * MM_TO_PX * scale,
-                                        left: `calc(${leftPct}% - ${boxW / 2}px)`,
-                                        width: boxW,
-                                        height: Math.max(12, boxH),
-                                        cursor: 'move',
-                                        zIndex: isSel ? 45 : (el.imageOf ? 35 : 30),
-                                        border: `1px ${isSel ? 'solid' : 'dashed'} ${isSel ? '#0284c7' : overlappingIds.has(el.id) ? '#dc2626' : el.imageOf ? 'rgba(217,119,6,0.65)' : 'rgba(2,132,199,0.4)'}`,
-                                        background: isSel ? 'rgba(2,132,199,0.16)' : overlappingIds.has(el.id) ? 'rgba(220,38,38,0.12)' : (el.imageOf ? 'rgba(217,119,6,0.10)' : 'rgba(2,132,199,0.04)'),
-                                        borderRadius: 3
-                                    }}
-                                >
-                                    {isSel && (
-                                        <span style={{
-                                            position: 'absolute', top: -16, left: -1,
-                                            fontSize: 9, lineHeight: '15px', padding: '0 5px',
-                                            background: '#0284c7', color: 'white',
-                                            borderRadius: '3px 3px 0 0', whiteSpace: 'nowrap'
-                                        }}>
-                                            {el.imageOf
-                                                ? t('certificates.designer.image_pos', '{{label}} · {{up}}mm up · {{across}}mm across', { label: el.label, up: readNum(data, el.axes.yKey, el.axes.yDef), across: readNum(data, el.axes.xKey, el.axes.xDef) })
-                                                : `${el.label} · ${Math.round(topMm)}mm${el.leftKey ? ` · ${Math.round(leftPct)}%` : ''}`}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {overlaps.length > 0 && (
-                        <div className="max-w-3xl mx-auto mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-                            <span className="font-bold">{t('certificates.designer.overlapping', 'Overlapping on the certificate:')} </span>
-                            {overlaps.map(([a, b], i) => (
-                                <span key={`${a.id}-${b.id}`}>
-                                    {i > 0 && ' · '}
-                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(a.id)}>{a.label}</button>
-                                    {` ${t('certificates.designer.and', 'and')} `}
-                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(b.id)}>{b.label}</button>
-                                </span>
-                            ))}
-                            <span className="text-red-600"> — {t('certificates.designer.overlap_fix', 'move one of them, or hide the line you don’t need.')}</span>
-                        </div>
-                    )}
-
-                    <p className="text-center text-xs text-gray-500 mt-3">
-                        {t('certificates.designer.canvas_help', 'Drag any box to move it — pink lines show when it lines up with something (hold Alt to move freely). Arrow keys nudge by 1mm, Shift+Arrow by one grid step.')}
-                    </p>
-                </main>
 
                 {/* ---- Properties panel ---- */}
-                <aside className="w-80 shrink-0 bg-white border-l border-gray-200 overflow-y-auto p-4">
+                <aside className={`${mobilePane === 'props' ? 'flex-1' : 'hidden'} lg:order-3 lg:block lg:flex-none min-h-0 lg:w-80 shrink-0 bg-white lg:border-l border-gray-200 overflow-y-auto p-4 pb-8`}>
                     {selected && (
                         <>
                             <div className="flex items-center justify-between mb-3">
@@ -3870,17 +3888,17 @@ export function CertificateDesigner({
                                     {t.multiline ? (
                                         <textarea
                                             dir={t.rtl ? 'rtl' : 'ltr'}
-                                            value={ownData[t.key] || ''}
+                                            value={textValue(t.key)}
                                             placeholder={inherited[t.key] || t.placeholder}
-                                            onChange={e => set(t.key, e.target.value)}
+                                            onChange={e => setText(t.key, e.target.value)}
                                             className="w-full border rounded p-2 text-sm h-24"
                                         />
                                     ) : (
                                         <input
                                             dir={t.rtl ? 'rtl' : 'ltr'}
-                                            value={ownData[t.key] || ''}
+                                            value={textValue(t.key)}
                                             placeholder={inherited[t.key] || t.placeholder}
-                                            onChange={e => set(t.key, e.target.value)}
+                                            onChange={e => setText(t.key, e.target.value)}
                                             className="w-full border rounded px-2 py-1 text-sm"
                                         />
                                     )}
@@ -4012,6 +4030,175 @@ export function CertificateDesigner({
                         </>
                     )}
                 </aside>
+                </div>
+
+                {/* ---- Canvas ---- */}
+                <main className="order-1 lg:order-2 shrink-0 lg:shrink lg:flex-1 min-w-0 max-h-[46vh] max-lg:landscape:max-h-none max-lg:landscape:flex-1 max-lg:landscape:shrink lg:max-h-none overflow-auto p-3 lg:p-6 bg-gray-200">
+                    <div
+                        ref={canvasRef}
+                        className="mx-auto bg-white shadow-lg"
+                        style={{ width: zoom === 'fit' ? '100%' : PAGE_W_PX * scale, maxWidth: '100%', position: 'relative', height: PAGE_H_PX * scale, touchAction: 'none' }}
+                    >
+                        <div
+                            style={{
+                                width: PAGE_W_PX, height: PAGE_H_PX,
+                                transform: `scale(${scale})`, transformOrigin: 'top left',
+                                position: 'absolute', top: 0, left: 0, pointerEvents: 'none'
+                            }}
+                        >
+                            <CertificateTemplate
+                                course={previewCourse}
+                                participant={{ name: isArabic ? 'اسم المشارك' : 'Participant Name', id: 'preview' }}
+                                federalProgramManagerName={liveCourse.approvedByManagerName || ''}
+                                participantSubCourse={autoSubCourse || null}
+                                language={language}
+                                programManagerSignatureUrl={liveCourse.approvedByManagerSignatureUrl || null}
+                                directorName={liveCourse.approvedDirectorName || liveCourse.director || ''}
+                                directorSignatureUrl={liveCourse.approvedDirectorSignatureUrl || null}
+                                programStampUrl={liveCourse.approvedProgramStampUrl || null}
+                                thirdPartySignatureUrl={liveCourse.approvedThirdPartySignatureUrl || null}
+                                fourthPartySignatureUrl={liveCourse.approvedFourthPartySignatureUrl || null}
+                                showPlaceholders
+                            />
+                        </div>
+
+                        {(showGuides || activeGuides) && (
+                            <GridOverlay
+                                gridSize={showGuides ? Number(gridPrefs.gridSize) || 0 : 0}
+                                showRulers={showGuides && gridPrefs.showRulers}
+                                guides={activeGuides}
+                            />
+                        )}
+
+                        {elements.filter(el => !el.inactive).map(el => {
+                            const isSel = selectedId === el.id;
+
+                            const { topMm, leftPct, boxW, boxH } = geomOf(el);
+
+                            return (
+                                <div
+                                    key={el.id}
+                                    onPointerDown={(e) => startDrag(e, el)}
+                                    onDoubleClick={() => quickInputRef.current?.focus()}
+                                    title={t('certificates.designer.drag_to_move', '{{label}} — drag to move', { label: el.label })}
+                                    style={{
+                                        position: 'absolute',
+                                        top: topMm * MM_TO_PX * scale,
+                                        left: `calc(${leftPct}% - ${boxW / 2}px)`,
+                                        width: boxW,
+                                        height: Math.max(12, boxH),
+                                        cursor: 'move',
+                                        zIndex: isSel ? 45 : (el.imageOf ? 35 : 30),
+                                        border: `1px ${isSel ? 'solid' : 'dashed'} ${isSel ? '#0284c7' : overlappingIds.has(el.id) ? '#dc2626' : el.imageOf ? 'rgba(217,119,6,0.65)' : 'rgba(2,132,199,0.4)'}`,
+                                        background: isSel ? 'rgba(2,132,199,0.16)' : overlappingIds.has(el.id) ? 'rgba(220,38,38,0.12)' : (el.imageOf ? 'rgba(217,119,6,0.10)' : 'rgba(2,132,199,0.04)'),
+                                        borderRadius: 3
+                                    }}
+                                >
+                                    {isSel && (
+                                        <span style={{
+                                            position: 'absolute', top: -16, left: -1,
+                                            fontSize: 9, lineHeight: '15px', padding: '0 5px',
+                                            background: '#0284c7', color: 'white',
+                                            borderRadius: '3px 3px 0 0', whiteSpace: 'nowrap'
+                                        }}>
+                                            {el.imageOf
+                                                ? t('certificates.designer.image_pos', '{{label}} · {{up}}mm up · {{across}}mm across', { label: el.label, up: readNum(data, el.axes.yKey, el.axes.yDef), across: readNum(data, el.axes.xKey, el.axes.xDef) })
+                                                : `${el.label} · ${Math.round(topMm)}mm${el.leftKey ? ` · ${Math.round(leftPct)}%` : ''}`}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {/* ---- Quick editor on the certificate: type the text, change the size or the image right here ---- */}
+                        {selected && !selected.inactive && !quickClosed && (() => {
+                            const g = geomOf(selected);
+                            const canvasW = PAGE_W_PX * scale;
+                            const w = Math.max(200, Math.min(320, canvasW - 8));
+                            const boxTop = g.topMm * MM_TO_PX * scale;
+                            const below = g.topMm < 120;
+                            const allTexts = (selected.texts || []).filter(x => !excludedKeys.includes(x.key));
+                            const langTexts = allTexts.filter(x => !!x.rtl === isArabic);
+                            const quickTexts = (langTexts.length ? langTexts : allTexts).slice(0, 2);
+                            // Text grows by font size; a logo grows by its height in mm.
+                            const size = selected.fontKey
+                                ? { key: selected.fontKey, def: selected.fontDef, min: 6, max: 140, unit: 'px' }
+                                : selected.boxHeightKey ? { key: selected.boxHeightKey, def: selected.boxHeightDef, min: 5, max: 80, unit: 'mm' } : null;
+                            const sizeNow = size ? readNum(data, size.key, size.def) : null;
+                            const stepSize = (d) => set(size.key, String(Math.min(size.max, Math.max(size.min, Math.round(sizeNow + d)))));
+                            if (!quickTexts.length && !size && !selected.logoKey) return null;
+                            const iconBtn = 'h-8 min-w-8 px-2 rounded border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1';
+                            return (
+                                <div
+                                    onPointerDown={e => e.stopPropagation()}
+                                    className="rounded-lg border border-sky-300 bg-white/95 shadow-lg p-1.5 flex flex-col gap-1.5"
+                                    style={{
+                                        position: 'absolute', zIndex: 60, width: w,
+                                        left: `clamp(4px, calc(${g.leftPct}% - ${w / 2}px), ${canvasW - w - 4}px)`,
+                                        top: below ? boxTop + Math.max(12, g.boxH) + 6 : boxTop - 20,
+                                        transform: below ? 'none' : 'translateY(-100%)'
+                                    }}
+                                >
+                                    {quickTexts.map((x, i) => {
+                                        const common = {
+                                            ref: i === 0 ? quickInputRef : undefined,
+                                            dir: x.rtl ? 'rtl' : 'ltr',
+                                            value: textValue(x.key),
+                                            placeholder: inherited[x.key] || x.placeholder || x.label,
+                                            'aria-label': x.label,
+                                            onChange: e => setText(x.key, e.target.value),
+                                            className: 'w-full border border-gray-300 rounded px-2 py-1 text-base lg:text-sm'
+                                        };
+                                        return x.multiline ? <textarea key={x.key} {...common} rows={3} /> : <input key={x.key} {...common} />;
+                                    })}
+                                    <div className="flex items-center gap-1">
+                                        {size && (
+                                            <>
+                                                <button type="button" className={iconBtn} onClick={() => stepSize(-1)} title={t('certificates.designer.smaller', 'Smaller')}>{size.unit === 'px' ? 'A−' : '−'}</button>
+                                                <span className="text-xs text-gray-500 tabular-nums w-11 text-center">{Math.round(sizeNow)}{size.unit}</span>
+                                                <button type="button" className={iconBtn} onClick={() => stepSize(1)} title={t('certificates.designer.larger', 'Larger')}>{size.unit === 'px' ? 'A+' : '+'}</button>
+                                            </>
+                                        )}
+                                        {selected.logoKey && (
+                                            <button type="button" className={iconBtn} onClick={() => triggerUpload(selected.logoKey)} disabled={!!uploadingAsset}>
+                                                {uploadingAsset === selected.logoKey ? <Spinner size="sm" /> : <><Upload className="h-4 w-4" />{data[selected.logoKey] ? t('certificates.designer.replace', 'Replace') : t('certificates.designer.upload', 'Upload')}</>}
+                                            </button>
+                                        )}
+                                        <span className="flex-1" />
+                                        <button type="button" className={`${iconBtn} lg:hidden`} onClick={() => setMobilePane('props')} title={t('certificates.designer.more_settings', 'More settings')}>
+                                            <Settings className="h-4 w-4" />
+                                        </button>
+                                        <button type="button" className={iconBtn} onClick={() => setQuickClosed(true)} title={t('certificates.common.close', 'Close')}>
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
+
+                    {overlaps.length > 0 && (
+                        <div className="max-w-3xl mx-auto mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                            <span className="font-bold">{t('certificates.designer.overlapping', 'Overlapping on the certificate:')} </span>
+                            {overlaps.map(([a, b], i) => (
+                                <span key={`${a.id}-${b.id}`}>
+                                    {i > 0 && ' · '}
+                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(a.id)}>{a.label}</button>
+                                    {` ${t('certificates.designer.and', 'and')} `}
+                                    <button type="button" className="underline font-semibold" onClick={() => setSelectedId(b.id)}>{b.label}</button>
+                                </span>
+                            ))}
+                            <span className="text-red-600"> — {t('certificates.designer.overlap_fix', 'move one of them, or hide the line you don’t need.')}</span>
+                        </div>
+                    )}
+
+                    <p className="lg:hidden text-center text-xs text-gray-600 mt-2">
+                        {t('certificates.designer.canvas_help_touch', 'Tap a box to pick it, drag to move it, and type in the small editor to change its text.')}
+                    </p>
+                    <p className="hidden lg:block text-center text-xs text-gray-500 mt-3">
+                        {t('certificates.designer.canvas_help', 'Drag any box to move it — pink lines show when it lines up with something (hold Alt to move freely). Arrow keys nudge by 1mm, Shift+Arrow by one grid step.')}
+                    </p>
+                </main>
             </div>
         </div>
     );
@@ -4192,8 +4379,8 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                     <FormGroup label={t('certificates.customizer.left_pct', 'Left %')}>
                                         <Input
                                             type="number" inputMode="decimal"
-                                            value={data[`logo${slot.n}Left`] ?? ''}
-                                            onChange={e => handleInputChange(`logo${slot.n}Left`, e.target.value)}
+                                            value={data[logoLeftKey(slot, previewLang === 'ar')] ?? ''}
+                                            onChange={e => handleInputChange(logoLeftKey(slot, previewLang === 'ar'), e.target.value)}
                                             placeholder={String(Math.round(defaultLogoLeft(data, slot, previewLang === 'ar')))}
                                         />
                                     </FormGroup>
@@ -4456,6 +4643,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
                                     // per-logo and per-signature overrides go back to following the row
                                     'logo1Top','logo2Top','logo3Top','logo4Top',
                                     'logo1Left','logo2Left','logo3Left','logo4Left',
+                                    'logo1LeftAr','logo2LeftAr','logo3LeftAr','logo4LeftAr',
                                     'managerSignatureTop','directorSignatureTop','thirdSignatureTop','fourthSignatureTop'
                                 ].forEach(k => { next[k] = ''; });
                                 return next;

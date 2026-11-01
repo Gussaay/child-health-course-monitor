@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    compactRow, rowsWithin, describeFields, groupRows, cleanFilters, systemFor, pageBlock, TOOLS,
+    compactRow, rowsWithin, describeFields, groupRows, cleanFilters, systemFor, pageBlock, TOOLS, splitChart, totalsBlock, eachRows, passes,
 } from '../functions/aiDataText.js';
 import { chartToText, cleanPageText } from '../src/utils/pageSnapshot.js';
 
@@ -146,7 +146,7 @@ describe('what the model is told', () => {
     });
 
     it('offers only reading tools', () => {
-        expect(TOOLS.map((t) => t.name)).toEqual(['list_data', 'describe_fields', 'count_data', 'query_data']);
+        expect(TOOLS.map((t) => t.name)).toEqual(['read_reference', 'online_progress', 'list_data', 'describe_fields', 'count_data', 'query_data']);
     });
 
     it('describes tools in a shape Gemini accepts (no untyped values)', () => {
@@ -266,5 +266,70 @@ describe('analysis, plans and follow-ups', () => {
     it('offers breakdown on count_data in a shape both providers accept', () => {
         const count = TOOLS.find((t) => t.name === 'count_data');
         expect(count.parameters.properties.breakdown).toMatchObject({ type: 'array', items: { type: 'string' } });
+    });
+});
+
+describe('charts and ready totals', () => {
+    it('takes a valid chart line out of the answer', () => {
+        const text = 'Courses by state:\n- A 12\n- B 7\n- C 3\n@@CHART {"type":"bar","title":"Courses","labels":["A","B","C"],"values":[12,7,3],"unit":""}\nEnd.';
+        const { text: rest, chart } = splitChart(text);
+        expect(rest).not.toContain('@@CHART');
+        expect(rest).toContain('End.');
+        expect(chart).toEqual({ type: 'bar', title: 'Courses', labels: ['A', 'B', 'C'], values: [12, 7, 3], unit: '' });
+    });
+    it('drops a broken chart and turns a crowded pie into bars', () => {
+        expect(splitChart('Hi\n@@CHART {"type":"bar","labels":["A","B"],"values":[1,"x"]}').chart).toBe(null);
+        expect(splitChart('Hi\n@@CHART {not json}').text.trim()).toBe('Hi');
+        const labels = 'ABCDEFG'.split('');
+        expect(splitChart(`@@CHART ${JSON.stringify({ type: 'pie', labels, values: labels.map(() => 1), unit: '%' })}`).chart).toMatchObject({ type: 'bar', unit: '%' });
+        expect(splitChart('No chart here').chart).toBe(null);
+    });
+    it('lists ready totals for the model and adds them to the instructions', () => {
+        const block = totalsBlock({ courses: 41, participants: 900, broken: NaN });
+        expect(block).toContain('- courses');
+        expect(block).toContain(': 41');
+        expect(block).not.toContain('broken');
+        expect(totalsBlock({})).toBe('');
+        expect(systemFor({ lang: 'en', totals: { courses: 41 } })).toContain(': 41');
+        expect(systemFor({ lang: 'en' })).toContain('@@CHART');
+    });
+});
+
+describe('the entries of a list inside a record (a facility\'s staff)', () => {
+    const facilities = [
+        { 'اسم_المؤسسة': 'A', 'الولاية': 'Kassala', imnci_staff: [{ name: 'x', job_title: 'طبيب', is_trained: 'Yes' }, { name: 'y', job_title: 'مساعد طبي', is_trained: 'No' }] },
+        { 'اسم_المؤسسة': 'B', 'الولاية': 'Gedaref', imnci_staff: [{ name: 'z', job_title: 'طبيب', is_trained: 'No' }] },
+        { 'اسم_المؤسسة': 'C', 'الولاية': 'Gedaref' },
+    ];
+
+    it('gives one row per staff member, with the facility beside it', () => {
+        const rows = eachRows(facilities, 'imnci_staff');
+        expect(rows).toHaveLength(3);
+        expect(rows[2]).toMatchObject({ name: 'z', 'اسم_المؤسسة': 'B', 'الولاية': 'Gedaref' });
+        expect(rows[0].imnci_staff).toBeUndefined();
+    });
+
+    it('counts staff by job and training', () => {
+        const groups = groupRows(eachRows(facilities, 'imnci_staff'), { groupBy: 'job_title', breakdown: ['is_trained'] });
+        expect(groups[0]).toMatchObject({ value: 'طبيب', count: 2 });
+    });
+
+    it('filters entries in memory', () => {
+        const rows = eachRows(facilities, 'imnci_staff').filter((r) => passes(r, cleanFilters([{ field: 'job_title', op: '==', value: 'طبيب' }, { field: 'is_trained', op: '==', value: 'yes' }])));
+        expect(rows.map((r) => r.name)).toEqual(['x']);
+    });
+});
+
+describe('any list inside a record', () => {
+    it('opens a nested list and a list of plain values', () => {
+        const plans = [{ state: 'Kassala', plan: { activities: [{ name: 'Train', status: 'done' }, { name: 'Visit', status: 'late' }] }, courses: ['IMNCI', 'ETAT'] }];
+        expect(eachRows(plans, 'plan.activities').map((r) => [r.state, r.status])).toEqual([['Kassala', 'done'], ['Kassala', 'late']]);
+        expect(eachRows(plans, 'courses').map((r) => r.value)).toEqual(['IMNCI', 'ETAT']);
+    });
+
+    it('shows what is inside list and object fields', () => {
+        const out = describeFields([{ staff: [{ name: 'a', job_title: 'طبيب' }], scores: { total: 3 } }]);
+        expect(out.fields.find((f) => f.field === 'staff').entryFields).toEqual(['name', 'job_title']);
+        expect(out.fields.find((f) => f.field === 'scores').subFields).toEqual(['total']);
     });
 });

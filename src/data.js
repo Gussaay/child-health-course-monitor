@@ -1444,6 +1444,19 @@ export async function upsertParticipant(payload) {
     }
 }
 
+// OSCE / skill checklists (community midwives course) live on the participant
+// under osce_results.<checklistId>, so they load with the participant list.
+// A null record removes that checklist's result.
+export async function saveParticipantOsceResult(participantId, checklistId, record) {
+    if (!participantId || !checklistId) throw new Error("Participant ID and checklist are required.");
+    const participantRef = doc(db, "participants", participantId);
+    const writePromise = updateDoc(participantRef, {
+        [`osce_results.${checklistId}`]: record ? record : deleteField(),
+        lastUpdatedAt: serverTimestamp()
+    });
+    await executeOfflineSafeWrite(writePromise, `OSCE ${checklistId}`);
+}
+
 export async function updateParticipantSharingSettings(participantId, settings) {
     if (!participantId) throw new Error("Participant ID is required.");
     const participantRef = doc(db, "participants", participantId);
@@ -1874,13 +1887,19 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
         oldObsSnapshot.forEach(doc => batch.delete(doc.ref)); 
     }
 
+    // createdByUid lets an observer on the shared monitoring link (a signed-in
+    // account without a staff role) save cases and later edit only their own;
+    // see the cases/observations rules. An edited case keeps its first author.
+    const uid = firebaseAuth.currentUser?.uid || null;
     const savedCase = { ...caseData, id: caseId, lastUpdatedAt: serverTimestamp() };
+    if (!editingCaseId && uid) savedCase.createdByUid = uid;
     batch.set(caseRef, savedCase, { merge: true }); 
 
     const savedObservations = [];
     observations.forEach(obs => {
         const obsRef = doc(collection(db, "observations")); 
         const finalObs = { ...obs, id: obsRef.id, caseId: caseId, lastUpdatedAt: serverTimestamp() }; 
+        if (uid) finalObs.createdByUid = uid;
         batch.set(obsRef, finalObs); 
         savedObservations.push(finalObs); 
     });
@@ -2227,6 +2246,14 @@ export async function resolveFacilityProjectAt(facilityId, visitTime) {
 // the visit stays with the project it was made under. If the facility cannot
 // be read in time (offline), the visit is saved without one and shows the
 // facility's project until "Assign projects to past visits" gives it its own.
+// The signed-in author of a new record, for the rules that let an account
+// without a staff role (the public mentorship and monitoring links) add
+// records and later edit only its own. Empty when nobody is signed in.
+function authorStamp() {
+    const uid = firebaseAuth.currentUser?.uid;
+    return uid ? { createdByUid: uid } : {};
+}
+
 async function withVisitProject(payload, isNew) {
     if (!isNew || !payload?.facilityId || hasRecordedProject(payload)) return payload;
     try {
@@ -2287,7 +2314,7 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
         const sessionData = {
             ...payload,
             lastUpdatedAt: serverTimestamp(),
-            ...( !sessionId ? { createdAt: serverTimestamp() } : {} ),
+            ...( !sessionId ? { createdAt: serverTimestamp(), ...authorStamp() } : {} ),
         };
         const docRef = sessionId ? doc(db, "skillMentorship", sessionId) : doc(collection(db, "skillMentorship")); 
         if (externalBatch) {
@@ -2381,7 +2408,7 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
         const sessionData = {
             ...payload,
             lastUpdatedAt: serverTimestamp(),
-            ...( !reportId ? { createdAt: serverTimestamp() } : {} ),
+            ...( !reportId ? { createdAt: serverTimestamp(), ...authorStamp() } : {} ),
         };
         const docRef = reportId ? doc(db, "imnciVisitReports", reportId) : doc(collection(db, "imnciVisitReports")); 
         const writePromise = setDoc(docRef, sessionData, { merge: !!reportId });
@@ -2420,7 +2447,7 @@ export async function saveEENCVisitReport(payload, reportId = null) {
         const sessionData = {
             ...payload,
             lastUpdatedAt: serverTimestamp(),
-            ...( !reportId ? { createdAt: serverTimestamp() } : {} ),
+            ...( !reportId ? { createdAt: serverTimestamp(), ...authorStamp() } : {} ),
         };
         const docRef = reportId ? doc(db, "eencVisitReports", reportId) : doc(collection(db, "eencVisitReports")); 
         const writePromise = setDoc(docRef, sessionData, { merge: !!reportId });
@@ -2910,6 +2937,41 @@ export async function recordCrash({ message, stack, screen }) {
         });
     } catch (e) {
         console.warn('Could not record that crash:', e?.message);
+    }
+}
+
+/**
+ * Records an error the app caught and handled (a refused save, for now) so it
+ * shows in Admin → Problems next to the crashes. Carries the account's role:
+ * "which role was this?" is the first question about any permission error.
+ * Never throws, and never logs with console.error (utils/errorCapture.js
+ * watches console.error, so that would loop).
+ */
+export async function recordHandledError(details) {
+    const user = firebaseAuth.currentUser;
+    if (!user) return; // the rules only take a report from a signed-in account
+    let role = null;
+    let roles = null;
+    try {
+        const snap = await fbGetDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) {
+            role = snap.data().role || null;
+            roles = Array.isArray(snap.data().roles) ? snap.data().roles.slice(0, 10) : null;
+        }
+    } catch { /* the role is a help, not a requirement */ }
+    try {
+        await submitProblemReport({
+            ...details,
+            role,
+            roles,
+            appVersion: typeof window !== 'undefined' ? window.__APP_VERSION__ || null : null,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 300) : null,
+            online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+            language: typeof document !== 'undefined' ? document.documentElement.lang || null : null,
+            reporterEmail: user.email || null,
+        });
+    } catch (e) {
+        console.warn('Could not record that error:', e?.message);
     }
 }
 

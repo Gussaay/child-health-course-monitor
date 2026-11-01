@@ -793,7 +793,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
 
         if (searchQuery) {
             const lowerQuery = searchQuery.toLowerCase();
-            result = result.filter(f => (f.name && f.name.toLowerCase().includes(lowerQuery)) || (f.email && f.email.toLowerCase().includes(lowerQuery)) || (f.phone && f.phone.includes(lowerQuery)));
+            result = result.filter(f => (f.name && f.name.toLowerCase().includes(lowerQuery)) || (f.email && f.email.toLowerCase().includes(lowerQuery)) || (f.phone && String(f.phone).includes(lowerQuery)));
         }
         
         // NEW: Sort by Alphabet or Score

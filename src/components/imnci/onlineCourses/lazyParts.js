@@ -18,3 +18,4 @@ export const ExerciseManagerView = lazy(() => import('../exercises.jsx').then((m
 // taught. Someone writing the course needs to be able to correct the protocol
 // without leaving for another screen and finding their way back.
 export const ProtocolEditor = lazy(() => import('../protocol'));
+export const ProgressDashboard = lazy(() => import('./ProgressDashboard').then((m) => ({ default: m.ProgressDashboard })));
