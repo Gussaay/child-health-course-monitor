@@ -6849,6 +6849,8 @@ const resources = {
             add_column: "+ column",
             add_row: "+ row",
             headings: "Headings",
+            part: "Standard lists for",
+            pick_hint: "Type or pick signs, classifications and treatments from the protocol; a classification sets its row colour.",
             insert: "Insert the chart",
             intro: "The row colour is the classification colour — the same one the protocol and the exercises use — so a pink row here means at the bedside what it means here.",
             title: "Build a classification chart",
@@ -7108,6 +7110,8 @@ const resources = {
           },
         },
         exercises: {
+          sections: { danger: "General danger signs", cough: "Cough / difficult breathing", diarrhea: "Diarrhoea", fever: "Fever", ear: "Ear problem", anemia: "Anaemia", malnutrition: "Malnutrition", vaccine: "Immunisation", other: "Other problems", feeding: "Assess the child's feeding" },
+          infant_sections: { infection: "Very severe disease / bacterial infection", jaundice: "Jaundice", diarrhea: "Diarrhoea", feeding: "Feeding problem or low weight", breast: "Assess breastfeeding", vaccine: "Immunisation", other: "Other problems" },
           badges: {
             built_in: "built-in",
             draft: "DRAFT",
@@ -7427,6 +7431,7 @@ const resources = {
         offline_pill: "Offline", no_internet_pill: "No internet", offline_pill_label: "Offline. Showing saved data; changes sync later.", download_offline: "No internet right now, so this file cannot be downloaded. Try again when you are back online."
       },
       imci: {
+        training: { mode_banner: "TRAINING MODE — no patient record is saved", treatment_not_required: "Not required in this exercise", submit_form: "Submit form", submitted: "Already submitted", correct: "correct", wrong: "wrong — should not be ticked", missed: "missed — this should be ticked", choose: "— choose —", vitamin_a: "Vitamin A" },
         ui: {
           age: "Age",
           age_unit_child: "months",
@@ -14378,6 +14383,8 @@ const resources = {
             add_column: "+ عمود",
             add_row: "+ صف",
             headings: "العناوين",
+            part: "القوائم القياسية لـ",
+            pick_hint: "اكتب أو اختر العلامات والتصنيفات والعلاجات من البروتوكول؛ اختيار التصنيف يحدد لون الصف.",
             insert: "إدراج الجدول",
             intro: "لون الصف هو لون التصنيف — نفسه المستخدم في البروتوكول والتمارين — لذا فإن الصف الوردي هنا يعني عند سرير المريض ما يعنيه هنا.",
             title: "إنشاء جدول تصنيف",
@@ -14637,6 +14644,8 @@ const resources = {
           },
         },
         exercises: {
+          sections: { danger: "علامات الخطورة العامة", cough: "الكحة / صعوبة التنفس", diarrhea: "الإسهال", fever: "الحمى", ear: "مشكلة الأذن", anemia: "فقر الدم", malnutrition: "سوء التغذية", vaccine: "التطعيم", other: "مشاكل أخرى", feeding: "تقييم تغذية الطفل" },
+          infant_sections: { infection: "مرض شديد جداً / التهاب بكتيري", jaundice: "اليرقان", diarrhea: "الإسهال", feeding: "مشكلة في التغذية أو نقص الوزن", breast: "تقييم الرضاعة الطبيعية", vaccine: "التطعيم", other: "مشاكل أخرى" },
           badges: {
             built_in: "مدمج",
             draft: "مسودة",
@@ -14956,6 +14965,7 @@ const resources = {
         offline_pill: "غير متصل", no_internet_pill: "لا يوجد إنترنت", offline_pill_label: "غير متصل. تُعرض البيانات المحفوظة وستُزامن التغييرات لاحقاً.", download_offline: "لا يوجد إنترنت الآن، لذا لا يمكن تنزيل هذا الملف. حاول مجدداً عند عودة الاتصال."
       },
       imci: {
+        training: { mode_banner: "وضع التدريب — لا يُحفظ سجل مريض", treatment_not_required: "غير مطلوب في هذا التمرين", submit_form: "إرسال الاستمارة", submitted: "تم الإرسال", correct: "صحيح", wrong: "خطأ — لا يجب اختياره", missed: "فات — كان يجب اختياره", choose: "— اختر —", vitamin_a: "فيتامين أ" },
         ui: {
           age: "العمر",
           age_unit_child: "شهر",

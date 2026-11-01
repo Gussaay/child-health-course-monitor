@@ -680,3 +680,13 @@ export const BookletDoseView = ({ protocol, edit = null, only = null }) => {
     );
 };
 
+
+// The same pickers for the advanced rule builder, so signs, classifications
+// and doses are chosen the same way on every editing screen.
+export { SignsPicker, ClassificationPicker, TreatmentEditor };
+/** The lists the pickers choose from, for one part of a protocol. */
+export const editorLists = (formType, protocol, ar) => ({
+    signOpts: signOptions(formType, protocol, ar),
+    classOpts: classificationOptions(formType, protocol, ar),
+    suggestions: treatmentSuggestions(formType, protocol, ar),
+});

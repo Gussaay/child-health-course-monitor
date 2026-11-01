@@ -8,6 +8,8 @@ import { notify } from '../../dialogs';
 import { storage } from '../../../firebase';
 import { upsertOnlineCourseItem } from '../../../data';
 import { IMNCI_SEVERITIES } from '../../constants';
+import { signOptions, classificationOptions, treatmentSuggestions } from '../standardLists';
+import { liveProtocol, SEVERITY_OF_COLOR } from '../vocabulary';
 import { SECTION_TABS, tabContent, newQuestion, newExerciseLink, blockHtml } from '../book';
 import { RichTextEditor, useImnci } from '../shared';
 import { ASSET_ROOT } from './assets';
@@ -297,6 +299,20 @@ export function ChartBuilderModal({ isOpen, onClose, onInsert }) {
     const { t, i18n } = useTranslation();
     const [rows, setRows] = useState([{ colour: 'note', cells: ['', '', ''] }]);
     const [headers, setHeaders] = useState(['Signs', 'Classify as', 'Treatment']);
+    // Signs, classifications and treatments come from the protocol's standard
+    // lists (the same ones Protocol management and the exercises use); a pick
+    // of a classification also sets the row to that classification's colour.
+    const [part, setPart] = useState('child');
+    const ar = i18n.language === 'ar';
+    const doc = liveProtocol(part);
+    const signs = signOptions(part, doc, ar);
+    const classes = classificationOptions(part, doc, ar);
+    const flat = (opts) => opts.groups.flatMap((g) => g.items.map((it) => (ar ? it.ar || it.en : it.en)));
+    const lists = { 0: flat(signs), 1: flat(classes), 2: treatmentSuggestions(part, doc, ar) };
+    const colourFor = (text) => {
+        const hit = classes.groups.flatMap((g) => g.items).find((it) => it.en === text || it.ar === text);
+        return hit ? SEVERITY_OF_COLOR[hit.color] : null;
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -305,8 +321,11 @@ export function ChartBuilderModal({ isOpen, onClose, onInsert }) {
         }
     }, [isOpen]);
 
-    const setCell = (ri, ci, v) => setRows((p) => p.map((r, i) => (
-        i === ri ? { ...r, cells: r.cells.map((c, k) => (k === ci ? v : c)) } : r)));
+    const setCell = (ri, ci, v) => setRows((p) => p.map((r, i) => {
+        if (i !== ri) return r;
+        const colour = ci === 1 ? colourFor(v) : null;
+        return { ...r, ...(colour ? { colour } : {}), cells: r.cells.map((c, k) => (k === ci ? v : c)) };
+    }));
     const addRow = () => setRows((p) => [...p, { colour: 'note', cells: headers.map(() => '') }]);
     const addColumn = () => {
         setHeaders((h) => [...h, '']);
@@ -335,6 +354,18 @@ export function ChartBuilderModal({ isOpen, onClose, onInsert }) {
                     {t('imnci_ui.courses.chart.intro', 'The row colour is the classification colour — the same one the protocol and the exercises use — so a pink row here means at the bedside what it means here.')}
                 </p>
 
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-slate-500">{t('imnci_ui.courses.chart.part', 'Standard lists for')}</span>
+                    <select value={part} onChange={(e) => setPart(e.target.value)} className="border rounded p-1 text-xs">
+                        <option value="child">{t('clinical_ui.protocol.parts.child', 'Sick child (2 months – 5 years)')}</option>
+                        <option value="infant">{t('clinical_ui.protocol.parts.infant', 'Young infant (up to 2 months)')}</option>
+                    </select>
+                    <span className="text-slate-500">{t('imnci_ui.courses.chart.pick_hint', 'Type or pick signs, classifications and treatments from the protocol; a classification sets its row colour.')}</span>
+                </div>
+                {[0, 1, 2].map((ci) => (
+                    <datalist key={ci} id={`chart-list-${ci}`}>{lists[ci].map((x) => <option key={x} value={x} />)}</datalist>
+                ))}
+
                 <div className="flex gap-1">
                     <span className="w-32 shrink-0 text-xs text-slate-500 self-center">{t('imnci_ui.courses.chart.headings', 'Headings')}</span>
                     {headers.map((h, i) => (
@@ -354,7 +385,8 @@ export function ChartBuilderModal({ isOpen, onClose, onInsert }) {
                         </select>
                         {r.cells.map((c, ci) => (
                             <input key={ci} value={c} onChange={(e) => setCell(ri, ci, e.target.value)}
-                                className="flex-1 border rounded px-2 py-1 text-sm" />
+                                list={ci <= 2 ? `chart-list-${ci}` : undefined} dir="auto"
+                                className="flex-1 min-w-0 border rounded px-2 py-1 text-sm" />
                         ))}
                         <button onClick={() => setRows((p) => p.filter((_, i) => i !== ri))}
                             disabled={rows.length <= 1}

@@ -269,6 +269,18 @@ describe('Protocol management layout', () => {
         const lines = Object.values(saved.categories).flatMap((c) => c.rules.flatMap((r) => [...r.treatments, ...(r.treatmentsAr || [])]));
         expect(lines.filter((l) => l.includes('{{dose:ciprofloxacin}}')).length).toBeGreaterThanOrEqual(2);
     });
+    it('the advanced rule builder picks signs, classifications and doses like the booklet editor', async () => {
+        await open({ child: P.child, infant: P.infant, dosages_child: P.dosages_child, dosages_infant: P.dosages_infant });
+        await act(async () => { button('Edit').click(); });
+        await act(async () => { button('Pneumonia / cough').click(); });
+        const adv = [...host.querySelectorAll('label')].find((l) => l.textContent.includes('Advanced rule builder')).querySelector('input');
+        await act(async () => { adv.click(); });
+        expect(host.textContent).toContain('Only when (all must be true)');
+        const selects = [...host.querySelectorAll('select')];
+        expect(selects.some((el) => el.value === 'Chest indrawing')).toBe(true);
+        expect(selects.some((el) => el.value === 'amoxicillin')).toBe(true);
+        expect([...host.querySelectorAll('textarea, input')].some((el) => String(el.value).includes('{{dose:'))).toBe(false);
+    });
     it('opens the national recording form when none is saved', async () => {
         await open({ child: P.child, infant: P.infant });
         await act(async () => { button('Recording form').click(); });

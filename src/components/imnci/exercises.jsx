@@ -17,6 +17,11 @@
 //
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18next from 'i18next';
+import { optionText } from './vocabulary';
+
+// Exercise options in the protocol's own words (vocabulary.js), in the screen's language.
+const screenLang = () => (String(i18next.language || '').toLowerCase().startsWith('ar') ? 'ar' : 'en');
 import { isOnline } from '../../firebase';
 import {
     Button, Card, CardBody, EmptyState, FormGroup, Modal, Select, Spinner, Toast,
@@ -246,9 +251,8 @@ export function gradeCase(expected, submitted, t = (k) => k, { requiredFields = 
     });
 
     const optionLabel = (section, id, bank) => {
-        const opt = (expected[bank]?.[section] || []).find(o => o.id === id);
-        if (opt?.label) return opt.label;
-        return String(id).startsWith('imci.') ? t(id) : id;
+        const opt = (expected[bank]?.[section] || []).find(o => o.id === id) || { id };
+        return optionText(opt, screenLang(), { t });
     };
 
     // Classification — the learner's own choice, all-or-nothing per section.
@@ -2223,7 +2227,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
         setExpected('sections', next);
     };
 
-    const optLabel = (o) => (String(o.id).startsWith('imci.') ? t(o.id) : (o.label || o.id));
+    const optLabel = (o) => optionText(o, screenLang(), { t });
 
     const toggleAnswer = (bucket, sec, id) => {
         const cur = ex.expected[bucket]?.[sec] || [];
@@ -2890,7 +2894,7 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
                 const bank = focus.expected.classifyOptions?.[sec] || [];
                 const labelOf = (combo) => combo.split(' + ').map(id => {
                     const o = bank.find(x => x.id === id);
-                    return o ? (String(o.id).startsWith('imci.') ? t(o.id) : (o.label || o.id)) : id;
+                    return o ? optionText(o, screenLang(), { t }) : id;
                 }).join(' + ');
                 const correctKey = [...(focus.expected.classifications[sec] || [])].sort().join(' + ');
                 const options = Object.keys(counts).map(k => ({ key: k, label: labelOf(k), correct: k === correctKey }));

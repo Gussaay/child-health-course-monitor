@@ -10,7 +10,7 @@ import { notify, confirmDialog, promptDialog } from '../dialogs';
 // drift into three different spellings of "yellow".
 import { IMNCI_SEVERITIES } from '../constants';
 import { NATIONAL_PROTOCOLS, NATIONAL_SAVE_ORDER } from './nationalProtocol';
-import { BookletProtocolView, BookletDoseView } from './bookletView';
+import { BookletProtocolView, BookletDoseView, SignsPicker, ClassificationPicker, TreatmentEditor, editorLists } from './bookletView';
 import { NATIONAL_FORMS } from './recordingForms';
 import { RecordingFormView } from './recordingFormView';
 import { NATIONAL_GUIDES } from './treatmentGuides';
@@ -265,40 +265,6 @@ export function validateProtocol(formType, data, dosageList = []) {
 
     return { errors, warnings };
 }
-
-// --- Custom Treatment Adder Component ---
-const CustomTreatmentAdder = ({ onAdd, dosages }) => {
-    const { t } = useTranslation();
-    const [val, setVal] = useState('');
-    return (
-        <div className="flex flex-col gap-1.5 mt-auto pt-3 border-t border-emerald-200">
-            <label className="text-xs font-bold text-emerald-800 uppercase">{t('clinical_ui.protocol.custom.title', 'Add Custom Treatment (If not in list)')}</label>
-            <div className="flex flex-col xl:flex-row gap-1.5 items-stretch xl:items-center">
-                <select 
-                    className="text-xs p-1.5 border border-emerald-300 rounded w-full xl:w-28 bg-emerald-50 text-emerald-800 font-bold" 
-                    onChange={(e) => { setVal(v => v + (v ? ' ' : '') + `{{dose:${e.target.value}}}`); e.target.value = ''; }}
-                >
-                    <option value="">{t('clinical_ui.protocol.custom.dose_tag', '+ Dose Tag')}</option>
-                    {dosages.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-                </select>
-                <input 
-                    type="text" 
-                    value={val} 
-                    onChange={e => setVal(e.target.value)} 
-                    placeholder={t('clinical_ui.protocol.custom.placeholder', 'Type custom text...')} 
-                    className="flex-1 text-xs p-1.5 border border-slate-300 rounded focus:ring-sky-500" 
-                    dir="auto"
-                />
-                <button 
-                    onClick={() => { if(val.trim()) { onAdd(val.trim()); setVal(''); } }} 
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors shrink-0"
-                >
-                    {t('clinical_ui.protocol.custom.add', 'Add')}
-                </button>
-            </div>
-        </div>
-    );
-};
 
 // The page is two parts, sick child and young infant. Each part has one tab per
 // illness (topics.js): the classification table, then its doses, treatment,
@@ -710,25 +676,8 @@ export default function ProtocolEditor() {
         setClass(newData);
     };
 
-    const addTreatment = (catKey, ruleIndex, treatment) => {
-        const newData = { ...classDoc };
-        const currentTreatments = newData.categories[catKey].rules[ruleIndex].treatments || [];
-        // Even if duplicate, allow it just in case they want to modify it differently
-        newData.categories[catKey].rules[ruleIndex].treatments = [...currentTreatments, treatment];
-        setClass(newData);
-    };
 
-    const editTreatment = (catKey, ruleIndex, tIdx, newText) => {
-        const newData = { ...classDoc };
-        newData.categories[catKey].rules[ruleIndex].treatments[tIdx] = newText;
-        setClass(newData);
-    };
 
-    const removeTreatment = (catKey, ruleIndex, treatmentIndex) => {
-        const newData = { ...classDoc };
-        newData.categories[catKey].rules[ruleIndex].treatments.splice(treatmentIndex, 1);
-        setClass(newData);
-    };
 
     // "Only when": conditions that must all be true before the rule is looked
     // at, such as "the child has cough" for the cough table.
@@ -898,6 +847,10 @@ export default function ProtocolEditor() {
         removeRange: removeDrugRange,
     };
     const editing_ = viewMode === 'edit';
+    // The standard lists both editors pick from (standardLists.js). The advanced
+    // builder also offers the old standard treatment lines as suggestions.
+    const lists = viewMode === 'advanced' ? editorLists(part, classDoc, ar) : null;
+    if (lists) lists.suggestions = [...new Set([...lists.suggestions, ...currentAvailableTreatments])];
 
     // The numbered parts of a disease tab, in the order they are used. Empty
     // parts are left out unless editing, when they are where a first box is added.
@@ -1164,6 +1117,7 @@ export default function ProtocolEditor() {
                     {/* ============================================================ */}
                     {/* CHILD & INFANT TAB UI */}
                     {/* ============================================================ */}
+                    {lists && <datalist id={`adv-treat-${part}`}>{lists.suggestions.map((x) => <option key={x} value={x} />)}</datalist>}
                     {viewMode === 'advanced' && (topic !== GENERAL || !topicDrugIdx.length) && (
                         topicCats.length === 0 ? (
                             <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg">
@@ -1234,27 +1188,12 @@ export default function ProtocolEditor() {
                                                         </div>
                                                         
                                                         <div>
-                                                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Globe size={10} className="text-sky-500"/> {t('clinical_ui.protocol.rule.label', 'Label')}</label>
-                                                            <input type="text" value={rule.classification.label} onChange={(e) => handleClassificationChange(catKey, ruleIndex, 'label', e.target.value)} className="w-full text-xs p-1.5 border border-slate-300 rounded font-bold" dir="auto" />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.color', 'Color')}</label>
-                                                            <select value={rule.classification.color} onChange={(e) => handleClassificationChange(catKey, ruleIndex, 'color', e.target.value)} className="w-full text-xs p-1.5 border border-slate-300 rounded">
-                                                                {IMNCI_SEVERITIES.map((sev) => (
-                                                                    <option key={sev.id} value={sev.protocolColor}>{sev.label}</option>
-                                                                ))}
-                                                            </select>
+                                                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Globe size={10} className="text-sky-500"/> {t('clinical_ui.protocol.rule.label', 'Label')} · {t('clinical_ui.protocol.rule.color', 'Color')}</label>
+                                                            <ClassificationPicker rule={rule} catKey={catKey} index={ruleIndex} edit={bookletEdit} options={lists.classOpts} ar={ar} t={t} />
                                                         </div>
                                                         <div>
                                                             <label className="text-xs font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.signs', 'Signs as printed in the booklet')}</label>
-                                                            <textarea
-                                                                rows={3}
-                                                                value={(rule.signs || []).join('\n')}
-                                                                onChange={(e) => handleRuleChange(catKey, ruleIndex, 'signs', e.target.value.split('\n'))}
-                                                                placeholder={t('clinical_ui.protocol.rule.signs_hint', 'One line each. Shown in the booklet view only.')}
-                                                                className="w-full text-xs p-1.5 border border-slate-300 rounded"
-                                                                dir="auto"
-                                                            />
+                                                            <SignsPicker rule={rule} catKey={catKey} index={ruleIndex} edit={bookletEdit} options={lists.signOpts} ar={ar} t={t} />
                                                         </div>
                                                         <div>
                                                             <label className="text-xs font-bold text-slate-400 uppercase">{t('clinical_ui.protocol.rule.id', 'Rule ID')}</label>
@@ -1316,45 +1255,8 @@ export default function ProtocolEditor() {
                                                             <Globe size={10}/> {t('clinical_ui.protocol.rule.treatments', 'Treatments (Editable)')}
                                                         </label>
                                                         
-                                                        <div className="flex flex-col gap-1.5 mb-3">
-                                                            {(rule.treatments || []).map((t, tIdx) => (
-                                                                <div key={tIdx} className="flex items-start gap-1">
-                                                                    <textarea 
-                                                                        value={t}
-                                                                        onChange={(e) => editTreatment(catKey, ruleIndex, tIdx, e.target.value)}
-                                                                        className="w-full bg-emerald-600 border border-emerald-700 rounded p-1.5 text-white text-xs font-semibold shadow-inner focus:ring-2 focus:ring-emerald-400 focus:outline-none leading-tight"
-                                                                        rows={2}
-                                                                        dir="auto"
-                                                                    />
-                                                                    <button 
-                                                                        onClick={() => removeTreatment(catKey, ruleIndex, tIdx)} 
-                                                                        className="text-slate-400 hover:text-red-500 bg-white border border-slate-200 rounded p-1.5 shadow-sm transition-colors"
-                                                                    >
-                                                                        <Trash2 size={14}/>
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                            {(!rule.treatments || rule.treatments.length === 0) && <span className="text-xs text-slate-400 italic">{t('clinical_ui.protocol.empty.no_treatments', 'No treatments added.')}</span>}
-                                                        </div>
-
-                                                        <div className="mt-auto space-y-2">
-                                                            <select
-                                                                className="text-xs p-1.5 border border-emerald-300 rounded text-emerald-800 font-bold w-full bg-white"
-                                                                onChange={(e) => {
-                                                                    if (e.target.value) {
-                                                                        addTreatment(catKey, ruleIndex, e.target.value);
-                                                                        e.target.value = '';
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <option value="">{t('clinical_ui.protocol.rule.add_std_treatment', '+ Add Standard Treatment')}</option>
-                                                                {currentAvailableTreatments.map(t => (
-                                                                    <option key={t} value={t}>{t}</option>
-                                                                ))}
-                                                            </select>
-                                                            
-                                                            <CustomTreatmentAdder onAdd={(val) => addTreatment(catKey, ruleIndex, val)} dosages={dynamicDosageList} />
-                                                        </div>
+                                                        {/* The same editor as the booklet view: each line's words, and its dose chosen from the drugs. */}
+                                                        <TreatmentEditor rule={rule} catKey={catKey} index={ruleIndex} edit={bookletEdit} drugs={dynamicDosageList} listId={`adv-treat-${part}`} suggestions={lists.suggestions} ar={ar} t={t} />
                                                     </div>
                                                 </div>
                                                 )}
