@@ -60,7 +60,7 @@ function examplesFor(view, t) {
     return [page, plan, ...(byView[view] || byView.landing)];
 }
 
-export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' }) {
+export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '', initialQuestion = null }) {
     const { t, i18n } = useTranslation();
     // One conversation per page, keyed by the page's view.
     const [chats, setChats] = useState(() => loadChats(uid));
@@ -121,6 +121,16 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '' })
             setBusy(false);
         }
     }, [question, busy, messages, setMessages, usePage, view, pageTitle, lang, t]);
+
+    // A question handed over by a button elsewhere ("Analyse with AI" in
+    // Admin → Problems): asked once, fresh, as soon as the panel is open.
+    const askedNonce = useRef(null);
+    useEffect(() => {
+        if (!open || !initialQuestion?.text || busy) return;
+        if (askedNonce.current === initialQuestion.nonce) return;
+        askedNonce.current = initialQuestion.nonce;
+        ask(initialQuestion.text, { fresh: true });
+    }, [open, initialQuestion, busy, ask]);
 
     // Sharing: the conversation is drawn off screen (ChatExportSheet) and the
     // picture or PDF taken from it; the export code loads only when used.

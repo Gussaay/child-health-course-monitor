@@ -157,6 +157,7 @@ import { publicBaseUrl } from './utils/publicLink';
 import SudanMiniMap from './components/SudanMiniMap';
 import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
+import { ASK_DATA_EVENT } from './utils/askDataAssistant';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
@@ -1064,6 +1065,19 @@ export default function App() {
     const [dataAssistant, setDataAssistant] = useState({ loaded: false, open: false });
     const openDataAssistant = useCallback(() => setDataAssistant({ loaded: true, open: true }), []);
     const closeDataAssistant = useCallback(() => setDataAssistant((s) => ({ ...s, open: false })), []);
+    // The open screen, for error reports sent from outside React (utils/errorCapture.js).
+    useEffect(() => { window.__CURRENT_VIEW__ = view; }, [view]);
+    // "Analyse with AI" (Admin → Problems) and similar buttons open the panel
+    // with a question already asked (utils/askDataAssistant.js).
+    useEffect(() => {
+        const onAsk = (e) => {
+            const text = e?.detail?.question;
+            if (!text) return;
+            setDataAssistant({ loaded: true, open: true, question: { text, nonce: Date.now() } });
+        };
+        window.addEventListener(ASK_DATA_EVENT, onAsk);
+        return () => window.removeEventListener(ASK_DATA_EVENT, onAsk);
+    }, []);
     const [publicViewData, setPublicViewData] = useState(null);
     const [publicViewType, setPublicViewType] = useState(null); 
     const [publicViewLoading, setPublicViewLoading] = useState(false);
@@ -3335,7 +3349,7 @@ case 'meetings':
             )}
             {dataAssistant.loaded && (
                 <Suspense fallback={null}>
-                    <DataAssistantPanel open={dataAssistant.open} onClose={closeDataAssistant} view={view} pageTitle={pageTitle} uid={user?.uid} />
+                    <DataAssistantPanel open={dataAssistant.open} onClose={closeDataAssistant} view={view} pageTitle={pageTitle} uid={user?.uid} initialQuestion={dataAssistant.question} />
                 </Suspense>
             )}
 
