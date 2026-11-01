@@ -1047,7 +1047,8 @@ export default function App() {
         } finally { setIsRefreshingAll(false); }
     }, [syncLoaded, t]);
     // Automatic syncs are quiet and at most every 30 seconds.
-    const quietSync = useCallback(() => { syncLoaded({ minIntervalMs: 30 * 1000 }).catch(() => {}); }, [syncLoaded]);
+    // Lists with a live listener are already current, so the quiet syncs skip them.
+    const quietSync = useCallback(() => { syncLoaded({ minIntervalMs: 30 * 1000, skipLive: true }).catch(() => {}); }, [syncLoaded]);
     useEffect(() => {
         const onVisible = () => { if (document.visibilityState === 'visible') quietSync(); };
         document.addEventListener('visibilitychange', onVisible);

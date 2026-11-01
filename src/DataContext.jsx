@@ -33,7 +33,10 @@ import {
     listFinalReport,
     fetchFacilitiesHistoryMultiDate, 
     listSnapshotsForFacility,
-    getAboutTeamImages 
+    getAboutTeamImages,
+    LIVE_LIST_KEYS,
+    subscribeListDelta,
+    subscribeFacilityDelta,
 } from './data';
 import { useAuth } from './hooks/useAuth';
 
@@ -76,6 +79,9 @@ const rewindWatermark = (ms) => (ms > 0 ? Math.max(0, ms - SYNC_OVERLAP_MS) : 0)
 // so the first sync after this update re-downloads each collection once
 // (SYNC_MARK_VERSION); after that it is delta again.
 const SYNC_MARK_VERSION = 2;
+// Listeners start from a server-time mark, so a second of overlap is enough
+// to catch two records stamped in the same millisecond.
+const LIVE_OVERLAP_MS = 1000;
 const syncMarkKey = (key) => `syncMark_v${SYNC_MARK_VERSION}_${key}`;
 const tsMillis = (v) => {
     if (!v) return 0;
@@ -399,7 +405,10 @@ export const DataProvider = ({ children }) => {
                 try {
                     const fetchStartedAt = Date.now();
 
-                    let effectiveLastFetchTime = rewindWatermark(lastFetchTime);
+                    // Server-time mark (newest lastSnapshotAt seen), like the other lists.
+                    const facMarkKey = `${syncMarkKey(key)}_${filterKey}`;
+                    const facMark = parseInt(localStorage.getItem(facMarkKey) || '0', 10);
+                    let effectiveLastFetchTime = rewindWatermark(facMark);
                     if (!localData || localData.length === 0) {
                         effectiveLastFetchTime = 0; // First time, full load needed
                     }
@@ -434,6 +443,10 @@ export const DataProvider = ({ children }) => {
                     
                     // Log success time (captured before the request, not after)
                     localStorage.setItem(timeKey, fetchStartedAt.toString());
+                    const newestFac = (finalMergedData || []).reduce((m, f) => Math.max(m, tsMillis(f?.lastSnapshotAt)), 0);
+                    localStorage.setItem(facMarkKey, String(newestFac > 0
+                        ? Math.max(effectiveLastFetchTime === 0 ? 0 : facMark, newestFac)
+                        : (facMark || fetchStartedAt)));
 
                     facilitiesFilterCacheRef.current[filterKey] = finalMergedData;
                     setCache(prev => ({ ...prev, healthFacilities: finalMergedData }));
@@ -633,9 +646,11 @@ export const DataProvider = ({ children }) => {
     // on the server since its last sync comes down. Lists never opened stay
     // unloaded (they load when their page opens). Calls closer together than
     // `minIntervalMs` are dropped, so page changes cannot hammer the server.
+    // Lists with a working live listener (see REAL-TIME LISTENERS below).
+    const liveRef = useRef({});
     const lastSyncAllRef = useRef(0);
     const syncAllPromiseRef = useRef(null);
-    const syncLoaded = useCallback(async ({ minIntervalMs = 0 } = {}) => {
+    const syncLoaded = useCallback(async ({ minIntervalMs = 0, skipLive = false } = {}) => {
         if (!navigator.onLine) return { synced: 0, offline: true };
         if (syncAllPromiseRef.current) return syncAllPromiseRef.current;
         const now = Date.now();
@@ -644,6 +659,7 @@ export const DataProvider = ({ children }) => {
         const keys = Object.keys(syncRegistryRef.current).filter((k) => {
             const v = cacheRef.current[k];
             if (v === null || v === undefined) return false;
+            if (skipLive && liveRef.current[k]) return false; // already kept current
             if (k === 'healthFacilities') return !!lastFacilityFiltersRef.current;
             return true;
         });
@@ -653,6 +669,127 @@ export const DataProvider = ({ children }) => {
             return { synced: keys.length - failed, failed };
         })();
         try { return await syncAllPromiseRef.current; } finally { syncAllPromiseRef.current = null; }
+    }, []);
+
+    // ========================================================================
+    // REAL-TIME LISTENERS
+    //
+    // Every list this device has loaded is kept current by a listener that
+    // asks the server only for records changed since the list's server-time
+    // mark (data.js subscribeListDelta / subscribeFacilityDelta). A change made
+    // anywhere arrives in seconds; an unchanged list costs nothing.
+    //
+    //   - Opened only while signed in, online and with the app on screen.
+    //   - Closed when the app goes to the background or offline, and reopened
+    //     from the newest mark when it returns, so a long disconnection never
+    //     makes Firestore re-send (and bill) what the device already has.
+    //   - A list that has not done its first download (no mark yet) waits for
+    //     it; a listener the server refuses (rules, missing index) is dropped
+    //     for this session and the list falls back to the delta sync.
+    // ========================================================================
+    const [appVisible, setAppVisible] = useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
+    const [netOnline, setNetOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
+    useEffect(() => {
+        const onVis = () => setAppVisible(document.visibilityState !== 'hidden');
+        const onOn = () => setNetOnline(true);
+        const onOff = () => setNetOnline(false);
+        document.addEventListener('visibilitychange', onVis);
+        window.addEventListener('online', onOn);
+        window.addEventListener('offline', onOff);
+        return () => {
+            document.removeEventListener('visibilitychange', onVis);
+            window.removeEventListener('online', onOn);
+            window.removeEventListener('offline', onOff);
+        };
+    }, []);
+
+    const liveFailedRef = useRef(new Set());
+    const persistTimersRef = useRef({});
+    const persistSoon = useCallback((diskKey, data) => {
+        clearTimeout(persistTimersRef.current[diskKey]);
+        persistTimersRef.current[diskKey] = setTimeout(() => {
+            setLocalData(diskKey, stripSignaturesForDisk(data)).catch?.(() => {});
+        }, 1000);
+    }, []);
+    const mergeDelta = (list, { upserts, removed }) => {
+        const map = new Map((Array.isArray(list) ? list : []).map((i) => [i.id, i]));
+        removed.forEach((id) => map.delete(id));
+        upserts.forEach((u) => map.set(u.id, u));
+        return Array.from(map.values());
+    };
+
+    const applyListDelta = useCallback((key, changes) => {
+        const next = mergeDelta(cacheRef.current[key], changes);
+        cacheRef.current = { ...cacheRef.current, [key]: next };
+        setCache((prev) => ({ ...prev, [key]: mergeDelta(prev[key], changes) }));
+        persistSoon(`cache_${key}`, next);
+        const newest = newestServerStamp(changes.upserts);
+        const stored = parseInt(localStorage.getItem(syncMarkKey(key)) || '0', 10);
+        if (newest > stored) localStorage.setItem(syncMarkKey(key), String(newest));
+    }, [persistSoon]);
+
+    const applyFacilityDelta = useCallback((filterKey, changes) => {
+        const next = mergeDelta(facilitiesFilterCacheRef.current[filterKey], changes);
+        facilitiesFilterCacheRef.current[filterKey] = next;
+        if (currentFacilitiesFilterKeyRef.current === filterKey) setCache((prev) => ({ ...prev, healthFacilities: next }));
+        persistSoon(`cache_healthFacilities_${filterKey}`, next);
+        const markKey = `${syncMarkKey('healthFacilities')}_${filterKey}`;
+        const newest = changes.upserts.reduce((m, f) => Math.max(m, tsMillis(f?.lastSnapshotAt)), 0);
+        const stored = parseInt(localStorage.getItem(markKey) || '0', 10);
+        if (newest > stored) localStorage.setItem(markKey, String(newest));
+    }, [persistSoon]);
+
+    // Which lists are loaded, as a string, so the effect below re-runs only
+    // when a list is loaded or dropped, not on every change inside one.
+    const loadedLiveKeys = LIVE_LIST_KEYS.filter((k) => cache[k] !== null && cache[k] !== undefined).join(',');
+    const liveFacilityFilterKey = cache.healthFacilities !== null && lastFacilityFiltersRef.current
+        ? getFilterKey(lastFacilityFiltersRef.current) : '';
+
+    useEffect(() => {
+        const live = liveRef.current;
+        const close = (k) => { try { live[k]?.unsub?.(); } catch { /* already closed */ } delete live[k]; };
+        const closeAll = () => Object.keys(live).forEach(close);
+        if (!user || !appVisible || !netOnline) { closeAll(); return undefined; }
+
+        const wanted = new Set(loadedLiveKeys ? loadedLiveKeys.split(',') : []);
+        Object.keys(live).forEach((k) => {
+            if (k === 'healthFacilities') { if (live[k].filterKey !== liveFacilityFilterKey) close(k); }
+            else if (!wanted.has(k)) close(k);
+        });
+
+        const refuse = (k) => (error) => {
+            console.warn(`[live] ${k} listener stopped; falling back to delta sync:`, error?.code || error?.message || error);
+            liveFailedRef.current.add(k === 'healthFacilities' ? `healthFacilities:${liveFacilityFilterKey}` : k);
+            close(k);
+        };
+        wanted.forEach((k) => {
+            if (live[k] || liveFailedRef.current.has(k)) return;
+            const since = parseInt(localStorage.getItem(syncMarkKey(k)) || '0', 10);
+            if (!(since > 0)) return; // first download not done yet
+            try {
+                const unsub = subscribeListDelta(k, Math.max(0, since - LIVE_OVERLAP_MS), (ch) => applyListDelta(k, ch), refuse(k));
+                if (unsub) live[k] = { unsub };
+            } catch (err) { refuse(k)(err); }
+        });
+
+        if (liveFacilityFilterKey && !live.healthFacilities && !liveFailedRef.current.has(`healthFacilities:${liveFacilityFilterKey}`)) {
+            const since = parseInt(localStorage.getItem(`${syncMarkKey('healthFacilities')}_${liveFacilityFilterKey}`) || '0', 10);
+            const filters = lastFacilityFiltersRef.current;
+            const fk = liveFacilityFilterKey;
+            if (since > 0) {
+                try {
+                    const unsub = subscribeFacilityDelta(filters, Math.max(0, since - LIVE_OVERLAP_MS), (ch) => applyFacilityDelta(fk, ch), refuse('healthFacilities'));
+                    if (unsub) live.healthFacilities = { unsub, filterKey: fk };
+                } catch (e) { refuse('healthFacilities')(e); }
+            }
+        }
+        return undefined;
+    }, [user, appVisible, netOnline, loadedLiveKeys, liveFacilityFilterKey, applyListDelta, applyFacilityDelta, cache]);
+
+    // Close everything when the provider goes away (sign-out reloads too).
+    useEffect(() => () => {
+        Object.values(liveRef.current).forEach((l) => { try { l.unsub?.(); } catch { /* closed */ } });
+        liveRef.current = {};
     }, []);
 
     const fetchers = useMemo(() => ({
@@ -806,6 +943,7 @@ export const DataProvider = ({ children }) => {
         isLoading,
         clearLocalCache,
         syncLoaded,
+        liveLists: () => Object.keys(liveRef.current),
         mergeIntoCache,
         removeFromCache,
         fetchFacilitiesHistoryMultiDate, 
