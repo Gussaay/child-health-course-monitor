@@ -152,7 +152,7 @@ export default function AiActivityTab() {
             {lines === null ? (
                 <Spinner />
             ) : !a.rows.length ? (
-                <EmptyState icon={<Sparkles className="w-8 h-8" />} message={t('admin_pages.ai_activity.empty', 'No AI use in this period.')} />
+                <EmptyState icon={Sparkles} message={t('admin_pages.ai_activity.empty', 'No AI use in this period.')} />
             ) : (
                 <>
                     <Card className="divide-y divide-slate-100">

@@ -459,7 +459,10 @@ export const EmptyState = ({ message, title, hint, icon, action, filtered = fals
     const block = (
         <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400" aria-hidden="true">
-                <Icon className="h-5 w-5" />
+                {/* icon may be a component (icon={Inbox}) or an element
+                    (icon={<Inbox />}); rendering an element as a component
+                    is React error #130 and blanked Admin → AI activity. */}
+                {React.isValidElement(Icon) ? Icon : <Icon className="h-5 w-5" />}
             </span>
             {title && <p className="font-semibold text-slate-800">{title}</p>}
             {message && <p className={title ? 'max-w-md text-sm text-slate-500' : 'max-w-md text-sm font-medium text-slate-600'}>{message}</p>}
