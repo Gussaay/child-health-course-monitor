@@ -45,3 +45,20 @@ describe('booklet view', () => {
         expect(document.body.textContent).not.toContain('99.99');
     });
 });
+
+describe('editing in the booklet layout', () => {
+    const noop = () => {};
+    const edit = { onRule: noop, onClass: noop, onDrug: noop, onRange: noop, addRange: noop, removeRange: noop };
+    it('turns signs, classification and treatment into boxes to type in', () => {
+        render(<BookletProtocolView formType="child" protocol={P.child} doses={P.dosages_child.drugs} edit={edit} />);
+        const boxes = [...document.querySelectorAll('textarea')].map((t) => t.textContent);
+        expect(boxes).toContain('Chest indrawing\nor Fast breathing');
+        expect(boxes.some((b) => b.includes('{{dose:amoxicillin}}'))).toBe(true);
+        expect([...document.querySelectorAll('select')].length).toBeGreaterThan(0);
+    });
+    it('turns dose bands into inputs with add and remove', () => {
+        render(<BookletDoseView protocol={P.dosages_child} edit={edit} />);
+        expect([...document.querySelectorAll('input')].some((i) => i.getAttribute('value') === '5 ml syrup (250 mg/5 ml) OR 1 tablet (250 mg)')).toBe(true);
+        expect(document.body.textContent).toContain('Add Dose Range');
+    });
+});

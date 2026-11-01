@@ -5207,6 +5207,7 @@ const resources = {
             save_anyway_msg: "{{count}} thing(s) look incomplete, listed above the editor. Save anyway?",
             save_anyway_title: "Save anyway",
             save: "Save",
+            load_tab_msg: "This loads the national booklet version of this tab only into the editor. Any unsaved changes here will be lost, and nothing is saved until you press Save Database.",
             load_msg: "This loads the standard English IMNCI protocol for [{{tab}}] into the editor. Any unsaved changes will be lost, and nothing is written to the database until you save.",
             load_title: "Load defaults",
             load: "Load",
@@ -5241,6 +5242,7 @@ const resources = {
           },
           btn: {
             load_national: "Load national protocol",
+            load_tab: { child: "Load child protocol", infant: "Load infant protocol", dosages_child: "Load child doses", dosages_infant: "Load infant doses" },
             load_defaults: "Load Defaults",
             add_category: "Add Category",
             add_drug: "Add Drug",
@@ -5286,7 +5288,7 @@ const resources = {
             no_treatments: "No treatments added.",
             no_rules: "No rules defined.",
           },
-          view: { booklet: "Booklet view", edit: "Edit rules" },
+          view: { booklet: "Booklet view", edit: "Edit rules", edit_booklet: "Edit", advanced: "Advanced" },
           booklet: {
             if_yes: "IF YES", ask: "ASK:", look: "LOOK, LISTEN, FEEL:",
             signs: "Signs", classify: "Classify as", treat: "Identify treatment",
@@ -5295,7 +5297,10 @@ const resources = {
             use_all: "Use all boxes that match the symptoms and problems to classify the illness.",
             empty: "This protocol has no classification tables yet.", no_drugs: "No doses saved yet.",
             age: "Age", weight: "Weight", dose: "Dose", freq: "How often", duration: "For how long",
-            months: "months", range_from: "{{lo}} {{unit}} or more", age_weight_badge: "Age and weight",
+            months: "months", days: "days", range_from: "{{lo}} {{unit}} or more", age_weight_badge: "Age and weight",
+            treat_hint: "One treatment per line. A dose is written {{dose:drug_id}} at the end of its line.",
+            pink: "Pink", yellow: "Yellow", green: "Green", grey: "Grey",
+            remove_band: "Remove", fallback: "Text when no band matches",
           },
           unnamed_rule: "Unnamed Rule",
           rule: {
@@ -12705,6 +12710,7 @@ const resources = {
             save_anyway_msg: "يبدو أن {{count}} عنصراً غير مكتمل، وهي مدرجة أعلى المحرر. هل تريد الحفظ على أي حال؟",
             save_anyway_title: "الحفظ على أي حال",
             save: "حفظ",
+            load_tab_msg: "سيؤدي هذا إلى تحميل نسخة الكتيب القومي لهذا التبويب فقط في المحرر. ستُفقد أي تغييرات غير محفوظة هنا، ولن يُحفظ شيء حتى تضغط حفظ قاعدة البيانات.",
             load_msg: "سيؤدي هذا إلى تحميل بروتوكول IMNCI القياسي باللغة الإنجليزية لـ [{{tab}}] في المحرر. ستفقد أي تغييرات غير محفوظة، ولن يُكتب أي شيء في قاعدة البيانات حتى تقوم بالحفظ.",
             load_title: "تحميل الإعدادات الافتراضية",
             load: "تحميل",
@@ -12739,6 +12745,7 @@ const resources = {
           },
           btn: {
             load_national: "تحميل البروتوكول القومي",
+            load_tab: { child: "تحميل بروتوكول الطفل", infant: "تحميل بروتوكول الرضيع", dosages_child: "تحميل جرعات الطفل", dosages_infant: "تحميل جرعات الرضيع" },
             load_defaults: "تحميل الإعدادات الافتراضية",
             add_category: "إضافة فئة",
             add_drug: "إضافة دواء",
@@ -12784,7 +12791,7 @@ const resources = {
             no_treatments: "لم تتم إضافة علاجات.",
             no_rules: "لم يتم تعريف قواعد.",
           },
-          view: { booklet: "عرض الكتيب", edit: "تعديل القواعد" },
+          view: { booklet: "عرض الكتيب", edit: "تعديل القواعد", edit_booklet: "تعديل", advanced: "متقدم" },
           booklet: {
             if_yes: "إذا كانت الإجابة نعم", ask: "اسأل:", look: "انظر، استمع، تحسس:",
             signs: "العلامات", classify: "التصنيف", treat: "حدد العلاج",
@@ -12793,7 +12800,10 @@ const resources = {
             use_all: "استخدم كل الخانات التي تطابق أعراض الطفل ومشاكله لتصنيف المرض.",
             empty: "لا توجد جداول تصنيف في هذا البروتوكول بعد.", no_drugs: "لم تُحفظ جرعات بعد.",
             age: "العمر", weight: "الوزن", dose: "الجرعة", freq: "كم مرة", duration: "لمدة",
-            months: "شهر", range_from: "{{lo}} {{unit}} أو أكثر", age_weight_badge: "العمر والوزن",
+            months: "شهر", days: "يوم", range_from: "{{lo}} {{unit}} أو أكثر", age_weight_badge: "العمر والوزن",
+            treat_hint: "علاج واحد في كل سطر. تُكتب الجرعة {{dose:drug_id}} في نهاية السطر.",
+            pink: "وردي", yellow: "أصفر", green: "أخضر", grey: "رمادي",
+            remove_band: "حذف", fallback: "نص عند عدم تطابق أي فئة",
           },
           unnamed_rule: "قاعدة بدون اسم",
           rule: {

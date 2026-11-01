@@ -11,7 +11,7 @@ import { IMNCI_SEVERITIES } from '../constants';
 import { NATIONAL_PROTOCOLS, NATIONAL_SAVE_ORDER } from './nationalProtocol';
 import { BookletProtocolView, BookletDoseView } from './bookletView';
 import { useTranslation } from 'react-i18next';
-import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, BookOpen, Pencil } from 'lucide-react';
+import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, BookOpen, Pencil, Settings2 } from 'lucide-react';
 
 // --- Predefined Conditions Mapping for Dropdowns ---
 const CHILD_CONDITIONS = [
@@ -302,7 +302,8 @@ export default function ProtocolEditor() {
     const [search, setSearch] = useState('');
     const [issues, setIssues] = useState(null);
     // 'booklet' shows the protocol as the national chart booklet prints it;
-    // 'edit' is the rule builder.
+    // 'edit' is the same layout with every cell editable; 'advanced' is the
+    // rule builder (conditions and logic).
     const [viewMode, setViewMode] = useState('booklet');
     // 'offline' | 'failed' | null. Set when the protocols could not be read, so
     // the page says so instead of spinning forever.
@@ -425,8 +426,8 @@ export default function ProtocolEditor() {
 
     const handleLoadDefaults = async () => {
         if (await confirmDialog(
-            t('clinical_ui.protocol.dlg.load_msg', 'This loads the standard English IMNCI protocol for [{{tab}}] into the editor. Any unsaved changes will be lost, and nothing is written to the database until you save.', { tab: activeTab }),
-            { title: t('clinical_ui.protocol.dlg.load_title', 'Load defaults'), confirmLabel: t('clinical_ui.protocol.dlg.load', 'Load'), danger: true }
+            t('clinical_ui.protocol.dlg.load_tab_msg', 'This loads the national booklet version of this tab only into the editor. Any unsaved changes here will be lost, and nothing is saved until you press Save Database.'),
+            { title: t(`clinical_ui.protocol.btn.load_tab.${activeTab}`, 'Load this tab'), confirmLabel: t('clinical_ui.protocol.dlg.load', 'Load'), danger: true }
         )) {
             setIssues(null);
             // A copy: editing used to change the built-in protocol itself.
@@ -699,6 +700,16 @@ export default function ProtocolEditor() {
     const targetDosageTab = activeTab === 'child' ? 'dosages_child' : 'dosages_infant';
     const dynamicDosageList = protocols?.[targetDosageTab]?.drugs || []; 
 
+    // The booklet layout edits through the same handlers as the rule builder.
+    const bookletEdit = {
+        onRule: handleRuleChange,
+        onClass: handleClassificationChange,
+        onDrug: handleDrugChange,
+        onRange: handleDrugRangeChange,
+        addRange: addDrugRange,
+        removeRange: removeDrugRange,
+    };
+
     return (
         <div className="space-y-4 max-w-[1400px] mx-auto pb-12 font-sans text-sm" dir="ltr">
             <PageHeader title={t('clinical_ui.protocol.title', 'IMNCI Protocol Builder')} subtitle={t('clinical_ui.protocol.subtitle', 'Manage dynamic rules, conditions, and treatments for the clinical engine')} />
@@ -711,23 +722,24 @@ export default function ProtocolEditor() {
                     <Button onClick={() => switchTab('dosages_infant')} variant={activeTab === 'dosages_infant' ? 'primary' : 'secondary'} className="rounded-l-none text-sm px-4 flex items-center gap-2"><Syringe size={16}/> {t('clinical_ui.protocol.tabs.infant_doses', 'Infant Doses')}</Button>
                     <div className="flex ms-0 md:ms-3">
                         <Button onClick={() => setViewMode('booklet')} variant={viewMode === 'booklet' ? 'primary' : 'secondary'} className="rounded-r-none border-r-0 text-sm px-3 flex items-center gap-1.5"><BookOpen size={16}/> {t('clinical_ui.protocol.view.booklet', 'Booklet view')}</Button>
-                        <Button onClick={() => setViewMode('edit')} variant={viewMode === 'edit' ? 'primary' : 'secondary'} className="rounded-l-none text-sm px-3 flex items-center gap-1.5"><Pencil size={16}/> {t('clinical_ui.protocol.view.edit', 'Edit rules')}</Button>
+                        <Button onClick={() => setViewMode('edit')} variant={viewMode === 'edit' ? 'primary' : 'secondary'} className="rounded-none border-r-0 text-sm px-3 flex items-center gap-1.5"><Pencil size={16}/> {t('clinical_ui.protocol.view.edit_booklet', 'Edit')}</Button>
+                        <Button onClick={() => setViewMode('advanced')} variant={viewMode === 'advanced' ? 'primary' : 'secondary'} className="rounded-l-none text-sm px-3 flex items-center gap-1.5"><Settings2 size={16}/> {t('clinical_ui.protocol.view.advanced', 'Advanced')}</Button>
                     </div>
                 </div>
-                <div className="flex gap-2 shrink-0 items-center">
-                    {viewMode === 'edit' && <input
+                <div className="flex flex-wrap gap-2 items-center">
+                    {viewMode === 'advanced' && <input
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder={isDosagesTab ? t('clinical_ui.protocol.search.drug', 'Find a drug…') : t('clinical_ui.protocol.search.rule', 'Find a category, classification, condition or treatment…')}
-                        className="w-64 p-2 border border-slate-300 rounded text-sm focus:ring-sky-500"
+                        className="w-full sm:w-64 p-2 border border-slate-300 rounded text-sm focus:ring-sky-500"
                     />}
                     <Button onClick={handleLoadNational} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"><DownloadCloud size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.load_national', 'Load national protocol')}</Button>
-                    <Button onClick={handleLoadDefaults} className="bg-amber-500 hover:bg-amber-600 text-white border-0"><DownloadCloud size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.load_defaults', 'Load Defaults')}</Button>
-                    {viewMode === 'edit' && !isDosagesTab && (
+                    <Button onClick={handleLoadDefaults} className="bg-amber-500 hover:bg-amber-600 text-white border-0"><DownloadCloud size={16} className="me-2 inline" /> {t(`clinical_ui.protocol.btn.load_tab.${activeTab}`, 'Load this tab')}</Button>
+                    {viewMode === 'advanced' && !isDosagesTab && (
                         <Button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><FolderPlus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_category', 'Add Category')}</Button>
                     )}
-                    {viewMode === 'edit' && isDosagesTab && (
+                    {viewMode === 'advanced' && isDosagesTab && (
                         <Button onClick={addNewDrug} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><Plus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}</Button>
                     )}
                 </div>
@@ -783,7 +795,7 @@ export default function ProtocolEditor() {
                         </div>
                     )}
 
-                    {viewMode === 'edit' && hiddenCount > 0 && (
+                    {viewMode === 'advanced' && hiddenCount > 0 && (
                         <div className="text-xs text-slate-600 bg-white border border-slate-200 rounded px-3 py-2">
                             {isDosagesTab ? t('clinical_ui.protocol.hidden_drugs', '{{count}} drug(s) hidden by the search.', { count: hiddenCount }) : t('clinical_ui.protocol.hidden_cats', '{{count}} category(ies) hidden by the search.', { count: hiddenCount })}
                             <button onClick={() => setSearch('')} className="ms-2 text-sky-700 font-bold hover:underline">{t('clinical_ui.protocol.btn.clear', 'Clear')}</button>
@@ -793,14 +805,14 @@ export default function ProtocolEditor() {
                     {/* ============================================================ */}
                     {/* BOOKLET VIEW */}
                     {/* ============================================================ */}
-                    {viewMode === 'booklet' && (isDosagesTab
-                        ? <BookletDoseView protocol={editorData} />
-                        : <BookletProtocolView formType={activeTab} protocol={editorData} doses={dynamicDosageList} />)}
+                    {viewMode !== 'advanced' && (isDosagesTab
+                        ? <BookletDoseView protocol={editorData} edit={viewMode === 'edit' ? bookletEdit : null} />
+                        : <BookletProtocolView formType={activeTab} protocol={editorData} doses={dynamicDosageList} edit={viewMode === 'edit' ? bookletEdit : null} />)}
 
                     {/* ============================================================ */}
                     {/* DOSAGES TAB UI */}
                     {/* ============================================================ */}
-                    {viewMode === 'edit' && isDosagesTab && (
+                    {viewMode === 'advanced' && isDosagesTab && (
                         <div className="space-y-3">
                             {visibleDrugs.map(({ drug, drugIndex }) => {
                                 // drugIndex is the index in editorData.drugs, not in the
@@ -876,7 +888,7 @@ export default function ProtocolEditor() {
                     {/* ============================================================ */}
                     {/* CHILD & INFANT TAB UI */}
                     {/* ============================================================ */}
-                    {viewMode === 'edit' && !isDosagesTab && (
+                    {viewMode === 'advanced' && !isDosagesTab && (
                         Object.keys(editorData.categories || {}).length === 0 ? (
                             <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg">
                                 <p className="text-slate-500 mb-4">{t('clinical_ui.protocol.empty.no_cats', 'No categories found in this protocol.')}</p>

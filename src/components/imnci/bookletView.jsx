@@ -1,11 +1,11 @@
 // ============================================================================
 // PROTOCOL AS THE BOOKLET PRINTS IT
 //
-// A read-only view of the protocol in Protocol management, laid out like the
-// national chart booklet: page title, the question box with IF YES, the ASK /
+// The protocol in Protocol management, laid out like the national chart
+// booklet: page title, the question box with IF YES, the ASK /
 // LOOK column, and the pink / yellow / green SIGNS | CLASSIFY | IDENTIFY
-// TREATMENT table. It shows what is in the editor, so an unsaved change is
-// visible here before it is saved.
+// TREATMENT table. Pass `edit` and the same layout becomes the editor: each
+// cell is a box to type in, and Save Database saves it as before.
 // ============================================================================
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -77,8 +77,81 @@ const AssessPanel = ({ page, t }) => (
     </div>
 );
 
-const ClassifyTable = ({ page, categories, drugLabels, t }) => {
+const inputCls = 'w-full bg-white/90 border border-slate-500 rounded px-1.5 py-1 text-[13px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500';
+
+// Treatments are edited as one line each. A dose stays written as {{dose:id}}
+// at the end of its line, as the editor's checks require.
+const linesValue = (arr) => (arr || []).join('\n');
+const toLines = (v) => String(v).split('\n');
+const tidyLines = (arr) => (arr || []).map((l) => String(l).trimEnd()).filter((l) => l.trim());
+
+const RuleCells = ({ rule, edit, catKey, index, drugLabels, t }) => {
+    const signs = ruleSigns(rule);
+    const label = rule.classification?.label;
+    if (!edit) {
+        return {
+            signs: signs.length
+                ? <ul className="space-y-0.5">{signs.map((sg, k) => <li key={k}>{sg}</li>)}</ul>
+                : <span className="italic font-normal">—</span>,
+            label,
+            treat: <ul className="space-y-1">{(rule.treatments || []).map((line, k) => <TreatmentLine key={k} line={line} drugLabels={drugLabels} />)}</ul>,
+        };
+    }
+    return {
+        signs: (
+            <textarea
+                rows={Math.max(3, signs.length + 1)}
+                value={linesValue(rule.signs ?? signs)}
+                onChange={(e) => edit.onRule(catKey, index, 'signs', toLines(e.target.value))}
+                onBlur={() => edit.onRule(catKey, index, 'signs', tidyLines(rule.signs))}
+                aria-label={t('clinical_ui.protocol.booklet.signs', 'Signs')}
+                className={`${inputCls} font-bold`}
+                dir="auto"
+            />
+        ),
+        label: (
+            <div className="space-y-1">
+                <textarea
+                    rows={3}
+                    value={label || ''}
+                    onChange={(e) => edit.onClass(catKey, index, 'label', e.target.value)}
+                    aria-label={t('clinical_ui.protocol.booklet.classify', 'Classify as')}
+                    className={`${inputCls} font-bold italic uppercase text-center`}
+                    dir="auto"
+                />
+                <select
+                    value={rule.classification?.color || ''}
+                    onChange={(e) => edit.onClass(catKey, index, 'color', e.target.value)}
+                    aria-label={t('clinical_ui.protocol.rule.color', 'Color')}
+                    className={`${inputCls} text-xs not-italic normal-case`}
+                >
+                    <option value="bg-red-500">{t('clinical_ui.protocol.booklet.pink', 'Pink')}</option>
+                    <option value="bg-yellow-400">{t('clinical_ui.protocol.booklet.yellow', 'Yellow')}</option>
+                    <option value="bg-green-500">{t('clinical_ui.protocol.booklet.green', 'Green')}</option>
+                    <option value="bg-slate-500">{t('clinical_ui.protocol.booklet.grey', 'Grey')}</option>
+                </select>
+            </div>
+        ),
+        treat: (
+            <div className="space-y-1">
+                <textarea
+                    rows={Math.min(16, Math.max(4, (rule.treatments || []).length * 2 + 1))}
+                    value={linesValue(rule.treatments)}
+                    onChange={(e) => edit.onRule(catKey, index, 'treatments', toLines(e.target.value))}
+                    onBlur={() => edit.onRule(catKey, index, 'treatments', tidyLines(rule.treatments))}
+                    aria-label={t('clinical_ui.protocol.booklet.treat', 'Identify treatment')}
+                    className={inputCls}
+                    dir="auto"
+                />
+                <p className="text-[11px] text-slate-700">{t('clinical_ui.protocol.booklet.treat_hint', 'One treatment per line. A dose is written {{dose:drug_id}} at the end of its line.')}</p>
+            </div>
+        ),
+    };
+};
+
+const ClassifyTable = ({ page, categories, drugLabels, edit, t }) => {
     const withSide = page.categories.length > 1;
+    const sideLabel = (catKey) => page.sideLabels?.[catKey] || categories[catKey]?.title || catKey;
     return (
         <>
         {/* Phone: one coloured box per classification, signs then treatment. */}
@@ -89,24 +162,16 @@ const ClassifyTable = ({ page, categories, drugLabels, t }) => {
                 return (
                     <div key={catKey} className="space-y-2">
                         {withSide && (
-                            <div className="text-xs font-bold uppercase text-slate-700 border-b-2 border-slate-800 pb-0.5">
-                                {page.sideLabels?.[catKey] || categories[catKey]?.title || catKey}
-                            </div>
+                            <div className="text-xs font-bold uppercase text-slate-700 border-b-2 border-slate-800 pb-0.5">{sideLabel(catKey)}</div>
                         )}
                         {rules.map((rule, i) => {
                             const c = rowColor(rule.classification?.color);
-                            const signs = ruleSigns(rule);
+                            const cells = RuleCells({ rule, edit, catKey, index: i, drugLabels, t });
                             return (
                                 <div key={rule.id || i} className="border-2 text-[13px] text-slate-900" style={{ background: c.background, borderColor: c.border }}>
-                                    <div className="px-2.5 py-1.5 font-bold italic uppercase text-center border-b" style={{ borderColor: c.border }}>{rule.classification?.label}</div>
-                                    {signs.length > 0 && (
-                                        <ul className="px-2.5 py-1.5 font-bold space-y-0.5 border-b" style={{ borderColor: c.border }}>
-                                            {signs.map((sg, k) => <li key={k}>{sg}</li>)}
-                                        </ul>
-                                    )}
-                                    <ul className="px-2.5 py-1.5 space-y-1">
-                                        {(rule.treatments || []).map((line, k) => <TreatmentLine key={k} line={line} drugLabels={drugLabels} />)}
-                                    </ul>
+                                    <div className="px-2.5 py-1.5 font-bold italic uppercase text-center border-b" style={{ borderColor: c.border }}>{cells.label}</div>
+                                    <div className="px-2.5 py-1.5 font-bold border-b" style={{ borderColor: c.border }}>{cells.signs}</div>
+                                    <div className="px-2.5 py-1.5">{cells.treat}</div>
                                 </div>
                             );
                         })}
@@ -131,27 +196,15 @@ const ClassifyTable = ({ page, categories, drugLabels, t }) => {
                         return rules.map((rule, i) => {
                             const c = rowColor(rule.classification?.color);
                             const cell = { background: c.background, borderColor: c.border };
-                            const signs = ruleSigns(rule);
+                            const cells = RuleCells({ rule, edit, catKey, index: i, drugLabels, t });
                             return (
                                 <tr key={`${catKey}-${rule.id || i}`}>
                                     {withSide && i === 0 && (
-                                        <td rowSpan={rules.length} className="border-2 border-slate-800 bg-white p-1.5 text-center text-xs font-bold align-middle">
-                                            {page.sideLabels?.[catKey] || categories[catKey]?.title || catKey}
-                                        </td>
+                                        <td rowSpan={rules.length} className="border-2 border-slate-800 bg-white p-1.5 text-center text-xs font-bold align-middle">{sideLabel(catKey)}</td>
                                     )}
-                                    <td className="border-2 p-2 align-top font-bold" style={cell}>
-                                        {signs.length
-                                            ? <ul className="space-y-0.5">{signs.map((s, k) => <li key={k}>{s}</li>)}</ul>
-                                            : <span className="italic font-normal">—</span>}
-                                    </td>
-                                    <td className="border-2 p-2 align-middle text-center font-bold italic uppercase" style={cell}>
-                                        {rule.classification?.label}
-                                    </td>
-                                    <td className="border-2 p-2 align-top" style={cell}>
-                                        <ul className="space-y-1">
-                                            {(rule.treatments || []).map((line, k) => <TreatmentLine key={k} line={line} drugLabels={drugLabels} />)}
-                                        </ul>
-                                    </td>
+                                    <td className="border-2 p-2 align-top font-bold" style={cell}>{cells.signs}</td>
+                                    <td className="border-2 p-2 align-middle text-center font-bold italic uppercase" style={cell}>{cells.label}</td>
+                                    <td className="border-2 p-2 align-top" style={cell}>{cells.treat}</td>
                                 </tr>
                             );
                         });
@@ -175,7 +228,7 @@ export const bookletPagesFor = (formType, categories = {}) => {
     return [...known, ...extra];
 };
 
-export const BookletProtocolView = ({ formType, protocol, doses = [] }) => {
+export const BookletProtocolView = ({ formType, protocol, doses = [], edit = null }) => {
     const { t } = useTranslation();
     const categories = protocol?.categories || {};
     const drugLabels = Object.fromEntries((doses || []).map((d) => [d.id, d.label || d.id]));
@@ -202,7 +255,7 @@ export const BookletProtocolView = ({ formType, protocol, doses = [] }) => {
                     </h3>
                     <div className={`grid gap-4 ${page.ask || page.look || page.question ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]' : ''}`}>
                         {(page.ask || page.look || page.question) && <AssessPanel page={page} t={t} />}
-                        <ClassifyTable page={page} categories={categories} drugLabels={drugLabels} t={t} />
+                        <ClassifyTable page={page} categories={categories} drugLabels={drugLabels} edit={edit} t={t} />
                     </div>
                 </section>
             ))}
@@ -221,17 +274,76 @@ const fmtUpper = (v) => {
     return frac === 99 ? `< ${Math.ceil(n)}` : `${n}`;
 };
 
+// Young-infant ages are stored in months but printed in days ("under 7 days"):
+// a value with more than two decimals is a day count turned into months.
+const DAYS_PER_MONTH = 30.44;
+const isDayValue = (n) => Math.abs(n * 100 - Math.round(n * 100)) > 1e-6;
+
 const rangeText = (min, max, unit, t) => {
     const lo = parseFloat(min) || 0;
     const hiNum = parseFloat(max);
     const open = !Number.isFinite(hiNum) || hiNum >= 99;
     if (lo === 0 && open) return '—';
-    if (open) return t('clinical_ui.protocol.booklet.range_from', '{{lo}} {{unit}} or more', { lo, unit });
-    if (lo === 0) return `${fmtUpper(hiNum)} ${unit}`;
-    return `${lo} – ${fmtUpper(hiNum)} ${unit}`;
+    const isAge = unit !== 'kg';
+    const days = t('clinical_ui.protocol.booklet.days', 'days');
+    const show = (n, upperBound) => {
+        if (isAge && isDayValue(n)) {
+            const d = n * DAYS_PER_MONTH;
+            return upperBound ? `< ${Math.ceil(d)} ${days}` : `${Math.round(d)} ${days}`;
+        }
+        return `${upperBound ? fmtUpper(n) : n} ${unit}`;
+    };
+    if (open) return t('clinical_ui.protocol.booklet.range_from', '{{lo}} {{unit}} or more', { lo: show(lo), unit: '' }).replace(/\s+/g, ' ');
+    if (lo === 0) { const hi = show(hiNum, true); return hi.startsWith('<') ? hi : `≤ ${hi}`; }
+    return `${show(lo)} – ${show(hiNum, true)}`;
 };
 
-export const BookletDoseView = ({ protocol }) => {
+/** One dose band: read as the booklet prints it, or as inputs when editing. */
+const DoseBand = ({ r, edit, drugIndex, k, months, t, layout }) => {
+    const set = (field) => (e) => edit.onRange(drugIndex, k, field, e.target.value);
+    const num = (field, ph) => (
+        <input type="number" inputMode="decimal" step="0.01" value={r[field] ?? ''} onChange={set(field)} placeholder={ph} aria-label={field} className={`${inputCls} text-center w-16`} />
+    );
+    const txt = (field, extra = '') => (
+        <input type="text" value={r[field] ?? ''} onChange={set(field)} aria-label={field} className={`${inputCls} ${extra}`} dir="auto" />
+    );
+    const age = edit ? <span className="inline-flex items-center gap-1">{num('minAge', '0')}–{num('maxAge', '∞')}</span> : rangeText(r.minAge, r.maxAge, months, t);
+    const weight = edit ? <span className="inline-flex items-center gap-1">{num('minWeight', '0')}–{num('maxWeight', '∞')}</span> : rangeText(r.minWeight, r.maxWeight, 'kg', t);
+    const remove = edit && (
+        <button type="button" onClick={() => edit.removeRange(drugIndex, k)} className="text-xs font-bold text-red-700 hover:underline">
+            {t('clinical_ui.protocol.booklet.remove_band', 'Remove')}
+        </button>
+    );
+
+    if (layout === 'card') {
+        return (
+            <div className="border-t border-slate-300 p-2.5 space-y-1.5 text-[13px] text-slate-900">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
+                    <span><b>{t('clinical_ui.protocol.booklet.age', 'Age')}:</b> {age}</span>
+                    <span><b>{t('clinical_ui.protocol.booklet.weight', 'Weight')}:</b> {weight}</span>
+                </div>
+                <div className="font-bold">{edit ? txt('doseQty', 'font-bold') : r.doseQty}</div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><div className="font-bold text-slate-600">{t('clinical_ui.protocol.booklet.freq', 'How often')}</div>{edit ? txt('doseFreq') : r.doseFreq}</div>
+                    <div><div className="font-bold text-slate-600">{t('clinical_ui.protocol.booklet.duration', 'For how long')}</div>{edit ? txt('doseDuration') : r.doseDuration}</div>
+                </div>
+                {remove}
+            </div>
+        );
+    }
+    return (
+        <tr className={k % 2 ? 'bg-slate-50' : ''}>
+            <td className="border border-slate-300 p-1.5 text-center whitespace-nowrap">{age}</td>
+            <td className="border border-slate-300 p-1.5 text-center whitespace-nowrap">{weight}</td>
+            <td className="border border-slate-300 p-1.5 font-bold">{edit ? txt('doseQty', 'font-bold') : r.doseQty}</td>
+            <td className="border border-slate-300 p-1.5 text-center">{edit ? txt('doseFreq') : r.doseFreq}</td>
+            <td className="border border-slate-300 p-1.5 text-center">{edit ? txt('doseDuration') : r.doseDuration}</td>
+            {edit && <td className="border border-slate-300 p-1.5 text-center">{remove}</td>}
+        </tr>
+    );
+};
+
+export const BookletDoseView = ({ protocol, edit = null }) => {
     const { t } = useTranslation();
     const drugs = protocol?.drugs || [];
     if (!drugs.length) {
@@ -242,12 +354,30 @@ export const BookletDoseView = ({ protocol }) => {
         <div className="grid gap-4 xl:grid-cols-2 items-start" dir="ltr">
             {drugs.map((drug, i) => (
                 <section key={drug.id || i} className="border-2 border-slate-800 bg-white rounded-sm overflow-hidden">
-                    <h3 className="bg-sky-100 border-b-2 border-slate-800 px-3 py-1.5 font-extrabold text-slate-900 text-sm">
-                        {drug.label || drug.id}
-                        {drug.ageAndWeight && <span className="ms-2 text-[10px] font-bold uppercase text-sky-800">{t('clinical_ui.protocol.booklet.age_weight_badge', 'Age and weight')}</span>}
-                    </h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[420px] border-collapse text-[13px] text-slate-900">
+                    <div className="bg-sky-100 border-b-2 border-slate-800 px-3 py-1.5 text-slate-900">
+                        {edit ? (
+                            <div className="space-y-1.5">
+                                <input type="text" value={drug.label || ''} onChange={(e) => edit.onDrug(i, 'label', e.target.value)} aria-label={t('clinical_ui.protocol.drug.label', 'Display label')} className={`${inputCls} font-extrabold`} dir="auto" />
+                                <input type="text" value={drug.fallback || ''} onChange={(e) => edit.onDrug(i, 'fallback', e.target.value)} placeholder={t('clinical_ui.protocol.booklet.fallback', 'Text when no band matches')} className={`${inputCls} text-xs`} dir="auto" />
+                                <label className="flex items-center gap-2 text-xs font-bold">
+                                    <input type="checkbox" checked={!!drug.ageAndWeight} onChange={(e) => edit.onDrug(i, 'ageAndWeight', e.target.checked)} />
+                                    {t('clinical_ui.protocol.booklet.age_weight_badge', 'Age and weight')}
+                                </label>
+                                <div className="text-[10px] font-mono text-slate-600">{`{{dose:${drug.id}}}`}</div>
+                            </div>
+                        ) : (
+                            <h3 className="font-extrabold text-sm">
+                                {drug.label || drug.id}
+                                {drug.ageAndWeight && <span className="ms-2 text-[10px] font-bold uppercase text-sky-800">{t('clinical_ui.protocol.booklet.age_weight_badge', 'Age and weight')}</span>}
+                            </h3>
+                        )}
+                    </div>
+                    {/* Phone: each band as a small card, so nothing is cut off. */}
+                    <div className="md:hidden">
+                        {(drug.rules || []).map((r, k) => <DoseBand key={k} r={r} edit={edit} drugIndex={i} k={k} months={months} t={t} layout="card" />)}
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full border-collapse text-[13px] text-slate-900">
                             <thead>
                                 <tr className="bg-slate-100 text-xs">
                                     <th className="border border-slate-400 p-1.5">{t('clinical_ui.protocol.booklet.age', 'Age')}</th>
@@ -255,23 +385,22 @@ export const BookletDoseView = ({ protocol }) => {
                                     <th className="border border-slate-400 p-1.5 text-start">{t('clinical_ui.protocol.booklet.dose', 'Dose')}</th>
                                     <th className="border border-slate-400 p-1.5">{t('clinical_ui.protocol.booklet.freq', 'How often')}</th>
                                     <th className="border border-slate-400 p-1.5">{t('clinical_ui.protocol.booklet.duration', 'For how long')}</th>
+                                    {edit && <th className="border border-slate-400 p-1.5" />}
                                 </tr>
                             </thead>
                             <tbody>
-                                {(drug.rules || []).map((r, k) => (
-                                    <tr key={k} className={k % 2 ? 'bg-slate-50' : ''}>
-                                        <td className="border border-slate-300 p-1.5 text-center whitespace-nowrap">{rangeText(r.minAge, r.maxAge, months, t)}</td>
-                                        <td className="border border-slate-300 p-1.5 text-center whitespace-nowrap">{rangeText(r.minWeight, r.maxWeight, 'kg', t)}</td>
-                                        <td className="border border-slate-300 p-1.5 font-bold">{r.doseQty}</td>
-                                        <td className="border border-slate-300 p-1.5 text-center">{r.doseFreq}</td>
-                                        <td className="border border-slate-300 p-1.5 text-center">{r.doseDuration}</td>
-                                    </tr>
-                                ))}
+                                {(drug.rules || []).map((r, k) => <DoseBand key={k} r={r} edit={edit} drugIndex={i} k={k} months={months} t={t} layout="row" />)}
                             </tbody>
                         </table>
                     </div>
+                    {edit && (
+                        <button type="button" onClick={() => edit.addRange(i)} className="w-full border-t border-slate-300 py-2 text-xs font-bold text-sky-800 hover:bg-sky-50">
+                            + {t('clinical_ui.protocol.btn.add_range', 'Add Dose Range')}
+                        </button>
+                    )}
                 </section>
             ))}
         </div>
     );
 };
+
