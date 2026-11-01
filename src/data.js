@@ -1887,13 +1887,19 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
         oldObsSnapshot.forEach(doc => batch.delete(doc.ref)); 
     }
 
+    // createdBy lets an observer on the shared monitoring link (a signed-in
+    // account without a staff role) save cases and later edit only their own;
+    // see the cases/observations rules. An edited case keeps its first author.
+    const uid = firebaseAuth.currentUser?.uid || null;
     const savedCase = { ...caseData, id: caseId, lastUpdatedAt: serverTimestamp() };
+    if (!editingCaseId && uid) savedCase.createdBy = uid;
     batch.set(caseRef, savedCase, { merge: true }); 
 
     const savedObservations = [];
     observations.forEach(obs => {
         const obsRef = doc(collection(db, "observations")); 
         const finalObs = { ...obs, id: obsRef.id, caseId: caseId, lastUpdatedAt: serverTimestamp() }; 
+        if (uid) finalObs.createdBy = uid;
         batch.set(obsRef, finalObs); 
         savedObservations.push(finalObs); 
     });
