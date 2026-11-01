@@ -2940,6 +2940,41 @@ export async function recordCrash({ message, stack, screen }) {
     }
 }
 
+/**
+ * Records an error the app caught and handled (a refused save, for now) so it
+ * shows in Admin → Problems next to the crashes. Carries the account's role:
+ * "which role was this?" is the first question about any permission error.
+ * Never throws, and never logs with console.error (utils/errorCapture.js
+ * watches console.error, so that would loop).
+ */
+export async function recordHandledError(details) {
+    const user = firebaseAuth.currentUser;
+    if (!user) return; // the rules only take a report from a signed-in account
+    let role = null;
+    let roles = null;
+    try {
+        const snap = await fbGetDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) {
+            role = snap.data().role || null;
+            roles = Array.isArray(snap.data().roles) ? snap.data().roles.slice(0, 10) : null;
+        }
+    } catch { /* the role is a help, not a requirement */ }
+    try {
+        await submitProblemReport({
+            ...details,
+            role,
+            roles,
+            appVersion: typeof window !== 'undefined' ? window.__APP_VERSION__ || null : null,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 300) : null,
+            online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+            language: typeof document !== 'undefined' ? document.documentElement.lang || null : null,
+            reporterEmail: user.email || null,
+        });
+    } catch (e) {
+        console.warn('Could not record that error:', e?.message);
+    }
+}
+
 // The signed-in person's email, for reports sent from outside React state.
 export function currentUserEmail() {
     return firebaseAuth.currentUser?.email || null;
