@@ -2844,10 +2844,22 @@ case 'meetings':
     // every page but the main menu. The web keeps its full header.
     const PAGE_TITLES = pageTitles(t);
     const closeSideMenu = () => setSideMenuOpen(false);
-    // The app keeps the full header on every page (it used to swap it for a
-    // slim back bar); a back arrow joins it on every page but the main menu.
-    const showBackInHeader = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
+    // The app keeps the full header on every page, and on every page but the
+    // main menu the slim back bar (back arrow, page name) sits right under it.
+    // Neither sticks: both scroll away with the page.
+    const showBackBar = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
     const pageTitle = PAGE_TITLES[view] || (IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program'));
+    const pageSubtitle = (() => {
+        if (view === 'facilitatorReport' || view === 'facilitatorForm') return selectedFacilitator?.name || '';
+        const course = view === 'finalReport' ? (finalReportCourse || selectedCourse) : selectedCourse;
+        const courseLine = course ? [course.course_type, [course.state, course.locality].filter(Boolean).join(' / ')].filter(Boolean).join(' · ') : '';
+        if (['participantReport', 'observe', 'monitoring'].includes(view)) {
+            const participant = (courseDetails.participants || []).find(p => p.id === selectedParticipantId);
+            return [participant?.name, courseLine].filter(Boolean).join(' · ');
+        }
+        if (['courses', 'courseReport', 'finalReport', 'attendanceManager'].includes(view)) return courseLine || (view === 'courses' ? activeCourseType || '' : '');
+        return '';
+    })();
     const headerActions = (
         <>
                 {/* The in-app chat is built but not switched on: it
@@ -2971,16 +2983,6 @@ case 'meetings':
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                        {showBackInHeader && (
-                            <button
-                                onClick={goBack}
-                                aria-label={t('app.back', 'Back')}
-                                title={t('app.back', 'Back')}
-                                className="p-1.5 -ms-1 rounded-full text-white hover:bg-white/10 active:bg-white/20 shrink-0"
-                            >
-                                <ArrowLeft size={22} className="rtl:-scale-x-100" />
-                            </button>
-                        )}
                         {user && !isMinimalUILayout && (
                             <button
                                 onClick={() => setSideMenuOpen(true)}
@@ -3086,6 +3088,25 @@ case 'meetings':
                             <LogOut size={18} className="sm:hidden" />
                             <span className="hidden sm:inline">{t('app.logout', 'Logout')}</span>
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {showBackBar && (
+                <div className="bg-slate-800 text-white border-t border-slate-700 shadow">
+                    <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-12 px-1 sm:px-4">
+                        <button
+                            onClick={goBack}
+                            aria-label={t('app.back', 'Back')}
+                            title={t('app.back', 'Back')}
+                            className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 shrink-0"
+                        >
+                            <ArrowLeft size={22} className="rtl:-scale-x-100" />
+                        </button>
+                        <div className="flex-1 min-w-0 px-1">
+                            <h2 className="text-base font-bold leading-tight truncate">{pageTitle}</h2>
+                            {pageSubtitle && <p className="text-xs text-slate-300 truncate">{pageSubtitle}</p>}
+                        </div>
                     </div>
                 </div>
             )}
