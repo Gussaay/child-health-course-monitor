@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, PageHeader, Button, Spinner } from '../CommonComponents';
 import { useDataCache } from '../../DataContext';
 import { saveIMNCIProtocol, appendIMNCIProtocolHistory, getIMNCIProtocolHistory } from '../../data';
@@ -14,10 +14,11 @@ import { BookletProtocolView, BookletDoseView } from './bookletView';
 import { NATIONAL_FORMS } from './recordingForms';
 import { RecordingFormView } from './recordingFormView';
 import { NATIONAL_GUIDES } from './treatmentGuides';
-import { TreatmentGuideView } from './treatmentGuideView';
+import { GuideBlock, addGuideBox } from './treatmentGuideView';
+import { GENERAL, FORM, topicsFor, drugsForTopic, guideForTopic, groupForNewBox } from './topics';
 import { diffProtocol, currentEditor } from './protocolHistory';
 import { useTranslation } from 'react-i18next';
-import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, Pencil, Settings2, History, ClipboardList, Baby, User, ListChecks } from 'lucide-react';
+import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, Pencil, Settings2, History, ClipboardList, Baby, User, ListChecks, MessageCircle, CalendarClock, Stethoscope, BookOpen } from 'lucide-react';
 
 // --- Predefined Conditions Mapping for Dropdowns ---
 const CHILD_CONDITIONS = [
@@ -299,18 +300,33 @@ const CustomTreatmentAdder = ({ onAdd, dosages }) => {
     );
 };
 
-// The page is two parts, sick child and young infant, each with the same three
-// sections. A tab is the protocol document the section edits.
+// The page is two parts, sick child and young infant. Each part has one tab per
+// illness (topics.js): the classification table, then its doses, treatment,
+// counselling and follow-up, one after the other. Behind them are still four
+// protocol documents per part, all held here at once, so moving between tabs
+// never loses an edit and Save writes every document that changed.
 const PARTS = ['child', 'infant'];
-const SECTIONS = ['classify', 'drugs', 'guide', 'form'];
-const SECTION_PREFIX = { drugs: 'dosages_', guide: 'guide_', form: 'form_' };
-const tabFor = (part, section) => `${SECTION_PREFIX[section] || ''}${part}`;
-const partOf = (tab) => tab.replace(/^(dosages_|form_|guide_)/, '');
-const sectionOf = (tab) => Object.keys(SECTION_PREFIX).find((k) => tab.startsWith(SECTION_PREFIX[k])) || 'classify';
+const docTypes = (part) => ({ classify: part, drugs: `dosages_${part}`, guide: `guide_${part}`, form: `form_${part}` });
+const ALL_TYPES = PARTS.flatMap((p) => Object.values(docTypes(p)));
+// Doses before the rules that point at them, so a new dose is saved before
+// the line that uses it is checked against the database.
+const SAVE_ORDER = ['dosages_child', 'dosages_infant', 'child', 'infant', 'guide_child', 'guide_infant', 'form_child', 'form_infant'];
 // Text-only documents (recording forms, treatment tables): nothing to validate,
 // and no rule builder.
-const isTextTab = (tab) => tab.startsWith('form_') || tab.startsWith('guide_');
+const isTextType = (ft) => ft.startsWith('form_') || ft.startsWith('guide_');
 const NATIONAL_TEXT = { ...NATIONAL_FORMS, ...NATIONAL_GUIDES };
+const clone = (v) => JSON.parse(JSON.stringify(v));
+// A document nobody has saved yet: the national text for forms and tables,
+// otherwise empty.
+const defaultDoc = (ft) => (NATIONAL_TEXT[ft] ? clone(NATIONAL_TEXT[ft])
+    : ft.startsWith('dosages') ? { formType: ft, version: '1.0', drugs: [] }
+        : { formType: ft, version: '1.0', categories: {} });
+const TOPIC_LABELS = {
+    danger: 'Danger signs', cough: 'Pneumonia / cough', diarrhea: 'Diarrhoea', fever: 'Fever, malaria & measles',
+    ear: 'Ear problem', malnutrition: 'Malnutrition', anemia: 'Anaemia',
+    bacterial_infection: 'Bacterial infection', jaundice: 'Jaundice', feeding_problem: 'Feeding & low weight',
+    [GENERAL]: 'General', [FORM]: 'Recording form',
+};
 // A history entry is kept small: one Firestore document holds a month of them.
 const MAX_CHANGES = 150;
 
@@ -360,8 +376,10 @@ export default function ProtocolEditor() {
     const { t, i18n } = useTranslation();
     const ar = i18n.language === 'ar';
     const { protocols, fetchProtocols, isLoading } = useDataCache();
-    const [activeTab, setActiveTab] = useState('child'); 
-    const [editorData, setEditorData] = useState(null);
+    const [part, setPart] = useState('child');
+    const [topicChoice, setTopicChoice] = useState({});
+    // Every protocol document of both parts, by formType, as being edited.
+    const [docs, setDocs] = useState({});
     const [isSaving, setIsSaving] = useState(false);
     const [search, setSearch] = useState('');
     const [issues, setIssues] = useState(null);
@@ -369,8 +387,6 @@ export default function ProtocolEditor() {
     // cell editable; Advanced is the rule builder (conditions and logic).
     const [editing, setEditing] = useState(false);
     const [advanced, setAdvanced] = useState(false);
-    const isFormTab = isTextTab(activeTab);
-    const viewMode = !editing ? 'booklet' : (advanced && !isFormTab ? 'advanced' : 'edit');
     const [showHistory, setShowHistory] = useState(false);
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -394,54 +410,45 @@ export default function ProtocolEditor() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // A snapshot of what was loaded, so "has this been edited" is a fact rather
-    // than a flag someone has to remember to set in every handler.
-    const baselineRef = useRef('');
-    const isDirty = !!editorData && JSON.stringify(editorData) !== baselineRef.current;
-
-    // The doses a treatment may legitimately reference. Deliberately the SAVED
-    // dosages, not anything unsaved in the other tab: the clinical engine reads
-    // what is in the database, so that is what a dose tag has to resolve against.
-    const dosageListForValidation = useMemo(() => {
-        const target = activeTab === 'child' ? 'dosages_child'
-            : activeTab === 'infant' ? 'dosages_infant' : null;
-        return target ? (protocols?.[target]?.drugs || []) : [];
-    }, [protocols, activeTab]);
+    // A snapshot of what was loaded, per document, so "has this been edited"
+    // is a fact rather than a flag someone has to remember to set.
+    const baselineRef = useRef({});
+    const dirtyTypes = ALL_TYPES.filter((ft) => docs[ft] && JSON.stringify(docs[ft]) !== baselineRef.current[ft]);
+    const isDirty = dirtyTypes.length > 0;
+    const setDoc = (ft, data) => setDocs((prev) => ({ ...prev, [ft]: data }));
 
     // Accordion States for Compact Layout
     const [expandedCats, setExpandedCats] = useState({});
     const [expandedRules, setExpandedRules] = useState({});
     const [expandedDrugs, setExpandedDrugs] = useState({});
 
-    // Loads the protocol for the active tab.
+    // Loads every document.
     //
     // The guard is the point. This effect depends on `protocols`, so ANY refresh
     // of the cache used to overwrite the editor — an hour of rule authoring
-    // replaced by the server copy, with no warning and no undo. It now refuses
-    // to overwrite unsaved work; the tab switch below is the one place that
-    // discards edits, and it asks first.
+    // replaced by the server copy, with no warning and no undo. A document with
+    // unsaved edits is never overwritten; the others take the fresh copy.
     useEffect(() => {
-        if (isDirty) return;
-
-        if (protocols && protocols[activeTab]) {
-            const fresh = JSON.parse(JSON.stringify(protocols[activeTab]));
-            baselineRef.current = JSON.stringify(fresh);
-            setEditorData(fresh);
-        } else if (protocols && !Array.isArray(protocols)) {
-            // Only once the protocols really loaded. Starting from a blank
-            // protocol after a FAILED load would let a save wipe the live rules.
-            // A recording form nobody has saved yet starts as the national one.
-            const defaultStructure = NATIONAL_TEXT[activeTab] ? JSON.parse(JSON.stringify(NATIONAL_TEXT[activeTab]))
-                : activeTab.startsWith('dosages')
-                    ? { formType: activeTab, version: "1.0", drugs: [] }
-                    : { formType: activeTab, version: "1.0", categories: {} };
-            baselineRef.current = JSON.stringify(defaultStructure);
-            setEditorData(defaultStructure);
-        }
-        // isDirty is read, not depended on: adding it would re-run the effect
-        // the moment the edits were discarded and reload mid-keystroke.
+        // Only once the protocols really loaded. Starting from a blank
+        // protocol after a FAILED load would let a save wipe the live rules.
+        if (!protocols || Array.isArray(protocols)) return;
+        const next = { ...docs };
+        let changed = false;
+        ALL_TYPES.forEach((ft) => {
+            const cur = docs[ft];
+            if (cur && JSON.stringify(cur) !== baselineRef.current[ft]) return;
+            const fresh = protocols[ft] ? clone(protocols[ft]) : defaultDoc(ft);
+            const json = JSON.stringify(fresh);
+            if (cur && json === baselineRef.current[ft]) return;
+            baselineRef.current[ft] = json;
+            next[ft] = fresh;
+            changed = true;
+        });
+        if (changed) setDocs(next);
+        // docs is read, not depended on: adding it would re-run the effect on
+        // every keystroke.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [protocols, activeTab, isLoading.imnciProtocols]);
+    }, [protocols, isLoading.imnciProtocols]);
 
     // Closing the tab is the other way an hour of work disappears.
     useEffect(() => {
@@ -451,25 +458,42 @@ export default function ProtocolEditor() {
         return () => window.removeEventListener('beforeunload', warn);
     }, [isDirty]);
 
-    const switchTab = async (next) => {
-        if (next === activeTab) return;
-        if (isDirty && !await confirmDialog(
-            t('clinical_ui.protocol.dlg.discard_msg', 'You have unsaved changes to this protocol. Switching tabs will discard them. Continue?'),
-            { title: t('clinical_ui.protocol.dlg.discard_title', 'Discard changes'), confirmLabel: t('clinical_ui.protocol.dlg.discard', 'Discard'), danger: true }
-        )) return;
-        baselineRef.current = '';   // force a reload for the tab being opened
-        setEditorData(null);
-        setIssues(null);
-        setActiveTab(next);
-    };
+    const types = docTypes(part);
+    const classKey = types.classify;
+    const doseKey = types.drugs;
+    const guideKey = types.guide;
+    const formKey = types.form;
+    const classDoc = docs[classKey];
+    const doseDoc = docs[doseKey];
+    const guideDoc = docs[guideKey];
+
+    const topics = classDoc ? topicsFor(part, classDoc) : [];
+    const topic = topics.find((tp) => tp.id === topicChoice[part]) ? topicChoice[part] : (topics[0]?.id || GENERAL);
+    const isFormTab = topic === FORM;
+    const viewMode = !editing ? 'booklet' : (advanced && !isFormTab ? 'advanced' : 'edit');
+    const openTopic = (id) => { setTopicChoice((prev) => ({ ...prev, [part]: id })); setSearch(''); };
+    // Nothing is lost by changing part or tab: every document stays in the editor.
+    const switchPart = (next) => { if (next !== part) { setPart(next); setIssues(null); setSearch(''); } };
+
+    const docName = (ft) => t(`clinical_ui.protocol.history.tab.${ft}`, ft);
 
     const handleSave = async () => {
-        if (!editorData) return;
+        const toSave = SAVE_ORDER.filter((ft) => dirtyTypes.includes(ft));
+        if (!toSave.length) return;
 
         // Checked before the write, not after. A protocol with a dangling dose
-        // tag saves perfectly happily and only fails at the bedside.
-        // The recording forms are text only: nothing in them can dangle.
-        const { errors, warnings } = isFormTab ? { errors: [], warnings: [] } : validateProtocol(activeTab, editorData, dosageListForValidation);
+        // tag saves perfectly happily and only fails at the bedside. Rules are
+        // checked against the doses as they will be once this save is done
+        // (doses are saved first). Forms and tables are text only.
+        const errors = [];
+        const warnings = [];
+        toSave.filter((ft) => !isTextType(ft)).forEach((ft) => {
+            const doses = PARTS.includes(ft) ? (docs[`dosages_${ft}`]?.drugs || []) : [];
+            const r = validateProtocol(ft, docs[ft], doses);
+            const tag = (m) => ({ ...m, message: `${docName(ft)}: ${m.message}` });
+            errors.push(...r.errors.map(tag));
+            warnings.push(...r.warnings.map(tag));
+        });
         setIssues({ errors, warnings });
 
         if (errors.length > 0) {
@@ -483,14 +507,17 @@ export default function ProtocolEditor() {
 
         setIsSaving(true);
         try {
-            let before = null;
-            try { before = baselineRef.current ? JSON.parse(baselineRef.current) : null; } catch { before = null; }
-            await saveIMNCIProtocol(activeTab, editorData);
-            baselineRef.current = JSON.stringify(editorData);
+            for (const ft of toSave) {
+                const data = docs[ft];
+                let before = null;
+                try { before = baselineRef.current[ft] ? JSON.parse(baselineRef.current[ft]) : null; } catch { before = null; }
+                await saveIMNCIProtocol(ft, data);
+                baselineRef.current[ft] = JSON.stringify(data);
+                await recordHistory(ft, diffProtocol(ft, before, data));
+            }
             setIssues(null);
             setEditing(false);
             notify(t('clinical_ui.protocol.toast.saved', 'Protocol saved. It is now live for every clinician.'), 'success');
-            await recordHistory(activeTab, diffProtocol(activeTab, before, editorData));
             await fetchProtocols(true);
         } catch (error) {
             console.error("Save failed:", error);
@@ -538,13 +565,18 @@ export default function ProtocolEditor() {
             t('clinical_ui.protocol.dlg.cancel_msg', 'Discard the changes you made since the last save?'),
             { title: t('clinical_ui.protocol.dlg.discard_title', 'Discard changes'), confirmLabel: t('clinical_ui.protocol.dlg.discard', 'Discard'), danger: true }
         )) return;
-        if (baselineRef.current) setEditorData(JSON.parse(baselineRef.current));
+        setDocs((prev) => {
+            const next = { ...prev };
+            dirtyTypes.forEach((ft) => { if (baselineRef.current[ft]) next[ft] = JSON.parse(baselineRef.current[ft]); });
+            return next;
+        });
         setIssues(null);
         setEditing(false);
     };
 
-    // All four tabs at once, Doses first. Saving the rules before their Doses
-    // tab is what produced one "dose does not exist" error per treatment line.
+    // All four rule and dose documents at once, Doses first. Saving the rules
+    // before their Doses tab is what produced one "dose does not exist" error
+    // per treatment line.
     const handleLoadNational = async () => {
         if (!await confirmDialog(
             t('clinical_ui.protocol.dlg.national_msg', 'This saves the Sudan national IMNCI protocol for the sick child and the young infant (classification, drugs and recording forms). Every clinician sees it straight away. After this, changes are made with Edit.'),
@@ -564,14 +596,17 @@ export default function ProtocolEditor() {
         setIsSaving(true);
         try {
             for (const formType of NATIONAL_SAVE_ORDER) {
-                await saveIMNCIProtocol(formType, JSON.parse(JSON.stringify(NATIONAL_PROTOCOLS[formType])));
+                await saveIMNCIProtocol(formType, clone(NATIONAL_PROTOCOLS[formType]));
             }
             for (const formType of Object.keys(NATIONAL_TEXT)) {
-                if (!protocols?.[formType]) await saveIMNCIProtocol(formType, JSON.parse(JSON.stringify(NATIONAL_TEXT[formType])));
+                if (!protocols?.[formType]) await saveIMNCIProtocol(formType, clone(NATIONAL_TEXT[formType]));
             }
-            const fresh = JSON.parse(JSON.stringify(NATIONAL_PROTOCOLS[activeTab] || NATIONAL_TEXT[activeTab]));
-            baselineRef.current = JSON.stringify(fresh);
-            setEditorData(fresh);
+            const fresh = {};
+            NATIONAL_SAVE_ORDER.forEach((ft) => {
+                fresh[ft] = clone(NATIONAL_PROTOCOLS[ft]);
+                baselineRef.current[ft] = JSON.stringify(fresh[ft]);
+            });
+            setDocs((prev) => ({ ...prev, ...fresh }));
             setIssues(null);
             notify(t('clinical_ui.protocol.toast.national_saved', 'The national protocol is saved and is now live for every clinician.'), 'success');
             await recordHistory('national', [], 'Loaded the Sudan national protocol');
@@ -595,22 +630,25 @@ export default function ProtocolEditor() {
     const toggleDrug = (drugIndex) => setExpandedDrugs(prev => ({...prev, [drugIndex]: !prev[drugIndex]}));
 
     // ========================================================================
-    // CLINICAL CATEGORY HANDLERS
+    // CLINICAL CATEGORY HANDLERS (the part's classification document)
     // ========================================================================
+    const setClass = (data) => setDoc(classKey, data);
     const addNewCategory = async () => {
         const catKey = await promptDialog(
             t('clinical_ui.protocol.dlg.add_cat_msg', "Enter a unique short key for this category (e.g. 'fever', 'cough'):"),
             { title: t('clinical_ui.protocol.dlg.add_cat_title', 'Add category') }
         );
         if (!catKey || catKey.trim() === '') return;
-        if (editorData.categories[catKey]) {
+        if (classDoc.categories[catKey]) {
             notify(t('clinical_ui.protocol.toast.cat_exists', 'A category with this key already exists.'), 'error');
             return;
         }
-        const newData = { ...editorData };
+        const newData = { ...classDoc, categories: { ...(classDoc.categories || {}) } };
         newData.categories[catKey] = { title: "New Category", rules: [] };
-        setEditorData(newData);
+        setClass(newData);
         setExpandedCats(prev => ({...prev, [catKey]: true}));
+        // A table of its own gets a tab of its own.
+        openTopic(catKey);
     };
 
     const removeCategory = async (catKey, e) => {
@@ -619,81 +657,81 @@ export default function ProtocolEditor() {
             t('clinical_ui.protocol.dlg.del_cat_msg', "Delete the entire '{{key}}' category and all its rules?", { key: catKey }),
             { title: t('clinical_ui.protocol.dlg.del_cat_title', 'Delete category'), confirmLabel: t('clinical_ui.protocol.dlg.delete', 'Delete'), danger: true }
         )) {
-            const newData = { ...editorData };
+            const newData = { ...classDoc };
             delete newData.categories[catKey];
-            setEditorData(newData);
+            setClass(newData);
         }
     };
 
     const handleCategoryChange = (catKey, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         newData.categories[catKey][field] = value;
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const handleRuleChange = (catKey, ruleIndex, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         newData.categories[catKey].rules[ruleIndex][field] = value;
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const handleClassificationChange = (catKey, ruleIndex, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         newData.categories[catKey].rules[ruleIndex].classification[field] = value;
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const toggleCondition = (catKey, ruleIndex, condition) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         const currentConditions = newData.categories[catKey].rules[ruleIndex].conditions || [];
         if (currentConditions.includes(condition)) {
             newData.categories[catKey].rules[ruleIndex].conditions = currentConditions.filter(c => c !== condition);
         } else {
             newData.categories[catKey].rules[ruleIndex].conditions = [...currentConditions, condition];
         }
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const addTreatment = (catKey, ruleIndex, treatment) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         const currentTreatments = newData.categories[catKey].rules[ruleIndex].treatments || [];
         // Even if duplicate, allow it just in case they want to modify it differently
         newData.categories[catKey].rules[ruleIndex].treatments = [...currentTreatments, treatment];
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const editTreatment = (catKey, ruleIndex, tIdx, newText) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         newData.categories[catKey].rules[ruleIndex].treatments[tIdx] = newText;
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const removeTreatment = (catKey, ruleIndex, treatmentIndex) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         newData.categories[catKey].rules[ruleIndex].treatments.splice(treatmentIndex, 1);
-        setEditorData(newData);
+        setClass(newData);
     };
 
     // "Only when": conditions that must all be true before the rule is looked
     // at, such as "the child has cough" for the cough table.
     const toggleRequire = (catKey, ruleIndex, condition) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         const target = newData.categories[catKey].rules[ruleIndex];
         const current = target.requires || [];
         target.requires = current.includes(condition) ? current.filter((c) => c !== condition) : [...current, condition];
         if (!target.requires.length) delete target.requires;
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const addNewRule = (catKey, e) => {
         e.stopPropagation();
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         const newIndex = newData.categories[catKey].rules.length;
         newData.categories[catKey].rules.push({
             id: `rule_${Math.floor(Math.random() * 100000)}`, type: "ANY", conditions: [],
             classification: { label: "New Classification", color: IMNCI_SEVERITIES[3].protocolColor }, treatments: []
         });
-        setEditorData(newData);
+        setClass(newData);
         setExpandedRules(prev => ({...prev, [`${catKey}_${newIndex}`]: true}));
     };
 
@@ -701,23 +739,28 @@ export default function ProtocolEditor() {
         e.stopPropagation();
         if (await confirmDialog(t('clinical_ui.protocol.dlg.del_rule_msg', 'Delete this rule?'),
             { title: t('clinical_ui.protocol.dlg.del_rule_title', 'Delete rule'), confirmLabel: t('clinical_ui.protocol.dlg.delete', 'Delete'), danger: true })) {
-            const newData = { ...editorData };
+            const newData = { ...classDoc };
             newData.categories[catKey].rules.splice(ruleIndex, 1);
-            setEditorData(newData);
+            setClass(newData);
         }
     };
 
     // ========================================================================
-    // DOSAGE CALCULATOR HANDLERS
+    // DOSAGE CALCULATOR HANDLERS (the part's doses document)
     // ========================================================================
+    const setDoses = (data) => setDoc(doseKey, data);
     const addNewDrug = () => {
-        const newData = { ...editorData };
-        newData.drugs = newData.drugs || [];
-        newData.drugs.unshift({
-            id: `drug_${Math.floor(Math.random() * 100000)}`, label: "New Drug Label", rules: [], fallback: "Check chart based on weight/age"
+        const newData = { ...doseDoc };
+        newData.drugs = [...(newData.drugs || [])];
+        const index = newData.drugs.length;
+        // Added on a disease tab, the dose stays on that tab even before a
+        // classification line points at it.
+        newData.drugs.push({
+            id: `drug_${Math.floor(Math.random() * 100000)}`, label: "New Drug Label", rules: [], fallback: "Check chart based on weight/age",
+            ...(topic !== GENERAL && topic !== FORM ? { topic } : {}),
         });
-        setEditorData(newData);
-        setExpandedDrugs(prev => ({...prev, 0: true}));
+        setDoses(newData);
+        setExpandedDrugs(prev => ({...prev, [index]: true}));
     };
 
     const removeDrug = async (drugIndex, e) => {
@@ -725,38 +768,38 @@ export default function ProtocolEditor() {
         if (await confirmDialog(
             t('clinical_ui.protocol.dlg.del_drug_msg', 'Delete this drug calculator entirely? Any treatment still referencing it will lose its dose.'),
             { title: t('clinical_ui.protocol.dlg.del_drug_title', 'Delete drug'), confirmLabel: t('clinical_ui.protocol.dlg.delete', 'Delete'), danger: true })) {
-            const newData = { ...editorData };
+            const newData = { ...doseDoc };
             newData.drugs.splice(drugIndex, 1);
-            setEditorData(newData);
+            setDoses(newData);
         }
     };
 
     const handleDrugChange = (drugIndex, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...doseDoc };
         newData.drugs[drugIndex][field] = value;
-        setEditorData(newData);
+        setDoses(newData);
     };
 
     const addDrugRange = (drugIndex) => {
-        const newData = { ...editorData };
+        const newData = { ...doseDoc };
         newData.drugs[drugIndex].rules = newData.drugs[drugIndex].rules || [];
         newData.drugs[drugIndex].rules.push({ minAge: '', maxAge: '', minWeight: '', maxWeight: '', doseQty: '', doseFreq: '', doseDuration: '' });
-        setEditorData(newData);
+        setDoses(newData);
     };
 
     const removeDrugRange = (drugIndex, rangeIndex) => {
-        const newData = { ...editorData };
+        const newData = { ...doseDoc };
         newData.drugs[drugIndex].rules.splice(rangeIndex, 1);
-        setEditorData(newData);
+        setDoses(newData);
     };
 
     const handleDrugRangeChange = (drugIndex, rangeIndex, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...doseDoc };
         newData.drugs[drugIndex].rules[rangeIndex][field] = value;
-        setEditorData(newData);
+        setDoses(newData);
     };
 
-    if (loadError && !editorData) {
+    if (loadError && !classDoc) {
         return (
             <Card>
                 <div className="p-8 flex flex-col items-center text-center gap-3">
@@ -774,14 +817,26 @@ export default function ProtocolEditor() {
         );
     }
 
-    if (isLoading.imnciProtocols || !editorData) {
+    if (isLoading.imnciProtocols || !classDoc || !doseDoc || !guideDoc || !docs[formKey]) {
         return <div className="flex justify-center p-12"><Spinner /></div>;
     }
 
-    const currentAvailableConditions = activeTab === 'child' ? CHILD_CONDITIONS : INFANT_CONDITIONS;
-    const currentAvailableTreatments = activeTab === 'child' ? CHILD_TREATMENTS : INFANT_TREATMENTS;
-    
-    const isDosagesTab = activeTab.startsWith('dosages');
+    const currentAvailableConditions = part === 'child' ? CHILD_CONDITIONS : INFANT_CONDITIONS;
+    const currentAvailableTreatments = part === 'child' ? CHILD_TREATMENTS : INFANT_TREATMENTS;
+
+    // What belongs on this tab: its classification tables, the doses they
+    // point at, and its treatment, counselling and follow-up boxes.
+    const topicEntry = topics.find((tp) => tp.id === topic);
+    const topicCats = topicEntry?.page?.categories || [];
+    const topicDrugIdx = isFormTab ? [] : drugsForTopic(part, topic, classDoc, doseDoc);
+    const knownTopics = topics.map((tp) => tp.id);
+    const topicGuide = isFormTab ? { treat: [], counsel: [], followup: [] } : guideForTopic(part, topic, guideDoc, knownTopics);
+    const guideLang = ar ? 'ar' : 'en';
+    const addBoxFor = (kind) => {
+        const gi = groupForNewBox(guideDoc, kind, topicGuide[kind]);
+        if (gi < 0) return;
+        setDoc(guideKey, addGuideBox(guideDoc, gi, topic !== GENERAL ? topic : undefined));
+    };
 
     // Filtering, so a protocol with ten categories and sixty rules is navigable.
     // Matches the category title, the classification label, any condition and
@@ -792,30 +847,25 @@ export default function ProtocolEditor() {
         || (rule.conditions || []).some((c) => String(c).toLowerCase().includes(term))
         || (rule.treatments || []).some((t) => String(t).toLowerCase().includes(term));
 
-    const visibleCategories = Object.entries(editorData.categories || {}).filter(([catKey, cat]) => {
+    const visibleCategories = topicCats.map((k) => [k, classDoc.categories?.[k]]).filter(([catKey, cat]) => {
+        if (!cat) return false;
         if (!term) return true;
         if (String(cat.title || '').toLowerCase().includes(term)) return true;
         if (catKey.toLowerCase().includes(term)) return true;
         return (cat.rules || []).some(ruleMatches);
     });
 
-    const visibleDrugs = (editorData.drugs || [])
-        .map((drug, drugIndex) => ({ drug, drugIndex }))
+    const visibleDrugs = topicDrugIdx
+        .map((drugIndex) => ({ drug: doseDoc.drugs[drugIndex], drugIndex }))
         .filter(({ drug }) => !term
             || String(drug.label || '').toLowerCase().includes(term)
             || String(drug.id || '').toLowerCase().includes(term));
 
-    const hiddenCount = isDosagesTab
-        ? (editorData.drugs || []).length - visibleDrugs.length
-        : Object.keys(editorData.categories || {}).length - visibleCategories.length;
+    const hiddenCount = (topicCats.length - visibleCategories.length) + (topicDrugIdx.length - visibleDrugs.length);
 
-    const part = partOf(activeTab);
-    const section = sectionOf(activeTab);
-    const targetDosageTab = `dosages_${part}`;
     // The national load is a one-time start: shown only while nothing is saved.
     const nothingSaved = !protocols?.child && !protocols?.infant;
-    const sectionIcon = { classify: Activity, drugs: Syringe, guide: ListChecks, form: ClipboardList };
-    const dynamicDosageList = protocols?.[targetDosageTab]?.drugs || []; 
+    const dynamicDosageList = doseDoc?.drugs || [];
 
     // The booklet layout edits through the same handlers as the rule builder.
     const bookletEdit = {
@@ -826,6 +876,49 @@ export default function ProtocolEditor() {
         addRange: addDrugRange,
         removeRange: removeDrugRange,
     };
+    const editing_ = viewMode === 'edit';
+
+    // The numbered parts of a disease tab, in the order they are used. Empty
+    // parts are left out unless editing, when they are where a first box is added.
+    const steps = [];
+    if (topicCats.length) {
+        steps.push({ key: 'classify', icon: Activity, title: t('clinical_ui.protocol.steps.classify', 'Classify'),
+            body: <BookletProtocolView formType={part} protocol={classDoc} doses={dynamicDosageList} edit={editing_ ? bookletEdit : null} pageIds={[topic]} heading={false} /> });
+    }
+    if (topicDrugIdx.length || editing_) {
+        steps.push({ key: 'drugs', icon: Syringe, title: t('clinical_ui.protocol.steps.drugs', 'Drug doses'),
+            body: (
+                <div className="space-y-2">
+                    {topicDrugIdx.length > 0 && <BookletDoseView protocol={doseDoc} only={topicDrugIdx} edit={editing_ ? bookletEdit : null} />}
+                    {editing_ && (
+                        <button type="button" onClick={addNewDrug} className="w-full border-2 border-dashed border-slate-300 rounded py-2 text-xs font-bold text-sky-800 hover:bg-sky-50">
+                            + {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}
+                        </button>
+                    )}
+                </div>
+            ) });
+    }
+    [['treat', ListChecks, t('clinical_ui.protocol.steps.treat', 'Treatment')],
+        ['counsel', MessageCircle, t('clinical_ui.protocol.steps.counsel', 'Counsel the mother')],
+        ['followup', CalendarClock, t('clinical_ui.protocol.steps.followup', 'Follow-up')]].forEach(([kind, icon, title]) => {
+        const list = topicGuide[kind];
+        if (!list.length && !editing_) return;
+        steps.push({ key: kind, icon, title, body: (
+            <div className="space-y-2" dir={ar ? 'rtl' : 'ltr'} lang={guideLang}>
+                <div className="grid gap-4 xl:grid-cols-2 items-start">
+                    {list.map(({ gi, bi }) => (
+                        <GuideBlock key={`${gi}-${guideDoc.groups[gi].blocks[bi]?.id || bi}`} guide={guideDoc} gi={gi} bi={bi} lang={guideLang} edit={editing_ ? {} : null} onChange={(next) => setDoc(guideKey, next)} t={t} />
+                    ))}
+                </div>
+                {editing_ && (
+                    <button type="button" onClick={() => addBoxFor(kind)} className="w-full border-2 border-dashed border-slate-300 rounded py-2 text-xs font-bold text-sky-800 hover:bg-sky-50">
+                        + {t('clinical_ui.protocol.guide.add_box', 'Add box')}
+                    </button>
+                )}
+            </div>
+        ) });
+    });
+    const topicLabel = (tp) => t(`clinical_ui.protocol.topics.${tp.id}`, TOPIC_LABELS[tp.id] || (ar ? classDoc.categories?.[tp.id]?.titleAr : null) || tp.title || tp.id);
 
     return (
         <div className="space-y-4 max-w-[1400px] mx-auto pb-12 font-sans text-sm" dir="ltr">
@@ -847,7 +940,7 @@ export default function ProtocolEditor() {
                         {PARTS.map((p) => {
                             const Icon = p === 'child' ? User : Baby;
                             return (
-                                <button key={p} type="button" role="tab" aria-selected={part === p} onClick={() => switchTab(tabFor(p, section))}
+                                <button key={p} type="button" role="tab" aria-selected={part === p} onClick={() => switchPart(p)}
                                     className={`px-4 py-2 text-sm font-bold flex items-center gap-2 ${part === p ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
                                     <Icon size={16} /> {t(`clinical_ui.protocol.parts.${p}`, p === 'child' ? 'Sick child (2 months – 5 years)' : 'Young infant (up to 2 months)')}
                                 </button>
@@ -877,13 +970,13 @@ export default function ProtocolEditor() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300">
-                    <div className="flex flex-wrap" role="tablist" aria-label={t('clinical_ui.protocol.sections.label', 'Section')}>
-                        {SECTIONS.map((sec) => {
-                            const Icon = sectionIcon[sec];
+                    <div className="flex flex-wrap" role="tablist" aria-label={t('clinical_ui.protocol.topics.label', 'Illness')}>
+                        {topics.map((tp) => {
+                            const Icon = tp.id === FORM ? ClipboardList : tp.id === GENERAL ? BookOpen : Stethoscope;
                             return (
-                                <button key={sec} type="button" role="tab" aria-selected={section === sec} onClick={() => switchTab(tabFor(part, sec))}
-                                    className={`px-3 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 -mb-px ${section === sec ? 'border-sky-700 text-sky-800' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>
-                                    <Icon size={15} /> {t(`clinical_ui.protocol.sections.${sec}`, { classify: 'Classification', drugs: 'Drugs', guide: 'Treatment & counselling', form: 'Recording form' }[sec])}
+                                <button key={tp.id} type="button" role="tab" aria-selected={topic === tp.id} onClick={() => openTopic(tp.id)}
+                                    className={`px-3 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 -mb-px ${topic === tp.id ? 'border-sky-700 text-sky-800' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>
+                                    <Icon size={15} /> {topicLabel(tp)}
                                 </button>
                             );
                         })}
@@ -902,11 +995,11 @@ export default function ProtocolEditor() {
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder={isDosagesTab ? t('clinical_ui.protocol.search.drug', 'Find a drug…') : t('clinical_ui.protocol.search.rule', 'Find a category, classification, condition or treatment…')}
+                            placeholder={t('clinical_ui.protocol.search.rule', 'Find a category, classification, condition or treatment…')}
                             className="w-full sm:w-64 p-2 border border-slate-300 rounded text-sm focus:ring-sky-500"
                         />
-                        {!isDosagesTab && <Button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><FolderPlus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_category', 'Add Category')}</Button>}
-                        {isDosagesTab && <Button onClick={addNewDrug} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><Plus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}</Button>}
+                        {<Button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><FolderPlus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_category', 'Add Category')}</Button>}
+                        {<Button onClick={addNewDrug} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><Plus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}</Button>}
                     </div>
                 )}
             </div>
@@ -945,7 +1038,7 @@ export default function ProtocolEditor() {
 
                     {viewMode === 'advanced' && hiddenCount > 0 && (
                         <div className="text-xs text-slate-600 bg-white border border-slate-200 rounded px-3 py-2">
-                            {isDosagesTab ? t('clinical_ui.protocol.hidden_drugs', '{{count}} drug(s) hidden by the search.', { count: hiddenCount }) : t('clinical_ui.protocol.hidden_cats', '{{count}} category(ies) hidden by the search.', { count: hiddenCount })}
+                            {t('clinical_ui.protocol.hidden_items', '{{count}} table(s) or drug(s) hidden by the search.', { count: hiddenCount })}
                             <button onClick={() => setSearch('')} className="ms-2 text-sky-700 font-bold hover:underline">{t('clinical_ui.protocol.btn.clear', 'Clear')}</button>
                         </div>
                     )}
@@ -953,21 +1046,32 @@ export default function ProtocolEditor() {
                     {/* ============================================================ */}
                     {/* BOOKLET VIEW */}
                     {/* ============================================================ */}
-                    {viewMode !== 'advanced' && (activeTab.startsWith('guide_')
-                        ? <TreatmentGuideView key={activeTab} guide={editorData} edit={viewMode === 'edit' ? {} : null} onChange={setEditorData} />
-                        : isFormTab
-                        ? <RecordingFormView key={activeTab} form={editorData} edit={viewMode === 'edit' ? {} : null} onChange={setEditorData} />
-                        : isDosagesTab
-                            ? <BookletDoseView protocol={editorData} edit={viewMode === 'edit' ? bookletEdit : null} />
-                            : <BookletProtocolView formType={activeTab} protocol={editorData} doses={dynamicDosageList} edit={viewMode === 'edit' ? bookletEdit : null} />)}
+                    {viewMode !== 'advanced' && (isFormTab
+                        ? <RecordingFormView key={formKey} form={docs[formKey]} edit={editing_ ? {} : null} onChange={(next) => setDoc(formKey, next)} />
+                        : (
+                            <div className="space-y-6" dir={ar ? 'rtl' : 'ltr'}>
+                                {steps.map((st, n) => (
+                                    <section key={st.key} className="space-y-2">
+                                        <h3 data-step={st.key} className="flex items-center gap-2 text-sm md:text-base font-extrabold text-slate-900 border-b-2 border-slate-800 pb-1">
+                                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-800 text-white text-xs shrink-0">{n + 1}</span>
+                                            <st.icon size={16} className="text-slate-700 shrink-0" /> {st.title}
+                                        </h3>
+                                        {st.body}
+                                    </section>
+                                ))}
+                                {!steps.length && (
+                                    <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.empty.topic', 'Nothing is saved for this illness yet. Press Edit to add it.')}</div>
+                                )}
+                            </div>
+                        ))}
 
                     {/* ============================================================ */}
                     {/* DOSAGES TAB UI */}
                     {/* ============================================================ */}
-                    {viewMode === 'advanced' && isDosagesTab && (
+                    {viewMode === 'advanced' && topicDrugIdx.length > 0 && (
                         <div className="space-y-3">
                             {visibleDrugs.map(({ drug, drugIndex }) => {
-                                // drugIndex is the index in editorData.drugs, not in the
+                                // drugIndex is the index in the doses document, not in the
                                 // filtered list — every handler edits by that index, so
                                 // filtering must not renumber it.
                                 const isExpanded = expandedDrugs[drugIndex] || false;
@@ -1032,16 +1136,15 @@ export default function ProtocolEditor() {
                                     )}
                                 </div>
                             )})}
-                            {(editorData.drugs || []).length === 0 && <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg text-slate-500">{t('clinical_ui.protocol.empty.no_drugs', 'No drug calculators added yet.')}</div>}
-                            {(editorData.drugs || []).length > 0 && visibleDrugs.length === 0 && <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg text-slate-500">{t('clinical_ui.protocol.empty.no_drug_match', 'No drugs match this search.')}</div>}
+                            {visibleDrugs.length === 0 && <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg text-slate-500">{t('clinical_ui.protocol.empty.no_drug_match', 'No drugs match this search.')}</div>}
                         </div>
                     )}
 
                     {/* ============================================================ */}
                     {/* CHILD & INFANT TAB UI */}
                     {/* ============================================================ */}
-                    {viewMode === 'advanced' && !isDosagesTab && (
-                        Object.keys(editorData.categories || {}).length === 0 ? (
+                    {viewMode === 'advanced' && (topic !== GENERAL || !topicDrugIdx.length) && (
+                        topicCats.length === 0 ? (
                             <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg">
                                 <p className="text-slate-500 mb-4">{t('clinical_ui.protocol.empty.no_cats', 'No categories found in this protocol.')}</p>
                                 <Button onClick={addNewCategory} variant="primary">{t('clinical_ui.protocol.btn.add_cat_manual', 'Add Category Manually')}</Button>

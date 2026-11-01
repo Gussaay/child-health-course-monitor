@@ -256,12 +256,16 @@ export const bookletPagesFor = (formType, categories = {}) => {
     return [...known, ...extra];
 };
 
-export const BookletProtocolView = ({ formType, protocol, doses = [], edit = null }) => {
+// `pageIds` limits the view to those booklet pages (one disease tab);
+// `heading` is the part's banner, left off when only one page is shown.
+export const BookletProtocolView = ({ formType, protocol, doses = [], edit = null, pageIds = null, heading = true }) => {
     const { t, i18n } = useTranslation();
     const ar = i18n.language === 'ar';
     const categories = protocol?.categories || {};
     const drugLabels = Object.fromEntries((doses || []).map((d) => [d.id, drugText(d, 'label', ar) || d.id]));
-    const pages = bookletPagesFor(formType, categories).map((p) => pageText(p, ar));
+    const pages = bookletPagesFor(formType, categories)
+        .filter((p) => !pageIds || pageIds.includes(p.id))
+        .map((p) => pageText(p, ar));
 
     if (!pages.length) {
         return <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.booklet.empty', 'This protocol has no classification tables yet.')}</div>;
@@ -269,14 +273,14 @@ export const BookletProtocolView = ({ formType, protocol, doses = [], edit = nul
 
     return (
         <div className="space-y-6" dir={ar ? 'rtl' : 'ltr'}>
-            <div className="text-center border-2 border-slate-800 bg-white py-2 px-3">
+            {heading && <div className="text-center border-2 border-slate-800 bg-white py-2 px-3">
                 <div className="font-extrabold uppercase text-slate-900 text-sm md:text-base">
                     {formType === 'infant'
                         ? t('clinical_ui.protocol.booklet.infant_heading', 'Assess, classify and treat the sick young infant, age up to 2 months')
                         : t('clinical_ui.protocol.booklet.child_heading', 'Assess and classify the sick child, age 2 months up to 5 years')}
                 </div>
                 <div className="text-[11px] text-slate-600 mt-0.5">{t('clinical_ui.protocol.booklet.use_all', 'Use all boxes that match the symptoms and problems to classify the illness.')}</div>
-            </div>
+            </div>}
             {pages.map((page) => (
                 <section key={page.id} className="rounded-sm p-3 md:p-4 shadow-sm border border-amber-200" style={{ background: '#fffbd6' }}>
                     <h3 className="mx-auto mb-3 w-fit max-w-full border-2 border-slate-800 bg-white px-4 py-1.5 text-center font-extrabold uppercase tracking-wide text-slate-900 text-sm md:text-base">
@@ -337,22 +341,24 @@ const DoseBand = ({ r, edit, drugIndex, k, months, t, layout, ar }) => {
     const txt = (field, extra = '') => (
         <input type="text" value={show(field) ?? ''} onChange={set(ar ? `${field}Ar` : field)} aria-label={field} className={`${inputCls} ${extra}`} dir="auto" />
     );
-    const age = edit ? <span className="inline-flex items-center gap-1">{num('minAge', '0')}–{num('maxAge', '∞')}</span> : rangeText(r.minAge, r.maxAge, months, t);
-    const weight = edit ? <span className="inline-flex items-center gap-1">{num('minWeight', '0')}–{num('maxWeight', '∞')}</span> : rangeText(r.minWeight, r.maxWeight, ar ? 'كجم' : 'kg', t);
+    const pair = (lo, hi) => (layout === 'compact'
+        ? <span className="flex flex-col gap-1">{num(lo, '0')}{num(hi, '∞')}</span>
+        : <span className="inline-flex items-center gap-1">{num(lo, '0')}–{num(hi, '∞')}</span>);
+    const age = edit ? pair('minAge', 'maxAge') : rangeText(r.minAge, r.maxAge, months, t);
+    const weight = edit ? pair('minWeight', 'maxWeight') : rangeText(r.minWeight, r.maxWeight, ar ? 'كجم' : 'kg', t);
     const remove = edit && (
         <button type="button" onClick={() => edit.removeRange(drugIndex, k)} className="text-xs font-bold text-red-700 hover:underline">
             {t('clinical_ui.protocol.booklet.remove_band', 'Remove')}
         </button>
     );
 
-    // Phone: the same table in two columns, so nothing scrolls sideways.
+    // Phone: Age, Weight and Dose columns (how often and how long under the
+    // dose), so nothing scrolls sideways and age never shares a cell with weight.
     if (layout === 'compact') {
         return (
             <tr className={k % 2 ? 'bg-slate-50' : ''}>
-                <td className="border border-slate-300 p-1.5 align-top text-xs">
-                    <div className={edit ? '' : 'whitespace-nowrap'}>{age}</div>
-                    <div className={`text-slate-600 ${edit ? 'mt-1' : 'whitespace-nowrap'}`}>{weight}</div>
-                </td>
+                <td className="border border-slate-300 p-1.5 align-top text-xs break-words">{age}</td>
+                <td className="border border-slate-300 p-1.5 align-top text-xs break-words">{weight}</td>
                 <td className="border border-slate-300 p-1.5 align-top break-words">
                     <div className="font-bold">{edit ? txt('doseQty', 'font-bold') : show('doseQty')}</div>
                     <div className="text-xs text-slate-700 mt-0.5 space-y-0.5">
@@ -375,17 +381,20 @@ const DoseBand = ({ r, edit, drugIndex, k, months, t, layout, ar }) => {
     );
 };
 
-export const BookletDoseView = ({ protocol, edit = null }) => {
+// `only` is the list of drug indexes to show (one disease tab). Indexes stay
+// those of protocol.drugs, since every edit handler works by that index.
+export const BookletDoseView = ({ protocol, edit = null, only = null }) => {
     const { t, i18n } = useTranslation();
     const ar = i18n.language === 'ar';
-    const drugs = protocol?.drugs || [];
+    const all = protocol?.drugs || [];
+    const drugs = (only || all.map((_, i) => i)).map((i) => ({ drug: all[i], i })).filter(({ drug }) => drug);
     if (!drugs.length) {
         return <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.booklet.no_drugs', 'No doses saved yet.')}</div>;
     }
     const months = t('clinical_ui.protocol.booklet.months', 'months');
     return (
         <div className="grid gap-4 xl:grid-cols-2 items-start" dir={ar ? 'rtl' : 'ltr'}>
-            {drugs.map((drug, i) => (
+            {drugs.map(({ drug, i }) => (
                 <section key={drug.id || i} className="border-2 border-slate-800 bg-white rounded-sm overflow-hidden">
                     <div className="bg-sky-100 border-b-2 border-slate-800 px-3 py-1.5 text-slate-900">
                         {edit ? (
@@ -405,11 +414,12 @@ export const BookletDoseView = ({ protocol, edit = null }) => {
                             </h3>
                         )}
                     </div>
-                    {/* Phone: two columns, so nothing is cut off or scrolls sideways. */}
+                    {/* Phone: Age, Weight, Dose — nothing is cut off or scrolls sideways. */}
                     <table className="md:hidden w-full border-collapse table-fixed text-[13px] text-slate-900">
                         <thead>
                             <tr className="bg-slate-100 text-xs">
-                                <th className="border border-slate-400 p-1.5 text-start w-[42%]">{t('clinical_ui.protocol.booklet.age', 'Age')} / {t('clinical_ui.protocol.booklet.weight', 'Weight')}</th>
+                                <th className="border border-slate-400 p-1.5 text-start w-[24%]">{t('clinical_ui.protocol.booklet.age', 'Age')}</th>
+                                <th className="border border-slate-400 p-1.5 text-start w-[22%]">{t('clinical_ui.protocol.booklet.weight', 'Weight')}</th>
                                 <th className="border border-slate-400 p-1.5 text-start">{t('clinical_ui.protocol.booklet.dose', 'Dose')}</th>
                             </tr>
                         </thead>

@@ -95,6 +95,82 @@ const GuideTable = ({ side, edit, setColumn, setCell, addRow, removeRow, t }) =>
     );
 };
 
+// Rows and columns are added on both language sides together, so the
+// English and Arabic tables never fall out of step.
+const bothSides = (b, fn) => ['en', 'ar'].forEach((l) => { b[l] = b[l] || {}; fn(b[l]); });
+
+/**
+ * One box of the booklet (guide.groups[gi].blocks[bi]) in one language.
+ * `onChange` gets the whole guide with the change made.
+ */
+export const GuideBlock = ({ guide, gi, bi, lang, edit, onChange, t }) => {
+    const group = guide.groups[gi];
+    const b = group?.blocks?.[bi];
+    if (!b) return null;
+    const s = b[lang] || {};
+    const hasTable = (s.columns || []).length > 0;
+    const update = (fn) => { const next = clone(guide); fn(next); onChange(next); };
+    const onBlock = (fn) => update((g) => {
+        const blk = g.groups[gi].blocks[bi];
+        blk[lang] = blk[lang] || {};
+        fn(blk, blk[lang]);
+    });
+    const removeBlock = () => update((g) => { g.groups[gi].blocks.splice(bi, 1); });
+    const addTable = () => onBlock((blk) => bothSides(blk, (sd) => {
+        sd.columns = sd.columns?.length ? sd.columns : ['', ''];
+        sd.rows = [...(sd.rows || []), sd.columns.map(() => '')];
+    }));
+    return (
+        <section className="border-2 border-slate-800 bg-white rounded-sm overflow-hidden text-slate-900">
+            <div className={`border-b-2 px-3 py-1.5 ${GROUP_COLORS[group.id] || 'bg-slate-100 border-slate-800'}`}>
+                {edit ? (
+                    <div className="flex items-center gap-2">
+                        <input type="text" value={s.title || ''} onChange={(e) => onBlock((_b, side) => { side.title = e.target.value; })} aria-label={`${b.id} title`} className={`${inputCls} font-extrabold`} dir="auto" />
+                        <button type="button" onClick={removeBlock} className="text-xs font-bold text-red-700 hover:underline shrink-0">{t('clinical_ui.protocol.guide.remove_box', 'Remove box')}</button>
+                    </div>
+                ) : <h4 className="font-extrabold text-sm">{s.title}</h4>}
+            </div>
+            <div className="p-2.5 space-y-2.5 text-[13px]">
+                {edit
+                    ? <LinesBox value={s.lines} onChange={(v) => onBlock((_b, side) => { side.lines = v; })} label={`${b.id} lines`} />
+                    : (s.lines || []).length > 0 && (
+                        <ul className="space-y-1">
+                            {s.lines.map((l, k) => <li key={k} className="flex gap-1.5 leading-snug"><span className="text-slate-500 shrink-0">►</span><span>{l}</span></li>)}
+                        </ul>
+                    )}
+                {hasTable && (
+                    <GuideTable
+                        side={s}
+                        edit={edit}
+                        t={t}
+                        setColumn={(c, v) => onBlock((_b, side) => { side.columns[c] = v; })}
+                        setCell={(r, c, v) => onBlock((_b, side) => { side.rows[r][c] = v; })}
+                        addRow={() => onBlock((blk) => bothSides(blk, (sd) => { sd.rows = [...(sd.rows || []), (sd.columns || []).map(() => '')]; }))}
+                        removeRow={(r) => onBlock((blk) => bothSides(blk, (sd) => { (sd.rows || []).splice(r, 1); }))}
+                    />
+                )}
+                {edit && !hasTable && (
+                    <button type="button" onClick={addTable} className="text-xs font-bold text-sky-800 hover:underline">
+                        + {t('clinical_ui.protocol.guide.add_table', 'Add a table')}
+                    </button>
+                )}
+            </div>
+        </section>
+    );
+};
+
+/** A new, empty box for guide.groups[gi]; `topic` ties it to a disease tab. */
+export const addGuideBox = (guide, gi, topic) => {
+    const next = clone(guide);
+    next.groups[gi].blocks.push({
+        id: `box_${Date.now().toString(36)}`,
+        ...(topic ? { topic } : {}),
+        en: { title: 'New box', lines: [] },
+        ar: { title: 'مربع جديد', lines: [] },
+    });
+    return next;
+};
+
 export const TreatmentGuideView = ({ guide, edit = null, onChange }) => {
     const { t, i18n } = useTranslation();
     const [lang, setLang] = useState(i18n.language === 'ar' ? 'ar' : 'en');
@@ -104,25 +180,7 @@ export const TreatmentGuideView = ({ guide, edit = null, onChange }) => {
     const rtl = lang === 'ar';
     const gi = Math.max(0, groups.findIndex((g) => g.id === active));
     const current = groups[gi];
-
     const update = (fn) => { const next = clone(guide); fn(next); onChange(next); };
-    const onBlock = (bi, fn) => update((g) => {
-        const b = g.groups[gi].blocks[bi];
-        b[lang] = b[lang] || {};
-        fn(b, b[lang]);
-    });
-    // Rows and columns are added on both language sides together, so the
-    // English and Arabic tables never fall out of step.
-    const bothSides = (b, fn) => ['en', 'ar'].forEach((l) => { b[l] = b[l] || {}; fn(b[l]); });
-
-    const addBlock = () => update((g) => {
-        g.groups[gi].blocks.push({ id: `box_${Date.now().toString(36)}`, en: { title: 'New box', lines: [] }, ar: { title: 'مربع جديد', lines: [] } });
-    });
-    const removeBlock = (bi) => update((g) => { g.groups[gi].blocks.splice(bi, 1); });
-    const addTable = (bi) => onBlock(bi, (b) => bothSides(b, (s) => {
-        s.columns = s.columns?.length ? s.columns : ['', ''];
-        s.rows = [...(s.rows || []), s.columns.map(() => '')];
-    }));
 
     return (
         <div className="space-y-3">
@@ -151,50 +209,12 @@ export const TreatmentGuideView = ({ guide, edit = null, onChange }) => {
                         <h3 className="text-center font-extrabold uppercase text-slate-900 border-2 border-slate-800 bg-white py-2 px-3 text-sm md:text-base">{current[lang]?.title}</h3>
                     )}
                     <div className="grid gap-4 xl:grid-cols-2 items-start">
-                        {(current.blocks || []).map((b, bi) => {
-                            const s = b[lang] || {};
-                            const hasTable = (s.columns || []).length > 0;
-                            return (
-                                <section key={b.id || bi} className="border-2 border-slate-800 bg-white rounded-sm overflow-hidden text-slate-900">
-                                    <div className={`border-b-2 px-3 py-1.5 ${GROUP_COLORS[current.id] || 'bg-slate-100 border-slate-800'}`}>
-                                        {edit ? (
-                                            <div className="flex items-center gap-2">
-                                                <input type="text" value={s.title || ''} onChange={(e) => onBlock(bi, (_b, side) => { side.title = e.target.value; })} aria-label={`${b.id} title`} className={`${inputCls} font-extrabold`} dir="auto" />
-                                                <button type="button" onClick={() => removeBlock(bi)} className="text-xs font-bold text-red-700 hover:underline shrink-0">{t('clinical_ui.protocol.guide.remove_box', 'Remove box')}</button>
-                                            </div>
-                                        ) : <h4 className="font-extrabold text-sm">{s.title}</h4>}
-                                    </div>
-                                    <div className="p-2.5 space-y-2.5 text-[13px]">
-                                        {edit
-                                            ? <LinesBox value={s.lines} onChange={(v) => onBlock(bi, (_b, side) => { side.lines = v; })} label={`${b.id} lines`} />
-                                            : (s.lines || []).length > 0 && (
-                                                <ul className="space-y-1">
-                                                    {s.lines.map((l, k) => <li key={k} className="flex gap-1.5 leading-snug"><span className="text-slate-500 shrink-0">►</span><span>{l}</span></li>)}
-                                                </ul>
-                                            )}
-                                        {hasTable && (
-                                            <GuideTable
-                                                side={s}
-                                                edit={edit}
-                                                t={t}
-                                                setColumn={(c, v) => onBlock(bi, (_b, side) => { side.columns[c] = v; })}
-                                                setCell={(r, c, v) => onBlock(bi, (_b, side) => { side.rows[r][c] = v; })}
-                                                addRow={() => onBlock(bi, (blk) => bothSides(blk, (sd) => { sd.rows = [...(sd.rows || []), (sd.columns || []).map(() => '')]; }))}
-                                                removeRow={(r) => onBlock(bi, (blk) => bothSides(blk, (sd) => { (sd.rows || []).splice(r, 1); }))}
-                                            />
-                                        )}
-                                        {edit && !hasTable && (
-                                            <button type="button" onClick={() => addTable(bi)} className="text-xs font-bold text-sky-800 hover:underline">
-                                                + {t('clinical_ui.protocol.guide.add_table', 'Add a table')}
-                                            </button>
-                                        )}
-                                    </div>
-                                </section>
-                            );
-                        })}
+                        {(current.blocks || []).map((b, bi) => (
+                            <GuideBlock key={b.id || bi} guide={guide} gi={gi} bi={bi} lang={lang} edit={edit} onChange={onChange} t={t} />
+                        ))}
                     </div>
                     {edit && (
-                        <button type="button" onClick={addBlock} className="w-full border-2 border-dashed border-slate-300 rounded py-2 text-xs font-bold text-sky-800 hover:bg-sky-50">
+                        <button type="button" onClick={() => onChange(addGuideBox(guide, gi))} className="w-full border-2 border-dashed border-slate-300 rounded py-2 text-xs font-bold text-sky-800 hover:bg-sky-50">
                             + {t('clinical_ui.protocol.guide.add_box', 'Add box')}
                         </button>
                     )}

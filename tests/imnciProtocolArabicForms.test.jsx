@@ -132,12 +132,19 @@ describe('treatment and counselling tables', () => {
 });
 
 describe('drug tables', () => {
-    it('are tables on a phone too (age and weight, then dose), not cards', () => {
+    it('are tables on a phone too, with age and weight in separate columns, then dose', () => {
         document.body.innerHTML = renderToStaticMarkup(<BookletDoseView protocol={P.dosages_child} />);
         const phone = document.querySelector('table.md\\:hidden');
         expect(phone).toBeTruthy();
-        expect(phone.querySelectorAll('thead th').length).toBe(2);
+        expect([...phone.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(['Age', 'Weight', 'Dose']);
         expect(phone.querySelectorAll('tbody tr').length).toBe(P.dosages_child.drugs[0].rules.length);
+        expect(phone.querySelector('tbody tr').children.length).toBe(3);
+    });
+    it('show only the doses asked for, keeping their place in the document', () => {
+        const i = P.dosages_child.drugs.findIndex((d) => d.id === 'zinc');
+        document.body.innerHTML = renderToStaticMarkup(<BookletDoseView protocol={P.dosages_child} only={[i]} />);
+        expect(document.querySelectorAll('h3')).toHaveLength(1);
+        expect(document.querySelector('h3').textContent).toContain('Zinc');
     });
 });
 
@@ -191,9 +198,10 @@ describe('Protocol management layout', () => {
         await open({ child: P.child, infant: P.infant, dosages_child: P.dosages_child, dosages_infant: P.dosages_infant });
         expect(host.textContent).not.toContain('Load Sudan national protocol');
     });
-    it('has Child and Infant parts with Classification, Drugs and Recording form', async () => {
-        await open({ child: P.child, infant: P.infant });
-        ['Classification', 'Drugs', 'Treatment & counselling', 'Recording form'].forEach((s) => expect(host.textContent).toContain(s));
+    it('has Child and Infant parts with one tab per illness, General and Recording form', async () => {
+        await open({ child: P.child, infant: P.infant, dosages_child: P.dosages_child, dosages_infant: P.dosages_infant });
+        ['Danger signs', 'Pneumonia / cough', 'Diarrhoea', 'Fever, malaria & measles', 'Ear problem', 'Malnutrition', 'Anaemia', 'General', 'Recording form'].forEach((s) => expect(button(s)).toBeTruthy());
+        expect(button('Classification')).toBeFalsy();
         expect(host.textContent).toContain('Sick child (2 months – 5 years)');
         expect(host.textContent).toContain('Young infant (up to 2 months)');
         expect(host.textContent).not.toContain('Save Database');
@@ -206,6 +214,45 @@ describe('Protocol management layout', () => {
         expect(button('Cancel')).toBeTruthy();
         await act(async () => { button('Cancel').click(); });
         expect(button('Save changes')).toBeFalsy();
+    });
+    it('shows an illness as classification, then its doses, counselling and follow-up', async () => {
+        await open({ child: P.child, infant: P.infant, dosages_child: P.dosages_child, dosages_infant: P.dosages_infant });
+        await act(async () => { button('Pneumonia / cough').click(); });
+        const steps = [...host.querySelectorAll('h3[data-step]')].map((h) => h.textContent.replace(/^\d+/, '').trim());
+        expect(steps).toEqual(['Classify', 'Drug doses', 'Treatment', 'Counsel the mother', 'Follow-up']);
+        const section = (key) => host.querySelector(`h3[data-step=${key}]`).parentElement;
+        expect(section('classify').textContent).toContain('Chest indrawing');
+        expect(section('drugs').querySelector('h3:not([data-step])').textContent).toContain('Amoxicillin (oral)');
+        expect(section('treat').textContent).toContain('Give inhaled salbutamol');
+        expect(section('counsel').textContent).toContain('Increase fluid during illness');
+        expect(section('followup').textContent).toContain('PNEUMONIA, after 3 days');
+        const text = host.textContent;
+        // Another illness's doses and boxes are not on this tab.
+        expect(text).not.toContain('Plan C: treat severe dehydration quickly');
+        expect(text).not.toContain('Artemether-lumefantrine');
+    });
+    it('keeps edits when moving between illnesses and saves every changed document', async () => {
+        const data = await import('../src/data');
+        data.saveIMNCIProtocol.mockClear();
+        vi.spyOn(window, 'alert').mockImplementation(() => {});
+        await open({ child: P.child, infant: P.infant, dosages_child: P.dosages_child, dosages_infant: P.dosages_infant, guide_child: NATIONAL_GUIDES.guide_child });
+        await act(async () => { button('Edit').click(); });
+        await act(async () => { button('Pneumonia / cough').click(); });
+        const setValue = (el, v) => {
+            const proto = Object.getPrototypeOf(el);
+            Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        const doseInput = [...host.querySelectorAll('input')].find((el) => el.value === 'Amoxicillin (oral)');
+        await act(async () => { setValue(doseInput, 'Amoxicillin DT'); });
+        await act(async () => { button('Diarrhoea').click(); });
+        await act(async () => { button('Pneumonia / cough').click(); });
+        expect([...host.querySelectorAll('input')].some((el) => el.value === 'Amoxicillin DT')).toBe(true);
+        const box = [...host.querySelectorAll('input')].find((el) => el.value === 'PNEUMONIA, after 3 days');
+        await act(async () => { setValue(box, 'PNEUMONIA, after 2 days'); });
+        await act(async () => { button('Save changes').click(); });
+        const saved = data.saveIMNCIProtocol.mock.calls.map((c) => c[0]);
+        expect(saved).toEqual(['dosages_child', 'guide_child']);
     });
     it('opens the national recording form when none is saved', async () => {
         await open({ child: P.child, infant: P.infant });
