@@ -49,7 +49,7 @@ export function FilterPanel({ activeCount = 0, className = '', children }) {
     const [open, setOpen] = useState(false);
     const tools = useContext(PageToolsContext);
     return (
-        <div className={`ignore-for-export sticky md:static z-20 top-[calc(var(--app-top,0px)+var(--tabs-h,0px)+4px)] ${className}`}>
+        <div className={`ignore-for-export relative z-20 ${className}`}>
             <div className="md:hidden flex items-center gap-2">
                 <button
                     type="button"
@@ -235,7 +235,7 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
     // Read by "Ask the data" (utils/pageSnapshot.js) to name the exact place an answer came from.
     const activeLabel = visible.find((tab) => tab.id === active)?.label;
     return (
-        <div data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 md:static sticky z-30 top-[calc(var(--app-top,0px)+4px)] ${className}`}>
+        <div data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 relative z-30 ${className}`}>
             <nav ref={navRef} className="md:hidden flex gap-0.5 rounded-xl bg-white p-1 border border-slate-200 shadow-sm">
                 {visible.map(tab => {
                     const on = active === tab.id;

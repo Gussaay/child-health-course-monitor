@@ -294,6 +294,10 @@ export const DataProvider = ({ children }) => {
     const [lastFacilitiesFetchTime, setLastFacilitiesFetchTime] = useState({}); 
     const lastFacilitiesFetchTimeRef = useRef(lastFacilitiesFetchTime);
     const fetchingRef = useRef({}); 
+    // Every list fetcher by cache key, so one call can delta-sync whatever this
+    // device has already loaded (header Refresh, opening the app, changing page).
+    const syncRegistryRef = useRef({});
+    const lastFacilityFiltersRef = useRef(null);
 
     const facilitiesFilterCacheRef = useRef({});
     const currentFacilitiesFilterKeyRef = useRef('all');
@@ -325,6 +329,7 @@ export const DataProvider = ({ children }) => {
              // for facilities changed since the last fetch (use after this
              // device saved or approved a facility); true = full re-download.
              const fetchFacilities = async (filters = {}, force = false) => {
+                lastFacilityFiltersRef.current = filters;
                 const filterKey = getFilterKey(filters);
                 const internalCache = facilitiesFilterCacheRef.current;
                 
@@ -448,6 +453,7 @@ export const DataProvider = ({ children }) => {
                     fetchingRef.current[filterKey] = false;
                 }
             };
+            syncRegistryRef.current[key] = () => fetchFacilities(lastFacilityFiltersRef.current || {}, 'sync');
             return fetchFacilities;
         }
         
@@ -619,8 +625,35 @@ export const DataProvider = ({ children }) => {
                 fetchingRef.current[key] = null;
             }
         };
+        syncRegistryRef.current[key] = () => fetcher('sync');
         return fetcher;
     }, [scheduleRevalidate]); 
+
+    // Delta-sync every list already loaded on this device: only what changed
+    // on the server since its last sync comes down. Lists never opened stay
+    // unloaded (they load when their page opens). Calls closer together than
+    // `minIntervalMs` are dropped, so page changes cannot hammer the server.
+    const lastSyncAllRef = useRef(0);
+    const syncAllPromiseRef = useRef(null);
+    const syncLoaded = useCallback(async ({ minIntervalMs = 0 } = {}) => {
+        if (!navigator.onLine) return { synced: 0, offline: true };
+        if (syncAllPromiseRef.current) return syncAllPromiseRef.current;
+        const now = Date.now();
+        if (minIntervalMs && now - lastSyncAllRef.current < minIntervalMs) return { synced: 0, skipped: true };
+        lastSyncAllRef.current = now;
+        const keys = Object.keys(syncRegistryRef.current).filter((k) => {
+            const v = cacheRef.current[k];
+            if (v === null || v === undefined) return false;
+            if (k === 'healthFacilities') return !!lastFacilityFiltersRef.current;
+            return true;
+        });
+        syncAllPromiseRef.current = (async () => {
+            const results = await Promise.allSettled(keys.map((k) => syncRegistryRef.current[k]()));
+            const failed = results.filter((r) => r.status === 'rejected').length;
+            return { synced: keys.length - failed, failed };
+        })();
+        try { return await syncAllPromiseRef.current; } finally { syncAllPromiseRef.current = null; }
+    }, []);
 
     const fetchers = useMemo(() => ({
         fetchCourses: createFetcher('courses', (opts, lastSync) => listAllCourses(opts, lastSync)),
@@ -772,6 +805,7 @@ export const DataProvider = ({ children }) => {
         protocols: cache.imnciProtocols,
         isLoading,
         clearLocalCache,
+        syncLoaded,
         mergeIntoCache,
         removeFromCache,
         fetchFacilitiesHistoryMultiDate, 

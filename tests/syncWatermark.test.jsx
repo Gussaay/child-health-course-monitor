@@ -102,4 +102,21 @@ describe('delta sync watermark', () => {
         await act(async () => { await ctx.fetchCourses(true); });
         expect(calls.at(-1)).toBeGreaterThan(0);
     });
+
+    it('Refresh syncs every loaded list, skips unloaded ones, and throttles automatic syncs', async () => {
+        const data = await import('../src/data');
+        await act(async () => { root.render(<DataProvider><Probe /></DataProvider>); });
+        serverCourses = [{ id: 'a', lastUpdatedAt: ts(SERVER_NOW) }];
+        await act(async () => { await ctx.fetchCourses(true); });
+        const before = calls.length;
+        data.listAllParticipants.mockClear();
+        let res;
+        await act(async () => { res = await ctx.syncLoaded(); });
+        expect(calls.length).toBe(before + 1);              // courses: one delta
+        expect(calls.at(-1)).toBeGreaterThan(0);
+        expect(data.listAllParticipants).not.toHaveBeenCalled(); // never loaded here
+        expect(res.failed).toBe(0);
+        await act(async () => { res = await ctx.syncLoaded({ minIntervalMs: 30000 }); });
+        expect(res.skipped).toBe(true);                     // automatic sync too soon
+    });
 });

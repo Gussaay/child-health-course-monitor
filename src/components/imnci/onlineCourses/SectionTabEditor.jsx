@@ -152,7 +152,7 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
             {/* Editing happens on the page the text is read on, at the width it
                 will be read at. It used to be a dialog, which meant writing a
                 paragraph in a box half the size of the page it appears on. */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-300 sticky top-2 z-20">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-300">
                 <span className="text-sm text-amber-900 font-semibold">
                     {t('imnci_ui.courses.editor.editing', 'Editing {{tab}}', { tab: tabLabel })}
                 </span>
