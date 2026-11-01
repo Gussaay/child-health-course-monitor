@@ -546,13 +546,50 @@ service cloud.firestore {
       allow update, delete: if isFederalApprover();
     }
 
+    // Cases and observations from the shared course monitoring link
+    // (/monitor/course/{id}). That page asks for a sign-in but not for a staff
+    // role, so the observer filling in cases is often a plain 'user' account.
+    // Such an account may add cases to a course that exists and is not deleted,
+    // stamped with its own uid in createdBy, and may edit or remove only the
+    // records it created (editing a case replaces its observations). Staff keep
+    // full write access as before.
+    function isLiveCourse(courseId) {
+      let path = /databases/$(database)/documents/courses/$(courseId);
+      return exists(path) && get(path).data.get('isDeleted', false) != true;
+    }
+
+    function observerCreates() {
+      return request.auth != null
+          && request.resource.data.get('createdBy', null) == request.auth.uid
+          && request.resource.data.get('courseId', null) is string
+          && isLiveCourse(request.resource.data.courseId);
+    }
+
+    function observerUpdatesOwn() {
+      return request.auth != null
+          && resource.data.get('createdBy', null) == request.auth.uid
+          && request.resource.data.get('createdBy', null) == request.auth.uid
+          && request.resource.data.get('courseId', null) == resource.data.get('courseId', null);
+    }
+
+    function observerDeletesOwn() {
+      return request.auth != null
+          && resource.data.get('createdBy', null) == request.auth.uid;
+    }
+
     match /observations/{observationId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
       allow write: if isStaff();
+      allow create: if observerCreates();
+      allow update: if observerUpdatesOwn();
+      allow delete: if observerDeletesOwn();
     }
     match /cases/{caseId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
       allow write: if isStaff();
+      allow create: if observerCreates();
+      allow update: if observerUpdatesOwn();
+      allow delete: if observerDeletesOwn();
     }
     match /finalReports/{reportId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
