@@ -62,6 +62,15 @@ const diffCategories = (out, before = {}, after = {}) => {
     });
 };
 
+// Page wording saved over the booklet's (title, question, ask, look, note…).
+const diffPages = (out, before = {}, after = {}) => {
+    [...new Set([...Object.keys(before || {}), ...Object.keys(after || {})])].forEach((id) => {
+        const b = before?.[id] || {};
+        const a = after?.[id] || {};
+        [...new Set([...Object.keys(b), ...Object.keys(a)])].forEach((f) => push(out, `Page ${id} › ${f}`, b[f], a[f]));
+    });
+};
+
 const DRUG_FIELDS = ['label', 'labelAr', 'fallback', 'fallbackAr', 'ageAndWeight'];
 const BAND_FIELDS = ['minAge', 'maxAge', 'minWeight', 'maxWeight', 'doseQty', 'doseQtyAr', 'doseFreq', 'doseFreqAr', 'doseDuration', 'doseDurationAr'];
 
@@ -152,7 +161,12 @@ export const diffProtocol = (formType, before, after) => {
     if (String(formType).startsWith('dosages')) diffDrugs(out, b.drugs, a.drugs);
     else if (String(formType).startsWith('form_')) diffForm(out, b, a);
     else if (String(formType).startsWith('guide_')) diffGuide(out, b, a);
-    else diffCategories(out, b.categories, a.categories);
+    else {
+        diffCategories(out, b.categories, a.categories);
+        diffPages(out, b.pages, a.pages);
+        push(out, 'Standard signs', (b.standardSigns || []).map((e) => e.en), (a.standardSigns || []).map((e) => e.en));
+        push(out, 'Standard classifications', (b.standardClassifications || []).map((e) => e.en), (a.standardClassifications || []).map((e) => e.en));
+    }
     push(out, 'version', b.version, a.version);
     return out;
 };

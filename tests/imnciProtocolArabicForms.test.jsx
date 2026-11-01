@@ -254,6 +254,21 @@ describe('Protocol management layout', () => {
         const saved = data.saveIMNCIProtocol.mock.calls.map((c) => c[0]);
         expect(saved).toEqual(['dosages_child', 'guide_child']);
     });
+    it('saves the dose chosen from the list, in English and Arabic', async () => {
+        const data = await import('../src/data');
+        data.saveIMNCIProtocol.mockClear();
+        vi.spyOn(window, 'alert').mockImplementation(() => {});
+        await open({ child: P.child, infant: P.infant, dosages_child: P.dosages_child, dosages_infant: P.dosages_infant });
+        await act(async () => { button('Edit').click(); });
+        await act(async () => { button('Pneumonia / cough').click(); });
+        const sel = [...host.querySelectorAll('select')].find((el) => el.value === 'amoxicillin');
+        await act(async () => { sel.value = 'ciprofloxacin'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+        await act(async () => { button('Save changes').click(); });
+        const [ft, saved] = data.saveIMNCIProtocol.mock.calls.at(-1);
+        expect(ft).toBe('child');
+        const lines = Object.values(saved.categories).flatMap((c) => c.rules.flatMap((r) => [...r.treatments, ...(r.treatmentsAr || [])]));
+        expect(lines.filter((l) => l.includes('{{dose:ciprofloxacin}}')).length).toBeGreaterThanOrEqual(2);
+    });
     it('opens the national recording form when none is saved', async () => {
         await open({ child: P.child, infant: P.infant });
         await act(async () => { button('Recording form').click(); });

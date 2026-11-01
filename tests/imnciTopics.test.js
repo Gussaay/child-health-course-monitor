@@ -58,3 +58,34 @@ describe('illness tabs', () => {
         expect(boxIds(guide, guideForTopic('child', 'cough', guide, known).counsel)).not.toContain('counsel.b');
     });
 });
+
+import { signOptions, classificationOptions, splitLine, joinLine } from '../src/components/imnci/standardLists';
+import { diffProtocol } from '../src/components/imnci/protocolHistory';
+
+describe('standard lists', () => {
+    it('signs come from the booklet, grouped by table, with Arabic', () => {
+        const o = signOptions('child', P.child);
+        expect(o.get('Chest indrawing')).toBeTruthy();
+        expect(o.get('Chest indrawing').ar).toMatch(/[؀-ۿ]/);
+        expect(o.groups.length).toBeGreaterThan(5);
+    });
+    it('classifications carry their colour, and added ones are listed', () => {
+        const doc = { ...P.child, standardClassifications: [{ en: 'NEW THING', ar: 'شيء جديد', color: 'bg-green-500' }] };
+        const o = classificationOptions('child', doc);
+        expect(o.get('NEW THING')).toMatchObject({ ar: 'شيء جديد', color: 'bg-green-500' });
+        expect(o.get(P.child.categories.cough.rules[1].classification.label).color).toBe(P.child.categories.cough.rules[1].classification.color);
+    });
+    it('a treatment line splits into words and dose, and joins back unchanged', () => {
+        const line = P.child.categories.cough.rules[1].treatments.find((l) => l.includes('{{dose:'));
+        const { words, drugId } = splitLine(line);
+        expect(drugId).toBe('amoxicillin');
+        expect(words).not.toContain('{{');
+        expect(joinLine(words, drugId)).toBe(line);
+        expect(joinLine(words, '')).toBe(words);
+    });
+    it('page wording and list additions are recorded in the history', () => {
+        const after = { ...P.child, pages: { cough: { title: 'New title' } }, standardSigns: [{ en: 'Grunting', ar: 'شخير' }] };
+        const where = diffProtocol('child', P.child, after).map((c) => c.where);
+        expect(where).toEqual(expect.arrayContaining(['Page cough › title', 'Standard signs']));
+    });
+});

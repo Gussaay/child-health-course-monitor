@@ -681,6 +681,24 @@ export default function ProtocolEditor() {
         setClass(newData);
     };
 
+    // Page wording (title, question, ASK / LOOK, note, side labels), kept in
+    // the classification document over the booklet's printed words.
+    // Changed in place like the handlers above, so several changes made in one
+    // action (a new list entry, then the rule that uses it) all survive.
+    const handlePageChange = (pageId, field, value) => {
+        classDoc.pages = { ...(classDoc.pages || {}) };
+        classDoc.pages[pageId] = { ...(classDoc.pages[pageId] || {}), [field]: value };
+        setClass({ ...classDoc });
+    };
+
+    // A sign or classification added to the standard list.
+    const addStandardEntry = (listName, entry) => {
+        const list = classDoc[listName] || [];
+        if (list.some((e) => e.en === entry.en)) return;
+        classDoc[listName] = [...list, entry];
+        setClass({ ...classDoc });
+    };
+
     const toggleCondition = (catKey, ruleIndex, condition) => {
         const newData = { ...classDoc };
         const currentConditions = newData.categories[catKey].rules[ruleIndex].conditions || [];
@@ -871,6 +889,9 @@ export default function ProtocolEditor() {
     const bookletEdit = {
         onRule: handleRuleChange,
         onClass: handleClassificationChange,
+        onCategory: handleCategoryChange,
+        onPage: handlePageChange,
+        addStandard: addStandardEntry,
         onDrug: handleDrugChange,
         onRange: handleDrugRangeChange,
         addRange: addDrugRange,
