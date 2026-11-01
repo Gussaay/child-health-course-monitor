@@ -62,6 +62,35 @@ const SYNC_OVERLAP_MS = 10 * 60 * 1000; // 10 minutes
 
 const rewindWatermark = (ms) => (ms > 0 ? Math.max(0, ms - SYNC_OVERLAP_MS) : 0);
 
+// --- SERVER-CLOCK WATERMARK ---
+// The overlap above only covers a device clock up to 10 minutes fast. A phone
+// whose clock was an hour (or a day) ahead stored a watermark in its own
+// future, and every record written on the server before that moment came
+// back from no delta query ever again: a course added on the web stayed
+// missing from that phone while a fresh browser showed it. The watermark is
+// now the newest lastUpdatedAt the server actually returned — server clock on
+// both sides of the comparison — and the device clock is used only to time
+// the cache (CACHE_TTL_MS), where a wrong clock cannot lose data.
+//
+// A device that synced under the old scheme may already have missed records,
+// so the first sync after this update re-downloads each collection once
+// (SYNC_MARK_VERSION); after that it is delta again.
+const SYNC_MARK_VERSION = 2;
+const syncMarkKey = (key) => `syncMark_v${SYNC_MARK_VERSION}_${key}`;
+const tsMillis = (v) => {
+    if (!v) return 0;
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    if (typeof v.seconds === 'number') return v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6);
+    if (v instanceof Date) return v.getTime();
+    if (typeof v === 'number') return v;
+    const n = Date.parse(v);
+    return Number.isFinite(n) ? n : 0;
+};
+/** Newest server lastUpdatedAt in a list of records, or 0 when none carry one. */
+export const newestServerStamp = (items) => (Array.isArray(items)
+    ? items.reduce((max, item) => Math.max(max, tsMillis(item?.lastUpdatedAt)), 0)
+    : 0);
+
 // --- BACKGROUND REVALIDATION ---
 // A cache hit used to be the end of the story for up to an hour (CACHE_TTL_MS),
 // so a record approved, edited or deleted on another device kept showing here.
@@ -521,7 +550,10 @@ export const DataProvider = ({ children }) => {
                 // request was in flight.
                 const fetchStartedAt = Date.now();
 
-                let effectiveLastFetchTime = rewindWatermark(lastFetchTime);
+                // The delta starts from the server-clock mark. No mark yet (first
+                // sync after this update, or a new device) means one full download.
+                const storedMark = parseInt(localStorage.getItem(syncMarkKey(key)) || '0', 10);
+                let effectiveLastFetchTime = rewindWatermark(storedMark);
 
                 // If localDB is empty, we must do a full download to reconstruct it.
                 if ((!localData || (Array.isArray(localData) && localData.length === 0)) && !key.includes('Settings')) {
@@ -560,6 +592,15 @@ export const DataProvider = ({ children }) => {
                 }
                 
                 localStorage.setItem(timeKey, fetchStartedAt.toString());
+                // Advance the mark only by what the server returned. A collection
+                // whose records carry no lastUpdatedAt cannot be delta-synced
+                // anyway; it keeps a client-clock mark so it is not re-downloaded
+                // in full on every sync.
+                const newest = newestServerStamp(Array.isArray(newOrUpdatedData) ? newOrUpdatedData : []);
+                const nextMark = newest > 0
+                    ? (isCompleteAnswer ? newest : Math.max(storedMark, newest))
+                    : (isCompleteAnswer ? (newestServerStamp(finalMergedData) || fetchStartedAt) : storedMark);
+                if (nextMark > 0) localStorage.setItem(syncMarkKey(key), String(nextMark));
 
                 setCache(prev => ({ ...prev, [key]: finalMergedData })); 
                 return finalMergedData;
@@ -703,7 +744,7 @@ export const DataProvider = ({ children }) => {
     const clearLocalCache = useCallback(async () => {
         try {
             Object.keys(localStorage)
-                .filter(k => k.startsWith('lastServerFetch_'))
+                .filter(k => k.startsWith('lastServerFetch_') || k.startsWith('syncMark_'))
                 .forEach(k => localStorage.removeItem(k));
             const db = await initDB();
             await new Promise((resolve, reject) => {
