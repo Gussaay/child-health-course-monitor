@@ -73,7 +73,7 @@ const RecordDetailsModal = ({ record, onClose }) => {
                                         <div className="md:w-1/3 p-3 bg-slate-50 border-b md:border-b-0 md:border-l border-slate-200 flex flex-col gap-2 justify-center">
                                             {catData.c.map((classification, idx) => (
                                                 <div key={idx} className={`${classification.color} text-white text-center font-bold text-sm px-2 py-2 rounded shadow-sm`}>
-                                                    {classification.label}
+                                                    {(i18n.language === 'ar' && classification.labelAr) || classification.label}
                                                 </div>
                                             ))}
                                         </div>
@@ -469,7 +469,7 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
 
 // --- Reusable Grid Row Component for IMNCI Layout ---
 const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange, children, classifyData = [], treatmentData = [], selectedTreatments = {}, onToggleTreatment }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const isActive = isConditional ? yesNoValue === true : true;
 
     return (
@@ -501,7 +501,7 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
             <div className="lg:col-span-2 p-4 border-r-0 lg:border-r border-slate-300 bg-slate-50 flex flex-col gap-2 justify-center items-center text-center">
                 {isActive && classifyData.map((c, i) => (
                     <div key={i} className={`${c.color || 'bg-slate-500'} text-white w-full px-2 py-2 rounded shadow-sm text-sm font-bold leading-tight uppercase`}>
-                        {c.label}
+                        {(i18n.language === 'ar' && c.labelAr) || c.label}
                     </div>
                 ))}
             </div>
@@ -566,7 +566,7 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
 // FORM 1: SICK YOUNG INFANT (UP TO 2 MONTHS)
 // ============================================================================
 function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { protocols } = useDataCache();
     const [isSaving, setIsSaving] = useState(false);
     const [statusModal, setStatusModal] = useState(null);
@@ -610,8 +610,8 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
         };
         const weight = parseFloat(infantData.weightKg) || 0;
         const ageInMonths = infantAgeInMonths(infantData.ageDaysWeeks);
-        return evaluateProtocol(findings, protocols?.infant, defaultCategories, weight, ageInMonths, protocols?.dosages_infant);
-    }, [assessments, infantData, protocols]);
+        return evaluateProtocol(findings, protocols?.infant, defaultCategories, weight, ageInMonths, protocols?.dosages_infant, i18n.language === 'ar' ? 'ar' : 'en');
+    }, [assessments, infantData, protocols, i18n.language]);
 
     const handleSave = async () => {
         if (!selectedState || !selectedLocality || !selectedFacility) {
@@ -637,7 +637,7 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
             const cleanClassifications = {};
             for (const [key, category] of Object.entries(results)) {
                 cleanClassifications[key] = {
-                    c: category.c.map(cls => ({ label: cls.label, color: cls.color })),
+                    c: category.c.map(cls => ({ label: cls.label, ...(cls.labelAr ? { labelAr: cls.labelAr } : {}), color: cls.color })),
                     t: category.t.map(extractText).filter(text => text.trim() !== '')
                 };
             }
@@ -804,7 +804,7 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
 // FORM 2: SICK CHILD (2 MONTHS UP TO 5 YEARS)
 // ============================================================================
 function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { protocols } = useDataCache();
     const [isSaving, setIsSaving] = useState(false);
     const [statusModal, setStatusModal] = useState(null);
@@ -886,8 +886,8 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
         };
         const weight = parseFloat(childData.weightKg) || 0;
         const age = parseFloat(childData.ageMonths) || 0;
-        return evaluateProtocol(findings, protocols?.child, defaultCategories, weight, age, protocols?.dosages_child);
-    }, [assessments, protocols, zScoreResult, childData]);
+        return evaluateProtocol(findings, protocols?.child, defaultCategories, weight, age, protocols?.dosages_child, i18n.language === 'ar' ? 'ar' : 'en');
+    }, [assessments, protocols, zScoreResult, childData, i18n.language]);
 
     const handleSave = async () => {
         if (!selectedState || !selectedLocality || !selectedFacility) {
@@ -911,7 +911,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
             const cleanClassifications = {};
             for (const [key, category] of Object.entries(results)) {
                 cleanClassifications[key] = {
-                    c: category.c.map(cls => ({ label: cls.label, color: cls.color })),
+                    c: category.c.map(cls => ({ label: cls.label, ...(cls.labelAr ? { labelAr: cls.labelAr } : {}), color: cls.color })),
                     t: category.t.map(extractText).filter(text => text.trim() !== '')
                 };
             }

@@ -7,6 +7,8 @@
 // browser.
 // ============================================================================
 
+import { toArabic } from './nationalProtocolAr';
+
 const num = (v) => {
     const n = parseFloat(v);
     return Number.isFinite(n) ? n : 0;
@@ -23,7 +25,7 @@ const inRange = (value, lo, hi) => value >= lo && value <= hi;
  * 5 mg/kg under 7 days and 7.5 mg/kg from 7 days, at the same weight. Weight
  * alone used to pick the first band, so a 10-day-old was shown the newborn dose.
  */
-export const resolveDoseTag = (drugKey, weight, ageInMonths, dosagesProtocol) => {
+export const resolveDoseTag = (drugKey, weight, ageInMonths, dosagesProtocol, lang = 'en') => {
     if (!dosagesProtocol || !dosagesProtocol.drugs) return 'Loading dose...';
 
     const drug = dosagesProtocol.drugs.find((d) => d.id === drugKey);
@@ -31,9 +33,13 @@ export const resolveDoseTag = (drugKey, weight, ageInMonths, dosagesProtocol) =>
 
     const w = num(weight);
     const a = num(ageInMonths);
+    // Arabic wording when the screen is Arabic and the protocol carries it.
+    const ar = lang === 'ar';
+    const pick = (obj, field) => (ar && (obj[`${field}Ar`] || (obj[field] && toArabic(obj[field])))) || obj[field];
+    const fallback = pick(drug, 'fallback');
 
-    if (w === 0 && a === 0) return drug.fallback || 'Check manual chart';
-    if (drug.ageAndWeight && (w === 0 || a === 0)) return drug.fallback || 'Enter age and weight';
+    if (w === 0 && a === 0) return fallback || 'Check manual chart';
+    if (drug.ageAndWeight && (w === 0 || a === 0)) return fallback || 'Enter age and weight';
 
     for (const rule of drug.rules || []) {
         const minW = num(rule.minWeight);
@@ -60,14 +66,17 @@ export const resolveDoseTag = (drugKey, weight, ageInMonths, dosagesProtocol) =>
 
         if (match) {
             const parts = [];
-            if (rule.doseQty) parts.push(rule.doseQty);
-            if (rule.doseFreq) parts.push(`(${rule.doseFreq})`);
-            if (rule.doseDuration) parts.push(`— ${rule.doseDuration}`);
+            const qty = pick(rule, 'doseQty');
+            const freq = pick(rule, 'doseFreq');
+            const duration = pick(rule, 'doseDuration');
+            if (qty) parts.push(qty);
+            if (freq) parts.push(`(${freq})`);
+            if (duration) parts.push(`— ${duration}`);
             return parts.join(' ');
         }
     }
 
-    return drug.fallback || 'Check manual chart (Out of range)';
+    return fallback || 'Check manual chart (Out of range)';
 };
 
 const ruleMatches = (rule, findings) => {
@@ -90,7 +99,7 @@ const ruleMatches = (rule, findings) => {
  * Each category is one booklet table: the first matching row (red, then
  * yellow, then green) is the child's classification for that table.
  */
-export const evaluateProtocol = (findings, currentProtocol, defaultCategories, weight, ageInMonths, dosagesProtocol) => {
+export const evaluateProtocol = (findings, currentProtocol, defaultCategories, weight, ageInMonths, dosagesProtocol, lang = 'en') => {
     const evaluated = {};
     Object.entries(defaultCategories || {}).forEach(([k, v]) => { evaluated[k] = { c: [...(v.c || [])], t: [...(v.t || [])] }; });
 
@@ -100,10 +109,20 @@ export const evaluateProtocol = (findings, currentProtocol, defaultCategories, w
         if (!evaluated[catKey]) evaluated[catKey] = { c: [], t: [] };
         for (const rule of category.rules || []) {
             if (!ruleMatches(rule, findings)) continue;
-            evaluated[catKey].c.push(rule.classification);
-            evaluated[catKey].t.push(...(rule.treatments || []).map((line) => String(line).replace(
+            const ar = lang === 'ar';
+            const cls = rule.classification || {};
+            const labelAr = cls.labelAr || (cls.label && toArabic(cls.label));
+            evaluated[catKey].c.push(labelAr && !cls.labelAr ? { ...cls, labelAr } : rule.classification);
+            // The saved Arabic lines when every line has its Arabic; otherwise
+            // each English line through the national dictionary, so a line
+            // added in English alone is never silently dropped.
+            const english = rule.treatments || [];
+            const arLines = rule.treatmentsAr;
+            const fullAr = Array.isArray(arLines) && arLines.length === english.length && arLines.every((l) => l && String(l).trim());
+            const lines = !ar ? english : (fullAr ? arLines : english.map((l) => toArabic(l) || l));
+            evaluated[catKey].t.push(...lines.map((line) => String(line).replace(
                 /{{dose:(.*?)}}/g,
-                (_m, drugKey) => `|||${resolveDoseTag(drugKey.trim(), weight, ageInMonths, dosagesProtocol)}|||`,
+                (_m, drugKey) => `|||${resolveDoseTag(drugKey.trim(), weight, ageInMonths, dosagesProtocol, lang)}|||`,
             )));
             break;
         }

@@ -3135,13 +3135,39 @@ export async function saveIMNCIProtocol(formType, protocolData) {
     return true;
 }
 
+// --- Change history ---------------------------------------------------------
+// Every save in Protocol management records who changed what: one document per
+// month in the same collection, each holding a list of entries. Same security
+// rule as the protocols themselves (only course editors write).
+export const PROTOCOL_HISTORY_PREFIX = 'history_';
+
+export async function appendIMNCIProtocolHistory(entry) {
+    const at = new Date();
+    const id = `${PROTOCOL_HISTORY_PREFIX}${at.getFullYear()}_${String(at.getMonth() + 1).padStart(2, '0')}`;
+    await fbSetDoc(doc(db, "imnciProtocols", id), {
+        entries: arrayUnion({ ...entry, at: at.toISOString() }),
+        lastUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+}
+
+export async function getIMNCIProtocolHistory() {
+    const snapshot = await fbGetDocs(collection(db, "imnciProtocols"));
+    return snapshot.docs
+        .filter((d) => d.id.startsWith(PROTOCOL_HISTORY_PREFIX))
+        .flatMap((d) => d.data().entries || [])
+        .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+
 // Returns an OBJECT keyed by form type, not an array, because every consumer
 // asks for one named protocol (protocols.child, protocols.dosages_infant).
 export async function getIMNCIProtocols(sourceOptions = {}) {
     try {
         const snapshot = await getData(collection(db, "imnciProtocols"), sourceOptions);
         const protocols = {};
-        snapshot.docs.forEach(d => { protocols[d.id] = d.data(); });
+        // The change history lives in the same collection (history_YYYY_MM) so
+        // it is covered by the same rules; it is read only when asked for.
+        snapshot.docs.forEach(d => { if (!d.id.startsWith(PROTOCOL_HISTORY_PREFIX)) protocols[d.id] = d.data(); });
         return protocols;
     } catch (error) {
         console.error("Error fetching IMNCI protocols:", error);

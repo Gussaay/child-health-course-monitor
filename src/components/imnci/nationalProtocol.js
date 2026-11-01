@@ -18,6 +18,7 @@
 // ============================================================================
 
 import { BOOKLET_SIGNS } from './bookletLayout';
+import { toArabic } from './nationalProtocolAr';
 
 export const NATIONAL_PROTOCOL_VERSION = 'Sudan national IMNCI booklet (2026-10)';
 
@@ -649,6 +650,32 @@ export const NATIONAL_INFANT_DOSAGES = {
         },
     ],
 };
+
+// The Arabic wording sits beside the English on the same rule, so the Arabic
+// screens and the Arabic form show the same protocol, line for line.
+const arabicRules = (protocol) => {
+    Object.values(protocol.categories).forEach((cat) => {
+        cat.titleAr = toArabic(cat.title);
+        cat.rules.forEach((r) => {
+            r.classification.labelAr = toArabic(r.classification.label);
+            if (r.signs) r.signsAr = r.signs.map(toArabic);
+            r.treatmentsAr = r.treatments.map(toArabic);
+        });
+    });
+};
+const arabicDoses = (dosages) => {
+    dosages.drugs.forEach((d) => {
+        d.labelAr = toArabic(d.label);
+        if (d.fallback) d.fallbackAr = toArabic(d.fallback);
+        d.rules.forEach((b) => {
+            ['doseQty', 'doseFreq', 'doseDuration'].forEach((f) => { if (b[f]) b[`${f}Ar`] = toArabic(b[f]); });
+        });
+    });
+};
+arabicRules(NATIONAL_CHILD_PROTOCOL);
+arabicRules(NATIONAL_INFANT_PROTOCOL);
+arabicDoses(NATIONAL_CHILD_DOSAGES);
+arabicDoses(NATIONAL_INFANT_DOSAGES);
 
 export const NATIONAL_PROTOCOLS = {
     dosages_child: NATIONAL_CHILD_DOSAGES,

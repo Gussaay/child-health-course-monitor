@@ -10,6 +10,34 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BOOKLET_PAGES, ruleSigns } from './bookletLayout';
+import { toArabic } from './nationalProtocolAr';
+
+// --- Language -------------------------------------------------------------
+// Arabic screens show the Arabic side of each line: the saved Arabic when it
+// was written, otherwise the national Arabic wording of the English line, and
+// the English only when neither exists (a line typed in English alone).
+const arOf = (en) => toArabic(en) || en;
+const nonEmpty = (arr) => Array.isArray(arr) && arr.some((l) => String(l ?? '').trim());
+export const ruleText = (rule, ar) => {
+    const signsEn = ruleSigns(rule);
+    if (!ar) return { label: rule.classification?.label, signs: signsEn, treatments: rule.treatments || [], fields: { label: 'label', signs: 'signs', treatments: 'treatments' } };
+    return {
+        label: rule.classification?.labelAr || arOf(rule.classification?.label || ''),
+        signs: nonEmpty(rule.signsAr) ? rule.signsAr : signsEn.map(arOf),
+        treatments: nonEmpty(rule.treatmentsAr) ? rule.treatmentsAr : (rule.treatments || []).map(arOf),
+        fields: { label: 'labelAr', signs: 'signsAr', treatments: 'treatmentsAr' },
+    };
+};
+const pageText = (page, ar) => (!ar ? page : {
+    ...page,
+    title: arOf(page.title),
+    question: page.question && arOf(page.question),
+    ask: page.ask?.map(arOf),
+    look: page.look?.map(arOf),
+    note: page.note && arOf(page.note),
+    sideLabels: page.sideLabels && Object.fromEntries(Object.entries(page.sideLabels).map(([k, v]) => [k, arOf(v)])),
+});
+const drugText = (obj, field, ar) => (ar ? (obj[`${field}Ar`] ?? (obj[field] ? arOf(obj[field]) : obj[field])) : obj[field]);
 
 // The booklet's own colours: magenta-pink, bright yellow, green, black text.
 const ROW_COLORS = {
@@ -85,25 +113,25 @@ const linesValue = (arr) => (arr || []).join('\n');
 const toLines = (v) => String(v).split('\n');
 const tidyLines = (arr) => (arr || []).map((l) => String(l).trimEnd()).filter((l) => l.trim());
 
-const RuleCells = ({ rule, edit, catKey, index, drugLabels, t }) => {
-    const signs = ruleSigns(rule);
-    const label = rule.classification?.label;
+const RuleCells = ({ rule, edit, catKey, index, drugLabels, t, ar }) => {
+    const text = ruleText(rule, ar);
+    const { signs, label } = text;
     if (!edit) {
         return {
             signs: signs.length
                 ? <ul className="space-y-0.5">{signs.map((sg, k) => <li key={k}>{sg}</li>)}</ul>
                 : <span className="italic font-normal">—</span>,
             label,
-            treat: <ul className="space-y-1">{(rule.treatments || []).map((line, k) => <TreatmentLine key={k} line={line} drugLabels={drugLabels} />)}</ul>,
+            treat: <ul className="space-y-1">{text.treatments.map((line, k) => <TreatmentLine key={k} line={line} drugLabels={drugLabels} />)}</ul>,
         };
     }
     return {
         signs: (
             <textarea
                 rows={Math.max(3, signs.length + 1)}
-                value={linesValue(rule.signs ?? signs)}
-                onChange={(e) => edit.onRule(catKey, index, 'signs', toLines(e.target.value))}
-                onBlur={() => edit.onRule(catKey, index, 'signs', tidyLines(rule.signs))}
+                value={linesValue(rule[text.fields.signs] ?? signs)}
+                onChange={(e) => edit.onRule(catKey, index, text.fields.signs, toLines(e.target.value))}
+                onBlur={() => edit.onRule(catKey, index, text.fields.signs, tidyLines(rule[text.fields.signs] ?? signs))}
                 aria-label={t('clinical_ui.protocol.booklet.signs', 'Signs')}
                 className={`${inputCls} font-bold`}
                 dir="auto"
@@ -114,7 +142,7 @@ const RuleCells = ({ rule, edit, catKey, index, drugLabels, t }) => {
                 <textarea
                     rows={3}
                     value={label || ''}
-                    onChange={(e) => edit.onClass(catKey, index, 'label', e.target.value)}
+                    onChange={(e) => edit.onClass(catKey, index, text.fields.label, e.target.value)}
                     aria-label={t('clinical_ui.protocol.booklet.classify', 'Classify as')}
                     className={`${inputCls} font-bold italic uppercase text-center`}
                     dir="auto"
@@ -135,10 +163,10 @@ const RuleCells = ({ rule, edit, catKey, index, drugLabels, t }) => {
         treat: (
             <div className="space-y-1">
                 <textarea
-                    rows={Math.min(16, Math.max(4, (rule.treatments || []).length * 2 + 1))}
-                    value={linesValue(rule.treatments)}
-                    onChange={(e) => edit.onRule(catKey, index, 'treatments', toLines(e.target.value))}
-                    onBlur={() => edit.onRule(catKey, index, 'treatments', tidyLines(rule.treatments))}
+                    rows={Math.min(16, Math.max(4, text.treatments.length * 2 + 1))}
+                    value={linesValue(rule[text.fields.treatments] ?? text.treatments)}
+                    onChange={(e) => edit.onRule(catKey, index, text.fields.treatments, toLines(e.target.value))}
+                    onBlur={() => edit.onRule(catKey, index, text.fields.treatments, tidyLines(rule[text.fields.treatments] ?? text.treatments))}
                     aria-label={t('clinical_ui.protocol.booklet.treat', 'Identify treatment')}
                     className={inputCls}
                     dir="auto"
@@ -149,9 +177,9 @@ const RuleCells = ({ rule, edit, catKey, index, drugLabels, t }) => {
     };
 };
 
-const ClassifyTable = ({ page, categories, drugLabels, edit, t }) => {
+const ClassifyTable = ({ page, categories, drugLabels, edit, t, ar }) => {
     const withSide = page.categories.length > 1;
-    const sideLabel = (catKey) => page.sideLabels?.[catKey] || categories[catKey]?.title || catKey;
+    const sideLabel = (catKey) => page.sideLabels?.[catKey] || (ar ? categories[catKey]?.titleAr || arOf(categories[catKey]?.title || '') : categories[catKey]?.title) || catKey;
     return (
         <>
         {/* Phone: one coloured box per classification, signs then treatment. */}
@@ -166,7 +194,7 @@ const ClassifyTable = ({ page, categories, drugLabels, edit, t }) => {
                         )}
                         {rules.map((rule, i) => {
                             const c = rowColor(rule.classification?.color);
-                            const cells = RuleCells({ rule, edit, catKey, index: i, drugLabels, t });
+                            const cells = RuleCells({ rule, edit, catKey, index: i, drugLabels, t, ar });
                             return (
                                 <div key={rule.id || i} className="border-2 text-[13px] text-slate-900" style={{ background: c.background, borderColor: c.border }}>
                                     <div className="px-2.5 py-1.5 font-bold italic uppercase text-center border-b" style={{ borderColor: c.border }}>{cells.label}</div>
@@ -196,7 +224,7 @@ const ClassifyTable = ({ page, categories, drugLabels, edit, t }) => {
                         return rules.map((rule, i) => {
                             const c = rowColor(rule.classification?.color);
                             const cell = { background: c.background, borderColor: c.border };
-                            const cells = RuleCells({ rule, edit, catKey, index: i, drugLabels, t });
+                            const cells = RuleCells({ rule, edit, catKey, index: i, drugLabels, t, ar });
                             return (
                                 <tr key={`${catKey}-${rule.id || i}`}>
                                     {withSide && i === 0 && (
@@ -229,17 +257,18 @@ export const bookletPagesFor = (formType, categories = {}) => {
 };
 
 export const BookletProtocolView = ({ formType, protocol, doses = [], edit = null }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const ar = i18n.language === 'ar';
     const categories = protocol?.categories || {};
-    const drugLabels = Object.fromEntries((doses || []).map((d) => [d.id, d.label || d.id]));
-    const pages = bookletPagesFor(formType, categories);
+    const drugLabels = Object.fromEntries((doses || []).map((d) => [d.id, drugText(d, 'label', ar) || d.id]));
+    const pages = bookletPagesFor(formType, categories).map((p) => pageText(p, ar));
 
     if (!pages.length) {
         return <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.booklet.empty', 'This protocol has no classification tables yet.')}</div>;
     }
 
     return (
-        <div className="space-y-6" dir="ltr">
+        <div className="space-y-6" dir={ar ? 'rtl' : 'ltr'}>
             <div className="text-center border-2 border-slate-800 bg-white py-2 px-3">
                 <div className="font-extrabold uppercase text-slate-900 text-sm md:text-base">
                     {formType === 'infant'
@@ -255,7 +284,7 @@ export const BookletProtocolView = ({ formType, protocol, doses = [], edit = nul
                     </h3>
                     <div className={`grid gap-4 ${page.ask || page.look || page.question ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]' : ''}`}>
                         {(page.ask || page.look || page.question) && <AssessPanel page={page} t={t} />}
-                        <ClassifyTable page={page} categories={categories} drugLabels={drugLabels} edit={edit} t={t} />
+                        <ClassifyTable page={page} categories={categories} drugLabels={drugLabels} edit={edit} t={t} ar={ar} />
                     </div>
                 </section>
             ))}
@@ -299,66 +328,70 @@ const rangeText = (min, max, unit, t) => {
 };
 
 /** One dose band: read as the booklet prints it, or as inputs when editing. */
-const DoseBand = ({ r, edit, drugIndex, k, months, t, layout }) => {
+const DoseBand = ({ r, edit, drugIndex, k, months, t, layout, ar }) => {
     const set = (field) => (e) => edit.onRange(drugIndex, k, field, e.target.value);
+    const show = (field) => drugText(r, field, ar);
     const num = (field, ph) => (
         <input type="number" inputMode="decimal" step="0.01" value={r[field] ?? ''} onChange={set(field)} placeholder={ph} aria-label={field} className={`${inputCls} text-center w-16`} />
     );
     const txt = (field, extra = '') => (
-        <input type="text" value={r[field] ?? ''} onChange={set(field)} aria-label={field} className={`${inputCls} ${extra}`} dir="auto" />
+        <input type="text" value={show(field) ?? ''} onChange={set(ar ? `${field}Ar` : field)} aria-label={field} className={`${inputCls} ${extra}`} dir="auto" />
     );
     const age = edit ? <span className="inline-flex items-center gap-1">{num('minAge', '0')}–{num('maxAge', '∞')}</span> : rangeText(r.minAge, r.maxAge, months, t);
-    const weight = edit ? <span className="inline-flex items-center gap-1">{num('minWeight', '0')}–{num('maxWeight', '∞')}</span> : rangeText(r.minWeight, r.maxWeight, 'kg', t);
+    const weight = edit ? <span className="inline-flex items-center gap-1">{num('minWeight', '0')}–{num('maxWeight', '∞')}</span> : rangeText(r.minWeight, r.maxWeight, ar ? 'كجم' : 'kg', t);
     const remove = edit && (
         <button type="button" onClick={() => edit.removeRange(drugIndex, k)} className="text-xs font-bold text-red-700 hover:underline">
             {t('clinical_ui.protocol.booklet.remove_band', 'Remove')}
         </button>
     );
 
-    if (layout === 'card') {
+    // Phone: the same table in two columns, so nothing scrolls sideways.
+    if (layout === 'compact') {
         return (
-            <div className="border-t border-slate-300 p-2.5 space-y-1.5 text-[13px] text-slate-900">
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
-                    <span><b>{t('clinical_ui.protocol.booklet.age', 'Age')}:</b> {age}</span>
-                    <span><b>{t('clinical_ui.protocol.booklet.weight', 'Weight')}:</b> {weight}</span>
-                </div>
-                <div className="font-bold">{edit ? txt('doseQty', 'font-bold') : r.doseQty}</div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div><div className="font-bold text-slate-600">{t('clinical_ui.protocol.booklet.freq', 'How often')}</div>{edit ? txt('doseFreq') : r.doseFreq}</div>
-                    <div><div className="font-bold text-slate-600">{t('clinical_ui.protocol.booklet.duration', 'For how long')}</div>{edit ? txt('doseDuration') : r.doseDuration}</div>
-                </div>
-                {remove}
-            </div>
+            <tr className={k % 2 ? 'bg-slate-50' : ''}>
+                <td className="border border-slate-300 p-1.5 align-top text-xs">
+                    <div className={edit ? '' : 'whitespace-nowrap'}>{age}</div>
+                    <div className={`text-slate-600 ${edit ? 'mt-1' : 'whitespace-nowrap'}`}>{weight}</div>
+                </td>
+                <td className="border border-slate-300 p-1.5 align-top break-words">
+                    <div className="font-bold">{edit ? txt('doseQty', 'font-bold') : show('doseQty')}</div>
+                    <div className="text-xs text-slate-700 mt-0.5 space-y-0.5">
+                        {edit ? <>{txt('doseFreq')}{txt('doseDuration')}</> : [show('doseFreq'), show('doseDuration')].filter(Boolean).join(' · ')}
+                    </div>
+                    {remove}
+                </td>
+            </tr>
         );
     }
     return (
         <tr className={k % 2 ? 'bg-slate-50' : ''}>
             <td className="border border-slate-300 p-1.5 text-center whitespace-nowrap">{age}</td>
             <td className="border border-slate-300 p-1.5 text-center whitespace-nowrap">{weight}</td>
-            <td className="border border-slate-300 p-1.5 font-bold">{edit ? txt('doseQty', 'font-bold') : r.doseQty}</td>
-            <td className="border border-slate-300 p-1.5 text-center">{edit ? txt('doseFreq') : r.doseFreq}</td>
-            <td className="border border-slate-300 p-1.5 text-center">{edit ? txt('doseDuration') : r.doseDuration}</td>
+            <td className="border border-slate-300 p-1.5 font-bold">{edit ? txt('doseQty', 'font-bold') : show('doseQty')}</td>
+            <td className="border border-slate-300 p-1.5 text-center">{edit ? txt('doseFreq') : show('doseFreq')}</td>
+            <td className="border border-slate-300 p-1.5 text-center">{edit ? txt('doseDuration') : show('doseDuration')}</td>
             {edit && <td className="border border-slate-300 p-1.5 text-center">{remove}</td>}
         </tr>
     );
 };
 
 export const BookletDoseView = ({ protocol, edit = null }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const ar = i18n.language === 'ar';
     const drugs = protocol?.drugs || [];
     if (!drugs.length) {
         return <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.booklet.no_drugs', 'No doses saved yet.')}</div>;
     }
     const months = t('clinical_ui.protocol.booklet.months', 'months');
     return (
-        <div className="grid gap-4 xl:grid-cols-2 items-start" dir="ltr">
+        <div className="grid gap-4 xl:grid-cols-2 items-start" dir={ar ? 'rtl' : 'ltr'}>
             {drugs.map((drug, i) => (
                 <section key={drug.id || i} className="border-2 border-slate-800 bg-white rounded-sm overflow-hidden">
                     <div className="bg-sky-100 border-b-2 border-slate-800 px-3 py-1.5 text-slate-900">
                         {edit ? (
                             <div className="space-y-1.5">
-                                <input type="text" value={drug.label || ''} onChange={(e) => edit.onDrug(i, 'label', e.target.value)} aria-label={t('clinical_ui.protocol.drug.label', 'Display label')} className={`${inputCls} font-extrabold`} dir="auto" />
-                                <input type="text" value={drug.fallback || ''} onChange={(e) => edit.onDrug(i, 'fallback', e.target.value)} placeholder={t('clinical_ui.protocol.booklet.fallback', 'Text when no band matches')} className={`${inputCls} text-xs`} dir="auto" />
+                                <input type="text" value={drugText(drug, 'label', ar) || ''} onChange={(e) => edit.onDrug(i, ar ? 'labelAr' : 'label', e.target.value)} aria-label={t('clinical_ui.protocol.drug.label', 'Display label')} className={`${inputCls} font-extrabold`} dir="auto" />
+                                <input type="text" value={drugText(drug, 'fallback', ar) || ''} onChange={(e) => edit.onDrug(i, ar ? 'fallbackAr' : 'fallback', e.target.value)} placeholder={t('clinical_ui.protocol.booklet.fallback', 'Text when no band matches')} className={`${inputCls} text-xs`} dir="auto" />
                                 <label className="flex items-center gap-2 text-xs font-bold">
                                     <input type="checkbox" checked={!!drug.ageAndWeight} onChange={(e) => edit.onDrug(i, 'ageAndWeight', e.target.checked)} />
                                     {t('clinical_ui.protocol.booklet.age_weight_badge', 'Age and weight')}
@@ -367,15 +400,23 @@ export const BookletDoseView = ({ protocol, edit = null }) => {
                             </div>
                         ) : (
                             <h3 className="font-extrabold text-sm">
-                                {drug.label || drug.id}
+                                {drugText(drug, 'label', ar) || drug.id}
                                 {drug.ageAndWeight && <span className="ms-2 text-[10px] font-bold uppercase text-sky-800">{t('clinical_ui.protocol.booklet.age_weight_badge', 'Age and weight')}</span>}
                             </h3>
                         )}
                     </div>
-                    {/* Phone: each band as a small card, so nothing is cut off. */}
-                    <div className="md:hidden">
-                        {(drug.rules || []).map((r, k) => <DoseBand key={k} r={r} edit={edit} drugIndex={i} k={k} months={months} t={t} layout="card" />)}
-                    </div>
+                    {/* Phone: two columns, so nothing is cut off or scrolls sideways. */}
+                    <table className="md:hidden w-full border-collapse table-fixed text-[13px] text-slate-900">
+                        <thead>
+                            <tr className="bg-slate-100 text-xs">
+                                <th className="border border-slate-400 p-1.5 text-start w-[42%]">{t('clinical_ui.protocol.booklet.age', 'Age')} / {t('clinical_ui.protocol.booklet.weight', 'Weight')}</th>
+                                <th className="border border-slate-400 p-1.5 text-start">{t('clinical_ui.protocol.booklet.dose', 'Dose')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(drug.rules || []).map((r, k) => <DoseBand key={k} r={r} edit={edit} drugIndex={i} k={k} months={months} t={t} ar={ar} layout="compact" />)}
+                        </tbody>
+                    </table>
                     <div className="hidden md:block overflow-x-auto">
                         <table className="w-full border-collapse text-[13px] text-slate-900">
                             <thead>
@@ -389,7 +430,7 @@ export const BookletDoseView = ({ protocol, edit = null }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {(drug.rules || []).map((r, k) => <DoseBand key={k} r={r} edit={edit} drugIndex={i} k={k} months={months} t={t} layout="row" />)}
+                                {(drug.rules || []).map((r, k) => <DoseBand key={k} r={r} edit={edit} drugIndex={i} k={k} months={months} t={t} ar={ar} layout="row" />)}
                             </tbody>
                         </table>
                     </div>

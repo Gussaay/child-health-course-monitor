@@ -5200,7 +5200,7 @@ const resources = {
             add: "Add",
           },
           dlg: {
-            national_msg: "This replaces all four tabs (sick child, young infant and both Doses tabs) with the Sudan national IMNCI protocol and saves them now. Every clinician sees it straight away. Any changes made here before are replaced.", national_title: "Load national protocol", national_confirm: "Load and save",
+            national_msg: "This saves the Sudan national IMNCI protocol for the sick child and the young infant (classification, drugs and recording forms). Every clinician sees it straight away. After this, changes are made with Edit.", national_title: "Load Sudan national protocol", cancel_msg: "Discard the changes you made since the last save?", national_confirm: "Load and save",
             discard_msg: "You have unsaved changes to this protocol. Switching tabs will discard them. Continue?",
             discard_title: "Discard changes",
             discard: "Discard",
@@ -5223,7 +5223,7 @@ const resources = {
             del_cat_title2: "Delete Category",
           },
           toast: {
-            national_saved: "The national protocol is saved in all four tabs and is now live for every clinician.",
+            national_saved: "The national protocol is saved and is now live for every clinician.", history_failed: "Saved, but the change could not be added to the history.",
             saved: "Protocol saved. It is now live for every clinician.",
             save_failed: "Could not save the protocol.",
             cat_exists: "A category with this key already exists.",
@@ -5241,7 +5241,7 @@ const resources = {
             rule: "Find a category, classification, condition or treatment…",
           },
           btn: {
-            load_national: "Load national protocol",
+            load_national: "Load Sudan national protocol", edit: "Edit", history: "History", save_changes: "Save changes", cancel: "Cancel", close: "Close",
             load_tab: { child: "Load child protocol", infant: "Load infant protocol", dosages_child: "Load child doses", dosages_infant: "Load infant doses" },
             load_defaults: "Load Defaults",
             add_category: "Add Category",
@@ -5288,7 +5288,13 @@ const resources = {
             no_treatments: "No treatments added.",
             no_rules: "No rules defined.",
           },
-          view: { booklet: "Booklet view", edit: "Edit rules", edit_booklet: "Edit", advanced: "Advanced" },
+          view: { booklet: "Booklet view", edit: "Edit rules", edit_booklet: "Edit", advanced: "Advanced", advanced_rules: "Advanced rule builder" },
+          parts: { label: "Age group", child: "Sick child (2 months – 5 years)", infant: "Young infant (up to 2 months)" },
+          sections: { label: "Section", classify: "Classification", drugs: "Drugs", guide: "Treatment & counselling", form: "Recording form" },
+          guide: { headings: "Headings", add_row: "Add row", add_table: "Add a table", add_box: "Add box", remove_box: "Remove box" },
+          national: { empty_title: "No protocol is saved yet", empty_hint: "Start from the Sudan national IMNCI protocol. This is done once; after that, changes are made with Edit." },
+          history: { title: "Change history", loading: "Loading history…", empty: "No changes recorded yet.", count: "{{count}} change(s)", before: "Before", after: "After", more: "…and {{count}} more", tab: { child: "Sick child classification", infant: "Young infant classification", dosages_child: "Sick child drugs", dosages_infant: "Young infant drugs", form_child: "Sick child recording form", form_infant: "Young infant recording form", guide_child: "Sick child treatment & counselling", guide_infant: "Young infant treatment & counselling", national: "National protocol" } },
+          form: { language: "Form language", yes_no: "Asks Yes / No", move_up: "Move up", move_down: "Move down", remove_section: "Remove section", add_section: "Add section", col_ask: "Ask", col_look: "Look", col_classify: "Classify", col_treat: "Identify treatment" },
           booklet: {
             if_yes: "IF YES", ask: "ASK:", look: "LOOK, LISTEN, FEEL:",
             signs: "Signs", classify: "Classify as", treat: "Identify treatment",
@@ -12711,7 +12717,7 @@ const resources = {
             add: "إضافة",
           },
           dlg: {
-            national_msg: "سيستبدل هذا التبويبات الأربعة (الطفل المريض، والرضيع الصغير، وتبويبي الجرعات) بالبروتوكول القومي للرعاية المتكاملة في السودان ويحفظها الآن. سيظهر لكل الكوادر الصحية فوراً، وستُستبدل أي تعديلات سابقة هنا.", national_title: "تحميل البروتوكول القومي", national_confirm: "تحميل وحفظ",
+            national_msg: "سيحفظ هذا البروتوكول القومي للعلاج المتكامل لأمراض الطفولة في السودان للطفل المريض والرضيع الصغير (التصنيف والأدوية واستمارات التسجيل). سيظهر لكل الكوادر الصحية فوراً، وبعدها تتم التعديلات بزر تعديل.", national_title: "تحميل البروتوكول القومي للسودان", cancel_msg: "تجاهل التعديلات التي أجريتها منذ آخر حفظ؟", national_confirm: "تحميل وحفظ",
             discard_msg: "لديك تغييرات غير محفوظة على هذا البروتوكول. سيؤدي تبديل التبويب إلى تجاهلها. هل تريد المتابعة؟",
             discard_title: "تجاهل التغييرات",
             discard: "تجاهل",
@@ -12734,7 +12740,7 @@ const resources = {
             del_cat_title2: "حذف الفئة",
           },
           toast: {
-            national_saved: "تم حفظ البروتوكول القومي في التبويبات الأربعة وأصبح متاحاً لكل الكوادر الصحية.",
+            national_saved: "تم حفظ البروتوكول القومي وأصبح متاحاً لكل الكوادر الصحية.", history_failed: "تم الحفظ، لكن تعذر إضافة التعديل إلى السجل.",
             saved: "تم حفظ البروتوكول. أصبح الآن مفعّلاً لجميع الكوادر السريرية.",
             save_failed: "تعذّر حفظ البروتوكول.",
             cat_exists: "توجد فئة بهذا المفتاح بالفعل.",
@@ -12752,7 +12758,7 @@ const resources = {
             rule: "ابحث عن فئة أو تصنيف أو حالة أو علاج…",
           },
           btn: {
-            load_national: "تحميل البروتوكول القومي",
+            load_national: "تحميل البروتوكول القومي للسودان", edit: "تعديل", history: "السجل", save_changes: "حفظ التعديلات", cancel: "إلغاء", close: "إغلاق",
             load_tab: { child: "تحميل بروتوكول الطفل", infant: "تحميل بروتوكول الرضيع", dosages_child: "تحميل جرعات الطفل", dosages_infant: "تحميل جرعات الرضيع" },
             load_defaults: "تحميل الإعدادات الافتراضية",
             add_category: "إضافة فئة",
@@ -12799,7 +12805,13 @@ const resources = {
             no_treatments: "لم تتم إضافة علاجات.",
             no_rules: "لم يتم تعريف قواعد.",
           },
-          view: { booklet: "عرض الكتيب", edit: "تعديل القواعد", edit_booklet: "تعديل", advanced: "متقدم" },
+          view: { booklet: "عرض الكتيب", edit: "تعديل القواعد", edit_booklet: "تعديل", advanced: "متقدم", advanced_rules: "منشئ القواعد المتقدم" },
+          parts: { label: "الفئة العمرية", child: "الطفل المريض (شهرين – 5 سنوات)", infant: "الرضيع الصغير (حتى شهرين)" },
+          sections: { label: "القسم", classify: "التصنيف", drugs: "الأدوية", guide: "العلاج والنصح", form: "استمارة التسجيل" },
+          guide: { headings: "العناوين", add_row: "إضافة صف", add_table: "إضافة جدول", add_box: "إضافة مربع", remove_box: "حذف المربع" },
+          national: { empty_title: "لم يُحفظ أي بروتوكول بعد", empty_hint: "ابدأ من البروتوكول القومي للعلاج المتكامل لأمراض الطفولة في السودان. يتم هذا مرة واحدة فقط، وبعدها تتم التعديلات بزر تعديل." },
+          history: { title: "سجل التعديلات", loading: "جارٍ تحميل السجل…", empty: "لا توجد تعديلات مسجلة بعد.", count: "{{count}} تعديل", before: "قبل", after: "بعد", more: "…و{{count}} أخرى", tab: { child: "تصنيف الطفل المريض", infant: "تصنيف الرضيع الصغير", dosages_child: "أدوية الطفل المريض", dosages_infant: "أدوية الرضيع الصغير", form_child: "استمارة تسجيل الطفل المريض", form_infant: "استمارة تسجيل الرضيع الصغير", guide_child: "علاج ونصح الطفل المريض", guide_infant: "علاج ونصح الرضيع الصغير", national: "البروتوكول القومي" } },
+          form: { language: "لغة الاستمارة", yes_no: "يسأل نعم / لا", move_up: "تحريك لأعلى", move_down: "تحريك لأسفل", remove_section: "حذف القسم", add_section: "إضافة قسم", col_ask: "اسأل", col_look: "انظر", col_classify: "صنّف", col_treat: "حدد العلاج" },
           booklet: {
             if_yes: "إذا كانت الإجابة نعم", ask: "اسأل:", look: "انظر، استمع، تحسس:",
             signs: "العلامات", classify: "التصنيف", treat: "حدد العلاج",
