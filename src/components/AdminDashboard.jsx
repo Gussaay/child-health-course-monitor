@@ -100,7 +100,7 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
             <div className="bg-white rounded-xl">
                 {PERMISSION_CATEGORIES.map((category, catIndex) => (
                     <div key={category.title} className={catIndex > 0 ? 'border-t-4 border-gray-100' : ''}>
-                        <div className={`px-6 py-3 bg-gray-100 border-b border-gray-200 sticky top-0 z-20 shadow-sm ${catIndex === 0 ? 'rounded-t-xl' : ''}`}>
+                        <div className={`px-6 py-3 bg-gray-100 border-b border-gray-200 shadow-sm ${catIndex === 0 ? 'rounded-t-xl' : ''}`}>
                             <h5 className="text-gray-800 font-black text-sm ">
                                 {category.title}
                             </h5>

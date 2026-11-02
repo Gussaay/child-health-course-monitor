@@ -604,7 +604,9 @@ export async function submitLocalityBatchUpdate(updates, localityName) {
     return true;
 }
 
-export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
+// The facilities query for a set of filters. Shared by the fetch below and the
+// live listener (subscribeFacilityDelta), so both always ask the same question.
+function facilityQuery(filters = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
     let orderByClause = orderBy("الولاية"); 
@@ -625,17 +627,20 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     }
 
     if (conditions.length > 0) q = query(q, ...conditions);
-    q = query(q, orderByClause);
+    return query(q, orderByClause);
+}
+// The filters Firestore cannot express, applied on the device.
+const facilityLocalFilter = (filters = {}) => (f) => {
+    if (filters.state === 'NOT_ASSIGNED' && f['الولاية']) return false;
+    if (filters.functioningStatus === 'NOT_SET' && !(f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '')) return false;
+    return true;
+};
 
+export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
+    const q = facilityQuery(filters);
     try {
         const querySnapshot = await getData(q, sourceOptions);
-        
-        let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        if (filters.state === 'NOT_ASSIGNED') facilities = facilities.filter(f => !f['الولاية']);
-        if (filters.functioningStatus === 'NOT_SET') facilities = facilities.filter(f => f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '');
-
-        return facilities;
+        return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(facilityLocalFilter(filters));
     } catch (error) {
         console.error("Error fetching health facilities:", error);
         throw error;
@@ -4057,4 +4062,85 @@ export function subscribeExerciseAttempts(courseId, onChange, onError) {
             if (onError) onError(error);
         }
     );
+}
+
+
+// ============================================================================
+// REAL-TIME DELTA LISTENERS
+//
+// A list already downloaded on this device is kept current by a listener that
+// asks only for records changed since the device's last sync (a server-time
+// mark, see DataContext). Firestore bills one read per record it sends, so an
+// unchanged list costs nothing while it is open; DataContext closes listeners
+// when the app goes to the background and reopens them from the newest mark,
+// so a long disconnection never re-reads what the device already has.
+// ============================================================================
+const LIVE_LISTS = {
+    courses: { col: 'courses' },
+    participants: { col: 'participants' },
+    facilitators: { col: 'facilitators' },
+    funders: { col: 'funders' },
+    federalCoordinators: { col: 'federalCoordinators' },
+    stateCoordinators: { col: 'stateCoordinators' },
+    localityCoordinators: { col: 'localityCoordinators' },
+    skillMentorshipSubmissions: { col: 'skillMentorship' },
+    imnciVisitReports: { col: 'imnciVisitReports' },
+    eencVisitReports: { col: 'eencVisitReports' },
+    // Same shape as listIMNCIPatientRecords: a record marked deleted leaves the
+    // query, and the listener removes it from the device.
+    imnciPatientRecords: { col: 'imnciPatientRecords', extra: () => [where("isDeleted", "!=", true)] },
+    projects: { col: 'projects' },
+    masterPlans: { col: 'masterPlans' },
+    operationalPlans: { col: 'operationalPlans' },
+    unitMeetings: { col: 'unitMeetings' },
+    supplyItems: { col: 'supplyItems' },
+    populationTargets: { col: 'populationTargets' },
+    supervisionAssessments: { col: 'supervisionAssessments' },
+    onlineCourses: { col: 'onlineCourses' },
+    onlineCourseItems: { col: 'onlineCourseItems' },
+    finalReports: { col: 'finalReports', map: (d) => lightFinalReport(d) },
+};
+export const LIVE_LIST_KEYS = Object.keys(LIVE_LISTS);
+
+// Turns a snapshot into { upserts, removed }. A record this device is still
+// writing (pending, no server time yet) is skipped: the confirmed copy follows.
+const deltaChanges = (snap, map = (d) => d, keep = () => true) => {
+    const upserts = [];
+    const removed = [];
+    snap.docChanges().forEach((ch) => {
+        if (ch.doc.metadata.hasPendingWrites) return;
+        if (ch.type === 'removed') { removed.push(ch.doc.id); return; }
+        const rec = map({ id: ch.doc.id, ...ch.doc.data() });
+        if (keep(rec)) upserts.push(rec); else removed.push(ch.doc.id);
+    });
+    return { upserts, removed };
+};
+
+/**
+ * Listens for records of list `key` changed after `sinceMs` (server time).
+ * onChange({ upserts, removed }) runs for each batch; returns the unsubscribe,
+ * or null when the list has no live form.
+ */
+export function subscribeListDelta(key, sinceMs, onChange, onError) {
+    const def = LIVE_LISTS[key];
+    if (!def || !(sinceMs > 0)) return null;
+    const q = query(
+        collection(db, def.col),
+        where("lastUpdatedAt", ">", Timestamp.fromMillis(sinceMs)),
+        ...(def.extra ? def.extra() : []),
+    );
+    return onSnapshot(q, (snap) => {
+        const changes = deltaChanges(snap, def.map);
+        if (changes.upserts.length || changes.removed.length) onChange(changes);
+    }, onError);
+}
+
+/** The facilities list for `filters`, live from `sinceMs` (lastSnapshotAt, server time). */
+export function subscribeFacilityDelta(filters, sinceMs, onChange, onError) {
+    if (!(sinceMs > 0)) return null;
+    const q = facilityQuery({ ...filters, lastUpdatedAfter: new Date(sinceMs) });
+    return onSnapshot(q, (snap) => {
+        const changes = deltaChanges(snap, undefined, facilityLocalFilter(filters));
+        if (changes.upserts.length || changes.removed.length) onChange(changes);
+    }, onError);
 }

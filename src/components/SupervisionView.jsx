@@ -791,7 +791,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
             </Card>
 
             {/* Overall progress and headline results; pinned under the top bar while scrolling. */}
-            <div className="sticky top-[calc(var(--app-top,0px)+4px)] z-20 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
+            <div className="relative z-20 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
                 <div className="flex items-center gap-3">
                     <span className="text-sm font-semibold text-slate-800">
                         {t('trackers.supervision.form.progress', 'Completed {{pct}}', { pct: `${Math.round(progress.percent)}%` })}

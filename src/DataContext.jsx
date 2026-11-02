@@ -33,7 +33,10 @@ import {
     listFinalReport,
     fetchFacilitiesHistoryMultiDate, 
     listSnapshotsForFacility,
-    getAboutTeamImages 
+    getAboutTeamImages,
+    LIVE_LIST_KEYS,
+    subscribeListDelta,
+    subscribeFacilityDelta,
 } from './data';
 import { useAuth } from './hooks/useAuth';
 
@@ -61,6 +64,38 @@ const CACHE_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
 const SYNC_OVERLAP_MS = 10 * 60 * 1000; // 10 minutes
 
 const rewindWatermark = (ms) => (ms > 0 ? Math.max(0, ms - SYNC_OVERLAP_MS) : 0);
+
+// --- SERVER-CLOCK WATERMARK ---
+// The overlap above only covers a device clock up to 10 minutes fast. A phone
+// whose clock was an hour (or a day) ahead stored a watermark in its own
+// future, and every record written on the server before that moment came
+// back from no delta query ever again: a course added on the web stayed
+// missing from that phone while a fresh browser showed it. The watermark is
+// now the newest lastUpdatedAt the server actually returned — server clock on
+// both sides of the comparison — and the device clock is used only to time
+// the cache (CACHE_TTL_MS), where a wrong clock cannot lose data.
+//
+// A device that synced under the old scheme may already have missed records,
+// so the first sync after this update re-downloads each collection once
+// (SYNC_MARK_VERSION); after that it is delta again.
+const SYNC_MARK_VERSION = 2;
+// Listeners start from a server-time mark, so a second of overlap is enough
+// to catch two records stamped in the same millisecond.
+const LIVE_OVERLAP_MS = 1000;
+const syncMarkKey = (key) => `syncMark_v${SYNC_MARK_VERSION}_${key}`;
+const tsMillis = (v) => {
+    if (!v) return 0;
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    if (typeof v.seconds === 'number') return v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6);
+    if (v instanceof Date) return v.getTime();
+    if (typeof v === 'number') return v;
+    const n = Date.parse(v);
+    return Number.isFinite(n) ? n : 0;
+};
+/** Newest server lastUpdatedAt in a list of records, or 0 when none carry one. */
+export const newestServerStamp = (items) => (Array.isArray(items)
+    ? items.reduce((max, item) => Math.max(max, tsMillis(item?.lastUpdatedAt)), 0)
+    : 0);
 
 // --- BACKGROUND REVALIDATION ---
 // A cache hit used to be the end of the story for up to an hour (CACHE_TTL_MS),
@@ -265,6 +300,10 @@ export const DataProvider = ({ children }) => {
     const [lastFacilitiesFetchTime, setLastFacilitiesFetchTime] = useState({}); 
     const lastFacilitiesFetchTimeRef = useRef(lastFacilitiesFetchTime);
     const fetchingRef = useRef({}); 
+    // Every list fetcher by cache key, so one call can delta-sync whatever this
+    // device has already loaded (header Refresh, opening the app, changing page).
+    const syncRegistryRef = useRef({});
+    const lastFacilityFiltersRef = useRef(null);
 
     const facilitiesFilterCacheRef = useRef({});
     const currentFacilitiesFilterKeyRef = useRef('all');
@@ -296,6 +335,7 @@ export const DataProvider = ({ children }) => {
              // for facilities changed since the last fetch (use after this
              // device saved or approved a facility); true = full re-download.
              const fetchFacilities = async (filters = {}, force = false) => {
+                lastFacilityFiltersRef.current = filters;
                 const filterKey = getFilterKey(filters);
                 const internalCache = facilitiesFilterCacheRef.current;
                 
@@ -365,7 +405,10 @@ export const DataProvider = ({ children }) => {
                 try {
                     const fetchStartedAt = Date.now();
 
-                    let effectiveLastFetchTime = rewindWatermark(lastFetchTime);
+                    // Server-time mark (newest lastSnapshotAt seen), like the other lists.
+                    const facMarkKey = `${syncMarkKey(key)}_${filterKey}`;
+                    const facMark = parseInt(localStorage.getItem(facMarkKey) || '0', 10);
+                    let effectiveLastFetchTime = rewindWatermark(facMark);
                     if (!localData || localData.length === 0) {
                         effectiveLastFetchTime = 0; // First time, full load needed
                     }
@@ -400,6 +443,10 @@ export const DataProvider = ({ children }) => {
                     
                     // Log success time (captured before the request, not after)
                     localStorage.setItem(timeKey, fetchStartedAt.toString());
+                    const newestFac = (finalMergedData || []).reduce((m, f) => Math.max(m, tsMillis(f?.lastSnapshotAt)), 0);
+                    localStorage.setItem(facMarkKey, String(newestFac > 0
+                        ? Math.max(effectiveLastFetchTime === 0 ? 0 : facMark, newestFac)
+                        : (facMark || fetchStartedAt)));
 
                     facilitiesFilterCacheRef.current[filterKey] = finalMergedData;
                     setCache(prev => ({ ...prev, healthFacilities: finalMergedData }));
@@ -419,6 +466,7 @@ export const DataProvider = ({ children }) => {
                     fetchingRef.current[filterKey] = false;
                 }
             };
+            syncRegistryRef.current[key] = () => fetchFacilities(lastFacilityFiltersRef.current || {}, 'sync');
             return fetchFacilities;
         }
         
@@ -521,7 +569,10 @@ export const DataProvider = ({ children }) => {
                 // request was in flight.
                 const fetchStartedAt = Date.now();
 
-                let effectiveLastFetchTime = rewindWatermark(lastFetchTime);
+                // The delta starts from the server-clock mark. No mark yet (first
+                // sync after this update, or a new device) means one full download.
+                const storedMark = parseInt(localStorage.getItem(syncMarkKey(key)) || '0', 10);
+                let effectiveLastFetchTime = rewindWatermark(storedMark);
 
                 // If localDB is empty, we must do a full download to reconstruct it.
                 if ((!localData || (Array.isArray(localData) && localData.length === 0)) && !key.includes('Settings')) {
@@ -560,6 +611,15 @@ export const DataProvider = ({ children }) => {
                 }
                 
                 localStorage.setItem(timeKey, fetchStartedAt.toString());
+                // Advance the mark only by what the server returned. A collection
+                // whose records carry no lastUpdatedAt cannot be delta-synced
+                // anyway; it keeps a client-clock mark so it is not re-downloaded
+                // in full on every sync.
+                const newest = newestServerStamp(Array.isArray(newOrUpdatedData) ? newOrUpdatedData : []);
+                const nextMark = newest > 0
+                    ? (isCompleteAnswer ? newest : Math.max(storedMark, newest))
+                    : (isCompleteAnswer ? (newestServerStamp(finalMergedData) || fetchStartedAt) : storedMark);
+                if (nextMark > 0) localStorage.setItem(syncMarkKey(key), String(nextMark));
 
                 setCache(prev => ({ ...prev, [key]: finalMergedData })); 
                 return finalMergedData;
@@ -578,8 +638,159 @@ export const DataProvider = ({ children }) => {
                 fetchingRef.current[key] = null;
             }
         };
+        syncRegistryRef.current[key] = () => fetcher('sync');
         return fetcher;
     }, [scheduleRevalidate]); 
+
+    // Delta-sync every list already loaded on this device: only what changed
+    // on the server since its last sync comes down. Lists never opened stay
+    // unloaded (they load when their page opens). Calls closer together than
+    // `minIntervalMs` are dropped, so page changes cannot hammer the server.
+    // Lists with a working live listener (see REAL-TIME LISTENERS below).
+    const liveRef = useRef({});
+    const lastSyncAllRef = useRef(0);
+    const syncAllPromiseRef = useRef(null);
+    const syncLoaded = useCallback(async ({ minIntervalMs = 0, skipLive = false } = {}) => {
+        if (!navigator.onLine) return { synced: 0, offline: true };
+        if (syncAllPromiseRef.current) return syncAllPromiseRef.current;
+        const now = Date.now();
+        if (minIntervalMs && now - lastSyncAllRef.current < minIntervalMs) return { synced: 0, skipped: true };
+        lastSyncAllRef.current = now;
+        const keys = Object.keys(syncRegistryRef.current).filter((k) => {
+            const v = cacheRef.current[k];
+            if (v === null || v === undefined) return false;
+            if (skipLive && liveRef.current[k]) return false; // already kept current
+            if (k === 'healthFacilities') return !!lastFacilityFiltersRef.current;
+            return true;
+        });
+        syncAllPromiseRef.current = (async () => {
+            const results = await Promise.allSettled(keys.map((k) => syncRegistryRef.current[k]()));
+            const failed = results.filter((r) => r.status === 'rejected').length;
+            return { synced: keys.length - failed, failed };
+        })();
+        try { return await syncAllPromiseRef.current; } finally { syncAllPromiseRef.current = null; }
+    }, []);
+
+    // ========================================================================
+    // REAL-TIME LISTENERS
+    //
+    // Every list this device has loaded is kept current by a listener that
+    // asks the server only for records changed since the list's server-time
+    // mark (data.js subscribeListDelta / subscribeFacilityDelta). A change made
+    // anywhere arrives in seconds; an unchanged list costs nothing.
+    //
+    //   - Opened only while signed in, online and with the app on screen.
+    //   - Closed when the app goes to the background or offline, and reopened
+    //     from the newest mark when it returns, so a long disconnection never
+    //     makes Firestore re-send (and bill) what the device already has.
+    //   - A list that has not done its first download (no mark yet) waits for
+    //     it; a listener the server refuses (rules, missing index) is dropped
+    //     for this session and the list falls back to the delta sync.
+    // ========================================================================
+    const [appVisible, setAppVisible] = useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
+    const [netOnline, setNetOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
+    useEffect(() => {
+        const onVis = () => setAppVisible(document.visibilityState !== 'hidden');
+        const onOn = () => setNetOnline(true);
+        const onOff = () => setNetOnline(false);
+        document.addEventListener('visibilitychange', onVis);
+        window.addEventListener('online', onOn);
+        window.addEventListener('offline', onOff);
+        return () => {
+            document.removeEventListener('visibilitychange', onVis);
+            window.removeEventListener('online', onOn);
+            window.removeEventListener('offline', onOff);
+        };
+    }, []);
+
+    const liveFailedRef = useRef(new Set());
+    const persistTimersRef = useRef({});
+    const persistSoon = useCallback((diskKey, data) => {
+        clearTimeout(persistTimersRef.current[diskKey]);
+        persistTimersRef.current[diskKey] = setTimeout(() => {
+            setLocalData(diskKey, stripSignaturesForDisk(data)).catch?.(() => {});
+        }, 1000);
+    }, []);
+    const mergeDelta = (list, { upserts, removed }) => {
+        const map = new Map((Array.isArray(list) ? list : []).map((i) => [i.id, i]));
+        removed.forEach((id) => map.delete(id));
+        upserts.forEach((u) => map.set(u.id, u));
+        return Array.from(map.values());
+    };
+
+    const applyListDelta = useCallback((key, changes) => {
+        const next = mergeDelta(cacheRef.current[key], changes);
+        cacheRef.current = { ...cacheRef.current, [key]: next };
+        setCache((prev) => ({ ...prev, [key]: mergeDelta(prev[key], changes) }));
+        persistSoon(`cache_${key}`, next);
+        const newest = newestServerStamp(changes.upserts);
+        const stored = parseInt(localStorage.getItem(syncMarkKey(key)) || '0', 10);
+        if (newest > stored) localStorage.setItem(syncMarkKey(key), String(newest));
+    }, [persistSoon]);
+
+    const applyFacilityDelta = useCallback((filterKey, changes) => {
+        const next = mergeDelta(facilitiesFilterCacheRef.current[filterKey], changes);
+        facilitiesFilterCacheRef.current[filterKey] = next;
+        if (currentFacilitiesFilterKeyRef.current === filterKey) setCache((prev) => ({ ...prev, healthFacilities: next }));
+        persistSoon(`cache_healthFacilities_${filterKey}`, next);
+        const markKey = `${syncMarkKey('healthFacilities')}_${filterKey}`;
+        const newest = changes.upserts.reduce((m, f) => Math.max(m, tsMillis(f?.lastSnapshotAt)), 0);
+        const stored = parseInt(localStorage.getItem(markKey) || '0', 10);
+        if (newest > stored) localStorage.setItem(markKey, String(newest));
+    }, [persistSoon]);
+
+    // Which lists are loaded, as a string, so the effect below re-runs only
+    // when a list is loaded or dropped, not on every change inside one.
+    const loadedLiveKeys = LIVE_LIST_KEYS.filter((k) => cache[k] !== null && cache[k] !== undefined).join(',');
+    const liveFacilityFilterKey = cache.healthFacilities !== null && lastFacilityFiltersRef.current
+        ? getFilterKey(lastFacilityFiltersRef.current) : '';
+
+    useEffect(() => {
+        const live = liveRef.current;
+        const close = (k) => { try { live[k]?.unsub?.(); } catch { /* already closed */ } delete live[k]; };
+        const closeAll = () => Object.keys(live).forEach(close);
+        if (!user || !appVisible || !netOnline) { closeAll(); return undefined; }
+
+        const wanted = new Set(loadedLiveKeys ? loadedLiveKeys.split(',') : []);
+        Object.keys(live).forEach((k) => {
+            if (k === 'healthFacilities') { if (live[k].filterKey !== liveFacilityFilterKey) close(k); }
+            else if (!wanted.has(k)) close(k);
+        });
+
+        const refuse = (k) => (error) => {
+            console.warn(`[live] ${k} listener stopped; falling back to delta sync:`, error?.code || error?.message || error);
+            liveFailedRef.current.add(k === 'healthFacilities' ? `healthFacilities:${liveFacilityFilterKey}` : k);
+            close(k);
+        };
+        wanted.forEach((k) => {
+            if (live[k] || liveFailedRef.current.has(k)) return;
+            const since = parseInt(localStorage.getItem(syncMarkKey(k)) || '0', 10);
+            if (!(since > 0)) return; // first download not done yet
+            try {
+                const unsub = subscribeListDelta(k, Math.max(0, since - LIVE_OVERLAP_MS), (ch) => applyListDelta(k, ch), refuse(k));
+                if (unsub) live[k] = { unsub };
+            } catch (err) { refuse(k)(err); }
+        });
+
+        if (liveFacilityFilterKey && !live.healthFacilities && !liveFailedRef.current.has(`healthFacilities:${liveFacilityFilterKey}`)) {
+            const since = parseInt(localStorage.getItem(`${syncMarkKey('healthFacilities')}_${liveFacilityFilterKey}`) || '0', 10);
+            const filters = lastFacilityFiltersRef.current;
+            const fk = liveFacilityFilterKey;
+            if (since > 0) {
+                try {
+                    const unsub = subscribeFacilityDelta(filters, Math.max(0, since - LIVE_OVERLAP_MS), (ch) => applyFacilityDelta(fk, ch), refuse('healthFacilities'));
+                    if (unsub) live.healthFacilities = { unsub, filterKey: fk };
+                } catch (e) { refuse('healthFacilities')(e); }
+            }
+        }
+        return undefined;
+    }, [user, appVisible, netOnline, loadedLiveKeys, liveFacilityFilterKey, applyListDelta, applyFacilityDelta, cache]);
+
+    // Close everything when the provider goes away (sign-out reloads too).
+    useEffect(() => () => {
+        Object.values(liveRef.current).forEach((l) => { try { l.unsub?.(); } catch { /* closed */ } });
+        liveRef.current = {};
+    }, []);
 
     const fetchers = useMemo(() => ({
         fetchCourses: createFetcher('courses', (opts, lastSync) => listAllCourses(opts, lastSync)),
@@ -703,7 +914,7 @@ export const DataProvider = ({ children }) => {
     const clearLocalCache = useCallback(async () => {
         try {
             Object.keys(localStorage)
-                .filter(k => k.startsWith('lastServerFetch_'))
+                .filter(k => k.startsWith('lastServerFetch_') || k.startsWith('syncMark_'))
                 .forEach(k => localStorage.removeItem(k));
             const db = await initDB();
             await new Promise((resolve, reject) => {
@@ -731,6 +942,8 @@ export const DataProvider = ({ children }) => {
         protocols: cache.imnciProtocols,
         isLoading,
         clearLocalCache,
+        syncLoaded,
+        liveLists: () => Object.keys(liveRef.current),
         mergeIntoCache,
         removeFromCache,
         fetchFacilitiesHistoryMultiDate, 

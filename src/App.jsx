@@ -831,15 +831,16 @@ export default function App() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
     const [sideMenuOpen, setSideMenuOpen] = useState(false);
-    // Where the sticky top bar ends, as --app-top, so page tabs, filter rows
-    // and toolbars can stick just under it.
+    // Nothing sticks to the top of a page any more (the header scrolls away
+    // with the page), so --app-top is only the download banner's height: the
+    // offline pill and the pull-to-refresh spinner sit just under it.
     const headerRef = useRef(null);
     const headerElRef = useRef(null);
     const headerObserverRef = useRef(null);
     useEffect(() => {
         const el = headerRef.current;
         const set = () => {
-            const top = el ? (el.classList.contains('top-10') ? 40 : 0) + el.offsetHeight : 0;
+            const top = el && el.classList.contains('top-10') ? 40 : 0;
             document.documentElement.style.setProperty('--app-top', `${top}px`);
         };
         if (headerElRef.current !== el) {
@@ -968,7 +969,8 @@ export default function App() {
         funders, federalCoordinators, stateCoordinators, localityCoordinators, healthFacilities, participantTests, 
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests,
-        mergeIntoCache, participants: rawParticipants, skillMentorshipSubmissions, isLoading: dataLoading
+        mergeIntoCache, participants: rawParticipants, skillMentorshipSubmissions, isLoading: dataLoading,
+        syncLoaded
     } = useDataCache();
 
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
@@ -1028,6 +1030,47 @@ export default function App() {
     const [permissionsLoading, setPermissionsLoading] = useState(true);
     const [permissionsError, setPermissionsError] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+    // --- Delta sync: header button, app start, page change, app back in view ---
+    const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+    const handleRefreshAll = useCallback(async () => {
+        if (!navigator.onLine) {
+            setToast({ show: true, message: t('app_extra.toast.refresh_offline', 'You are offline. The data will refresh when you are back online.'), type: 'warning' });
+            return;
+        }
+        setIsRefreshingAll(true);
+        try {
+            const res = await syncLoaded();
+            setToast(res.failed
+                ? { show: true, message: t('app_extra.toast.refresh_partial', 'Refreshed, but {{count}} list(s) could not be reached. Try again.', { count: res.failed }), type: 'warning' }
+                : { show: true, message: t('app_extra.toast.refreshed', 'Data refreshed.'), type: 'success' });
+        } finally { setIsRefreshingAll(false); }
+    }, [syncLoaded, t]);
+    // Automatic syncs are quiet and at most every 30 seconds.
+    // Lists with a live listener are already current, so the quiet syncs skip them.
+    const quietSync = useCallback(() => { syncLoaded({ minIntervalMs: 30 * 1000, skipLive: true }).catch(() => {}); }, [syncLoaded]);
+    useEffect(() => {
+        const onVisible = () => { if (document.visibilityState === 'visible') quietSync(); };
+        document.addEventListener('visibilitychange', onVisible);
+        window.addEventListener('online', quietSync);
+        let resumeSub = null;
+        if (Capacitor.isNativePlatform()) {
+            Promise.resolve(CapacitorApp.addListener('appStateChange', ({ isActive }) => { if (isActive) quietSync(); }))
+                .then((h) => { resumeSub = h; }).catch(() => {});
+        }
+        return () => {
+            document.removeEventListener('visibilitychange', onVisible);
+            window.removeEventListener('online', quietSync);
+            resumeSub?.remove?.();
+        };
+    }, [quietSync]);
+    // On opening the app (once signed in) and on every page change: the lists
+    // a page shows are brought up to date with what changed on the server.
+    useEffect(() => {
+        if (!user) return undefined;
+        const timer = setTimeout(quietSync, 1500); // after the page's own first load
+        return () => clearTimeout(timer);
+    }, [user, view, quietSync]);
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
@@ -2802,7 +2845,10 @@ case 'meetings':
     // every page but the main menu. The web keeps its full header.
     const PAGE_TITLES = pageTitles(t);
     const closeSideMenu = () => setSideMenuOpen(false);
-    const showSlimBar = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
+    // The app keeps the full header on every page, and on every page but the
+    // main menu the slim back bar (back arrow, page name) sits right under it.
+    // Neither sticks: both scroll away with the page.
+    const showBackBar = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
     const pageTitle = PAGE_TITLES[view] || (IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program'));
     const pageSubtitle = (() => {
         if (view === 'facilitatorReport' || view === 'facilitatorForm') return selectedFacilitator?.name || '';
@@ -2842,6 +2888,18 @@ case 'meetings':
                         <ReportProblemButton user={user} currentView={view} />
                     </Suspense>
                 </QuietBoundary>
+
+                {/* Refresh: asks the server for whatever changed since this
+                    device last synced, for every list it has loaded. */}
+                <button
+                    onClick={handleRefreshAll}
+                    disabled={isRefreshingAll}
+                    aria-label={t('app_extra.header.refresh', 'Refresh data')}
+                    title={t('app_extra.header.refresh', 'Refresh data')}
+                    className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-60"
+                >
+                    <RefreshCw size={20} className={isRefreshingAll ? 'animate-spin' : ''} />
+                </button>
 
                 <NotificationBell user={user} navigate={guardedNavigate} />
 
@@ -2922,25 +2980,7 @@ case 'meetings':
                 )}
             </div>
 
-            {showSlimBar ? (
-            <header ref={headerRef} className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
-                <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-14 px-1 sm:px-4">
-                    <button
-                        onClick={goBack}
-                        aria-label={t('app.back', 'Back')}
-                        title={t('app.back', 'Back')}
-                        className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 shrink-0"
-                    >
-                        <ArrowLeft size={22} className="rtl:-scale-x-100" />
-                    </button>
-                    <div className="flex-1 min-w-0 px-1">
-                        <h1 className="text-base sm:text-lg font-bold leading-tight truncate">{pageTitle}</h1>
-                        {pageSubtitle && <p className="text-xs text-slate-300 truncate">{pageSubtitle}</p>}
-                    </div>
-                </div>
-            </header>
-            ) : (<>
-            <header ref={headerRef} className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
@@ -3052,7 +3092,25 @@ case 'meetings':
                     </div>
                 </div>
             )}
-            </>)}
+
+            {showBackBar && (
+                <div className="bg-slate-800 text-white border-t border-slate-700 shadow">
+                    <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-12 px-1 sm:px-4">
+                        <button
+                            onClick={goBack}
+                            aria-label={t('app.back', 'Back')}
+                            title={t('app.back', 'Back')}
+                            className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 shrink-0"
+                        >
+                            <ArrowLeft size={22} className="rtl:-scale-x-100" />
+                        </button>
+                        <div className="flex-1 min-w-0 px-1">
+                            <h2 className="text-base font-bold leading-tight truncate">{pageTitle}</h2>
+                            {pageSubtitle && <p className="text-xs text-slate-300 truncate">{pageSubtitle}</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 

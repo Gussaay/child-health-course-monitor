@@ -1135,6 +1135,7 @@ const resources = {
           offline_mode: "Offline Mode",
           sync_status: "Data Sync Status",
           check_updates: "Tap to check for updates",
+          refresh: "Refresh data",
           view_profile: "View Profile Information",
         },
         push: {
@@ -1143,6 +1144,9 @@ const resources = {
         },
         toast: {
           profile_updated: "Profile updated.",
+          refreshed: "Data refreshed.",
+          refresh_partial: "Refreshed, but {{count}} list(s) could not be reached. Try again.",
+          refresh_offline: "You are offline. The data will refresh when you are back online.",
           profile_update_failed: "Failed to update profile: {{message}}",
           download_opening: "Download complete. Opening...",
           native_error: "NATIVE ERROR: {{message}}",
@@ -8663,6 +8667,7 @@ const resources = {
           offline_mode: "وضع عدم الاتصال",
           sync_status: "حالة مزامنة البيانات",
           check_updates: "اضغط للتحقق من التحديثات",
+          refresh: "تحديث البيانات",
           view_profile: "عرض معلومات الملف الشخصي",
         },
         push: {
@@ -8671,6 +8676,9 @@ const resources = {
         },
         toast: {
           profile_updated: "تم تحديث الملف الشخصي.",
+          refreshed: "تم تحديث البيانات.",
+          refresh_partial: "تم التحديث، لكن تعذر الوصول إلى {{count}} قائمة. حاول مرة أخرى.",
+          refresh_offline: "أنت غير متصل. ستُحدَّث البيانات عند عودة الاتصال.",
           profile_update_failed: "تعذّر تحديث الملف الشخصي: {{message}}",
           download_opening: "اكتمل التنزيل. جاري الفتح...",
           native_error: "خطأ في النظام: {{message}}",
