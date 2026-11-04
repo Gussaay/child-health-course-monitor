@@ -39,6 +39,7 @@ import {
     subscribeFacilityDelta,
 } from './data';
 import { useAuth } from './hooks/useAuth';
+import { setUsageSource } from './utils/usageLedger';
 
 const DataCacheContext = createContext();
 
@@ -664,7 +665,12 @@ export const DataProvider = ({ children }) => {
             return true;
         });
         syncAllPromiseRef.current = (async () => {
-            const results = await Promise.allSettled(keys.map((k) => syncRegistryRef.current[k]()));
+            // Reads made while syncing are filed as 'auto-sync' (or 'refresh' for
+            // the button) in the usage tab, not under the page's own actions.
+            setUsageSource(skipLive ? 'auto-sync' : 'refresh');
+            let results;
+            try { results = await Promise.allSettled(keys.map((k) => syncRegistryRef.current[k]())); }
+            finally { setUsageSource(null); }
             const failed = results.filter((r) => r.status === 'rejected').length;
             return { synced: keys.length - failed, failed };
         })();

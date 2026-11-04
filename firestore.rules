@@ -786,6 +786,22 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == userId || isManager());
     }
 
+    // Monthly reads and writes by list, page and source (utils/usageLedger.js).
+    // The id is <YYYY-MM>_<uid>: a device can only add to its own document, and
+    // only a super user can read them all. Nothing is ever deleted from here.
+    match /usageMonthly/{docId} {
+      allow create, update: if request.auth != null
+        && docId == request.resource.data.month + '_' + request.auth.uid;
+      allow read: if request.auth != null && isSuperUser();
+      allow delete: if false;
+    }
+
+    // The bill the super user types in beside the estimate: usageBills/<YYYY-MM>.
+    match /usageBills/{month} {
+      allow read, write: if request.auth != null && isSuperUser()
+        && month.matches('^[0-9]{4}-[0-9]{2}$');
+    }
+
     // =========================================================================
     // --- APP UPDATE PIPELINE & META ---
     // =========================================================================

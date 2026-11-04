@@ -37,6 +37,21 @@ import { projectAtTime, projectOfFacility, visitTimeOf, hasRecordedProject } fro
 import { recycleBinType, recordTitle } from './utils/recycleBin.js';
 import { DuplicatePhoneError, findPhoneConflict, duplicatePhoneMessage, normalizePhone, isSoftDeleted, validateReaddRequest } from './utils/participantDuplicates.js';
 
+import {
+    recordOperation, takePending, restorePending, hasPending, monthlyPayload, monthKey,
+} from './utils/usageLedger';
+
+// The collection a reference or query touches, for the usage ledger.
+const collectionOf = (ref) => {
+    try {
+        if (!ref) return 'other';
+        if (ref.type === 'document') return ref.parent.id;
+        if (ref.type === 'collection') return ref.id;
+        const q = ref._query;
+        return q?.collectionGroup || q?.path?.lastSegment?.() || 'other';
+    } catch { return 'other'; }
+};
+
 // --- USAGE TRACKING VARIABLES ---
 let currentUser = null;
 let sessionReads = 0;
@@ -45,6 +60,7 @@ let lastDbUpdateTime = 0;
 const UPDATE_INTERVAL = 30000; 
 const UPDATE_THRESHOLD = 15; 
 let updateTimeout = null; 
+let monthlyUsageBlocked = false;
 
 let localSessionDurationMs = 0; 
 let durationIntervalId = null; 
@@ -138,10 +154,30 @@ const updateUsageStatsInDb = () => {
     }
 
     fbSetDoc(userUsageRef, updatePayload, { merge: true }).catch(e => console.error("Failed to update stats:", e));
+
+    // The same counts, by month, list, page and source (utils/usageLedger.js).
+    // Each flush is two writes (this one and the one above); they are counted
+    // as trackingWrites so the cost of measuring is itself visible.
+    if (hasPending() && !monthlyUsageBlocked) {
+        const bucket = takePending();
+        const month = monthKey();
+        fbSetDoc(
+            doc(db, 'usageMonthly', `${month}_${userId}`),
+            monthlyPayload(bucket, { inc: increment, stamp: serverTimestamp, email: userEmail, month, trackingWrites: 2 }),
+            { merge: true },
+        ).catch(e => {
+            // Rules not deployed yet (or this account refused): stop for this
+            // session instead of retrying a write that will keep being refused.
+            if (e?.code === 'permission-denied') { monthlyUsageBlocked = true; console.warn('Monthly usage is not being recorded: the usageMonthly rules are not deployed.'); return; }
+            restorePending(bucket);
+            console.error("Failed to update monthly usage:", e);
+        });
+    }
 };
 
-const dispatchOpEvent = (type, count = 1) => {
+const dispatchOpEvent = (type, count = 1, collection = 'other', source) => {
   if (count > 0 && currentUser) {
+    recordOperation(type, count, { collection, source });
     window.dispatchEvent(new CustomEvent('firestoreOperation', { detail: { type, count } }));
 
     if (type === 'read') sessionReads += count;
@@ -268,7 +304,7 @@ export const getDocs = async (query, options) => {
     ? await getDocsFromCache(query)
     : await fbGetDocs(query);
   if (servedByServer(snapshot)) {
-    dispatchOpEvent('read', Math.max(1, snapshot.docs.length || 0));
+    dispatchOpEvent('read', Math.max(1, snapshot.docs.length || 0), collectionOf(query));
   }
   return snapshot;
 };
@@ -276,54 +312,57 @@ export const getDocs = async (query, options) => {
 export const getDoc = async (docRef, options) => {
   const snapshot = await fbGetDoc(docRef, options);
   if (servedByServer(snapshot)) {
-    dispatchOpEvent('read', 1);
+    dispatchOpEvent('read', 1, collectionOf(docRef));
   }
   return snapshot;
 };
 
 export const setDoc = async (docRef, data, options) => {
   await fbSetDoc(docRef, data, options);
-  dispatchOpEvent('write', 1);
+  dispatchOpEvent('write', 1, collectionOf(docRef));
 };
 
 export const addDoc = async (collectionRef, data) => {
   const docRef = await fbAddDoc(collectionRef, data);
-  dispatchOpEvent('write', 1);
+  dispatchOpEvent('write', 1, collectionOf(collectionRef));
   return docRef;
 };
 
 export const deleteDoc = async (docRef) => {
   await fbDeleteDoc(docRef);
-  dispatchOpEvent('write', 1);
+  dispatchOpEvent('write', 1, collectionOf(docRef));
 };
 
 export const updateDoc = async (docRef, data) => {
   await fbUpdateDoc(docRef, { ...data }); 
-  dispatchOpEvent('write', 1);
+  dispatchOpEvent('write', 1, collectionOf(docRef));
 };
 
 export const writeBatch = (firestore) => {
   const batch = fbWriteBatch(firestore);
   let writeCount = 0;
+  const perCollection = {};
+  const tally = (docRef) => { writeCount++; const c = collectionOf(docRef); perCollection[c] = (perCollection[c] || 0) + 1; };
   const originalSet = batch.set;
   batch.set = (docRef, data, options) => {
-    writeCount++;
+    tally(docRef);
     return originalSet.call(batch, docRef, data, options);
   };
   const originalUpdate = batch.update;
   batch.update = (docRef, data) => { 
-    writeCount++;
+    tally(docRef);
     return originalUpdate.call(batch, docRef, data); 
   };
   const originalDelete = batch.delete;
   batch.delete = (docRef) => {
-    writeCount++;
+    tally(docRef);
     return originalDelete.call(batch, docRef);
   };
   const originalCommit = batch.commit;
   batch.commit = async () => {
     await originalCommit.call(batch);
-    dispatchOpEvent('write', writeCount); 
+    // One event per collection, so the ledger can say which list was written.
+    Object.entries(perCollection).forEach(([c, n]) => dispatchOpEvent('write', n, c));
   };
   return batch;
 };
@@ -922,8 +961,9 @@ export async function approveFacilitatorSubmission(submission, approverEmail) {
         tx.set(newFacRef, { ...facilitatorData, lastUpdatedAt: serverTimestamp() });
         tx.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp(), facilitatorId: newFacRef.id });
     });
-    dispatchOpEvent('read', 1);
-    dispatchOpEvent('write', 2);
+    dispatchOpEvent('read', 1, 'facilitatorSubmissions');
+    dispatchOpEvent('write', 1, 'facilitators');
+    dispatchOpEvent('write', 1, 'facilitatorSubmissions');
 }
 export async function rejectFacilitatorSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
@@ -4042,7 +4082,7 @@ export function subscribeExerciseAttempts(courseId, onChange, onError) {
             // answers) are free. The first server snapshot costs at least one read.
             if (servedByServer(snapshot)) {
                 const changed = snapshot.docChanges().length;
-                dispatchOpEvent('read', serverSnapshots === 0 ? Math.max(1, changed) : changed);
+                dispatchOpEvent('read', serverSnapshots === 0 ? Math.max(1, changed) : changed, collectionOf(q), 'live');
                 serverSnapshots += 1;
             }
             const rows = snapshot.docs
@@ -4104,9 +4144,15 @@ export const LIVE_LIST_KEYS = Object.keys(LIVE_LISTS);
 
 // Turns a snapshot into { upserts, removed }. A record this device is still
 // writing (pending, no server time yet) is skipped: the confirmed copy follows.
-const deltaChanges = (snap, map = (d) => d, keep = () => true) => {
+const deltaChanges = (snap, map = (d) => d, keep = () => true, collection = 'other') => {
     const upserts = [];
     const removed = [];
+    // The server sends (and Firestore bills) one read for each changed record,
+    // except records this device wrote itself and answers from the device cache.
+    if (snap.metadata?.fromCache === false) {
+        const billed = snap.docChanges().filter((ch) => !ch.doc.metadata.hasPendingWrites).length;
+        dispatchOpEvent('read', billed, collection, 'live');
+    }
     snap.docChanges().forEach((ch) => {
         if (ch.doc.metadata.hasPendingWrites) return;
         if (ch.type === 'removed') { removed.push(ch.doc.id); return; }
@@ -4130,7 +4176,7 @@ export function subscribeListDelta(key, sinceMs, onChange, onError) {
         ...(def.extra ? def.extra() : []),
     );
     return onSnapshot(q, (snap) => {
-        const changes = deltaChanges(snap, def.map);
+        const changes = deltaChanges(snap, def.map, undefined, def.col);
         if (changes.upserts.length || changes.removed.length) onChange(changes);
     }, onError);
 }
@@ -4140,7 +4186,7 @@ export function subscribeFacilityDelta(filters, sinceMs, onChange, onError) {
     if (!(sinceMs > 0)) return null;
     const q = facilityQuery({ ...filters, lastUpdatedAfter: new Date(sinceMs) });
     return onSnapshot(q, (snap) => {
-        const changes = deltaChanges(snap, undefined, facilityLocalFilter(filters));
+        const changes = deltaChanges(snap, undefined, facilityLocalFilter(filters), 'healthFacilities');
         if (changes.upserts.length || changes.removed.length) onChange(changes);
     }, onError);
 }

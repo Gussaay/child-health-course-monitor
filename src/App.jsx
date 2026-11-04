@@ -139,6 +139,7 @@ import {
     clearPendingSyncQueue,
     getCachedCourse, getCachedParticipants,
 } from './data.js';
+import { setUsageView } from './utils/usageLedger';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton } from './components/CommonComponents';
 import { auth, db, isOnline, getConnectivity } from './firebase';
@@ -1064,6 +1065,9 @@ export default function App() {
             resumeSub?.remove?.();
         };
     }, [quietSync]);
+    // Every read and write is filed under the page it happened on (usage tab).
+    useEffect(() => { setUsageView(view); }, [view]);
+
     // On opening the app (once signed in) and on every page change: the lists
     // a page shows are brought up to date with what changed on the server.
     useEffect(() => {
