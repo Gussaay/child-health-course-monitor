@@ -358,3 +358,8 @@ exports.aiVote = require("./aiLog").aiVote;
 
 // Managers' online course progress (dashboard tab and the data assistant).
 exports.onlineProgressReport = require("./onlineProgress").onlineProgressReport;
+
+// Google's own Firestore read/write/delete counts for a month, for the super
+// users' Usage tab (googleUsage.js). Runs as the function's service account,
+// which needs the Monitoring Viewer role.
+exports.googleFirestoreUsage = require("./googleUsage").googleFirestoreUsage;

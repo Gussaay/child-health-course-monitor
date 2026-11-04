@@ -6,12 +6,17 @@
 // the operations the app counted itself (utils/usageLedger.js) priced at
 // Firestore's list rates; the bill typed in beside them shows how much of the
 // real cost the app cannot see (Cloud Functions, Storage, AI services).
-// Read once per press of Refresh, not live, so looking at it costs almost nothing.
+// This month is LIVE while the tab is open and the page is on screen: each
+// user's record is rewritten about every five minutes, and every rewrite
+// reaches this screen as one read, so an open tab costs a few cents a month at
+// most. Past months are read once. Google's own counts (the Firebase console's
+// Usage numbers) are fetched on demand, through a Cloud Function.
 // ============================================================================
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { RefreshCw, Database, Edit3, DollarSign, Info } from 'lucide-react';
+import { collection, query, where, getDocs, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { RefreshCw, Database, Edit3, DollarSign, Info, Radio } from 'lucide-react';
 import { db } from '../firebase';
 import { Card, Button, Table, Spinner } from './CommonComponents';
 import { DEFAULT_PRICES, monthKey, summariseUsage } from '../utils/usageLedger';
@@ -81,27 +86,78 @@ export default function UsageCostPanel() {
     const [savingBill, setSavingBill] = useState(false);
     const [prices, setPrices] = useState(loadPrices);
     const [showPrices, setShowPrices] = useState(false);
+    const [live, setLive] = useState(true);
+    const [pageVisible, setPageVisible] = useState(() => document.visibilityState !== 'hidden');
+    const [google, setGoogle] = useState(null);
+    const [googleLoading, setGoogleLoading] = useState(false);
+    const [googleError, setGoogleError] = useState('');
+    const isCurrentMonth = month === months[0];
+    const listening = live && isCurrentMonth && pageVisible;
 
+    const onError = useCallback((e) => {
+        console.warn('Usage cost load failed:', e);
+        setError(e?.code === 'permission-denied'
+            ? t('admin_pages.admin_dashboard.usage_cost.denied', 'Only a super user can read the monthly usage. If you are one, deploy the updated Firestore rules.')
+            : (e?.message || 'Could not load.'));
+        setDocs(null);
+    }, [t]);
+
+    // The month's records: read once (Refresh, or a past month)...
     const load = useCallback(async () => {
         setLoading(true);
         setError('');
         try {
             const snap = await getDocs(query(collection(db, 'usageMonthly'), where('month', '==', month)));
             setDocs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-            const billSnap = await getDoc(doc(db, 'usageBills', month));
+        } catch (e) { onError(e); } finally { setLoading(false); }
+    }, [month, onError]);
+
+    // ...and the bill typed in for it.
+    useEffect(() => {
+        let cancelled = false;
+        setGoogle(null); setGoogleError('');
+        getDoc(doc(db, 'usageBills', month)).then((billSnap) => {
+            if (cancelled) return;
             const v = billSnap.exists() ? billSnap.data().actualUsd : null;
             setSavedBill(v);
             setBill(v == null ? '' : String(v));
-        } catch (e) {
-            console.warn('Usage cost load failed:', e);
-            setError(e?.code === 'permission-denied'
-                ? t('admin_pages.admin_dashboard.usage_cost.denied', 'Only a super user can read the monthly usage. If you are one, deploy the updated Firestore rules.')
-                : (e?.message || 'Could not load.'));
-            setDocs(null);
-        } finally { setLoading(false); }
-    }, [month, t]);
+        }).catch(() => {});
+        return () => { cancelled = true; };
+    }, [month]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => {
+        const onVis = () => setPageVisible(document.visibilityState !== 'hidden');
+        document.addEventListener('visibilitychange', onVis);
+        return () => document.removeEventListener('visibilitychange', onVis);
+    }, []);
+
+    // Live: one listener while the tab is open and the page is visible. Closed
+    // in the background; reopening re-reads the month once.
+    useEffect(() => {
+        if (!listening) { if (!docs) load(); return undefined; }
+        setLoading(true);
+        setError('');
+        const unsub = onSnapshot(
+            query(collection(db, 'usageMonthly'), where('month', '==', month)),
+            (snap) => { setDocs(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); setLoading(false); },
+            (e) => { setLoading(false); onError(e); },
+        );
+        return unsub;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [listening, month]);
+
+    const loadGoogle = async () => {
+        setGoogleLoading(true);
+        setGoogleError('');
+        try {
+            const call = httpsCallable(getFunctions(db.app), 'googleFirestoreUsage');
+            const res = await call({ month });
+            setGoogle(res.data);
+        } catch (e) {
+            setGoogle(null);
+            setGoogleError(e?.message || 'Could not reach Google\'s usage numbers.');
+        } finally { setGoogleLoading(false); }
+    };
 
     const summary = useMemo(() => summariseUsage(docs || [], prices), [docs, prices]);
     const est = summary.totals.cost;
@@ -150,6 +206,13 @@ export default function UsageCostPanel() {
                         <select value={month} onChange={(e) => setMonth(e.target.value)} aria-label={t('admin_pages.admin_dashboard.usage_cost.month', 'Month')} className="border border-gray-300 rounded-md p-2 text-sm font-semibold bg-white">
                             {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
                         </select>
+                        {isCurrentMonth && (
+                            <button type="button" onClick={() => setLive((v) => !v)} aria-pressed={live}
+                                title={t('admin_pages.admin_dashboard.usage_cost.live_hint', 'Live: new figures appear as users\' devices report (about every 5 minutes).')}
+                                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-md border text-xs font-bold ${listening ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-white border-gray-300 text-gray-600'}`}>
+                                <Radio size={14} className={listening ? 'animate-pulse' : ''} /> {listening ? t('admin_pages.admin_dashboard.usage_cost.live', 'Live') : t('admin_pages.admin_dashboard.usage_cost.paused', 'Paused')}
+                            </button>
+                        )}
                         <Button variant="secondary" onClick={load} disabled={loading} className="flex items-center gap-1.5">
                             {loading ? <Spinner size="sm" /> : <RefreshCw size={14} />} {t('admin_pages.admin_dashboard.usage_cost.refresh', 'Refresh')}
                         </Button>
@@ -218,6 +281,50 @@ export default function UsageCostPanel() {
                 nameOf={(n) => SOURCE_LABELS[n] || n}
                 rows={summary.bySource} total={est} t={t}
             />
+
+            <Card className="shadow-sm border border-gray-100">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 className="text-md font-bold text-gray-800">{t('admin_pages.admin_dashboard.usage_cost.google_title', 'Google\'s own count')}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{t('admin_pages.admin_dashboard.usage_cost.google_hint', 'The same numbers as the Firebase console\'s Usage page: every read, write and delete the project received, from any app, device or function.')}</p>
+                    </div>
+                    <Button variant="secondary" onClick={loadGoogle} disabled={googleLoading} className="flex items-center gap-1.5">
+                        {googleLoading ? <Spinner size="sm" /> : <RefreshCw size={14} />} {google ? t('admin_pages.admin_dashboard.usage_cost.google_reload', 'Reload') : t('admin_pages.admin_dashboard.usage_cost.google_load', 'Compare with Google')}
+                    </Button>
+                </div>
+                {googleError && <p className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{googleError}</p>}
+                {google && (
+                    <div className="mt-4 space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            {[
+                                [t('admin_pages.admin_dashboard.usage_cost.reads', 'Reads'), num(google.totals.reads), summary.totals.reads > 0 && google.totals.reads > 0 ? t('admin_pages.admin_dashboard.usage_cost.coverage', 'the app counted {{pct}}%', { pct: Math.round((summary.totals.reads / google.totals.reads) * 100) }) : ''],
+                                [t('admin_pages.admin_dashboard.usage_cost.writes', 'Writes'), num(google.totals.writes), summary.totals.writes > 0 && google.totals.writes > 0 ? t('admin_pages.admin_dashboard.usage_cost.coverage', 'the app counted {{pct}}%', { pct: Math.round((summary.totals.writes / google.totals.writes) * 100) }) : ''],
+                                [t('admin_pages.admin_dashboard.usage_cost.deletes', 'Deletes'), num(google.totals.deletes), ''],
+                                [t('admin_pages.admin_dashboard.usage_cost.google_cost', 'Database cost, after the free daily quota'), usd(google.costAfterFreeQuota), `${t('admin_pages.admin_dashboard.usage_cost.before_free', 'before the free quota')}: ${usd(google.costBeforeFreeQuota)}`],
+                            ].map(([label, value, sub]) => (
+                                <div key={label} className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                    <div className="text-xs font-bold text-slate-600">{label}</div>
+                                    <div className="text-2xl font-black text-slate-900">{value}</div>
+                                    {sub && <div className="text-xs text-slate-500 mt-0.5">{sub}</div>}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="overflow-x-auto rounded-lg border border-gray-200 max-h-72 overflow-y-auto">
+                            <Table headers={[t('admin_pages.admin_dashboard.usage_cost.day', 'Day'), t('admin_pages.admin_dashboard.usage_cost.reads', 'Reads'), t('admin_pages.admin_dashboard.usage_cost.writes', 'Writes'), t('admin_pages.admin_dashboard.usage_cost.deletes', 'Deletes')]} cardsOnPhone>
+                                {[...google.days].reverse().map((d) => (
+                                    <tr key={d.date}>
+                                        <td className="font-medium text-gray-800">{d.date}</td>
+                                        <td className="font-mono text-emerald-700">{num(d.reads)}</td>
+                                        <td className="font-mono text-amber-700">{num(d.writes)}</td>
+                                        <td className="font-mono text-gray-600">{num(d.deletes)}</td>
+                                    </tr>
+                                ))}
+                            </Table>
+                        </div>
+                        <p className="text-xs text-gray-500">{t('admin_pages.admin_dashboard.usage_cost.google_note', 'Days run from midnight Pacific time, when Google\'s free quota (50,000 reads, 20,000 writes, 20,000 deletes a day) resets. This is the database only. The full invoice, with Functions, Storage and Hosting, is under Billing > Reports in the Google Cloud console: group by SKU to see each service.')}</p>
+                    </div>
+                )}
+            </Card>
 
             <Card className="shadow-sm border border-gray-100">
                 <div className="flex items-start gap-3 text-sm text-gray-600">

@@ -154,26 +154,35 @@ const updateUsageStatsInDb = () => {
     }
 
     fbSetDoc(userUsageRef, updatePayload, { merge: true }).catch(e => console.error("Failed to update stats:", e));
-
-    // The same counts, by month, list, page and source (utils/usageLedger.js).
-    // Each flush is two writes (this one and the one above); they are counted
-    // as trackingWrites so the cost of measuring is itself visible.
-    if (hasPending() && !monthlyUsageBlocked) {
-        const bucket = takePending();
-        const month = monthKey();
-        fbSetDoc(
-            doc(db, 'usageMonthly', `${month}_${userId}`),
-            monthlyPayload(bucket, { inc: increment, stamp: serverTimestamp, email: userEmail, month, trackingWrites: 2 }),
-            { merge: true },
-        ).catch(e => {
-            // Rules not deployed yet (or this account refused): stop for this
-            // session instead of retrying a write that will keep being refused.
-            if (e?.code === 'permission-denied') { monthlyUsageBlocked = true; console.warn('Monthly usage is not being recorded: the usageMonthly rules are not deployed.'); return; }
-            restorePending(bucket);
-            console.error("Failed to update monthly usage:", e);
-        });
-    }
 };
+
+// --- MONTHLY LEDGER FLUSH (utils/usageLedger.js) ---
+// The by-list, by-page counts are written to usageMonthly/<month>_<uid> every
+// 5 minutes, and when the app goes to the background or the user signs out,
+// not on every burst of activity: one write per five minutes keeps the cost of
+// counting negligible. A device closed within five minutes of its last write
+// loses at most those minutes; counts from before a sign-out are dropped (the
+// write would be refused once signed out). Each flush is one write, counted as a
+// trackingWrite so the overhead stays visible.
+const MONTHLY_FLUSH_MS = 5 * 60 * 1000;
+let monthlyTimerId = null;
+const flushMonthlyUsage = () => {
+    if (!currentUser || monthlyUsageBlocked || !hasPending()) return;
+    const bucket = takePending();
+    const month = monthKey();
+    fbSetDoc(
+        doc(db, 'usageMonthly', `${month}_${currentUser.uid}`),
+        monthlyPayload(bucket, { inc: increment, stamp: serverTimestamp, email: currentUser.email || 'unknown', month, trackingWrites: 1 }),
+        { merge: true },
+    ).catch(e => {
+        // Rules not deployed yet (or this account refused): stop for this
+        // session instead of retrying a write that will keep being refused.
+        if (e?.code === 'permission-denied') { monthlyUsageBlocked = true; console.warn('Monthly usage is not being recorded: the usageMonthly rules are not deployed.'); return; }
+        restorePending(bucket);
+        console.error("Failed to update monthly usage:", e);
+    });
+};
+const flushMonthlyWhenHidden = () => { if (document.visibilityState === 'hidden') flushMonthlyUsage(); };
 
 const dispatchOpEvent = (type, count = 1, collection = 'other', source) => {
   if (count > 0 && currentUser) {
@@ -205,6 +214,10 @@ const dispatchOpEvent = (type, count = 1, collection = 'other', source) => {
 export const initializeUsageTracking = () => {
   onAuthStateChanged(firebaseAuth, (user) => {
     if (!user) {
+        if (monthlyTimerId) clearInterval(monthlyTimerId);
+        monthlyTimerId = null;
+        document.removeEventListener('visibilitychange', flushMonthlyWhenHidden);
+        takePending(); // not credited to the next person who signs in on this device
         if (durationIntervalId) clearInterval(durationIntervalId);
         durationIntervalId = null;
         if (updateTimeout) clearTimeout(updateTimeout);
@@ -246,6 +259,10 @@ export const initializeUsageTracking = () => {
         lastDbUpdateTime = Date.now(); 
         durationIntervalId = setInterval(tickLocalDuration, DURATION_TICK_MS);
         window.addEventListener('beforeunload', saveDurationToLocalStorage);
+        monthlyUsageBlocked = false; // a new sign-in tries again (rules may have been deployed)
+        if (monthlyTimerId) clearInterval(monthlyTimerId);
+        monthlyTimerId = setInterval(flushMonthlyUsage, MONTHLY_FLUSH_MS);
+        document.addEventListener('visibilitychange', flushMonthlyWhenHidden);
     }
   });
 };

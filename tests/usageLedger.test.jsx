@@ -7,17 +7,28 @@ import { act } from 'react';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-const store = { docs: [], bill: null, saved: null };
+const store = { docs: [], bill: null, saved: null, listeners: [], google: null, googleError: null };
 vi.mock('../src/firebase', () => ({ db: {} }));
 vi.mock('firebase/firestore', () => ({
     collection: (_db, name) => ({ name }),
     query: (c) => c,
     where: () => ({}),
+    onSnapshot: (_q, next) => {
+        const l = { next, open: true };
+        store.listeners.push(l);
+        next({ docs: store.docs.map((d) => ({ id: d.id, data: () => d })) });
+        return () => { l.open = false; };
+    },
     getDocs: async () => ({ docs: store.docs.map((d) => ({ id: d.id, data: () => d })) }),
     doc: (_db, col, id) => ({ col, id }),
     getDoc: async () => ({ exists: () => store.bill != null, data: () => ({ actualUsd: store.bill }) }),
     setDoc: async (_ref, data) => { store.saved = data; },
     serverTimestamp: () => 'ts',
+}));
+
+vi.mock('firebase/functions', () => ({
+    getFunctions: () => ({}),
+    httpsCallable: () => async () => { if (store.googleError) throw new Error(store.googleError); return { data: store.google }; },
 }));
 
 import {
@@ -95,7 +106,7 @@ describe('usage cost panel', () => {
         store.docs = [
             { id: `${monthKey()}_u1`, month: monthKey(), email: 'mentor@x.org', reads: 250000, writes: 1000, trackingWrites: 20, byCollection: { skillMentorship: { r: 200000 }, courses: { r: 50000, w: 1000 } }, byView: { skillsMentorship: { r: 200000 }, courses: { r: 50000, w: 1000 } }, bySource: { user: { r: 100000, w: 1000 }, live: { r: 150000 } } },
         ];
-        store.bill = 8; store.saved = null;
+        store.bill = 8; store.saved = null; store.listeners = []; store.google = null; store.googleError = null;
         host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
     });
     afterEach(() => { act(() => root.unmount()); host.remove(); });
@@ -123,5 +134,43 @@ describe('usage cost panel', () => {
         });
         await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Save').click(); });
         expect(store.saved.actualUsd).toBe(9.5);
+    });
+
+    it('is live for the current month: a device\'s new report appears without pressing anything, and it stops in the background', async () => {
+        await act(async () => { root.render(<UsageCostPanel />); });
+        expect(host.textContent).toContain('Live');
+        const l = store.listeners.find((x) => x.open);
+        expect(l).toBeTruthy();
+        const more = { id: `${monthKey()}_u2`, month: monthKey(), email: 'new@x.org', reads: 1000, writes: 0, byCollection: { courses: { r: 1000 } }, byView: { courses: { r: 1000 } }, bySource: { user: { r: 1000 } } };
+        await act(async () => { l.next({ docs: [...store.docs, more].map((d) => ({ id: d.id, data: () => d })) }); });
+        expect(host.textContent).toContain('new@x.org');
+        // page goes to the background: the listener closes
+        Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+        await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+        expect(l.open).toBe(false);
+        expect(host.textContent).toContain('Paused');
+        Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    });
+
+    it('puts Google\'s own counts beside the app\'s, with the share the app saw', async () => {
+        store.google = {
+            totals: { reads: 500000, writes: 2000, deletes: 10 },
+            costAfterFreeQuota: 0.42, costBeforeFreeQuota: 0.31,
+            days: [{ date: '2026-11-01', reads: 200000, writes: 1000, deletes: 5 }, { date: '2026-11-02', reads: 300000, writes: 1000, deletes: 5 }],
+        };
+        await act(async () => { root.render(<UsageCostPanel />); });
+        await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent.includes('Compare with Google')).click(); });
+        const text = host.textContent;
+        expect(text).toContain('500,000');
+        expect(text).toContain('$0.42');
+        expect(text).toContain('the app counted 50%');   // 250,000 of 500,000 reads
+        expect(text).toContain('2026-11-02');
+    });
+
+    it('says why when Google refuses', async () => {
+        store.googleError = 'Google refused to share the usage numbers. Give the service account the "Monitoring Viewer" role.';
+        await act(async () => { root.render(<UsageCostPanel />); });
+        await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent.includes('Compare with Google')).click(); });
+        expect(host.textContent).toContain('Monitoring Viewer');
     });
 });
