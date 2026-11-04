@@ -1,7 +1,7 @@
 // ParticipantReport.jsx
 import React, { useState, useMemo, useRef } from 'react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2canvas from '../utils/html2canvasLight';
 import { Bar } from 'react-chartjs-2';
 import { CHART_COLORS } from './chartSetup'; // also registers the scales and elements these charts use
 import { getElementAtEvent } from 'react-chartjs-2';

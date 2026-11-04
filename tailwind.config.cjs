@@ -1,5 +1,6 @@
 const colors = require('tailwindcss/colors');
 const defaultTheme = require('tailwindcss/defaultTheme');
+const dark = require('./tailwind.theme.cjs');
 
 /*
   The app's design tokens. Change a colour, corner or shadow here and every
@@ -22,6 +23,7 @@ module.exports = {
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
+      ...dark.extend,
       fontFamily: {
         sans: ['"IBM Plex Sans Arabic"', ...defaultTheme.fontFamily.sans],
       },
@@ -54,5 +56,5 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [dark.plugin],
 };

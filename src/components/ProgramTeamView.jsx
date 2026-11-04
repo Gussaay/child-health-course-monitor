@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { QRCodeCanvas } from 'qrcode.react'; 
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import html2canvas from 'html2canvas';
+import html2canvas from '../utils/html2canvasLight';
 import {
     upsertStateCoordinator,
     deleteStateCoordinator,

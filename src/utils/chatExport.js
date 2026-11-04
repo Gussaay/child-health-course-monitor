@@ -5,6 +5,7 @@
 // from the conversation as the app draws it (ChatExportSheet), so the layout,
 // the Arabic shaping and the app's font are kept; a PDF written as text would
 // lose the Arabic joins.
+import { runInLight } from './html2canvasLight';
 import { shareFile, shareText } from './sharePdf';
 
 const MM_PAGE = { w: 210, h: 297 };
@@ -33,7 +34,7 @@ async function drawOne(node, fontEmbedCSS) {
             width: node.offsetWidth, height: node.offsetHeight,
         });
     } catch {
-        const { default: html2canvas } = await import('html2canvas');
+        const { default: html2canvas } = await import('./html2canvasLight');
         return html2canvas(node, { backgroundColor: '#ffffff', scale: 2, logging: false, useCORS: true });
     }
 }
@@ -52,7 +53,7 @@ const canvasBlob = (canvas, type = 'image/png', quality) => new Promise((resolve
 
 /** The element (one question and its answer) as a PNG, to the share sheet. */
 export async function shareImage(node, fileName, options) {
-    const canvas = await drawOne(node, await fontsOf(node));
+    const canvas = await runInLight(async () => drawOne(node, await fontsOf(node)));
     return shareFile(await canvasBlob(canvas), fileName, options);
 }
 
@@ -61,7 +62,11 @@ export async function shareImage(node, fileName, options) {
  * conversation never needs one huge canvas) on A4 pages. A block goes to the
  * next page when it does not fit; one taller than a page is cut across pages.
  */
-export async function sharePdf(node, fileName, options) {
+export function sharePdf(node, fileName, options) {
+    return runInLight(() => sharePdfLight(node, fileName, options));
+}
+
+async function sharePdfLight(node, fileName, options) {
     const { jsPDF } = await import('jspdf');
     const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
     const fontEmbedCSS = await fontsOf(node);

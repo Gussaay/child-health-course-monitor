@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import html2canvas from 'html2canvas';
+import html2canvas from '../utils/html2canvasLight';
 
 // Reusing components and styles from your ecosystem
 import { Card, Button, Table, EmptyState, Spinner, PdfIcon, Modal } from './CommonComponents'; 

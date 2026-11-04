@@ -1,4 +1,6 @@
 // App.jsx
+import ThemeToggle from './components/ThemeToggle';
+import { useTheme } from './utils/theme';
 import './i18n'; 
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -6,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -630,10 +632,16 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
     }, [open]);
 
     const go = (fn) => () => { onClose(); fn(); };
+    const [themePref, setThemePref] = useTheme();
+    const themeNext = { light: 'dark', dark: 'system', system: 'light' }[themePref];
+    const themeIcon = { light: Sun, dark: Moon, system: Monitor }[themePref];
+    const themeLabel = `${t('theme.title', 'Appearance')}: ${{ light: t('theme.light', 'Light mode'), dark: t('theme.dark', 'Dark mode'), system: t('theme.system', 'Follow device') }[themePref]}`;
+    const cycleTheme = () => setThemePref(themeNext);
     const settings = [
         { icon: User, label: t('menu.profile', 'My profile'), action: onProfile },
         { icon: isOffline ? CloudOff : Cloud, label: isOffline ? t('menu.offline', 'Offline – sync status') : t('menu.sync', 'Data sync status'), action: onSync },
         { icon: Languages, label: languageLabel, action: onLanguage, keepOpen: true },
+        { icon: themeIcon, label: themeLabel, action: cycleTheme, keepOpen: true },
         { icon: RefreshCw, label: t('menu.updates', 'Check for updates'), action: onUpdate },
     ];
 
@@ -2928,6 +2936,7 @@ case 'meetings':
                     )}
                 </button>
 
+                <ThemeToggle className="!bg-slate-600 !border-slate-500 hover:!bg-slate-500" />
                 <button
                     onClick={() => {
                         const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
@@ -3028,6 +3037,7 @@ case 'meetings':
                                     ))} 
                                 </nav>
                             )}
+                            {(!user || isMinimalUILayout) && <ThemeToggle />}
                             {(!user || isMinimalUILayout) && (
                                 <button
                                     onClick={() => {

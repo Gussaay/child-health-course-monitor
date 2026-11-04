@@ -17,6 +17,8 @@ import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
 import { isChunkLoadError, recoverFromStaleBuild } from './utils/staleBuild';
 import { installErrorCapture } from './utils/errorCapture';
 import './index.css';
+import { applyTheme } from './utils/theme';
+applyTheme();
 
 window.Buffer = Buffer;
 

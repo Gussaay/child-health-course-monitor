@@ -9,7 +9,7 @@ import { STATE_LOCALITIES } from './constants';
 import { notify, promptDialog, confirmDialog } from './dialogs';
 import { createPortal } from 'react-dom';
 import { attachFinalReportPdf, removeFinalReportPdf, getFinalReportByCourseId, lightFinalReport, updateFinalReportContent } from '../data';
-import html2canvas from 'html2canvas'; // <-- Added proper import
+import html2canvas from '../utils/html2canvasLight'; // <-- Added proper import
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 
