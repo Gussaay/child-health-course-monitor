@@ -13,7 +13,7 @@ const BATCH = 'kassala-operational-guide-2026-11-09';
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync(keyPath, 'utf8'))) });
 const db = admin.firestore(), now = admin.firestore.FieldValue.serverTimestamp();
 const people = JSON.parse(fs.readFileSync(path.join(__dirname, 'participants.json'), 'utf8'))
-  .map(({ name_en, job_title_en, ...p }) => ({ ...p, importBatch: BATCH, notes: `${name_en} / ${job_title_en}` }));
+  .map(({ name_en, job_title_en, ...p }) => ({ ...p, importBatch: BATCH, notes: `${name_en} / ${job_title_en}`, _en: name_en }));
 (async () => {
   if (UNDO) {
     const s = await db.collection('participants').where('importBatch', '==', BATCH).get();
@@ -27,8 +27,10 @@ const people = JSON.parse(fs.readFileSync(path.join(__dirname, 'participants.jso
   if (m.length !== 1) { console.error(`Expected 1 matching course, found ${m.length}: ${m.map((d) => d.id)}`); process.exit(1); }
   const c = m[0];
   const have = await db.collection('participants').where('courseId', '==', c.id).get();
-  const names = new Set(have.docs.map((d) => d.data().name));
-  const fresh = people.filter((p) => !names.has(p.name));
+  const key = (v) => String(v || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const names = new Set(have.docs.map((d) => key(d.data().name)));
+  have.docs.forEach((d) => console.log(`existing ${d.id}: ${d.data().name} | ${d.data().job_title} | ${d.data().locality}`));
+  const fresh = people.filter((p) => !names.has(key(p.name)) && !names.has(key(p._en))).map(({ _en, ...p }) => p);
   console.log(`Course ${c.id} (${c.data().state}/${c.data().locality}), ${have.size} participants now; ${fresh.length} to add, ${people.length - fresh.length} already there.`);
   if (!COMMIT) return console.log('Dry run: nothing written. Add --commit.');
   const b = db.batch();
