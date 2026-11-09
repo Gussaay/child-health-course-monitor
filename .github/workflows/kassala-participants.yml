@@ -1,0 +1,24 @@
+name: One-off - Kassala operational guide participants
+# Runs scripts/kassala-operational-guide/add-participants.cjs with the mode in mode.txt
+# (dry = read only, commit = write, undo = remove what commit wrote).
+on:
+  push:
+    branches: [claude/project-thread-cjkawg]
+    paths: ['scripts/kassala-operational-guide/**', '.github/workflows/kassala-participants.yml']
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save --ignore-scripts firebase-admin@13
+        working-directory: scripts/kassala-operational-guide
+      - env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}
+        working-directory: scripts/kassala-operational-guide
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
+          MODE=$(tr -d '[:space:]' < mode.txt)
+          FLAG=""; [ "$MODE" = commit ] && FLAG=--commit; [ "$MODE" = undo ] && FLAG=--undo
+          KEY_FILE="$RUNNER_TEMP/key.json" node add-participants.cjs $FLAG
