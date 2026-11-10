@@ -531,22 +531,21 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
     );
 }
 
-// Credit line shown at the foot of every page: inside the phone bottom bar,
-// and as a page footer on wider screens and on pages without the bar.
+// Credit line shown at the foot of every page, on one line: inside the phone
+// bottom bar, and as a page footer on wider screens and on pages without the bar.
 function AppCredit({ className = '' }) {
     return (
-        <div className={`text-center leading-snug ${className}`}>
-            <p className="font-semibold">{`© ${new Date().getFullYear()} National Child Health Program`}</p>
-            <p>
-                <span>Developed by <span className="font-semibold">Dr Qusay Mohamed</span></span>
-                <span className="mx-1.5 opacity-60">•</span>
-                <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 underline-offset-2 hover:underline">Gussaay@gmail.com</a>
-            </p>
-        </div>
+        <p className={`text-center leading-snug ${className}`}>
+            <span>{`© ${new Date().getFullYear()} `}Developed by <span className="font-semibold">Dr Qusay Mohamed</span></span>
+            <span className="mx-1.5 opacity-60">•</span>
+            <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 underline-offset-2 hover:underline">Gussaay@gmail.com</a>
+        </p>
     );
 }
 
-const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
+// `onHome`: the main menu already shows every module as a tile, so the bar
+// there holds only the credit line.
+const BottomNav = React.memo(function BottomNav({ navItems, navigate, onHome = false }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
         'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
@@ -567,7 +566,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
 
     return (
         <nav ref={navRef} className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
-            <div className="flex justify-between items-center px-2 w-full">
+            {!onHome && <div className="flex justify-between items-center px-2 w-full">
                 {navItems.map(item => {
                     const Icon = icons[item.view] || Activity;
                     return (
@@ -584,7 +583,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
                         </button>
                     )
                 })}
-            </div>
+            </div>}
             
             <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-2 w-full border-t border-slate-700 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
                 <AppCredit />
@@ -3177,7 +3176,7 @@ case 'meetings':
                 />
             )}
 
-            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} /> }
+            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} onHome={view === 'landing'} /> }
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
@@ -3427,7 +3426,7 @@ case 'meetings':
                 </Suspense>
             )}
 
-            {user && !isMinimalUILayout && !IS_EMONC_SITE && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && (
+            {user && !isMinimalUILayout && !IS_EMONC_SITE && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && view !== 'landing' && (
                 <DataAssistantButton onClick={openDataAssistant} />
             )}
             {dataAssistant.loaded && (
