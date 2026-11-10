@@ -654,7 +654,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, neonatalLevelFilter, showPlanningMap].filter(Boolean).length} className="mb-3 md:mb-6">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, neonatalLevelFilter, showPlanningMap].filter(Boolean).length} className="mb-3 md:mb-6">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                     <FormGroup label={t('dashboard.filters.state', 'State')}>
                         <Select value={stateFilter} onChange={handleStateChange}>
@@ -1086,7 +1086,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     return (
         <div onMouseMove={handleMouseMove}>
             
-            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
@@ -1410,7 +1410,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     return (
         <div onMouseMove={handleMouseMove}>
             
-            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
@@ -1728,7 +1728,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
@@ -2086,7 +2086,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     return (
         <div className="flex flex-col gap-3 md:gap-6" onMouseMove={handleMouseMove}>
             
-            <FilterPanel activeCount={[stateFilter, localityFilter].filter(Boolean).length} className="md:mb-6 md:mt-4">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter].filter(Boolean).length} className="md:mb-6 md:mt-4">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-2 max-w-2xl">
                     <FormGroup label={t('dashboard.filters.state', 'Filter by State')}>
                         <Select value={stateFilter} onChange={(e) => {setStateFilter(e.target.value); setLocalityFilter('');}}>

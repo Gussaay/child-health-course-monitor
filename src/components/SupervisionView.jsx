@@ -24,7 +24,7 @@ import {
 
 import {
     Card, CardBody, PageHeader, Button, Tabs, Table, EmptyState, Modal,
-    Input, Select, Textarea, IS_NATIVE, useInPageBack, SkeletonTable, MenuTile, MenuGrid,
+    Input, Select, Textarea, IS_NATIVE, useInPageBack, SkeletonTable, MenuTile, MenuGrid, BackArrow,
 } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
 import { useDataCache } from '../DataContext';
@@ -977,12 +977,9 @@ function FormPicker({ service, assessments, onSelect, onBack }) {
     const info = SUPERVISION_SERVICES.find((s) => s.key === service);
     return (
         <div className="space-y-4">
-            {!IS_NATIVE && (
-                <Button variant="secondary" onClick={onBack}>
-                    <ArrowLeft size={16} /> {t('trackers.supervision.back_to_services', 'All services')}
-                </Button>
-            )}
             <PageHeader
+                onBack={onBack}
+                backLabel={t('trackers.supervision.back_to_services', 'All services')}
                 title={isArabic ? info?.titleAr : info?.title}
                 subtitle={t('trackers.supervision.choose_form', 'Choose a supervision form')}
             />
@@ -1128,12 +1125,8 @@ export default function SupervisionView({ permissions = {} }) {
 
     return (
         <div ref={topRef} className="space-y-4">
-            {!IS_NATIVE && (
-                <Button variant="secondary" onClick={() => setChecklistId(null)}>
-                    <ArrowLeft size={16} /> {t('trackers.supervision.back_to_forms', 'All forms')}
-                </Button>
-            )}
             <div className="flex flex-wrap items-center gap-3">
+                <BackArrow onClick={() => setChecklistId(null)} label={t('trackers.supervision.back_to_forms', 'All forms')} className="-ms-2" />
                 <FormIcon checklist={checklist} large />
                 <div className="min-w-0 flex-1">
                     <h2 className="text-xl font-semibold text-slate-800">{isArabic ? checklist.titleAr : checklist.title}</h2>

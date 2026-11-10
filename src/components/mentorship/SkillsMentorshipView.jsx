@@ -24,7 +24,7 @@ import {
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, PageActions,
     EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal,
-    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid
+    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid, BackArrow
 } from '../CommonComponents';
 
 import { STATE_LOCALITIES } from "../constants.js";
@@ -4262,10 +4262,8 @@ const SkillsMentorshipView = ({
                     <div className="p-3 md:p-6">
                         <div className="flex flex-wrap justify-between items-center gap-2 md:gap-3 mb-3 md:mb-6 border-b border-gray-200 pb-2">
                             <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
-                                {!publicDashboardMode && !IS_NATIVE && (
-                                    <Button variant="secondary" onClick={() => setCurrentView('action_menu')} className="me-4">
-                                        <ArrowLeft className="w-4 h-4 me-2" /> {t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')}
-                                    </Button>
+                                {!publicDashboardMode && (
+                                    <BackArrow onClick={() => setCurrentView('action_menu')} label={t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')} className="-ms-2" />
                                 )}
 
                                 {!publicDashboardMode && <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing} />}

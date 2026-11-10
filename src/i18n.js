@@ -168,7 +168,7 @@ const resources = {
       ui: {
         more: "More", more_actions: "More actions",
         pull_refresh: "Pull to refresh", release_refresh: "Release to refresh", refreshing: "Refreshing…",
-        filters: "Filters", refresh: "Refresh data", next_fact: "Show another highlight",
+        filters: "Filters", more_filters: "More filters", refresh: "Refresh data", next_fact: "Show another highlight",
         facts: {
           courses: "{{n}} courses held this year", participants: "{{n}} participants trained this year",
           facilities_reached: "{{n}} facilities reached by mentorship this year", visits: "{{n}} mentorship visits this year",
@@ -7736,7 +7736,7 @@ const resources = {
       ui: {
         more: "المزيد", more_actions: "إجراءات أخرى",
         pull_refresh: "اسحب للتحديث", release_refresh: "اترك للتحديث", refreshing: "جارٍ التحديث…",
-        filters: "التصفية", refresh: "تحديث البيانات", next_fact: "عرض معلومة أخرى",
+        filters: "التصفية", more_filters: "تصفية إضافية", refresh: "تحديث البيانات", next_fact: "عرض معلومة أخرى",
         facts: {
           courses: "{{n}} دورة أُقيمت هذا العام", participants: "{{n}} مشاركاً تم تدريبهم هذا العام",
           facilities_reached: "{{n}} مرفقاً وصلها الإرشاد هذا العام", visits: "{{n}} زيارة إرشاد هذا العام",

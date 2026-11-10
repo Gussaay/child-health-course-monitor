@@ -1,16 +1,18 @@
 // src/components/HumanResources.jsx
 import React, { Suspense, lazy } from 'react';
-import { Button, Card, CardBody, Spinner, IS_NATIVE, MenuTile, MenuGrid } from './CommonComponents';
+import { Button, Card, CardBody, Spinner, IS_NATIVE, MenuTile, MenuGrid, BackArrow } from './CommonComponents';
 import { FacilitatorsView } from './Facilitator';
 import { ProgramTeamView } from './ProgramTeamView';
 import { PartnersPage } from './PartnersPage';
 import { HealthWorkerView } from './HealthWorker';
-import { Users, Briefcase, Handshake, Stethoscope, ArrowLeft, Trash2 } from 'lucide-react'; // ADDED ICON IMPORTS
+import { Users, Briefcase, Handshake, Stethoscope, Trash2 } from 'lucide-react'; // ADDED ICON IMPORTS
 
 const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 const HR_DELETED_TYPES = ['facilitators', 'federalCoordinators', 'stateCoordinators', 'localityCoordinators', 'coordinators', 'funders'];
 
 // --- Main Navigation Menu Component ---
+const HR_SECTION_TITLES = { healthWorkers: 'Health Workers', facilitators: 'Facilitators', programTeams: 'Program Teams', partnersPage: 'Partners', deletedItems: 'Deleted Items' };
+
 const HumanResourcesMenu = ({ onAction, canEmptyBin }) => {
     const menuItems = [
         { id: 'healthWorkers', label: 'Health Workers', icon: Stethoscope },
@@ -65,10 +67,9 @@ export function HumanResourcesPage({
                     <div>
                         {/* BACK BUTTON TO RETURN TO MAIN NAV */}
                         {!IS_NATIVE && (
-                        <div className="mb-6 border-b border-gray-200 pb-4">
-                            <Button variant="secondary" onClick={() => setActiveTab('menu')}>
-                                <ArrowLeft className="w-4 h-4 me-2" /> Back to HR Menu
-                            </Button>
+                        <div className="mb-4 flex items-center gap-2 border-b border-gray-200 pb-3">
+                            <BackArrow onClick={() => setActiveTab('menu')} label="Back to HR Menu" className="-ms-2" />
+                            <h2 className="text-xl font-bold text-slate-800">{HR_SECTION_TITLES[currentTab] || 'Human Resources'}</h2>
                         </div>
                         )}
 

@@ -2144,12 +2144,9 @@ const ChildHealthServicesView = ({
             <div className="p-3 md:p-6">
                 <div className="flex flex-wrap justify-between items-center gap-3">
                     <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
-                        {!IS_NATIVE && (
-                        <Button variant="secondary" onClick={() => setView('action_menu')} className="me-4">
-                            <ArrowLeft className="w-4 h-4 me-1 inline" /> {t('facilities_page.common.back', 'Back')}
-                        </Button>
-                        )}
                         <PageHeader 
+                            onBack={() => setView('action_menu')}
+                            backLabel={t('facilities_page.common.back', 'Back')}
                             title={t('facilities_page.services.page_title', 'Child Health Services Management')} 
                             subtitle={t('facilities_page.services.page_subtitle', 'Manage health facilities and their pediatric services.')}
                         />

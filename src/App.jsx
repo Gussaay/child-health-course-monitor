@@ -144,6 +144,7 @@ import {
 } from './data.js';
 import { setUsageView } from './utils/usageLedger';
 import { STATE_LOCALITIES } from './components/constants.js';
+import SudanMiniMap from './components/SudanMiniMap';
 import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton, MenuTile, MenuGrid } from './components/CommonComponents';
 import { auth, db, isOnline, getConnectivity } from './firebase';
 import OfflinePill from './components/OfflinePill';
@@ -448,10 +449,50 @@ function homeFacts(t, stats, level) {
     return facts;
 }
 
+// The greeting card's colour and label follow the person's programme level.
+const LEVEL_CARDS = {
+    federal: 'bg-sky-700',
+    state: 'bg-emerald-700',
+    locality: 'bg-violet-700',
+};
+
+function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
+    const { t } = useTranslation();
+    const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
+    const facts = homeFacts(t, stats, level);
+    const loading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
+    const fact = facts.length ? facts[pick % facts.length] : null;
+    const FactIcon = fact?.icon;
+    return (
+        <section className={`relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3`}>
+            <SudanMiniMap highlight={states} all={level === 'federal'} title={scope || levelLabel} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 text-white" />
+            <div className="relative flex items-center gap-2 min-w-0">
+                <h2 className="text-base font-bold leading-tight truncate">
+                    {greeting}{firstName ? `, ${firstName}` : ''}
+                </h2>
+                <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-xs font-semibold">{scope || levelLabel}</span>
+            </div>
+            {fact ? (
+                <button
+                    type="button"
+                    onClick={() => setPick(p => p + 1)}
+                    title={t('ui.next_fact', 'Show another highlight')}
+                    className="relative mt-1 flex w-full items-center gap-1.5 text-start text-sm text-white/90 min-w-0"
+                >
+                    <FactIcon size={14} className="shrink-0" />
+                    <span className="truncate">{fact.text}</span>
+                </button>
+            ) : loading ? (
+                <Skeleton className="shimmer-light relative mt-1.5 h-4 w-2/3" />
+            ) : (
+                <p className="relative mt-1 text-sm text-white/80 truncate">{levelLabel}</p>
+            )}
+        </section>
+    );
+}
+
 function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData }) {
     const { t, i18n } = useTranslation();
-    const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
-
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
     const firstName = String(user?.displayName || '').trim().split(/\s+/)[0];
@@ -466,42 +507,13 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
 
     const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
 
-    const facts = homeFacts(t, stats, level);
-    const factsLoading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
-    const fact = facts.length ? facts[pick % facts.length] : null;
-    const FactIcon = fact?.icon;
-
-    // One calm card, as the main menu was before: a welcome line, then every
-    // module as the same tile (big icon in the app's colour, bold name).
+    // The coloured welcome card, then one calm card with every module as the
+    // same tile (big icon in the app's colour, bold name), as in August.
     return (
-        <div className="flex flex-col min-h-full">
+        <div className="flex flex-col min-h-full space-y-3 md:space-y-4">
+            <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
             <Card>
                 <div className="p-3 md:p-6">
-                    <div className="mb-3 md:mb-5 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight">
-                                {greeting}{firstName ? `, ${firstName}` : ''}
-                            </h2>
-                            <p className="mt-0.5 text-sm text-slate-500">{t('landing.subtitle', 'Select a module to get started')}</p>
-                        </div>
-                        <div className="flex shrink-0 max-w-[50%] flex-col items-end gap-1">
-                            <span className="max-w-full truncate rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">{scope || levelLabel}</span>
-                            {fact ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setPick(p => p + 1)}
-                                    title={t('ui.next_fact', 'Show another highlight')}
-                                    className="flex max-w-full items-start gap-1 text-end text-xs text-slate-600 hover:text-sky-700"
-                                >
-                                    <FactIcon size={14} className="mt-0.5 shrink-0 text-sky-600" />
-                                    <span>{fact.text}</span>
-                                </button>
-                            ) : factsLoading ? (
-                                <Skeleton className="h-3.5 w-28" />
-                            ) : null}
-                        </div>
-                    </div>
-
                     {onAskData && accessibleButtons.length > 0 && <div className="mb-3 md:mb-5"><DataAssistantCard onOpen={onAskData} /></div>}
 
                     {accessibleButtons.length > 0 ? (

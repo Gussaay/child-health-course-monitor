@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, Inbox, MoreHorizontal, RefreshCw, SearchX, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Inbox, MoreHorizontal, RefreshCw, SearchX, SlidersHorizontal } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { addInPageBack } from '../utils/inPageBack';
 
@@ -44,27 +44,39 @@ export const PageToolsContext = createContext(null);
 // Filters panel. Wider screens: always open, as before. Phones: one
 // "Filters (n)" row that opens the panel on tap, so the page's content shows
 // straight away.
-export function FilterPanel({ activeCount = 0, className = '', children }) {
+// `keep`: on phones the first `keep` filters stay in view even when the panel
+// is closed (for example State and Locality); the button then opens the rest.
+// The filters are the children of the panel's single grid element.
+export function FilterPanel({ activeCount = 0, keep = 0, className = '', children }) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const tools = useContext(PageToolsContext);
+    const only = React.Children.toArray(children);
+    const total = only.length === 1 && React.isValidElement(only[0])
+        ? React.Children.toArray(only[0].props.children).filter(Boolean).length
+        : Infinity;
+    const pinned = keep > 0 ? Math.min(keep, 3) : 0;
+    const hasMore = !pinned || total > pinned;
+    const closedPhone = pinned ? `block mb-2 filter-keep-${pinned}` : 'hidden';
     return (
-        <div className={`ignore-for-export relative z-20 ${className}`}>
-            <div className="md:hidden flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => setOpen(o => !o)}
-                    aria-expanded={open}
-                    className="flex-1 min-w-0 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50"
-                >
-                    <SlidersHorizontal size={16} className="text-sky-600 shrink-0" />
-                    <span className="truncate">{t('ui.filters', 'Filters')}</span>
-                    {activeCount > 0 && <span className="rounded-full bg-sky-600 px-1.5 text-xs leading-5 text-white">{activeCount}</span>}
-                    <ChevronDown size={16} className={`ms-auto shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-                </button>
+        <div className={`ignore-for-export relative z-20 ${pinned ? 'flex flex-col md:block' : ''} ${className}`}>
+            <div className={`${pinned ? 'order-last' : ''} md:hidden flex items-center gap-2`}>
+                {hasMore ? (
+                    <button
+                        type="button"
+                        onClick={() => setOpen(o => !o)}
+                        aria-expanded={open}
+                        className="flex-1 min-w-0 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50"
+                    >
+                        <SlidersHorizontal size={16} className="text-sky-600 shrink-0" />
+                        <span className="truncate">{pinned ? t('ui.more_filters', 'More filters') : t('ui.filters', 'Filters')}</span>
+                        {activeCount > 0 && <span className="rounded-full bg-sky-600 px-1.5 text-xs leading-5 text-white">{activeCount}</span>}
+                        <ChevronDown size={16} className={`ms-auto shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                    </button>
+                ) : <span className="flex-1" />}
                 {tools}
             </div>
-            <div className={`${open ? 'block mt-2 max-h-[60vh] overflow-y-auto shadow-lg' : 'hidden'} md:block md:mt-0 md:max-h-none md:overflow-visible md:shadow-sm bg-white rounded-xl border border-gray-200 p-3 md:p-4 shadow-sm`}>
+            <div className={`${open ? `block ${pinned ? 'mb-2' : 'mt-2'} max-h-[60vh] overflow-y-auto shadow-lg` : closedPhone} md:block md:mt-0 md:mb-0 md:max-h-none md:overflow-visible md:shadow-sm bg-white rounded-xl border border-gray-200 p-3 md:p-4 shadow-sm ${pinned ? '-order-1' : ''}`}>
                 {children}
             </div>
         </div>
@@ -223,16 +235,39 @@ export const MenuGrid = ({ children, columns = 'sm:grid-cols-3 lg:grid-cols-4', 
     <div className={`grid grid-cols-2 gap-3 md:gap-4 ${columns} ${className}`}>{children}</div>
 );
 
-export const PageHeader = ({ title, subtitle, actions }) => {
+// The back arrow at the start of a page's title row (web only: the Android app
+// has its own arrow in the slim top bar).
+export function BackArrow({ onClick, label, className = '' }) {
+    const { t } = useTranslation();
+    if (IS_NATIVE || !onClick) return null;
+    const text = label || t('ui.short.back', 'Back');
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            title={text}
+            aria-label={text}
+            className={`shrink-0 h-10 w-10 flex items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-sky-700 ${className}`}
+        >
+            <ArrowLeft size={22} className="rtl:rotate-180" />
+        </button>
+    );
+}
+
+// A page's title row. `onBack` puts a back arrow before the title.
+export const PageHeader = ({ title, subtitle, actions, onBack, backLabel }) => {
     // Android app: the title is already in the top bar; keep only the buttons.
     if (IS_NATIVE) {
         return actions ? <div className="flex items-center gap-2 flex-wrap mb-3 md:mb-6">{actions}</div> : null;
     }
     return (
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
-                {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
+            <div className="flex items-center gap-2 min-w-0">
+                <BackArrow onClick={onBack} label={backLabel} className="-ms-2" />
+                <div className="min-w-0">
+                    <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+                    {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
+                </div>
             </div>
             {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
         </div>

@@ -247,3 +247,10 @@ html, body, #root {
   html.dark .cards-on-phone tbody > tr > td { border-bottom-color: #1e2a40 !important; }
   html.dark ::selection { background: #0c4a6e; color: #fff; }
 }
+
+/* FilterPanel keep={n}: on phones the closed panel shows only its first n filters. */
+@media (max-width: 767.98px) {
+  .filter-keep-1 > * > :nth-child(n+2),
+  .filter-keep-2 > * > :nth-child(n+3),
+  .filter-keep-3 > * > :nth-child(n+4) { display: none; }
+}
