@@ -40,6 +40,7 @@ import {
 } from './data';
 import { useAuth } from './hooks/useAuth';
 import { setUsageSource } from './utils/usageLedger';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const DataCacheContext = createContext();
 
@@ -206,6 +207,9 @@ const setLocalData = async (key, data) => {
         });
     } catch (e) { console.warn('IDB put error', e); return false; }
 };
+
+// IndexedDB key of the Dashboard's slim facility copy (see fetchDashboardFacilities).
+const DASHBOARD_COPY_KEY = 'dashboardCopy_facilities';
 
 const getLocalData = async (key) => {
     try {
@@ -938,6 +942,59 @@ export const DataProvider = ({ children }) => {
         }
     }, []);
 
+    // ========================================================================
+    // DASHBOARD COPY OF THE FACILITIES (functions/facilityDashboardCopyCore.js)
+    //
+    // The Dashboard and the main menu's coverage read a slim server-built copy
+    // of every facility (no staff lists, signatures, photos or notes) instead
+    // of downloading every full facility document. The same calculations run
+    // on it, so the numbers are the same. The copy is never used by a page that
+    // edits facilities, so a slim record can never be saved back.
+    //
+    // Falls back to the full list: fetchDashboardFacilities() resolves to null
+    // when no copy can be had (offline with none saved, function unreachable,
+    // copy too large), and callers then load the full list as before.
+    // ========================================================================
+    const [dashboardCopy, setDashboardCopy] = useState(null);
+    const dashboardCopyRef = useRef(null);
+    const dashboardCopyInflight = useRef(null);
+    useEffect(() => { dashboardCopyRef.current = dashboardCopy; }, [dashboardCopy]);
+    useEffect(() => { if (!user) { setDashboardCopy(null); dashboardCopyRef.current = null; } }, [user]);
+    const fetchDashboardFacilities = useCallback(async () => {
+        if (dashboardCopyInflight.current) return dashboardCopyInflight.current;
+        const run = (async () => {
+            let current = dashboardCopyRef.current;
+            if (!current) {
+                const saved = await getLocalData(DASHBOARD_COPY_KEY);
+                if (saved && Array.isArray(saved.items) && saved.items.length > 0) {
+                    current = saved;
+                    dashboardCopyRef.current = saved;
+                    setDashboardCopy(saved);
+                }
+            }
+            if (!navigator.onLine) return current || null;
+            try {
+                const call = httpsCallable(getFunctions(), 'facilityDashboardCopy', { timeout: 90000 });
+                const { data } = await call({ version: current?.version || null });
+                if (data?.unchanged) return current;
+                if (Array.isArray(data?.items) && data.items.length > 0) {
+                    const next = { items: data.items, version: data.version, savedAt: Date.now() };
+                    dashboardCopyRef.current = next;
+                    setDashboardCopy(next);
+                    setLocalData(DASHBOARD_COPY_KEY, next);
+                    return next;
+                }
+                console.warn('[dashboard copy] not usable, using the full list:', data?.tooLarge ? 'too large' : 'empty');
+                return current || null;
+            } catch (e) {
+                console.warn('[dashboard copy] unavailable, using the full list:', e?.code || e?.message || e);
+                return current || null;
+            }
+        })();
+        dashboardCopyInflight.current = run;
+        try { return await run; } finally { dashboardCopyInflight.current = null; }
+    }, []);
+
     const value = {
         ...cache,
         ...fetchers,
@@ -949,6 +1006,8 @@ export const DataProvider = ({ children }) => {
         isLoading,
         clearLocalCache,
         syncLoaded,
+        dashboardCopy,
+        fetchDashboardFacilities,
         liveLists: () => Object.keys(liveRef.current),
         mergeIntoCache,
         removeFromCache,

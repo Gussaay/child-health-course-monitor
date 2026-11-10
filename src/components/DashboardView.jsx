@@ -1,5 +1,5 @@
 // src/components/DashboardView.jsx
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
     NeonatalCoverageDashboard, 
@@ -9,6 +9,7 @@ import {
     CriticalCareCoverageDashboard 
 } from "./ServiceCoverageDashboard.jsx";
 import { useDataCache } from '../DataContext';
+import { DashboardFacilitiesContext } from '../hooks/useDashboardFacilities';
 import { PageSkeleton, PageToolsContext, PageTabs, PullToRefresh } from './CommonComponents';
 import { RefreshCw } from 'lucide-react';
 
@@ -29,7 +30,30 @@ const Spinner = ({ size = 'md' }) => (
 
 function DashboardView({ userStates, userLocalities }) {
     const { t } = useTranslation();
-    const { fetchCourses, fetchParticipants, fetchHealthFacilities, isLoading, healthFacilities } = useDataCache();
+    const { fetchHealthFacilities, isLoading, healthFacilities, dashboardCopy, fetchDashboardFacilities } = useDataCache();
+
+    // The coverage tabs draw from the slim Dashboard copy of the facilities
+    // (one small download, same calculations). Only when no copy can be had
+    // does this fall back to downloading the full facility list, as before.
+    const [useFullList, setUseFullList] = useState(false);
+    const loadFacilities = useCallback(async (forceFull = false) => {
+        const copy = await fetchDashboardFacilities();
+        if (!copy) {
+            setUseFullList(true);
+            await fetchHealthFacilities({}, forceFull);
+        }
+    }, [fetchDashboardFacilities, fetchHealthFacilities]);
+    useEffect(() => { loadFacilities(); }, [loadFacilities]);
+
+    const facilitiesSource = useMemo(() => {
+        if (!useFullList && dashboardCopy) {
+            return { facilities: dashboardCopy.items, loading: false, refresh: () => loadFacilities() };
+        }
+        if (useFullList) {
+            return { facilities: healthFacilities, loading: !!isLoading.healthFacilities || healthFacilities === null, refresh: () => fetchHealthFacilities({}, 'sync') };
+        }
+        return { facilities: null, loading: true, refresh: () => loadFacilities() };
+    }, [useFullList, dashboardCopy, healthFacilities, isLoading.healthFacilities, loadFacilities, fetchHealthFacilities]);
 
     const [viewType, setViewType] = useState('combinedCoverage'); 
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -37,11 +61,12 @@ function DashboardView({ userStates, userLocalities }) {
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            await Promise.all([
-                fetchCourses(true), 
-                fetchParticipants(true), 
-                fetchHealthFacilities({}, true)
-            ]);
+            // Every tab here is drawn from facilities only; refreshing courses
+            // and participants too made the button wait for lists it never shows.
+            // The Dashboard copy is brought up to date on the server; the full
+            // list is re-downloaded only when the page is already using it.
+            if (useFullList) await fetchHealthFacilities({}, true);
+            else await loadFacilities(true);
         } catch (error) {
             console.error("Error refreshing dashboard data:", error);
         } finally { 
@@ -49,7 +74,7 @@ function DashboardView({ userStates, userLocalities }) {
         }
     };
 
-    const isDashboardLoading = isLoading.healthFacilities || healthFacilities === null;
+    const isDashboardLoading = facilitiesSource.loading;
 
     const tabs = [
         { id: 'combinedCoverage', short: 'combined', label: t('dashboard.tabs.combined', 'Combined Coverage') },
@@ -132,6 +157,7 @@ function DashboardView({ userStates, userLocalities }) {
                 </div>
             ) : (
                 <div className="md:px-8 pt-3 md:pt-6 pb-6 md:pb-12 w-full max-w-screen-2xl mx-auto">
+                  <DashboardFacilitiesContext.Provider value={facilitiesSource}>
                   <PageToolsContext.Provider value={phoneRefresh}>
                     {/* Render Coverage Dashboards */}
                     {viewType === 'combinedCoverage' && <CombinedServiceDashboard userStates={userStates} userLocalities={userLocalities} />}
@@ -146,6 +172,7 @@ function DashboardView({ userStates, userLocalities }) {
                         <Suspense fallback={<PageSkeleton />}><MorbidityMortalityDashboard /></Suspense>
                     )}
                   </PageToolsContext.Provider>
+                  </DashboardFacilitiesContext.Provider>
                 </div>
             )}
         </div>

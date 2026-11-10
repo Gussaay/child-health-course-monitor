@@ -363,3 +363,8 @@ exports.onlineProgressReport = require("./onlineProgress").onlineProgressReport;
 // users' Usage tab (googleUsage.js). Runs as the function's service account,
 // which needs the Monitoring Viewer role.
 exports.googleFirestoreUsage = require("./googleUsage").googleFirestoreUsage;
+
+// The Dashboard's slim copy of the health facilities, kept current by delta
+// reads, so the Dashboard does not download every full facility document
+// (facilityDashboardCopy.js).
+exports.facilityDashboardCopy = require("./facilityDashboardCopy").facilityDashboardCopy;

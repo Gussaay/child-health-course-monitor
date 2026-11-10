@@ -1646,14 +1646,20 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         fetchStateCoordinators();
         fetchLocalityCoordinators();
         fetchFunders();
-        fetchParticipants(true); 
-    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders, fetchParticipants]); 
+    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders]); 
 
+    // Courses first, participants after. Both used to start together, and the
+    // participant list (many times larger) took the connection the course list
+    // needed, so the page sat empty. Participants still start after 8 s if the
+    // courses are slow, so a slow course list never holds them back for long.
     useEffect(() => {
-        if (['courses', 'dashboard', 'participants'].includes(activeCoursesTab)) {
-            fetchCourses(true);
-            fetchParticipants(true);
-        }
+        let cancelled = false;
+        const coursesFirst = ['courses', 'dashboard', 'participants'].includes(activeCoursesTab)
+            ? Promise.resolve().then(() => fetchCourses(true)).catch(() => {})
+            : Promise.resolve();
+        Promise.race([coursesFirst, new Promise((resolve) => setTimeout(resolve, 8000))])
+            .then(() => { if (!cancelled) fetchParticipants(true); });
+        return () => { cancelled = true; };
     }, [activeCoursesTab, fetchCourses, fetchParticipants]);
 
     useEffect(() => {
@@ -1679,14 +1685,18 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     const [filterProject, setFilterProject] = useRememberedState('courses.project', 'All');
 
     // Number of courses in each package, shown on the package tiles.
+    // Nothing is counted while the courses are still arriving after sign-in
+    // (a "0 courses" that turns into the real number a moment later misleads).
+    const coursesLoading = !!isLoading?.courses && (allCourses || []).length === 0;
     const packageCounts = useMemo(() => {
+        if (coursesLoading) return null;
         const counts = {};
         (allCourses || []).forEach(c => {
             if (c.inRecycleBin || c.isDeleted) return;
             counts[c.course_type] = (counts[c.course_type] || 0) + 1;
         });
         return counts;
-    }, [allCourses]);
+    }, [allCourses, coursesLoading]);
 
     const filterStateOptions = useMemo(() => {
         const states = new Set();
@@ -2276,7 +2286,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                     </div>
                                 </FilterPanel>
                                 
-                                <CoursesTable
+                                {coursesLoading ? <SkeletonTable /> : <CoursesTable
                                     courses={courses} onOpen={handleOpenCourse} onEdit={handleOpenEditForm} onDelete={handleCourseDeleteAction} 
                                     onOpenReport={onOpenReport} onOpenTestForm={handleOpenTestForm} onOpenAttendanceManager={onOpenAttendanceManager} 
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse} canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
@@ -2284,7 +2294,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                     canManageFinalReportDocument={canSeeFinalReports}
                                     finalReportsByCourse={finalReportsByCourse}
                                     isProcessing={isProcessing}
-                                />
+                                />}
                             </div>
                         )}
                     </>

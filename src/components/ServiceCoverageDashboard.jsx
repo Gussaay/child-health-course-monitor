@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import html2canvas from '../utils/html2canvasLight';
 import * as XLSX from 'xlsx';
 import { Card, FormGroup, Select, FilterPanel, SkeletonTable, Skeleton } from './CommonComponents';
-import { useDataCache } from '../DataContext';
+import { useDashboardFacilities } from '../hooks/useDashboardFacilities';
 import { STATE_LOCALITIES, getLocalizedStateName, getLocalizedLocalityName } from "./constants.js";
 import SudanMap from '../SudanMap';
 
@@ -180,8 +180,7 @@ const NEONATAL_EQUIPMENT_KEYS = Object.keys(NEONATAL_EQUIPMENT_SPEC);
 
 export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading } = useDashboardFacilities();
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useRememberedState('coverage.neonatal.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
@@ -928,8 +927,7 @@ const EENC_EQUIPMENT_KEYS = Object.keys(EENC_EQUIPMENT_SPEC);
 
 export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading } = useDashboardFacilities();
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useRememberedState('coverage.eenc.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
@@ -1223,8 +1221,7 @@ const IMNCI_FILTER_SPEC = {
 
 export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
-    const loading = isLoading.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading, refresh: refreshFacilities } = useDashboardFacilities();
     
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
@@ -1248,10 +1245,12 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     
     useEffect(() => {
         if (activeFacilities !== null && activeFacilities.length > 0) {
-            const intervalId = setInterval(() => { fetchHealthFacilities({}, true); }, 15 * 60 * 1000); 
+            // Every 15 minutes while open. This used to re-download every
+            // facility in full; now it asks only for what changed.
+            const intervalId = setInterval(() => { refreshFacilities(); }, 15 * 60 * 1000); 
             return () => clearInterval(intervalId);
         }
-    }, [activeFacilities, fetchHealthFacilities]);
+    }, [activeFacilities, refreshFacilities]);
 
     // Projects by their standard names, so spelling variants are one option.
     const observedProjects = useMemo(() => activeFacilities.map(f => f.project_name).filter(Boolean), [activeFacilities]);
@@ -1589,8 +1588,7 @@ const CRITICAL_EQUIPMENT_KEYS = Object.keys(CRITICAL_EQUIPMENT_SPEC);
 
 export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading } = useDashboardFacilities();
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useRememberedState('coverage.criticalCare.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
@@ -1912,8 +1910,7 @@ const CombinedMapTooltip = ({ data }) => {
 // --- COMBINED SERVICES DASHBOARD ---
 export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading?.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading } = useDashboardFacilities();
     
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 

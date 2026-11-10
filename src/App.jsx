@@ -956,7 +956,7 @@ export default function App() {
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests,
         mergeIntoCache, participants: rawParticipants, skillMentorshipSubmissions, isLoading: dataLoading,
-        syncLoaded
+        syncLoaded, dashboardCopy, fetchDashboardFacilities
     } = useDataCache();
 
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
@@ -1782,19 +1782,47 @@ export default function App() {
 
     useEffect(() => {
         if (isSharedView || isPublicMentorshipDashboardView || (!user && !isPublicMentorshipDashboardView)) return;
-        if (view === 'dashboard') { fetchCourses(); fetchParticipants(); fetchFacilitators(); fetchHealthFacilities(); }
-        if (['humanResources', 'facilitatorForm', 'facilitatorReport', 'courseForm', 'dashboard', 'landing'].includes(view)) fetchFacilitators();
+        // The Dashboard loads its own facilities (the slim Dashboard copy, or
+        // the full list if no copy can be had): see DashboardView.
+        if (['humanResources', 'facilitatorForm', 'facilitatorReport', 'courseForm'].includes(view)) fetchFacilitators();
         if (['courseForm', 'humanResources'].includes(view)) fetchFunders();
         if (['courseForm'].includes(view)) fetchCoordinators();
         if (view === 'courses' || view === 'facilitatorReport') fetchCourses();
         if (view === 'skillsMentorship') { fetchHealthFacilities(); fetchSkillMentorshipSubmissions(); }
         if (view === 'childHealthServices') fetchHealthFacilities();
         if (view === 'courseReport') fetchHealthFacilities();
-        // The main menu's greeting card counts courses, participants and mentorship visits.
-        // Coordinators tell us the person's unit (IMNCI, newborn...), which narrows the numbers.
-        // Facilities give the coverage card.
-        if (view === 'landing') { fetchCourses(); fetchParticipants(); fetchSkillMentorshipSubmissions(); fetchCoordinators(); fetchHealthFacilities(); }
-    }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
+    }, [view, isSharedView, user, fetchCourses, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
+
+    // The main menu's highlight counts courses, participants, mentorship visits
+    // and facilitators; coordinators give the person's unit (IMNCI, newborn...)
+    // and facilities the coverage. These used to be requested all at once on
+    // the main menu, so on a new device (or after the cache expired) the page
+    // the person opened next waited behind thousands of records it did not
+    // need. Now they load one after another, smallest first, and the chain
+    // stops as soon as the person leaves the main menu, so the next page gets
+    // the connection to itself. The menu shows the last saved numbers meanwhile.
+    useEffect(() => {
+        if (isSharedView || isPublicMentorshipDashboardView || !user || view !== 'landing') return undefined;
+        let cancelled = false;
+        const stillHere = () => !cancelled && viewRef.current === 'landing';
+        // One slow list must not hold the rest back for the full 60 s timeout:
+        // after a few seconds the next one starts while the slow one finishes.
+        const step = (load) => Promise.race([
+            Promise.resolve().then(load).catch(() => {}),
+            new Promise((resolve) => setTimeout(resolve, 8000)),
+        ]);
+        (async () => {
+            // Coverage comes from the slim Dashboard copy; the full facility
+            // list is downloaded only if no copy can be had.
+            const facilitiesForCoverage = async () => { if (!(await fetchDashboardFacilities())) await fetchHealthFacilities(); };
+            const queue = [fetchCourses, fetchCoordinators, fetchFacilitators, fetchParticipants, fetchSkillMentorshipSubmissions, facilitiesForCoverage];
+            for (const load of queue) {
+                if (!stillHere()) return;
+                await step(load);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [view, isSharedView, user, isPublicMentorshipDashboardView, fetchCourses, fetchCoordinators, fetchFacilitators, fetchParticipants, fetchSkillMentorshipSubmissions, fetchHealthFacilities, fetchDashboardFacilities]);
 
     // The offline cache only holds what THIS device last read. Tests and scores
     // entered on another phone (or a cache that never held this course's tests,
@@ -1935,9 +1963,9 @@ export default function App() {
             states: userStates, localities: userLocalities,
             courses: rawCourses, participants: rawParticipants, sessions: skillMentorshipSubmissions, facilitators: rawFacilitators,
         });
-        const coverage = computeCoverage({ level, states: userStates, localities: userLocalities, facilities: healthFacilities });
+        const coverage = computeCoverage({ level, states: userStates, localities: userLocalities, facilities: dashboardCopy?.items || healthFacilities });
         return { ...stats, coverage };
-    }, [view, user, permissions, userHRProfile, userStates, userLocalities, rawCourses, rawParticipants, skillMentorshipSubmissions, rawFacilitators, healthFacilities]);
+    }, [view, user, permissions, userHRProfile, userStates, userLocalities, rawCourses, rawParticipants, skillMentorshipSubmissions, rawFacilitators, healthFacilities, dashboardCopy]);
     const homeStats = useMemo(() => {
         if (!freshHomeStats) return null;
         const merged = { ...freshHomeStats };
@@ -1948,10 +1976,10 @@ export default function App() {
         const busy = {
             courses: !!dataLoading?.courses, participants: !!dataLoading?.participants,
             visits: !!dataLoading?.skillMentorshipSubmissions, facilitators: !!dataLoading?.facilitators,
-            facilities: !!dataLoading?.healthFacilities,
+            facilities: !dashboardCopy && !!dataLoading?.healthFacilities,
         };
         return { ...merged, busy };
-    }, [freshHomeStats, savedHomeStats, dataLoading]);
+    }, [freshHomeStats, savedHomeStats, dataLoading, dashboardCopy]);
     useEffect(() => {
         if (!homeStatsKey || !freshHomeStats) return;
         const known = Object.fromEntries(Object.entries(freshHomeStats).filter(([, v]) => v !== null && v !== undefined));
