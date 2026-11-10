@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp, collection, getDocs, doc, query, where, orderBy, limit } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle, ShieldCheck, Clock, Activity, Baby, Siren } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -24,7 +24,7 @@ import {
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, PageActions,
     EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal,
-    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh
+    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid
 } from '../CommonComponents';
 
 import { STATE_LOCALITIES } from "../constants.js";
@@ -2087,10 +2087,10 @@ const MentorshipSubmissionsTable = ({
 const ServiceSelector = ({ onSelectService }) => {
     const { t } = useTranslation();
     const services = [
-        { key: 'IMNCI', title: t('mentorship_page.services.imnci', 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)'), enabled: true },
-        { key: 'EENC', title: t('mentorship_page.services.eenc', 'Mentorship on Early Essential Newborn Care (EENC)'), enabled: true },
-        { key: 'ETAT', title: t('mentorship_page.services.etat', 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)'), enabled: true },
-        { key: 'IPC', title: t('mentorship_page.services.ipc', 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)'), enabled: true }
+        { key: 'IMNCI', icon: Activity, title: t('mentorship_page.services.imnci', 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)') },
+        { key: 'EENC', icon: Baby, title: t('mentorship_page.services.eenc', 'Mentorship on Early Essential Newborn Care (EENC)') },
+        { key: 'ETAT', icon: Siren, title: t('mentorship_page.services.etat', 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)') },
+        { key: 'IPC', icon: ShieldCheck, title: t('mentorship_page.services.ipc', 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)') }
     ];
 
     return (
@@ -2101,26 +2101,11 @@ const ServiceSelector = ({ onSelectService }) => {
                     subtitle={t('mentorship_page.services.choose_subtitle', 'Select a program to begin skills mentorship.')}
                 />
             </div>
-            <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
+            <MenuGrid columns="lg:grid-cols-4">
                 {services.map(service => (
-                    <button
-                        key={service.key}
-                        disabled={!service.enabled}
-                        className={`border rounded-lg p-4 md:p-6 text-start transition-all duration-200 ${service.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`}
-                        onClick={() => service.enabled && onSelectService(service.key)}
-                    >
-                        <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
-                            <CourseIcon course={service.key} />
-                            <div>
-                                <div className="font-semibold text-gray-800 text-start">{service.title}</div>
-                                <div className="text-xs text-gray-500 mt-1 text-start">
-                                    {service.enabled ? t('mentorship_page.services.click_to_start', 'Click to start session') : t('mentorship_page.services.coming_soon', 'Coming Soon')}
-                                </div>
-                            </div>
-                        </div>
-                    </button>
+                    <MenuTile key={service.key} icon={service.icon} label={service.key} title={service.title} onClick={() => onSelectService(service.key)} />
                 ))}
-            </div>
+            </MenuGrid>
         </Card>
     );
 };

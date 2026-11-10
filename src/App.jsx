@@ -143,7 +143,7 @@ import {
 } from './data.js';
 import { setUsageView } from './utils/usageLedger';
 import { STATE_LOCALITIES } from './components/constants.js';
-import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton } from './components/CommonComponents';
+import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton, MenuTile, MenuGrid } from './components/CommonComponents';
 import { auth, db, isOnline, getConnectivity } from './firebase';
 import OfflinePill from './components/OfflinePill';
 
@@ -157,7 +157,6 @@ import NotificationBell from './components/NotificationBell.jsx';
 import { notify, confirmDialog, DialogHost } from './components/dialogs';
 import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
-import SudanMiniMap from './components/SudanMiniMap';
 import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
@@ -369,29 +368,6 @@ const MODULE_GROUPS = [
     { id: 'general', tint: 'slate', label: 'App and team' },
 ];
 
-function ModuleTile({ label, tagline, icon: Icon, tint, onClick }) {
-    const { icon: iconCls, ring: ringCls } = TILE_TINTS[tint];
-    return (
-        <button
-            onClick={onClick}
-            className={`group relative text-start bg-white rounded-2xl border border-slate-100 p-4 shadow-sm ring-2 ring-transparent transition hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] ${ringCls}`}
-        >
-            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${iconCls}`}>
-                <Icon size={24} />
-            </div>
-            <p className="font-bold text-slate-900 mt-3 leading-snug">{label}</p>
-            <p className="text-xs text-slate-500 mt-0.5 leading-snug">{tagline}</p>
-        </button>
-    );
-}
-
-// The greeting card's colour and label follow the person's programme level.
-const LEVEL_CARDS = {
-    federal: 'bg-sky-700',
-    state: 'bg-emerald-700',
-    locality: 'bg-violet-700',
-};
-
 // `value` null: still loading (`busy`) or could not be loaded.
 // The app's modules, for the main menu tiles and the side menu. 'downloads'
 // only exists on the native app.
@@ -427,13 +403,13 @@ function allModules(t, permissions) {
         { label: t('landing.modules.facilities', 'Child Health Services'), tagline: tile('facilities', 'Facilities and service coverage'), view: 'childHealthServices', group: 'services', icon: Hospital, permission: permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
+        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
+        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
+        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
         { label: t('landing.modules.projects', 'Project Tracker'), tagline: tile('projects', 'Track project tasks'), view: 'projects', group: 'planning', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.meetings', 'Meeting Tracker'), tagline: tile('meetings', 'Meetings and attendance'), view: 'meetings', group: 'planning', icon: CalendarDays, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), tagline: tile('planning', 'The annual master plan'), view: 'planning', group: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), tagline: tile('locality_plan', 'Plans from the localities'), view: 'localityPlan', group: 'planning', icon: Layers, permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
-        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
-        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
         { label: t('landing.modules.downloads', 'App Files & Downloads'), tagline: tile('downloads', 'Files saved on this device'), view: 'downloads', group: 'general', icon: HardDrive, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), tagline: tile('admin', 'Users, roles and settings'), view: 'admin', group: 'general', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), tagline: tile('about', 'The programme team'), view: 'about', group: 'general', icon: Info, permission: true },
@@ -448,9 +424,8 @@ const COVERAGE_ITEMS = [
     { key: 'scnu', label: 'SCNU' },
 ];
 
-// Greeting card, the same on the phone app and the web: two lines. The
-// greeting, then one highlight from this year's numbers, picked at random
-// each time the main menu opens; tapping it shows another.
+// One highlight from this year's numbers for the main menu, picked at random
+// each time it opens; tapping it shows another.
 function homeFacts(t, stats, level) {
     if (!stats) return [];
     const n = (v) => Number(v).toLocaleString();
@@ -472,43 +447,9 @@ function homeFacts(t, stats, level) {
     return facts;
 }
 
-function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
-    const { t } = useTranslation();
-    const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
-    const facts = homeFacts(t, stats, level);
-    const loading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
-    const fact = facts.length ? facts[pick % facts.length] : null;
-    const FactIcon = fact?.icon;
-    return (
-        <section className={`relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3`}>
-            <SudanMiniMap highlight={states} all={level === 'federal'} title={scope || levelLabel} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 text-white" />
-            <div className="relative flex items-center gap-2 min-w-0">
-                <h2 className="text-base font-bold leading-tight truncate">
-                    {greeting}{firstName ? `, ${firstName}` : ''}
-                </h2>
-                <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-xs font-semibold">{scope || levelLabel}</span>
-            </div>
-            {fact ? (
-                <button
-                    type="button"
-                    onClick={() => setPick(p => p + 1)}
-                    title={t('ui.next_fact', 'Show another highlight')}
-                    className="relative mt-1 flex w-full items-center gap-1.5 text-start text-sm text-white/90 min-w-0"
-                >
-                    <FactIcon size={14} className="shrink-0" />
-                    <span className="truncate">{fact.text}</span>
-                </button>
-            ) : loading ? (
-                <Skeleton className="shimmer-light relative mt-1.5 h-4 w-2/3" />
-            ) : (
-                <p className="relative mt-1 text-sm text-white/80 truncate">{levelLabel}</p>
-            )}
-        </section>
-    );
-}
-
 function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData }) {
     const { t, i18n } = useTranslation();
+    const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
@@ -524,32 +465,55 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
 
     const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
 
+    const facts = homeFacts(t, stats, level);
+    const factsLoading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
+    const fact = facts.length ? facts[pick % facts.length] : null;
+    const FactIcon = fact?.icon;
+
+    // One calm card, as the main menu was before: a welcome line, then every
+    // module as the same tile (big icon in the app's colour, bold name).
     return (
-        <div className="flex flex-col min-h-full space-y-4">
-            <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
+        <div className="flex flex-col min-h-full">
+            <Card>
+                <div className="p-3 md:p-6">
+                    <div className="mb-3 md:mb-5 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight">
+                                {greeting}{firstName ? `, ${firstName}` : ''}
+                            </h2>
+                            <p className="mt-0.5 text-sm text-slate-500">{t('landing.subtitle', 'Select a module to get started')}</p>
+                        </div>
+                        <div className="flex shrink-0 max-w-[50%] flex-col items-end gap-1">
+                            <span className="max-w-full truncate rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">{scope || levelLabel}</span>
+                            {fact ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setPick(p => p + 1)}
+                                    title={t('ui.next_fact', 'Show another highlight')}
+                                    className="flex max-w-full items-start gap-1 text-end text-xs text-slate-600 hover:text-sky-700"
+                                >
+                                    <FactIcon size={14} className="mt-0.5 shrink-0 text-sky-600" />
+                                    <span>{fact.text}</span>
+                                </button>
+                            ) : factsLoading ? (
+                                <Skeleton className="h-3.5 w-28" />
+                            ) : null}
+                        </div>
+                    </div>
 
-            {onAskData && accessibleButtons.length > 0 && <DataAssistantCard onOpen={onAskData} />}
+                    {onAskData && accessibleButtons.length > 0 && <div className="mb-3 md:mb-5"><DataAssistantCard onOpen={onAskData} /></div>}
 
-            {accessibleButtons.length > 0 ? (
-                <div className="space-y-5">
-                    {MODULE_GROUPS.map(group => {
-                        const tiles = accessibleButtons.filter(btn => btn.group === group.id);
-                        if (!tiles.length) return null;
-                        return (
-                            <section key={group.id} aria-labelledby={`group-${group.id}`}>
-                                <h3 id={`group-${group.id}`} className="mb-2 text-sm font-semibold text-slate-500">{t(`landing.groups.${group.id}`, group.label)}</h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                                    {tiles.map(btn => (
-                                        <ModuleTile key={btn.view} label={btn.label} tagline={btn.tagline} icon={btn.icon} tint={group.tint} onClick={() => navigate(btn.view)} />
-                                    ))}
-                                </div>
-                            </section>
-                        );
-                    })}
+                    {accessibleButtons.length > 0 ? (
+                        <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-5">
+                            {accessibleButtons.map(btn => (
+                                <MenuTile key={btn.view} icon={btn.icon} label={btn.label} onClick={() => navigate(btn.view)} />
+                            ))}
+                        </MenuGrid>
+                    ) : (
+                        <div className="p-8 text-center text-gray-500">{t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')}</div>
+                    )}
                 </div>
-            ) : (
-                <Card><div className="p-8 text-center text-gray-500">{t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')}</div></Card>
-            )}
+            </Card>
         </div>
     );
 }

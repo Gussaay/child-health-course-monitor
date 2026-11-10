@@ -157,6 +157,34 @@ export function PullToRefresh({ onRefresh, disabled = false }) {
     );
 }
 
+// The one menu tile used by every "choose where to go" screen: the main menu,
+// course packages, Child Health Services, Human Resources, mentorship and
+// supervision. One big icon in the app's colour, a short bold name and an
+// optional small line under it.
+export function MenuTile({ icon: Icon, iconNode, label, hint, title, onClick, disabled = false, active = false, className = '' }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            title={title}
+            className={`flex w-full flex-col items-center justify-center gap-2 md:gap-3 rounded-lg border bg-white px-2 py-4 md:p-6 text-center shadow-sm transition-all duration-150 ${active ? 'border-sky-500 ring-2 ring-sky-500' : 'border-slate-200'} ${disabled ? 'opacity-60 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50 hover:text-sky-600 hover:shadow-md active:scale-[0.98]'} ${className}`}
+        >
+            {iconNode || (Icon && <Icon className="h-9 w-9 md:h-12 md:w-12 shrink-0 text-sky-500" strokeWidth={1.75} />)}
+            <span className="text-[15px] md:text-lg font-semibold leading-snug">{label}</span>
+            {hint && <span className="-mt-1 text-xs text-slate-500 leading-snug">{hint}</span>}
+        </button>
+    );
+}
+
+// Icon size and colour for a hand-drawn icon passed to MenuTile as `iconNode`.
+export const MENU_ICON_CLASS = 'h-9 w-9 md:h-12 md:w-12 shrink-0 text-sky-500';
+
+// The grid that holds MenuTiles: two per row on phones.
+export const MenuGrid = ({ children, columns = 'sm:grid-cols-3 lg:grid-cols-4', className = '' }) => (
+    <div className={`grid grid-cols-2 gap-3 md:gap-4 ${columns} ${className}`}>{children}</div>
+);
+
 export const PageHeader = ({ title, subtitle, actions }) => {
     // Android app: the title is already in the top bar; keep only the buttons.
     if (IS_NATIVE) {
@@ -225,9 +253,17 @@ function usePinnedTabsHeight(ref) {
     }, [ref]);
 }
 
-// Page tabs. Phones: every tab in one row that never scrolls sideways, using
-// each tab's `short` name when it has one. Wider screens: the usual buttons.
+// Page tabs. Phones: every tab is on screen and nothing scrolls sideways. Up
+// to four tabs share one row; more wrap onto a second row so each name stays
+// readable (each tab's `short` name is used when it has one). Wider screens:
+// the usual buttons.
 // tabs: [{ id, label, short?, icon?, count?, disabled? }]
+// Tabs per row on a phone: one row up to four, two even rows after that.
+export function phoneTabColumns(count) {
+    if (count <= 4) return Math.max(count, 1);
+    return Math.min(4, Math.ceil(count / 2));
+}
+
 export function PageTabs({ tabs, active, onChange, className = '' }) {
     const visible = tabs.filter(Boolean);
     const navRef = useRef(null);
@@ -236,7 +272,11 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
     const activeLabel = visible.find((tab) => tab.id === active)?.label;
     return (
         <div data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 relative z-30 ${className}`}>
-            <nav ref={navRef} className="md:hidden flex gap-0.5 rounded-xl bg-white p-1 border border-slate-200 shadow-sm">
+            <nav
+                ref={navRef}
+                className="md:hidden grid gap-1 rounded-xl bg-white p-1 border border-slate-200 shadow-sm"
+                style={{ gridTemplateColumns: `repeat(${phoneTabColumns(visible.length)}, minmax(0, 1fr))` }}
+            >
                 {visible.map(tab => {
                     const on = active === tab.id;
                     return (
@@ -246,10 +286,10 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
                             onClick={() => onChange(tab.id)}
                             disabled={tab.disabled}
                             title={typeof tab.label === 'string' ? tab.label : undefined}
-                            className={`relative min-w-0 disabled:opacity-40 rounded-lg px-1 py-1.5 text-xs font-bold leading-tight text-center transition-colors ${on ? 'shrink-0 bg-sky-600 text-white shadow-sm' : 'flex-auto text-slate-500 active:bg-sky-50'}`}
+                            className={`relative min-w-0 min-h-[36px] disabled:opacity-40 rounded-lg px-1.5 py-1.5 text-[13px] font-semibold leading-tight text-center transition-colors ${on ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 active:bg-sky-50'}`}
                         >
-                            <span className="block truncate">{tab.short || tab.label}</span>
-                            {tab.count > 0 && <span className="absolute -top-1.5 -end-0.5 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-xs leading-4 text-white">{tab.count}</span>}
+                            <span className="block break-words">{tab.short || tab.label}</span>
+                            {tab.count > 0 && <span className="absolute -top-1 end-0 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-xs leading-4 text-white">{tab.count}</span>}
                         </button>
                     );
                 })}

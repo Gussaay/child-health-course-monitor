@@ -1,6 +1,6 @@
 // src/components/HumanResources.jsx
 import React, { Suspense, lazy } from 'react';
-import { Button, Card, CardBody, Spinner, IS_NATIVE } from './CommonComponents';
+import { Button, Card, CardBody, Spinner, IS_NATIVE, MenuTile, MenuGrid } from './CommonComponents';
 import { FacilitatorsView } from './Facilitator';
 import { ProgramTeamView } from './ProgramTeamView';
 import { PartnersPage } from './PartnersPage';
@@ -13,79 +13,29 @@ const HR_DELETED_TYPES = ['facilitators', 'federalCoordinators', 'stateCoordinat
 // --- Main Navigation Menu Component ---
 const HumanResourcesMenu = ({ onAction, canEmptyBin }) => {
     const menuItems = [
-        { 
-            id: 'healthWorkers', 
-            label: 'Health Workers', 
-            icon: Stethoscope, 
-            color: 'text-emerald-600', 
-            bg: 'bg-emerald-100', 
-            border: 'hover:border-emerald-400', 
-            shadow: 'hover:shadow-emerald-100' 
-        },
-        { 
-            id: 'facilitators', 
-            label: 'Facilitators', 
-            icon: Users, 
-            color: 'text-blue-600', 
-            bg: 'bg-blue-100', 
-            border: 'hover:border-blue-400', 
-            shadow: 'hover:shadow-blue-100' 
-        },
-        { 
-            id: 'programTeams', 
-            label: 'Program Teams', 
-            icon: Briefcase, 
-            color: 'text-purple-600', 
-            bg: 'bg-purple-100', 
-            border: 'hover:border-purple-400', 
-            shadow: 'hover:shadow-purple-100' 
-        },
-        { 
-            id: 'partnersPage', 
-            label: 'Partners', 
-            icon: Handshake, 
-            color: 'text-amber-600', 
-            bg: 'bg-amber-100', 
-            border: 'hover:border-amber-400', 
-            shadow: 'hover:shadow-amber-100' 
-        },
-        ...(canEmptyBin ? [{
-            id: 'deletedItems',
-            label: 'Deleted Items',
-            icon: Trash2,
-            color: 'text-red-600',
-            bg: 'bg-red-100',
-            border: 'hover:border-red-400',
-            shadow: 'hover:shadow-red-100'
-        }] : []),
+        { id: 'healthWorkers', label: 'Health Workers', icon: Stethoscope },
+        { id: 'facilitators', label: 'Facilitators', icon: Users },
+        { id: 'programTeams', label: 'Program Teams', icon: Briefcase },
+        { id: 'partnersPage', label: 'Partners', icon: Handshake },
     ];
 
     return (
-        <div className="max-w-6xl mx-auto mt-4 p-0 md:p-4 space-y-12" dir="ltr">
-            <section>
-                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">
-                    Human Resources Management
-                </h3>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-                    {menuItems.map(item => {
-                        const Icon = item.icon;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => onAction(item.id)}
-                                className={`flex flex-col items-center justify-center p-4 md:p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
-                            >
-                                <div className={`p-3 md:p-5 rounded-2xl mb-3 md:mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
-                                    <Icon className={`w-8 h-8 ${item.color}`} strokeWidth={1.5} />
-                                </div>
-                                <div className="font-semibold text-gray-700 text-sm md:text-lg group-hover:text-gray-900 transition-colors text-center">
-                                    {item.label}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </section>
+        <div className="max-w-6xl mx-auto mt-2 md:mt-6" dir="ltr">
+            <Card className="p-3 md:p-6">
+                <h3 className="text-xl md:text-2xl font-bold text-slate-800 mb-3 md:mb-5">Human Resources</h3>
+                <MenuGrid columns="lg:grid-cols-4">
+                    {menuItems.map(item => (
+                        <MenuTile key={item.id} icon={item.icon} label={item.label} onClick={() => onAction(item.id)} />
+                    ))}
+                </MenuGrid>
+                {canEmptyBin && (
+                    <div className="mt-4 flex justify-center">
+                        <button type="button" onClick={() => onAction('deletedItems')} className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                            <Trash2 size={16} /> Deleted Items
+                        </button>
+                    </div>
+                )}
+            </Card>
         </div>
     );
 };
