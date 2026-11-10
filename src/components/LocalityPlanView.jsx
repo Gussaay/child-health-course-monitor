@@ -1,7 +1,7 @@
 // src/components/LocalityPlanView.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import jsPDF from "jspdf";
-import html2canvas from 'html2canvas';
+import html2canvas from '../utils/html2canvasLight';
 import { amiriFontBase64 } from './AmiriFont.js'; 
 import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner, PageTabs, FilterPanel, PageSkeleton } from './CommonComponents';
 import { useTranslation } from 'react-i18next';

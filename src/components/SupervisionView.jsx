@@ -24,7 +24,7 @@ import {
 
 import {
     Card, CardBody, PageHeader, Button, Tabs, Table, EmptyState, Modal,
-    Input, Select, Textarea, IS_NATIVE, useInPageBack, SkeletonTable,
+    Input, Select, Textarea, IS_NATIVE, useInPageBack, SkeletonTable, MenuTile, MenuGrid,
 } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
 import { useDataCache } from '../DataContext';
@@ -791,7 +791,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
             </Card>
 
             {/* Overall progress and headline results; pinned under the top bar while scrolling. */}
-            <div className="sticky top-[calc(var(--app-top,0px)+4px)] z-20 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
+            <div className="relative z-20 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
                 <div className="flex items-center gap-3">
                     <span className="text-sm font-semibold text-slate-800">
                         {t('trackers.supervision.form.progress', 'Completed {{pct}}', { pct: `${Math.round(progress.percent)}%` })}
@@ -951,22 +951,22 @@ function ServicePicker({ onSelect }) {
                 title={t('trackers.supervision.title', 'Supervision')}
                 subtitle={t('trackers.supervision.choose_service', 'Choose the service to supervise')}
             />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <MenuGrid columns="lg:grid-cols-4">
                 {SUPERVISION_SERVICES.map((s) => {
                     const forms = checklistsForService(s.key);
                     const enabled = forms.length > 0;
                     const Icon = SERVICE_ICONS[s.key] || Baby;
                     return (
-                        <PickerTile key={s.key} disabled={!enabled} onClick={() => onSelect(s.key)}
-                            icon={<Icon size={34} />}
-                            tone={enabled ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-500'}
-                            title={`${isArabic ? s.titleAr : s.title} (${s.key})`}
-                            subtitle={enabled
+                        <MenuTile key={s.key} disabled={!enabled} onClick={() => onSelect(s.key)}
+                            icon={Icon}
+                            label={s.key}
+                            title={isArabic ? s.titleAr : s.title}
+                            hint={enabled
                                 ? t('trackers.supervision.form_count', '{{count}} forms', { count: forms.length })
                                 : t('trackers.supervision.no_forms', 'No checklists yet')} />
                     );
                 })}
-            </div>
+            </MenuGrid>
         </div>
     );
 }

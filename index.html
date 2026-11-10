@@ -16,6 +16,15 @@
     <meta name="description" content="National Child Health Program - Monitoring System" />
     <link rel="apple-touch-icon" href="/child.png" />
     
+    <script>
+      (function () {
+        try {
+          var p = localStorage.getItem('themePref');
+          var dark = p === 'dark' || ((p !== 'light') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) { document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = 'dark'; }
+        } catch (e) {}
+      })();
+    </script>
     <title>Child Health Program Monitoring System</title>
   </head>
   <body>

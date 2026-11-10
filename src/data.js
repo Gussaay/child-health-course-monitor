@@ -37,6 +37,21 @@ import { projectAtTime, projectOfFacility, visitTimeOf, hasRecordedProject } fro
 import { recycleBinType, recordTitle } from './utils/recycleBin.js';
 import { DuplicatePhoneError, findPhoneConflict, duplicatePhoneMessage, normalizePhone, isSoftDeleted, validateReaddRequest } from './utils/participantDuplicates.js';
 
+import {
+    recordOperation, takePending, restorePending, hasPending, monthlyPayload, monthKey,
+} from './utils/usageLedger';
+
+// The collection a reference or query touches, for the usage ledger.
+const collectionOf = (ref) => {
+    try {
+        if (!ref) return 'other';
+        if (ref.type === 'document') return ref.parent.id;
+        if (ref.type === 'collection') return ref.id;
+        const q = ref._query;
+        return q?.collectionGroup || q?.path?.lastSegment?.() || 'other';
+    } catch { return 'other'; }
+};
+
 // --- USAGE TRACKING VARIABLES ---
 let currentUser = null;
 let sessionReads = 0;
@@ -45,6 +60,7 @@ let lastDbUpdateTime = 0;
 const UPDATE_INTERVAL = 30000; 
 const UPDATE_THRESHOLD = 15; 
 let updateTimeout = null; 
+let monthlyUsageBlocked = false;
 
 let localSessionDurationMs = 0; 
 let durationIntervalId = null; 
@@ -140,8 +156,37 @@ const updateUsageStatsInDb = () => {
     fbSetDoc(userUsageRef, updatePayload, { merge: true }).catch(e => console.error("Failed to update stats:", e));
 };
 
-const dispatchOpEvent = (type, count = 1) => {
+// --- MONTHLY LEDGER FLUSH (utils/usageLedger.js) ---
+// The by-list, by-page counts are written to usageMonthly/<month>_<uid> every
+// 5 minutes, and when the app goes to the background or the user signs out,
+// not on every burst of activity: one write per five minutes keeps the cost of
+// counting negligible. A device closed within five minutes of its last write
+// loses at most those minutes; counts from before a sign-out are dropped (the
+// write would be refused once signed out). Each flush is one write, counted as a
+// trackingWrite so the overhead stays visible.
+const MONTHLY_FLUSH_MS = 5 * 60 * 1000;
+let monthlyTimerId = null;
+const flushMonthlyUsage = () => {
+    if (!currentUser || monthlyUsageBlocked || !hasPending()) return;
+    const bucket = takePending();
+    const month = monthKey();
+    fbSetDoc(
+        doc(db, 'usageMonthly', `${month}_${currentUser.uid}`),
+        monthlyPayload(bucket, { inc: increment, stamp: serverTimestamp, email: currentUser.email || 'unknown', month, trackingWrites: 1 }),
+        { merge: true },
+    ).catch(e => {
+        // Rules not deployed yet (or this account refused): stop for this
+        // session instead of retrying a write that will keep being refused.
+        if (e?.code === 'permission-denied') { monthlyUsageBlocked = true; console.warn('Monthly usage is not being recorded: the usageMonthly rules are not deployed.'); return; }
+        restorePending(bucket);
+        console.error("Failed to update monthly usage:", e);
+    });
+};
+const flushMonthlyWhenHidden = () => { if (document.visibilityState === 'hidden') flushMonthlyUsage(); };
+
+const dispatchOpEvent = (type, count = 1, collection = 'other', source) => {
   if (count > 0 && currentUser) {
+    recordOperation(type, count, { collection, source });
     window.dispatchEvent(new CustomEvent('firestoreOperation', { detail: { type, count } }));
 
     if (type === 'read') sessionReads += count;
@@ -169,6 +214,10 @@ const dispatchOpEvent = (type, count = 1) => {
 export const initializeUsageTracking = () => {
   onAuthStateChanged(firebaseAuth, (user) => {
     if (!user) {
+        if (monthlyTimerId) clearInterval(monthlyTimerId);
+        monthlyTimerId = null;
+        document.removeEventListener('visibilitychange', flushMonthlyWhenHidden);
+        takePending(); // not credited to the next person who signs in on this device
         if (durationIntervalId) clearInterval(durationIntervalId);
         durationIntervalId = null;
         if (updateTimeout) clearTimeout(updateTimeout);
@@ -210,6 +259,10 @@ export const initializeUsageTracking = () => {
         lastDbUpdateTime = Date.now(); 
         durationIntervalId = setInterval(tickLocalDuration, DURATION_TICK_MS);
         window.addEventListener('beforeunload', saveDurationToLocalStorage);
+        monthlyUsageBlocked = false; // a new sign-in tries again (rules may have been deployed)
+        if (monthlyTimerId) clearInterval(monthlyTimerId);
+        monthlyTimerId = setInterval(flushMonthlyUsage, MONTHLY_FLUSH_MS);
+        document.addEventListener('visibilitychange', flushMonthlyWhenHidden);
     }
   });
 };
@@ -268,7 +321,7 @@ export const getDocs = async (query, options) => {
     ? await getDocsFromCache(query)
     : await fbGetDocs(query);
   if (servedByServer(snapshot)) {
-    dispatchOpEvent('read', Math.max(1, snapshot.docs.length || 0));
+    dispatchOpEvent('read', Math.max(1, snapshot.docs.length || 0), collectionOf(query));
   }
   return snapshot;
 };
@@ -276,54 +329,57 @@ export const getDocs = async (query, options) => {
 export const getDoc = async (docRef, options) => {
   const snapshot = await fbGetDoc(docRef, options);
   if (servedByServer(snapshot)) {
-    dispatchOpEvent('read', 1);
+    dispatchOpEvent('read', 1, collectionOf(docRef));
   }
   return snapshot;
 };
 
 export const setDoc = async (docRef, data, options) => {
   await fbSetDoc(docRef, data, options);
-  dispatchOpEvent('write', 1);
+  dispatchOpEvent('write', 1, collectionOf(docRef));
 };
 
 export const addDoc = async (collectionRef, data) => {
   const docRef = await fbAddDoc(collectionRef, data);
-  dispatchOpEvent('write', 1);
+  dispatchOpEvent('write', 1, collectionOf(collectionRef));
   return docRef;
 };
 
 export const deleteDoc = async (docRef) => {
   await fbDeleteDoc(docRef);
-  dispatchOpEvent('write', 1);
+  dispatchOpEvent('write', 1, collectionOf(docRef));
 };
 
 export const updateDoc = async (docRef, data) => {
   await fbUpdateDoc(docRef, { ...data }); 
-  dispatchOpEvent('write', 1);
+  dispatchOpEvent('write', 1, collectionOf(docRef));
 };
 
 export const writeBatch = (firestore) => {
   const batch = fbWriteBatch(firestore);
   let writeCount = 0;
+  const perCollection = {};
+  const tally = (docRef) => { writeCount++; const c = collectionOf(docRef); perCollection[c] = (perCollection[c] || 0) + 1; };
   const originalSet = batch.set;
   batch.set = (docRef, data, options) => {
-    writeCount++;
+    tally(docRef);
     return originalSet.call(batch, docRef, data, options);
   };
   const originalUpdate = batch.update;
   batch.update = (docRef, data) => { 
-    writeCount++;
+    tally(docRef);
     return originalUpdate.call(batch, docRef, data); 
   };
   const originalDelete = batch.delete;
   batch.delete = (docRef) => {
-    writeCount++;
+    tally(docRef);
     return originalDelete.call(batch, docRef);
   };
   const originalCommit = batch.commit;
   batch.commit = async () => {
     await originalCommit.call(batch);
-    dispatchOpEvent('write', writeCount); 
+    // One event per collection, so the ledger can say which list was written.
+    Object.entries(perCollection).forEach(([c, n]) => dispatchOpEvent('write', n, c));
   };
   return batch;
 };
@@ -604,7 +660,9 @@ export async function submitLocalityBatchUpdate(updates, localityName) {
     return true;
 }
 
-export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
+// The facilities query for a set of filters. Shared by the fetch below and the
+// live listener (subscribeFacilityDelta), so both always ask the same question.
+function facilityQuery(filters = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
     let orderByClause = orderBy("الولاية"); 
@@ -625,17 +683,20 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     }
 
     if (conditions.length > 0) q = query(q, ...conditions);
-    q = query(q, orderByClause);
+    return query(q, orderByClause);
+}
+// The filters Firestore cannot express, applied on the device.
+const facilityLocalFilter = (filters = {}) => (f) => {
+    if (filters.state === 'NOT_ASSIGNED' && f['الولاية']) return false;
+    if (filters.functioningStatus === 'NOT_SET' && !(f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '')) return false;
+    return true;
+};
 
+export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
+    const q = facilityQuery(filters);
     try {
         const querySnapshot = await getData(q, sourceOptions);
-        
-        let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        if (filters.state === 'NOT_ASSIGNED') facilities = facilities.filter(f => !f['الولاية']);
-        if (filters.functioningStatus === 'NOT_SET') facilities = facilities.filter(f => f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '');
-
-        return facilities;
+        return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(facilityLocalFilter(filters));
     } catch (error) {
         console.error("Error fetching health facilities:", error);
         throw error;
@@ -917,8 +978,9 @@ export async function approveFacilitatorSubmission(submission, approverEmail) {
         tx.set(newFacRef, { ...facilitatorData, lastUpdatedAt: serverTimestamp() });
         tx.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp(), facilitatorId: newFacRef.id });
     });
-    dispatchOpEvent('read', 1);
-    dispatchOpEvent('write', 2);
+    dispatchOpEvent('read', 1, 'facilitatorSubmissions');
+    dispatchOpEvent('write', 1, 'facilitators');
+    dispatchOpEvent('write', 1, 'facilitatorSubmissions');
 }
 export async function rejectFacilitatorSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
@@ -3135,13 +3197,39 @@ export async function saveIMNCIProtocol(formType, protocolData) {
     return true;
 }
 
+// --- Change history ---------------------------------------------------------
+// Every save in Protocol management records who changed what: one document per
+// month in the same collection, each holding a list of entries. Same security
+// rule as the protocols themselves (only course editors write).
+export const PROTOCOL_HISTORY_PREFIX = 'history_';
+
+export async function appendIMNCIProtocolHistory(entry) {
+    const at = new Date();
+    const id = `${PROTOCOL_HISTORY_PREFIX}${at.getFullYear()}_${String(at.getMonth() + 1).padStart(2, '0')}`;
+    await fbSetDoc(doc(db, "imnciProtocols", id), {
+        entries: arrayUnion({ ...entry, at: at.toISOString() }),
+        lastUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+}
+
+export async function getIMNCIProtocolHistory() {
+    const snapshot = await fbGetDocs(collection(db, "imnciProtocols"));
+    return snapshot.docs
+        .filter((d) => d.id.startsWith(PROTOCOL_HISTORY_PREFIX))
+        .flatMap((d) => d.data().entries || [])
+        .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+
 // Returns an OBJECT keyed by form type, not an array, because every consumer
 // asks for one named protocol (protocols.child, protocols.dosages_infant).
 export async function getIMNCIProtocols(sourceOptions = {}) {
     try {
         const snapshot = await getData(collection(db, "imnciProtocols"), sourceOptions);
         const protocols = {};
-        snapshot.docs.forEach(d => { protocols[d.id] = d.data(); });
+        // The change history lives in the same collection (history_YYYY_MM) so
+        // it is covered by the same rules; it is read only when asked for.
+        snapshot.docs.forEach(d => { if (!d.id.startsWith(PROTOCOL_HISTORY_PREFIX)) protocols[d.id] = d.data(); });
         return protocols;
     } catch (error) {
         console.error("Error fetching IMNCI protocols:", error);
@@ -4011,7 +4099,7 @@ export function subscribeExerciseAttempts(courseId, onChange, onError) {
             // answers) are free. The first server snapshot costs at least one read.
             if (servedByServer(snapshot)) {
                 const changed = snapshot.docChanges().length;
-                dispatchOpEvent('read', serverSnapshots === 0 ? Math.max(1, changed) : changed);
+                dispatchOpEvent('read', serverSnapshots === 0 ? Math.max(1, changed) : changed, collectionOf(q), 'live');
                 serverSnapshots += 1;
             }
             const rows = snapshot.docs
@@ -4031,4 +4119,130 @@ export function subscribeExerciseAttempts(courseId, onChange, onError) {
             if (onError) onError(error);
         }
     );
+}
+
+
+// ============================================================================
+// REAL-TIME DELTA LISTENERS
+//
+// A list already downloaded on this device is kept current by a listener that
+// asks only for records changed since the device's last sync (a server-time
+// mark, see DataContext). Firestore bills one read per record it sends, so an
+// unchanged list costs nothing while it is open; DataContext closes listeners
+// when the app goes to the background and reopens them from the newest mark,
+// so a long disconnection never re-reads what the device already has.
+// ============================================================================
+const LIVE_LISTS = {
+    courses: { col: 'courses' },
+    participants: { col: 'participants' },
+    facilitators: { col: 'facilitators' },
+    funders: { col: 'funders' },
+    federalCoordinators: { col: 'federalCoordinators' },
+    stateCoordinators: { col: 'stateCoordinators' },
+    localityCoordinators: { col: 'localityCoordinators' },
+    skillMentorshipSubmissions: { col: 'skillMentorship' },
+    imnciVisitReports: { col: 'imnciVisitReports' },
+    eencVisitReports: { col: 'eencVisitReports' },
+    // Same shape as listIMNCIPatientRecords: a record marked deleted leaves the
+    // query, and the listener removes it from the device.
+    imnciPatientRecords: { col: 'imnciPatientRecords', extra: () => [where("isDeleted", "!=", true)] },
+    projects: { col: 'projects' },
+    masterPlans: { col: 'masterPlans' },
+    operationalPlans: { col: 'operationalPlans' },
+    unitMeetings: { col: 'unitMeetings' },
+    supplyItems: { col: 'supplyItems' },
+    populationTargets: { col: 'populationTargets' },
+    supervisionAssessments: { col: 'supervisionAssessments' },
+    onlineCourses: { col: 'onlineCourses' },
+    onlineCourseItems: { col: 'onlineCourseItems' },
+    finalReports: { col: 'finalReports', map: (d) => lightFinalReport(d) },
+};
+export const LIVE_LIST_KEYS = Object.keys(LIVE_LISTS);
+
+// Turns a snapshot into { upserts, removed }. A record this device is still
+// writing (pending, no server time yet) is skipped: the confirmed copy follows.
+const deltaChanges = (snap, map = (d) => d, keep = () => true, collection = 'other') => {
+    const upserts = [];
+    const removed = [];
+    // The server sends (and Firestore bills) one read for each changed record,
+    // except records this device wrote itself and answers from the device cache.
+    if (snap.metadata?.fromCache === false) {
+        const billed = snap.docChanges().filter((ch) => !ch.doc.metadata.hasPendingWrites).length;
+        dispatchOpEvent('read', billed, collection, 'live');
+    }
+    snap.docChanges().forEach((ch) => {
+        if (ch.doc.metadata.hasPendingWrites) return;
+        if (ch.type === 'removed') { removed.push(ch.doc.id); return; }
+        const rec = map({ id: ch.doc.id, ...ch.doc.data() });
+        if (keep(rec)) upserts.push(rec); else removed.push(ch.doc.id);
+    });
+    return { upserts, removed };
+};
+
+/**
+ * Listens for records of list `key` changed after `sinceMs` (server time).
+ * onChange({ upserts, removed }) runs for each batch; returns the unsubscribe,
+ * or null when the list has no live form.
+ */
+export function subscribeListDelta(key, sinceMs, onChange, onError) {
+    const def = LIVE_LISTS[key];
+    if (!def || !(sinceMs > 0)) return null;
+    const q = query(
+        collection(db, def.col),
+        where("lastUpdatedAt", ">", Timestamp.fromMillis(sinceMs)),
+        ...(def.extra ? def.extra() : []),
+    );
+    return onSnapshot(q, (snap) => {
+        const changes = deltaChanges(snap, def.map, undefined, def.col);
+        if (changes.upserts.length || changes.removed.length) onChange(changes);
+    }, onError);
+}
+
+/** The facilities list for `filters`, live from `sinceMs` (lastSnapshotAt, server time). */
+export function subscribeFacilityDelta(filters, sinceMs, onChange, onError) {
+    if (!(sinceMs > 0)) return null;
+    const q = facilityQuery({ ...filters, lastUpdatedAfter: new Date(sinceMs) });
+    return onSnapshot(q, (snap) => {
+        const changes = deltaChanges(snap, undefined, facilityLocalFilter(filters), 'healthFacilities');
+        if (changes.upserts.length || changes.removed.length) onChange(changes);
+    }, onError);
+}
+
+// --- IMCI OPERATIONAL GUIDE: DAILY EVALUATION ---
+// Exercise monitoring goes through the normal course monitoring (cases +
+// observations). The daily evaluation is anonymous participant feedback from a
+// public link, saved with lastUpdatedAt / isDeleted and written through
+// executeOfflineSafeWrite so it queues when offline.
+
+// Cases of one course (the operational guide exercise monitoring summary).
+export async function listCasesForCourse(courseId, sourceOptions = {}) {
+    const q = query(collection(db, "cases"), where("courseId", "==", courseId));
+    const snapshot = await getDocs(q, sourceOptions);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.isDeleted !== true);
+}
+
+export async function getDailyEvalForm(formId) {
+    const snap = await getDoc(doc(db, "dailyEvalForms", formId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function saveDailyEvalForm(formId, form) {
+    const data = { ...form, id: formId, lastUpdatedAt: serverTimestamp() };
+    const uid = firebaseAuth.currentUser?.uid || null;
+    if (uid) data.updatedByUid = uid;
+    return executeOfflineSafeWrite(setDoc(doc(db, "dailyEvalForms", formId), data, { merge: true }), 'Daily evaluation form');
+}
+
+export async function submitDailyEvalResponse(response) {
+    const ref = doc(collection(db, "dailyEvalResponses"));
+    const data = { ...response, id: ref.id, isDeleted: false, createdAt: serverTimestamp() };
+    const uid = firebaseAuth.currentUser?.uid || null;
+    if (uid) data.createdByUid = uid; // the form stays anonymous: no name, uid only marks a signed-in device
+    return executeOfflineSafeWrite(setDoc(ref, data), 'Daily evaluation');
+}
+
+export async function listDailyEvalResponses(courseId) {
+    const q = query(collection(db, "dailyEvalResponses"), where("courseId", "==", courseId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.isDeleted);
 }

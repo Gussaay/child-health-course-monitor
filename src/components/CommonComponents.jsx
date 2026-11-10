@@ -49,7 +49,7 @@ export function FilterPanel({ activeCount = 0, className = '', children }) {
     const [open, setOpen] = useState(false);
     const tools = useContext(PageToolsContext);
     return (
-        <div className={`ignore-for-export sticky md:static z-20 top-[calc(var(--app-top,0px)+var(--tabs-h,0px)+4px)] ${className}`}>
+        <div className={`ignore-for-export relative z-20 ${className}`}>
             <div className="md:hidden flex items-center gap-2">
                 <button
                     type="button"
@@ -98,6 +98,44 @@ export function PageActions({ children, keep = 1, className = '' }) {
             {extra > 1 && items.slice(keep).map((child, i) => (
                 <div key={child.key ?? i} className={`${open ? 'w-full [&>*]:w-full [&>*]:justify-start' : 'hidden'} md:contents`}>{child}</div>
             ))}
+        </div>
+    );
+}
+
+// A button that opens a short list of related actions (for example "Export"
+// holding Excel and the PDF choices), so a page's tool row stays one line.
+// Its children are ordinary Buttons; choosing one closes the list.
+export function MenuButton({ label, icon: Icon, children, className = '' }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        if (!open) return undefined;
+        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('pointerdown', close);
+        return () => document.removeEventListener('pointerdown', close);
+    }, [open]);
+    const items = React.Children.toArray(children);
+    if (items.length === 0) return null;
+    return (
+        <div ref={ref} className={`relative ${className}`}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-expanded={open}
+                className={`h-[38px] px-3 rounded-md border flex items-center gap-1.5 text-sm font-semibold transition-colors ${open ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
+            >
+                {Icon && <Icon size={16} />}
+                {label}
+                <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && (
+                <div
+                    onClick={() => setOpen(false)}
+                    className="absolute start-0 top-full z-40 mt-1 flex w-max max-w-[85vw] min-w-full flex-col gap-1 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg [&>*]:w-full [&>*]:justify-start [&>*]:shadow-none"
+                >
+                    {items}
+                </div>
+            )}
         </div>
     );
 }
@@ -156,6 +194,34 @@ export function PullToRefresh({ onRefresh, disabled = false }) {
         </div>
     );
 }
+
+// The one menu tile used by every "choose where to go" screen: the main menu,
+// course packages, Child Health Services, Human Resources, mentorship and
+// supervision. One big icon in the app's colour, a short bold name and an
+// optional small line under it.
+export function MenuTile({ icon: Icon, iconNode, label, hint, title, onClick, disabled = false, active = false, className = '' }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            title={title}
+            className={`flex w-full flex-col items-center justify-center gap-2 md:gap-3 rounded-lg border bg-white px-2 py-4 md:p-6 text-center shadow-sm transition-all duration-150 ${active ? 'border-sky-500 ring-2 ring-sky-500' : 'border-slate-200'} ${disabled ? 'opacity-60 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50 hover:text-sky-600 hover:shadow-md active:scale-[0.98]'} ${className}`}
+        >
+            {iconNode || (Icon && <Icon className="h-9 w-9 md:h-12 md:w-12 shrink-0 text-sky-500" strokeWidth={1.75} />)}
+            <span className="text-[15px] md:text-lg font-semibold leading-snug">{label}</span>
+            {hint && <span className="-mt-1 text-xs text-slate-500 leading-snug">{hint}</span>}
+        </button>
+    );
+}
+
+// Icon size and colour for a hand-drawn icon passed to MenuTile as `iconNode`.
+export const MENU_ICON_CLASS = 'h-9 w-9 md:h-12 md:w-12 shrink-0 text-sky-500';
+
+// The grid that holds MenuTiles: two per row on phones.
+export const MenuGrid = ({ children, columns = 'sm:grid-cols-3 lg:grid-cols-4', className = '' }) => (
+    <div className={`grid grid-cols-2 gap-3 md:gap-4 ${columns} ${className}`}>{children}</div>
+);
 
 export const PageHeader = ({ title, subtitle, actions }) => {
     // Android app: the title is already in the top bar; keep only the buttons.
@@ -225,9 +291,17 @@ function usePinnedTabsHeight(ref) {
     }, [ref]);
 }
 
-// Page tabs. Phones: every tab in one row that never scrolls sideways, using
-// each tab's `short` name when it has one. Wider screens: the usual buttons.
+// Page tabs. Phones: every tab is on screen and nothing scrolls sideways. Up
+// to four tabs share one row; more wrap onto a second row so each name stays
+// readable (each tab's `short` name is used when it has one). Wider screens:
+// the usual buttons.
 // tabs: [{ id, label, short?, icon?, count?, disabled? }]
+// Tabs per row on a phone: one row up to four, two even rows after that.
+export function phoneTabColumns(count) {
+    if (count <= 4) return Math.max(count, 1);
+    return Math.min(4, Math.ceil(count / 2));
+}
+
 export function PageTabs({ tabs, active, onChange, className = '' }) {
     const visible = tabs.filter(Boolean);
     const navRef = useRef(null);
@@ -235,8 +309,12 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
     // Read by "Ask the data" (utils/pageSnapshot.js) to name the exact place an answer came from.
     const activeLabel = visible.find((tab) => tab.id === active)?.label;
     return (
-        <div data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 md:static sticky z-30 top-[calc(var(--app-top,0px)+4px)] ${className}`}>
-            <nav ref={navRef} className="md:hidden flex gap-0.5 rounded-xl bg-white p-1 border border-slate-200 shadow-sm">
+        <div data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 relative z-30 ${className}`}>
+            <nav
+                ref={navRef}
+                className="md:hidden grid gap-1 rounded-xl bg-white p-1 border border-slate-200 shadow-sm"
+                style={{ gridTemplateColumns: `repeat(${phoneTabColumns(visible.length)}, minmax(0, 1fr))` }}
+            >
                 {visible.map(tab => {
                     const on = active === tab.id;
                     return (
@@ -246,10 +324,10 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
                             onClick={() => onChange(tab.id)}
                             disabled={tab.disabled}
                             title={typeof tab.label === 'string' ? tab.label : undefined}
-                            className={`relative min-w-0 disabled:opacity-40 rounded-lg px-1 py-1.5 text-xs font-bold leading-tight text-center transition-colors ${on ? 'shrink-0 bg-sky-600 text-white shadow-sm' : 'flex-auto text-slate-500 active:bg-sky-50'}`}
+                            className={`relative min-w-0 min-h-[36px] disabled:opacity-40 rounded-lg px-1.5 py-1.5 text-[13px] font-semibold leading-tight text-center transition-colors ${on ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 active:bg-sky-50'}`}
                         >
-                            <span className="block truncate">{tab.short || tab.label}</span>
-                            {tab.count > 0 && <span className="absolute -top-1.5 -end-0.5 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-xs leading-4 text-white">{tab.count}</span>}
+                            <span className="block break-words">{tab.short || tab.label}</span>
+                            {tab.count > 0 && <span className="absolute -top-1 end-0 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-xs leading-4 text-white">{tab.count}</span>}
                         </button>
                     );
                 })}
@@ -459,7 +537,10 @@ export const EmptyState = ({ message, title, hint, icon, action, filtered = fals
     const block = (
         <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400" aria-hidden="true">
-                <Icon className="h-5 w-5" />
+                {/* icon may be a component (icon={Inbox}) or an element
+                    (icon={<Inbox />}); rendering an element as a component
+                    is React error #130 and blanked Admin → AI activity. */}
+                {React.isValidElement(Icon) ? Icon : <Icon className="h-5 w-5" />}
             </span>
             {title && <p className="font-semibold text-slate-800">{title}</p>}
             {message && <p className={title ? 'max-w-md text-sm text-slate-500' : 'max-w-md text-sm font-medium text-slate-600'}>{message}</p>}

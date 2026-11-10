@@ -895,3 +895,55 @@ describe('mentorship visits — mentors on the public submission link', () => {
         await assertFails(getDocs(collection(as('plainUser'), 'imnciVisitReports')));
     });
 });
+
+// =============================================================================
+// usageMonthly / usageBills — the cost tracking in the admin usage tab.
+// =============================================================================
+describe('usageMonthly — each device adds to its own month, only a super user reads', () => {
+    const entry = (month) => ({ month, email: 'x@example.org', reads: 5, writes: 1 });
+
+    it('lets a signed-in user write their own monthly document', async () => {
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'usageMonthly', '2026-11_plainUser'), entry('2026-11'), { merge: true }));
+    });
+    it('refuses writing another user\'s document, or one whose id does not match its month', async () => {
+        await assertFails(setDoc(doc(as('plainUser'), 'usageMonthly', '2026-11_facilitator'), entry('2026-11')));
+        await assertFails(setDoc(doc(as('plainUser'), 'usageMonthly', '2026-10_plainUser'), entry('2026-11')));
+        await assertFails(setDoc(doc(anonymous(), 'usageMonthly', '2026-11_plainUser'), entry('2026-11')));
+    });
+    it('lets only a super user read them, and nobody delete', async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'usageMonthly', '2026-11_plainUser'), entry('2026-11'));
+        });
+        await assertSucceeds(getDocs(collection(as('superUser'), 'usageMonthly')));
+        await assertFails(getDocs(collection(as('federalManager'), 'usageMonthly')));
+        await assertFails(getDoc(doc(as('plainUser'), 'usageMonthly', '2026-11_plainUser')));
+        await assertFails(deleteDoc(doc(as('superUser'), 'usageMonthly', '2026-11_plainUser')));
+    });
+    it('keeps the typed-in bill to the super user', async () => {
+        await assertSucceeds(setDoc(doc(as('superUser'), 'usageBills', '2026-11'), { actualUsd: 8 }));
+        await assertFails(setDoc(doc(as('federalManager'), 'usageBills', '2026-11'), { actualUsd: 8 }));
+        await assertFails(getDoc(doc(as('plainUser'), 'usageBills', '2026-11')));
+    });
+});
+
+// =============================================================================
+// IMCI operational guide workshop: daily evaluation, filled from a public
+// link signed in or not.
+// =============================================================================
+describe('dailyEval — staff set up the form, anyone answers, staff read answers', () => {
+    const answer = (over = {}) => ({ formId: 'publicCourse_2026-11-10', courseId: 'publicCourse', date: '2026-11-10', dayNumber: 1, lectures: {}, general: {}, ...over });
+
+    it('lets staff set up the form and anyone read it', async () => {
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'dailyEvalForms', 'publicCourse_2026-11-10'), { courseId: 'publicCourse', dayNumber: 1, lectures: [], general: [] }));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalForms', 'x'), { courseId: 'publicCourse' }));
+        await assertSucceeds(getDoc(doc(anonymous(), 'dailyEvalForms', 'publicCourse_2026-11-10')));
+    });
+    it('lets anyone send one answer, nobody change it, only staff read it', async () => {
+        await assertSucceeds(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r1'), answer()));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'dailyEvalResponses', 'r2'), answer()));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r3'), answer({ formId: 'otherCourse_2026-11-10' })));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r1'), answer({ dayNumber: 2 })));
+        await assertFails(getDoc(doc(anonymous(), 'dailyEvalResponses', 'r1')));
+        await assertSucceeds(getDoc(doc(as('facilitator'), 'dailyEvalResponses', 'r1')));
+    });
+});

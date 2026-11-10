@@ -2,7 +2,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
-import html2canvas from 'html2canvas';
+import html2canvas from '../utils/html2canvasLight';
 import { Bar, Line } from 'react-chartjs-2';
 import {Button, Card, EmptyState, PageHeader, PdfIcon, Table, Spinner, Modal, Input, FormGroup, Select, PageSkeleton } from './CommonComponents';
 import {

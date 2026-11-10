@@ -1,7 +1,7 @@
 // src/components/ServiceCoverageDashboard.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import html2canvas from 'html2canvas';
+import html2canvas from '../utils/html2canvasLight';
 import * as XLSX from 'xlsx';
 import { Card, FormGroup, Select, FilterPanel, SkeletonTable, Skeleton } from './CommonComponents';
 import { useDataCache } from '../DataContext';

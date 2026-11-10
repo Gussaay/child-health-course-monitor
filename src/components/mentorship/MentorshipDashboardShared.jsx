@@ -1,6 +1,6 @@
 // MentorshipDashboardShared.jsx
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import html2canvas from 'html2canvas';
+import html2canvas, { runInLight } from '../../utils/html2canvasLight';
 import { Line, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -246,7 +246,7 @@ export const CopyImageButton = ({ targetRef, title, kind = 'chart' }) => {
 
             try {
                 const htmlToImage = await import('html-to-image');
-                blob = await htmlToImage.toBlob(node, {
+                blob = await runInLight(() => htmlToImage.toBlob(node, {
                     backgroundColor: '#ffffff',
                     pixelRatio: 2,
                     cacheBust: true,
@@ -257,7 +257,7 @@ export const CopyImageButton = ({ targetRef, title, kind = 'chart' }) => {
                     style: {
                         margin: '0',
                     }
-                });
+                }));
             } catch (e) {
                 blob = null; 
             }

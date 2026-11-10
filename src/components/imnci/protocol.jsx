@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, PageHeader, Button, Spinner } from '../CommonComponents';
 import { useDataCache } from '../../DataContext';
-import { saveIMNCIProtocol } from '../../data';
+import { saveIMNCIProtocol, appendIMNCIProtocolHistory, getIMNCIProtocolHistory } from '../../data';
+import { auth } from '../../firebase';
 import { notify, confirmDialog, promptDialog } from '../dialogs';
 // The same four severities the online course books colour their classification
 // tables with, and that the patient form compares against by value. Defined
@@ -9,9 +10,15 @@ import { notify, confirmDialog, promptDialog } from '../dialogs';
 // drift into three different spellings of "yellow".
 import { IMNCI_SEVERITIES } from '../constants';
 import { NATIONAL_PROTOCOLS, NATIONAL_SAVE_ORDER } from './nationalProtocol';
-import { BookletProtocolView, BookletDoseView } from './bookletView';
+import { BookletProtocolView, BookletDoseView, SignsPicker, ClassificationPicker, TreatmentEditor, editorLists } from './bookletView';
+import { NATIONAL_FORMS } from './recordingForms';
+import { RecordingFormView } from './recordingFormView';
+import { NATIONAL_GUIDES } from './treatmentGuides';
+import { GuideBlock, addGuideBox } from './treatmentGuideView';
+import { GENERAL, FORM, topicsFor, drugsForTopic, guideForTopic, groupForNewBox } from './topics';
+import { diffProtocol, currentEditor } from './protocolHistory';
 import { useTranslation } from 'react-i18next';
-import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, BookOpen, Pencil } from 'lucide-react';
+import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, Pencil, Settings2, History, ClipboardList, Baby, User, ListChecks, MessageCircle, CalendarClock, Stethoscope, BookOpen } from 'lucide-react';
 
 // --- Predefined Conditions Mapping for Dropdowns ---
 const CHILD_CONDITIONS = [
@@ -259,51 +266,96 @@ export function validateProtocol(formType, data, dosageList = []) {
     return { errors, warnings };
 }
 
-// --- Custom Treatment Adder Component ---
-const CustomTreatmentAdder = ({ onAdd, dosages }) => {
-    const { t } = useTranslation();
-    const [val, setVal] = useState('');
-    return (
-        <div className="flex flex-col gap-1.5 mt-auto pt-3 border-t border-emerald-200">
-            <label className="text-xs font-bold text-emerald-800 uppercase">{t('clinical_ui.protocol.custom.title', 'Add Custom Treatment (If not in list)')}</label>
-            <div className="flex flex-col xl:flex-row gap-1.5 items-stretch xl:items-center">
-                <select 
-                    className="text-xs p-1.5 border border-emerald-300 rounded w-full xl:w-28 bg-emerald-50 text-emerald-800 font-bold" 
-                    onChange={(e) => { setVal(v => v + (v ? ' ' : '') + `{{dose:${e.target.value}}}`); e.target.value = ''; }}
-                >
-                    <option value="">{t('clinical_ui.protocol.custom.dose_tag', '+ Dose Tag')}</option>
-                    {dosages.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-                </select>
-                <input 
-                    type="text" 
-                    value={val} 
-                    onChange={e => setVal(e.target.value)} 
-                    placeholder={t('clinical_ui.protocol.custom.placeholder', 'Type custom text...')} 
-                    className="flex-1 text-xs p-1.5 border border-slate-300 rounded focus:ring-sky-500" 
-                    dir="auto"
-                />
-                <button 
-                    onClick={() => { if(val.trim()) { onAdd(val.trim()); setVal(''); } }} 
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors shrink-0"
-                >
-                    {t('clinical_ui.protocol.custom.add', 'Add')}
-                </button>
-            </div>
-        </div>
-    );
+// The page is two parts, sick child and young infant. Each part has one tab per
+// illness (topics.js): the classification table, then its doses, treatment,
+// counselling and follow-up, one after the other. Behind them are still four
+// protocol documents per part, all held here at once, so moving between tabs
+// never loses an edit and Save writes every document that changed.
+const PARTS = ['child', 'infant'];
+const docTypes = (part) => ({ classify: part, drugs: `dosages_${part}`, guide: `guide_${part}`, form: `form_${part}` });
+const ALL_TYPES = PARTS.flatMap((p) => Object.values(docTypes(p)));
+// Doses before the rules that point at them, so a new dose is saved before
+// the line that uses it is checked against the database.
+const SAVE_ORDER = ['dosages_child', 'dosages_infant', 'child', 'infant', 'guide_child', 'guide_infant', 'form_child', 'form_infant'];
+// Text-only documents (recording forms, treatment tables): nothing to validate,
+// and no rule builder.
+const isTextType = (ft) => ft.startsWith('form_') || ft.startsWith('guide_');
+const NATIONAL_TEXT = { ...NATIONAL_FORMS, ...NATIONAL_GUIDES };
+const clone = (v) => JSON.parse(JSON.stringify(v));
+// A document nobody has saved yet: the national text for forms and tables,
+// otherwise empty.
+const defaultDoc = (ft) => (NATIONAL_TEXT[ft] ? clone(NATIONAL_TEXT[ft])
+    : ft.startsWith('dosages') ? { formType: ft, version: '1.0', drugs: [] }
+        : { formType: ft, version: '1.0', categories: {} });
+const TOPIC_LABELS = {
+    danger: 'Danger signs', cough: 'Pneumonia / cough', diarrhea: 'Diarrhoea', fever: 'Fever, malaria & measles',
+    ear: 'Ear problem', malnutrition: 'Malnutrition', anemia: 'Anaemia',
+    bacterial_infection: 'Bacterial infection', jaundice: 'Jaundice', feeding_problem: 'Feeding & low weight',
+    [GENERAL]: 'General', [FORM]: 'Recording form',
 };
+// A history entry is kept small: one Firestore document holds a month of them.
+const MAX_CHANGES = 150;
+
+// Who changed what, newest first.
+const HistoryPanel = ({ entries, loading, onClose, t }) => (
+    <div className="border border-slate-300 bg-white rounded-md shadow-sm">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2"><History size={16} /> {t('clinical_ui.protocol.history.title', 'Change history')}</h3>
+            <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-800" aria-label={t('clinical_ui.protocol.btn.close', 'Close')}><X size={16} /></button>
+        </div>
+        <div className="max-h-[28rem] overflow-y-auto divide-y divide-slate-100">
+            {loading && <div className="p-4 text-center text-slate-500">{t('clinical_ui.protocol.history.loading', 'Loading history…')}</div>}
+            {!loading && entries.length === 0 && <div className="p-4 text-center text-slate-500">{t('clinical_ui.protocol.history.empty', 'No changes recorded yet.')}</div>}
+            {!loading && entries.map((e, i) => (
+                <details key={`${e.at}_${i}`} className="px-3 py-2">
+                    <summary className="cursor-pointer list-none">
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                            <span className="font-bold text-slate-900">{e.name || e.email || '—'}</span>
+                            {e.role && <span className="text-[11px] font-bold uppercase bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{e.role}</span>}
+                            <span className="text-xs text-slate-600">{e.at ? new Date(e.at).toLocaleString() : ''}</span>
+                        </div>
+                        <div className="text-xs text-slate-700 mt-0.5">
+                            {t(`clinical_ui.protocol.history.tab.${e.formType}`, e.formType)}
+                            {' · '}
+                            {e.summary || t('clinical_ui.protocol.history.count', '{{count}} change(s)', { count: (e.changes || []).length })}
+                        </div>
+                    </summary>
+                    {(e.changes || []).length > 0 && (
+                        <ul className="mt-2 space-y-1.5 text-xs">
+                            {e.changes.map((c, k) => (
+                                <li key={k} className="border-s-2 border-sky-300 ps-2">
+                                    <div className="font-bold text-slate-800" dir="auto">{c.where}</div>
+                                    {c.before && <div className="text-red-800" dir="auto"><span className="font-bold">{t('clinical_ui.protocol.history.before', 'Before')}:</span> {c.before}</div>}
+                                    {c.after && <div className="text-emerald-800" dir="auto"><span className="font-bold">{t('clinical_ui.protocol.history.after', 'After')}:</span> {c.after}</div>}
+                                </li>
+                            ))}
+                            {e.more > 0 && <li className="text-slate-500">{t('clinical_ui.protocol.history.more', '…and {{count}} more', { count: e.more })}</li>}
+                        </ul>
+                    )}
+                </details>
+            ))}
+        </div>
+    </div>
+);
 
 export default function ProtocolEditor() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const ar = i18n.language === 'ar';
     const { protocols, fetchProtocols, isLoading } = useDataCache();
-    const [activeTab, setActiveTab] = useState('child'); 
-    const [editorData, setEditorData] = useState(null);
+    const [part, setPart] = useState('child');
+    const [topicChoice, setTopicChoice] = useState({});
+    // Every protocol document of both parts, by formType, as being edited.
+    const [docs, setDocs] = useState({});
     const [isSaving, setIsSaving] = useState(false);
     const [search, setSearch] = useState('');
     const [issues, setIssues] = useState(null);
-    // 'booklet' shows the protocol as the national chart booklet prints it;
-    // 'edit' is the rule builder.
-    const [viewMode, setViewMode] = useState('booklet');
+    // Read-only until Edit is pressed. Editing shows the same layout with every
+    // cell editable; Advanced is the rule builder (conditions and logic).
+    const [editing, setEditing] = useState(false);
+    const [advanced, setAdvanced] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [history, setHistory] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
     // 'offline' | 'failed' | null. Set when the protocols could not be read, so
     // the page says so instead of spinning forever.
     const [loadError, setLoadError] = useState(null);
@@ -324,52 +376,45 @@ export default function ProtocolEditor() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // A snapshot of what was loaded, so "has this been edited" is a fact rather
-    // than a flag someone has to remember to set in every handler.
-    const baselineRef = useRef('');
-    const isDirty = !!editorData && JSON.stringify(editorData) !== baselineRef.current;
-
-    // The doses a treatment may legitimately reference. Deliberately the SAVED
-    // dosages, not anything unsaved in the other tab: the clinical engine reads
-    // what is in the database, so that is what a dose tag has to resolve against.
-    const dosageListForValidation = useMemo(() => {
-        const target = activeTab === 'child' ? 'dosages_child'
-            : activeTab === 'infant' ? 'dosages_infant' : null;
-        return target ? (protocols?.[target]?.drugs || []) : [];
-    }, [protocols, activeTab]);
+    // A snapshot of what was loaded, per document, so "has this been edited"
+    // is a fact rather than a flag someone has to remember to set.
+    const baselineRef = useRef({});
+    const dirtyTypes = ALL_TYPES.filter((ft) => docs[ft] && JSON.stringify(docs[ft]) !== baselineRef.current[ft]);
+    const isDirty = dirtyTypes.length > 0;
+    const setDoc = (ft, data) => setDocs((prev) => ({ ...prev, [ft]: data }));
 
     // Accordion States for Compact Layout
     const [expandedCats, setExpandedCats] = useState({});
     const [expandedRules, setExpandedRules] = useState({});
     const [expandedDrugs, setExpandedDrugs] = useState({});
 
-    // Loads the protocol for the active tab.
+    // Loads every document.
     //
     // The guard is the point. This effect depends on `protocols`, so ANY refresh
     // of the cache used to overwrite the editor — an hour of rule authoring
-    // replaced by the server copy, with no warning and no undo. It now refuses
-    // to overwrite unsaved work; the tab switch below is the one place that
-    // discards edits, and it asks first.
+    // replaced by the server copy, with no warning and no undo. A document with
+    // unsaved edits is never overwritten; the others take the fresh copy.
     useEffect(() => {
-        if (isDirty) return;
-
-        if (protocols && protocols[activeTab]) {
-            const fresh = JSON.parse(JSON.stringify(protocols[activeTab]));
-            baselineRef.current = JSON.stringify(fresh);
-            setEditorData(fresh);
-        } else if (protocols && !Array.isArray(protocols)) {
-            // Only once the protocols really loaded. Starting from a blank
-            // protocol after a FAILED load would let a save wipe the live rules.
-            const defaultStructure = activeTab.startsWith('dosages')
-                ? { formType: activeTab, version: "1.0", drugs: [] }
-                : { formType: activeTab, version: "1.0", categories: {} };
-            baselineRef.current = JSON.stringify(defaultStructure);
-            setEditorData(defaultStructure);
-        }
-        // isDirty is read, not depended on: adding it would re-run the effect
-        // the moment the edits were discarded and reload mid-keystroke.
+        // Only once the protocols really loaded. Starting from a blank
+        // protocol after a FAILED load would let a save wipe the live rules.
+        if (!protocols || Array.isArray(protocols)) return;
+        const next = { ...docs };
+        let changed = false;
+        ALL_TYPES.forEach((ft) => {
+            const cur = docs[ft];
+            if (cur && JSON.stringify(cur) !== baselineRef.current[ft]) return;
+            const fresh = protocols[ft] ? clone(protocols[ft]) : defaultDoc(ft);
+            const json = JSON.stringify(fresh);
+            if (cur && json === baselineRef.current[ft]) return;
+            baselineRef.current[ft] = json;
+            next[ft] = fresh;
+            changed = true;
+        });
+        if (changed) setDocs(next);
+        // docs is read, not depended on: adding it would re-run the effect on
+        // every keystroke.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [protocols, activeTab, isLoading.imnciProtocols]);
+    }, [protocols, isLoading.imnciProtocols]);
 
     // Closing the tab is the other way an hour of work disappears.
     useEffect(() => {
@@ -379,24 +424,42 @@ export default function ProtocolEditor() {
         return () => window.removeEventListener('beforeunload', warn);
     }, [isDirty]);
 
-    const switchTab = async (next) => {
-        if (next === activeTab) return;
-        if (isDirty && !await confirmDialog(
-            t('clinical_ui.protocol.dlg.discard_msg', 'You have unsaved changes to this protocol. Switching tabs will discard them. Continue?'),
-            { title: t('clinical_ui.protocol.dlg.discard_title', 'Discard changes'), confirmLabel: t('clinical_ui.protocol.dlg.discard', 'Discard'), danger: true }
-        )) return;
-        baselineRef.current = '';   // force a reload for the tab being opened
-        setEditorData(null);
-        setIssues(null);
-        setActiveTab(next);
-    };
+    const types = docTypes(part);
+    const classKey = types.classify;
+    const doseKey = types.drugs;
+    const guideKey = types.guide;
+    const formKey = types.form;
+    const classDoc = docs[classKey];
+    const doseDoc = docs[doseKey];
+    const guideDoc = docs[guideKey];
+
+    const topics = classDoc ? topicsFor(part, classDoc) : [];
+    const topic = topics.find((tp) => tp.id === topicChoice[part]) ? topicChoice[part] : (topics[0]?.id || GENERAL);
+    const isFormTab = topic === FORM;
+    const viewMode = !editing ? 'booklet' : (advanced && !isFormTab ? 'advanced' : 'edit');
+    const openTopic = (id) => { setTopicChoice((prev) => ({ ...prev, [part]: id })); setSearch(''); };
+    // Nothing is lost by changing part or tab: every document stays in the editor.
+    const switchPart = (next) => { if (next !== part) { setPart(next); setIssues(null); setSearch(''); } };
+
+    const docName = (ft) => t(`clinical_ui.protocol.history.tab.${ft}`, ft);
 
     const handleSave = async () => {
-        if (!editorData) return;
+        const toSave = SAVE_ORDER.filter((ft) => dirtyTypes.includes(ft));
+        if (!toSave.length) return;
 
         // Checked before the write, not after. A protocol with a dangling dose
-        // tag saves perfectly happily and only fails at the bedside.
-        const { errors, warnings } = validateProtocol(activeTab, editorData, dosageListForValidation);
+        // tag saves perfectly happily and only fails at the bedside. Rules are
+        // checked against the doses as they will be once this save is done
+        // (doses are saved first). Forms and tables are text only.
+        const errors = [];
+        const warnings = [];
+        toSave.filter((ft) => !isTextType(ft)).forEach((ft) => {
+            const doses = PARTS.includes(ft) ? (docs[`dosages_${ft}`]?.drugs || []) : [];
+            const r = validateProtocol(ft, docs[ft], doses);
+            const tag = (m) => ({ ...m, message: `${docName(ft)}: ${m.message}` });
+            errors.push(...r.errors.map(tag));
+            warnings.push(...r.warnings.map(tag));
+        });
         setIssues({ errors, warnings });
 
         if (errors.length > 0) {
@@ -410,9 +473,16 @@ export default function ProtocolEditor() {
 
         setIsSaving(true);
         try {
-            await saveIMNCIProtocol(activeTab, editorData);
-            baselineRef.current = JSON.stringify(editorData);
+            for (const ft of toSave) {
+                const data = docs[ft];
+                let before = null;
+                try { before = baselineRef.current[ft] ? JSON.parse(baselineRef.current[ft]) : null; } catch { before = null; }
+                await saveIMNCIProtocol(ft, data);
+                baselineRef.current[ft] = JSON.stringify(data);
+                await recordHistory(ft, diffProtocol(ft, before, data));
+            }
             setIssues(null);
+            setEditing(false);
             notify(t('clinical_ui.protocol.toast.saved', 'Protocol saved. It is now live for every clinician.'), 'success');
             await fetchProtocols(true);
         } catch (error) {
@@ -423,22 +493,59 @@ export default function ProtocolEditor() {
         }
     };
 
-    const handleLoadDefaults = async () => {
-        if (await confirmDialog(
-            t('clinical_ui.protocol.dlg.load_msg', 'This loads the standard English IMNCI protocol for [{{tab}}] into the editor. Any unsaved changes will be lost, and nothing is written to the database until you save.', { tab: activeTab }),
-            { title: t('clinical_ui.protocol.dlg.load_title', 'Load defaults'), confirmLabel: t('clinical_ui.protocol.dlg.load', 'Load'), danger: true }
-        )) {
-            setIssues(null);
-            // A copy: editing used to change the built-in protocol itself.
-            setEditorData(JSON.parse(JSON.stringify(NATIONAL_PROTOCOLS[activeTab])));
+    // Who, their role, what changed and when. A failed history write never
+    // undoes the save; it is reported so it can be looked into.
+    const recordHistory = async (formType, changes, summary = '') => {
+        if (!changes.length && !summary) return;
+        try {
+            await appendIMNCIProtocolHistory({
+                ...currentEditor(auth?.currentUser),
+                formType,
+                summary,
+                changes: changes.slice(0, MAX_CHANGES),
+                more: Math.max(0, changes.length - MAX_CHANGES),
+            });
+            if (showHistory) await loadHistory();
+        } catch (error) {
+            console.error('Protocol history write failed:', error);
+            notify(t('clinical_ui.protocol.toast.history_failed', 'Saved, but the change could not be added to the history.'), 'warning');
         }
     };
 
-    // All four tabs at once, Doses first. Saving the rules before their Doses
-    // tab is what produced one "dose does not exist" error per treatment line.
+    const loadHistory = async () => {
+        setHistoryLoading(true);
+        try { setHistory(await getIMNCIProtocolHistory()); } catch (error) {
+            console.error('Protocol history read failed:', error);
+            setHistory([]);
+        } finally { setHistoryLoading(false); }
+    };
+    const toggleHistory = async () => {
+        const next = !showHistory;
+        setShowHistory(next);
+        if (next) await loadHistory();
+    };
+
+    const startEditing = () => { setIssues(null); setEditing(true); };
+    const cancelEditing = async () => {
+        if (isDirty && !await confirmDialog(
+            t('clinical_ui.protocol.dlg.cancel_msg', 'Discard the changes you made since the last save?'),
+            { title: t('clinical_ui.protocol.dlg.discard_title', 'Discard changes'), confirmLabel: t('clinical_ui.protocol.dlg.discard', 'Discard'), danger: true }
+        )) return;
+        setDocs((prev) => {
+            const next = { ...prev };
+            dirtyTypes.forEach((ft) => { if (baselineRef.current[ft]) next[ft] = JSON.parse(baselineRef.current[ft]); });
+            return next;
+        });
+        setIssues(null);
+        setEditing(false);
+    };
+
+    // All four rule and dose documents at once, Doses first. Saving the rules
+    // before their Doses tab is what produced one "dose does not exist" error
+    // per treatment line.
     const handleLoadNational = async () => {
         if (!await confirmDialog(
-            t('clinical_ui.protocol.dlg.national_msg', 'This replaces all four tabs (sick child, young infant and both Doses tabs) with the Sudan national IMNCI protocol and saves them now. Every clinician sees it straight away. Any changes made here before are replaced.'),
+            t('clinical_ui.protocol.dlg.national_msg', 'This saves the Sudan national IMNCI protocol for the sick child and the young infant (classification, drugs and recording forms). Every clinician sees it straight away. After this, changes are made with Edit.'),
             { title: t('clinical_ui.protocol.dlg.national_title', 'Load national protocol'), confirmLabel: t('clinical_ui.protocol.dlg.national_confirm', 'Load and save'), danger: true }
         )) return;
 
@@ -455,13 +562,20 @@ export default function ProtocolEditor() {
         setIsSaving(true);
         try {
             for (const formType of NATIONAL_SAVE_ORDER) {
-                await saveIMNCIProtocol(formType, JSON.parse(JSON.stringify(NATIONAL_PROTOCOLS[formType])));
+                await saveIMNCIProtocol(formType, clone(NATIONAL_PROTOCOLS[formType]));
             }
-            const fresh = JSON.parse(JSON.stringify(NATIONAL_PROTOCOLS[activeTab]));
-            baselineRef.current = JSON.stringify(fresh);
-            setEditorData(fresh);
+            for (const formType of Object.keys(NATIONAL_TEXT)) {
+                if (!protocols?.[formType]) await saveIMNCIProtocol(formType, clone(NATIONAL_TEXT[formType]));
+            }
+            const fresh = {};
+            NATIONAL_SAVE_ORDER.forEach((ft) => {
+                fresh[ft] = clone(NATIONAL_PROTOCOLS[ft]);
+                baselineRef.current[ft] = JSON.stringify(fresh[ft]);
+            });
+            setDocs((prev) => ({ ...prev, ...fresh }));
             setIssues(null);
-            notify(t('clinical_ui.protocol.toast.national_saved', 'The national protocol is saved in all four tabs and is now live for every clinician.'), 'success');
+            notify(t('clinical_ui.protocol.toast.national_saved', 'The national protocol is saved and is now live for every clinician.'), 'success');
+            await recordHistory('national', [], 'Loaded the Sudan national protocol');
             await fetchProtocols(true);
         } catch (error) {
             console.error('National protocol save failed:', error);
@@ -482,22 +596,25 @@ export default function ProtocolEditor() {
     const toggleDrug = (drugIndex) => setExpandedDrugs(prev => ({...prev, [drugIndex]: !prev[drugIndex]}));
 
     // ========================================================================
-    // CLINICAL CATEGORY HANDLERS
+    // CLINICAL CATEGORY HANDLERS (the part's classification document)
     // ========================================================================
+    const setClass = (data) => setDoc(classKey, data);
     const addNewCategory = async () => {
         const catKey = await promptDialog(
             t('clinical_ui.protocol.dlg.add_cat_msg', "Enter a unique short key for this category (e.g. 'fever', 'cough'):"),
             { title: t('clinical_ui.protocol.dlg.add_cat_title', 'Add category') }
         );
         if (!catKey || catKey.trim() === '') return;
-        if (editorData.categories[catKey]) {
+        if (classDoc.categories[catKey]) {
             notify(t('clinical_ui.protocol.toast.cat_exists', 'A category with this key already exists.'), 'error');
             return;
         }
-        const newData = { ...editorData };
+        const newData = { ...classDoc, categories: { ...(classDoc.categories || {}) } };
         newData.categories[catKey] = { title: "New Category", rules: [] };
-        setEditorData(newData);
+        setClass(newData);
         setExpandedCats(prev => ({...prev, [catKey]: true}));
+        // A table of its own gets a tab of its own.
+        openTopic(catKey);
     };
 
     const removeCategory = async (catKey, e) => {
@@ -506,81 +623,82 @@ export default function ProtocolEditor() {
             t('clinical_ui.protocol.dlg.del_cat_msg', "Delete the entire '{{key}}' category and all its rules?", { key: catKey }),
             { title: t('clinical_ui.protocol.dlg.del_cat_title', 'Delete category'), confirmLabel: t('clinical_ui.protocol.dlg.delete', 'Delete'), danger: true }
         )) {
-            const newData = { ...editorData };
+            const newData = { ...classDoc };
             delete newData.categories[catKey];
-            setEditorData(newData);
+            setClass(newData);
         }
     };
 
     const handleCategoryChange = (catKey, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         newData.categories[catKey][field] = value;
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const handleRuleChange = (catKey, ruleIndex, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         newData.categories[catKey].rules[ruleIndex][field] = value;
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const handleClassificationChange = (catKey, ruleIndex, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         newData.categories[catKey].rules[ruleIndex].classification[field] = value;
-        setEditorData(newData);
+        setClass(newData);
+    };
+
+    // Page wording (title, question, ASK / LOOK, note, side labels), kept in
+    // the classification document over the booklet's printed words.
+    // Changed in place like the handlers above, so several changes made in one
+    // action (a new list entry, then the rule that uses it) all survive.
+    const handlePageChange = (pageId, field, value) => {
+        classDoc.pages = { ...(classDoc.pages || {}) };
+        classDoc.pages[pageId] = { ...(classDoc.pages[pageId] || {}), [field]: value };
+        setClass({ ...classDoc });
+    };
+
+    // A sign or classification added to the standard list.
+    const addStandardEntry = (listName, entry) => {
+        const list = classDoc[listName] || [];
+        if (list.some((e) => e.en === entry.en)) return;
+        classDoc[listName] = [...list, entry];
+        setClass({ ...classDoc });
     };
 
     const toggleCondition = (catKey, ruleIndex, condition) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         const currentConditions = newData.categories[catKey].rules[ruleIndex].conditions || [];
         if (currentConditions.includes(condition)) {
             newData.categories[catKey].rules[ruleIndex].conditions = currentConditions.filter(c => c !== condition);
         } else {
             newData.categories[catKey].rules[ruleIndex].conditions = [...currentConditions, condition];
         }
-        setEditorData(newData);
+        setClass(newData);
     };
 
-    const addTreatment = (catKey, ruleIndex, treatment) => {
-        const newData = { ...editorData };
-        const currentTreatments = newData.categories[catKey].rules[ruleIndex].treatments || [];
-        // Even if duplicate, allow it just in case they want to modify it differently
-        newData.categories[catKey].rules[ruleIndex].treatments = [...currentTreatments, treatment];
-        setEditorData(newData);
-    };
 
-    const editTreatment = (catKey, ruleIndex, tIdx, newText) => {
-        const newData = { ...editorData };
-        newData.categories[catKey].rules[ruleIndex].treatments[tIdx] = newText;
-        setEditorData(newData);
-    };
 
-    const removeTreatment = (catKey, ruleIndex, treatmentIndex) => {
-        const newData = { ...editorData };
-        newData.categories[catKey].rules[ruleIndex].treatments.splice(treatmentIndex, 1);
-        setEditorData(newData);
-    };
 
     // "Only when": conditions that must all be true before the rule is looked
     // at, such as "the child has cough" for the cough table.
     const toggleRequire = (catKey, ruleIndex, condition) => {
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         const target = newData.categories[catKey].rules[ruleIndex];
         const current = target.requires || [];
         target.requires = current.includes(condition) ? current.filter((c) => c !== condition) : [...current, condition];
         if (!target.requires.length) delete target.requires;
-        setEditorData(newData);
+        setClass(newData);
     };
 
     const addNewRule = (catKey, e) => {
         e.stopPropagation();
-        const newData = { ...editorData };
+        const newData = { ...classDoc };
         const newIndex = newData.categories[catKey].rules.length;
         newData.categories[catKey].rules.push({
             id: `rule_${Math.floor(Math.random() * 100000)}`, type: "ANY", conditions: [],
             classification: { label: "New Classification", color: IMNCI_SEVERITIES[3].protocolColor }, treatments: []
         });
-        setEditorData(newData);
+        setClass(newData);
         setExpandedRules(prev => ({...prev, [`${catKey}_${newIndex}`]: true}));
     };
 
@@ -588,23 +706,28 @@ export default function ProtocolEditor() {
         e.stopPropagation();
         if (await confirmDialog(t('clinical_ui.protocol.dlg.del_rule_msg', 'Delete this rule?'),
             { title: t('clinical_ui.protocol.dlg.del_rule_title', 'Delete rule'), confirmLabel: t('clinical_ui.protocol.dlg.delete', 'Delete'), danger: true })) {
-            const newData = { ...editorData };
+            const newData = { ...classDoc };
             newData.categories[catKey].rules.splice(ruleIndex, 1);
-            setEditorData(newData);
+            setClass(newData);
         }
     };
 
     // ========================================================================
-    // DOSAGE CALCULATOR HANDLERS
+    // DOSAGE CALCULATOR HANDLERS (the part's doses document)
     // ========================================================================
+    const setDoses = (data) => setDoc(doseKey, data);
     const addNewDrug = () => {
-        const newData = { ...editorData };
-        newData.drugs = newData.drugs || [];
-        newData.drugs.unshift({
-            id: `drug_${Math.floor(Math.random() * 100000)}`, label: "New Drug Label", rules: [], fallback: "Check chart based on weight/age"
+        const newData = { ...doseDoc };
+        newData.drugs = [...(newData.drugs || [])];
+        const index = newData.drugs.length;
+        // Added on a disease tab, the dose stays on that tab even before a
+        // classification line points at it.
+        newData.drugs.push({
+            id: `drug_${Math.floor(Math.random() * 100000)}`, label: "New Drug Label", rules: [], fallback: "Check chart based on weight/age",
+            ...(topic !== GENERAL && topic !== FORM ? { topic } : {}),
         });
-        setEditorData(newData);
-        setExpandedDrugs(prev => ({...prev, 0: true}));
+        setDoses(newData);
+        setExpandedDrugs(prev => ({...prev, [index]: true}));
     };
 
     const removeDrug = async (drugIndex, e) => {
@@ -612,38 +735,38 @@ export default function ProtocolEditor() {
         if (await confirmDialog(
             t('clinical_ui.protocol.dlg.del_drug_msg', 'Delete this drug calculator entirely? Any treatment still referencing it will lose its dose.'),
             { title: t('clinical_ui.protocol.dlg.del_drug_title', 'Delete drug'), confirmLabel: t('clinical_ui.protocol.dlg.delete', 'Delete'), danger: true })) {
-            const newData = { ...editorData };
+            const newData = { ...doseDoc };
             newData.drugs.splice(drugIndex, 1);
-            setEditorData(newData);
+            setDoses(newData);
         }
     };
 
     const handleDrugChange = (drugIndex, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...doseDoc };
         newData.drugs[drugIndex][field] = value;
-        setEditorData(newData);
+        setDoses(newData);
     };
 
     const addDrugRange = (drugIndex) => {
-        const newData = { ...editorData };
+        const newData = { ...doseDoc };
         newData.drugs[drugIndex].rules = newData.drugs[drugIndex].rules || [];
         newData.drugs[drugIndex].rules.push({ minAge: '', maxAge: '', minWeight: '', maxWeight: '', doseQty: '', doseFreq: '', doseDuration: '' });
-        setEditorData(newData);
+        setDoses(newData);
     };
 
     const removeDrugRange = (drugIndex, rangeIndex) => {
-        const newData = { ...editorData };
+        const newData = { ...doseDoc };
         newData.drugs[drugIndex].rules.splice(rangeIndex, 1);
-        setEditorData(newData);
+        setDoses(newData);
     };
 
     const handleDrugRangeChange = (drugIndex, rangeIndex, field, value) => {
-        const newData = { ...editorData };
+        const newData = { ...doseDoc };
         newData.drugs[drugIndex].rules[rangeIndex][field] = value;
-        setEditorData(newData);
+        setDoses(newData);
     };
 
-    if (loadError && !editorData) {
+    if (loadError && !classDoc) {
         return (
             <Card>
                 <div className="p-8 flex flex-col items-center text-center gap-3">
@@ -661,14 +784,26 @@ export default function ProtocolEditor() {
         );
     }
 
-    if (isLoading.imnciProtocols || !editorData) {
+    if (isLoading.imnciProtocols || !classDoc || !doseDoc || !guideDoc || !docs[formKey]) {
         return <div className="flex justify-center p-12"><Spinner /></div>;
     }
 
-    const currentAvailableConditions = activeTab === 'child' ? CHILD_CONDITIONS : INFANT_CONDITIONS;
-    const currentAvailableTreatments = activeTab === 'child' ? CHILD_TREATMENTS : INFANT_TREATMENTS;
-    
-    const isDosagesTab = activeTab.startsWith('dosages');
+    const currentAvailableConditions = part === 'child' ? CHILD_CONDITIONS : INFANT_CONDITIONS;
+    const currentAvailableTreatments = part === 'child' ? CHILD_TREATMENTS : INFANT_TREATMENTS;
+
+    // What belongs on this tab: its classification tables, the doses they
+    // point at, and its treatment, counselling and follow-up boxes.
+    const topicEntry = topics.find((tp) => tp.id === topic);
+    const topicCats = topicEntry?.page?.categories || [];
+    const topicDrugIdx = isFormTab ? [] : drugsForTopic(part, topic, classDoc, doseDoc);
+    const knownTopics = topics.map((tp) => tp.id);
+    const topicGuide = isFormTab ? { treat: [], counsel: [], followup: [] } : guideForTopic(part, topic, guideDoc, knownTopics);
+    const guideLang = ar ? 'ar' : 'en';
+    const addBoxFor = (kind) => {
+        const gi = groupForNewBox(guideDoc, kind, topicGuide[kind]);
+        if (gi < 0) return;
+        setDoc(guideKey, addGuideBox(guideDoc, gi, topic !== GENERAL ? topic : undefined));
+    };
 
     // Filtering, so a protocol with ten categories and sixty rules is navigable.
     // Matches the category title, the classification label, any condition and
@@ -679,82 +814,174 @@ export default function ProtocolEditor() {
         || (rule.conditions || []).some((c) => String(c).toLowerCase().includes(term))
         || (rule.treatments || []).some((t) => String(t).toLowerCase().includes(term));
 
-    const visibleCategories = Object.entries(editorData.categories || {}).filter(([catKey, cat]) => {
+    const visibleCategories = topicCats.map((k) => [k, classDoc.categories?.[k]]).filter(([catKey, cat]) => {
+        if (!cat) return false;
         if (!term) return true;
         if (String(cat.title || '').toLowerCase().includes(term)) return true;
         if (catKey.toLowerCase().includes(term)) return true;
         return (cat.rules || []).some(ruleMatches);
     });
 
-    const visibleDrugs = (editorData.drugs || [])
-        .map((drug, drugIndex) => ({ drug, drugIndex }))
+    const visibleDrugs = topicDrugIdx
+        .map((drugIndex) => ({ drug: doseDoc.drugs[drugIndex], drugIndex }))
         .filter(({ drug }) => !term
             || String(drug.label || '').toLowerCase().includes(term)
             || String(drug.id || '').toLowerCase().includes(term));
 
-    const hiddenCount = isDosagesTab
-        ? (editorData.drugs || []).length - visibleDrugs.length
-        : Object.keys(editorData.categories || {}).length - visibleCategories.length;
+    const hiddenCount = (topicCats.length - visibleCategories.length) + (topicDrugIdx.length - visibleDrugs.length);
 
-    const targetDosageTab = activeTab === 'child' ? 'dosages_child' : 'dosages_infant';
-    const dynamicDosageList = protocols?.[targetDosageTab]?.drugs || []; 
+    // The national load is a one-time start: shown only while nothing is saved.
+    const nothingSaved = !protocols?.child && !protocols?.infant;
+    const dynamicDosageList = doseDoc?.drugs || [];
+
+    // The booklet layout edits through the same handlers as the rule builder.
+    const bookletEdit = {
+        onRule: handleRuleChange,
+        onClass: handleClassificationChange,
+        onCategory: handleCategoryChange,
+        onPage: handlePageChange,
+        addStandard: addStandardEntry,
+        onDrug: handleDrugChange,
+        onRange: handleDrugRangeChange,
+        addRange: addDrugRange,
+        removeRange: removeDrugRange,
+    };
+    const editing_ = viewMode === 'edit';
+    // The standard lists both editors pick from (standardLists.js). The advanced
+    // builder also offers the old standard treatment lines as suggestions.
+    const lists = viewMode === 'advanced' ? editorLists(part, classDoc, ar) : null;
+    if (lists) lists.suggestions = [...new Set([...lists.suggestions, ...currentAvailableTreatments])];
+
+    // The numbered parts of a disease tab, in the order they are used. Empty
+    // parts are left out unless editing, when they are where a first box is added.
+    const steps = [];
+    if (topicCats.length) {
+        steps.push({ key: 'classify', icon: Activity, title: t('clinical_ui.protocol.steps.classify', 'Classify'),
+            body: <BookletProtocolView formType={part} protocol={classDoc} doses={dynamicDosageList} edit={editing_ ? bookletEdit : null} pageIds={[topic]} heading={false} /> });
+    }
+    if (topicDrugIdx.length || editing_) {
+        steps.push({ key: 'drugs', icon: Syringe, title: t('clinical_ui.protocol.steps.drugs', 'Drug doses'),
+            body: (
+                <div className="space-y-2">
+                    {topicDrugIdx.length > 0 && <BookletDoseView protocol={doseDoc} only={topicDrugIdx} edit={editing_ ? bookletEdit : null} />}
+                    {editing_ && (
+                        <button type="button" onClick={addNewDrug} className="w-full border-2 border-dashed border-slate-300 rounded py-2 text-xs font-bold text-sky-800 hover:bg-sky-50">
+                            + {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}
+                        </button>
+                    )}
+                </div>
+            ) });
+    }
+    [['treat', ListChecks, t('clinical_ui.protocol.steps.treat', 'Treatment')],
+        ['counsel', MessageCircle, t('clinical_ui.protocol.steps.counsel', 'Counsel the mother')],
+        ['followup', CalendarClock, t('clinical_ui.protocol.steps.followup', 'Follow-up')]].forEach(([kind, icon, title]) => {
+        const list = topicGuide[kind];
+        if (!list.length && !editing_) return;
+        steps.push({ key: kind, icon, title, body: (
+            <div className="space-y-2" dir={ar ? 'rtl' : 'ltr'} lang={guideLang}>
+                <div className="grid gap-4 xl:grid-cols-2 items-start">
+                    {list.map(({ gi, bi }) => (
+                        <GuideBlock key={`${gi}-${guideDoc.groups[gi].blocks[bi]?.id || bi}`} guide={guideDoc} gi={gi} bi={bi} lang={guideLang} edit={editing_ ? {} : null} onChange={(next) => setDoc(guideKey, next)} t={t} />
+                    ))}
+                </div>
+                {editing_ && (
+                    <button type="button" onClick={() => addBoxFor(kind)} className="w-full border-2 border-dashed border-slate-300 rounded py-2 text-xs font-bold text-sky-800 hover:bg-sky-50">
+                        + {t('clinical_ui.protocol.guide.add_box', 'Add box')}
+                    </button>
+                )}
+            </div>
+        ) });
+    });
+    const topicLabel = (tp) => t(`clinical_ui.protocol.topics.${tp.id}`, TOPIC_LABELS[tp.id] || (ar ? classDoc.categories?.[tp.id]?.titleAr : null) || tp.title || tp.id);
 
     return (
         <div className="space-y-4 max-w-[1400px] mx-auto pb-12 font-sans text-sm" dir="ltr">
             <PageHeader title={t('clinical_ui.protocol.title', 'IMNCI Protocol Builder')} subtitle={t('clinical_ui.protocol.subtitle', 'Manage dynamic rules, conditions, and treatments for the clinical engine')} />
             
-            <div className="flex flex-col md:flex-row justify-between gap-4 mb-2">
-                <div className="flex flex-wrap gap-2">
-                    <Button onClick={() => switchTab('child')} variant={activeTab === 'child' ? 'primary' : 'secondary'} className="rounded-r-none border-r-0 text-sm px-4">{t('clinical_ui.protocol.tabs.child', 'Child (2m - 5y)')}</Button>
-                    <Button onClick={() => switchTab('infant')} variant={activeTab === 'infant' ? 'primary' : 'secondary'} className="rounded-none border-r-0 text-sm px-4">{t('clinical_ui.protocol.tabs.infant', 'Infant (< 2m)')}</Button>
-                    <Button onClick={() => switchTab('dosages_child')} variant={activeTab === 'dosages_child' ? 'primary' : 'secondary'} className="rounded-none border-r-0 text-sm px-4 flex items-center gap-2"><Syringe size={16}/> {t('clinical_ui.protocol.tabs.child_doses', 'Child Doses')}</Button>
-                    <Button onClick={() => switchTab('dosages_infant')} variant={activeTab === 'dosages_infant' ? 'primary' : 'secondary'} className="rounded-l-none text-sm px-4 flex items-center gap-2"><Syringe size={16}/> {t('clinical_ui.protocol.tabs.infant_doses', 'Infant Doses')}</Button>
-                    <div className="flex ms-0 md:ms-3">
-                        <Button onClick={() => setViewMode('booklet')} variant={viewMode === 'booklet' ? 'primary' : 'secondary'} className="rounded-r-none border-r-0 text-sm px-3 flex items-center gap-1.5"><BookOpen size={16}/> {t('clinical_ui.protocol.view.booklet', 'Booklet view')}</Button>
-                        <Button onClick={() => setViewMode('edit')} variant={viewMode === 'edit' ? 'primary' : 'secondary'} className="rounded-l-none text-sm px-3 flex items-center gap-1.5"><Pencil size={16}/> {t('clinical_ui.protocol.view.edit', 'Edit rules')}</Button>
+            {nothingSaved && (
+                <div className="border border-emerald-300 bg-emerald-50 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3" dir={ar ? 'rtl' : 'ltr'}>
+                    <div>
+                        <p className="font-bold text-emerald-900">{t('clinical_ui.protocol.national.empty_title', 'No protocol is saved yet')}</p>
+                        <p className="text-xs text-emerald-800">{t('clinical_ui.protocol.national.empty_hint', 'Start from the Sudan national IMNCI protocol. This is done once; after that, changes are made with Edit.')}</p>
+                    </div>
+                    <Button onClick={handleLoadNational} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 shrink-0"><DownloadCloud size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.load_national', 'Load Sudan national protocol')}</Button>
+                </div>
+            )}
+
+            <div className="space-y-2" dir={ar ? 'rtl' : 'ltr'}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="inline-flex rounded-md border border-slate-300 overflow-hidden" role="tablist" aria-label={t('clinical_ui.protocol.parts.label', 'Age group')}>
+                        {PARTS.map((p) => {
+                            const Icon = p === 'child' ? User : Baby;
+                            return (
+                                <button key={p} type="button" role="tab" aria-selected={part === p} onClick={() => switchPart(p)}
+                                    className={`px-4 py-2 text-sm font-bold flex items-center gap-2 ${part === p ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
+                                    <Icon size={16} /> {t(`clinical_ui.protocol.parts.${p}`, p === 'child' ? 'Sick child (2 months – 5 years)' : 'Young infant (up to 2 months)')}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {!editing ? (
+                            <>
+                                <Button onClick={startEditing} className="flex items-center gap-1.5 text-sm"><Pencil size={16} /> {t('clinical_ui.protocol.btn.edit', 'Edit')}</Button>
+                                <Button onClick={toggleHistory} variant="secondary" className="flex items-center gap-1.5 text-sm"><History size={16} /> {t('clinical_ui.protocol.btn.history', 'History')}</Button>
+                            </>
+                        ) : (
+                            <>
+                                {isDirty && (
+                                    <span className="text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-1 rounded">
+                                        {t('clinical_ui.protocol.unsaved', 'Unsaved changes')}
+                                    </span>
+                                )}
+                                <Button onClick={handleSave} disabled={isSaving || !isDirty} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 text-sm flex items-center gap-1.5">
+                                    {isSaving ? t('clinical_ui.protocol.btn.saving', 'Saving...') : <><Save size={16} /> {t('clinical_ui.protocol.btn.save_changes', 'Save changes')}</>}
+                                </Button>
+                                <Button onClick={cancelEditing} disabled={isSaving} variant="secondary" className="text-sm">{t('clinical_ui.protocol.btn.cancel', 'Cancel')}</Button>
+                            </>
+                        )}
                     </div>
                 </div>
-                <div className="flex gap-2 shrink-0 items-center">
-                    {viewMode === 'edit' && <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder={isDosagesTab ? t('clinical_ui.protocol.search.drug', 'Find a drug…') : t('clinical_ui.protocol.search.rule', 'Find a category, classification, condition or treatment…')}
-                        className="w-64 p-2 border border-slate-300 rounded text-sm focus:ring-sky-500"
-                    />}
-                    <Button onClick={handleLoadNational} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"><DownloadCloud size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.load_national', 'Load national protocol')}</Button>
-                    <Button onClick={handleLoadDefaults} className="bg-amber-500 hover:bg-amber-600 text-white border-0"><DownloadCloud size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.load_defaults', 'Load Defaults')}</Button>
-                    {viewMode === 'edit' && !isDosagesTab && (
-                        <Button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><FolderPlus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_category', 'Add Category')}</Button>
-                    )}
-                    {viewMode === 'edit' && isDosagesTab && (
-                        <Button onClick={addNewDrug} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><Plus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}</Button>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300">
+                    <div className="flex flex-wrap" role="tablist" aria-label={t('clinical_ui.protocol.topics.label', 'Illness')}>
+                        {topics.map((tp) => {
+                            const Icon = tp.id === FORM ? ClipboardList : tp.id === GENERAL ? BookOpen : Stethoscope;
+                            return (
+                                <button key={tp.id} type="button" role="tab" aria-selected={topic === tp.id} onClick={() => openTopic(tp.id)}
+                                    className={`px-3 py-2 text-sm font-bold flex items-center gap-1.5 border-b-2 -mb-px ${topic === tp.id ? 'border-sky-700 text-sky-800' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>
+                                    <Icon size={15} /> {topicLabel(tp)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {editing && !isFormTab && (
+                        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 py-1">
+                            <input type="checkbox" checked={advanced} onChange={(e) => setAdvanced(e.target.checked)} />
+                            <Settings2 size={14} /> {t('clinical_ui.protocol.view.advanced_rules', 'Advanced rule builder')}
+                        </label>
                     )}
                 </div>
+
+                {viewMode === 'advanced' && (
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={t('clinical_ui.protocol.search.rule', 'Find a category, classification, condition or treatment…')}
+                            className="w-full sm:w-64 p-2 border border-slate-300 rounded text-sm focus:ring-sky-500"
+                        />
+                        {<Button onClick={addNewCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><FolderPlus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_category', 'Add Category')}</Button>}
+                        {<Button onClick={addNewDrug} className="bg-indigo-600 hover:bg-indigo-700 text-white border-0"><Plus size={16} className="me-2 inline" /> {t('clinical_ui.protocol.btn.add_drug', 'Add Drug')}</Button>}
+                    </div>
+                )}
             </div>
 
-            <Card>
-                <div className="p-4 bg-slate-50 space-y-4">
-                    <div className={`flex justify-between items-center text-white p-3 rounded-md shadow-sm ${isDosagesTab ? 'bg-sky-800' : 'bg-slate-800'}`}>
-                        <div>
-                            <h2 className="text-lg font-bold uppercase tracking-wide flex items-center gap-2">
-                                {isDosagesTab ? <Syringe size={18}/> : <Activity size={18}/>}
-                                {t('clinical_ui.protocol.editing', 'Editing: {{tab}} protocol', { tab: activeTab.replace('_', ' ') })}
-                            </h2>
-                            <p className="text-sm text-sky-200">{t('clinical_ui.protocol.engine_version', 'Engine Version: {{version}}', { version: editorData.version })}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            {isDirty && (
-                                <span className="text-xs font-bold text-amber-300 bg-amber-900/40 border border-amber-500/50 px-2 py-1 rounded">
-                                    {t('clinical_ui.protocol.unsaved', 'Unsaved changes')}
-                                </span>
-                            )}
-                            <Button onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 py-1.5 px-4 h-auto text-sm">
-                                {isSaving ? t('clinical_ui.protocol.btn.saving', 'Saving...') : <><Save size={16} className="me-1 inline" /> {t('clinical_ui.protocol.btn.save_db', 'Save Database')}</>}
-                            </Button>
-                        </div>
-                    </div>
+            {showHistory && <div dir={ar ? 'rtl' : 'ltr'}><HistoryPanel entries={history} loading={historyLoading} onClose={() => setShowHistory(false)} t={t} /></div>}
 
+            <Card>
+                <div className="p-3 sm:p-4 bg-slate-50 space-y-4">
                     {issues && (issues.errors.length > 0 || issues.warnings.length > 0) && (
                         <div className="space-y-2">
                             {issues.errors.length > 0 && (
@@ -783,9 +1010,9 @@ export default function ProtocolEditor() {
                         </div>
                     )}
 
-                    {viewMode === 'edit' && hiddenCount > 0 && (
+                    {viewMode === 'advanced' && hiddenCount > 0 && (
                         <div className="text-xs text-slate-600 bg-white border border-slate-200 rounded px-3 py-2">
-                            {isDosagesTab ? t('clinical_ui.protocol.hidden_drugs', '{{count}} drug(s) hidden by the search.', { count: hiddenCount }) : t('clinical_ui.protocol.hidden_cats', '{{count}} category(ies) hidden by the search.', { count: hiddenCount })}
+                            {t('clinical_ui.protocol.hidden_items', '{{count}} table(s) or drug(s) hidden by the search.', { count: hiddenCount })}
                             <button onClick={() => setSearch('')} className="ms-2 text-sky-700 font-bold hover:underline">{t('clinical_ui.protocol.btn.clear', 'Clear')}</button>
                         </div>
                     )}
@@ -793,17 +1020,32 @@ export default function ProtocolEditor() {
                     {/* ============================================================ */}
                     {/* BOOKLET VIEW */}
                     {/* ============================================================ */}
-                    {viewMode === 'booklet' && (isDosagesTab
-                        ? <BookletDoseView protocol={editorData} />
-                        : <BookletProtocolView formType={activeTab} protocol={editorData} doses={dynamicDosageList} />)}
+                    {viewMode !== 'advanced' && (isFormTab
+                        ? <RecordingFormView key={formKey} form={docs[formKey]} edit={editing_ ? {} : null} onChange={(next) => setDoc(formKey, next)} />
+                        : (
+                            <div className="space-y-6" dir={ar ? 'rtl' : 'ltr'}>
+                                {steps.map((st, n) => (
+                                    <section key={st.key} className="space-y-2">
+                                        <h3 data-step={st.key} className="flex items-center gap-2 text-sm md:text-base font-extrabold text-slate-900 border-b-2 border-slate-800 pb-1">
+                                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-800 text-white text-xs shrink-0">{n + 1}</span>
+                                            <st.icon size={16} className="text-slate-700 shrink-0" /> {st.title}
+                                        </h3>
+                                        {st.body}
+                                    </section>
+                                ))}
+                                {!steps.length && (
+                                    <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.empty.topic', 'Nothing is saved for this illness yet. Press Edit to add it.')}</div>
+                                )}
+                            </div>
+                        ))}
 
                     {/* ============================================================ */}
                     {/* DOSAGES TAB UI */}
                     {/* ============================================================ */}
-                    {viewMode === 'edit' && isDosagesTab && (
+                    {viewMode === 'advanced' && topicDrugIdx.length > 0 && (
                         <div className="space-y-3">
                             {visibleDrugs.map(({ drug, drugIndex }) => {
-                                // drugIndex is the index in editorData.drugs, not in the
+                                // drugIndex is the index in the doses document, not in the
                                 // filtered list — every handler edits by that index, so
                                 // filtering must not renumber it.
                                 const isExpanded = expandedDrugs[drugIndex] || false;
@@ -868,16 +1110,16 @@ export default function ProtocolEditor() {
                                     )}
                                 </div>
                             )})}
-                            {(editorData.drugs || []).length === 0 && <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg text-slate-500">{t('clinical_ui.protocol.empty.no_drugs', 'No drug calculators added yet.')}</div>}
-                            {(editorData.drugs || []).length > 0 && visibleDrugs.length === 0 && <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg text-slate-500">{t('clinical_ui.protocol.empty.no_drug_match', 'No drugs match this search.')}</div>}
+                            {visibleDrugs.length === 0 && <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg text-slate-500">{t('clinical_ui.protocol.empty.no_drug_match', 'No drugs match this search.')}</div>}
                         </div>
                     )}
 
                     {/* ============================================================ */}
                     {/* CHILD & INFANT TAB UI */}
                     {/* ============================================================ */}
-                    {viewMode === 'edit' && !isDosagesTab && (
-                        Object.keys(editorData.categories || {}).length === 0 ? (
+                    {lists && <datalist id={`adv-treat-${part}`}>{lists.suggestions.map((x) => <option key={x} value={x} />)}</datalist>}
+                    {viewMode === 'advanced' && (topic !== GENERAL || !topicDrugIdx.length) && (
+                        topicCats.length === 0 ? (
                             <div className="text-center p-8 bg-white border-2 border-dashed border-slate-300 rounded-lg">
                                 <p className="text-slate-500 mb-4">{t('clinical_ui.protocol.empty.no_cats', 'No categories found in this protocol.')}</p>
                                 <Button onClick={addNewCategory} variant="primary">{t('clinical_ui.protocol.btn.add_cat_manual', 'Add Category Manually')}</Button>
@@ -946,27 +1188,12 @@ export default function ProtocolEditor() {
                                                         </div>
                                                         
                                                         <div>
-                                                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Globe size={10} className="text-sky-500"/> {t('clinical_ui.protocol.rule.label', 'Label')}</label>
-                                                            <input type="text" value={rule.classification.label} onChange={(e) => handleClassificationChange(catKey, ruleIndex, 'label', e.target.value)} className="w-full text-xs p-1.5 border border-slate-300 rounded font-bold" dir="auto" />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.color', 'Color')}</label>
-                                                            <select value={rule.classification.color} onChange={(e) => handleClassificationChange(catKey, ruleIndex, 'color', e.target.value)} className="w-full text-xs p-1.5 border border-slate-300 rounded">
-                                                                {IMNCI_SEVERITIES.map((sev) => (
-                                                                    <option key={sev.id} value={sev.protocolColor}>{sev.label}</option>
-                                                                ))}
-                                                            </select>
+                                                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Globe size={10} className="text-sky-500"/> {t('clinical_ui.protocol.rule.label', 'Label')} · {t('clinical_ui.protocol.rule.color', 'Color')}</label>
+                                                            <ClassificationPicker rule={rule} catKey={catKey} index={ruleIndex} edit={bookletEdit} options={lists.classOpts} ar={ar} t={t} />
                                                         </div>
                                                         <div>
                                                             <label className="text-xs font-bold text-slate-500 uppercase">{t('clinical_ui.protocol.rule.signs', 'Signs as printed in the booklet')}</label>
-                                                            <textarea
-                                                                rows={3}
-                                                                value={(rule.signs || []).join('\n')}
-                                                                onChange={(e) => handleRuleChange(catKey, ruleIndex, 'signs', e.target.value.split('\n'))}
-                                                                placeholder={t('clinical_ui.protocol.rule.signs_hint', 'One line each. Shown in the booklet view only.')}
-                                                                className="w-full text-xs p-1.5 border border-slate-300 rounded"
-                                                                dir="auto"
-                                                            />
+                                                            <SignsPicker rule={rule} catKey={catKey} index={ruleIndex} edit={bookletEdit} options={lists.signOpts} ar={ar} t={t} />
                                                         </div>
                                                         <div>
                                                             <label className="text-xs font-bold text-slate-400 uppercase">{t('clinical_ui.protocol.rule.id', 'Rule ID')}</label>
@@ -1028,45 +1255,8 @@ export default function ProtocolEditor() {
                                                             <Globe size={10}/> {t('clinical_ui.protocol.rule.treatments', 'Treatments (Editable)')}
                                                         </label>
                                                         
-                                                        <div className="flex flex-col gap-1.5 mb-3">
-                                                            {(rule.treatments || []).map((t, tIdx) => (
-                                                                <div key={tIdx} className="flex items-start gap-1">
-                                                                    <textarea 
-                                                                        value={t}
-                                                                        onChange={(e) => editTreatment(catKey, ruleIndex, tIdx, e.target.value)}
-                                                                        className="w-full bg-emerald-600 border border-emerald-700 rounded p-1.5 text-white text-xs font-semibold shadow-inner focus:ring-2 focus:ring-emerald-400 focus:outline-none leading-tight"
-                                                                        rows={2}
-                                                                        dir="auto"
-                                                                    />
-                                                                    <button 
-                                                                        onClick={() => removeTreatment(catKey, ruleIndex, tIdx)} 
-                                                                        className="text-slate-400 hover:text-red-500 bg-white border border-slate-200 rounded p-1.5 shadow-sm transition-colors"
-                                                                    >
-                                                                        <Trash2 size={14}/>
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                            {(!rule.treatments || rule.treatments.length === 0) && <span className="text-xs text-slate-400 italic">{t('clinical_ui.protocol.empty.no_treatments', 'No treatments added.')}</span>}
-                                                        </div>
-
-                                                        <div className="mt-auto space-y-2">
-                                                            <select
-                                                                className="text-xs p-1.5 border border-emerald-300 rounded text-emerald-800 font-bold w-full bg-white"
-                                                                onChange={(e) => {
-                                                                    if (e.target.value) {
-                                                                        addTreatment(catKey, ruleIndex, e.target.value);
-                                                                        e.target.value = '';
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <option value="">{t('clinical_ui.protocol.rule.add_std_treatment', '+ Add Standard Treatment')}</option>
-                                                                {currentAvailableTreatments.map(t => (
-                                                                    <option key={t} value={t}>{t}</option>
-                                                                ))}
-                                                            </select>
-                                                            
-                                                            <CustomTreatmentAdder onAdd={(val) => addTreatment(catKey, ruleIndex, val)} dosages={dynamicDosageList} />
-                                                        </div>
+                                                        {/* The same editor as the booklet view: each line's words, and its dose chosen from the drugs. */}
+                                                        <TreatmentEditor rule={rule} catKey={catKey} index={ruleIndex} edit={bookletEdit} drugs={dynamicDosageList} listId={`adv-treat-${part}`} suggestions={lists.suggestions} ar={ar} t={t} />
                                                     </div>
                                                 </div>
                                                 )}

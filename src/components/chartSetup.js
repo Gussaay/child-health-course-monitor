@@ -25,6 +25,7 @@ import {
     Legend,
     Filler,
 } from 'chart.js';
+import { isDarkNow, onThemeChange } from '../utils/theme';
 
 ChartJS.register(
     CategoryScale,
@@ -43,8 +44,17 @@ ChartJS.register(
 // dark rounded tooltip. Charts only set what is special about them.
 ChartJS.defaults.font.family = '"IBM Plex Sans Arabic", system-ui, sans-serif';
 ChartJS.defaults.font.size = 12;
-ChartJS.defaults.color = '#475569';           // slate-600
-ChartJS.defaults.borderColor = '#e2e8f0';     // slate-200
+// Text and grid colours follow the theme; open charts redraw when it changes.
+const applyChartTheme = () => {
+    const dark = isDarkNow();
+    ChartJS.defaults.color = dark ? '#a9b6c9' : '#475569';           // slate-600
+    ChartJS.defaults.borderColor = dark ? '#2a374f' : '#e2e8f0';     // slate-200
+};
+applyChartTheme();
+onThemeChange(() => {
+    applyChartTheme();
+    Object.values(ChartJS.instances || {}).forEach((c) => { try { c.update(); } catch { /* chart already gone */ } });
+});
 ChartJS.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.95)';
 ChartJS.defaults.plugins.tooltip.padding = 10;
 ChartJS.defaults.plugins.tooltip.cornerRadius = 8;

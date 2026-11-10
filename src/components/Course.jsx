@@ -3,8 +3,8 @@ import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
-    Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, CourseIcon, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges,
-    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, PageActions, FormActions
+    Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges,
+    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, PageActions, FormActions, MenuTile, MenuGrid, MENU_ICON_CLASS
 } from './CommonComponents';
 
 // --- Firebase Imports ---
@@ -27,6 +27,8 @@ import {
     listAllParticipantsForCourse 
 } from '../data.js'; 
 
+import { DailyEvaluationShare } from './DailyEvaluation';
+import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import { CourseExercisesView } from './imnci';
@@ -43,7 +45,8 @@ import {
     Users, Share2, UserPlus, CheckCircle, 
     FileText, Edit, Trash2, ExternalLink, Link as LinkIcon, Eye, BarChart2,
     AlertTriangle, Shield, Check, X, RefreshCw, Archive, ClipboardList,
-    Award, FileSignature, Stamp, Upload, Lock, XCircle, QrCode, Send, Copy, Download
+    Award, FileSignature, Stamp, Upload, Lock, XCircle, QrCode, Send, Copy, Download,
+    Activity, Siren, HeartPulse, Baby, MoreHorizontal, CalendarDays
 } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
 import { useAuth } from '../hooks/useAuth'; 
@@ -754,41 +757,39 @@ export function PublicParticipantRegistrationView({ courseId }) {
     );
 }
 
-const Landing = React.memo(function Landing({ active, onPick }) {
+// Course packages, as the same tile the main menu uses: a short name the eye
+// can find at once, with the number of courses under it. The full name is the
+// tile's tooltip.
+const Landing = React.memo(function Landing({ active, onPick, counts }) {
     const { t } = useTranslation();
-   const items = [
-        { key: 'IMNCI', title: t('course_page.packages.imnci', 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)'), enabled: true },
-        { key: 'ICCM', title: t('course_page.packages.iccm', 'Integrated Community case management for under 5 children (iCCM)'), enabled: true },
-        { key: 'Comprehensive Package For Community Midwives', title: t('course_page.packages.midwives', 'Comprehensive Package For Community Midwives'), enabled: true },
-        { key: 'ETAT', title: t('course_page.packages.etat', 'Emergency Triage, Assessment & Treatment (ETAT)'), enabled: true },
-        { key: 'EmONC', title: t('course_page.packages.emonc', 'Emergency Obstetric and Newborn Care (EmONC)'), enabled: true },
-        { key: 'IPC', title: t('course_page.packages.ipc', 'Infection Prevention & Control (Neonatal Unit)'), enabled: true },
-        { key: 'Small & Sick Newborn', title: t('course_page.packages.ssnc', 'Small & Sick Newborn Case Management'), enabled: true },
-        { key: 'Program Management', title: t('course_page.packages.program_management', 'Program Management'), enabled: true },
+    const items = [
+        { key: 'IMNCI', short: 'IMNCI', icon: Activity, title: t('course_page.packages.imnci', 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)') },
+        { key: 'ICCM', short: 'iCCM', iconNode: <IccmIcon className={MENU_ICON_CLASS} />, title: t('course_page.packages.iccm', 'Integrated Community case management for under 5 children (iCCM)') },
+        { key: 'Comprehensive Package For Community Midwives', short: t('course_page.packages.short.midwives', 'Community Midwives'), icon: Users, title: t('course_page.packages.midwives', 'Comprehensive Package For Community Midwives') },
+        { key: 'ETAT', short: 'ETAT', icon: Siren, title: t('course_page.packages.etat', 'Emergency Triage, Assessment & Treatment (ETAT)') },
+        { key: 'EmONC', short: 'EmONC', icon: HeartPulse, title: t('course_page.packages.emonc', 'Emergency Obstetric and Newborn Care (EmONC)') },
+        { key: 'IPC', short: 'IPC', iconNode: <IpcIcon className={MENU_ICON_CLASS} />, title: t('course_page.packages.ipc', 'Infection Prevention & Control (Neonatal Unit)') },
+        { key: 'Small & Sick Newborn', short: t('course_page.packages.short.ssnc', 'Small & Sick Newborn'), icon: Baby, title: t('course_page.packages.ssnc', 'Small & Sick Newborn Case Management') },
+        { key: 'Program Management', short: t('course_page.packages.program_management', 'Program Management'), icon: ClipboardList, title: t('course_page.packages.program_management', 'Program Management') },
     ].filter(it => !IS_EMONC_SITE || it.key === 'EmONC');
-  
+
     return (
-        <Card className="p-4 md:p-6">
+        <Card className="p-3 md:p-6">
             <PageHeader title={t('course_page.packages.select_title', 'Select a Course Package')} subtitle={t('course_page.packages.select_subtitle', 'Choose a monitoring package to begin.')} />
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-4">
                 {items.map(it => (
-                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-4 md:p-6 text-start transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
-                        <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
-                            {it.key === 'ICCM' ? <IccmIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                             it.key === 'Comprehensive Package For Community Midwives' ? <Users className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                             it.key === 'IPC' ? <IpcIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                             it.key === 'Small & Sick Newborn' ? <NewbornIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                             it.key === 'Program Management' ? <ClipboardList className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                                <CourseIcon course={it.key} />
-                             }
-                            <div>
-                                <div className="font-semibold text-gray-800 text-sm md:text-base">{it.title}</div>
-                                <div className="text-xs text-gray-500 mt-1">{it.enabled ? t('course_page.packages.click_to_manage', 'Click to manage courses') : t('course_page.packages.coming_soon', 'Coming Soon')}</div>
-                            </div>
-                        </div>
-                    </button>
+                    <MenuTile
+                        key={it.key}
+                        icon={it.icon}
+                        iconNode={it.iconNode}
+                        label={it.short}
+                        title={it.title}
+                        hint={counts ? t('course_page.packages.n_courses', '{{count}} courses', { count: counts[it.key] || 0 }) : undefined}
+                        active={active === it.key}
+                        onClick={() => onPick(it.key)}
+                    />
                 ))}
-            </div>
+            </MenuGrid>
         </Card>
     );
 });
@@ -1075,7 +1076,7 @@ export function CoursesTable({
             </div>
 
             {/* Mobile View (Collapsible Accordion Cards) */}
-            <div className="grid gap-4 md:hidden">
+            <div className="grid gap-3 md:hidden">
                 {paginatedCourses.map((c) => {
                     const isPendingDeletion = c.deletionRequested === true;
                     const active = isCourseActive(c);
@@ -1086,56 +1087,80 @@ export function CoursesTable({
                     const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
                         ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ') : t('course_page.na', 'N/A');
 
+                    const startDate = c.start_date ? new Date(c.start_date) : null;
+                    const hasDates = startDate && !Number.isNaN(startDate.getTime());
+                    const endDate = hasDates && c.course_duration > 0 ? new Date(startDate.getTime() + (c.course_duration - 1) * 86400000) : null;
+                    const fmt = (d) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+                    // The card shows what you need to pick a course (place,
+                    // type, status, dates, size) and its two most used
+                    // buttons; the rest open under "More".
                     return (
-                        <div key={c.id} className={`border rounded-lg bg-white shadow-sm overflow-hidden ${isPendingDeletion ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
-                            <div 
-                                className="p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
-                                onClick={() => toggleExpand(c.id)}
-                            >
-                                <div>
-                                    <h4 className="font-bold text-lg text-gray-800">
+                        <div key={c.id} className={`rounded-lg border bg-white p-3 shadow-sm ${isPendingDeletion ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <h4 className="font-bold text-base text-slate-900 leading-snug">
                                         {formatLocation(c.state)} - {formatLocation(c.locality)}
                                     </h4>
-                                    <p className="text-sm text-gray-600 line-clamp-1">{subcourses}</p>
-                                    <div className="mt-2 flex gap-2 items-center flex-wrap">
-                                        {c.approvalStatus === 'pending' ? (
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{t('course_page.status.pending', 'Pending')}</span>
-                                        ) : c.approvalStatus === 'rejected' ? (
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">{t('course_page.status.rejected', 'Rejected')}</span>
-                                        ) : active ? (
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{t('course_page.status.active', 'Active')}</span>
-                                        ) : (
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{t('course_page.status.inactive', 'Inactive')}</span>
-                                        )}
-                                        {isPendingDeletion && <span className="text-xs text-red-600 font-bold">{t('course_page.table.deletion_pending', '(Deletion Pending)')}</span>}
-                                    </div>
-                                    {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-2" />}
+                                    <p className="mt-0.5 text-sm text-slate-500 line-clamp-2">{subcourses}</p>
                                 </div>
-                                <div className="text-gray-400">
-                                    <svg className={`w-6 h-6 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                {c.approvalStatus === 'pending' ? (
+                                    <span className="shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{t('course_page.status.pending', 'Pending')}</span>
+                                ) : c.approvalStatus === 'rejected' ? (
+                                    <span className="shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">{t('course_page.status.rejected', 'Rejected')}</span>
+                                ) : active ? (
+                                    <span className="shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{t('course_page.status.active', 'Active')}</span>
+                                ) : (
+                                    <span className="shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{t('course_page.status.inactive', 'Inactive')}</span>
+                                )}
+                            </div>
+
+                            {(hasDates || c.participants_count > 0 || isPendingDeletion) && (
+                                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                                    {hasDates && (
+                                        <span className="flex items-center gap-1"><CalendarDays size={14} className="text-slate-400" />{fmt(startDate)}{endDate && endDate > startDate ? ` – ${fmt(endDate)}` : ''}</span>
+                                    )}
+                                    {c.participants_count > 0 && (
+                                        <span className="flex items-center gap-1"><Users size={14} className="text-slate-400" />{t('course_page.table.n_participants', '{{count}} participants', { count: c.participants_count })}</span>
+                                    )}
+                                    {isPendingDeletion && <span className="text-red-600 font-bold">{t('course_page.table.deletion_pending', '(Deletion Pending)')}</span>}
                                 </div>
+                            )}
+                            {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-2" />}
+
+                            <div className="mt-3 flex items-stretch gap-2">
+                                <Button variant="primary" className="flex-1 px-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
+                                    <ExternalLink size={16} /> {t('course_page.buttons.open', 'Open')}
+                                </Button>
+                                <Button variant="ghost" className="flex-1 px-2 bg-white" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
+                                    <FileText size={16} /> {t('course_page.buttons.reports', 'Reports')}
+                                </Button>
+                                <Button variant="ghost" className="px-3 bg-white" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
+                                    <Share2 size={16} /><span className="sr-only">{t('course_page.buttons.share', 'Share')}</span>
+                                </Button>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleExpand(c.id)}
+                                    aria-expanded={isExpanded}
+                                    title={t('ui.more_actions', 'More actions')}
+                                    aria-label={t('ui.more_actions', 'More actions')}
+                                    className={`flex items-center justify-center rounded-md border px-3 ${isExpanded ? 'border-slate-700 bg-slate-700 text-white' : 'border-slate-300 bg-white text-slate-700'}`}
+                                >
+                                    <MoreHorizontal size={18} />
+                                </button>
                             </div>
 
                             {isExpanded && (
-                                <div className="p-4 border-t border-gray-100 bg-gray-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                    <Button variant="primary" className="w-full flex justify-center items-center gap-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
-                                        <ExternalLink size={16} /> {t('course_page.buttons.open', 'Open')}
-                                    </Button>
-                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
+                                <div className="mt-2 grid grid-cols-2 gap-2 border-t border-slate-100 pt-2">
+                                    <Button variant="secondary" className="w-full px-2" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
                                         <Edit size={16} /> {t('course_page.buttons.edit', 'Edit')}
                                     </Button>
-                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
-                                        <FileText size={16} /> {t('course_page.buttons.reports', 'Reports')}
-                                    </Button>
                                     {canManageFinalReportDocument && (
-                                        <Button variant="secondary" className="w-full flex justify-center items-center gap-2 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
+                                        <Button variant="secondary" className="w-full px-2 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
                                             <FileSignature size={16} /> {t('course_page.buttons.final_report', 'Final report')}
                                         </Button>
                                     )}
-                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
-                                        <Share2 size={16} /> {t('course_page.buttons.share', 'Share')}
-                                    </Button>
-                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                    <Button variant="danger" className="w-full px-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                         <Trash2 size={16} /> {t('course_page.buttons.delete', 'Delete')}
                                     </Button>
                                 </div>
@@ -1284,6 +1309,17 @@ export function CoursesTable({
                                         </div>
                                         )}
                                     </div>
+                                )}
+
+                                {isOperationalGuideCourse(shareModalCourse) && (
+                                    <DailyEvaluationShare
+                                        key={shareModalCourse.id}
+                                        course={shareModalCourse}
+                                        onShare={(formId, day) => {
+                                            const link = `${getBaseUrl()}/public/evaluation/${formId}`;
+                                            setQrShareData({ url: link, title: `Daily evaluation - Day ${day}: ${shareModalCourse.course_type}` });
+                                        }}
+                                    />
                                 )}
 
                                 <div className="bg-gray-50 p-3 rounded border">
@@ -1641,6 +1677,16 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     const [filterLocality, setFilterLocality] = useRememberedState('courses.locality', 'All');
     const [filterSubCourse, setFilterSubCourse] = useRememberedState('courses.subCourse', 'All');
     const [filterProject, setFilterProject] = useRememberedState('courses.project', 'All');
+
+    // Number of courses in each package, shown on the package tiles.
+    const packageCounts = useMemo(() => {
+        const counts = {};
+        (allCourses || []).forEach(c => {
+            if (c.inRecycleBin || c.isDeleted) return;
+            counts[c.course_type] = (counts[c.course_type] || 0) + 1;
+        });
+        return counts;
+    }, [allCourses]);
 
     const filterStateOptions = useMemo(() => {
         const states = new Set();
@@ -2190,7 +2236,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 {activeCoursesTab === 'courses' && (
                     <>
                         {!activeCourseType ? (
-                            <Landing active={activeCourseType} onPick={(type) => setActiveCourseType(type)} />
+                            <Landing active={activeCourseType} onPick={(type) => setActiveCourseType(type)} counts={packageCounts} />
                         ) : showTypeReport ? (
                             <Suspense fallback={<PageSkeleton />}>
                                 <CourseTypeReportView

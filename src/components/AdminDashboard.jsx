@@ -15,6 +15,7 @@ import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter,
 // should pay to download a screen they are not looking at.
 const ProblemReportsTab = lazy(() => import('./ProblemReports').then(m => ({ default: m.ProblemReportsTab })));
 const AiActivityTab = lazy(() => import('./AiActivityTab'));
+const UsageCostPanel = lazy(() => import('./UsageCostPanel'));
 import { listFederalCoordinators } from '../data';
 
 // --- NEW COMPONENT IMPORT ---
@@ -100,7 +101,7 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
             <div className="bg-white rounded-xl">
                 {PERMISSION_CATEGORIES.map((category, catIndex) => (
                     <div key={category.title} className={catIndex > 0 ? 'border-t-4 border-gray-100' : ''}>
-                        <div className={`px-6 py-3 bg-gray-100 border-b border-gray-200 sticky top-0 z-20 shadow-sm ${catIndex === 0 ? 'rounded-t-xl' : ''}`}>
+                        <div className={`px-6 py-3 bg-gray-100 border-b border-gray-200 shadow-sm ${catIndex === 0 ? 'rounded-t-xl' : ''}`}>
                             <h5 className="text-gray-800 font-black text-sm ">
                                 {category.title}
                             </h5>
@@ -1265,6 +1266,9 @@ export function AdminDashboard({ appRoles = [] }) {
 
         return (
             <div className="space-y-6 animate-in fade-in duration-500">
+                {/* Monthly cost: who, which list, which page (reads once per Refresh). */}
+                <Suspense fallback={<div className="flex justify-center p-8"><Spinner /></div>}><UsageCostPanel /></Suspense>
+
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
                     <div className="p-3 bg-indigo-50 rounded-full shrink-0"><Activity className="w-6 h-6 text-indigo-500" /></div>
                     <div>

@@ -11,8 +11,8 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from 'react-i18next';
 
 // --- ICONS ---
-import { PdfIcon, PageActions } from './CommonComponents';
-import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity } from 'lucide-react';
+import { PdfIcon } from './CommonComponents';
+import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity, Baby, Siren, BarChart3, Pencil, Link2, MapPin, History, Trash2, Download, Wrench } from 'lucide-react';
 
 import NameStandardizationModal from './NameStandardizationModal.jsx';
 import { useStandardNames } from '../hooks/useNameRegistry';
@@ -27,7 +27,7 @@ import { point } from '@turf/helpers';
 import {
     Card, PageHeader, Button, FormGroup, Select, Table,
     Modal, Spinner, EmptyState, Checkbox, Input, SkeletonTable,
-    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh
+    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid, MenuButton
 } from './CommonComponents';
 import {
     saveFacilitySnapshot,
@@ -290,51 +290,30 @@ const getLocalityName = (stateKey, localityKey) => { if (!stateKey || !localityK
 // --- SUB-COMPONENTS ---
 
 const ActionMenu = ({ onAction, isSuperUserOrFed }) => {
+    // Each tile: a short name, with what it does in small text under it.
     const items = [
-        { id: 'show_list', label: 'عرض قائمة المنشآت', icon: List, color: 'text-blue-600', bg: 'bg-blue-100', border: 'hover:border-blue-400', shadow: 'hover:shadow-blue-100' },
-        { id: 'share_imnci', label: 'تحديث معلومات العلاج المتكامل', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
-        { id: 'share_eenc', label: 'تحديث معلومات الرعاية الضرورية (غرفة الولادة)', icon: Users, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
-        { id: 'share_neonatal', label: 'تحديث معلومات الرعاية الخاصة (الحضانة)', icon: Building, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
-        { id: 'share_etat', label: 'تحديث معلومات الرعاية الحرجة (الحوادث والعناية المكثفة)', icon: PlusCircle, color: 'text-red-600', bg: 'bg-red-100', border: 'hover:border-red-400', shadow: 'hover:shadow-red-100' },
-        { id: 'show_update_dashboard', label: 'لوحة متابعة تحديثات المنشآت (Update Dashboard)', icon: Activity, color: 'text-orange-600', bg: 'bg-orange-100', border: 'hover:border-orange-400', shadow: 'hover:shadow-orange-100' },
+        { id: 'show_list', label: 'قائمة المنشآت', hint: 'عرض وبحث', icon: List },
+        { id: 'share_imnci', label: 'العلاج المتكامل', hint: 'تحديث المعلومات', icon: Activity },
+        { id: 'share_eenc', label: 'الرعاية الضرورية', hint: 'تحديث معلومات غرفة الولادة', icon: Baby },
+        { id: 'share_neonatal', label: 'الرعاية الخاصة', hint: 'تحديث معلومات الحضانة', icon: Building },
+        { id: 'share_etat', label: 'الرعاية الحرجة', hint: 'تحديث معلومات الحوادث والعناية المكثفة', icon: Siren },
+        { id: 'show_update_dashboard', label: 'لوحة المتابعة', hint: 'تحديثات المنشآت', icon: BarChart3 },
     ];
 
     if (isSuperUserOrFed) {
-        items.push({ 
-            id: 'show_history', 
-            label: 'مؤشرات التغطية التاريخية (KPI)', 
-            icon: LineChart, 
-            color: 'text-purple-600', 
-            bg: 'bg-purple-100', 
-            border: 'hover:border-purple-400', 
-            shadow: 'hover:shadow-purple-100' 
-        });
+        items.push({ id: 'show_history', label: 'مؤشرات التغطية', hint: 'التغطية التاريخية (KPI)', icon: LineChart });
     }
 
     return (
-        <div className="max-w-7xl mx-auto mt-4 md:mt-8 p-0 md:p-4 space-y-12" dir="rtl">
-            <section>
-                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">خدمات صحة الطفل</h3>
-                <div className="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-6">
-                    {items.map(item => {
-                        const Icon = item.icon;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => onAction(item.id)}
-                                className={`flex flex-col items-center justify-center p-4 md:p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
-                            >
-                                <div className={`p-3 md:p-5 rounded-2xl mb-3 md:mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
-                                    <Icon className={`w-7 h-7 md:w-8 md:h-8 ${item.color}`} strokeWidth={1.5} />
-                                </div>
-                                <div className="font-semibold text-gray-700 text-sm md:text-lg group-hover:text-gray-900 transition-colors text-center">
-                                    {item.label}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </section>
+        <div className="max-w-7xl mx-auto mt-2 md:mt-6" dir="rtl">
+            <Card className="p-3 md:p-6">
+                <h3 className="text-xl md:text-2xl font-bold text-slate-800 mb-3 md:mb-5">خدمات صحة الطفل</h3>
+                <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-4">
+                    {items.map(item => (
+                        <MenuTile key={item.id} icon={item.icon} label={item.label} hint={item.hint} onClick={() => onAction(item.id)} />
+                    ))}
+                </MenuGrid>
+            </Card>
         </div>
     );
 };
@@ -351,7 +330,56 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
         return <div className="flex flex-wrap gap-1">{services.map(s => <span key={s.name} className={`px-2 py-1 text-xs font-medium rounded-full ${s.color}`}>{s.label || s.name}</span>)}</div>;
     };
 
+    // Phones: one card per facility. The name is the title, the place sits on
+    // one line under it, the status is at the corner and services are chips.
+    const functioningBadge = (f) => {
+        const v = f['هل_المؤسسة_تعمل'];
+        if (v !== 'Yes' && v !== 'No') return null;
+        return (
+            <span className={`shrink-0 px-2 py-0.5 text-xs font-semibold rounded-full ${v === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {v === 'Yes' ? t('facilities_page.services.card.functioning', 'Functioning') : t('facilities_page.services.card.not_functioning', 'Not functioning')}
+            </span>
+        );
+    };
+    const phoneCards = (
+        <div className="md:hidden grid gap-3 my-3">
+            {facilities.length > 0 ? facilities.map((f) => (
+                <div key={f.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <h4 className="font-bold text-base text-slate-900 leading-snug break-words">{f['اسم_المؤسسة']}</h4>
+                            <p className="mt-0.5 text-sm text-slate-500">
+                                {[getStateName(f['الولاية']), getLocalityName(f['الولاية'], f['المحلية']), f.facility_ownership].filter(Boolean).join(' • ')}
+                            </p>
+                        </div>
+                        {functioningBadge(f)}
+                    </div>
+                    <div className="mt-2">{getServiceBadges(f)}</div>
+                    <p className="mt-2 text-xs text-slate-500">
+                        {t('facilities_page.services.col.last_update', 'Last Update')}: {f.lastSnapshotAt?.toDate ? f.lastSnapshotAt.toDate().toLocaleDateString() : t('facilities_page.common.na', 'N/A')}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2 border-t border-slate-100 pt-2">
+                        {canManageFacilities && (
+                            <Button variant="ghost" size="sm" className="bg-white px-3 py-1.5" onClick={() => onEdit(f.id)}><Pencil size={14} /> {t('facilities_page.common.edit', 'Edit')}</Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="bg-white px-3 py-1.5" onClick={() => onGenerateLink(f.id)}><Link2 size={14} /> {t('facilities_page.services.card.link', 'Link')}</Button>
+                        <Button variant="ghost" size="sm" className="bg-white px-3 py-1.5" onClick={() => onOpenMap(f)}><MapPin size={14} /> {t('facilities_page.services.map', 'Map')}</Button>
+                        <Button variant="ghost" size="sm" className="bg-white px-3 py-1.5" onClick={() => onOpenHistory(f)}><History size={14} /> {t('facilities_page.services.history', 'History')}</Button>
+                        {canManageFacilities && (
+                            <Button variant="ghost" size="sm" className="ms-auto bg-white px-3 py-1.5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={() => onDelete(f.id)}><Trash2 size={14} /><span className="sr-only">{t('facilities_page.common.delete', 'Delete')}</span></Button>
+                        )}
+                    </div>
+                </div>
+            )) : (
+                <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">{emptyMessage}</div>
+            )}
+        </div>
+    );
+
     return (
+        <>
+        {phoneCards}
+        <div className="hidden md:block">
         <Table cardsOnPhone headers={[t('facilities_page.services.col.state', 'State'), t('facilities_page.services.col.locality', 'Locality'), t('facilities_page.services.col.facility_name', 'Facility Name'), t('facilities_page.services.col.ownership', 'Ownership'), t('facilities_page.services.col.functioning', 'Functioning'), t('facilities_page.services.col.services_available', 'Services Available'), t('facilities_page.services.col.last_update', 'Last Update'), t('facilities_page.common.actions', 'Actions')]}>
             {facilities.length > 0 ? (
                 facilities.map((f, index) => (
@@ -390,6 +418,8 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
                 <EmptyState message={emptyMessage} colSpan={8} />
               )}
         </Table>
+        </div>
+        </>
     );
 };
 
@@ -2212,34 +2242,33 @@ const ChildHealthServicesView = ({
                     </div>
                     </FilterPanel>
 
-                    <div className="flex flex-col items-start gap-2 md:flex-row md:justify-between md:items-center my-4">
-                        <PageActions keep={1}>
-                            {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>{t('facilities_page.services.add_new', 'Add New')}</Button> )}
-                            {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>{t('facilities_page.services.bulk_upload', 'Bulk Upload')}</Button> )}
-                            
-                            <Button variant="info" onClick={handleShareBulkUpdateLink}>{t('facilities_page.services.share_bulk_link', 'Share Bulk Update Link')}</Button>
-                            
+                    {/* One tool row: Add, then the exports and the clean-up tools as two short menus. */}
+                    <div className="flex flex-wrap items-center gap-2 my-4">
+                        {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>{t('facilities_page.services.add_new', 'Add New')}</Button> )}
+
+                        <MenuButton label={t('facilities_page.services.export_menu', 'Export')} icon={Download}>
                             <Button variant="secondary" onClick={handleExportExcel} disabled={!filteredFacilities || filteredFacilities.length === 0}>{t('facilities_page.services.export_excel', 'Export Excel')}</Button>
-                            
                             {isPdfGenerating ? (
                                 <Button disabled variant="secondary"><Spinner size="sm" /> {t('facilities_page.services.generating_pdf', 'Generating PDF...')}</Button>
                             ) : (
-                                <>
-                                    <Button onClick={() => handlePdfListGeneration('print')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
-                                        <PdfIcon /> {t('facilities_page.services.export_pdf_print', 'Export PDF (Print)')}
-                                    </Button>
-                                    <Button onClick={() => handlePdfListGeneration('screen')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
-                                        <PdfIcon /> {t('facilities_page.services.export_pdf_share', 'Export PDF (Share)')}
-                                    </Button>
-                                </>
+                                <Button onClick={() => handlePdfListGeneration('print')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
+                                    <PdfIcon /> {t('facilities_page.services.export_pdf_print', 'Export PDF (Print)')}
+                                </Button>
                             )}
-                        </PageActions>
-                         
-                        <div className="flex flex-wrap gap-2">
-                             {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>{t('facilities_page.services.find_duplicates', 'Find Duplicates')}</Button> )}
-                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>{t('facilities_page.services.clean_data', 'Clean Data')}</Button> )}
-                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>{t('facilities_page.services.standardize_names', 'Standardize Projects & Organizations')}</Button> )}
-                        </div>
+                            {!isPdfGenerating && (
+                                <Button onClick={() => handlePdfListGeneration('screen')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
+                                    <PdfIcon /> {t('facilities_page.services.export_pdf_share', 'Export PDF (Share)')}
+                                </Button>
+                            )}
+                        </MenuButton>
+
+                        <MenuButton label={t('facilities_page.services.tools_menu', 'Tools')} icon={Wrench}>
+                            {canBulkUploadFacilities && ( <Button variant="secondary" onClick={() => setIsBulkUploadModalOpen(true)}>{t('facilities_page.services.bulk_upload', 'Bulk Upload')}</Button> )}
+                            <Button variant="secondary" onClick={handleShareBulkUpdateLink}>{t('facilities_page.services.share_bulk_link', 'Share Bulk Update Link')}</Button>
+                            {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>{t('facilities_page.services.find_duplicates', 'Find Duplicates')}</Button> )}
+                            {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>{t('facilities_page.services.clean_data', 'Clean Data')}</Button> )}
+                            {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>{t('facilities_page.services.standardize_names', 'Standardize Projects & Organizations')}</Button> )}
+                        </MenuButton>
                     </div>
 
                     <p className="text-sm text-gray-600 mb-2">

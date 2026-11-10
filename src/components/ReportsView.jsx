@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; 
-import html2canvas from 'html2canvas';
+import html2canvas from '../utils/html2canvasLight';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';

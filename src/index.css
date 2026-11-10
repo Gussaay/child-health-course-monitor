@@ -228,3 +228,22 @@ html, body, #root {
 [dir="rtl"] .sticky-col {
   box-shadow: inset 1px 0 0 #e2e8f0;
 }
+
+/* ---- Dark mode extras (the colour classes themselves live in tailwind.theme.cjs) ---- */
+@media screen {
+  html.dark,
+  html.dark body {
+    background-color: rgb(var(--bg-surface));
+    color: rgb(var(--tx-ink));
+  }
+  html.dark .shimmer { background-color: #26324a; }
+  html.dark .shimmer::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  }
+  html.dark .cards-on-phone tbody > tr {
+    background: rgb(var(--bg-white));
+    border-color: #2a374f !important;
+  }
+  html.dark .cards-on-phone tbody > tr > td { border-bottom-color: #1e2a40 !important; }
+  html.dark ::selection { background: #0c4a6e; color: #fff; }
+}

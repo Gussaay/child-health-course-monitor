@@ -1,4 +1,6 @@
 // App.jsx
+import ThemeToggle from './components/ThemeToggle';
+import { useTheme } from './utils/theme';
 import './i18n'; 
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -6,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -61,6 +63,7 @@ const PublicCertificateDownloadView = lazy(() => import('./components/Certificat
 const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
 const CertificateDownloadBanner = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateDownloadBanner })));
 
+const PublicDailyEvaluationView = lazy(() => import('./components/DailyEvaluation.jsx').then(module => ({ default: module.PublicDailyEvaluationView })));
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
 const PublicParticipantRegistrationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicParticipantRegistrationView })));
@@ -139,8 +142,9 @@ import {
     clearPendingSyncQueue,
     getCachedCourse, getCachedParticipants,
 } from './data.js';
+import { setUsageView } from './utils/usageLedger';
 import { STATE_LOCALITIES } from './components/constants.js';
-import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton } from './components/CommonComponents';
+import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton, MenuTile, MenuGrid } from './components/CommonComponents';
 import { auth, db, isOnline, getConnectivity } from './firebase';
 import OfflinePill from './components/OfflinePill';
 
@@ -154,7 +158,6 @@ import NotificationBell from './components/NotificationBell.jsx';
 import { notify, confirmDialog, DialogHost } from './components/dialogs';
 import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
-import SudanMiniMap from './components/SudanMiniMap';
 import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
@@ -366,29 +369,6 @@ const MODULE_GROUPS = [
     { id: 'general', tint: 'slate', label: 'App and team' },
 ];
 
-function ModuleTile({ label, tagline, icon: Icon, tint, onClick }) {
-    const { icon: iconCls, ring: ringCls } = TILE_TINTS[tint];
-    return (
-        <button
-            onClick={onClick}
-            className={`group relative text-start bg-white rounded-2xl border border-slate-100 p-4 shadow-sm ring-2 ring-transparent transition hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] ${ringCls}`}
-        >
-            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${iconCls}`}>
-                <Icon size={24} />
-            </div>
-            <p className="font-bold text-slate-900 mt-3 leading-snug">{label}</p>
-            <p className="text-xs text-slate-500 mt-0.5 leading-snug">{tagline}</p>
-        </button>
-    );
-}
-
-// The greeting card's colour and label follow the person's programme level.
-const LEVEL_CARDS = {
-    federal: 'bg-sky-700',
-    state: 'bg-emerald-700',
-    locality: 'bg-violet-700',
-};
-
 // `value` null: still loading (`busy`) or could not be loaded.
 // The app's modules, for the main menu tiles and the side menu. 'downloads'
 // only exists on the native app.
@@ -424,13 +404,13 @@ function allModules(t, permissions) {
         { label: t('landing.modules.facilities', 'Child Health Services'), tagline: tile('facilities', 'Facilities and service coverage'), view: 'childHealthServices', group: 'services', icon: Hospital, permission: permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
+        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
+        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
+        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
         { label: t('landing.modules.projects', 'Project Tracker'), tagline: tile('projects', 'Track project tasks'), view: 'projects', group: 'planning', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.meetings', 'Meeting Tracker'), tagline: tile('meetings', 'Meetings and attendance'), view: 'meetings', group: 'planning', icon: CalendarDays, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), tagline: tile('planning', 'The annual master plan'), view: 'planning', group: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), tagline: tile('locality_plan', 'Plans from the localities'), view: 'localityPlan', group: 'planning', icon: Layers, permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
-        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
-        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
         { label: t('landing.modules.downloads', 'App Files & Downloads'), tagline: tile('downloads', 'Files saved on this device'), view: 'downloads', group: 'general', icon: HardDrive, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), tagline: tile('admin', 'Users, roles and settings'), view: 'admin', group: 'general', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), tagline: tile('about', 'The programme team'), view: 'about', group: 'general', icon: Info, permission: true },
@@ -445,9 +425,8 @@ const COVERAGE_ITEMS = [
     { key: 'scnu', label: 'SCNU' },
 ];
 
-// Greeting card, the same on the phone app and the web: two lines. The
-// greeting, then one highlight from this year's numbers, picked at random
-// each time the main menu opens; tapping it shows another.
+// One highlight from this year's numbers for the main menu, picked at random
+// each time it opens; tapping it shows another.
 function homeFacts(t, stats, level) {
     if (!stats) return [];
     const n = (v) => Number(v).toLocaleString();
@@ -469,43 +448,9 @@ function homeFacts(t, stats, level) {
     return facts;
 }
 
-function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
-    const { t } = useTranslation();
-    const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
-    const facts = homeFacts(t, stats, level);
-    const loading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
-    const fact = facts.length ? facts[pick % facts.length] : null;
-    const FactIcon = fact?.icon;
-    return (
-        <section className={`relative overflow-hidden rounded-2xl ${LEVEL_CARDS[level]} text-white ps-4 pe-[4.5rem] py-3`}>
-            <SudanMiniMap highlight={states} all={level === 'federal'} title={scope || levelLabel} className="absolute end-3 top-1/2 -translate-y-1/2 h-14 w-14 text-white" />
-            <div className="relative flex items-center gap-2 min-w-0">
-                <h2 className="text-base font-bold leading-tight truncate">
-                    {greeting}{firstName ? `, ${firstName}` : ''}
-                </h2>
-                <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-xs font-semibold">{scope || levelLabel}</span>
-            </div>
-            {fact ? (
-                <button
-                    type="button"
-                    onClick={() => setPick(p => p + 1)}
-                    title={t('ui.next_fact', 'Show another highlight')}
-                    className="relative mt-1 flex w-full items-center gap-1.5 text-start text-sm text-white/90 min-w-0"
-                >
-                    <FactIcon size={14} className="shrink-0" />
-                    <span className="truncate">{fact.text}</span>
-                </button>
-            ) : loading ? (
-                <Skeleton className="shimmer-light relative mt-1.5 h-4 w-2/3" />
-            ) : (
-                <p className="relative mt-1 text-sm text-white/80 truncate">{levelLabel}</p>
-            )}
-        </section>
-    );
-}
-
 function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData }) {
     const { t, i18n } = useTranslation();
+    const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
@@ -521,32 +466,55 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
 
     const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
 
+    const facts = homeFacts(t, stats, level);
+    const factsLoading = facts.length === 0 && stats && Object.values(stats.busy || {}).some(Boolean);
+    const fact = facts.length ? facts[pick % facts.length] : null;
+    const FactIcon = fact?.icon;
+
+    // One calm card, as the main menu was before: a welcome line, then every
+    // module as the same tile (big icon in the app's colour, bold name).
     return (
-        <div className="flex flex-col min-h-full space-y-4">
-            <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
+        <div className="flex flex-col min-h-full">
+            <Card>
+                <div className="p-3 md:p-6">
+                    <div className="mb-3 md:mb-5 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight">
+                                {greeting}{firstName ? `, ${firstName}` : ''}
+                            </h2>
+                            <p className="mt-0.5 text-sm text-slate-500">{t('landing.subtitle', 'Select a module to get started')}</p>
+                        </div>
+                        <div className="flex shrink-0 max-w-[50%] flex-col items-end gap-1">
+                            <span className="max-w-full truncate rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">{scope || levelLabel}</span>
+                            {fact ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setPick(p => p + 1)}
+                                    title={t('ui.next_fact', 'Show another highlight')}
+                                    className="flex max-w-full items-start gap-1 text-end text-xs text-slate-600 hover:text-sky-700"
+                                >
+                                    <FactIcon size={14} className="mt-0.5 shrink-0 text-sky-600" />
+                                    <span>{fact.text}</span>
+                                </button>
+                            ) : factsLoading ? (
+                                <Skeleton className="h-3.5 w-28" />
+                            ) : null}
+                        </div>
+                    </div>
 
-            {onAskData && accessibleButtons.length > 0 && <DataAssistantCard onOpen={onAskData} />}
+                    {onAskData && accessibleButtons.length > 0 && <div className="mb-3 md:mb-5"><DataAssistantCard onOpen={onAskData} /></div>}
 
-            {accessibleButtons.length > 0 ? (
-                <div className="space-y-5">
-                    {MODULE_GROUPS.map(group => {
-                        const tiles = accessibleButtons.filter(btn => btn.group === group.id);
-                        if (!tiles.length) return null;
-                        return (
-                            <section key={group.id} aria-labelledby={`group-${group.id}`}>
-                                <h3 id={`group-${group.id}`} className="mb-2 text-sm font-semibold text-slate-500">{t(`landing.groups.${group.id}`, group.label)}</h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                                    {tiles.map(btn => (
-                                        <ModuleTile key={btn.view} label={btn.label} tagline={btn.tagline} icon={btn.icon} tint={group.tint} onClick={() => navigate(btn.view)} />
-                                    ))}
-                                </div>
-                            </section>
-                        );
-                    })}
+                    {accessibleButtons.length > 0 ? (
+                        <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-5">
+                            {accessibleButtons.map(btn => (
+                                <MenuTile key={btn.view} icon={btn.icon} label={btn.label} onClick={() => navigate(btn.view)} />
+                            ))}
+                        </MenuGrid>
+                    ) : (
+                        <div className="p-8 text-center text-gray-500">{t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')}</div>
+                    )}
                 </div>
-            ) : (
-                <Card><div className="p-8 text-center text-gray-500">{t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')}</div></Card>
-            )}
+            </Card>
         </div>
     );
 }
@@ -629,10 +597,16 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
     }, [open]);
 
     const go = (fn) => () => { onClose(); fn(); };
+    const [themePref, setThemePref] = useTheme();
+    const themeNext = { light: 'dark', dark: 'system', system: 'light' }[themePref];
+    const themeIcon = { light: Sun, dark: Moon, system: Monitor }[themePref];
+    const themeLabel = `${t('theme.title', 'Appearance')}: ${{ light: t('theme.light', 'Light mode'), dark: t('theme.dark', 'Dark mode'), system: t('theme.system', 'Follow device') }[themePref]}`;
+    const cycleTheme = () => setThemePref(themeNext);
     const settings = [
         { icon: User, label: t('menu.profile', 'My profile'), action: onProfile },
         { icon: isOffline ? CloudOff : Cloud, label: isOffline ? t('menu.offline', 'Offline – sync status') : t('menu.sync', 'Data sync status'), action: onSync },
         { icon: Languages, label: languageLabel, action: onLanguage, keepOpen: true },
+        { icon: themeIcon, label: themeLabel, action: cycleTheme, keepOpen: true },
         { icon: RefreshCw, label: t('menu.updates', 'Check for updates'), action: onUpdate },
     ];
 
@@ -831,15 +805,16 @@ export default function App() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
     const [sideMenuOpen, setSideMenuOpen] = useState(false);
-    // Where the sticky top bar ends, as --app-top, so page tabs, filter rows
-    // and toolbars can stick just under it.
+    // Nothing sticks to the top of a page any more (the header scrolls away
+    // with the page), so --app-top is only the download banner's height: the
+    // offline pill and the pull-to-refresh spinner sit just under it.
     const headerRef = useRef(null);
     const headerElRef = useRef(null);
     const headerObserverRef = useRef(null);
     useEffect(() => {
         const el = headerRef.current;
         const set = () => {
-            const top = el ? (el.classList.contains('top-10') ? 40 : 0) + el.offsetHeight : 0;
+            const top = el && el.classList.contains('top-10') ? 40 : 0;
             document.documentElement.style.setProperty('--app-top', `${top}px`);
         };
         if (headerElRef.current !== el) {
@@ -968,7 +943,8 @@ export default function App() {
         funders, federalCoordinators, stateCoordinators, localityCoordinators, healthFacilities, participantTests, 
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests,
-        mergeIntoCache, participants: rawParticipants, skillMentorshipSubmissions, isLoading: dataLoading
+        mergeIntoCache, participants: rawParticipants, skillMentorshipSubmissions, isLoading: dataLoading,
+        syncLoaded
     } = useDataCache();
 
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
@@ -1028,6 +1004,50 @@ export default function App() {
     const [permissionsLoading, setPermissionsLoading] = useState(true);
     const [permissionsError, setPermissionsError] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+    // --- Delta sync: header button, app start, page change, app back in view ---
+    const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+    const handleRefreshAll = useCallback(async () => {
+        if (!navigator.onLine) {
+            setToast({ show: true, message: t('app_extra.toast.refresh_offline', 'You are offline. The data will refresh when you are back online.'), type: 'warning' });
+            return;
+        }
+        setIsRefreshingAll(true);
+        try {
+            const res = await syncLoaded();
+            setToast(res.failed
+                ? { show: true, message: t('app_extra.toast.refresh_partial', 'Refreshed, but {{count}} list(s) could not be reached. Try again.', { count: res.failed }), type: 'warning' }
+                : { show: true, message: t('app_extra.toast.refreshed', 'Data refreshed.'), type: 'success' });
+        } finally { setIsRefreshingAll(false); }
+    }, [syncLoaded, t]);
+    // Automatic syncs are quiet and at most every 30 seconds.
+    // Lists with a live listener are already current, so the quiet syncs skip them.
+    const quietSync = useCallback(() => { syncLoaded({ minIntervalMs: 30 * 1000, skipLive: true }).catch(() => {}); }, [syncLoaded]);
+    useEffect(() => {
+        const onVisible = () => { if (document.visibilityState === 'visible') quietSync(); };
+        document.addEventListener('visibilitychange', onVisible);
+        window.addEventListener('online', quietSync);
+        let resumeSub = null;
+        if (Capacitor.isNativePlatform()) {
+            Promise.resolve(CapacitorApp.addListener('appStateChange', ({ isActive }) => { if (isActive) quietSync(); }))
+                .then((h) => { resumeSub = h; }).catch(() => {});
+        }
+        return () => {
+            document.removeEventListener('visibilitychange', onVisible);
+            window.removeEventListener('online', quietSync);
+            resumeSub?.remove?.();
+        };
+    }, [quietSync]);
+    // Every read and write is filed under the page it happened on (usage tab).
+    useEffect(() => { setUsageView(view); }, [view]);
+
+    // On opening the app (once signed in) and on every page change: the lists
+    // a page shows are brought up to date with what changed on the server.
+    useEffect(() => {
+        if (!user) return undefined;
+        const timer = setTimeout(quietSync, 1500); // after the page's own first load
+        return () => clearTimeout(timer);
+    }, [user, view, quietSync]);
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
@@ -1402,6 +1422,9 @@ export default function App() {
             const courseCertPageMatch = path.match(/^\/public\/course\/certificates\/([a-zA-Z0-9_-]+)\/?$/);
             if (courseCertPageMatch && courseCertPageMatch[1]) { setPublicViewType('courseCertificatesPage'); setPublicViewData({ courseId: courseCertPageMatch[1] }); return; }
             
+            const dailyEvalMatch = path.match(/^\/public\/evaluation\/([a-zA-Z0-9_-]+)\/?$/);
+            if (dailyEvalMatch && dailyEvalMatch[1]) { setPublicViewType('dailyEvaluation'); setPublicViewData({ formId: dailyEvalMatch[1] }); return; }
+
             const publicAttendanceMatch = path.match(/^\/attendance\/course\/([a-zA-Z0-9]+)\/?$/);
             if (publicAttendanceMatch && publicAttendanceMatch[1]) { setPublicViewType('attendance'); setPublicViewData({ courseId: publicAttendanceMatch[1] }); return; }
 
@@ -2530,7 +2553,7 @@ case 'meetings':
     // window. Drawn with the full app chrome — header, navigation, bottom bar —
     // the consent card is pushed below the fold of a 600px popup and the window
     // looks empty, which is exactly how it was reported.
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!connectClaudeId;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!connectClaudeId;
 
     let mainContent;
 
@@ -2661,7 +2684,7 @@ case 'meetings':
         }
     }
 
-    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'onlineExercises') { 
+    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <PageSkeleton />;
         }
@@ -2689,6 +2712,9 @@ case 'meetings':
                     break;
                 case 'courseCertificatesPage':
                     mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicCourseCertificatesView courseId={publicViewData.courseId} /></Suspense> );
+                    break;
+                case 'dailyEvaluation':
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicDailyEvaluationView formId={publicViewData.formId} /></Suspense> );
                     break;
                 case 'attendance':
                     mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );
@@ -2802,7 +2828,10 @@ case 'meetings':
     // every page but the main menu. The web keeps its full header.
     const PAGE_TITLES = pageTitles(t);
     const closeSideMenu = () => setSideMenuOpen(false);
-    const showSlimBar = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
+    // The app keeps the full header on every page, and on every page but the
+    // main menu the slim back bar (back arrow, page name) sits right under it.
+    // Neither sticks: both scroll away with the page.
+    const showBackBar = Capacitor.isNativePlatform() && !!user && !isMinimalUILayout && view !== 'landing';
     const pageTitle = PAGE_TITLES[view] || (IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program'));
     const pageSubtitle = (() => {
         if (view === 'facilitatorReport' || view === 'facilitatorForm') return selectedFacilitator?.name || '';
@@ -2843,6 +2872,18 @@ case 'meetings':
                     </Suspense>
                 </QuietBoundary>
 
+                {/* Refresh: asks the server for whatever changed since this
+                    device last synced, for every list it has loaded. */}
+                <button
+                    onClick={handleRefreshAll}
+                    disabled={isRefreshingAll}
+                    aria-label={t('app_extra.header.refresh', 'Refresh data')}
+                    title={t('app_extra.header.refresh', 'Refresh data')}
+                    className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-60"
+                >
+                    <RefreshCw size={20} className={isRefreshingAll ? 'animate-spin' : ''} />
+                </button>
+
                 <NotificationBell user={user} navigate={guardedNavigate} />
 
                 {/* Update arrow. Red and pulsing when an update is
@@ -2866,6 +2907,7 @@ case 'meetings':
                     )}
                 </button>
 
+                <ThemeToggle className="!bg-slate-600 !border-slate-500 hover:!bg-slate-500" />
                 <button
                     onClick={() => {
                         const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
@@ -2922,25 +2964,7 @@ case 'meetings':
                 )}
             </div>
 
-            {showSlimBar ? (
-            <header ref={headerRef} className={`bg-slate-800 text-white shadow-lg sticky z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
-                <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-14 px-1 sm:px-4">
-                    <button
-                        onClick={goBack}
-                        aria-label={t('app.back', 'Back')}
-                        title={t('app.back', 'Back')}
-                        className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 shrink-0"
-                    >
-                        <ArrowLeft size={22} className="rtl:-scale-x-100" />
-                    </button>
-                    <div className="flex-1 min-w-0 px-1">
-                        <h1 className="text-base sm:text-lg font-bold leading-tight truncate">{pageTitle}</h1>
-                        {pageSubtitle && <p className="text-xs text-slate-300 truncate">{pageSubtitle}</p>}
-                    </div>
-                </div>
-            </header>
-            ) : (<>
-            <header ref={headerRef} className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
@@ -2984,6 +3008,7 @@ case 'meetings':
                                     ))} 
                                 </nav>
                             )}
+                            {(!user || isMinimalUILayout) && <ThemeToggle />}
                             {(!user || isMinimalUILayout) && (
                                 <button
                                     onClick={() => {
@@ -3052,7 +3077,25 @@ case 'meetings':
                     </div>
                 </div>
             )}
-            </>)}
+
+            {showBackBar && (
+                <div className="bg-slate-800 text-white border-t border-slate-700 shadow">
+                    <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-12 px-1 sm:px-4">
+                        <button
+                            onClick={goBack}
+                            aria-label={t('app.back', 'Back')}
+                            title={t('app.back', 'Back')}
+                            className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 shrink-0"
+                        >
+                            <ArrowLeft size={22} className="rtl:-scale-x-100" />
+                        </button>
+                        <div className="flex-1 min-w-0 px-1">
+                            <h2 className="text-base font-bold leading-tight truncate">{pageTitle}</h2>
+                            {pageSubtitle && <p className="text-xs text-slate-300 truncate">{pageSubtitle}</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 

@@ -63,9 +63,9 @@ export const CLASSIFICATION_COLOURS = {
 };
 
 // ---------------------------------------------------------------------------
-// Classification option banks. Every id beginning `imci.` is a real i18n key
-// from the app's own classification engine, so the checkbox labels follow the
-// interface language. Reuse these rather than retyping options per case.
+// Classification option banks. Every id beginning `imci.classifications.` is
+// shown in the protocol's own wording (vocabulary.js maps it to the protocol
+// rule), in the interface language. Reuse these rather than retyping options.
 // ---------------------------------------------------------------------------
 
 export const CLASSIFY_OPTIONS = {
@@ -127,73 +127,75 @@ export const SECTION_LABELS = {
 };
 
 // ---------------------------------------------------------------------------
-// Treatment option banks. Plain text, because treatments are phrased differently
-// per programme — edit these to match your national chart booklet wording.
+// Treatment option banks, written in the national protocol's own lines so the
+// learner reads what the protocol and the patient form print; their Arabic
+// comes from the national dictionary (vocabulary.js). An option with no
+// national line carries its own labelAr. Ids never change: attempts use them.
 // ---------------------------------------------------------------------------
 
 export const TREATMENT_OPTIONS = {
     danger: [
-        { id: 'd_first_dose',  label: 'Give first dose of an appropriate antibiotic' },
-        { id: 'd_sugar',       label: 'Treat to prevent low blood sugar' },
+        { id: 'd_first_dose',  label: "First dose of antibiotic if the child can take oral medicine — oral amoxicillin" },
+        { id: 'd_sugar',       label: "Treat the child to prevent low blood sugar" },
         { id: 'd_refer',       label: 'Refer URGENTLY to hospital' },
     ],
     cough: [
-        { id: 'c_first_dose',  label: 'Give first dose of an appropriate antibiotic' },
-        { id: 'c_sugar',       label: 'Treat to prevent low blood sugar' },
+        { id: 'c_first_dose',  label: "First dose of antibiotic if the child can take oral medicine — oral amoxicillin" },
+        { id: 'c_sugar',       label: "Treat the child to prevent low blood sugar" },
         { id: 'c_refer',       label: 'Refer URGENTLY to hospital' },
-        { id: 'c_oral_5days',  label: 'Oral antibiotic for 5 days at home' },
-        { id: 'c_soothe',      label: 'Soothe the throat, relieve the cough with a safe remedy' },
+        { id: 'c_oral_5days',  label: "Give oral amoxicillin for 5 days" },
+        { id: 'c_soothe',      label: "Soothe the throat and relieve the cough with a safe remedy" },
         { id: 'c_return',      label: 'Advise the mother when to return immediately' },
         { id: 'c_followup_3',  label: 'Follow up in 3 days' },
-        { id: 'c_none',        label: 'No treatment needed for cough' },
+        { id: 'c_none',        label: "No treatment needed" },
     ],
     diarrhea: [
-        { id: 'dr_planA',      label: 'Plan A: treat diarrhoea at home' },
-        { id: 'dr_planB',      label: 'Plan B: treat some dehydration with ORS' },
-        { id: 'dr_planC',      label: 'Plan C: treat severe dehydration quickly' },
-        { id: 'dr_zinc',       label: 'Give zinc supplement' },
-        { id: 'dr_antibiotic', label: 'Oral antibiotic for dysentery' },
-        { id: 'dr_ors_on_way', label: 'Give frequent sips of ORS on the way to hospital' },
+        { id: 'dr_planA',      label: 'Give fluid and food to treat diarrhoea at home (Plan A)' },
+        { id: 'dr_planB',      label: 'Give fluid and food for some dehydration (Plan B)' },
+        { id: 'dr_planC',      label: 'If the child has no other severe classification, give fluid for severe dehydration (Plan C)' },
+        { id: 'dr_zinc',       label: "Give zinc for 14 days" },
+        { id: 'dr_antibiotic', label: "Give oral ciprofloxacin for 3 days" },
+        { id: 'dr_ors_on_way', label: "If the child also has another severe classification, refer URGENTLY to hospital with the mother giving frequent sips of ORS on the way" },
         { id: 'dr_refer',      label: 'Refer URGENTLY to hospital' },
-        { id: 'dr_followup_3', label: 'Follow up in 3 days' },
+        { id: 'dr_followup_3', label: 'Follow up in 3 days', labelAr: "المتابعة بعد 3 أيام" },
     ],
     fever: [
-        { id: 'f_antimalarial', label: 'Give oral antimalarial' },
-        { id: 'f_paracetamol',  label: 'Give paracetamol for high fever' },
+        { id: 'f_antimalarial', label: "Give the first-line oral antimalarial, artemether-lumefantrine" },
+        { id: 'f_paracetamol',  label: "Give one dose of paracetamol in clinic for high fever (38.5 °C or above)" },
         { id: 'f_refer',        label: 'Refer URGENTLY to hospital' },
-        { id: 'f_followup_2',   label: 'Follow up in 2 days if fever persists' },
+        { id: 'f_followup_2',   label: 'Follow up in 2 days if fever persists', labelAr: "المتابعة بعد يومين إذا استمرت الحمى" },
     ],
     ear: [
-        { id: 'e_antibiotic',  label: 'Give an oral antibiotic for 5 days' },
+        { id: 'e_antibiotic',  label: 'Give an oral antibiotic for 5 days', labelAr: "أعطِ مضاداً حيوياً بالفم لمدة 5 أيام" },
         { id: 'e_wick',        label: 'Dry the ear by wicking' },
-        { id: 'e_paracetamol', label: 'Give paracetamol for pain' },
+        { id: 'e_paracetamol', label: "Give paracetamol for pain" },
         { id: 'e_refer',       label: 'Refer URGENTLY to hospital' },
     ],
     anemia: [
-        { id: 'an_iron',       label: 'Give iron' },
-        { id: 'an_antimalarial', label: 'Give oral antimalarial if the malaria test is positive' },
-        { id: 'an_deworm',     label: 'Give mebendazole if the child is older than one year' },
+        { id: 'an_iron',       label: "Give iron for 14 days, but not if sickle cell anaemia is known or suspected, or the child is on RUTF" },
+        { id: 'an_antimalarial', label: 'Give oral antimalarial if the malaria test is positive', labelAr: "أعطِ علاج الملاريا بالفم إذا كان اختبار الملاريا إيجابياً" },
+        { id: 'an_deworm',     label: "If 1 year or older and no mebendazole in the last 6 months, give mebendazole" },
         { id: 'an_followup_14', label: 'Follow up in 14 days' },
         { id: 'an_refer',      label: 'Refer URGENTLY to hospital' },
     ],
     malnutrition: [
-        { id: 'mn_rutf',       label: 'Give ready-to-use therapeutic food (RUTF)' },
-        { id: 'mn_vit_a',      label: 'Give vitamin A' },
-        { id: 'mn_amoxicillin', label: 'Give oral amoxicillin' },
+        { id: 'mn_rutf',       label: "If 6 months or older, refer to the outpatient therapeutic programme (OTP) and give RUTF" },
+        { id: 'mn_vit_a',      label: "Give vitamin A treatment" },
+        { id: 'mn_amoxicillin', label: "Give oral amoxicillin for 5 days" },
         { id: 'mn_refer',      label: 'Refer URGENTLY to hospital' },
-        { id: 'mn_supplementary', label: 'Refer to a supplementary feeding programme' },
-        { id: 'mn_assess_feeding', label: "Assess the child's feeding and counsel the mother" },
-        { id: 'mn_followup_7', label: 'Follow up in 7 days' },
+        { id: 'mn_supplementary', label: "Refer the child to the supplementary feeding programme" },
+        { id: 'mn_assess_feeding', label: "Assess the child's feeding and counsel the mother on the feeding recommendations" },
+        { id: 'mn_followup_7', label: "If there is a feeding problem, follow up in 7 days" },
         { id: 'mn_followup_30', label: 'Follow up in 30 days' },
     ],
     feeding: [
-        { id: 'fd_counsel',    label: 'Counsel the mother using the mother card' },
-        { id: 'fd_exclusive',  label: 'Advise exclusive breastfeeding under 6 months' },
-        { id: 'fd_no_bottle',  label: 'Advise against feeding bottles; use a cup' },
-        { id: 'fd_extra_meals', label: 'Advise extra feeds each day' },
-        { id: 'fd_active',     label: 'Advise active feeding: sit with the child and encourage' },
-        { id: 'fd_followup_7', label: 'Follow up any feeding problem in 7 days' },
-        { id: 'fd_none',       label: 'No feeding counselling needed' },
+        { id: 'fd_counsel',    label: 'Counsel the mother using the mother card', labelAr: "انصح الأم باستخدام كرت الأم" },
+        { id: 'fd_exclusive',  label: 'Advise exclusive breastfeeding under 6 months', labelAr: "انصح بالرضاعة الطبيعية المطلقة لمن هم دون 6 أشهر" },
+        { id: 'fd_no_bottle',  label: 'Advise against feeding bottles; use a cup', labelAr: "انصح بعدم استخدام زجاجة الرضاعة واستخدام الكوب" },
+        { id: 'fd_extra_meals', label: 'Advise extra feeds each day', labelAr: "انصح بوجبات إضافية كل يوم" },
+        { id: 'fd_active',     label: 'Advise active feeding: sit with the child and encourage', labelAr: "انصح بالتغذية النشطة: اجلسي مع الطفل وشجعيه" },
+        { id: 'fd_followup_7', label: 'Follow up any feeding problem in 7 days', labelAr: "تابع أي مشكلة تغذية بعد 7 أيام" },
+        { id: 'fd_none',       label: 'No feeding counselling needed', labelAr: "لا حاجة لنصح بالتغذية" },
     ],
 };
 
@@ -261,8 +263,8 @@ export const INFANT_CLASSIFY_OPTIONS = {
         { id: 'imci.classifications.no_feeding_problem' },
     ],
     breast: [
-        { id: 'bf_good', label: 'No breastfeeding problem' },
-        { id: 'bf_problem', label: 'Breastfeeding problem — position, attachment or sucking' },
+        { id: 'bf_good', label: 'No breastfeeding problem', labelAr: "لا توجد مشكلة في الرضاعة الطبيعية" },
+        { id: 'bf_problem', label: 'Breastfeeding problem — position, attachment or sucking', labelAr: "مشكلة في الرضاعة الطبيعية — الوضع أو الالتقام أو المص" },
     ],
     vaccine: [
         { id: 'imci.classifications.fully_vaccinated' },
@@ -274,43 +276,43 @@ export const INFANT_CLASSIFY_OPTIONS = {
 
 export const INFANT_TREATMENT_OPTIONS = {
     infection: [
-        { id: 'i_local_abx',  label: 'Give an appropriate oral antibiotic' },
-        { id: 'i_teach_skin', label: 'Teach the mother to treat local infections at home' },
+        { id: 'i_local_abx',  label: "Give oral amoxicillin for 5 days" },
+        { id: 'i_teach_skin', label: "Teach the mother to treat local infections at home (full-strength gentian violet 0.5%, twice daily for 5 days)" },
         { id: 'i_followup_2', label: 'Follow up in 2 days' },
-        { id: 'i_first_dose', label: 'Give first dose of intramuscular antibiotics' },
-        { id: 'i_sugar',      label: 'Treat to prevent low blood sugar' },
-        { id: 'i_warm',       label: 'Advise the mother how to keep the infant warm on the way' },
+        { id: 'i_first_dose', label: "Give first dose of IM ampicillin" },
+        { id: 'i_sugar',      label: "Treat the young infant to prevent low blood sugar" },
+        { id: 'i_warm',       label: "Advise the mother how to keep the infant warm on the way to the hospital" },
         { id: 'i_refer',      label: 'Refer URGENTLY to hospital' },
     ],
     jaundice: [
         { id: 'j_advise_return', label: 'Advise the mother when to return immediately' },
         { id: 'j_followup_1',    label: 'Follow up in 1 day' },
-        { id: 'j_sunlight',      label: 'Advise the mother to keep the infant warm' },
-        { id: 'j_sugar',         label: 'Treat to prevent low blood sugar' },
+        { id: 'j_sunlight',      label: 'Advise the mother to keep the infant warm', labelAr: "انصح الأم بتدفئة الرضيع" },
+        { id: 'j_sugar',         label: 'Treat the young infant to prevent low blood sugar' },
         { id: 'j_refer',         label: 'Refer URGENTLY to hospital' },
     ],
     diarrhea: [
-        { id: 'id_planA', label: 'Plan A: treat diarrhoea at home' },
-        { id: 'id_planB', label: 'Plan B: treat some dehydration with ORS' },
-        { id: 'id_planC', label: 'Plan C: treat severe dehydration quickly' },
+        { id: 'id_planA', label: 'Give fluids to treat diarrhoea at home (Plan A)' },
+        { id: 'id_planB', label: 'If the infant has no severe classification, give fluid for some dehydration (Plan B)' },
+        { id: 'id_planC', label: 'If the infant has no other severe classification, give fluid for severe dehydration (Plan C)' },
         { id: 'id_refer', label: 'Refer URGENTLY to hospital' },
-        { id: 'id_none',  label: 'No treatment needed — the infant has no diarrhoea' },
+        { id: 'id_none',  label: 'No treatment needed — the infant has no diarrhoea', labelAr: "لا حاجة لعلاج — الرضيع ليس لديه إسهال" },
     ],
     feeding: [
-        { id: 'f_continue_bf', label: 'Advise the mother to continue breastfeeding on demand' },
-        { id: 'f_home_care',   label: 'Advise home care for the young infant' },
-        { id: 'f_counsel',     label: 'Counsel the mother about a feeding problem' },
-        { id: 'f_thrush',      label: 'Treat thrush' },
-        { id: 'f_followup_2',  label: 'Follow up any feeding problem in 2 days' },
+        { id: 'f_continue_bf', label: 'Advise the mother to continue breastfeeding on demand', labelAr: "انصح الأم بالاستمرار في الرضاعة الطبيعية حسب الطلب" },
+        { id: 'f_home_care',   label: "Advise the mother to give home care for the young infant" },
+        { id: 'f_counsel',     label: "Counsel the mother on feeding the young infant" },
+        { id: 'f_thrush',      label: "If thrush, teach the mother to treat it at home (half-strength gentian violet 0.25%, 4 times daily for 7 days)" },
+        { id: 'f_followup_2',  label: "Follow up any feeding problem or thrush in 2 days" },
     ],
     breast: [
-        { id: 'b_teach_position', label: 'Teach correct positioning and attachment' },
-        { id: 'b_followup_2',     label: 'Follow up in 2 days' },
-        { id: 'b_none',           label: 'No action needed' },
+        { id: 'b_teach_position', label: "If not well attached or not suckling effectively, teach correct positioning and attachment" },
+        { id: 'b_followup_2',     label: 'Follow up in 2 days', labelAr: "المتابعة بعد يومين" },
+        { id: 'b_none',           label: 'No action needed', labelAr: "لا حاجة لإجراء" },
     ],
     vaccine: [
-        { id: 'v_give_due',  label: 'Give the vaccines due today' },
-        { id: 'v_next_date', label: 'Tell the mother the date of the next immunisation' },
+        { id: 'v_give_due',  label: 'Give the vaccines due today', labelAr: "أعطِ التطعيمات المستحقة اليوم" },
+        { id: 'v_next_date', label: 'Tell the mother the date of the next immunisation', labelAr: "أخبر الأم بموعد التطعيم القادم" },
     ],
     other: [],
 };
