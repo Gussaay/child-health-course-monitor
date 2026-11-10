@@ -102,6 +102,44 @@ export function PageActions({ children, keep = 1, className = '' }) {
     );
 }
 
+// A button that opens a short list of related actions (for example "Export"
+// holding Excel and the PDF choices), so a page's tool row stays one line.
+// Its children are ordinary Buttons; choosing one closes the list.
+export function MenuButton({ label, icon: Icon, children, className = '' }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        if (!open) return undefined;
+        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('pointerdown', close);
+        return () => document.removeEventListener('pointerdown', close);
+    }, [open]);
+    const items = React.Children.toArray(children);
+    if (items.length === 0) return null;
+    return (
+        <div ref={ref} className={`relative ${className}`}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-expanded={open}
+                className={`h-[38px] px-3 rounded-md border flex items-center gap-1.5 text-sm font-semibold transition-colors ${open ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
+            >
+                {Icon && <Icon size={16} />}
+                {label}
+                <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && (
+                <div
+                    onClick={() => setOpen(false)}
+                    className="absolute start-0 top-full z-40 mt-1 flex w-max max-w-[85vw] min-w-full flex-col gap-1 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg [&>*]:w-full [&>*]:justify-start [&>*]:shadow-none"
+                >
+                    {items}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // Pull down from the top of a list to refresh it (phones / touch only).
 // Render it once in a page that has a refresh action.
 export function PullToRefresh({ onRefresh, disabled = false }) {

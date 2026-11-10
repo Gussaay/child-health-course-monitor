@@ -11,8 +11,8 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from 'react-i18next';
 
 // --- ICONS ---
-import { PdfIcon, PageActions } from './CommonComponents';
-import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity, Baby, Siren, BarChart3, Pencil, Link2, MapPin, History, Trash2 } from 'lucide-react';
+import { PdfIcon } from './CommonComponents';
+import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity, Baby, Siren, BarChart3, Pencil, Link2, MapPin, History, Trash2, Download, Wrench } from 'lucide-react';
 
 import NameStandardizationModal from './NameStandardizationModal.jsx';
 import { useStandardNames } from '../hooks/useNameRegistry';
@@ -27,7 +27,7 @@ import { point } from '@turf/helpers';
 import {
     Card, PageHeader, Button, FormGroup, Select, Table,
     Modal, Spinner, EmptyState, Checkbox, Input, SkeletonTable,
-    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid
+    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid, MenuButton
 } from './CommonComponents';
 import {
     saveFacilitySnapshot,
@@ -2242,34 +2242,33 @@ const ChildHealthServicesView = ({
                     </div>
                     </FilterPanel>
 
-                    <div className="flex flex-col items-start gap-2 md:flex-row md:justify-between md:items-center my-4">
-                        <PageActions keep={1}>
-                            {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>{t('facilities_page.services.add_new', 'Add New')}</Button> )}
-                            {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>{t('facilities_page.services.bulk_upload', 'Bulk Upload')}</Button> )}
-                            
-                            <Button variant="info" onClick={handleShareBulkUpdateLink}>{t('facilities_page.services.share_bulk_link', 'Share Bulk Update Link')}</Button>
-                            
+                    {/* One tool row: Add, then the exports and the clean-up tools as two short menus. */}
+                    <div className="flex flex-wrap items-center gap-2 my-4">
+                        {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>{t('facilities_page.services.add_new', 'Add New')}</Button> )}
+
+                        <MenuButton label={t('facilities_page.services.export_menu', 'Export')} icon={Download}>
                             <Button variant="secondary" onClick={handleExportExcel} disabled={!filteredFacilities || filteredFacilities.length === 0}>{t('facilities_page.services.export_excel', 'Export Excel')}</Button>
-                            
                             {isPdfGenerating ? (
                                 <Button disabled variant="secondary"><Spinner size="sm" /> {t('facilities_page.services.generating_pdf', 'Generating PDF...')}</Button>
                             ) : (
-                                <>
-                                    <Button onClick={() => handlePdfListGeneration('print')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
-                                        <PdfIcon /> {t('facilities_page.services.export_pdf_print', 'Export PDF (Print)')}
-                                    </Button>
-                                    <Button onClick={() => handlePdfListGeneration('screen')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
-                                        <PdfIcon /> {t('facilities_page.services.export_pdf_share', 'Export PDF (Share)')}
-                                    </Button>
-                                </>
+                                <Button onClick={() => handlePdfListGeneration('print')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
+                                    <PdfIcon /> {t('facilities_page.services.export_pdf_print', 'Export PDF (Print)')}
+                                </Button>
                             )}
-                        </PageActions>
-                         
-                        <div className="flex flex-wrap gap-2">
-                             {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>{t('facilities_page.services.find_duplicates', 'Find Duplicates')}</Button> )}
-                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>{t('facilities_page.services.clean_data', 'Clean Data')}</Button> )}
-                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>{t('facilities_page.services.standardize_names', 'Standardize Projects & Organizations')}</Button> )}
-                        </div>
+                            {!isPdfGenerating && (
+                                <Button onClick={() => handlePdfListGeneration('screen')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
+                                    <PdfIcon /> {t('facilities_page.services.export_pdf_share', 'Export PDF (Share)')}
+                                </Button>
+                            )}
+                        </MenuButton>
+
+                        <MenuButton label={t('facilities_page.services.tools_menu', 'Tools')} icon={Wrench}>
+                            {canBulkUploadFacilities && ( <Button variant="secondary" onClick={() => setIsBulkUploadModalOpen(true)}>{t('facilities_page.services.bulk_upload', 'Bulk Upload')}</Button> )}
+                            <Button variant="secondary" onClick={handleShareBulkUpdateLink}>{t('facilities_page.services.share_bulk_link', 'Share Bulk Update Link')}</Button>
+                            {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>{t('facilities_page.services.find_duplicates', 'Find Duplicates')}</Button> )}
+                            {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>{t('facilities_page.services.clean_data', 'Clean Data')}</Button> )}
+                            {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>{t('facilities_page.services.standardize_names', 'Standardize Projects & Organizations')}</Button> )}
+                        </MenuButton>
                     </div>
 
                     <p className="text-sm text-gray-600 mb-2">

@@ -775,33 +775,14 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         });
     }
 
+    // The app's menu tile, as on the main menu.
     const renderGrid = (items) => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {items.map(item => {
-                const Icon = item.icon;
-                return (
-                    <button
-                        key={item.id}
-                        onClick={() => onAction(item.id)}
-                        className={`flex flex-row items-center p-3 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-start focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
-                    >
-                        <div className={`p-2.5 rounded-md transition-transform duration-200 group-hover:scale-110 flex-shrink-0 ${item.bg}`}>
-                            <Icon className={`w-5 h-5 ${item.color}`} strokeWidth={2} />
-                        </div>
-                        <div className="font-semibold text-gray-700 text-sm group-hover:text-gray-900 transition-colors mx-3 flex-1">
-                            {item.label}
-                        </div>
-                        <div className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 transform group-hover:translate-x-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 rtl:rotate-180" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                    </button>
-                );
-            })}
-        </div>
+        <MenuGrid columns="md:grid-cols-4">
+            {items.map(item => (
+                <MenuTile key={item.id} icon={item.icon} label={item.label} onClick={() => onAction(item.id)} />
+            ))}
+        </MenuGrid>
     );
-
     const landingItems = [
         ...(canManage ? [{
             id: 'add',
@@ -828,27 +809,18 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
     ];
 
     const renderLanding = () => (
-        <div className="grid grid-cols-2 gap-3 md:gap-4">
-            {landingItems.map(item => {
-                const Icon = item.icon;
-                return (
-                    <button
-                        key={item.id}
-                        onClick={() => onSelectSection(item.id)}
-                        className={`flex flex-col items-start p-4 md:p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-start focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
-                    >
-                        <div className={`p-3 rounded-lg transition-transform duration-200 group-hover:scale-110 ${item.bg}`}>
-                            <Icon className={`w-6 h-6 ${item.color}`} strokeWidth={2} />
-                        </div>
-                        <div className="mt-3 font-bold text-gray-800 group-hover:text-gray-900">{item.label}</div>
-                        <div className="text-sm text-gray-500" dir="rtl">{item.arabic}</div>
-                        <div className="text-xs text-gray-400 mt-1">{item.hint}</div>
-                    </button>
-                );
-            })}
-        </div>
+        <MenuGrid columns="">
+            {landingItems.map(item => (
+                <MenuTile
+                    key={item.id}
+                    icon={item.icon}
+                    label={<>{item.label}<span className="block text-sm font-normal text-slate-500" dir="rtl">{item.arabic}</span></>}
+                    hint={item.hint}
+                    onClick={() => onSelectSection(item.id)}
+                />
+            ))}
+        </MenuGrid>
     );
-
     const sectionTitles = { add: t('mentorship_page.menu.add_new_data', 'Add New Data'), view: t('mentorship_page.menu.view_records', 'View Records & Dashboards') };
 
     return (
