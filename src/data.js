@@ -4207,3 +4207,42 @@ export function subscribeFacilityDelta(filters, sinceMs, onChange, onError) {
         if (changes.upserts.length || changes.removed.length) onChange(changes);
     }, onError);
 }
+
+// --- IMCI OPERATIONAL GUIDE: DAILY EVALUATION ---
+// Exercise monitoring goes through the normal course monitoring (cases +
+// observations). The daily evaluation is anonymous participant feedback from a
+// public link, saved with lastUpdatedAt / isDeleted and written through
+// executeOfflineSafeWrite so it queues when offline.
+
+// Cases of one course (the operational guide exercise monitoring summary).
+export async function listCasesForCourse(courseId, sourceOptions = {}) {
+    const q = query(collection(db, "cases"), where("courseId", "==", courseId));
+    const snapshot = await getDocs(q, sourceOptions);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.isDeleted !== true);
+}
+
+export async function getDailyEvalForm(formId) {
+    const snap = await getDoc(doc(db, "dailyEvalForms", formId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function saveDailyEvalForm(formId, form) {
+    const data = { ...form, id: formId, lastUpdatedAt: serverTimestamp() };
+    const uid = firebaseAuth.currentUser?.uid || null;
+    if (uid) data.updatedByUid = uid;
+    return executeOfflineSafeWrite(setDoc(doc(db, "dailyEvalForms", formId), data, { merge: true }), 'Daily evaluation form');
+}
+
+export async function submitDailyEvalResponse(response) {
+    const ref = doc(collection(db, "dailyEvalResponses"));
+    const data = { ...response, id: ref.id, isDeleted: false, createdAt: serverTimestamp() };
+    const uid = firebaseAuth.currentUser?.uid || null;
+    if (uid) data.createdByUid = uid; // the form stays anonymous: no name, uid only marks a signed-in device
+    return executeOfflineSafeWrite(setDoc(ref, data), 'Daily evaluation');
+}
+
+export async function listDailyEvalResponses(courseId) {
+    const q = query(collection(db, "dailyEvalResponses"), where("courseId", "==", courseId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.isDeleted);
+}

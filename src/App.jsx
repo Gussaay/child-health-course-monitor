@@ -63,6 +63,7 @@ const PublicCertificateDownloadView = lazy(() => import('./components/Certificat
 const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
 const CertificateDownloadBanner = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateDownloadBanner })));
 
+const PublicDailyEvaluationView = lazy(() => import('./components/DailyEvaluation.jsx').then(module => ({ default: module.PublicDailyEvaluationView })));
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
 const PublicParticipantRegistrationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicParticipantRegistrationView })));
@@ -1421,6 +1422,9 @@ export default function App() {
             const courseCertPageMatch = path.match(/^\/public\/course\/certificates\/([a-zA-Z0-9_-]+)\/?$/);
             if (courseCertPageMatch && courseCertPageMatch[1]) { setPublicViewType('courseCertificatesPage'); setPublicViewData({ courseId: courseCertPageMatch[1] }); return; }
             
+            const dailyEvalMatch = path.match(/^\/public\/evaluation\/([a-zA-Z0-9_-]+)\/?$/);
+            if (dailyEvalMatch && dailyEvalMatch[1]) { setPublicViewType('dailyEvaluation'); setPublicViewData({ formId: dailyEvalMatch[1] }); return; }
+
             const publicAttendanceMatch = path.match(/^\/attendance\/course\/([a-zA-Z0-9]+)\/?$/);
             if (publicAttendanceMatch && publicAttendanceMatch[1]) { setPublicViewType('attendance'); setPublicViewData({ courseId: publicAttendanceMatch[1] }); return; }
 
@@ -2549,7 +2553,7 @@ case 'meetings':
     // window. Drawn with the full app chrome — header, navigation, bottom bar —
     // the consent card is pushed below the fold of a 600px popup and the window
     // looks empty, which is exactly how it was reported.
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!connectClaudeId;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!connectClaudeId;
 
     let mainContent;
 
@@ -2680,7 +2684,7 @@ case 'meetings':
         }
     }
 
-    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'onlineExercises') { 
+    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <PageSkeleton />;
         }
@@ -2708,6 +2712,9 @@ case 'meetings':
                     break;
                 case 'courseCertificatesPage':
                     mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicCourseCertificatesView courseId={publicViewData.courseId} /></Suspense> );
+                    break;
+                case 'dailyEvaluation':
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicDailyEvaluationView formId={publicViewData.formId} /></Suspense> );
                     break;
                 case 'attendance':
                     mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );

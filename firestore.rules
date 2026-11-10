@@ -473,6 +473,11 @@ service cloud.firestore {
 
     // --- Course-Related Collections ---
 
+    // Anonymous daily evaluation of the IMCI operational guide training. Staff
+    // set up the day and its items; the public link reads the setup and adds a
+    // response without signing in. Responses are anonymous, so only staff read
+    // or delete them, and nobody can change one after it is sent.
+
     match /courses/{courseId} {
       allow read: if true;
       allow write: if isStaff();
@@ -608,6 +613,34 @@ service cloud.firestore {
       allow update: if observerUpdatesOwn();
       allow delete: if observerDeletesOwn();
     }
+    // =========================================================================
+    // --- IMCI operational guide workshop: daily evaluation ---
+    // Opened from /public/evaluation/{formId}, signed in or not, so the writer
+    // may be anonymous; every answer must point at a live course. (Exercise
+    // monitoring for this course is saved in cases/observations like any
+    // other course monitoring.)
+    // =========================================================================
+
+    // The form set-up (day + lectures + general items) for one course day.
+    // Public read so the anonymous link can show it; only staff set it up.
+    match /dailyEvalForms/{formId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Anonymous answers: anyone may add one to a live course's form; nobody
+    // can change one after sending; only staff read or delete them.
+    match /dailyEvalResponses/{responseId} {
+      allow create: if request.resource.data.formId is string
+                    && request.resource.data.formId.size() < 200
+                    && request.resource.data.courseId is string
+                    && request.resource.data.formId.matches(request.resource.data.courseId + '_.*')
+                    && request.resource.data.keys().size() < 25
+                    && isLiveCourse(request.resource.data.courseId);
+      allow read, delete: if isStaff();
+      allow update: if false;
+    }
+
     match /finalReports/{reportId} {
       allow read: if request.auth != null || get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true;
       allow write: if isStaff();

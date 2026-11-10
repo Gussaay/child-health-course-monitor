@@ -27,6 +27,8 @@ import {
     listAllParticipantsForCourse 
 } from '../data.js'; 
 
+import { DailyEvaluationShare } from './DailyEvaluation';
+import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import { CourseExercisesView } from './imnci';
@@ -1307,6 +1309,17 @@ export function CoursesTable({
                                         </div>
                                         )}
                                     </div>
+                                )}
+
+                                {isOperationalGuideCourse(shareModalCourse) && (
+                                    <DailyEvaluationShare
+                                        key={shareModalCourse.id}
+                                        course={shareModalCourse}
+                                        onShare={(formId, day) => {
+                                            const link = `${getBaseUrl()}/public/evaluation/${formId}`;
+                                            setQrShareData({ url: link, title: `Daily evaluation - Day ${day}: ${shareModalCourse.course_type}` });
+                                        }}
+                                    />
                                 )}
 
                                 <div className="bg-gray-50 p-3 rounded border">

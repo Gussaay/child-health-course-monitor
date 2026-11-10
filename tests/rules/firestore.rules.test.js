@@ -925,3 +925,25 @@ describe('usageMonthly — each device adds to its own month, only a super user 
         await assertFails(getDoc(doc(as('plainUser'), 'usageBills', '2026-11')));
     });
 });
+
+// =============================================================================
+// IMCI operational guide workshop: daily evaluation, filled from a public
+// link signed in or not.
+// =============================================================================
+describe('dailyEval — staff set up the form, anyone answers, staff read answers', () => {
+    const answer = (over = {}) => ({ formId: 'publicCourse_2026-11-10', courseId: 'publicCourse', date: '2026-11-10', dayNumber: 1, lectures: {}, general: {}, ...over });
+
+    it('lets staff set up the form and anyone read it', async () => {
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'dailyEvalForms', 'publicCourse_2026-11-10'), { courseId: 'publicCourse', dayNumber: 1, lectures: [], general: [] }));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalForms', 'x'), { courseId: 'publicCourse' }));
+        await assertSucceeds(getDoc(doc(anonymous(), 'dailyEvalForms', 'publicCourse_2026-11-10')));
+    });
+    it('lets anyone send one answer, nobody change it, only staff read it', async () => {
+        await assertSucceeds(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r1'), answer()));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'dailyEvalResponses', 'r2'), answer()));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r3'), answer({ formId: 'otherCourse_2026-11-10' })));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r1'), answer({ dayNumber: 2 })));
+        await assertFails(getDoc(doc(anonymous(), 'dailyEvalResponses', 'r1')));
+        await assertSucceeds(getDoc(doc(as('facilitator'), 'dailyEvalResponses', 'r1')));
+    });
+});
