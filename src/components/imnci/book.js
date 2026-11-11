@@ -386,8 +386,69 @@ export function countWords(section) {
 // come straight from the book's prose.
 export const BLOCK_TYPES = [
     'heading', 'paragraph', 'rich', 'list', 'image', 'page', 'video',
-    'table', 'note', 'question', 'exercise',
+    'table', 'note', 'question', 'exercise', 'booklet', 'form',
 ];
+
+// ---------------------------------------------------------------------------
+// Cards in the section editor
+//
+// Prose is edited as one document; anything assembled from fields is a card:
+// a video, a question, a link to a case, a captured page, a chart booklet
+// table or recording form drawn from the protocol, and a labelled note (such
+// as "Sudan national protocol"). A card is held in the text by a marker
+// paragraph, [[card c3]], so it stays where the author put it. Before markers,
+// every card was moved below the text on the first save.
+// ---------------------------------------------------------------------------
+
+export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form'];
+export const isCard = (b) => CARD_TYPES.includes(b?.type) || (b?.type === 'note' && !!b.label);
+export const cardMarker = (key) => `[[card ${key}]]`;
+const MARKER_PARA = /<p[^>]*>\s*\[\[card ([a-z0-9]+)\]\]\s*(?:<br\s*\/?>)?\s*<\/p>/gi;
+const STRAY_MARKER = /\[\[card [a-z0-9]+\]\]/gi;
+
+/** A tab's blocks as one HTML document plus its cards, each keyed by a marker. */
+export function splitForEditor(content = []) {
+    const cards = [];
+    const parts = [];
+    content.forEach((b) => {
+        if (isCard(b)) {
+            const key = `c${cards.length + 1}`;
+            cards.push({ ...JSON.parse(JSON.stringify(b)), _k: key });
+            parts.push(`<p>${cardMarker(key)}</p>`);
+        } else {
+            const h = blockHtml(b);
+            if (h) parts.push(h);
+        }
+    });
+    return { html: parts.join('\n'), cards };
+}
+
+/**
+ * The edited document and cards back as blocks, in the order the markers put
+ * them. A card whose marker was deleted is kept, after the text, rather than
+ * lost; a marker with no card left is dropped.
+ */
+export function joinFromEditor(html = '', cards = []) {
+    const byKey = Object.fromEntries(cards.map((c) => [c._k, c]));
+    const used = new Set();
+    const out = [];
+    const strip = ({ _k, ...rest }) => rest;
+    const pushText = (chunk) => {
+        const clean = chunk.replace(STRAY_MARKER, '').trim();
+        const words = clean.replace(/<[^>]*>/g, '').trim();
+        if (words || /<img|<table/i.test(clean)) out.push({ type: 'rich', text: clean });
+    };
+    let last = 0;
+    for (const m of String(html).matchAll(MARKER_PARA)) {
+        pushText(html.slice(last, m.index));
+        const card = byKey[m[1]];
+        if (card && !used.has(m[1])) { out.push(strip(card)); used.add(m[1]); }
+        last = m.index + m[0].length;
+    }
+    pushText(String(html).slice(last));
+    cards.filter((c) => !used.has(c._k)).forEach((c) => out.push(strip(c)));
+    return out;
+}
 
 // Which block types hold text the author writes, as opposed to something they
 // assemble from fields. These are the ones edited in place, in the rich editor.
