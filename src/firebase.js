@@ -10,6 +10,7 @@ import {
   indexedDBLocalPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
+  browserPopupRedirectResolver,
 } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -66,11 +67,21 @@ export const app = firebaseApp;
 // The same stores getAuth() uses are kept, so nobody is signed out; the helper
 // is passed only to the Google sign-in calls in auth-ui.jsx, which load it
 // when it is actually needed.
+//
+// Desktop Safari is the exception. Firebase loads the helper early there on
+// purpose (getAuth does too): Safari only opens a popup straight from the
+// click, and loading the helper after the click would get the Google window
+// blocked. Phones never use the popup (auth-ui.jsx signs in by redirect), and
+// desktop Chrome, Edge and Firefox already loaded it only on the click.
+const IS_DESKTOP_SAFARI = typeof navigator !== 'undefined'
+  && /^((?!chrome|chromium|crios|fxios|edg|android).)*safari/i.test(navigator.userAgent)
+  && !/iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 function createAuth() {
   if (!Capacitor.isNativePlatform()) {
     try {
       return initializeAuth(firebaseApp, {
         persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+        ...(IS_DESKTOP_SAFARI ? { popupRedirectResolver: browserPopupRedirectResolver } : {}),
       });
     } catch {
       return getAuth(firebaseApp); // already initialised (hot reload)

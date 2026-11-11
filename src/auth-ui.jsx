@@ -37,16 +37,6 @@ const takeRedirectMark = () => {
     return pending;
   } catch { return true; } // storage blocked: check, as before
 };
-// Loads the helper ahead of the click when the pointer reaches the Google
-// button (or it gets keyboard focus), so the popup still opens straight from
-// the click and is not caught by popup blockers. getRedirectResult with no
-// redirect in progress only loads the helper and returns null.
-let googleHelperWarm = false;
-const warmGoogleHelper = () => {
-  if (googleHelperWarm || Capacitor.isNativePlatform()) return;
-  googleHelperWarm = true;
-  getRedirectResult(auth, browserPopupRedirectResolver).catch(() => {});
-};
 const googleRedirect = (provider) => { markRedirect(); return signInWithRedirect(auth, provider, browserPopupRedirectResolver); };
 
 // --- NATIVE PLUGIN INITIALIZATION ---
@@ -544,8 +534,6 @@ export function SignInBox() {
         
         <button 
           type="button"
-          onPointerEnter={warmGoogleHelper}
-          onFocus={warmGoogleHelper}
           onClick={(e) => {
             e.preventDefault();
             signInWithGoogle();
