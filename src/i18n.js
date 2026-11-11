@@ -51,6 +51,12 @@ const initDone = i18n
     interpolation: {
       escapeValue: false,
     },
+    // No Suspense: there is no <Suspense> above the app root, so a component
+    // that suspended on a language still loading (after i18nReady gave up
+    // waiting, see below) would hold the whole app on the boot splash. Without
+    // it, such a screen renders with the English text written next to each t()
+    // call and re-renders in the right language once the file arrives.
+    react: { useSuspense: false },
   });
 
 // Resolves once the language in use is ready. Never rejects and never waits
