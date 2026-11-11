@@ -9,7 +9,7 @@
 // a learner can see the sections of a module without leaving the page. The
 // module page is still there, one tap away, for saving a module for offline
 // use and for the authors' tools.
-import React, { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     BookOpen, Plus, Pencil, ArrowLeft, ArrowRight, CheckCircle2, Lock, Unlock, Clock, Layers, Search, X,
@@ -54,6 +54,12 @@ export function CoursePage() {
     const [filter, setFilter] = useState('all');
     // The module the learner is working in starts open; the rest are folded.
     const [openIds, setOpenIds] = useState(() => new Set(nextUp?.moduleId ? [nextUp.moduleId] : []));
+    // Progress can arrive after the page has drawn from cached courses, which
+    // moves "Up next" to another module; open that one too when it does.
+    const nextModuleId = nextUp?.moduleId;
+    useEffect(() => {
+        if (nextModuleId) setOpenIds((s) => (s.has(nextModuleId) ? s : new Set(s).add(nextModuleId)));
+    }, [nextModuleId]);
     const toggleOpen = (id) => setOpenIds((s) => {
         const n = new Set(s);
         if (n.has(id)) n.delete(id); else n.add(id);
