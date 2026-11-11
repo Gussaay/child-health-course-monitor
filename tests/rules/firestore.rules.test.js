@@ -4,7 +4,7 @@ import {
     assertFails,
     assertSucceeds,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 import fs from 'node:fs';
 
 // Run with:  npm run test:rules   (starts the Firestore emulator around them)
@@ -945,5 +945,53 @@ describe('dailyEval — staff set up the form, anyone answers, staff read answer
         await assertFails(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r1'), answer({ dayNumber: 2 })));
         await assertFails(getDoc(doc(anonymous(), 'dailyEvalResponses', 'r1')));
         await assertSucceeds(getDoc(doc(as('facilitator'), 'dailyEvalResponses', 'r1')));
+    });
+});
+
+// =============================================================================
+// Training links (src/training/): a practice copy of the app per course,
+// open only during the course's practice window.
+// =============================================================================
+describe('trainingSandboxes — practice data only while the course window is open', () => {
+    const HOUR = 60 * 60 * 1000;
+    const setCourse = (id, training) => testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'courses', id), { course_type: 'Program Management', ...(training ? { training } : {}) });
+    });
+    const window = (fromMs, toMs, enabled = true) => ({
+        enabled,
+        startsAt: Timestamp.fromMillis(Date.now() + fromMs),
+        endsAt: Timestamp.fromMillis(Date.now() + toMs),
+    });
+
+    it('lets a signed-in trainee read and write while the window is open', async () => {
+        await setCourse('openCourse', window(-HOUR, HOUR));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingSandboxes', 'openCourse', 'participants', 'p1'), { name: 'Practice' }));
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'trainingSandboxes', 'openCourse', 'participants', 'p1')));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingSandboxes', 'openCourse'), { seededAt: 1 }));
+    });
+    it('refuses anyone not signed in', async () => {
+        await setCourse('openCourse', window(-HOUR, HOUR));
+        await assertFails(setDoc(doc(anonymous(), 'trainingSandboxes', 'openCourse', 'participants', 'p1'), { name: 'x' }));
+        await assertFails(getDoc(doc(anonymous(), 'trainingSandboxes', 'openCourse', 'participants', 'p1')));
+    });
+    it('refuses writes after the window, before it, when switched off, or never shared', async () => {
+        await setCourse('expired', window(-2 * HOUR, -HOUR));
+        await setCourse('future', window(HOUR, 2 * HOUR));
+        await setCourse('off', window(-HOUR, HOUR, false));
+        await setCourse('never', null);
+        for (const id of ['expired', 'future', 'off', 'never', 'noSuchCourse']) {
+            await assertFails(setDoc(doc(as('plainUser'), 'trainingSandboxes', id, 'courses', 'c1'), { course_type: 'IMNCI' }));
+            await assertFails(getDoc(doc(as('plainUser'), 'trainingSandboxes', id, 'courses', 'c1')));
+        }
+    });
+    it('lets staff review a closed sandbox but not change it', async () => {
+        await setCourse('expired', window(-2 * HOUR, -HOUR));
+        await assertSucceeds(getDoc(doc(as('facilitator'), 'trainingSandboxes', 'expired', 'courses', 'c1')));
+        await assertFails(setDoc(doc(as('facilitator'), 'trainingSandboxes', 'expired', 'courses', 'c1'), { x: 1 }));
+    });
+    it('does not let a plain user switch the window on', async () => {
+        await setCourse('never', null);
+        await assertFails(updateDoc(doc(as('plainUser'), 'courses', 'never'), { training: window(-HOUR, HOUR) }));
+        await assertSucceeds(updateDoc(doc(as('facilitator'), 'courses', 'never'), { training: window(-HOUR, HOUR) }));
     });
 });

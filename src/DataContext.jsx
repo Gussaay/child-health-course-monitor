@@ -41,6 +41,7 @@ import {
 import { useAuth } from './hooks/useAuth';
 import { setUsageSource } from './utils/usageLedger';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { trainingCourseId } from './training/trainingSession.js';
 
 const DataCacheContext = createContext();
 
@@ -84,7 +85,10 @@ const SYNC_MARK_VERSION = 2;
 // Listeners start from a server-time mark, so a second of overlap is enough
 // to catch two records stamped in the same millisecond.
 const LIVE_OVERLAP_MS = 1000;
-const syncMarkKey = (key) => `syncMark_v${SYNC_MARK_VERSION}_${key}`;
+// A training link (src/training/) keeps its own cache, sync marks and
+// IndexedDB store, so practice data never mixes with the real copy on this device.
+const CACHE_NS = trainingCourseId() ? `training_${trainingCourseId()}_` : '';
+const syncMarkKey = (key) => `${CACHE_NS}syncMark_v${SYNC_MARK_VERSION}_${key}`;
 const tsMillis = (v) => {
     if (!v) return 0;
     if (typeof v.toMillis === 'function') return v.toMillis();
@@ -184,7 +188,7 @@ const fetchWithTimeout = async (promise, timeoutMs = 60000) => {
 // ============================================================================
 const initDB = () => {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open('AppDataCache', 1);
+        const request = indexedDB.open(CACHE_NS ? `AppDataCache_${CACHE_NS}` : 'AppDataCache', 1);
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains('apiData')) {
@@ -344,7 +348,7 @@ export const DataProvider = ({ children }) => {
                 const filterKey = getFilterKey(filters);
                 const internalCache = facilitiesFilterCacheRef.current;
                 
-                const timeKey = `lastServerFetch_${key}_${filterKey}`;
+                const timeKey = `${CACHE_NS}lastServerFetch_${key}_${filterKey}`;
                 const lastFetchTime = parseInt(localStorage.getItem(timeKey) || '0', 10);
                 const isStale = (Date.now() - lastFetchTime) > CACHE_TTL_MS;
                 const shouldForceServer = force || isStale;
@@ -515,7 +519,7 @@ export const DataProvider = ({ children }) => {
             const hasData = currentCache !== null;
             const isDefaultSettings = (key.includes('Settings') && currentCache?.openCount === 0);
 
-            const timeKey = `lastServerFetch_${key}`;
+            const timeKey = `${CACHE_NS}lastServerFetch_${key}`;
             const lastFetchTime = parseInt(localStorage.getItem(timeKey) || '0', 10);
             const isStale = (Date.now() - lastFetchTime) > CACHE_TTL_MS;
             const shouldForceServer = force || isStale;
@@ -924,7 +928,7 @@ export const DataProvider = ({ children }) => {
     const clearLocalCache = useCallback(async () => {
         try {
             Object.keys(localStorage)
-                .filter(k => k.startsWith('lastServerFetch_') || k.startsWith('syncMark_'))
+                .filter(k => k.startsWith(`${CACHE_NS}lastServerFetch_`) || k.startsWith(`${CACHE_NS}syncMark_`))
                 .forEach(k => localStorage.removeItem(k));
             const db = await initDB();
             await new Promise((resolve, reject) => {

@@ -8,6 +8,7 @@ import { registerSW } from 'virtual:pwa-register';
 
 import App from './App';
 import { DataProvider } from './DataContext';
+import TrainingGate from './training/TrainingGate';
 import { AuthProvider } from './hooks/useAuth';
 import { DATA_ENTRY_PATH } from './hooks/useAppUpdate';
 import { applyWebUpdateQuietly } from './utils/quietWebUpdate';
@@ -169,9 +170,11 @@ if (IS_NATIVE) {
 i18nReady.then(() => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <AuthProvider>
-      <DataProvider>
-        <App />
-      </DataProvider>
+      <TrainingGate>
+        <DataProvider>
+          <App />
+        </DataProvider>
+      </TrainingGate>
     </AuthProvider>
   );
 

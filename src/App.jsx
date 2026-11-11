@@ -128,6 +128,7 @@ import {
     DEFAULT_ROLE_PERMISSIONS, 
     applyDerivedPermissions 
 } from './components/permissions.js';
+import { isTrainingMode } from './training/trainingSession.js';
 
 import {
     listAllDataForCourse, deleteFacilitator,
@@ -1454,6 +1455,18 @@ export default function App() {
     }, []); 
 
     const permissions = useMemo(() => {
+        // Training link: everyone gets the whole app to practise on, because
+        // everything they save goes to the course's sandbox. The few areas
+        // that only manage real reference data or accounts stay hidden.
+        if (isTrainingMode()) {
+            const TRAINING_OFF = ['canViewAdmin', 'canManageProtocols', 'canManageOnlineCourses', 'canManagePopulation', 'canEditLocalityPlan'];
+            const all = ALL_PERMISSION_KEYS.reduce((acc, key) => {
+                acc[key] = !TRAINING_OFF.includes(key);
+                return acc;
+            }, {});
+            return { ...all, manageScope: 'federal', manageLocation: 'federal_level', manageTimePeriod: 'anytime', role: userRole };
+        }
+
         let derivedPermissions = { ...userPermissions };
         
         if (userRole?.toLowerCase() === 'super_user') {

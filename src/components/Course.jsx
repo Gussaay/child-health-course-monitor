@@ -28,6 +28,8 @@ import {
 } from '../data.js'; 
 
 import { DailyEvaluationShare } from './DailyEvaluation';
+import TrainingLinkShare from '../training/TrainingLinkShare.jsx';
+import { isTrainingMode } from '../training/trainingSession.js';
 import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
@@ -1440,6 +1442,18 @@ export function CoursesTable({
                                         </Button>
                                     </div>
                                 </div>
+
+                                {/* Practice copy of the whole app for this course (src/training/).
+                                    Not offered from inside a training link itself. */}
+                                {!isTrainingMode() && (
+                                    <TrainingLinkShare
+                                        key={`training-${shareModalCourse.id}`}
+                                        course={shareModalCourse}
+                                        baseUrl={getBaseUrl()}
+                                        notify={notify}
+                                        onShare={(link) => setQrShareData({ url: link, title: t('course_page.share.qr_training', 'Training (practice): {{type}}', { type: shareModalCourse.course_type }) })}
+                                    />
+                                )}
                             </div>
                         </div>
                     </CardBody>

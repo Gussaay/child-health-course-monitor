@@ -484,6 +484,30 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // --- Training links (src/training/) ---
+    // A course's training link opens the whole app as a practice copy. Every
+    // read and write goes under trainingSandboxes/{courseId}/…, never to the
+    // real collections. Anyone signed in may use the sandbox, but only while
+    // the course's practice window (courses/{courseId}.training, stamped by
+    // staff when they share the link) is open. Staff can still read it later
+    // to review what trainees did.
+    // =========================================================================
+    function trainingOpen(courseId) {
+      let path = /databases/$(database)/documents/courses/$(courseId);
+      let t = exists(path) ? get(path).data.get('training', {}) : {};
+      return t.get('enabled', false) == true
+          && t.get('startsAt', null) is timestamp
+          && t.get('endsAt', null) is timestamp
+          && request.time >= t.startsAt
+          && request.time < t.endsAt;
+    }
+
+    match /trainingSandboxes/{courseId}/{document=**} {
+      allow read: if request.auth != null && (trainingOpen(courseId) || isStaff());
+      allow write: if request.auth != null && trainingOpen(courseId);
+    }
+
+    // =========================================================================
     // --- Certificate Templates ---
     // =========================================================================
     match /certificateTemplates/{templateId} {

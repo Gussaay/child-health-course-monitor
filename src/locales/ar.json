@@ -2080,7 +2080,18 @@
       "share_posttest": "مشاركة الاختبار البعدي",
       "share_pretest": "مشاركة الاختبار القبلي",
       "share_qr": "مشاركة رمز QR",
-      "testing": "الاختبارات"
+      "testing": "الاختبارات",
+      "training_link": "رابط التدريب (تطبيق للممارسة)",
+      "training_help": "يفتح التطبيق كاملاً للممارسة. كل ما يُحفظ يذهب إلى نسخة تدريبية منفصلة لهذه الدورة، ولا يمسّ البيانات الحقيقية أبداً.",
+      "training_window": "يعمل فقط خلال فترة الدورة: من {{from}} إلى {{to}}.",
+      "training_needs_dates": "حدّد تاريخ بداية الدورة ومدتها أولاً.",
+      "training_save_failed": "تعذّر تفعيل رابط التدريب. تحقق من الاتصال والصلاحيات.",
+      "training_stopped": "تم إيقاف رابط التدريب.",
+      "training_stop": "إيقاف هذا الرابط",
+      "training_status_open": "مفتوح الآن",
+      "training_status_not_started": "يُفتح في أول يوم من الدورة",
+      "training_status_expired": "منتهي",
+      "qr_training": "تدريب (ممارسة): {{type}}"
     },
     "status": {
       "active": "نشطة",

@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from 'vite-plugin-pwa';
 import pkg from './package.json';
+import { fileURLToPath } from 'node:url';
 
 // Translations are loaded on demand, one language per visitor (src/i18n.js).
 // A dynamic import only starts once the app code has run, so this puts a small
@@ -190,6 +191,16 @@ export default defineConfig({
       },
     }),
   ],
+  // Training links (src/training/): every Firestore and Cloud Functions import
+  // goes through a thin wrapper that, only when the tab was opened from a
+  // course's training link, sends reads and writes to that course's sandbox.
+  // The wrappers import the real SDK from '@firebase/…', so there is no loop.
+  resolve: {
+    alias: [
+      { find: /^firebase\/firestore$/, replacement: fileURLToPath(new URL('./src/training/firestoreShim.js', import.meta.url)) },
+      { find: /^firebase\/functions$/, replacement: fileURLToPath(new URL('./src/training/functionsShim.js', import.meta.url)) },
+    ],
+  },
   base: '/',
   define: {
     // The app version now comes from package.json, so you only bump it in one

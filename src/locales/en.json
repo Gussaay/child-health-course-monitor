@@ -2084,7 +2084,18 @@
       "share_posttest": "Share Post-Test",
       "share_pretest": "Share Pre-Test",
       "share_qr": "Share QR Code",
-      "testing": "Testing"
+      "testing": "Testing",
+      "training_link": "Training link (practice app)",
+      "training_help": "Opens the full app for practice. Everything saved goes to a separate training copy for this course, never to real data.",
+      "training_window": "Works only during the course: {{from}} to {{to}}.",
+      "training_needs_dates": "Set the course start date and duration first.",
+      "training_save_failed": "Could not switch on the training link. Check your connection and permissions.",
+      "training_stopped": "Training link switched off.",
+      "training_stop": "Switch off this link",
+      "training_status_open": "Open now",
+      "training_status_not_started": "Opens on the first course day",
+      "training_status_expired": "Expired",
+      "qr_training": "Training (practice): {{type}}"
     },
     "status": {
       "active": "Active",
