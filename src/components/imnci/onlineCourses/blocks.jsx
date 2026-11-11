@@ -10,6 +10,11 @@ import { videoSource, blockHtml } from '../book';
 import { RichText, useImnci } from '../shared';
 import { useInPageBack } from '../../CommonComponents';
 import { assetUrl } from './assets';
+import { useDataCache } from '../../../DataContext';
+import { NATIONAL_PROTOCOLS } from '../nationalProtocol';
+import { NATIONAL_FORMS } from '../recordingForms';
+import { BookletProtocolView } from '../bookletView';
+import { RecordingFormView } from '../recordingFormView';
 
 // =============================================================================
 // Readable content
@@ -246,6 +251,60 @@ export function ExerciseLinkBlock({ block }) {
     );
 }
 
+// =============================================================================
+// Chart booklet and recording form, read live from the protocol
+//
+// A course does not keep its own copy of a classification table or of the
+// recording form. It names the booklet tables (`categories`) or the form rows
+// (`sections`) it wants, and they are drawn from the saved national protocol,
+// so a change made in Protocol management shows in the course too. Until the
+// saved protocol has loaded, or on a device that never loaded it, the national
+// text that ships with the app is shown.
+// =============================================================================
+
+function useLiveProtocols() {
+    const cache = useDataCache() || {};
+    const { protocols, fetchProtocols } = cache;
+    useEffect(() => { if (fetchProtocols) fetchProtocols(false).catch(() => {}); }, [fetchProtocols]);
+    return protocols && !Array.isArray(protocols) ? protocols : {};
+}
+
+const pick = (obj, keys) => Object.fromEntries(Object.entries(obj || {}).filter(([k]) => !keys?.length || keys.includes(k)));
+
+export function BookletBlock({ block }) {
+    const { t } = useTranslation();
+    const live = useLiveProtocols();
+    const part = block.part === 'infant' ? 'infant' : 'child';
+    const protocol = live[part]?.categories ? live[part] : NATIONAL_PROTOCOLS[part];
+    const doses = live[`dosages_${part}`]?.drugs || NATIONAL_PROTOCOLS[`dosages_${part}`]?.drugs || [];
+    const shown = { ...protocol, categories: pick(protocol?.categories, block.categories) };
+    return (
+        <figure className="not-prose my-4">
+            <BookletProtocolView formType={part} protocol={shown} doses={doses} heading={false} />
+            <figcaption className="text-xs text-slate-500 text-center mt-1">
+                {block.caption || t('imnci_ui.courses.booklet.caption', 'From the chart booklet')}
+            </figcaption>
+        </figure>
+    );
+}
+
+export function FormBlock({ block }) {
+    const { t } = useTranslation();
+    const live = useLiveProtocols();
+    const key = block.part === 'infant' ? 'form_infant' : 'form_child';
+    const form = live[key]?.sections ? live[key] : NATIONAL_FORMS[key];
+    const ids = block.sections || [];
+    const shown = form ? { ...form, sections: (form.sections || []).filter((s) => !ids.length || ids.includes(s.id)) } : null;
+    return (
+        <figure className="not-prose my-4">
+            <RecordingFormView form={shown} />
+            <figcaption className="text-xs text-slate-500 text-center mt-1">
+                {block.caption || t('imnci_ui.courses.form.caption', 'From the recording form')}
+            </figcaption>
+        </figure>
+    );
+}
+
 // A table cell is plain text unless an author wrote markup into it (bold, a
 // list, a line break), which is then shown as written rather than as tags.
 const MARKUP = /<\/?(b|strong|i|em|u|br|ul|ol|li|p|span)\b/i;
@@ -315,6 +374,12 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                 if (b.type === 'exercise') {
                     return <ExerciseLinkBlock key={i} block={b} />;
                 }
+                if (b.type === 'booklet') {
+                    return <BookletBlock key={i} block={b} />;
+                }
+                if (b.type === 'form') {
+                    return <FormBlock key={i} block={b} />;
+                }
                 if (b.type === 'note') {
                     return (
                         <div key={i} className="not-prose rounded-xl border border-sky-200 border-s-4 border-s-sky-600 bg-sky-50 p-4 flex gap-3 my-4">
@@ -323,7 +388,7 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                             </span>
                             <div className="min-w-0 text-slate-800">
                                 <div className="text-[11px] font-bold uppercase tracking-wider text-sky-800 mb-0.5">
-                                    {t('imnci_ui.courses.look.key_point', 'Key point')}
+                                    {b.label || t('imnci_ui.courses.look.key_point', 'Key point')}
                                 </div>
                                 <RichText html={blockHtml(b)} />
                             </div>
