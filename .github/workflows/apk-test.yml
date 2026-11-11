@@ -1,0 +1,60 @@
+name: Test APK (background updates)
+
+# Builds a signed TEST APK from this branch only. Nothing is deployed and no
+# device is told about it: the APK is attached to the run as an artifact for
+# testing on a phone. The web layer inside shows "v3.2-test", so you can see
+# when the background updater has replaced it with the live release (v3.2).
+on:
+  push:
+    branches:
+      - claude/project-thread-rz6vnt
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build the test web layer
+        run: |
+          npm pkg set releaseVersion=3.2-test
+          npm run build
+      - name: Build and sign the test APK
+        run: |
+          # Above the live APK (run 318), so it installs as an update.
+          sed -i -e "s/versionCode [0-9]*/versionCode 319/g" android/app/build.gradle
+          sed -i -e "s/versionName \".*\"/versionName \"bg-test\"/g" android/app/build.gradle
+          # Test builds look for updates 15 minutes after the app is closed
+          # instead of 1 hour.
+          sed -i -e "s/setInitialDelay(1, TimeUnit.HOURS)/setInitialDelay(15, TimeUnit.MINUTES)/" \
+            android/app/src/main/java/com/nchp/monitoring/app/BackgroundUpdateWorker.java
+          npx cap sync android
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/nchp-release.keystore
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          BT=$(ls -d ${ANDROID_HOME}/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -v -p 4 app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/NCHP-background-update-TEST.apk > /dev/null
+          $BT/apksigner sign --ks app/nchp-release.keystore \
+            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+            --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
+            --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+            app/build/outputs/apk/release/NCHP-background-update-TEST.apk
+          $BT/apksigner verify app/build/outputs/apk/release/NCHP-background-update-TEST.apk
+          rm -f app/nchp-release.keystore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NCHP-background-update-TEST
+          path: android/app/build/outputs/apk/release/NCHP-background-update-TEST.apk
+          retention-days: 7
