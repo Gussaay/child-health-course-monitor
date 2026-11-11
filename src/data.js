@@ -3068,18 +3068,25 @@ export async function deleteOnlineCourseItem(itemId) {
 // Awaited to completion rather than run through executeOfflineSafeWrite: an
 // import writes a hundred documents and the four-second timeout in that helper
 // would report success for a migration that had barely started.
-export async function bulkUpsertOnlineCourseContent({ course, items }) {
+export async function bulkUpsertOnlineCourseContent({ course, items, existingCourseId = null }) {
     if (!isOnline()) {
         throw new Error('You appear to be offline. Connect to the internet and import again — nothing was saved.');
     }
 
-    const courseRef = course.id
-        ? doc(db, "onlineCourses", course.id)
-        : doc(collection(db, "onlineCourses"));
-    await setDoc(courseRef, {
-        ...course, id: courseRef.id, isDeleted: false,
-        createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
-    }, { merge: true });
+    // Adding modules to a course that is already there leaves the course
+    // document itself alone: its title, description and publishing stay as
+    // the managers set them.
+    const courseRef = existingCourseId
+        ? doc(db, "onlineCourses", existingCourseId)
+        : course.id
+            ? doc(db, "onlineCourses", course.id)
+            : doc(collection(db, "onlineCourses"));
+    if (!existingCourseId) {
+        await setDoc(courseRef, {
+            ...course, id: courseRef.id, isDeleted: false,
+            createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
+        }, { merge: true });
+    }
 
     // Sections carry a legacy module key; it is swapped for the real Firestore
     // id once the module it belongs to has been written.
