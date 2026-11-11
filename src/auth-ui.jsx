@@ -479,7 +479,7 @@ export function SignInBox() {
             {isSignUpMode ? (
               <button 
                 onClick={handleSignUp} 
-                className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+                className="w-full px-4 py-2 font-bold text-white bg-green-700 rounded-md hover:bg-green-800 transition duration-300 disabled:bg-gray-400"
                 disabled={isLoading} 
               >
                 {isLoading ? (message ? message : t('auth.creating', "Creating Account...")) : t('auth.sign_up', "Sign Up")}
@@ -487,7 +487,7 @@ export function SignInBox() {
             ) : (
               <button 
                 onClick={handleSignIn} 
-                className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+                className="w-full px-4 py-2 font-bold text-white bg-green-700 rounded-md hover:bg-green-800 transition duration-300 disabled:bg-gray-400"
                 disabled={isLoading} 
               >
                 {isLoading ? (message ? message : t('auth.signing_in', "Signing In...")) : t('auth.sign_in', "Sign In")}
