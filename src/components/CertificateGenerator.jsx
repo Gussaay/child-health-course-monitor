@@ -14,7 +14,7 @@ import {
     Button, Card, EmptyState, PageHeader, 
     Spinner, Table, Modal, CardBody, CardFooter, FormGroup, Select, Input, FilterPanel
 } from './CommonComponents'; 
-import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X, AlertTriangle, ChevronDown } from 'lucide-react'; 
+import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X, ChevronDown } from 'lucide-react'; 
 
 // Data & Firebase
 import {
@@ -39,6 +39,11 @@ import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { publicBaseUrl } from '../utils/publicLink';
+import {
+    downloadJobs, announceJobs, nextCertificateJobId,
+    subscribeCertificateDownloads, cancelCertificateDownload, dismissCertificateDownload,
+} from '../utils/certificateDownloads';
+export { subscribeCertificateDownloads, cancelCertificateDownload, dismissCertificateDownload };
 
 // -----------------------------------------------------------------------------
 // HELPER FUNCTIONS
@@ -1817,38 +1822,9 @@ export const generateAllCertificatesPdf = async (inputCourse, participants, fede
 // app no longer does.
 // =============================================================================
 
-let jobCounter = 0;
-const downloadJobs = new Map();
-const downloadListeners = new Set();
-
-const announceJobs = () => {
-    const snapshot = [...downloadJobs.values()].map((j) => ({ ...j }));
-    downloadListeners.forEach((fn) => { try { fn(snapshot); } catch (e) { console.warn(e); } });
-};
-
-/** Watch the queue. Called immediately with the current state. */
-export const subscribeCertificateDownloads = (fn) => {
-    downloadListeners.add(fn);
-    fn([...downloadJobs.values()].map((j) => ({ ...j })));
-    return () => downloadListeners.delete(fn);
-};
-
-/** Ask a job to stop. It stops between certificates, not mid-render. */
-export const cancelCertificateDownload = (id) => {
-    const job = downloadJobs.get(id);
-    if (!job || job.status !== 'running') return;
-    job.cancelled = true;
-    job.status = 'stopping';
-    announceJobs();
-};
-
-/** Clear a finished job from the banner. */
-export const dismissCertificateDownload = (id) => {
-    const job = downloadJobs.get(id);
-    if (job && job.status === 'running') return;
-    downloadJobs.delete(id);
-    announceJobs();
-};
+// The queue itself (jobs, subscribers, stop and dismiss) lives in
+// utils/certificateDownloads.js, so the banner can watch it without loading
+// this file, jsPDF and html2canvas on every page.
 
 const CANCELLED = 'CANCELLED_BY_USER';
 
@@ -1872,7 +1848,7 @@ const CANCELLED = 'CANCELLED_BY_USER';
  * @returns {string} the job id
  */
 export const startCertificateDownload = (spec) => {
-    const id = `cert-${++jobCounter}`;
+    const id = nextCertificateJobId();
     const isBulk = spec.kind === 'bulk';
 
     const job = {
@@ -1946,64 +1922,8 @@ export const startCertificateDownload = (spec) => {
     return id;
 };
 
-/**
- * The progress banner. App.jsx mounts exactly one, outside the routed views, so
- * it survives navigation — which is the only reason it is a separate component
- * rather than part of the participants screen.
- */
-export const CertificateDownloadBanner = () => {
-    const { t } = useTranslation();
-    const [jobs, setJobs] = useState([]);
-    useEffect(() => subscribeCertificateDownloads(setJobs), []);
-
-    if (jobs.length === 0) return null;
-
-    return (
-        <div className="fixed bottom-[calc(var(--bottom-nav,0px)+1rem)] inset-x-3 sm:inset-x-auto sm:end-4 sm:w-80 z-[70] space-y-2 print-hide">
-            {jobs.map((job) => {
-                const pct = job.total > 0 ? Math.round((job.current / job.total) * 100) : 0;
-                const done = job.status === 'done';
-                const failed = job.status === 'failed';
-                const stopped = job.status === 'cancelled';
-                return (
-                    <div key={job.id} className={`rounded-lg shadow-lg border p-3 text-sm bg-white ${
-                        failed ? 'border-red-300' : done ? 'border-green-300' : 'border-slate-300'}`}>
-                        <div className="flex items-start gap-2">
-                            {done ? <CheckCircle size={16} className="text-green-600 shrink-0 mt-0.5" />
-                                : failed ? <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                                    : <Download size={16} className="text-sky-600 shrink-0 mt-0.5" />}
-                            <div className="min-w-0 flex-1">
-                                <div className="font-semibold text-slate-800 break-words">{job.label}</div>
-                                <div className="text-xs text-slate-500">
-                                    {done ? t('certificates.banner.downloaded', 'Downloaded')
-                                        : failed ? job.error
-                                            : stopped ? t('certificates.banner.stopped', 'Stopped')
-                                                : job.status === 'stopping' ? t('certificates.banner.stopping', 'Stopping…')
-                                                    : job.kind === 'bulk'
-                                                        ? t('certificates.banner.preparing_n', 'Preparing {{current}} of {{total}}', { current: job.current, total: job.total })
-                                                        : t('certificates.banner.preparing_one', 'Preparing the certificate…')}
-                                </div>
-                            </div>
-                            {job.status === 'running' ? (
-                                <button type="button" onClick={() => cancelCertificateDownload(job.id)}
-                                    className="text-xs text-red-600 hover:underline shrink-0">{t('certificates.banner.stop', 'Stop')}</button>
-                            ) : (
-                                <button type="button" onClick={() => dismissCertificateDownload(job.id)}
-                                    className="text-slate-400 hover:text-slate-600 shrink-0"><X size={14} /></button>
-                            )}
-                        </div>
-
-                        {job.kind === 'bulk' && !done && !failed && !stopped && (
-                            <div className="mt-2 h-1.5 bg-slate-200 rounded overflow-hidden">
-                                <div className="h-full bg-sky-600 transition-all" style={{ width: `${pct}%` }} />
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
+// The progress banner moved to components/CertificateDownloadBanner.jsx.
+export { CertificateDownloadBanner } from './CertificateDownloadBanner';
 
 const AssetUploader = ({ label, fieldKey, value, uploading, onPick, onClear, height = 'h-12' }) => {
     const { t } = useTranslation();

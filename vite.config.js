@@ -192,6 +192,9 @@ export default defineConfig({
         // silently precached those route chunks too.
         entryFileNames: 'assets/app-[hash].js',
         manualChunks(id) {
+          // Analytics is loaded after the page is idle (firebase.js), so it is
+          // left out of the start-up Firebase chunk and gets one of its own.
+          if (/node_modules\/(@firebase\/analytics|firebase\/analytics)\//.test(id)) return undefined;
           if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
             return 'firebase';
           }
