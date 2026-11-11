@@ -1708,7 +1708,9 @@
       "pending": "Pending",
       "none": "No tracked items waiting to sync.",
       "firebase": "Firebase handles background data synchronization automatically."
-    }
+    },
+    "role_not_loaded": "Your access could not be loaded, so some modules are hidden. Check your connection and try again.",
+    "retry": "Try again"
   },
   "shared_ui": {
     "empty": {
