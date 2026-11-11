@@ -292,11 +292,18 @@ export function gradeCase(expected, submitted, t = (k) => k, { requiredFields = 
  *   'mcq'    options[] + correct[] of indexes (multi-select when correct.length > 1)
  *   'tf'     correct: true | false
  *   'text'   correct: string, accept: [alternative spellings]
+ *   'open'   points: [what a full answer contains]. A written answer, as the
+ *            WHO books ask ("list the signs"). It is not scored: after checking,
+ *            the learner compares what they wrote with the points.
  */
 export function gradeQuiz(questions = [], answers = {}) {
     const detail = {};
     let earned = 0;
-    questions.forEach(q => {
+    const graded = questions.filter(q => q.type !== 'open');
+    questions.filter(q => q.type === 'open').forEach(q => {
+        detail[q.id] = { ok: true, open: true, expected: q.points || [], given: answers[q.id] };
+    });
+    graded.forEach(q => {
         const given = answers[q.id];
         let ok = false;
         if (q.type === 'tf') {
@@ -312,7 +319,7 @@ export function gradeQuiz(questions = [], answers = {}) {
         detail[q.id] = { ok, expected: q.correct, given };
         if (ok) earned += 1;
     });
-    const possible = questions.length;
+    const possible = graded.length;
     return { earned, possible, percent: possible ? Math.round((earned / possible) * 100) : 0, correct: earned === possible, detail, isQuiz: true };
 }
 
@@ -728,11 +735,12 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
 
 function QuizQuestion({ q, index, value, onChange, detail, locked }) {
     const { t } = useTranslation();
-    const wrong = detail && !detail.ok;
-    const right = detail && detail.ok;
+    const open = q.type === 'open';
+    const wrong = detail && !open && !detail.ok;
+    const right = detail && !open && detail.ok;
 
     return (
-        <div className={`border rounded-lg p-4 ${!detail ? 'border-slate-200 bg-white' : right ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40'}`}>
+        <div className={`border rounded-lg p-4 ${!detail || open ? 'border-slate-200 bg-white' : right ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40'}`}>
             <div className="flex items-start gap-2 mb-3">
                 <span className="text-xs font-bold text-slate-400 mt-0.5">{index + 1}.</span>
                 <p className="text-sm font-medium text-slate-800 flex-1 whitespace-pre-line">{q.question}</p>
@@ -740,7 +748,16 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
                 {wrong && <XCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />}
             </div>
 
-            {q.type === 'text' ? (
+            {open ? (
+                <textarea
+                    disabled={locked}
+                    rows={Math.max(3, (q.points || []).length + 1)}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    value={value ?? ''}
+                    onChange={e => onChange(e.target.value)}
+                    placeholder={t('imnci_ui.exercises.quiz.write_answer', 'Write your answer')}
+                />
+            ) : q.type === 'text' ? (
                 <input
                     disabled={locked}
                     className="w-full sm:w-80 rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -781,7 +798,15 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
                 </div>
             )}
 
-            {detail && !detail.ok && (
+            {detail && open && (
+                <div className="mt-2 rounded-md bg-slate-50 border border-slate-200 p-2.5">
+                    <p className="text-xs font-semibold text-slate-600">{t('imnci_ui.exercises.quiz.compare_points', 'Not scored. Compare your answer with the answer key:')}</p>
+                    <ul className="list-disc ms-5 mt-1 text-xs text-emerald-800 space-y-0.5">
+                        {(q.points || []).map((p, i) => <li key={i}>{p}</li>)}
+                    </ul>
+                </div>
+            )}
+            {detail && !open && !detail.ok && (
                 <p className="text-xs text-emerald-700 mt-2">
                     {t('imnci_ui.exercises.quiz.correct_answer', 'Correct answer:')}{' '}
                     <strong>
@@ -835,7 +860,7 @@ export function QuizPlayer({ exercise, participant, onSubmit, onExit, previousBe
 
     const answeredAll = questions.every(q => answers[q.id] !== undefined &&
         !(Array.isArray(answers[q.id]) && answers[q.id].length === 0) &&
-        !(q.type === 'text' && String(answers[q.id]).trim() === ''));
+        !((q.type === 'text' || q.type === 'open') && String(answers[q.id]).trim() === ''));
 
     return (
         <div className="space-y-4 max-w-4xl mx-auto">
@@ -2099,6 +2124,7 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
     const setType = (type) => {
         if (type === 'mcq') setQ({ type, options: q.options?.length ? q.options : ['', ''], correct: [] });
         else if (type === 'tf') setQ({ type, correct: true, options: undefined });
+        else if (type === 'open') setQ({ type, points: q.points?.length ? q.points : [''], correct: undefined, options: undefined });
         else setQ({ type, correct: '', accept: [], options: undefined });
     };
 
@@ -2116,7 +2142,7 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                         value={q.question} onChange={e => setQ({ question: e.target.value })}
                         placeholder={t('imnci_ui.exercises.qeditor.question_text', 'Question text')} />
                     <div className="flex flex-wrap gap-2">
-                        {[['mcq', t('imnci_ui.exercises.qeditor.mcq', 'Multiple choice')], ['tf', t('imnci_ui.exercises.qeditor.tf', 'True / False')], ['text', t('imnci_ui.exercises.qeditor.short', 'Short answer')]].map(([v, l]) => (
+                        {[['mcq', t('imnci_ui.exercises.qeditor.mcq', 'Multiple choice')], ['tf', t('imnci_ui.exercises.qeditor.tf', 'True / False')], ['text', t('imnci_ui.exercises.qeditor.short', 'Short answer')], ['open', t('imnci_ui.exercises.qeditor.open', 'Written answer (not scored)')]].map(([v, l]) => (
                             <button key={v} type="button" onClick={() => setType(v)}
                                 className={`px-3 py-1 rounded-md text-xs border transition-colors ${
                                     q.type === v ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}>
@@ -2185,6 +2211,17 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                             value={(q.accept || []).join(', ')}
                             onChange={e => setQ({ accept: e.target.value.split(',').map(x => x.trim()).filter(Boolean) })}
                             placeholder={t('imnci_ui.exercises.qeditor.accept_placeholder', '7 days, seven')} />
+                    </FormGroup>
+                </div>
+            )}
+
+            {q.type === 'open' && (
+                <div className="pl-8">
+                    <FormGroup label={t('imnci_ui.exercises.qeditor.answer_points', 'Answer key: one point per line. Shown after checking; the learner compares, it is not scored.')}>
+                        <textarea rows={Math.max(3, (q.points || []).length + 1)} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            value={(q.points || []).join('\n')}
+                            onChange={e => setQ({ points: e.target.value.split('\n') })}
+                            onBlur={e => setQ({ points: e.target.value.split('\n').map(x => x.trim()).filter(Boolean) })} />
                     </FormGroup>
                 </div>
             )}
@@ -2272,6 +2309,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                     if ((q.options || []).some(o => !o.trim())) return setError(t('imnci_ui.exercises.editor.q_empty_option', 'Question {{n}} has an empty option.', { n: i + 1 }));
                     if (!(q.correct || []).length) return setError(t('imnci_ui.exercises.editor.q_no_correct_ticked', 'Question {{n}} has no correct option ticked.', { n: i + 1 }));
                 }
+                if (q.type === 'open' && !(q.points || []).some(p => String(p).trim())) return setError(t('imnci_ui.exercises.editor.q_no_points', 'Question {{n}} has no answer key.', { n: i + 1 }));
                 if (q.type === 'text' && !String(q.correct || '').trim()) return setError(t('imnci_ui.exercises.editor.q_no_correct', 'Question {{n}} has no correct answer.', { n: i + 1 }));
             }
         } else if (sections.length === 0) {
@@ -2850,7 +2888,8 @@ export function LiveExerciseDashboard({ course, participants = [], subCourse = O
         if (rows.length === 0) return { rows: [], items: [] };
 
         if (focus.kind === 'quiz') {
-            const items = (focus.questions || []).map(q => {
+            // A written answer is not scored, so there is no right or wrong to tally.
+            const items = (focus.questions || []).filter(q => q.type !== 'open').map(q => {
                 const counts = {};
                 let answered = 0;
                 rows.forEach(a => {

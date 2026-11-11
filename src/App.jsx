@@ -109,7 +109,6 @@ const CLAUDE_CHAT_ENABLED = false;
 // The panel loads the first time it is opened.
 const DataAssistantPanel = lazy(() => import('./components/DataAssistant').then(m => ({ default: m.DataAssistantPanel })));
 // Pages where the round button would sit on top of a form's own Save row.
-const NO_ASSISTANT_BUTTON = new Set(['courseForm', 'participantForm', 'facilitatorForm', 'observe', 'imciForm', 'enter-test-scores', 'participantMigration']);
 
 // Reporting a problem from wherever it happened.
 const ReportProblemButton = lazy(() => import('./components/ProblemReports').then(m => ({ default: m.ReportProblemButton })));
@@ -166,7 +165,8 @@ import NotificationBell from './components/NotificationBell.jsx';
 import { notify, confirmDialog, DialogHost } from './components/dialogs';
 import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
-import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
+import { DataAssistantCard, PageAddButton } from './components/DataAssistantLauncher';
+import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
 
@@ -778,6 +778,24 @@ export default function App() {
     // with the page), so --app-top is only the download banner's height: the
     // offline pill and the pull-to-refresh spinner sit just under it.
     const headerRef = useRef(null);
+    // Set by a full-page form (Android top bar title) and by pages that have an "Add" action.
+    const formTitle = useFormTitleOverride();
+    const pageAdd = usePageAddAction();
+    // The pinned credit bar's height, for the bottom bars that sit above it.
+    // A callback ref, so it follows the footer however often the screen re-renders.
+    const creditBarObserver = useRef(null);
+    const creditBarRef = useCallback((el) => {
+        creditBarObserver.current?.disconnect();
+        creditBarObserver.current = null;
+        const root = document.documentElement;
+        if (!el) { root.style.removeProperty('--credit-bar'); return; }
+        const set = () => root.style.setProperty('--credit-bar', `${el.offsetHeight}px`);
+        set();
+        if (typeof ResizeObserver !== 'undefined') {
+            creditBarObserver.current = new ResizeObserver(set);
+            creditBarObserver.current.observe(el);
+        }
+    }, []);
     const headerElRef = useRef(null);
     const headerObserverRef = useRef(null);
     useEffect(() => {
@@ -3085,7 +3103,7 @@ case 'meetings':
             )}
 
             {showBackBar && (
-                <div className="bg-slate-800 text-white border-t border-slate-700 shadow">
+                <div className="app-backbar bg-slate-800 text-white border-t border-slate-700 shadow">
                     <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-12 px-1 sm:px-4">
                         <button
                             onClick={goBack}
@@ -3096,8 +3114,9 @@ case 'meetings':
                             <ArrowLeft size={22} className="rtl:-scale-x-100" />
                         </button>
                         <div className="flex-1 min-w-0 px-1">
-                            <h2 className="text-base font-bold leading-tight truncate">{pageTitle}</h2>
-                            {pageSubtitle && <p className="text-xs text-slate-300 truncate">{pageSubtitle}</p>}
+                            {/* A full-page form (e.g. Add course) names itself here instead of repeating it in its own bar. */}
+                            <h2 className="text-base font-bold leading-tight truncate">{formTitle ? formTitle.title : pageTitle}</h2>
+                            {(formTitle ? formTitle.subtitle : pageSubtitle) && <p className="text-xs text-slate-300 truncate">{formTitle ? formTitle.subtitle : pageSubtitle}</p>}
                         </div>
                     </div>
                 </div>
@@ -3117,8 +3136,10 @@ case 'meetings':
                 </ErrorBoundary>
             </main>
 
-            {/* The credit is the page footer on every screen. */}
-            <footer data-app-chrome="footer" className={`block bg-slate-800 text-slate-300 text-xs py-3 px-4 border-t border-slate-700`}>
+            {/* The credit bar is pinned to the bottom of every screen. Its height
+                is measured into --credit-bar so the other pinned bottom bars
+                (Save, Next module, ...) sit just above it. */}
+            <footer ref={creditBarRef} data-app-chrome="footer" className="print-hide sticky bottom-0 z-30 block bg-slate-800 text-slate-300 text-xs pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] px-4 border-t border-slate-700">
                 <AppCredit />
             </footer>
 
@@ -3393,8 +3414,11 @@ case 'meetings':
                 </Suspense>
             )}
 
-            {user && !isMinimalUILayout && !IS_EMONC_SITE && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && view !== 'landing' && (
-                <DataAssistantButton onClick={openDataAssistant} />
+            {/* "Ask the data" opens from the main menu only, where it answers
+                questions about any page. Other pages show the page's own
+                "Add" button in that corner when the page has one. */}
+            {user && !isMinimalUILayout && !dataAssistant.open && view !== 'landing' && pageAdd && (
+                <PageAddButton label={pageAdd.label} onClick={pageAdd.run} />
             )}
             {dataAssistant.loaded && (
                 <Suspense fallback={null}>

@@ -9,6 +9,8 @@ import {
   initializeAuth,
   indexedDBLocalPersistence,
   browserLocalPersistence,
+  browserSessionPersistence,
+  browserPopupRedirectResolver,
 } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -57,8 +59,34 @@ export const app = firebaseApp;
 // especially on iOS. Native sign-in goes through SocialLogin, so it only needs
 // a persistent store. This is one cause of users being signed out.
 // =========================================================================
+//
+// On the web, getAuth() is not used either, for a different reason: it also
+// loads Google's sign-in helper (a hidden iframe plus ~93 KB of script from
+// authDomain) on every page load, for everyone, before anyone has asked to
+// sign in with Google. PageSpeed showed it as the longest chain on the page.
+// The same stores getAuth() uses are kept, so nobody is signed out; the helper
+// is passed only to the Google sign-in calls in auth-ui.jsx, which load it
+// when it is actually needed.
+//
+// Desktop Safari is the exception. Firebase loads the helper early there on
+// purpose (getAuth does too): Safari only opens a popup straight from the
+// click, and loading the helper after the click would get the Google window
+// blocked. Phones never use the popup (auth-ui.jsx signs in by redirect), and
+// desktop Chrome, Edge and Firefox already loaded it only on the click.
+const IS_DESKTOP_SAFARI = typeof navigator !== 'undefined'
+  && /^((?!chrome|chromium|crios|fxios|edg|android).)*safari/i.test(navigator.userAgent)
+  && !/iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 function createAuth() {
-  if (!Capacitor.isNativePlatform()) return getAuth(firebaseApp);
+  if (!Capacitor.isNativePlatform()) {
+    try {
+      return initializeAuth(firebaseApp, {
+        persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+        ...(IS_DESKTOP_SAFARI ? { popupRedirectResolver: browserPopupRedirectResolver } : {}),
+      });
+    } catch {
+      return getAuth(firebaseApp); // already initialised (hot reload)
+    }
+  }
   try {
     return initializeAuth(firebaseApp, {
       persistence: [indexedDBLocalPersistence, browserLocalPersistence],
@@ -116,7 +144,8 @@ export const storage = getStorage(firebaseApp);
 // So it is skipped under the test runner entirely. Analytics measures how the
 // app is used; there is nothing to measure in a test, and the only thing it can
 // do there is fail the run.
-// Analytics is started only after the page has loaded and gone idle. Started
+// Analytics is started only once the visitor interacts or the page has been
+// open a while (see below), and then when the browser is idle. Started
 // here at import time, it downloaded its own code plus Google Tag Manager and
 // made the Installations calls while the first screen was still loading,
 // which is what PageSpeed counted against start-up. Nothing in the app reads
@@ -135,8 +164,20 @@ function startAnalyticsWhenIdle() {
     'requestIdleCallback' in window
       ? window.requestIdleCallback(start, { timeout: 10000 })
       : setTimeout(start, 3000);
-  if (document.readyState === 'complete') whenIdle();
-  else window.addEventListener('load', whenIdle, { once: true });
+  // Started on the first tap, key press or scroll, or 15 s after the page has
+  // loaded, whichever comes first. Google Tag Manager is ~156 KB; started on
+  // idle it still landed while the first screen was being measured.
+  let started = false;
+  const once = () => {
+    if (started) return;
+    started = true;
+    ['pointerdown', 'keydown', 'scroll'].forEach((e) => window.removeEventListener(e, once, true));
+    whenIdle();
+  };
+  ['pointerdown', 'keydown', 'scroll'].forEach((e) => window.addEventListener(e, once, { capture: true, passive: true }));
+  const afterLoad = () => setTimeout(once, 15000);
+  if (document.readyState === 'complete') afterLoad();
+  else window.addEventListener('load', afterLoad, { once: true });
 }
 startAnalyticsWhenIdle();
 

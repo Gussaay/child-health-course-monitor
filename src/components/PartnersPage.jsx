@@ -6,6 +6,7 @@ import { STATE_LOCALITIES } from './constants.js';
 import { useDataCache } from '../DataContext'; 
 import { confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { usePageAddButton } from '../utils/pageChrome';
 
 export function PartnersPage({ permissions, userStates }) {
     const { t } = useTranslation();
@@ -120,13 +121,13 @@ export function PartnersPage({ permissions, userStates }) {
         }));
     };
 
+    // The app's round "Add" button (bottom corner) adds a partner.
+    usePageAddButton(t('hr_misc.partners.add_new', 'Add New Partner'), handleAddNew, !!canManage);
+
     return (
         <Card>
             <CardBody>
                 <PageHeader title={t('hr_misc.partners.title', 'Funding Partners')} subtitle={t('hr_misc.partners.subtitle', 'Manage the master list of funding partners.')} />
-                <div className="mb-6">
-                    {canManage && <Button onClick={handleAddNew}>{t('hr_misc.partners.add_new', 'Add New Partner')}</Button>}
-                </div>
             
                 {loading ? <SkeletonTable /> : (
                     <Table cardsOnPhone headers={[t('hr_misc.partners.org_name', 'Organization Name'), t('hr_misc.partners.state', 'State'), t('hr_misc.partners.projects', 'Projects'), t('hr_misc.partners.focal_person', 'Focal Person'), t('hr_misc.partners.phone', 'Phone'), t('hr_misc.partners.actions', 'Actions')]}>

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, u
 import { ArrowLeft, ChevronDown, Inbox, MoreHorizontal, RefreshCw, SearchX, SlidersHorizontal } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { addInPageBack } from '../utils/inPageBack';
+import { useFormTitle } from '../utils/pageChrome';
 
 // The Android app shows every inner page's name and a back arrow in its slim
 // top bar, so in-page titles and back buttons are left out there.
@@ -25,12 +26,17 @@ import { useTranslation } from 'react-i18next';
 
 export const Card = ({ children, className = '' }) => <section className={`bg-white rounded-xl border border-slate-200 shadow-sm ${className}`}>{children}</section>;
 export const CardHeader = ({ children, className = '' }) => <div className={`p-4 md:p-6 border-b border-gray-200 ${className}`}><h3 className="text-lg font-semibold text-gray-800">{children}</h3></div>;
-// A form's Save / Cancel row. On phones it stays pinned just above the bottom
-// bar while the form is on screen, so there is no scrolling down to save.
+// A form's Save / Cancel (or Previous / Next) row. It stays pinned to the
+// bottom of the screen, just above the credit bar, while the form is on
+// screen, so there is no scrolling down to save or move on.
 // Put it as the last child of the form's own container (not inside a short
 // wrapper), or it has nothing to stick within.
-export const FormActions = ({ children, className = '' }) => (
-    <div className={`sticky bottom-[calc(var(--bottom-nav,0px)+8px)] [dialog_&]:bottom-2 z-20 -mx-1 mt-4 flex flex-wrap items-center justify-end gap-2 rounded-lg border border-gray-200 bg-white/95 p-2 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none ${className}`}>
+// `edge`: a full-width bar flush with the screen's bottom edge, for forms
+// whose container has the usual p-3 md:p-6 padding (the step forms).
+export const FormActions = ({ children, className = '', edge = false }) => (
+    <div className={edge
+        ? `sticky bottom-[var(--bottom-nav,0px)] z-20 -mx-3 md:-mx-6 -mb-5 md:-mb-8 mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-gray-200 bg-white/95 px-3 md:px-6 py-2.5 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur ${className}`
+        : `sticky bottom-[calc(var(--bottom-nav,0px)+8px)] [dialog_&]:bottom-2 z-20 -mx-1 mt-4 flex flex-wrap items-center justify-end gap-2 rounded-lg border border-gray-200 bg-white/95 p-2 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur ${className}`}>
         {children}
     </div>
 );
@@ -93,26 +99,36 @@ export function useFullPageForm(active = true) {
 }
 
 /**
- * A form split into steps: a slim top bar with back and title, a step bar you
- * can tap to jump to any step, the current step, and the footer buttons.
+ * A form split into steps: a top bar with back and title, a step bar you can
+ * tap to jump to any step, the current step, and the footer buttons.
+ * The bar sits flush against the top of the screen and stays there. In the
+ * Android app the app's own top bar already shows a back arrow, so the form's
+ * title moves into that bar and only the step bar is drawn here, pinned right
+ * under it, rather than repeating the title and back button.
  * steps: [{ id, label, missing, complete }]
  */
 export function StepForm({ title, subtitle, steps, current, onStepChange, onBack, backLabel = 'Back', children, footer, dir }) {
     const idx = Math.max(0, steps.findIndex(st => st.id === current));
+    useInPageBack(onBack, IS_NATIVE);
+    useFormTitle(title, subtitle, IS_NATIVE);
+    const counter = <span dir="ltr" className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold tabular-nums">{idx + 1} / {steps.length}</span>;
     return (
         <div dir={dir} className="pb-2">
-            <div className="sticky top-0 z-40 -mx-3 md:-mx-6 mb-3 bg-slate-800 text-white shadow-md">
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                    <button type="button" onClick={onBack} aria-label={backLabel} title={backLabel} className="shrink-0 rounded-full p-2 hover:bg-white/10 active:bg-white/20">
-                        <ArrowLeft size={22} className="rtl:rotate-180" />
-                    </button>
-                    <div className="min-w-0 flex-1">
-                        <div className="truncate text-base font-bold leading-tight">{title}</div>
-                        {subtitle && <div className="truncate text-xs text-slate-300">{subtitle}</div>}
+            {/* -mt cancels the card's top padding so the bar meets the top bar. */}
+            <div className={`sticky z-40 -mx-3 md:-mx-6 -mt-3 md:-mt-6 mb-3 bg-slate-800 text-white shadow-md ${IS_NATIVE ? 'top-[var(--app-topbar,0px)]' : 'top-0'}`}>
+                {!IS_NATIVE && (
+                    <div className="flex items-center gap-2 px-3 py-2.5">
+                        <button type="button" onClick={onBack} aria-label={backLabel} title={backLabel} className="shrink-0 rounded-full p-2 hover:bg-white/10 active:bg-white/20">
+                            <ArrowLeft size={22} className="rtl:rotate-180" />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                            <div className="truncate text-base font-bold leading-tight">{title}</div>
+                            {subtitle && <div className="truncate text-xs text-slate-300">{subtitle}</div>}
+                        </div>
+                        {counter}
                     </div>
-                    <span dir="ltr" className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold tabular-nums">{idx + 1} / {steps.length}</span>
-                </div>
-                <div className="flex gap-1 px-3 pb-2.5">
+                )}
+                <div className={`flex items-start gap-1 px-3 pb-2.5 ${IS_NATIVE ? 'pt-1.5 border-t border-slate-700' : ''}`}>
                     {steps.map((st, i) => {
                         const state = i === idx ? 'current' : st.missing > 0 ? 'missing' : (st.complete && i < idx) || (st.complete && st.visited) ? 'done' : 'todo';
                         const bar = { current: 'bg-sky-400', missing: 'bg-red-400', done: 'bg-emerald-400', todo: 'bg-white/20' }[state];
@@ -126,6 +142,7 @@ export function StepForm({ title, subtitle, steps, current, onStepChange, onBack
                             </button>
                         );
                     })}
+                    {IS_NATIVE && counter}
                 </div>
             </div>
             {children}

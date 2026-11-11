@@ -1,17 +1,18 @@
 // src/components/imnci/onlineCourses/ImportModal.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DownloadCloud, AlertTriangle } from 'lucide-react';
+import { DownloadCloud, AlertTriangle, BookOpen } from 'lucide-react';
 import { Button, Spinner, Modal, Select } from '../../CommonComponents';
 import { notify, confirmDialog } from '../../dialogs';
 import { bulkUpsertOnlineCourseContent } from '../../../data';
 import { LEGACY_DB, buildMigration } from './migration';
+import { DIMCI_M1_PLAN } from '../dimci/module1';
 
 // =============================================================================
 // Import
 // =============================================================================
 
-export function ImportModal({ isOpen, onClose, onImported }) {
+export function ImportModal({ isOpen, onClose, onImported, existingCourses = [] }) {
     const { t } = useTranslation();
     const [busy, setBusy] = useState(false);
     const [legacy, setLegacy] = useState(null);
@@ -73,16 +74,50 @@ export function ImportModal({ isOpen, onClose, onImported }) {
         }
     };
 
+    // WHO distance learning Module 1, shipped with the app. Added as a new,
+    // unpublished course; from then on it is edited like any other course.
+    const dimciThere = existingCourses.find((c) => c?.source === 'dimci' && !c.isDeleted);
+    const addDimci = async () => {
+        const ok = await confirmDialog(
+            dimciThere
+                ? t('imnci_ui.courses.import.dimci_again', '"{{title}}" is already here. Add another copy of Module 1 as a new course? The existing one is not changed.', { title: dimciThere.title })
+                : t('imnci_ui.courses.import.dimci_confirm', 'Add "{{title}}" with Module 1 (5 sections)? It is added unpublished, so only managers see it until you publish it.', { title: DIMCI_M1_PLAN.course.title }),
+            { title: t('imnci_ui.courses.import.dimci_title', 'Add WHO distance learning Module 1'), confirmLabel: t('imnci_ui.courses.import.add', 'Add') });
+        if (!ok) return;
+        setBusy(true); setError('');
+        try {
+            const r = await bulkUpsertOnlineCourseContent(DIMCI_M1_PLAN);
+            notify(t('imnci_ui.courses.import.dimci_done', 'Added Module 1 with {{sections}} sections. Its exercises are drafts in Manage Exercises until you publish them.', { sections: r.sections }), 'success');
+            onImported();
+            onClose();
+        } catch (e) {
+            console.error('Adding Module 1 failed:', e);
+            setError(t('imnci_ui.courses.import.failed', 'The import failed and nothing was saved. {{msg}}', { msg: String(e?.message || e) }));
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const courses = Object.values(legacy?.course || {});
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={t('imnci_ui.courses.import.title', 'Import from the Android app')}>
+        <Modal isOpen={isOpen} onClose={onClose} title={t('imnci_ui.courses.import.title_any', 'Add or import a course')}>
             <div className="space-y-4">
                 {error && (
                     <div className="flex gap-2 bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-sm">
                         <AlertTriangle size={18} className="shrink-0 mt-0.5" /><div>{error}</div>
                     </div>
                 )}
+
+                <div className="p-3 rounded border border-sky-200 bg-sky-50 space-y-2">
+                    <div className="font-semibold text-sm text-sky-900">{t('imnci_ui.courses.import.dimci_heading', 'WHO IMCI distance learning modules')}</div>
+                    <p className="text-xs text-sky-900">
+                        {t('imnci_ui.courses.import.dimci_intro', 'Module 1, General danger signs: the WHO text in the Sudan national wording, chart booklet tables and the recording form from the protocol, and its exercises as quizzes and recording-form cases. Everything can be edited after it is added.')}
+                    </p>
+                    <Button onClick={addDimci} disabled={busy}>
+                        <BookOpen size={16} /> {t('imnci_ui.courses.import.dimci_add', 'Add Module 1')}
+                    </Button>
+                </div>
 
                 <p className="text-sm text-slate-600">
                     {t('imnci_ui.courses.import.intro', 'Reads the course structure from the original Sudan Child Health database. Nothing in that database is changed.')}
