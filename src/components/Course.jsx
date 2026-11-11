@@ -4,7 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
     Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges,
-    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, FormActions, FormSection, FieldError, MenuTile, MenuGrid, MENU_ICON_CLASS
+    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, FormActions, FormSection, FieldError, StepForm, useFullPageForm, MenuTile, MenuGrid, MENU_ICON_CLASS
 } from './CommonComponents';
 
 // --- Firebase Imports ---
@@ -3095,8 +3095,14 @@ export function CourseForm({
     const [showErrors, setShowErrors] = useState(false);
     const err = (field) => showErrors && missing[field];
     // Adding: the first section open. Editing: all closed, each with a summary.
-    const [openSections, setOpenSections] = useState(() => (initialData ? {} : { basics: true }));
-    const toggleSection = (sec) => setOpenSections(prev => ({ ...prev, [sec]: !prev[sec] }));
+    // Steps: one part of the form at a time, with a step bar to jump around.
+    useFullPageForm(true);
+    const STEP_IDS = ['basics', 'coordination', ...(isInfectionControl ? [] : ['leadership']), 'facilitators', ...(initialData ? [] : ['review'])];
+    const [stepId, setStepId] = useState('basics');
+    const stepIndex = STEP_IDS.indexOf(stepId);
+    const goStep = (id) => { setStepId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    const goNext = () => goStep(STEP_IDS[Math.min(STEP_IDS.length - 1, stepIndex + 1)]);
+    const goPrev = () => goStep(STEP_IDS[Math.max(0, stepIndex - 1)]);
 
     // Two people in the same course twice is almost always a slip.
     const duplicateFacilitators = useMemo(() => {
@@ -3158,7 +3164,6 @@ export function CourseForm({
     };
     const discardDraft = () => { clearDraft(); setSavedDraft(null); };
 
-    const [reviewOpen, setReviewOpen] = useState(false);
 
     const submit = async (confirmed = false) => {
         const allFacilitatorAssignments = groups.reduce((acc, group) => {
@@ -3187,11 +3192,8 @@ export function CourseForm({
         const missingFields = Object.keys(missing).filter(k => missing[k]);
         if (missingFields.length > 0) {
             setShowErrors(true);
-            setOpenSections(prev => {
-                const next = { ...prev };
-                Object.keys(SECTION_FIELDS).forEach(sec => { if (missingIn(sec) > 0) next[sec] = true; });
-                return next;
-            });
+            const firstMissing = Object.keys(SECTION_FIELDS).find(sec => STEP_IDS.includes(sec) && missingIn(sec) > 0);
+            if (firstMissing) setStepId(firstMissing);
             setError(L('الرجاء إكمال الحقول الإلزامية التالية: ', 'Please complete: ') + missingFields.map(k => labels[k]).join(isAr ? '، ' : ', '));
             setTimeout(() => {
                 const el = document.querySelector('[data-missing="true"]');
@@ -3208,7 +3210,7 @@ export function CourseForm({
         }
 
         // A new course gets one look at the summary before it is created.
-        if (!initialData && !confirmed) { setError(''); setReviewOpen(true); return; }
+        if (!initialData && !confirmed) { setError(''); goStep('review'); return; }
 
         const selectedDirectorObj = directorOptions.find(d => d.name === director);
         const directorId = selectedDirectorObj ? selectedDirectorObj.id : null;
@@ -3295,8 +3297,8 @@ export function CourseForm({
     const sectionProps = (sec) => {
         const n = missingIn(sec);
         return {
-            open: !!openSections[sec],
-            onToggle: () => toggleSection(sec),
+            hidden: stepId !== sec,
+            bare: true,
             missing: showErrors ? n : 0,
             missingLabel: L(`${n} ناقص`, `${n} missing`),
             complete: n === 0,
@@ -3311,7 +3313,42 @@ export function CourseForm({
     return (
         <Card>
             <div className="p-3 md:p-6" dir={isAr ? 'rtl' : 'ltr'} style={{ textAlign: isAr ? 'right' : 'left' }}>
-                <PageHeader title={initialData ? L('تعديل دورة', 'Edit course') : L('إضافة دورة', 'Add course')} subtitle={`${L('الحزمة', 'Package')}: ${courseType || L('غير محدد', 'not set')}`} className="mb-4" />
+                <StepForm
+                    title={initialData ? L('تعديل دورة', 'Edit course') : L('إضافة دورة', 'Add course')}
+                    subtitle={`${L('الحزمة', 'Package')}: ${courseType || L('غير محدد', 'not set')}`}
+                    backLabel={L('رجوع', 'Back')}
+                    onBack={() => onCancel()}
+                    current={stepId}
+                    onStepChange={goStep}
+                    steps={STEP_IDS.map(id => ({
+                        id,
+                        label: {
+                            basics: L('الأساسيات', 'Basics'), coordination: L('التنسيق', 'Coordination'), leadership: L('القيادة', 'Leadership'),
+                            facilitators: L('الميسرون', 'Facilitators'), review: L('مراجعة', 'Review'),
+                        }[id],
+                        missing: id === 'review' ? 0 : (showErrors ? missingIn(id) : 0),
+                        complete: id === 'review' ? false : missingIn(id) === 0,
+                    }))}
+                    footer={
+                        <FormActions className="mt-4">
+                            {stepIndex === 0
+                                ? <Button variant="secondary" onClick={() => { clearDraft(); onCancel(); }} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
+                                : <Button variant="secondary" onClick={goPrev} disabled={isSaving}>{isAr ? '→' : '←'} {L('السابق', 'Back')}</Button>}
+                            {initialData && (
+                                <Button variant={stepIndex === STEP_IDS.length - 1 ? 'primary' : 'secondary'} onClick={() => submit(true)} disabled={isSaving}>
+                                    {isSaving ? <Spinner size="sm" /> : L('حفظ الدورة', 'Save course')}
+                                </Button>
+                            )}
+                            {stepId === 'review' ? (
+                                <Button variant="success" onClick={() => submit(true)} disabled={isSaving}>
+                                    {isSaving ? <Spinner size="sm" /> : `✓ ${L('حفظ الدورة', 'Save course')}`}
+                                </Button>
+                            ) : stepIndex < STEP_IDS.length - 1 && (
+                                <Button onClick={goNext} disabled={isSaving}>{L('التالي', 'Next')} {isAr ? '←' : '→'}</Button>
+                            )}
+                        </FormActions>
+                    }
+                >
 
                 {savedDraft && (
                     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -3529,16 +3566,9 @@ export function CourseForm({
                     )}
                 </FormSection>
 
-                <FormActions className="mt-6 md:border-t md:pt-6">
-                    <Button variant="secondary" onClick={() => { clearDraft(); onCancel(); }} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
-                    <Button onClick={() => submit(false)} disabled={isSaving}>
-                        {isSaving ? <Spinner size="sm" /> : initialData ? L('حفظ الدورة', 'Save course') : L('مراجعة وحفظ', 'Review and save')}
-                    </Button>
-                </FormActions>
-            </div>
-
-            <Modal isOpen={reviewOpen} onClose={() => setReviewOpen(false)} title={L('مراجعة الدورة قبل الحفظ', 'Review the course before saving')}>
-                <CardBody className="space-y-2" >
+                {stepId === 'review' && (
+                    <section className="mb-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <h3 className="mb-3 text-base font-bold text-slate-900">{L('راجع الدورة قبل الحفظ', 'Check the course before saving')}</h3>
                     <div dir={isAr ? 'rtl' : 'ltr'} className="space-y-2">
                         {[
                             ['basics', L('الأساسيات', 'Basics'), [
@@ -3563,7 +3593,7 @@ export function CourseForm({
                             <div key={sec} className="rounded-xl border border-slate-200 p-3 text-sm">
                                 <div className="mb-1 flex items-center justify-between font-bold text-slate-900">
                                     <span>{title}</span>
-                                    <button type="button" className="text-xs font-bold text-sky-700 hover:underline" onClick={() => { setReviewOpen(false); setOpenSections(prev => ({ ...prev, [sec]: true })); }}>{L('تعديل', 'Edit')}</button>
+                                    <button type="button" className="text-xs font-bold text-sky-700 hover:underline" onClick={() => goStep(sec)}>{L('تعديل', 'Edit')}</button>
                                 </div>
                                 {rows.filter(([, v]) => v !== '' && v != null).map(([k, v]) => (
                                     <div key={k} className="flex justify-between gap-3 py-0.5 text-slate-600"><span>{k}</span><b className="text-slate-900 text-end">{v}</b></div>
@@ -3571,12 +3601,10 @@ export function CourseForm({
                             </div>
                         ))}
                     </div>
-                </CardBody>
-                <CardFooter>
-                    <Button variant="secondary" onClick={() => setReviewOpen(false)} disabled={isSaving}>{L('رجوع', 'Back')}</Button>
-                    <Button variant="success" onClick={() => { setReviewOpen(false); submit(true); }} disabled={isSaving}>✓ {L('حفظ الدورة', 'Save course')}</Button>
-                </CardFooter>
-            </Modal>
+                    </section>
+                )}
+                </StepForm>
+            </div>
         </Card>
     );
 }

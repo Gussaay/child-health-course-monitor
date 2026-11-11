@@ -16,6 +16,7 @@ export function DataAssistantButton({ onClick }) {
             onClick={onClick}
             title={label}
             aria-label={label}
+            data-app-chrome="assistant"
             className="print-hide fixed z-50 end-4 bottom-[calc(var(--bottom-nav,0px)+1rem)] md:bottom-6 flex items-center gap-2 rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-700 active:bg-sky-800 h-12 w-12 md:w-auto md:px-4 justify-center"
         >
             <Sparkles size={20} className="shrink-0" />

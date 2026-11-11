@@ -254,3 +254,9 @@ html, body, #root {
   .filter-keep-2 > * > :nth-child(n+3),
   .filter-keep-3 > * > :nth-child(n+4) { display: none; }
 }
+
+
+/* Full-page forms (useFullPageForm): hide the app chrome so the form has the
+   whole screen; the form shows its own back button and step bar. */
+html.form-focus [data-app-chrome] { display: none !important; }
+html.form-focus { --bottom-nav: 0px; }

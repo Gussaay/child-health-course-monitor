@@ -41,7 +41,10 @@ export const FormActions = ({ children, className = '' }) => (
  * it is closed, so a long form can be checked at a glance and edited one part
  * at a time.
  */
-export function FormSection({ title, tone = 'sky', open, onToggle, missing = 0, complete = false, summary = '', missingLabel, children, id }) {
+export function FormSection({ title, tone = 'sky', open, onToggle, missing = 0, complete = false, summary = '', missingLabel, children, id, hidden = false, bare = false }) {
+    if (hidden) return null;
+    // Inside a step form the step bar already names the part, so no header.
+    if (bare) return <section id={id} className="mb-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">{children}</section>;
     const tones = {
         sky: 'border-s-sky-500', green: 'border-s-emerald-500', amber: 'border-s-amber-500', purple: 'border-s-violet-500', slate: 'border-s-slate-400'
     };
@@ -66,6 +69,68 @@ export function FormSection({ title, tone = 'sky', open, onToggle, missing = 0, 
             </button>
             {open && <div className="border-t border-slate-100 p-4">{children}</div>}
         </section>
+    );
+}
+
+// ---- Full-page forms ----
+// While an add/edit form is open the app header, the bar under it, the phone
+// bottom bar, the page tabs and floating buttons are hidden (see .form-focus in
+// index.css), so the form has the whole screen. The form keeps its own back
+// button and step bar.
+let formFocusCount = 0;
+export function useFullPageForm(active = true) {
+    useEffect(() => {
+        if (!active) return undefined;
+        const root = document.documentElement;
+        formFocusCount += 1;
+        root.classList.add('form-focus');
+        window.scrollTo(0, 0);
+        return () => {
+            formFocusCount = Math.max(0, formFocusCount - 1);
+            if (formFocusCount === 0) root.classList.remove('form-focus');
+        };
+    }, [active]);
+}
+
+/**
+ * A form split into steps: a slim top bar with back and title, a step bar you
+ * can tap to jump to any step, the current step, and the footer buttons.
+ * steps: [{ id, label, missing, complete }]
+ */
+export function StepForm({ title, subtitle, steps, current, onStepChange, onBack, backLabel = 'Back', children, footer, dir }) {
+    const idx = Math.max(0, steps.findIndex(st => st.id === current));
+    return (
+        <div dir={dir} className="pb-2">
+            <div className="sticky top-0 z-40 -mx-3 md:-mx-6 mb-3 bg-slate-800 text-white shadow-md">
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                    <button type="button" onClick={onBack} aria-label={backLabel} title={backLabel} className="shrink-0 rounded-full p-2 hover:bg-white/10 active:bg-white/20">
+                        <ArrowLeft size={22} className="rtl:rotate-180" />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                        <div className="truncate text-base font-bold leading-tight">{title}</div>
+                        {subtitle && <div className="truncate text-xs text-slate-300">{subtitle}</div>}
+                    </div>
+                    <span dir="ltr" className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold tabular-nums">{idx + 1} / {steps.length}</span>
+                </div>
+                <div className="flex gap-1 px-3 pb-2.5">
+                    {steps.map((st, i) => {
+                        const state = i === idx ? 'current' : st.missing > 0 ? 'missing' : (st.complete && i < idx) || (st.complete && st.visited) ? 'done' : 'todo';
+                        const bar = { current: 'bg-sky-400', missing: 'bg-red-400', done: 'bg-emerald-400', todo: 'bg-white/20' }[state];
+                        const text = { current: 'text-white', missing: 'text-red-200', done: 'text-emerald-200', todo: 'text-slate-400' }[state];
+                        return (
+                            <button key={st.id} type="button" onClick={() => onStepChange(st.id)} aria-current={i === idx ? 'step' : undefined} className="min-w-0 flex-1 text-start">
+                                <span className={`block h-1.5 rounded-full ${bar}`} />
+                                <span className={`mt-1 block truncate text-[11px] font-semibold ${text}`}>
+                                    {state === 'done' ? '✓ ' : state === 'missing' ? '⚠ ' : ''}{st.label}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+            {children}
+            {footer}
+        </div>
     );
 }
 
@@ -381,7 +446,7 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
     // Read by "Ask the data" (utils/pageSnapshot.js) to name the exact place an answer came from.
     const activeLabel = visible.find((tab) => tab.id === active)?.label;
     return (
-        <div data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 relative z-30 ${className}`}>
+        <div data-app-chrome="tabs" data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 relative z-30 ${className}`}>
             <nav
                 ref={navRef}
                 className="md:hidden grid gap-1 rounded-xl bg-white p-1 border border-slate-200 shadow-sm"

@@ -12,7 +12,7 @@ import { db } from '../firebase';
 import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 import {
-    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast, FilterPanel, PageActions, FormActions, FormSection, FieldError
+    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast, FilterPanel, PageActions, FormActions, FormSection, FieldError, StepForm, useFullPageForm
 } from "./CommonComponents";
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC,
@@ -3423,6 +3423,15 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
 
     // ---- Field errors, duplicates, phone tidy, counter ----
     const [fieldErrors, setFieldErrors] = useState({});
+
+    // Steps: the person first, then training, then facility questions.
+    useFullPageForm(true);
+    const hasTrainingStep = showTestScores || isImnci || isIccm || isCpcm || isEtat || isEenc || isSsnc;
+    const STEP_IDS = ['basic', ...(hasTrainingStep ? ['training'] : []), ...(isImnci ? ['facility'] : [])];
+    const [stepId, setStepId] = useState('basic');
+    const stepIndex = STEP_IDS.indexOf(stepId);
+    const isLastStep = stepIndex === STEP_IDS.length - 1;
+    const goStep = (id) => { setStepId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
     const fe = (k) => !!fieldErrors[k];
     const markWrap = (k) => ({ 'data-missing': fe(k) ? 'true' : undefined, className: fe(k) ? 'rounded-lg ring-2 ring-red-300 ring-offset-2' : '' });
     const reqMsg = L('هذا الحقل مطلوب', 'This field is required');
@@ -3481,6 +3490,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
         };
         if (Object.values(missingNow).some(Boolean)) {
             setFieldErrors(missingNow);
+            setStepId('basic');
             setError(L('الرجاء إكمال الحقول المطلوبة المعلّمة باللون الأحمر.', 'Please fill in the fields marked in red.'));
             setTimeout(() => document.querySelector('[data-missing="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
             return;
@@ -3727,8 +3737,41 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
              )}
 
             <Card>
-                <div className="p-6">
-                    <PageHeader title={initialData ? L('تعديل بيانات المشارك', 'Edit participant') : L('إضافة مشارك جديد', 'Add participant')} />
+                <div className="p-3 md:p-6">
+                <StepForm
+                    title={initialData ? L('تعديل بيانات المشارك', 'Edit participant') : L('إضافة مشارك جديد', 'Add participant')}
+                    subtitle={course.course_type}
+                    backLabel={L('رجوع', 'Back')}
+                    onBack={onCancel}
+                    current={stepId}
+                    onStepChange={goStep}
+                    steps={STEP_IDS.map(id => ({
+                        id,
+                        label: { basic: L('البيانات الأساسية', 'Details'), training: L('التدريب', 'Training'), facility: L('المؤسسة', 'Facility') }[id],
+                        missing: id === 'basic' ? Object.values(fieldErrors).filter(Boolean).length : 0,
+                        complete: id === 'basic' ? !!(name.trim() && phone.trim() && state && locality) : id === 'facility' ? facilityAlreadyFilled : false,
+                    }))}
+                    footer={
+                        <FormActions className="mt-4">
+                            {stepIndex === 0
+                                ? <Button variant="secondary" onClick={onCancel} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
+                                : <Button variant="secondary" onClick={() => goStep(STEP_IDS[stepIndex - 1])} disabled={isSaving}>{isAr ? '→' : '←'} {L('السابق', 'Back')}</Button>}
+                            {(initialData || isLastStep) && (
+                                <Button variant={initialData ? 'primary' : 'secondary'} onClick={() => submit(false)} disabled={isSaving}>
+                                    {isSaving ? <Spinner size="sm"/> : L('حفظ', 'Save')}
+                                </Button>
+                            )}
+                            {!initialData && isLastStep && (
+                                <Button onClick={() => submit(true)} disabled={isSaving} className="bg-teal-700 hover:bg-teal-800 text-white">
+                                    {isSaving ? <Spinner size="sm"/> : L('حفظ وإضافة آخر ＋', 'Save and add another ＋')}
+                                </Button>
+                            )}
+                            {!isLastStep && (
+                                <Button onClick={() => goStep(STEP_IDS[stepIndex + 1])} disabled={isSaving}>{L('التالي', 'Next')} {isAr ? '←' : '→'}</Button>
+                            )}
+                        </FormActions>
+                    }
+                >
                     {!initialData && (
                         <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
                             <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold text-slate-800">
@@ -3743,7 +3786,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm font-medium">{error}</div>}
                     
                     {/* --- القسم 1: البيانات الأساسية --- */}
-                    <div className="mt-6 mb-6">
+                    {stepId === 'basic' && (
+                    <div className="mt-4 mb-6">
                         <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">{L("البيانات الأساسية", "Basic details")}</h3>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <FormGroup label={L("المجموعة (Group)", "Group")}>
@@ -3891,9 +3935,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                             <FormGroup label={L("البريد الإلكتروني (اختياري)", "Email (optional)")}><Input disabled={isSaving} type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="text-start" /></FormGroup>
                         </div>
                     </div>
+                    )}
 
                     {/* --- القسم 2: التقييم والاختبارات --- */}
-                    {showTestScores && (
+                    {showTestScores && stepId === 'training' && (
                         <div className="mb-6 p-4 border rounded-md bg-gray-50/50">
                             <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">{L("التقييم والاختبارات", "Tests")}</h3>
                             <div className="grid md:grid-cols-2 gap-6">
@@ -3904,7 +3949,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                     )}
 
                     {/* --- القسم 3: بيانات التدريب والمؤسسة --- */}
-                    {(isImnci || isIccm || isCpcm || isEtat || isEenc || isSsnc) && (
+                    {(isImnci || isIccm || isCpcm || isEtat || isEenc || isSsnc) && stepId === 'training' && (
                         <div className="mb-6">
                             <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">{L("بيانات التدريب وإحصائيات الكوادر", "Training and staff numbers")}</h3>
                             <div className="grid md:grid-cols-1 gap-6">
@@ -3925,7 +3970,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                                             <table className="min-w-full border-collapse text-sm text-center">
                                                 <thead className="bg-sky-100/50">
                                                     <tr>
-                                                        <th className="border p-2 text-right text-sky-800 w-1/3">{L('الوصف الوظيفي', 'Job')}</th>
+                                                        <th className="border p-2 text-start text-sky-800 w-1/3">{L('الوصف الوظيفي', 'Job')}</th>
                                                         <th className="border p-2 text-sky-800 w-1/3">{L('العدد الكلي الموجود', 'Total')}</th>
                                                         <th className="border p-2 text-sky-800 w-1/3">{L('المدربين على العلاج المتكامل', 'Trained in IMNCI')}</th>
                                                     </tr>
@@ -4029,7 +4074,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                     )}
 
                     {/* --- القسم 4: معدات وخدمات المؤسسة (مخصص لـ IMNCI) --- */}
-                    {isImnci && (
+                    {isImnci && stepId === 'facility' && (
                         <FormSection
                             tone="slate"
                             title={L('معدات وخدمات المؤسسة', 'Facility equipment and services')}
@@ -4096,18 +4141,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                         </FormSection>
                     )}
 
-                    {/* Submit Buttons */}
-                    <FormActions className="mt-6 md:border-t md:pt-6">
-                        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
-                        <Button variant={initialData ? 'primary' : 'secondary'} onClick={() => submit(false)} disabled={isSaving}>
-                            {isSaving ? <Spinner size="sm"/> : L('حفظ', 'Save')}
-                        </Button>
-                        {!initialData && (
-                            <Button onClick={() => submit(true)} disabled={isSaving} className="bg-teal-700 hover:bg-teal-800 text-white">
-                                {isSaving ? <Spinner size="sm"/> : L('حفظ وإضافة آخر ＋', 'Save and add another ＋')}
-                            </Button>
-                        )}
-                    </FormActions>
+                </StepForm>
                 </div>
             </Card>
         </div>

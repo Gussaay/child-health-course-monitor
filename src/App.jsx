@@ -565,7 +565,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate, onHome = f
     }, []);
 
     return (
-        <nav ref={navRef} className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+        <nav data-app-chrome="bottom-nav" ref={navRef} className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
             {!onHome && <div className="flex justify-between items-center px-2 w-full">
                 {navItems.map(item => {
                     const Icon = icons[item.view] || Activity;
@@ -3003,7 +3003,7 @@ case 'meetings':
                 )}
             </div>
 
-            <header ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
+            <header data-app-chrome="header" ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
@@ -3066,7 +3066,7 @@ case 'meetings':
             </header>
 
             {user && !isMinimalUILayout && (
-                <div className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
+                <div data-app-chrome="subbar" className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
 
                     <div className="flex-1 flex items-center justify-start overflow-hidden min-w-0">
                         {/* Phones: the side menu sits here; the greeting already names the user. */}
@@ -3151,7 +3151,7 @@ case 'meetings':
             </main>
 
             {/* On phones the credit sits in the bottom bar; everywhere else it is the page footer. */}
-            <footer className={`${user && !isMinimalUILayout ? 'hidden md:block' : 'block'} bg-slate-800 text-slate-300 text-xs py-3 px-4 border-t border-slate-700`}>
+            <footer data-app-chrome="footer" className={`${user && !isMinimalUILayout ? 'hidden md:block' : 'block'} bg-slate-800 text-slate-300 text-xs py-3 px-4 border-t border-slate-700`}>
                 <AppCredit />
             </footer>
 
