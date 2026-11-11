@@ -69,6 +69,7 @@ import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
 import { countsForCoverage } from '../utils/coverageEligibility';
 import { IS_EMONC_SITE } from '../siteMode';
+import { usePageAddButton } from '../utils/pageChrome';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
@@ -2323,6 +2324,9 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         showExercises && { id: 'exercises', label: t('course_page.tabs.exercises', 'Exercises'), short: t('ui.short.exercises', 'Exercises'), go: () => setActiveCoursesTab('exercises') },
         !isGlobalView && selectedCourse && canManageCourseCertificates && { id: 'course-certificates', label: <>{t('course_page.tabs.certificates', 'Certificates')}{selectedCourse.isCertificateApproved && <span className="ms-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>}</>, short: t('ui.short.certificates', 'Certificates'), go: openTab('course-certificates') },
     ];
+    // The app's round "Add" button (bottom corner) adds a course while the course list is open.
+    usePageAddButton(t('course_page.buttons.add_course', 'Add New Course'), handleOpenAddForm,
+        canAddCourse && activeCoursesTab === 'courses' && !!activeCourseType && !showTypeReport && !isProcessing);
     const activeCourseTabId =
         ['courses', 'add-course', 'edit-course'].includes(activeCoursesTab) ? 'courses'
         : ['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) ? 'participants'
@@ -2364,20 +2368,6 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                         ) : (
                             <div>
                                 <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing || isProcessing} />
-                                {/* Adding a course: a round + button on phones, a normal button on wider screens. */}
-                                {canAddCourse && (
-                                    <button
-                                        type="button"
-                                        onClick={handleOpenAddForm}
-                                        disabled={isProcessing}
-                                        aria-label={t('course_page.buttons.add_course', 'Add New Course')}
-                                        className="md:hidden fixed left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg shadow-sky-600/30 active:scale-95"
-                                        style={{ bottom: 'calc(var(--bottom-nav, 0px) + 16px)' }}
-                                    >
-                                        <Plus size={28} />
-                                    </button>
-                                )}
-                                
                                 <FilterPanel className="mb-4" activeCount={[filterState, filterLocality, filterSubCourse, filterProject].filter(v => v && v !== 'All').length}>
                                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                         <FormGroup label={t('course_page.filters.by_state', 'Filter by State')}><Select disabled={isProcessing} value={filterState} onChange={(e) => setFilterState(e.target.value)}>{filterStateOptions.map(s => <option key={s} value={s}>{s === 'All' ? t('course_page.filters.all', 'All') : s}</option>)}</Select></FormGroup>
@@ -2390,7 +2380,6 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                 {coursesLoading ? <SkeletonTable /> : <CoursesTable
                                     toolbarExtra={
                                         <>
-                                            {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="hidden md:inline-flex bg-sky-600 text-white hover:bg-sky-700"><Plus size={16} /> {t('course_page.buttons.add_course', 'Add New Course')}</Button>}
                                             <CoursePageMoreMenu
                                                 disabled={isProcessing}
                                                 items={[
@@ -3330,7 +3319,7 @@ export function CourseForm({
                         complete: id === 'review' ? false : missingIn(id) === 0,
                     }))}
                     footer={
-                        <FormActions className="mt-4">
+                        <FormActions edge>
                             {stepIndex === 0
                                 ? <Button variant="secondary" onClick={() => { clearDraft(); onCancel(); }} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
                                 : <Button variant="secondary" onClick={goPrev} disabled={isSaving}>{isAr ? '→' : '←'} {L('السابق', 'Back')}</Button>}

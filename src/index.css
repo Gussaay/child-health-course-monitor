@@ -259,6 +259,14 @@ html, body, #root {
 /* Full-page forms (useFullPageForm): hide the app chrome so the form has the
    whole screen; the form shows its own back button and step bar. */
 html.form-focus [data-app-chrome] { display: none !important; }
-/* No bottom navigation bar any more: pinned bars sit on the screen edge. */
-html { --bottom-nav: 0px; }
+/* The credit bar is pinned to the bottom of every screen; App.jsx measures it
+   into --credit-bar. Other pinned bottom bars (Save, Next module, ...) sit
+   just above it by using --bottom-nav. Full-page forms hide the credit bar,
+   so their bars sit on the screen edge. */
+html { --bottom-nav: var(--credit-bar, 0px); }
 html.form-focus { --bottom-nav: 0px; }
+/* Full-page forms: the form's own top bar meets the top of the screen (web)
+   or the app's slim top bar (Android), with no gap above it. */
+html.form-focus main { padding-top: 0 !important; }
+html.form-focus .app-backbar { position: sticky; top: 0; z-index: 45; }
+html.form-focus { --app-topbar: 3rem; }

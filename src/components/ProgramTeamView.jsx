@@ -52,6 +52,7 @@ import { useTranslation } from 'react-i18next';
 import { publicBaseUrl, publicCurrentUrl } from '../utils/publicLink';
 import { useLeaveGuard } from '../utils/leaveGuard';
 import { useRememberedState } from '../utils/rememberedState';
+import { usePageAddButton } from '../utils/pageChrome';
 
 // Standard job titles for normalization
 const STANDARD_JOB_TITLES = ['صحة عامة', 'طبيب', 'ممرض', 'ظابط تغذية', 'مساعد طبي', 'صيدلي', 'إحصائي', 'إدارة اعمال'];
@@ -2051,6 +2052,8 @@ export function ProgramTeamView({ permissions, userStates }) {
     
     const handleCloseModal = () => { setIsModalOpen(false); setModalMode(null); setEditingMember(null); setOriginalMember(null); };
     const handleAdd = () => { setEditingMember(null); setOriginalMember(null); setModalMode('edit'); setIsModalOpen(true); };
+    // The app's round "Add" button (bottom corner) adds a team member on the Members tab.
+    usePageAddButton(t('program_teams.members.add', 'Add New Team Member'), handleAdd, activeTab === 'members' && !!permissions.canManageHumanResource);
     const handleEdit = (member) => { setEditingMember(member); setOriginalMember(null); setModalMode('edit'); setIsModalOpen(true); };
     
     const handleView = (member, isPending = false) => { 
@@ -2425,7 +2428,6 @@ export function ProgramTeamView({ permissions, userStates }) {
             {/* ACTION BUTTONS */}
             {((activeTab === 'members' && (permissions.canManageHumanResource || permissions.canUseFederalManagerAdvancedFeatures)) || permissions?.canApproveSubmissions) && (
                 <PageActions className="mb-4">
-                    {activeTab === 'members' && permissions.canManageHumanResource && <Button onClick={handleAdd}>{t('program_teams.members.add', 'Add New Team Member')}</Button>}
                     {activeTab === 'members' && permissions.canManageHumanResource && <Button variant="secondary" onClick={handleOpenAutoNormalize}>{t('program_teams.members.auto_normalize', 'Auto-Normalize Jobs')}</Button>}
                     {activeTab === 'members' && permissions.canUseFederalManagerAdvancedFeatures && (
                         <Button variant="secondary" onClick={() => setIsBulkImportOpen(true)}>{t('program_teams.members.bulk_import', 'Bulk Import/Update')}</Button>

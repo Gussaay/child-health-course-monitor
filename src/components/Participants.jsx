@@ -46,6 +46,7 @@ import { sharePdf, certificateFileName } from '../utils/sharePdf';
 import { Capacitor } from '@capacitor/core';
 import { useRememberedState } from '../utils/rememberedState';
 import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
+import { usePageAddButton } from '../utils/pageChrome';
 
 
 // ====================================================================
@@ -1983,6 +1984,10 @@ export function ParticipantsView({
 
     const [isBulkEditing, setIsBulkEditing] = useState(false); 
     useLeaveGuard(activeScreen === 'form' || activeScreen === 'migration' || isBulkEditing);
+    // The app's round "Add" button (bottom corner) adds a participant while the list is open.
+    usePageAddButton(t('participants_page.list.add_participant', 'Add Participant'),
+        () => { setEditingParticipant(null); setActiveScreen('form'); },
+        !!canAddParticipant && activeScreen === 'list' && !isBulkEditing && !isProcessing);
     const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
     
     const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
@@ -2850,11 +2855,6 @@ export function ParticipantsView({
             <div className="flex flex-col gap-4 mb-4">
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <PageActions>
-                        {canAddParticipant && (
-                            <Button onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>
-                                {t('participants_page.list.add_participant', 'Add Participant')}
-                            </Button>
-                        )}
 
                         {finalFederalPerm && (
                             <Button variant="secondary" onClick={() => setIsDeletedModalOpen(true)} disabled={isProcessing}>
@@ -3752,7 +3752,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                         complete: id === 'basic' ? !!(name.trim() && phone.trim() && state && locality) : id === 'facility' ? facilityAlreadyFilled : false,
                     }))}
                     footer={
-                        <FormActions className="mt-4">
+                        <FormActions edge>
                             {stepIndex === 0
                                 ? <Button variant="secondary" onClick={onCancel} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
                                 : <Button variant="secondary" onClick={() => goStep(STEP_IDS[stepIndex - 1])} disabled={isSaving}>{isAr ? '→' : '←'} {L('السابق', 'Back')}</Button>}

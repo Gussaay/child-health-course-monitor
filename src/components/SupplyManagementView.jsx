@@ -20,6 +20,7 @@ import { notify, confirmDialog } from './dialogs';
 import { useDataCache } from '../DataContext';
 import { upsertSupplyItem, deleteSupplyItem, bulkUpsertSupplyItems } from '../data';
 import { COURSE_TYPES_FACILITATOR } from './constants';
+import { usePageAddButton } from '../utils/pageChrome';
 
 // =============================================================================
 // Domain vocabulary
@@ -893,6 +894,8 @@ export default function SupplyManagementView({ permissions = {} }) {
     };
 
     const openAdd = () => { setEditing(null); setModalOpen(true); };
+    // The app's round "Add" button (bottom corner) adds an item to the list.
+    usePageAddButton(t('trackers.supply.add_item', 'Add item'), openAdd, canManage && section === 'list');
     const openEdit = (item) => { setEditing(item); setModalOpen(true); };
 
     const isDrugTab = category === 'drugs';
@@ -916,9 +919,6 @@ export default function SupplyManagementView({ permissions = {} }) {
                     <div className="flex gap-2">
                         <Button variant="secondary" onClick={() => setImportOpen(true)}>
                             <Upload size={16} /> {t('trackers.supply.bulk_upload', 'Bulk upload')}
-                        </Button>
-                        <Button onClick={openAdd}>
-                            <Plus size={16} /> {t('trackers.supply.add_item', 'Add item')}
                         </Button>
                     </div>
                 ) : null}

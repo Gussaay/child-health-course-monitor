@@ -13,6 +13,7 @@ import { CourseModal } from './ItemModals';
 import { DeletedItems } from './DeletedItems';
 import { AiLibraryView, ExerciseManagerView, ProgressDashboard, ProtocolEditor } from './lazyParts';
 import { useCourseScreen } from './screen';
+import { usePageAddButton } from '../../../utils/pageChrome';
 
 export function CourseList() {
     const { t } = useTranslation();
@@ -26,6 +27,8 @@ export function CourseList() {
     // --- course list --------------------------------------------------------
     // Leaving Manage mode leaves the Deleted tab too.
     const shownTab = (topTab === 'deleted' && !isAdmin) || (topTab === 'progress' && !canSeeProgress) ? 'courses' : topTab;
+    // The app's round "Add" button (bottom corner) adds a course in Manage mode.
+    usePageAddButton(t('imnci_ui.courses.course_modal.add', 'Add course'), () => setCourseModal({}), !!isAdmin && shownTab === 'courses' && !builder);
     return (
         <div className="space-y-4">
             <PageHeader
@@ -54,9 +57,6 @@ export function CourseList() {
                             <>
                                 <Button variant="secondary" onClick={() => setImportOpen(true)}>
                                     <DownloadCloud size={16} /> {t('imnci_ui.courses.import.import', 'Import')}
-                                </Button>
-                                <Button onClick={() => setCourseModal({})}>
-                                    <Plus size={16} /> {t('imnci_ui.courses.course_modal.add', 'Add course')}
                                 </Button>
                             </>
                         )}

@@ -32,6 +32,7 @@ import { Capacitor } from '@capacitor/core';
 import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl, publicCurrentUrl } from '../utils/publicLink';
+import { usePageAddButton } from '../utils/pageChrome';
 
 // --- Helper Functions ---
 const getBaseUrl = () => publicBaseUrl();
@@ -646,6 +647,8 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
 
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('current');
+    // The app's round "Add" button (bottom corner) adds a facilitator.
+    usePageAddButton(t('facilitators_page.list.add_new', 'Add New Facilitator'), onAdd, !!permissions.canManageHumanResource && activeTab !== 'pending');
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [viewingCertsFor, setViewingCertsFor] = useState(null);
@@ -893,7 +896,6 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                 />
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                     <PageActions>
-                        {permissions.canManageHumanResource && <Button onClick={onAdd}>{t('facilitators_page.list.add_new', 'Add New Facilitator')}</Button>}
                         {permissions.canManageHumanResource && <Button variant="secondary" onClick={() => setImportModalOpen(true)}>{t('facilitators_page.list.import_excel', 'Import from Excel')}</Button>}
                         {permissions.canApproveSubmissions && <Button variant="secondary" onClick={() => setIsLinkModalOpen(true)}>{t('facilitators_page.list.manage_link', 'Manage Submission Link')}</Button>}
                         {/* NEW: Refresh Button */}
